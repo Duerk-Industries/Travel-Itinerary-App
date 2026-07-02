@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import axios from 'axios';
 import { generateItineraryViaPromptPlan } from '../src/services/itineraryPromptPlanService';
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';

@@ -55,3 +55,15 @@ flags:
   merchant_category_lookup:
     enabled: false
     description: "Use Nominatim to look up merchant categories from receipt OCR vendor names"
+  stripe_billing:
+    enabled: false
+    description: "Enable Stripe billing integration (master switch for all billing features)"
+  stripe_checkout:
+    enabled: false
+    description: "Enable Stripe Checkout for new Premium subscription signups (web only for initial release)"
+  stripe_customer_portal:
+    enabled: false
+    description: "Enable Stripe Customer Portal for subscription management (cancellation, payment update, plan switch)"
+  premium_trials:
+    enabled: true
+    description: "Enable Premium free trial offers, trial eligibility tracking, and trial-ending reminders"

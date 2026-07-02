@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import * as firebaseDb from '../src/db.firebase';
 
 describe('firebase lodging update', () => {

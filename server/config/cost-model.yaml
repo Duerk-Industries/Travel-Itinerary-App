@@ -1,0 +1,261 @@
+# Monthly cost assumptions for the estimator.
+#
+# Tier alignment:
+# - "Basic" maps to the app's current free/default tier: 5 AI itinerary
+#   generations/month, no ingestion, no Gmail import, no forwarded mailbox.
+# - "Premium" maps to the app's premium tier: ingestion is allowed with the
+#   current 50 uploads/month and 30-day Gmail lookback. Premium AI generation is
+#   unlimited in the app, so this file uses a production planning estimate.
+#
+# Provider-limit alignment:
+# server/config/api-limits.yaml is an aggregate throttle config, not a user-tier
+# quota file. At 10,000 users, several production estimates below exceed those
+# current aggregate throttles. Comments call those out; the assumption for this
+# model is that production limits are raised and paid provider tiers are used
+# where required.
+settings:
+  rowStep: 100
+  maxUsers: 10000
+
+userMix:
+  # Premium users are assumed to be 1% of Basic users:
+  # Basic = 100 / 101, Premium = 1 / 101.
+  Basic: 0.99
+  Premium: 0.01
+
+usagePerUser:
+  Basic:
+    # Basic/free allows 5 AI itinerary generations/month. These token estimates
+    # model that full allowance at about 6k input and 2k output tokens each.
+    # At 10k users this exceeds the current aggregate OPENAI throttle
+    # (50 ITINERARY_GENERATE_PLAN calls/day and 200 calls/day for each plan
+    # stage), so production must raise provider/app limits for this volume.
+    openai:
+      input_tokens: 30000
+      output_tokens: 10000
+    googlePlaces:
+      place_details_requests: 2
+    googleAi:
+      input_tokens: 0
+      output_tokens: 0
+    # Current UNSPLASH throttle is 50/hour. This monthly estimate should fit at
+    # 10k users if traffic is smoothed and app image caching remains effective.
+    unsplash:
+      requests: 1
+    # Current SMTP throttle is 100/day aggregate. At 10k users, 1 message/user
+    # per month is above that monthly capacity; production should raise SMTP
+    # limits or use a paid transactional email tier.
+    smtp:
+      messages: 1
+    # Basic/free users are not entitled to ingestion or Gmail import.
+    gmail:
+      token_requests: 0
+      profile_requests: 0
+      message_list_requests: 0
+      message_get_requests: 0
+      attachment_requests: 0
+    mailgun:
+      inbound_messages: 0
+      inbound_attachments: 0
+    docling:
+      document_conversions: 0
+    # Current OPEN_METEO throttle is 2,000/day aggregate split across geocode
+    # and forecast callers. This estimate fits monthly volume at 10k users, but
+    # peak-day traffic may still require smoothing/caching.
+    openMeteo:
+      geocode_requests: 1
+      forecast_requests: 2
+    frankfurter:
+      requests: 2
+    airportDataset:
+      requests: 0
+    googleCloudHosting:
+      cloud_run_requests: 30
+      firestore_reads: 600
+      firestore_writes: 90
+      storage_gb_month: 0.02
+      egress_gb: 0.05
+  Premium:
+    # Premium has unlimited AI itinerary generations in current tier config.
+    # This model assumes a production planning average of 20 generations/month
+    # at about 8k input and 3k output tokens each, plus ingestion extraction.
+    # This is intentionally different from current unlimited entitlement and
+    # requires raised OPENAI throttles for the 10k-user scenario.
+    openai:
+      input_tokens: 250000
+      output_tokens: 90000
+    googlePlaces:
+      place_details_requests: 20
+    # Gemini flight parser is present in the app and defaults on when
+    # LLM_PROVIDER is unset. No matching aggregate api-limits provider exists
+    # today, so add one before relying on this in production.
+    googleAi:
+      input_tokens: 1000000
+      output_tokens: 100000
+    unsplash:
+      requests: 10
+    smtp:
+      messages: 6
+    # Premium Gmail syncs are limited by current code to 30/month because the
+    # limit is derived from the 30-day Gmail lookback. Each sync can list up to
+    # 25 candidate messages, so message_get_requests models the max search pass.
+    gmail:
+      token_requests: 1
+      profile_requests: 1
+      message_list_requests: 30
+      message_get_requests: 750
+      attachment_requests: 50
+    # Premium ingestion permits 50 uploads/month. Forwarded mailbox deliveries
+    # share that same monthly upload allowance.
+    mailgun:
+      inbound_messages: 50
+      inbound_attachments: 50
+    docling:
+      document_conversions: 50
+    openMeteo:
+      geocode_requests: 5
+      forecast_requests: 10
+    frankfurter:
+      requests: 50
+    airportDataset:
+      requests: 0
+    googleCloudHosting:
+      cloud_run_requests: 120
+      firestore_reads: 2400
+      firestore_writes: 350
+      storage_gb_month: 0.08
+      egress_gb: 0.2
+
+costSources:
+  - id: google_cloud_baseline
+    name: Google Cloud baseline hosting
+    type: fixed
+    monthlyCostUsd: 25
+
+  - id: google_cloud_usage
+    name: Google Cloud usage
+    type: variable
+    api: googleCloudHosting
+    usageLevels:
+      - metric: cloud_run_requests
+        unitCostUsd: 0.40
+        perUnits: 1000000
+      - metric: firestore_reads
+        unitCostUsd: 0.06
+        perUnits: 100000
+      - metric: firestore_writes
+        unitCostUsd: 0.18
+        perUnits: 100000
+      - metric: storage_gb_month
+        unitCostUsd: 0.026
+      - metric: egress_gb
+        unitCostUsd: 0.12
+
+  - id: openai_gpt_4o_mini
+    name: OpenAI GPT-4o mini
+    type: variable
+    api: openai
+    usageLevels:
+      - metric: input_tokens
+        unitCostUsd: 0.15
+        perUnits: 1000000
+      - metric: output_tokens
+        unitCostUsd: 0.60
+        perUnits: 1000000
+
+  - id: google_places
+    name: Google Places details
+    type: variable
+    api: googlePlaces
+    usageLevels:
+      - metric: place_details_requests
+        unitCostUsd: 0
+        perUnits: 1000
+
+  - id: google_ai_gemini
+    name: Google AI Gemini flight parser
+    type: variable
+    api: googleAi
+    usageLevels:
+      - metric: input_tokens
+        unitCostUsd: 0
+        perUnits: 1000000
+      - metric: output_tokens
+        unitCostUsd: 0
+        perUnits: 1000000
+
+  - id: unsplash
+    name: Unsplash
+    type: variable
+    api: unsplash
+    usageLevels:
+      - metric: requests
+        unitCostUsd: 0
+
+  - id: smtp
+    name: SMTP email
+    type: variable
+    api: smtp
+    usageLevels:
+      - metric: messages
+        unitCostUsd: 0
+
+  - id: gmail
+    name: Gmail import API
+    type: variable
+    api: gmail
+    usageLevels:
+      - metric: token_requests
+        unitCostUsd: 0
+      - metric: profile_requests
+        unitCostUsd: 0
+      - metric: message_list_requests
+        unitCostUsd: 0
+      - metric: message_get_requests
+        unitCostUsd: 0
+      - metric: attachment_requests
+        unitCostUsd: 0
+
+  - id: mailgun
+    name: Mailgun inbound webhook
+    type: variable
+    api: mailgun
+    usageLevels:
+      - metric: inbound_messages
+        unitCostUsd: 0
+      - metric: inbound_attachments
+        unitCostUsd: 0
+
+  - id: docling
+    name: Docling document conversion
+    type: variable
+    api: docling
+    usageLevels:
+      - metric: document_conversions
+        unitCostUsd: 0
+
+  - id: open_meteo
+    name: Open-Meteo weather
+    type: variable
+    api: openMeteo
+    usageLevels:
+      - metric: geocode_requests
+        unitCostUsd: 0
+      - metric: forecast_requests
+        unitCostUsd: 0
+
+  - id: frankfurter
+    name: Frankfurter exchange rates
+    type: variable
+    api: frankfurter
+    usageLevels:
+      - metric: requests
+        unitCostUsd: 0
+
+  - id: airport_dataset
+    name: Airport dataset refresh
+    type: variable
+    api: airportDataset
+    usageLevels:
+      - metric: requests
+        unitCostUsd: 0

@@ -1,8 +1,9 @@
 /**
  * @jest-environment node
  */
+/// <reference types="node" />
 
-import { describe, expect, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import {
   buildOverviewRows,
   formatFlightSummary,
@@ -15,10 +16,68 @@ import {
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { OverviewTab } from '../tabs/overview';
+import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
 
 describe('Overview helpers', () => {
+  test('chooses the first lodging location for day weather', () => {
+    const location = buildDayWeatherLocation(
+      {
+        lodgings: [
+          { name: 'First Hotel', address: 'First Hotel Address' },
+          { name: 'Second Hotel', address: 'Second Hotel Address' },
+        ] as any,
+        flights: [
+          { arrival_airport_code: 'OTP', arrival_location: 'Bucharest' },
+        ] as any,
+        tours: [],
+        rentals: [],
+      },
+      'Romania'
+    );
+
+    expect(location).toBe('First Hotel Address');
+  });
+
+  test('makes street-address weather locations geocoder friendly', () => {
+    expect(makeWeatherLocationGeofriendly('3751 N Tracy Blvd Tracy CALIFORNIA 95304 US')).toBe(
+      'Tracy, CALIFORNIA, US'
+    );
+  });
+
+  test('uses a geocoder-friendly lodging address for day weather', () => {
+    const location = buildDayWeatherLocation(
+      {
+        lodgings: [
+          { name: 'Holiday Inn Express & Suites TRACY by IHG', address: '3751 N Tracy Blvd Tracy CALIFORNIA 95304 US' },
+        ] as any,
+        flights: [],
+        tours: [],
+        rentals: [],
+      },
+      'Yosemite National Park'
+    );
+
+    expect(location).toBe('Tracy, CALIFORNIA, US');
+  });
+
+  test('uses the first arrival airport for day weather when lodging is unavailable', () => {
+    const location = buildDayWeatherLocation(
+      {
+        lodgings: [],
+        flights: [
+          { arrival_airport_code: 'OTP', arrival_location: 'Bucharest' },
+          { arrival_airport_code: 'CLJ', arrival_location: 'Cluj-Napoca' },
+        ] as any,
+        tours: [{ startLocation: 'Trailhead' }] as any,
+        rentals: [{ pickupLocation: 'Rental counter' }] as any,
+      },
+      'Romania'
+    );
+
+    expect(location).toBe('OTP');
+  });
+
   test('formats flight summary', () => {
     const summary = formatFlightSummary({
       id: 'f1',
@@ -250,7 +309,7 @@ describe('Overview UI (nested itinerary)', () => {
     openLodgingDetails: jest.fn(),
   };
     
-    let fetchMock: jest.SpyInstance;
+    let fetchMock: any;
     const originalFetch = global.fetch;  const renderOverview = async (element: React.ReactElement) => {
     const utils = render(element);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
@@ -512,7 +571,7 @@ describe('Overview UI (nested itinerary)', () => {
     fireEvent.press(await findByTestId('activity-save'));
 
     await waitFor(() => expect(onTourDataChanged).toHaveBeenCalled());
-    const activityCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/activities');
+    const activityCall = fetchMock.mock.calls.find((call: any[]) => call[0] === 'http://localhost:4000/api/activities');
     expect(activityCall).toBeTruthy();
     const payload = JSON.parse(String(activityCall?.[1]?.body ?? '{}'));
     expect(payload.name).toBe('Custom walking tour');
@@ -664,6 +723,50 @@ describe('Overview UI (nested itinerary)', () => {
 
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...weatherTripProps} />);
     expect(await findByTestId('overview-day-card-1-weather')).toBeTruthy();
+    expect(await findByText('☀ 72°F')).toBeTruthy();
+  });
+
+  test('shows weather badges in Celsius when the profile prefers Celsius', async () => {
+    const now = new Date();
+    const start = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+    const end = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+    const startDate = start.toISOString().slice(0, 10);
+    const endDate = end.toISOString().slice(0, 10);
+    fetchMock.mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.includes('/api/itinerary/weather/overview')) {
+        return {
+          ok: true,
+          json: async () => ({
+            weather: [
+              {
+                date: startDate,
+                icon: '☀',
+                temperatureHighC: 22,
+                description: 'Clear',
+                resolvedLocation: 'Test City',
+              },
+            ],
+          }),
+        } as any;
+      }
+      return {
+        ok: true,
+        json: async () => [],
+      } as any;
+    });
+
+    const weatherTripProps = {
+      ...baseProps,
+      trip: {
+        ...baseProps.trip,
+        startDate,
+        endDate,
+      },
+      temperatureUnit: 'celsius' as const,
+    };
+
+    const { findByText } = await renderOverview(<OverviewTab {...weatherTripProps} />);
     expect(await findByText('☀ 22°C')).toBeTruthy();
   });
 

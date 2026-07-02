@@ -12,6 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "types": [
       "@playwright/test",
+      "jest",
       "node"
     ]
   },

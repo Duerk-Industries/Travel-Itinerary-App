@@ -2,20 +2,24 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   fetchFollowedTripsApi,
   loadFollowCodes,
+  loadFollowCodesAsync,
   loadFollowPayloads,
+  loadFollowPayloadsAsync,
   saveFollowCodes,
+  saveFollowCodesAsync,
   saveFollowPayloads,
+  saveFollowPayloadsAsync,
   type FollowedTrip,
 } from '../tabs/follow';
 import type { InvitePayload } from '../utils/inviteCodes';
 import { ApiClientError, requestJson } from '../utils/apiClient';
+import { canAccessWebStorage, readAsync, removeAsync, writeAsync } from '../utils/persistentStorage';
 
 export type { FollowedTrip };
 
 export const pendingFollowCodeStorageKey = 'stp.pendingFollowCode';
 
-const hasWindow = (): boolean =>
-  typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+const hasWindow = (): boolean => canAccessWebStorage();
 
 const readPendingFollowCode = (): string | null => {
   if (!hasWindow()) return null;
@@ -61,23 +65,55 @@ export const useFollowedTrips = ({
   );
   const [pendingFollowCode, setPendingFollowCode] = useState<string | null>(() => readPendingFollowCode());
 
-  // Persist generated codes + payloads on change.
+  // Native hydration: pull persisted follow codes/payloads/pendingCode from
+  // AsyncStorage after the initial render. (Web reads them synchronously in
+  // the useState initializers above.)
+  useEffect(() => {
+    if (hasWindow()) return;
+    let cancelled = false;
+    void (async () => {
+      const [codes, payloads, pending] = await Promise.all([
+        loadFollowCodesAsync(),
+        loadFollowPayloadsAsync(),
+        readAsync(pendingFollowCodeStorageKey),
+      ]);
+      if (cancelled) return;
+      if (codes && Object.keys(codes).length) setFollowCodes(codes);
+      if (payloads && Object.keys(payloads).length) setFollowCodePayloads(payloads);
+      const trimmed = pending?.trim();
+      if (trimmed) setPendingFollowCode(trimmed);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Persist generated codes + payloads on change (web sync, native async).
   useEffect(() => {
     if (hasWindow()) saveFollowCodes(followCodes);
+    else void saveFollowCodesAsync(followCodes);
   }, [followCodes]);
 
   useEffect(() => {
     if (hasWindow()) saveFollowPayloads(followCodePayloads);
+    else void saveFollowPayloadsAsync(followCodePayloads);
   }, [followCodePayloads]);
 
   // Persist pendingFollowCode so it survives a page reload between login
   // and the moment the user accepts/rejects the follow prompt.
   useEffect(() => {
-    if (!hasWindow()) return;
+    if (hasWindow()) {
+      if (pendingFollowCode) {
+        window.localStorage.setItem(pendingFollowCodeStorageKey, pendingFollowCode);
+      } else {
+        window.localStorage.removeItem(pendingFollowCodeStorageKey);
+      }
+      return;
+    }
     if (pendingFollowCode) {
-      window.localStorage.setItem(pendingFollowCodeStorageKey, pendingFollowCode);
+      void writeAsync(pendingFollowCodeStorageKey, pendingFollowCode);
     } else {
-      window.localStorage.removeItem(pendingFollowCodeStorageKey);
+      void removeAsync(pendingFollowCodeStorageKey);
     }
   }, [pendingFollowCode]);
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { canAccessWebStorage, readAsync, readSync, writeAsync, writeSync } from '../utils/persistentStorage';
 
 /**
  * A single queued write captured while the client was offline. The `kind`
@@ -22,14 +23,9 @@ export interface PendingWrite<TArgs = unknown> {
 const STORAGE_KEY = 'stp.pending-writes';
 const DEFAULT_MAX_ATTEMPTS = 5;
 
-const hasWindow = (): boolean =>
-  typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-
-const readQueue = (): PendingWrite[] => {
-  if (!hasWindow()) return [];
+const parseQueue = (raw: string | null): PendingWrite[] => {
+  if (!raw) return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as PendingWrite[]) : [];
   } catch {
@@ -37,13 +33,14 @@ const readQueue = (): PendingWrite[] => {
   }
 };
 
-const writeQueue = (queue: PendingWrite[]): void => {
-  if (!hasWindow()) return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
-  } catch {
-    // quota errors are non-fatal — a dropped entry is better than a thrown
-    // render.
+const readQueueSync = (): PendingWrite[] => parseQueue(readSync(STORAGE_KEY));
+
+const persistQueue = (queue: PendingWrite[]): void => {
+  const serialized = JSON.stringify(queue);
+  if (canAccessWebStorage()) {
+    writeSync(STORAGE_KEY, serialized);
+  } else {
+    void writeAsync(STORAGE_KEY, serialized);
   }
 };
 
@@ -80,8 +77,9 @@ export interface UsePendingWritesResult {
 }
 
 /**
- * Hook that persists pending writes to `localStorage` and exposes a replay
- * API. Pairs with `useRetryableMutation` + `useConnectionState`:
+ * Hook that persists pending writes via the hybrid persistentStorage helper
+ * (localStorage on web, AsyncStorage on native) and exposes a replay API.
+ * Pairs with `useRetryableMutation` + `useConnectionState`:
  *
  *   - Call site that just failed with `!navigator.onLine` → `enqueue(kind, args)`.
  *   - Root effect watches `useConnectionState().status === 'online'` →
@@ -96,14 +94,32 @@ export function usePendingWrites(
   opts: UsePendingWritesOptions = {},
 ): UsePendingWritesResult {
   const maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-  const [pending, setPending] = useState<PendingWrite[]>(() => readQueue());
+  const [pending, setPending] = useState<PendingWrite[]>(() => readQueueSync());
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
 
   const persist = useCallback((next: PendingWrite[]) => {
     pendingRef.current = next;
-    writeQueue(next);
+    persistQueue(next);
     setPending(next);
+  }, []);
+
+  // Native hydration: the synchronous initial read returns [] on native; pull
+  // the persisted queue from AsyncStorage and adopt it if non-empty.
+  useEffect(() => {
+    if (canAccessWebStorage()) return;
+    let cancelled = false;
+    void (async () => {
+      const raw = await readAsync(STORAGE_KEY);
+      if (cancelled) return;
+      const queue = parseQueue(raw);
+      if (queue.length === 0) return;
+      pendingRef.current = queue;
+      setPending(queue);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const enqueue = useCallback(<TArgs>(kind: string, args: TArgs): string => {
@@ -160,11 +176,11 @@ export function usePendingWrites(
   }, [maxAttempts, persist]);
 
   // Re-hydrate from storage whenever the window gains focus — another tab
-  // may have mutated the same queue.
+  // may have mutated the same queue. (Web only — native is single-instance.)
   useEffect(() => {
-    if (!hasWindow()) return;
+    if (!canAccessWebStorage()) return;
     const onFocus = () => {
-      const stored = readQueue();
+      const stored = readQueueSync();
       if (JSON.stringify(stored) !== JSON.stringify(pendingRef.current)) {
         setPending(stored);
         pendingRef.current = stored;

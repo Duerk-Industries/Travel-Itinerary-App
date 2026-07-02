@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React from 'react';
 import { render, fireEvent, within, waitFor } from '@testing-library/react-native';
@@ -77,7 +79,11 @@ describe('LodgingTab', () => {
             />
         );
 
-        expect(getByTestId('lodging-table-horizontal-scroll').props.horizontal).toBe(true);
+        const tableScroll = getByTestId('lodging-table-horizontal-scroll');
+        expect(tableScroll.props.horizontal).toBe(true);
+        expect(tableScroll.props.nestedScrollEnabled).toBe(true);
+        expect(tableScroll.props.showsHorizontalScrollIndicator).toBe(true);
+        expect(tableScroll.props.directionalLockEnabled).toBe(true);
         const row1 = getByTestId('lodging-row-l1');
         expect(within(row1).getByText('Hotel 1')).toBeTruthy();
         expect(within(row1).getByText(formatShortDate('2025-01-01'))).toBeTruthy();

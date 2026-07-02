@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
 import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
+import { type TemperatureUnit, normalizeTemperatureUnit } from '../utils/temperatureUnit';
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
 import PackingListTable from '../components/PackingListTable';
+import PremiumSubscriptionPanel from '../components/PremiumSubscriptionPanel';
+import { useBillingStatus } from '../hooks/useBillingStatus';
+import { fetchBillingPlans, type PlanInfo } from '../utils/billing';
 import { getAppTheme } from '../theme/theme';
 import { type Trait } from './traits';
 
@@ -19,6 +23,7 @@ export interface AccountProfile {
   preferredAirport: string;
   mapPreference?: MapApp;
   appearancePreference: AppearancePreference;
+  temperatureUnit: TemperatureUnit;
   entitlements?: {
     costTracking?: boolean;
   };
@@ -79,6 +84,7 @@ export const fetchAccountProfile = async ({
     const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || data.email || 'Traveler';
     const mapPreference = isMapApp(data.mapPreference) ? data.mapPreference : undefined;
     const appearancePreference = isAppearancePreference(data.appearancePreference) ? data.appearancePreference : undefined;
+    const temperatureUnit = normalizeTemperatureUnit(data.temperatureUnit);
     if (mapPreference && setMapPreference) setMapPreference(mapPreference);
     if (appearancePreference && setAppearancePreference) setAppearancePreference(appearancePreference);
     setAccountProfile((prev) => ({
@@ -89,6 +95,7 @@ export const fetchAccountProfile = async ({
       preferredAirport: data.preferredAirport ?? '',
       mapPreference: mapPreference ?? prev.mapPreference ?? 'google',
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
+      temperatureUnit,
       entitlements: data.entitlements ?? prev.entitlements,
     }));
     setUserName(fullName);
@@ -154,7 +161,7 @@ interface AccountTabProps {
   onChangeMapApp: (pref: MapApp) => void;
   appearancePreference: AppearancePreference;
   onChangeAppearancePreference: (pref: AppearancePreference) => void;
-  saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
+  saveSession: (token: string, name: string, page?: string, email?: string | null) => void | Promise<void>;
   headers: Headers;
   jsonHeaders: Headers;
   airportOptions: string[];
@@ -231,6 +238,29 @@ const AccountTab: React.FC<AccountTabProps> = ({
   const colorScheme = useColorScheme();
   const theme = getAppTheme(appearancePreference, colorScheme);
   const [showPackingList, setShowPackingList] = useState(false);
+  const [billingPlans, setBillingPlans] = useState<PlanInfo[]>([]);
+  const {
+    billingStatus,
+    checkoutSuccessMessage,
+    clearCheckoutSuccessMessage,
+    refresh: refreshBillingStatus,
+  } = useBillingStatus({ backendUrl, token: userToken });
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadBillingPlans = async () => {
+      if (!userToken) {
+        setBillingPlans([]);
+        return;
+      }
+      const plans = await fetchBillingPlans(backendUrl, userToken);
+      if (!cancelled) setBillingPlans(plans);
+    };
+    loadBillingPlans();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl, userToken]);
 
   return (
     <View>
@@ -254,6 +284,17 @@ const AccountTab: React.FC<AccountTabProps> = ({
         onSearchAirports={onSearchAirports}
         logout={logout}
         styles={styles}
+      />
+      <PremiumSubscriptionPanel
+        backendUrl={backendUrl}
+        token={userToken}
+        billingStatus={billingStatus}
+        plans={billingPlans}
+        onRefresh={refreshBillingStatus}
+        checkoutSuccessMessage={checkoutSuccessMessage}
+        onDismissCheckoutSuccess={clearCheckoutSuccessMessage}
+        appearancePreference={appearancePreference}
+        systemColorScheme={colorScheme}
       />
       <FamilyRelationships
         backendUrl={backendUrl}
@@ -332,16 +373,16 @@ const AccountTab: React.FC<AccountTabProps> = ({
 };
 
 const localStyles = StyleSheet.create({
-  packingLauncher: { borderWidth: 1, borderRadius: 8, padding: 14, marginVertical: 12, gap: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  packingLauncher: { borderWidth: 1, borderRadius: 8, padding: 14, marginVertical: 12, gap: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' },
   packingLauncherText: { flex: 1, gap: 4 },
-  packingTitle: { fontSize: 18, fontWeight: '700' },
+  packingTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
   packingMeta: { fontSize: 13 },
-  packingButton: { alignSelf: 'center' },
+  packingButton: { alignSelf: 'center', maxWidth: '100%' },
   modalOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
   modalCard: { width: '100%', maxWidth: 980, maxHeight: '88%', borderWidth: 1, borderRadius: 8, padding: 16 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
-  modalTitle: { fontSize: 20, fontWeight: '700' },
-  closeButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  modalHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  modalTitle: { fontSize: 20, fontWeight: '700', flexShrink: 1 },
+  closeButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   closeText: { fontSize: 18, fontWeight: '700' },
   modalBody: { maxHeight: 680 },
   modalBodyContent: { paddingBottom: 8 },

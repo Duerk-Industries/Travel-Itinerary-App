@@ -67,6 +67,9 @@ export const isLocalEnv = (): boolean => {
   if (process.env.K_SERVICE) {
     return false;
   }
+  if (getEnvFlag('RUN_LOCAL')) {
+    return true;
+  }
   // Allow E2E test runners to signal local-mode without requiring a .local_env file.
   if (getEnvFlag('E2E_MODE')) {
     return true;

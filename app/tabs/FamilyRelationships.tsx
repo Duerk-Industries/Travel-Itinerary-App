@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 
@@ -75,7 +75,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     if (!userToken) return;
     const { firstName, lastName, email } = fellowForm;
     if (!firstName.trim() || !lastName.trim()) {
-      alert('Enter first and last name');
+      Alert.alert('Enter first and last name');
       return;
     }
     const res = await fetch(`${backendUrl}/api/account/fellow-travelers`, {
@@ -85,7 +85,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert(data.error || 'Unable to add fellow traveler');
+      Alert.alert(data.error || 'Unable to add fellow traveler');
       return;
     }
     setFellowTravelers(data);
@@ -105,7 +105,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert(data.error || 'Unable to update fellow traveler');
+      Alert.alert(data.error || 'Unable to update fellow traveler');
       return;
     }
     setFellowTravelers(data);
@@ -121,7 +121,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert(data.error || 'Unable to remove fellow traveler');
+      Alert.alert(data.error || 'Unable to remove fellow traveler');
       return;
     }
     setFellowTravelers(data);
@@ -131,7 +131,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     if (!userToken) return;
     const { givenName, familyName, relationship } = familyForm;
     if (!givenName.trim() || !familyName.trim()) {
-      alert('Fill out given and family name');
+      Alert.alert('Fill out given and family name');
       return;
     }
     const payload = {
@@ -145,7 +145,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert((data as any).error || 'Unable to add family member');
+      Alert.alert((data as any).error || 'Unable to add family member');
       return;
     }
     setFamilyRelationships(data);
@@ -158,7 +158,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     const res = await fetch(`${backendUrl}/api/account/family/${id}/accept`, { method: 'PATCH', headers });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert((data as any).error || 'Unable to accept relationship');
+      Alert.alert((data as any).error || 'Unable to accept relationship');
       return;
     }
     setFamilyRelationships(data);
@@ -169,7 +169,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     const res = await fetch(`${backendUrl}/api/account/family/${id}/reject`, { method: 'PATCH', headers });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert((data as any).error || 'Unable to reject relationship');
+      Alert.alert((data as any).error || 'Unable to reject relationship');
       return;
     }
     setFamilyRelationships(data);
@@ -180,7 +180,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     const res = await fetch(`${backendUrl}/api/account/family/${id}`, { method: 'DELETE', headers });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert((data as any).error || 'Unable to remove relationship');
+      Alert.alert((data as any).error || 'Unable to remove relationship');
       return;
     }
     setFamilyRelationships(data);
@@ -199,7 +199,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
-      alert((data as any).error || 'Unable to update family profile');
+      Alert.alert((data as any).error || 'Unable to update family profile');
       return;
     }
     setFamilyRelationships(data);

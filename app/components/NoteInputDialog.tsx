@@ -50,7 +50,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
         <Pressable
           style={styles.dialog}
           onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
-          accessibilityRole="dialog"
+          accessibilityRole={'dialog' as any}
           accessibilityLabel="Add a note"
           testID="note-dialog"
         >

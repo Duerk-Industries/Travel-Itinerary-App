@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import HorizontalTableScroll from './HorizontalTableScroll';
 import { createInitialCarRentalDraft, type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import type { GroupMemberOption } from '../tabs/transfers';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -332,8 +333,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           </TouchableOpacity>
         ) : null}
       </View>
-      <ScrollView
-        horizontal
+      <HorizontalTableScroll
         style={styles.tableScroll}
         contentContainerStyle={styles.tableScrollContent}
         testID="car-rentals-table-scroll"
@@ -435,7 +435,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           </View>
         ))}
       </View>
-      </ScrollView>
+      </HorizontalTableScroll>
 
       <DialogShell
         visible={editorOpen}

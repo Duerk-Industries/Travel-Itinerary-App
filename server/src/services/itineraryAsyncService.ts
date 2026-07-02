@@ -70,6 +70,60 @@ type QueueInput = {
 };
 
 const jobs = new Map<string, AsyncItineraryJob>();
+const jobRuns = new Map<string, Promise<void>>();
+
+// Cap the in-memory job store so long-lived server processes don't accumulate
+// completed jobs indefinitely. We keep the most-recently-touched N jobs; this
+// covers in-flight + recently-finished jobs that the client may still poll.
+// Tunable via env if a deploy needs a different ceiling.
+const JOB_RETENTION_LIMIT = Number(process.env.ITINERARY_JOB_RETENTION_LIMIT ?? 5000);
+// Completed/failed jobs older than this are eligible for pruning regardless
+// of the count cap, so a quiet server doesn't keep stale jobs around forever.
+const JOB_RETENTION_TTL_MS = Number(
+  process.env.ITINERARY_JOB_RETENTION_TTL_MS ?? 24 * 60 * 60 * 1000,
+);
+
+const pruneStaleJobs = (
+  opts: { limit?: number; ttlMs?: number; now?: number } = {},
+): void => {
+  if (jobs.size === 0) return;
+  const limit = opts.limit ?? JOB_RETENTION_LIMIT;
+  const ttlMs = opts.ttlMs ?? JOB_RETENTION_TTL_MS;
+  const now = opts.now ?? Date.now();
+
+  // Phase 1: drop any terminal job whose updatedAt is older than the TTL.
+  if (ttlMs > 0) {
+    for (const [id, job] of jobs) {
+      if (job.status !== 'completed' && job.status !== 'failed') continue;
+      const updated = Date.parse(job.updatedAt);
+      if (Number.isFinite(updated) && now - updated > ttlMs) {
+        jobs.delete(id);
+      }
+    }
+  }
+
+  // Phase 2: enforce the count cap by evicting oldest terminal jobs first,
+  // and only falling back to oldest jobs of any status if still over the cap.
+  if (limit > 0 && jobs.size > limit) {
+    const sortable: Array<{ id: string; updated: number; terminal: boolean }> = [];
+    for (const [id, job] of jobs) {
+      sortable.push({
+        id,
+        updated: Date.parse(job.updatedAt) || 0,
+        terminal: job.status === 'completed' || job.status === 'failed',
+      });
+    }
+    // Terminal-first, then oldest-first.
+    sortable.sort((a, b) => {
+      if (a.terminal !== b.terminal) return a.terminal ? -1 : 1;
+      return a.updated - b.updated;
+    });
+    while (jobs.size > limit && sortable.length) {
+      const victim = sortable.shift();
+      if (victim) jobs.delete(victim.id);
+    }
+  }
+};
 
 const nowIso = (): string => new Date().toISOString();
 
@@ -617,6 +671,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripStartMonth: input.tripStartMonth,
       tripStartYear: input.tripStartYear,
       tripIdSeed: input.tripId,
+      usageWindowKey: input.usageWindowKey,
     });
 
     const itineraryId = await ensureItineraryId({
@@ -690,11 +745,51 @@ export const enqueueAsyncItineraryJob = (input: QueueInput): AsyncItineraryJob =
     updatedAt: now,
   };
   jobs.set(id, job);
+  // Opportunistic prune at the moment of growth — cheap, and avoids needing
+  // a separate timer/interval that would also have to be cleaned up.
+  pruneStaleJobs();
   logInfo(`[itinerary][async] queued job=${id} trip=${input.tripId}`);
-  setTimeout(() => {
-    void runJob(id, input);
-  }, 0);
+  const runPromise = new Promise<void>((resolve, reject) => {
+    setTimeout(() => {
+      runJob(id, input).then(resolve, reject);
+    }, 0);
+  });
+  jobRuns.set(id, runPromise);
+  runPromise.finally(() => {
+    if (jobRuns.get(id) === runPromise) {
+      jobRuns.delete(id);
+    }
+  }).catch(() => undefined);
   return job;
 };
 
 export const getAsyncItineraryJob = (jobId: string): AsyncItineraryJob | null => jobs.get(jobId) ?? null;
+
+const waitForJobForTest = async (jobId: string, timeoutMs = 10000): Promise<AsyncItineraryJob | null> => {
+  const runPromise = jobRuns.get(jobId);
+  if (runPromise) {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        runPromise,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error(`Timed out waiting for itinerary job ${jobId}`)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+  return getAsyncItineraryJob(jobId);
+};
+
+// Test-only helper. Lets the regression test exercise the prune logic
+// without having to enqueue thousands of real jobs.
+export const __testing = {
+  jobs,
+  jobRuns,
+  waitForJob: waitForJobForTest,
+  pruneStaleJobs,
+  JOB_RETENTION_LIMIT,
+  JOB_RETENTION_TTL_MS,
+};

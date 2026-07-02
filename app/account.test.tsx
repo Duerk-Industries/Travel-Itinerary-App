@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { View } from 'react-native';
@@ -46,6 +48,7 @@ describe('AccountTab', () => {
       homeAddress: '',
       preferredAirport: '',
       appearancePreference: 'auto' as const,
+      temperatureUnit: 'fahrenheit' as const,
     },
     setAccountProfile: jest.fn(),
     familyRelationships: [],

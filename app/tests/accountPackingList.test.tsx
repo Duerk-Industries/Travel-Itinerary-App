@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
@@ -27,6 +29,7 @@ const defaultProps = {
     homeAddress: '',
     preferredAirport: '',
     appearancePreference: 'auto' as const,
+    temperatureUnit: 'fahrenheit' as const,
   },
   setAccountProfile: jest.fn(),
   familyRelationships: [],

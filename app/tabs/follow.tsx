@@ -1,6 +1,8 @@
 import React from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { decodeInviteCode, encodeInviteCode, InvitePayload } from '../utils/inviteCodes';
+import { copyToClipboard } from '../utils/clipboard';
+import { canAccessWebStorage, readAsync, writeAsync, removeAsync } from '../utils/persistentStorage';
 
 export type FollowedTrip = {
   tripId: string;
@@ -41,6 +43,36 @@ export const loadFollowPayloads = (): Record<string, InvitePayload> => {
 export const saveFollowPayloads = (payloads: Record<string, InvitePayload>) => {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(followPayloadsKey, JSON.stringify(payloads));
+};
+
+export const loadFollowCodesAsync = async (): Promise<Record<string, string>> => {
+  if (canAccessWebStorage()) return loadFollowCodes();
+  const raw = await readAsync(followCodesKey);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, string>;
+  } catch {
+    return {};
+  }
+};
+
+export const saveFollowCodesAsync = async (codes: Record<string, string>): Promise<void> => {
+  await writeAsync(followCodesKey, JSON.stringify(codes));
+};
+
+export const loadFollowPayloadsAsync = async (): Promise<Record<string, InvitePayload>> => {
+  if (canAccessWebStorage()) return loadFollowPayloads();
+  const raw = await readAsync(followPayloadsKey);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, InvitePayload>;
+  } catch {
+    return {};
+  }
+};
+
+export const saveFollowPayloadsAsync = async (payloads: Record<string, InvitePayload>): Promise<void> => {
+  await writeAsync(followPayloadsKey, JSON.stringify(payloads));
 };
 
 export const fetchFollowedTripsApi = async (backendUrl: string, headers: Record<string, string>): Promise<FollowedTrip[]> => {
@@ -347,10 +379,7 @@ export const FollowTab: React.FC<FollowTabProps> = ({
                       <TouchableOpacity
                         style={[styles.button, styles.smallButton]}
                         onPress={() => {
-                          const text = code;
-                          if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-                            navigator.clipboard.writeText(text).catch(() => undefined);
-                          }
+                          void copyToClipboard(code);
                         }}
                       >
                         <Text style={styles.buttonText}>Copy</Text>

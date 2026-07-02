@@ -671,7 +671,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
       </View>
 
       {selectedItem ? (
-        <Modal transparent animationType="fade" visible>
+        <Modal transparent animationType="fade" visible onRequestClose={() => setSelectedItem(null)}>
           <View style={styles.modalOverlay}>
             <View style={[styles.modalCard, { maxWidth: 720 }]}>
               <ScrollView style={{ maxHeight: 520 }}>

@@ -59,6 +59,8 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
+  const imageHeight = Math.max(170, Math.min(260, width * 0.52));
+  const mapHeight = Math.max(150, Math.min(220, width * 0.45));
   const detailStyles = useMemo(() => buildDetailStyles(theme), [theme]);
 
   const [placeDetails, setPlaceDetails] = useState<PlaceDetailsPayload | null>(null);
@@ -146,13 +148,20 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
       cardStyle={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}
       showTitle={false}
     >
-        <ScrollView>
-          <View style={detailStyles.imageWrap}>
+        <ScrollView
+          style={{ flexShrink: 1, minHeight: 0 }}
+          contentContainerStyle={{ paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <View style={[detailStyles.imageWrap, { height: imageHeight }]}>
             {imageUrl ? (
               <Image source={imageSource} style={detailStyles.image} resizeMode="cover" />
             ) : (
               <View style={detailStyles.imageFallback}>
-                <Text style={styles.helperText}>No photo available</Text>
+                <Text style={detailStyles.mutedText}>No photo available</Text>
               </View>
             )}
             <TouchableOpacity
@@ -167,7 +176,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
           <View style={detailStyles.headerRow}>
             <View style={detailStyles.headerMeta}>
               <Text style={detailStyles.title} accessibilityRole="header">{lodging.name}</Text>
-              <Text style={[styles.helperText, { marginTop: 2 }]} numberOfLines={2}>
+              <Text style={[detailStyles.mutedText, { marginTop: 2 }]} numberOfLines={2}>
                 {lodging.address || 'Address not available'}
               </Text>
             </View>
@@ -226,7 +235,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
           </View>
           {mapImageUrl ? (
             <View style={detailStyles.mapCard}>
-              <Image style={detailStyles.mapImage} source={mapImageSource} resizeMode="cover" />
+              <Image style={[detailStyles.mapImage, { height: mapHeight }]} source={mapImageSource} resizeMode="cover" />
               <View style={detailStyles.mapMeta}>
                 <Text style={detailStyles.summaryLabel}>Location preview</Text>
                 <Text style={detailStyles.summaryValue} numberOfLines={2}>
@@ -330,6 +339,10 @@ const buildDetailStyles = (theme?: AppTheme) => StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: theme?.colors.text ?? '#0f172a',
+  },
+  mutedText: {
+    color: theme?.colors.textMuted ?? '#64748b',
+    fontSize: 13,
   },
   statusBadge: {
     borderRadius: 999,

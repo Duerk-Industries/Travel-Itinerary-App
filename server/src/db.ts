@@ -476,3 +476,71 @@ export const countUnreadMessages = async (...args: Parameters<ReturnType<typeof 
   adapter().countUnreadMessages(...args);
 export const listUserAuthoredItems = async (...args: Parameters<ReturnType<typeof adapter>['listUserAuthoredItems']>) =>
   adapter().listUserAuthoredItems(...args);
+
+// ---- Stripe Billing facade exports ----
+export const getBillingCustomerByUserId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingCustomerByUserId']>) =>
+  adapter().getBillingCustomerByUserId(...args);
+export const getBillingCustomerByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingCustomerByStripeId']>) =>
+  adapter().getBillingCustomerByStripeId(...args);
+export const upsertBillingCustomer = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingCustomer']>) =>
+  adapter().upsertBillingCustomer(...args);
+export const getBillingTrialUsageByEmail = async (...args: Parameters<ReturnType<typeof adapter>['getBillingTrialUsageByEmail']>) =>
+  adapter().getBillingTrialUsageByEmail(...args);
+export const markBillingTrialUsed = async (...args: Parameters<ReturnType<typeof adapter>['markBillingTrialUsed']>) =>
+  adapter().markBillingTrialUsed(...args);
+export const claimBillingNotification = async (...args: Parameters<ReturnType<typeof adapter>['claimBillingNotification']>) =>
+  adapter().claimBillingNotification(...args);
+export const markBillingNotificationEmailSent = async (...args: Parameters<ReturnType<typeof adapter>['markBillingNotificationEmailSent']>) =>
+  adapter().markBillingNotificationEmailSent(...args);
+export const listBillingNotificationsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listBillingNotificationsForUser']>) =>
+  adapter().listBillingNotificationsForUser(...args);
+export const getBillingSubscriptionByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingSubscriptionByStripeId']>) =>
+  adapter().getBillingSubscriptionByStripeId(...args);
+export const listActiveBillingSubscriptionsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listActiveBillingSubscriptionsForUser']>) =>
+  adapter().listActiveBillingSubscriptionsForUser(...args);
+export const claimBillingCheckout = async (...args: Parameters<ReturnType<typeof adapter>['claimBillingCheckout']>) =>
+  adapter().claimBillingCheckout(...args);
+export const completeBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['completeBillingCheckoutClaim']>) =>
+  adapter().completeBillingCheckoutClaim(...args);
+export const releaseBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['releaseBillingCheckoutClaim']>) =>
+  adapter().releaseBillingCheckoutClaim(...args);
+export const clearBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['clearBillingCheckoutClaim']>) =>
+  adapter().clearBillingCheckoutClaim(...args);
+export const upsertBillingSubscription = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingSubscription']>) =>
+  adapter().upsertBillingSubscription(...args);
+export const revokeBillingSubscriptionAccess = async (...args: Parameters<ReturnType<typeof adapter>['revokeBillingSubscriptionAccess']>) =>
+  adapter().revokeBillingSubscriptionAccess(...args);
+export const restoreBillingSubscriptionAccess = async (...args: Parameters<ReturnType<typeof adapter>['restoreBillingSubscriptionAccess']>) =>
+  adapter().restoreBillingSubscriptionAccess(...args);
+export const setPastDueSince = async (...args: Parameters<ReturnType<typeof adapter>['setPastDueSince']>) =>
+  adapter().setPastDueSince(...args);
+export const clearPastDueSince = async (...args: Parameters<ReturnType<typeof adapter>['clearPastDueSince']>) =>
+  adapter().clearPastDueSince(...args);
+export const listStaleSubscriptionsForReconciliation = async (...args: Parameters<ReturnType<typeof adapter>['listStaleSubscriptionsForReconciliation']>) =>
+  adapter().listStaleSubscriptionsForReconciliation(...args);
+export const listPastDueBillingSubscriptions = async (...args: Parameters<ReturnType<typeof adapter>['listPastDueBillingSubscriptions']>) =>
+  adapter().listPastDueBillingSubscriptions(...args);
+export const claimStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['claimStripeWebhookEvent']>) =>
+  adapter().claimStripeWebhookEvent(...args);
+export const markStripeWebhookEventProcessed = async (...args: Parameters<ReturnType<typeof adapter>['markStripeWebhookEventProcessed']>) =>
+  adapter().markStripeWebhookEventProcessed(...args);
+export const markStripeWebhookEventFailed = async (...args: Parameters<ReturnType<typeof adapter>['markStripeWebhookEventFailed']>) =>
+  adapter().markStripeWebhookEventFailed(...args);
+export const getStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['getStripeWebhookEvent']>) =>
+  adapter().getStripeWebhookEvent(...args);
+
+// ---- Billing plan config ----
+export const listBillingPlanConfigs = async (...args: Parameters<ReturnType<typeof adapter>['listBillingPlanConfigs']>) =>
+  adapter().listBillingPlanConfigs(...args);
+export const getBillingPlanConfig = async (...args: Parameters<ReturnType<typeof adapter>['getBillingPlanConfig']>) =>
+  adapter().getBillingPlanConfig(...args);
+export const upsertBillingPlanConfig = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingPlanConfig']>) =>
+  adapter().upsertBillingPlanConfig(...args);
+
+// ---- Billing price history ----
+export const listBillingPriceHistory = async (...args: Parameters<ReturnType<typeof adapter>['listBillingPriceHistory']>) =>
+  adapter().listBillingPriceHistory(...args);
+export const insertBillingPriceHistory = async (...args: Parameters<ReturnType<typeof adapter>['insertBillingPriceHistory']>) =>
+  adapter().insertBillingPriceHistory(...args);
+export const deactivateOldPricesForPlan = async (...args: Parameters<ReturnType<typeof adapter>['deactivateOldPricesForPlan']>) =>
+  adapter().deactivateOldPricesForPlan(...args);

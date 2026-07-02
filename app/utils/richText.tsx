@@ -57,7 +57,7 @@ export const renderRichTextBlocks = (
           <Text
             key={`rt-token-${idx}-${i}`}
             style={[token.bold ? styles.bold : null, token.italic ? styles.italic : null, token.link ? styles.link : null]}
-            onPress={token.link ? () => Linking.openURL(token.link as string) : undefined}
+            onPress={token.link ? () => { Linking.openURL(token.link as string).catch(() => {}); } : undefined}
           >
             {token.text}
           </Text>

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 let fakeDb: FakeFirestore;
 
 jest.mock('firebase-admin/app', () => ({

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Proves `initDb()` runs pending SQL migrations on startup (Priority 10).
  *

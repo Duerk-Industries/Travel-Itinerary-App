@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import { PassThrough } from 'stream';
 import { app } from '../src/app';

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 describe('isLocalEnv', () => {
   const originalEnv = { ...process.env };
 

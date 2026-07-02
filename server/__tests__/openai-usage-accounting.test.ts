@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import axios from 'axios';
 import { closePool, getApiCostCounter, getUsageCounter, initDb, resetDbAdapter } from '../src/db';
 import { postOpenAiChatCompletion } from '../src/apis/openaiApi';

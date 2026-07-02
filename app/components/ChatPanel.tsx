@@ -38,6 +38,16 @@ interface Props {
 const PANEL_WIDTH = 360;
 const PANEL_HEIGHT = 480;
 
+// On narrow web viewports (phone-sized browsers) cap the panel so it doesn't
+// swallow the entire screen. Use window width when available; fall back to a
+// safe constant so SSR / non-browser environments don't throw.
+const getResponsivePanelWidth = (): number => {
+  if (typeof window !== 'undefined' && window.innerWidth) {
+    return Math.min(PANEL_WIDTH, window.innerWidth - 32);
+  }
+  return PANEL_WIDTH;
+};
+
 const mergeMessagesById = (current: ChatMessage[], incoming: ChatMessage[], prepend = false): ChatMessage[] => {
   const seen = new Set<string>();
   const ordered = prepend ? [...incoming, ...current] : [...current, ...incoming];
@@ -392,7 +402,7 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
     position: 'absolute' as any,
     bottom: 80,
     right: 16,
-    width: PANEL_WIDTH,
+    width: getResponsivePanelWidth(),
     height: PANEL_HEIGHT,
     borderWidth: 1,
     borderColor: theme?.colors.border ?? '#e0e0e0',

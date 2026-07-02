@@ -1,7 +1,6 @@
 // @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Linking,
+import { ActivityIndicator, Alert, Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -11,8 +10,7 @@ import {
   View,
   Image,
   type LayoutChangeEvent,
-  useWindowDimensions,
-} from 'react-native';
+  useWindowDimensions, } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
@@ -24,6 +22,7 @@ import {
 } from '../utils/overviewBuilder';
 import { type MapApp } from '../utils/mapLinks';
 import {
+  computeEndDateFromDuration,
   formatMonthYear,
 } from '../utils/tripDates';
 import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
@@ -75,9 +74,22 @@ import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// AsyncStorage is loaded lazily (see getAsyncStorage below) so the day-card
+// cache import doesn't add @react-native-async-storage/async-storage to the
+// module-evaluation graph of every tab that ends up importing this file.
+type AsyncStorageModule = typeof import('@react-native-async-storage/async-storage').default;
+let _asyncStoragePromise: Promise<AsyncStorageModule | null> | null = null;
+const getAsyncStorage = (): Promise<AsyncStorageModule | null> => {
+  if (!_asyncStoragePromise) {
+    _asyncStoragePromise = import('@react-native-async-storage/async-storage')
+      .then((mod) => mod.default ?? (mod as unknown as AsyncStorageModule))
+      .catch(() => null);
+  }
+  return _asyncStoragePromise;
+};
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSourceGetter } from '../utils/imageSource';
+import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -191,9 +203,11 @@ type OverviewTabProps = {
   defaultPayerId: string | null;
   styles: Record<string, any>;
   mapApp: MapApp;
+  temperatureUnit?: TemperatureUnit;
   aiItineraryPending?: boolean;
   aiItineraryFailedMessage?: string | null;
   editSignal?: number;
+  goToDay1Signal?: number;
   onUpdateCurrency?: (tripId: string, currency: string) => void;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
@@ -268,46 +282,85 @@ type OverviewWeather = {
   resolvedLocation?: string | null;
 };
 
-const compareTimes = (left?: string | null, right?: string | null) => {
-  const toValue = (value?: string | null) => {
-    const match = String(value ?? '').match(/^(\d{1,2}):(\d{2})$/);
-    if (!match) return -1;
-    return Number(match[1]) * 60 + Number(match[2]);
-  };
-  return toValue(left) - toValue(right);
+const normalizeWeatherLocationText = (value?: string | null): string =>
+  String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*,\s*/g, ', ')
+    .trim();
+
+const usStatePattern =
+  '(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)';
+
+const streetSuffixPattern =
+  /\b(?:aly|alley|ave|avenue|blvd|boulevard|cir|circle|ct|court|dr|drive|hwy|highway|ln|lane|pkwy|parkway|pl|place|rd|road|st|street|ter|terrace|trl|trail|way)\b/i;
+
+export const makeWeatherLocationGeofriendly = (
+  location?: string | null,
+  fallbackLocation?: string | null,
+  options: { stripLodgingWords?: boolean } = {}
+): string => {
+  const original = normalizeWeatherLocationText(location);
+  const fallback = normalizeWeatherLocationText(fallbackLocation);
+  if (!original) return fallback;
+
+  const commaParts = original.split(',').map((part) => part.trim()).filter(Boolean);
+  if (commaParts.length >= 3) {
+    const [last, secondLast] = [commaParts[commaParts.length - 1], commaParts[commaParts.length - 2]];
+    const city = commaParts[commaParts.length - 3];
+    const country = /^(?:us|usa|united states)$/i.test(last) ? 'US' : last;
+    const state = secondLast.replace(/\b\d{5}(?:-\d{4})?\b/g, '').trim();
+    if (city && state) return `${city}, ${state}, ${country}`.trim();
+  }
+
+  const stateMatch = original.match(new RegExp(`\\b(${usStatePattern})\\b`, 'i'));
+  if (stateMatch?.index != null) {
+    const beforeState = original.slice(0, stateMatch.index).trim();
+    const afterState = original.slice(stateMatch.index + stateMatch[0].length).trim();
+    const countryMatch = afterState.match(/\b(?:US|USA|United States)\b/i);
+    const country = countryMatch ? 'US' : '';
+    const state = stateMatch[0];
+    const beforeTokens = beforeState.split(/\s+/).filter(Boolean);
+    let suffixIndex = -1;
+    for (let idx = beforeTokens.length - 1; idx >= 0; idx -= 1) {
+      if (streetSuffixPattern.test(beforeTokens[idx])) {
+        suffixIndex = idx;
+        break;
+      }
+    }
+    const cityTokens = beforeTokens.slice(suffixIndex + 1).filter((token) => !/^\d/.test(token));
+    const city = cityTokens.join(' ').trim();
+    if (city) return [city, state, country].filter(Boolean).join(', ');
+  }
+
+  if (options.stripLodgingWords) {
+    const cleanedLodgingName = original
+      .replace(/\b(?:airbnb|hotel|inn|suites?|resort|lodging|accommodations?|by ihg|express)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+-\s+$/g, '')
+      .trim();
+    if (cleanedLodgingName && cleanedLodgingName !== original) return cleanedLodgingName;
+  }
+
+  return original || fallback;
 };
 
 export const buildDayWeatherLocation = (info?: DayLocationInfo | null, fallbackLocation?: string | null) => {
   const fallback = String(fallbackLocation ?? '').trim();
   if (!info) return fallback;
 
-  const lodging = info.lodgings.find((item) => String(item.address ?? '').trim()) ?? info.lodgings[0];
+  const lodging = info.lodgings[0];
   if (lodging) {
-    return String(lodging.address ?? lodging.name ?? '').trim() || fallback;
+    const rawAddress = normalizeWeatherLocationText(lodging.address);
+    const address = rawAddress ? makeWeatherLocationGeofriendly(rawAddress, fallback) : '';
+    if (address) return address;
+    return makeWeatherLocationGeofriendly(lodging.name, fallback, { stripLodgingWords: true }) || fallback;
   }
 
-  const arrivalFlight = [...info.flights]
-    .filter((flight) => String(flight.arrival_location ?? flight.arrival_airport_code ?? '').trim())
-    .sort((a, b) => compareTimes(b.arrival_time, a.arrival_time))[0];
+  const arrivalFlight = info.flights.find((flight) =>
+    String(flight.arrival_airport_code ?? flight.arrival_location ?? '').trim()
+  );
   if (arrivalFlight) {
-    return String(arrivalFlight.arrival_location ?? arrivalFlight.arrival_airport_code ?? '').trim() || fallback;
-  }
-
-  const tour = info.tours.find((item) => String(item.startLocation ?? '').trim()) ?? info.tours[0];
-  if (tour) {
-    return String(tour.startLocation ?? tour.name ?? '').trim() || fallback;
-  }
-
-  const rental = info.rentals.find((item) => String(item.dropoffLocation ?? item.pickupLocation ?? '').trim()) ?? info.rentals[0];
-  if (rental) {
-    return String(rental.dropoffLocation ?? rental.pickupLocation ?? rental.vendor ?? '').trim() || fallback;
-  }
-
-  const departureFlight = [...info.flights]
-    .filter((flight) => String(flight.departure_location ?? flight.departure_airport_code ?? '').trim())
-    .sort((a, b) => compareTimes(a.departure_time, b.departure_time))[0];
-  if (departureFlight) {
-    return String(departureFlight.departure_location ?? departureFlight.departure_airport_code ?? '').trim() || fallback;
+    return String(arrivalFlight.arrival_airport_code ?? arrivalFlight.arrival_location ?? '').trim() || fallback;
   }
 
   return fallback;
@@ -344,9 +397,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   defaultPayerId,
   styles,
   mapApp,
+  temperatureUnit = 'fahrenheit',
   aiItineraryPending,
   aiItineraryFailedMessage,
   editSignal,
+  goToDay1Signal,
   onUpdateCurrency,
   onOpenAddress,
   onRefreshTrips,
@@ -362,6 +417,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
   const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
+  const dayHeroHeight = Math.max(190, Math.min(300, viewportWidth * (isPhoneLayout ? 0.52 : 0.3)));
+  const lodgingThumbnailSize = isPhoneLayout ? 64 : isTabletLayout ? 72 : 80;
   const stripResizeMode = useCallback((style: any) => {
     const flattened = StyleSheet.flatten(style);
     if (!flattened || typeof flattened !== 'object' || !('resizeMode' in flattened)) {
@@ -593,7 +650,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const saveItineraryDetail = async () => {
     if (!itineraryId) return;
     if (!detailDraft.activity.trim()) {
-      alert('Activity is required.');
+      Alert.alert('Activity is required.');
       return;
     }
     const payload = {
@@ -644,7 +701,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Could not create itinerary record');
+        Alert.alert(data.error || 'Could not create itinerary record');
         return null;
       }
       const created = (await res.json()) as { id?: string };
@@ -666,7 +723,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Could not add item');
+        Alert.alert(data.error || 'Could not add item');
         return false;
       }
       const detailsRes = await fetch(`${backendUrl}/api/itineraries/${targetItineraryId}/details`, { headers });
@@ -865,7 +922,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       if (!res.ok && res.status !== 204) {
         const data = await res.json().catch(() => ({}));
-        alert((data as any)?.error || 'Could not delete item');
+        Alert.alert((data as any)?.error || 'Could not delete item');
         return;
       }
       setItineraryDetails((prev) => prev.filter((d) => d.id !== detailId));
@@ -969,8 +1026,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return { startDate: min, endDate: max };
   }, [flights, lodgings, tours, carRentals]);
 
-  const overviewStartDate = displayStartDate ?? eventDateBounds?.startDate ?? null;
-  const overviewEndDate = displayEndDate ?? eventDateBounds?.endDate ?? null;
+  // Trips created via the wizard's "Flexible Timeline" mode (month + duration,
+  // no exact dates) never get a startDate/endDate — synthesize a range from
+  // startMonth/startYear/durationDays so the day-by-day view doesn't collapse
+  // to a single fallback "today" entry.
+  const monthDurationDates = useMemo(() => {
+    const month = trip?.startMonth ?? null;
+    const year = trip?.startYear ?? null;
+    const days = trip?.durationDays ?? null;
+    if (!month || !year || !days) return null;
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = computeEndDateFromDuration(startDate, days);
+    return endDate ? { startDate, endDate } : null;
+  }, [trip?.startMonth, trip?.startYear, trip?.durationDays]);
+
+  const overviewStartDate = displayStartDate ?? monthDurationDates?.startDate ?? eventDateBounds?.startDate ?? null;
+  const overviewEndDate = displayEndDate ?? monthDurationDates?.endDate ?? eventDateBounds?.endDate ?? null;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
@@ -1086,10 +1157,31 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     buildDayCards();
   }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel, trip?.destination]);
 
+  // Lets App.tsx command "jump to Day 1" (e.g. when an AI itinerary finishes generating)
+  // without lifting selectedDay state up. Mirrors the editSignal nonce-prop pattern.
+  // dayCards is built asynchronously above, so the request is "armed" on signal change
+  // and applied once dayCards actually has data, rather than racing it.
+  const lastGoToDay1Signal = useRef(goToDay1Signal);
+  const [pendingGoToDay1, setPendingGoToDay1] = useState(false);
+  useEffect(() => {
+    if (goToDay1Signal !== undefined && goToDay1Signal !== lastGoToDay1Signal.current) {
+      lastGoToDay1Signal.current = goToDay1Signal;
+      setPendingGoToDay1(true);
+    }
+  }, [goToDay1Signal]);
+  useEffect(() => {
+    if (pendingGoToDay1 && dayCards.length) {
+      setSelectedDay(dayCards[0].date);
+      setPendingGoToDay1(false);
+    }
+  }, [pendingGoToDay1, dayCards]);
+
   useEffect(() => {
     const cache = async () => {
       if (!trip?.id || !dayCards.length) return;
-      await AsyncStorage.setItem(`overview.cache.${trip.id}`, JSON.stringify(dayCards));
+      const storage = await getAsyncStorage();
+      if (!storage) return;
+      await storage.setItem(`overview.cache.${trip.id}`, JSON.stringify(dayCards));
     };
     cache().catch(() => undefined);
   }, [dayCards, trip?.id]);
@@ -1099,7 +1191,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (!trip?.id) return;
       if (dayCards.length) return;
       try {
-        const raw = await AsyncStorage.getItem(`overview.cache.${trip.id}`);
+        const storage = await getAsyncStorage();
+        if (!storage) return;
+        const raw = await storage.getItem(`overview.cache.${trip.id}`);
         if (raw) {
           const parsed = JSON.parse(raw) as DayCard[];
           if (Array.isArray(parsed) && parsed.length) {
@@ -1192,48 +1286,54 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel]);
 
   useEffect(() => {
+    let active = true;
+    const fetchOneImage = async (card: DayCard): Promise<[string, string] | null> => {
+      const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
+      const activities = itineraryDetails
+        .filter((detail) => detail.day === dayNumber)
+        .map((detail) => detail.activity)
+        .filter(Boolean);
+      const tourNames = tours
+        .filter((tour) => tour.date === card.date)
+        .map((tour) => tour.name)
+        .filter(Boolean);
+      const contextParts = [...activities, ...tourNames].filter(Boolean);
+      const context = contextParts.join(' | ').slice(0, 200);
+      try {
+        const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
+        const query = [
+          `location=${encodeURIComponent(baseLocation)}`,
+          `day=${encodeURIComponent(card.date)}`,
+          context ? `context=${encodeURIComponent(context)}` : '',
+        ]
+          .filter(Boolean)
+          .join('&');
+        const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
+        const data = await res.json().catch(() => ({}));
+        return data?.url ? [card.date, data.url] : null;
+      } catch {
+        return null;
+      }
+    };
     const fetchImages = async () => {
       if (!dayCards.length) return;
       const missingCards = dayCards.filter((card) => !dayImages[card.date]);
       if (!missingCards.length) return;
+      const results = await Promise.all(missingCards.map(fetchOneImage));
+      if (!active) return;
       const next: Record<string, string> = {};
-      for (let idx = 0; idx < missingCards.length; idx += 1) {
-        const card = missingCards[idx];
-        const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
-        const activities = itineraryDetails
-          .filter((detail) => detail.day === dayNumber)
-          .map((detail) => detail.activity)
-          .filter(Boolean);
-        const tourNames = tours
-          .filter((tour) => tour.date === card.date)
-          .map((tour) => tour.name)
-          .filter(Boolean);
-        const contextParts = [...activities, ...tourNames].filter(Boolean);
-        const context = contextParts.join(' | ').slice(0, 200);
-        try {
-          const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
-          const query = [
-            `location=${encodeURIComponent(baseLocation)}`,
-            `day=${encodeURIComponent(card.date)}`,
-            context ? `context=${encodeURIComponent(context)}` : '',
-          ]
-            .filter(Boolean)
-            .join('&');
-          const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
-          const data = await res.json().catch(() => ({}));
-          if (data?.url) {
-            next[card.date] = data.url;
-          }
-        } catch {
-          // ignore
-        }
-      }
+      results.forEach((entry) => {
+        if (entry) next[entry[0]] = entry[1];
+      });
       if (Object.keys(next).length) {
         setDayImages((prev) => ({ ...prev, ...next }));
       }
     };
     fetchImages().catch(() => undefined);
-  }, [backendUrl, headers, dayCards, dayImages, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -1333,7 +1433,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       durationDays: dateDraft.durationDays,
     });
     if (validationError) {
-      alert(validationError);
+      Alert.alert(validationError);
       return;
     }
     const payload: any = {
@@ -1355,13 +1455,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update trip');
+      Alert.alert(data.error || 'Unable to update trip');
       return;
     }
     if (pendingRemovalIds.length && trip?.id) {
       const removalGroupId = group?.id ?? trip.groupId;
       if (!removalGroupId) {
-        alert('Unable to remove member: missing group id');
+        Alert.alert('Unable to remove member: missing group id');
         return;
       }
       for (const memberId of pendingRemovalIds) {
@@ -1371,7 +1471,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         });
         if (!removeRes.ok) {
           const removeData = await removeRes.json().catch(() => ({}));
-          alert(removeData.error || 'Unable to remove member');
+          Alert.alert(removeData.error || 'Unable to remove member');
           return;
         }
       }
@@ -1407,7 +1507,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const last = travelerDraft.lastName.trim();
     const email = travelerDraft.email.trim();
     if (!first || !last) {
-      alert('Enter first and last name');
+      Alert.alert('Enter first and last name');
       return;
     }
     const guestName = `${first} ${last}`.trim();
@@ -1419,7 +1519,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to add member');
+      Alert.alert(data.error || 'Unable to add member');
       return;
     }
     onRefreshGroupMembers();
@@ -1431,11 +1531,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const saveFlightDetails = async () => {
     if (!editingFlightId || !editingFlightDraft) return;
     if (!trip?.id) {
-      alert('Select an active trip before editing a flight.');
+      Alert.alert('Select an active trip before editing a flight.');
       return;
     }
     if (!editingFlightDraft.passengerIds.length) {
-      alert('Select at least one passenger');
+      Alert.alert('Select at least one passenger');
       return;
     }
     const payload = buildFlightPayload(
@@ -1451,7 +1551,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to save flight');
+        Alert.alert(data.error || 'Unable to save flight');
         return;
       }
       closeFlightEditor();
@@ -1466,7 +1566,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update flight');
+      Alert.alert(data.error || 'Unable to update flight');
       return;
     }
     closeFlightEditor();
@@ -1517,18 +1617,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const saveLodging = async () => {
     if (!trip?.id) {
-      alert('Select an active trip before saving lodging.');
+      Alert.alert('Select an active trip before saving lodging.');
       return;
     }
     const { payload, error } = buildLodgingPayload(lodgingDraft, trip.id, defaultPayerId);
     if (error || !payload) {
-      alert(error || 'Unable to save lodging');
+      Alert.alert(error || 'Unable to save lodging');
       return;
     }
     if (editingLodgingId) {
       const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, editingLodgingId);
       if (!result.ok) {
-        alert(result.error || 'Unable to save lodging');
+        Alert.alert(result.error || 'Unable to save lodging');
         return;
       }
       closeLodgingModal();
@@ -1543,7 +1643,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId,
     });
     if (!result.ok) {
-      alert(result.error || 'Unable to save lodging');
+      Alert.alert(result.error || 'Unable to save lodging');
       return;
     }
     closeLodgingModal();
@@ -1554,7 +1654,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (editingTourId) {
       const { payload, error } = buildActivityPayload(tourDraft, defaultPayerId);
       if (error || !payload) {
-        alert(error || 'Unable to save activity');
+        Alert.alert(error || 'Unable to save activity');
         return;
       }
       const res = await fetch(`${backendUrl}/api/activities/${editingTourId}`, {
@@ -1564,7 +1664,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to save activity');
+        Alert.alert(data.error || 'Unable to save activity');
         return;
       }
       closeTourModal();
@@ -1579,7 +1679,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId,
     });
     if (!result.ok) {
-      alert(result.error || 'Unable to save activity');
+      Alert.alert(result.error || 'Unable to save activity');
       return;
     }
     closeTourModal();
@@ -1594,7 +1694,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     const result = buildCarRentalFromDraft(rentalDraft, defaultPayerId);
     if (!result.rental || result.error) {
-      alert(result.error || 'Unable to save rental car');
+      Alert.alert(result.error || 'Unable to save rental car');
       return;
     }
     onAddCarRental(result.rental);
@@ -1731,7 +1831,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
-      Linking.openURL(url);
+      Linking.openURL(url).catch((err) => Alert.alert('Could not open link', err?.message ?? String(err)));
     }
   };
 
@@ -1868,18 +1968,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
-    if (!info) return 'Free day';
+    if (!info) return itineraryLoading ? 'Loading itinerary...' : 'Free day';
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) return activityDetails[0].activity;
     if (info.tours.length) return info.tours[0].name || 'Activity day';
     if (info.flights.length) return 'Travel day';
     if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
     if (info.rentals.length) return 'Drive day';
+    if (itineraryLoading) return 'Loading itinerary...';
     return 'Free day';
   };
 
   const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
-    if (!info) return ['No itinerary details yet.'];
+    if (!info) return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) {
       return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
@@ -1898,7 +1999,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
     }
     if (info.tours.length) return [];
-    return ['No itinerary details yet.'];
+    return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
   const renderDayBar = (activeDate: string | null) => (
@@ -1948,13 +2049,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const img = dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
-          weather && weather.temperatureHighC != null ? `${weather.icon} ${weather.temperatureHighC}°C` : null;
+          weather && weather.temperatureHighC != null
+            ? `${weather.icon} ${formatTemperatureFromCelsius(weather.temperatureHighC, normalizeTemperatureUnit(temperatureUnit))}`
+            : null;
         return (
           <TouchableOpacity
             testID={testID}
             style={[
               styles.dayHeroCard,
-              isPhoneLayout ? { height: 150 } : isTabletLayout ? { height: 170 } : null,
+              { height: dayHeroHeight },
             ]}
             onPress={onPress}
             disabled={!onPress}
@@ -1988,9 +2091,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text
                 style={[
                   styles.dayHeroTitle,
-                  isPhoneLayout ? { fontSize: 18 } : isTabletLayout ? { fontSize: 20 } : null,
+                  isPhoneLayout ? { fontSize: 18, lineHeight: 23 } : isTabletLayout ? { fontSize: 20 } : null,
                 ]}
-                numberOfLines={2}
+                numberOfLines={isPhoneLayout ? 4 : 3}
                 ellipsizeMode="tail"
               >
                 {title}
@@ -2047,9 +2150,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <ScrollView
               ref={scrollRef}
               style={{ flex: 1, minHeight: 0 }}
-              contentContainerStyle={{ gap: isPhoneLayout ? 12 : 16, paddingTop: isPhoneLayout ? 48 : 56 }}
+              contentContainerStyle={{
+                gap: isPhoneLayout ? 12 : 16,
+                paddingTop: isPhoneLayout ? 48 : 56,
+                paddingBottom: 24,
+              }}
               onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              nestedScrollEnabled
+              contentInsetAdjustmentBehavior="automatic"
             >
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
@@ -2195,9 +2306,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         onPress={() => openLodgingDetails(lodging)}
                       >
                         {lodging.imageUrl ? (
-                          <Image style={lodgingImageStyle} source={getImageSource(lodging.imageUrl)} resizeMode="cover" />
+                          <Image
+                            style={[lodgingImageStyle, { width: lodgingThumbnailSize, height: lodgingThumbnailSize }]}
+                            source={getImageSource(lodging.imageUrl)}
+                            resizeMode="cover"
+                          />
                         ) : (
-                          <View style={styles.lodgingImageFallback} />
+                          <View
+                            style={[
+                              styles.lodgingImageFallback,
+                              { width: lodgingThumbnailSize, height: lodgingThumbnailSize },
+                            ]}
+                          />
                         )}
                         <View style={styles.dayInfoText}>
                           <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
@@ -2227,7 +2347,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   </TouchableOpacity>
                 </View>
                 {(activeDayInfo.details ?? []).length === 0 ? (
-                  <Text style={styles.helperText}>No items yet for this day.</Text>
+                  <Text style={styles.helperText}>
+                    {itineraryLoading ? 'Loading itinerary...' : 'No items yet for this day.'}
+                  </Text>
                 ) : (
                   (activeDayInfo.details ?? []).map((d) => {
                     const isActivity = !d.kind || d.kind === 'activity';
@@ -2250,7 +2372,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </View>
                           ) : d.kind === 'checklist' ? (
                             <View style={{ width: '100%' }}>
-                              <Text style={styles.dayInfoRoute}>{`✅ ${d.activity}`}</Text>
+                              <Text style={[styles.dayInfoRoute, { marginBottom: 4 }]}>{`📋 ${d.activity}`}</Text>
                               {(d.checklistItems ?? []).map((it) => {
                                 const checked = !!it.checkedBy;
                                 return (
@@ -2304,6 +2426,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             accessibilityLabel="Delete item"
                             onPress={() => deleteDetail(d.id)}
                             style={styles.detailDeleteButton}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
                             <Text style={styles.detailDeleteButtonText}>×</Text>
                           </TouchableOpacity>
@@ -2346,9 +2469,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <ScrollView
           ref={scrollRef}
           style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
+          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
           onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
         >
           <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
@@ -2404,9 +2531,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <ScrollView
         ref={scrollRef}
         style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
+        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
         onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        contentInsetAdjustmentBehavior="automatic"
       >
         <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
           <Text style={styles.sectionTitle}>Overview</Text>
@@ -2781,7 +2912,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 member.status === 'pending' && styles.attendeeChipPending,
               ]}
             >
-              <Text style={styles.attendeeText}>{attendeeLabel(member)}</Text>
+              <Text style={styles.attendeeText} numberOfLines={1} ellipsizeMode="tail">{attendeeLabel(member)}</Text>
               {isEditing ? (
                 <TouchableOpacity
                   style={styles.attendeeRemoveButton}
@@ -2990,8 +3121,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
       {trip && aiItineraryPending ? (
-        <View style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}>
-          <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+        <View
+          style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}
+          testID="ai-itinerary-pending-banner"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator size="small" color="#2563eb" testID="ai-itinerary-pending-spinner" />
+            <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+          </View>
           <Text style={styles.helperText}>Your AI trip plan is being generated and will appear here automatically.</Text>
         </View>
       ) : null}

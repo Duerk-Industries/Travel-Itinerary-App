@@ -1,0 +1,53 @@
+# Native auth-form interaction smoke for the installed iOS / Android bundle.
+#
+# This flow stays backend-independent: it proves the release/preview bundle can
+# launch, render controlled React Native inputs, accept keyboard text, and
+# switch between Login/Create modes without JS startup or render failures.
+
+appId:
+  ios: com.duerkindustries.travelitineraryplanner
+  android: com.duerkindustries.travelitineraryplanner
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+
+- assertNotVisible: "WanderBunnies could not start"
+- assertVisible:
+    id: "auth-form"
+    timeout: 30000
+
+- assertVisible:
+    id: "auth-form-mode-login"
+- assertVisible:
+    id: "auth-form-mode-register"
+- assertVisible:
+    id: "auth-form-submit"
+- assertVisible:
+    id: "auth-form-google"
+
+- tapOn:
+    id: "auth-form-mode-register"
+- assertVisible: "First name"
+- assertVisible: "Last name"
+- assertVisible: "Confirm password"
+- assertVisible:
+    id: "auth-form-submit"
+
+- tapOn: "First name"
+- inputText: "Native"
+- tapOn: "Last name"
+- inputText: "Smoke"
+- tapOn: "Email or Username"
+- inputText: "native-smoke@example.com"
+- tapOn: "Password"
+- inputText: "TestPass1!"
+- tapOn: "Confirm password"
+- inputText: "TestPass1!"
+
+- tapOn:
+    id: "auth-form-mode-login"
+- assertVisible: "Email or Username"
+- assertVisible: "Password"
+- assertNotVisible: "Confirm password"
+- assertNotVisible: "WanderBunnies could not start"

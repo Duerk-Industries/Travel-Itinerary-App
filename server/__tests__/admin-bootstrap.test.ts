@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { app } from '../src/app';
 import { initDb, closePool, getUserRole, getCurrentUserTier, findUserByEmail, listAuditLog, setUserRole, deleteAuditLog } from '../src/db';
 import { registerAndLoginWebUser, loginWebUser, cleanupTestUsersByEmail } from './helpers';
@@ -69,6 +71,17 @@ describe('Admin bootstrap', () => {
 
     const role = await getUserRole(userId);
     expect(role).toBe('admin');
+  });
+
+  it('JWT issued by shared OAuth login includes role: admin for tristan.duerk@gmail.com', async () => {
+    const res = await request(app)
+      .post('/api/auth/oauth')
+      .send({ email: BOOTSTRAP_EMAIL_2, provider: 'google' })
+      .expect(200);
+
+    const payload = JSON.parse(Buffer.from(res.body.token.split('.')[1], 'base64url').toString());
+    expect(payload.role).toBe('admin');
+    expect(await getUserRole(payload.userId)).toBe('admin');
   });
 
   it('match is case-insensitive (uppercase email)', async () => {

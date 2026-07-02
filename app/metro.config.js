@@ -1,59 +1,39 @@
+// App-rooted Metro config for `expo start` during local development.
+// Shares its resolver behavior with the workspace-root metro.config.cjs via
+// metro.shared.cjs so EAS builds and local dev cannot diverge.
 const fs = require('fs');
 const path = require('path');
-const { getDefaultConfig } = require('expo/metro-config');
+const { createSharedMetroConfig } = require('../metro.shared.cjs');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '..');
 const projectNodeModules = path.join(projectRoot, 'node_modules');
 const workspaceNodeModules = path.join(workspaceRoot, 'node_modules');
-const pdfjsDistPath = fs.existsSync(path.join(projectNodeModules, 'pdfjs-dist'))
-  ? path.join(projectNodeModules, 'pdfjs-dist')
-  : path.join(workspaceNodeModules, 'pdfjs-dist');
+const workspacePackages = path.join(workspaceRoot, 'packages');
+const escapedWorkspaceRoot = workspaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const config = getDefaultConfig(__dirname);
-const { resolver } = config;
-
-// Add support for svgs
-config.transformer = {
-  ...config.transformer,
-  babelTransformerPath: require.resolve('react-native-svg-transformer'),
-};
-
-config.resolver = {
-  ...resolver,
-  assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),
-  sourceExts: resolver.sourceExts.includes('svg')
-    ? resolver.sourceExts
-    : [...resolver.sourceExts, 'svg'],
-  resolverMainFields: [
-    'react-native',
-    'browser',
-    'module',
-    'main',
-    ...((resolver.resolverMainFields || []).filter(
-      (field) => !['react-native', 'browser', 'module', 'main'].includes(field),
-    )),
+const config = createSharedMetroConfig({
+  projectRoot,
+  primaryNodeModules: projectNodeModules,
+  secondaryNodeModules: workspaceNodeModules,
+  // Watch only the workspace packages app/ imports from (packages/messaging
+  // and packages/domain). Watching the entire workspaceRoot caused Metro's
+  // file watcher to crawl server/, functions/, .firebase-data/ and root
+  // scripts/assets on every change — blockList suppresses resolution but
+  // not the crawl, so HMR latency suffered.
+  watchFolders: [workspacePackages],
+  blockedPaths: [
+    new RegExp(`${escapedWorkspaceRoot}[\\\\/]server[\\\\/].*`),
+    new RegExp(`${escapedWorkspaceRoot}[\\\\/]functions[\\\\/].*`),
+    new RegExp(`${escapedWorkspaceRoot}[\\\\/]\\.firebase-data[\\\\/].*`),
   ],
-  extraNodeModules: {
-    ...(resolver.extraNodeModules || {}),
-    'pdfjs-dist': pdfjsDistPath,
-  },
-  nodeModulesPaths: [
-    projectNodeModules,
-    workspaceNodeModules,
-  ],
-  disableHierarchicalLookup: true,
-};
+});
 
+// Local-dev only: serve the React DevTools installHook source map when the
+// browser asks for it. (Chrome DevTools probes /installHook.js.map and logs
+// a 404 in console otherwise; harmless but noisy.)
 const installHookMapPath = path.join(__dirname, 'installHook.js.map');
 const existingEnhanceMiddleware = config.server?.enhanceMiddleware;
-
-config.watchFolders = Array.from(
-  new Set([...(config.watchFolders || []), projectRoot, workspaceRoot]),
-);
-config.watchFolders = Array.from(
-  new Set([...(config.watchFolders || []), projectRoot, workspaceRoot]),
-);
 
 config.server = {
   ...(config.server || {}),

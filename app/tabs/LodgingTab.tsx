@@ -1,7 +1,8 @@
 
 // @ts-nocheck
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
 import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
@@ -9,6 +10,7 @@ import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import type { AppTheme } from '../theme/theme';
 
 type LodgingTabProps = {
   backendUrl: string;
@@ -23,6 +25,7 @@ type LodgingTabProps = {
   onOpenMap: (address: string) => void;
   formatMemberName: (member: any) => string; // This will be ignored, but kept for compatibility
   payerName: (id: string) => string;
+  theme?: AppTheme;
   readOnly?: boolean;
 };
 
@@ -52,6 +55,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   onOpenMap,
   formatMemberName: _formatMemberName, // unused
   payerName: _payerName, // unused
+  theme,
   readOnly = false,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -66,7 +70,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const openAddDialog = () => {
     if (readOnly) return;
     if (!activeTripId) {
-      alert('Please select a trip first.');
+      Alert.alert('Please select a trip first.');
       return;
     }
     const draft = createLodgingDraftForTrip({
@@ -116,7 +120,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
 
     const { payload, error } = buildLodgingPayload(lodgingDraft, activeTripId, defaultPayerId);
     if (error || !payload) {
-      alert(error || 'Failed to save lodging.');
+      Alert.alert(error || 'Failed to save lodging.');
       return;
     }
 
@@ -125,7 +129,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       onRefreshLodgings?.();
       closeEditor();
     } else {
-      alert(result.error || 'Failed to save lodging.');
+      Alert.alert(result.error || 'Failed to save lodging.');
     }
   };
 
@@ -138,7 +142,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       setLodgingToDelete(null);
       closeDetails();
     } else {
-      alert(result.error || 'Failed to delete lodging.');
+      Alert.alert(result.error || 'Failed to delete lodging.');
     }
   };
 
@@ -151,7 +155,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit vote');
+      Alert.alert(data.error || 'Unable to submit vote');
       return;
     }
     onRefreshLodgings?.();
@@ -166,7 +170,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit rating');
+      Alert.alert(data.error || 'Unable to submit rating');
       return;
     }
     onRefreshLodgings?.();
@@ -209,12 +213,12 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       </View>
 
       <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ flexGrow: 1 }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
+        <HorizontalTableScroll
           style={styles.tableScroll}
           contentContainerStyle={styles.tableScrollContent}
           testID="lodging-table-horizontal-scroll"
+          nestedScrollEnabled
+          directionalLockEnabled
         >
         <View style={[styles.table, styles.lodgingTable, { minWidth: 878 }]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
@@ -316,7 +320,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             </View>
           ))}
         </View>
-        </ScrollView>
+        </HorizontalTableScroll>
       </ScrollView>
 
       {showDetails && selectedLodging && (
@@ -327,6 +331,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           backendUrl={backendUrl}
           requestHeaders={requestHeaders}
           styles={styles}
+          theme={theme}
           payerName={payerName}
           travelerName={travelerName}
           readOnly={readOnly}

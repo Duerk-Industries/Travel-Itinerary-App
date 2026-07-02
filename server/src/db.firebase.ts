@@ -2,6 +2,8 @@
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldPath, FieldValue } from 'firebase-admin/firestore';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import {
   Flight,
   Lodging,
@@ -38,13 +40,34 @@ import {
   PackingListItem,
   PackingListTraveler,
   TripPackingList,
+  BillingCustomer,
+  BillingNotification,
+  BillingTrialUsage,
+  BillingSubscription,
+  BillingSubscriptionScope,
+  BillingSubscriptionStatus,
+  StripeWebhookEvent,
+  BillingPlanConfig,
+  BillingPlanKey,
+  BillingPriceHistory,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
 import { getApiLimitsConfig } from './config/apiLimits';
+import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 
 let app: App | null = null;
+
+const clearMissingGoogleApplicationCredentials = (): void => {
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credentialsPath) return;
+  const resolvedPath = path.resolve(credentialsPath);
+  if (fs.existsSync(resolvedPath)) return;
+  logInfo(`Ignoring missing GOOGLE_APPLICATION_CREDENTIALS file: ${credentialsPath}`);
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS_FILE;
+};
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
 const isEmailLikeIdentifier = (value: string): boolean => value.includes('@');
@@ -77,22 +100,6 @@ const generateTripShareToken = (): string => randomBytes(TRIP_SHARE_TOKEN_BYTES)
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
-const DEFAULT_PACKING_LIST_ITEMS: Array<{ category: string; label: string }> = [
-  { category: 'Documents', label: 'Passport or government ID' },
-  { category: 'Documents', label: 'Travel confirmations' },
-  { category: 'Documents', label: 'Health insurance card' },
-  { category: 'Clothing', label: 'Daily outfits' },
-  { category: 'Clothing', label: 'Comfortable walking shoes' },
-  { category: 'Clothing', label: 'Sleepwear' },
-  { category: 'Clothing', label: 'Light jacket or sweater' },
-  { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
-  { category: 'Toiletries', label: 'Deodorant' },
-  { category: 'Toiletries', label: 'Personal medications' },
-  { category: 'Electronics', label: 'Phone charger' },
-  { category: 'Electronics', label: 'Power adapter' },
-  { category: 'Travel Day', label: 'Reusable water bottle' },
-  { category: 'Travel Day', label: 'Snacks' },
-];
 type TripAccessRole = 'owner' | 'member' | 'follower';
 type GroupAccessRole = 'owner' | 'member';
 type GroupAccessRecord = {
@@ -740,6 +747,7 @@ export const getDb = (): Firestore => {
         });
       } else {
         logInfo('Initializing Firebase with default Application Default Credentials (ADC).');
+        clearMissingGoogleApplicationCredentials();
         // Default to ADC on Cloud Run / local gcloud auth
         app = initializeApp({ projectId });
       }
@@ -864,8 +872,53 @@ export const initDb = async (): Promise<void> => {
       logInfo(`[db.firebase] Seeded tier limit: ${tierKey}/${limitKey}`);
     }
   }
+
+  const billingPlanSeeds: Array<Omit<BillingPlanConfig, 'id' | 'updatedAt'>> = [
+    {
+      planKey: 'premium_monthly',
+      stripeProductId: null,
+      activeStripePriceId: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID ?? null,
+      unitAmountCents: 500,
+      currency: 'usd',
+      interval: 'month',
+      trialDays: 14,
+      pastDueGraceDays: 14,
+      automaticTaxEnabled: true,
+      promotionCodesEnabled: false,
+      isCheckoutEnabled: true,
+      livemode: process.env.STRIPE_SECRET_KEY ? !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') : null,
+      version: 1,
+      updatedBy: null,
+    },
+    {
+      planKey: 'premium_annual',
+      stripeProductId: null,
+      activeStripePriceId: process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID ?? null,
+      unitAmountCents: 3500,
+      currency: 'usd',
+      interval: 'year',
+      trialDays: 14,
+      pastDueGraceDays: 14,
+      automaticTaxEnabled: true,
+      promotionCodesEnabled: false,
+      isCheckoutEnabled: true,
+      livemode: process.env.STRIPE_SECRET_KEY ? !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') : null,
+      version: 1,
+      updatedBy: null,
+    },
+  ];
+  for (const plan of billingPlanSeeds) {
+    const ref = db.collection('billing_plan_config').doc(plan.planKey);
+    if (!(await ref.get()).exists) {
+      await ref.set({ id: plan.planKey, ...plan, updatedAt: nowIso() });
+      logInfo(`[db.firebase] Seeded billing plan: ${plan.planKey}`);
+    }
+  }
   await seedUniversalPackingDefaults();
-  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+  if (
+    process.env.FIREBASE_INIT_BACKFILL_PACKING !== '0' &&
+    (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1')
+  ) {
     await backfillUserPackingLists();
   }
 };
@@ -1033,7 +1086,10 @@ export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: strin
     updatedAt: nowIso(),
   }));
   await batch.commit();
-  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+  if (
+    process.env.FIREBASE_INIT_BACKFILL_PACKING !== '0' &&
+    (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1')
+  ) {
     await backfillUserPackingLists();
   }
   return getUniversalPackingList();
@@ -1601,6 +1657,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       preferredAirport: data.preferredAirport ?? null,
       mapPreference: data.mapPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
+      temperatureUnit: data.temperatureUnit ?? null,
     };
   }
 
@@ -1616,6 +1673,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       preferredAirport: data.preferredAirport ?? null,
       mapPreference: data.mapPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
+      temperatureUnit: data.temperatureUnit ?? null,
     };
   }
 
@@ -1650,6 +1708,12 @@ export const updateWebUserProfile = async (
         : typeof (payload as any).appearancePreference === 'undefined'
           ? undefined
           : null,
+    temperatureUnit:
+      (payload as any).temperatureUnit === 'fahrenheit' || (payload as any).temperatureUnit === 'celsius'
+        ? (payload as any).temperatureUnit
+        : typeof (payload as any).temperatureUnit === 'undefined'
+          ? undefined
+          : null,
   });
   await db.collection('web_users').doc(userId).update(updates);
   const updated = await db.collection('web_users').doc(userId).get();
@@ -1663,6 +1727,7 @@ export const updateWebUserProfile = async (
     preferredAirport: data.preferredAirport ?? null,
     mapPreference: data.mapPreference ?? null,
     appearancePreference: data.appearancePreference ?? null,
+    temperatureUnit: data.temperatureUnit ?? null,
   };
 };
 
@@ -1715,6 +1780,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     tripFollowers,
     tripRemovals,
     userEmails,
+    billingSubscriptions,
   ] = await Promise.all([
     db.collection('group_members').where('userId', '==', userId).get(),
     db.collection('group_invites').where('inviteeUserId', '==', userId).get(),
@@ -1723,6 +1789,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('trip_followers').where('followerUserId', '==', userId).get(),
     db.collection('trip_removals').where('userId', '==', userId).get(),
     db.collection('user_emails').where('userId', '==', userId).get(),
+    db.collection('billing_subscriptions').where('userId', '==', userId).get(),
   ]);
   const refs = [
     db.collection('users').doc(userId),
@@ -1734,6 +1801,8 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     ...tripFollowers.docs.map((doc) => doc.ref),
     ...tripRemovals.docs.map((doc) => doc.ref),
     ...userEmails.docs.map((doc) => doc.ref),
+    db.collection('billing_customers').doc(userId),
+    ...billingSubscriptions.docs.map((doc) => doc.ref),
   ];
   await deleteDocRefsInBatches(refs);
 };
@@ -3302,6 +3371,20 @@ export const followTripByCode = async (
   const tripId = String(codeData.tripId ?? '').trim();
   if (!tripId) throw new Error('Invalid or expired follow code');
 
+  // Block members from following their own trip — they already have full access.
+  const tripForGroup = await db.collection('trips').doc(tripId).get();
+  const groupId = tripForGroup.exists ? String((tripForGroup.data() as any).groupId ?? '') : '';
+  if (groupId) {
+    const memberSnap = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', userId)
+      .where('removedAt', '==', null)
+      .limit(1)
+      .get();
+    if (!memberSnap.empty) throw new Error('You are already a member of this trip and cannot follow it.');
+  }
+
   const existing = await db
     .collection('trip_followers')
     .where('tripId', '==', tripId)
@@ -3373,6 +3456,13 @@ export const listFollowedTrips = async (
     const tripDoc = await db.collection('trips').doc(tripId).get();
     if (!tripDoc.exists) continue;
     const trip = tripDoc.data() as any;
+    const activeMembership = await db
+      .collection('group_members')
+      .where('groupId', '==', trip.groupId)
+      .where('userId', '==', userId)
+      .where('removedAt', '==', null)
+      .get();
+    if (!activeMembership.empty) continue;
     const groupDoc = await db.collection('groups').doc(trip.groupId).get();
     const ownerId = groupDoc.exists ? (groupDoc.data() as any).ownerId : null;
     let inviterName: string | null = null;
@@ -4385,6 +4475,8 @@ export const getItineraryDetailContext = async (
   return { tripId, itineraryId };
 };
 
+const getReactionDocId = (detailId: string, userId: string): string => `${detailId}_${userId}`;
+
 export const castItineraryDetailReaction = async (
   userId: string,
   tripId: string,
@@ -4392,18 +4484,14 @@ export const castItineraryDetailReaction = async (
   value: 1 | -1
 ): Promise<void> => {
   const db = getDb();
-  const existing = await db
-    .collection('itinerary_detail_reactions')
-    .where('detailId', '==', detailId)
-    .where('userId', '==', userId)
-    .limit(1)
-    .get();
+  const ref = db.collection('itinerary_detail_reactions').doc(getReactionDocId(detailId, userId));
+  const existing = await ref.get();
   const payload = { tripId, detailId, userId, value, updatedAt: nowIso() };
-  if (!existing.empty) {
-    await existing.docs[0].ref.update(payload);
+  if (existing.exists) {
+    await ref.update(payload);
     return;
   }
-  await db.collection('itinerary_detail_reactions').doc(randomUUID()).set({ ...payload, createdAt: nowIso() });
+  await ref.set({ ...payload, createdAt: nowIso() });
 };
 
 export const clearItineraryDetailReaction = async (
@@ -4411,14 +4499,7 @@ export const clearItineraryDetailReaction = async (
   detailId: string
 ): Promise<void> => {
   const db = getDb();
-  const existing = await db
-    .collection('itinerary_detail_reactions')
-    .where('detailId', '==', detailId)
-    .where('userId', '==', userId)
-    .limit(1)
-    .get();
-  if (existing.empty) return;
-  await existing.docs[0].ref.delete();
+  await db.collection('itinerary_detail_reactions').doc(getReactionDocId(detailId, userId)).delete();
 };
 
 export const getItineraryDetailReactionSummaries = async (
@@ -6018,6 +6099,19 @@ export const getGenerationIdempotency = async (key: string) => {
   const doc = await db.collection('generation_idempotency').doc(key).get();
   if (!doc.exists) return null;
   const data = doc.data()!;
+  // responseBody is stored as a JSON string (see completeGenerationIdempotency) because
+  // Firestore rejects arrays nested directly inside arrays ("invalid nested entity"),
+  // which AI-generated itinerary plans can contain.
+  let responseBody: Record<string, unknown> | null = null;
+  if (typeof data.responseBody === 'string') {
+    try {
+      responseBody = JSON.parse(data.responseBody);
+    } catch {
+      responseBody = null;
+    }
+  } else if (data.responseBody && typeof data.responseBody === 'object') {
+    responseBody = data.responseBody;
+  }
   return {
     key: doc.id,
     userId: data.userId,
@@ -6026,7 +6120,7 @@ export const getGenerationIdempotency = async (key: string) => {
     windowKey: data.windowKey ?? null,
     status: data.status ?? 'pending',
     resultRef: data.resultRef ?? null,
-    responseBody: data.responseBody ?? null,
+    responseBody,
     errorMessage: data.errorMessage ?? null,
     createdAt: data.createdAt ?? nowIso(),
     expiresAt: data.expiresAt ?? nowIso(),
@@ -6069,10 +6163,13 @@ export const reserveGenerationIdempotency = async (params: {
 
 export const completeGenerationIdempotency = async (key: string, responseBody: Record<string, unknown>, resultRef?: string | null): Promise<void> => {
   const db = getDb();
+  // Stored as a JSON string, not a native Firestore map/array — AI-generated plans can
+  // contain arrays nested directly inside arrays, which Firestore rejects outright
+  // ("Property responseBody contains an invalid nested entity").
   await db.collection('generation_idempotency').doc(key).set({
     status: 'completed',
     resultRef: resultRef ?? null,
-    responseBody,
+    responseBody: JSON.stringify(responseBody),
     errorMessage: null,
   }, { merge: true });
 };
@@ -6710,4 +6807,487 @@ export const listUserAuthoredItems = async (
   ]);
   return { flights, lodgings, tours, carRentals, expenses, tripMessages };
 };
+
+// ---------------------------------------------------------------------------
+// Stripe Billing
+// ---------------------------------------------------------------------------
+
+const toIsoOrNull = (value: Date | string | null | undefined): string | null =>
+  value == null ? null : (value instanceof Date ? value : new Date(value)).toISOString();
+
+export const getBillingCustomerByUserId = async (userId: string): Promise<BillingCustomer | null> => {
+  const doc = await getDb().collection('billing_customers').doc(userId).get();
+  return doc.exists ? (doc.data() as BillingCustomer) : null;
+};
+
+export const getBillingCustomerByStripeId = async (stripeCustomerId: string): Promise<BillingCustomer | null> => {
+  const snap = await getDb().collection('billing_customers').where('stripeCustomerId', '==', stripeCustomerId).limit(1).get();
+  return snap.empty ? null : (snap.docs[0].data() as BillingCustomer);
+};
+
+export const upsertBillingCustomer = async (data: {
+  userId: string;
+  stripeCustomerId: string;
+  emailSnapshot?: string | null;
+  livemode: boolean;
+}): Promise<BillingCustomer> => {
+  const ref = getDb().collection('billing_customers').doc(data.userId);
+  return getDb().runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    const previous = existing.exists ? existing.data() as BillingCustomer : null;
+    const timestamp = nowIso();
+    const customer: BillingCustomer = {
+      id: previous?.id ?? randomUUID(),
+      userId: data.userId,
+      stripeCustomerId: previous?.stripeCustomerId ?? data.stripeCustomerId,
+      emailSnapshot: data.emailSnapshot ?? previous?.emailSnapshot ?? null,
+      livemode: data.livemode,
+      createdAt: previous?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, customer);
+    return customer;
+  });
+};
+
+export const getBillingTrialUsageByEmail = async (
+  emailNormalized: string,
+): Promise<BillingTrialUsage | null> => {
+  const doc = await getDb().collection('billing_trial_usage').doc(emailNormalized).get();
+  return doc.exists ? (doc.data() as BillingTrialUsage) : null;
+};
+
+export const markBillingTrialUsed = async (data: {
+  emailNormalized: string;
+  userId?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  trialUsedAt?: Date | null;
+}): Promise<BillingTrialUsage> => {
+  const ref = getDb().collection('billing_trial_usage').doc(data.emailNormalized);
+  return getDb().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const previous = snapshot.exists ? snapshot.data() as BillingTrialUsage : null;
+    const timestamp = nowIso();
+    const trialUsedAt = data.trialUsedAt ? data.trialUsedAt.toISOString() : timestamp;
+    const usage: BillingTrialUsage = {
+      id: previous?.id ?? randomUUID(),
+      emailNormalized: data.emailNormalized,
+      userId: previous?.userId ?? data.userId ?? null,
+      stripeCustomerId: previous?.stripeCustomerId ?? data.stripeCustomerId ?? null,
+      stripeSubscriptionId: previous?.stripeSubscriptionId ?? data.stripeSubscriptionId ?? null,
+      trialUsedAt: previous?.trialUsedAt ?? trialUsedAt,
+      createdAt: previous?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, usage);
+    return usage;
+  });
+};
+
+export const claimBillingNotification = async (data: {
+  userId: string;
+  type: BillingNotification['type'];
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId?: string | null;
+  stripeEventId?: string | null;
+}): Promise<{ notification: BillingNotification; created: boolean }> => {
+  const ref = getDb().collection('billing_notifications').doc(data.notificationKey);
+  return getDb().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const previous = snapshot.exists ? snapshot.data() as BillingNotification : null;
+    if (previous) return { notification: previous, created: false };
+    const timestamp = nowIso();
+    const notification: BillingNotification = {
+      id: randomUUID(),
+      userId: data.userId,
+      type: data.type,
+      notificationKey: data.notificationKey,
+      title: data.title,
+      message: data.message,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      stripeEventId: data.stripeEventId ?? null,
+      emailSentAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, notification);
+    return { notification, created: true };
+  });
+};
+
+export const markBillingNotificationEmailSent = async (
+  notificationId: string,
+  sentAt: Date = new Date(),
+): Promise<void> => {
+  const snap = await getDb()
+    .collection('billing_notifications')
+    .where('id', '==', notificationId)
+    .limit(1)
+    .get();
+  if (snap.empty) return;
+  await snap.docs[0].ref.set({ emailSentAt: sentAt.toISOString(), updatedAt: nowIso() }, { merge: true });
+};
+
+export const listBillingNotificationsForUser = async (
+  userId: string,
+  limit = 10,
+): Promise<BillingNotification[]> => {
+  const snap = await getDb()
+    .collection('billing_notifications')
+    .where('userId', '==', userId)
+    .get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingNotification)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+};
+
+export const getBillingSubscriptionByStripeId = async (
+  stripeSubscriptionId: string,
+): Promise<BillingSubscription | null> => {
+  const doc = await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId).get();
+  return doc.exists ? (doc.data() as BillingSubscription) : null;
+};
+
+export const listActiveBillingSubscriptionsForUser = async (userId: string): Promise<BillingSubscription[]> => {
+  const snap = await getDb().collection('billing_subscriptions').where('userId', '==', userId).get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingSubscription)
+    .filter((sub) =>
+      (sub.status !== 'canceled' && sub.status !== 'incomplete_expired') || Boolean(sub.pastDueSince),
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const claimBillingCheckout = async (data: {
+  userId: string;
+  claimToken: string;
+  planKey: BillingPlanKey;
+  expiresAt: Date;
+}): Promise<{ claimed: boolean; checkoutUrl: string | null }> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(data.userId);
+  return getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const existing = snapshot.exists ? snapshot.data() as any : null;
+    const existingExpiry = existing?.expiresAt ? new Date(existing.expiresAt).getTime() : 0;
+    if (existing && existingExpiry > Date.now()) {
+      return { claimed: false, checkoutUrl: existing.checkoutUrl ?? null };
+    }
+    const now = new Date().toISOString();
+    transaction.set(ref, {
+      userId: data.userId,
+      claimToken: data.claimToken,
+      planKey: data.planKey,
+      stripeCheckoutSessionId: null,
+      checkoutUrl: null,
+      expiresAt: data.expiresAt.toISOString(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    });
+    return { claimed: true, checkoutUrl: null };
+  });
+};
+
+export const completeBillingCheckoutClaim = async (data: {
+  userId: string;
+  claimToken: string;
+  stripeCheckoutSessionId: string;
+  checkoutUrl: string;
+  expiresAt: Date;
+}): Promise<void> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(data.userId);
+  await getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists || (snapshot.data() as any).claimToken !== data.claimToken) return;
+    transaction.update(ref, {
+      stripeCheckoutSessionId: data.stripeCheckoutSessionId,
+      checkoutUrl: data.checkoutUrl,
+      expiresAt: data.expiresAt.toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  });
+};
+
+export const releaseBillingCheckoutClaim = async (userId: string, claimToken: string): Promise<void> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(userId);
+  await getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists && (snapshot.data() as any).claimToken === claimToken) {
+      transaction.delete(ref);
+    }
+  });
+};
+
+export const clearBillingCheckoutClaim = async (userId: string): Promise<void> => {
+  await getDb().collection('billing_checkout_claims').doc(userId).delete();
+};
+
+export const upsertBillingSubscription = async (data: {
+  stripeSubscriptionId: string;
+  userId: string;
+  subscriptionScope?: BillingSubscriptionScope;
+  scopeOwnerId: string;
+  stripeCustomerId: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  status: BillingSubscriptionStatus;
+  livemode: boolean;
+  cancelAtPeriodEnd: boolean;
+  cancelAt?: Date | null;
+  currentPeriodStart?: Date | null;
+  currentPeriodEnd?: Date | null;
+  trialEnd?: Date | null;
+  endedAt?: Date | null;
+  latestInvoiceId?: string | null;
+  pastDueSince?: Date | null;
+  accessRevokedAt?: Date | null;
+  accessRevocationReason?: string | null;
+  disputeId?: string | null;
+  refundedAt?: Date | null;
+  lastStripeEventCreated?: number | null;
+}): Promise<BillingSubscription> => {
+  const ref = getDb().collection('billing_subscriptions').doc(data.stripeSubscriptionId);
+  return getDb().runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    const previous = existing.exists ? existing.data() as BillingSubscription : null;
+    const timestamp = nowIso();
+    const subscription: BillingSubscription = {
+      id: previous?.id ?? randomUUID(),
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      userId: data.userId,
+      subscriptionScope: data.subscriptionScope ?? previous?.subscriptionScope ?? 'individual',
+      scopeOwnerId: data.scopeOwnerId,
+      stripeCustomerId: data.stripeCustomerId,
+      stripePriceId: data.stripePriceId,
+      planKey: data.planKey,
+      status: data.status,
+      livemode: data.livemode,
+      cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+      cancelAt: toIsoOrNull(data.cancelAt),
+      currentPeriodStart: toIsoOrNull(data.currentPeriodStart),
+      currentPeriodEnd: toIsoOrNull(data.currentPeriodEnd),
+      trialEnd: toIsoOrNull(data.trialEnd),
+      endedAt: toIsoOrNull(data.endedAt),
+      latestInvoiceId: data.latestInvoiceId ?? null,
+      pastDueSince: data.pastDueSince === undefined ? previous?.pastDueSince ?? null : toIsoOrNull(data.pastDueSince),
+      accessRevokedAt: data.accessRevokedAt === undefined ? previous?.accessRevokedAt ?? null : toIsoOrNull(data.accessRevokedAt),
+      accessRevocationReason: data.accessRevocationReason === undefined
+        ? previous?.accessRevocationReason ?? null
+        : data.accessRevocationReason,
+      disputeId: data.disputeId === undefined ? previous?.disputeId ?? null : data.disputeId,
+      refundedAt: data.refundedAt === undefined ? previous?.refundedAt ?? null : toIsoOrNull(data.refundedAt),
+      lastStripeEventCreated: data.lastStripeEventCreated ?? previous?.lastStripeEventCreated ?? null,
+      lastSyncedAt: timestamp,
+      createdAt: previous?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, subscription);
+    return subscription;
+  });
+};
+
+export const revokeBillingSubscriptionAccess = async (
+  stripeSubscriptionId: string,
+  reason: string,
+  details?: { disputeId?: string | null; refundedAt?: Date | null },
+): Promise<void> => {
+  await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId).set({
+    accessRevokedAt: nowIso(),
+    accessRevocationReason: reason,
+    ...(details?.disputeId !== undefined ? { disputeId: details.disputeId } : {}),
+    ...(details?.refundedAt !== undefined ? { refundedAt: toIsoOrNull(details.refundedAt) } : {}),
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const restoreBillingSubscriptionAccess = async (stripeSubscriptionId: string): Promise<void> => {
+  await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId).set({
+    accessRevokedAt: null,
+    accessRevocationReason: null,
+    disputeId: null,
+    refundedAt: null,
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const setPastDueSince = async (stripeSubscriptionId: string, since: Date): Promise<void> => {
+  const ref = getDb().collection('billing_subscriptions').doc(stripeSubscriptionId);
+  await getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (doc.exists && !(doc.data() as BillingSubscription).pastDueSince) {
+      tx.update(ref, { pastDueSince: since.toISOString(), updatedAt: nowIso() });
+    }
+  });
+};
+
+export const clearPastDueSince = async (stripeSubscriptionId: string): Promise<void> => {
+  await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId)
+    .set({ pastDueSince: null, updatedAt: nowIso() }, { merge: true });
+};
+
+export const listStaleSubscriptionsForReconciliation = async (
+  olderThanMinutes: number,
+  limit: number,
+): Promise<BillingSubscription[]> => {
+  const cutoff = Date.now() - olderThanMinutes * 60_000;
+  const snap = await getDb().collection('billing_subscriptions').get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingSubscription)
+    .filter((sub) =>
+      sub.status !== 'canceled' &&
+      sub.status !== 'incomplete_expired' &&
+      (!sub.lastSyncedAt || new Date(sub.lastSyncedAt).getTime() < cutoff))
+    .sort((a, b) => (a.lastSyncedAt ?? '').localeCompare(b.lastSyncedAt ?? ''))
+    .slice(0, limit);
+};
+
+export const listPastDueBillingSubscriptions = async (): Promise<BillingSubscription[]> => {
+  const snapshot = await getDb().collection('billing_subscriptions').get();
+  return snapshot.docs
+    .map((doc) => doc.data() as BillingSubscription)
+    .filter((subscription) => Boolean(subscription.pastDueSince))
+    .sort((a, b) => (a.pastDueSince ?? '').localeCompare(b.pastDueSince ?? ''));
+};
+
+export const claimStripeWebhookEvent = async (data: {
+  stripeEventId: string;
+  eventType: string;
+  stripeObjectId?: string | null;
+  livemode: boolean;
+  eventCreated?: number | null;
+}): Promise<boolean> => {
+  const ref = getDb().collection('stripe_webhook_events').doc(data.stripeEventId);
+  return getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const previous = doc.exists ? doc.data() as StripeWebhookEvent : null;
+    const pendingLeaseExpired =
+      previous?.processingStatus === 'pending' &&
+      Date.now() - new Date(previous.receivedAt).getTime() >= 5 * 60_000;
+    if (previous && previous.processingStatus !== 'failed' && !pendingLeaseExpired) return false;
+    const event: StripeWebhookEvent = {
+      id: previous?.id ?? randomUUID(),
+      stripeEventId: data.stripeEventId,
+      eventType: data.eventType,
+      stripeObjectId: data.stripeObjectId ?? null,
+      livemode: data.livemode,
+      eventCreated: data.eventCreated ?? null,
+      processingStatus: 'pending',
+      attemptCount: previous?.attemptCount ?? 0,
+      lastError: null,
+      receivedAt: previous?.receivedAt ?? nowIso(),
+      processedAt: null,
+    };
+    tx.set(ref, event);
+    return true;
+  });
+};
+
+export const markStripeWebhookEventProcessed = async (stripeEventId: string): Promise<void> => {
+  await getDb().collection('stripe_webhook_events').doc(stripeEventId)
+    .set({ processingStatus: 'processed', processedAt: nowIso(), lastError: null }, { merge: true });
+};
+
+export const markStripeWebhookEventFailed = async (stripeEventId: string, error: string): Promise<void> => {
+  await getDb().collection('stripe_webhook_events').doc(stripeEventId).set({
+    processingStatus: 'failed',
+    lastError: error,
+    attemptCount: FieldValue.increment(1),
+  }, { merge: true });
+};
+
+export const getStripeWebhookEvent = async (stripeEventId: string): Promise<StripeWebhookEvent | null> => {
+  const doc = await getDb().collection('stripe_webhook_events').doc(stripeEventId).get();
+  return doc.exists ? (doc.data() as StripeWebhookEvent) : null;
+};
+
+export const listBillingPlanConfigs = async (): Promise<BillingPlanConfig[]> => {
+  const snap = await getDb().collection('billing_plan_config').get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingPlanConfig)
+    .sort((a, b) => a.planKey.localeCompare(b.planKey));
+};
+
+export const getBillingPlanConfig = async (planKey: BillingPlanKey): Promise<BillingPlanConfig | null> => {
+  const doc = await getDb().collection('billing_plan_config').doc(planKey).get();
+  return doc.exists ? (doc.data() as BillingPlanConfig) : null;
+};
+
+export const upsertBillingPlanConfig = async (
+  data: Partial<Omit<BillingPlanConfig, 'id' | 'planKey'>> & { planKey: BillingPlanKey; updatedBy?: string | null },
+): Promise<BillingPlanConfig> => {
+  const ref = getDb().collection('billing_plan_config').doc(data.planKey);
+  const has = (key: keyof typeof data): boolean => Object.prototype.hasOwnProperty.call(data, key);
+  return getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const previous = doc.exists ? doc.data() as BillingPlanConfig : null;
+    const config: BillingPlanConfig = {
+      id: previous?.id ?? data.planKey,
+      planKey: data.planKey,
+      stripeProductId: has('stripeProductId') ? data.stripeProductId ?? null : previous?.stripeProductId ?? null,
+      activeStripePriceId: has('activeStripePriceId') ? data.activeStripePriceId ?? null : previous?.activeStripePriceId ?? null,
+      unitAmountCents: data.unitAmountCents ?? previous?.unitAmountCents ?? 0,
+      currency: data.currency ?? previous?.currency ?? 'usd',
+      interval: data.interval ?? previous?.interval ?? 'month',
+      trialDays: data.trialDays ?? previous?.trialDays ?? 14,
+      pastDueGraceDays: data.pastDueGraceDays ?? previous?.pastDueGraceDays ?? 14,
+      automaticTaxEnabled: data.automaticTaxEnabled ?? previous?.automaticTaxEnabled ?? true,
+      promotionCodesEnabled: data.promotionCodesEnabled ?? previous?.promotionCodesEnabled ?? false,
+      isCheckoutEnabled: data.isCheckoutEnabled ?? previous?.isCheckoutEnabled ?? true,
+      livemode: has('livemode') ? data.livemode ?? null : previous?.livemode ?? null,
+      version: previous ? previous.version + 1 : 1,
+      updatedBy: data.updatedBy ?? null,
+      updatedAt: nowIso(),
+    };
+    tx.set(ref, config);
+    return config;
+  });
+};
+
+export const listBillingPriceHistory = async (planKey?: BillingPlanKey): Promise<BillingPriceHistory[]> => {
+  const snap = await getDb().collection('billing_price_history').get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingPriceHistory)
+    .filter((price) => !planKey || price.planKey === planKey)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const insertBillingPriceHistory = async (data: {
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  livemode: boolean;
+  activeForNewCheckout: boolean;
+  createdBy: string | null;
+}): Promise<BillingPriceHistory> => {
+  const price: BillingPriceHistory = {
+    id: randomUUID(),
+    ...data,
+    createdAt: nowIso(),
+    retiredAt: null,
+  };
+  await getDb().collection('billing_price_history').doc(data.stripePriceId).set(price);
+  return price;
+};
+
+export const deactivateOldPricesForPlan = async (
+  planKey: BillingPlanKey,
+  keepActivePriceId: string,
+): Promise<void> => {
+  const snap = await getDb().collection('billing_price_history').where('planKey', '==', planKey).get();
+  const batch = getDb().batch();
+  for (const doc of snap.docs) {
+    const price = doc.data() as BillingPriceHistory;
+    if (price.stripePriceId !== keepActivePriceId && price.activeForNewCheckout) {
+      batch.update(doc.ref, { activeForNewCheckout: false, retiredAt: nowIso() });
+    }
+  }
+  await batch.commit();
+};
+
 import { searchBundledAirportDataset } from './services/airportCatalog';

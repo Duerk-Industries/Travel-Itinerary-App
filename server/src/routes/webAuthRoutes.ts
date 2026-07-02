@@ -24,6 +24,7 @@ import { logError, logInfo } from '../logger';
 import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
 import { ensureAdminBootstrap, getSeededTierForEmail } from '../services/entitlementService';
+import { authLoginRateLimit } from '../services/httpRateLimitService';
 
 // Web auth routes for email/password login/registration.
 const router = Router();
@@ -119,7 +120,7 @@ router.post('/resend-confirmation', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLoginRateLimit, async (req, res) => {
   const { identifier, email, password } = req.body ?? {};
   const loginIdentifier = String(identifier ?? email ?? '').trim().toLowerCase();
   const usernameEnabled = getAuthFlag('usernameLoginEnabled');

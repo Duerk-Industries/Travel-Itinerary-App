@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import { renderHook } from '@testing-library/react-native';
 import { useTripMembers } from '../hooks/useTripMembers';

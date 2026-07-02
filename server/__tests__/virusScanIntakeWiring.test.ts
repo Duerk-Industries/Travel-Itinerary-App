@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Proves the virus-scan adapter's `scanBuffer` is invoked per-file by both
  * `buildManualUploadPayloads` and `buildWebhookPayload`, and that a FAILED

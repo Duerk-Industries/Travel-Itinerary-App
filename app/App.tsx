@@ -11,10 +11,12 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Alert, AppState, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
+import * as ExpoLinking from 'expo-linking';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
@@ -50,14 +52,25 @@ import {
   loadStoredAppearancePreference,
   persistAppearancePreference,
 } from './utils/appearancePreference';
-import { getAppTheme, type AppTheme } from './theme/theme';
+import { getAppTheme, hitSlop, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
-import { Buffer } from 'buffer';
-import { loadLastActiveTripId, loadSession, saveLastActiveTripId, saveSession, clearSession } from './utils/session';
+import {
+  clearSessionAsync,
+  loadAsyncItineraryByTripAsync,
+  loadLastActiveTripId,
+  loadSessionAsync,
+  saveAsyncItineraryByTripAsync,
+  saveLastActiveTripIdAsync,
+  saveSessionAsync,
+} from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
+import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
+import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
+import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
@@ -65,6 +78,11 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
+import { installPermissionDeniedInterceptor } from './utils/permissionDeniedInterceptor';
+
+// Installed once at module load so every fetch in the app — regardless of
+// which tab/hook issues it — surfaces a permission-denied modal on a 403.
+installPermissionDeniedInterceptor();
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
 import { useTripMembers } from './hooks/useTripMembers';
@@ -93,10 +111,17 @@ const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
 import ChatOverlay from './components/ChatOverlay';
+import HorizontalTableScroll from './components/HorizontalTableScroll';
 import { connectSocket, disconnectSocket } from './utils/socket';
+import { horizontalTableLayout } from './utils/horizontalTableLayout';
+import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
+WebBrowser.maybeCompleteAuthSession();
+
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
+type SafeAreaViewCompatProps = React.ComponentProps<typeof View>;
+const SafeAreaView = NativeSafeAreaView as unknown as React.ComponentType<SafeAreaViewCompatProps>;
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -160,7 +185,7 @@ type Page =
   | 'following'
   | 'admin';
 
-type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
+type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'billing';
 
 type RootStackParamList = {
   Main: undefined;
@@ -170,6 +195,7 @@ type RootStackParamList = {
   AdminFeatures: undefined;
   AdminUserData: undefined;
   AdminAuditLog: undefined;
+  AdminBilling: undefined;
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -182,6 +208,7 @@ const adminScreenBySection: Partial<Record<AdminSectionRoute, keyof RootStackPar
   features: 'AdminFeatures',
   'user-data': 'AdminUserData',
   'audit-log': 'AdminAuditLog',
+  billing: 'AdminBilling',
   // 'ingestion' and 'api-limits' are handled internally by AdminTab, no separate screen needed
 };
 
@@ -192,11 +219,14 @@ const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, Ad
   AdminFeatures: 'features',
   AdminUserData: 'user-data',
   AdminAuditLog: 'audit-log',
+  AdminBilling: 'billing',
 };
 
+// IMPORTANT: this scheme MUST match `expo.scheme` in app.json, otherwise
+// React Navigation builds deep-link URLs that don't open the installed app.
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
-    'wanderbunnies://',
+    'travelitineraryplanner://',
     ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
   ],
   config: {
@@ -208,6 +238,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       AdminFeatures: 'admin/features',
       AdminUserData: 'admin/user-data',
       AdminAuditLog: 'admin/audit-log',
+      AdminBilling: 'admin/billing',
     },
   },
 };
@@ -336,15 +367,36 @@ const extractTokenFromUrl = (rawUrl: string) => {
   return { token: null, authCode: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
+const decodeBase64UrlUtf8 = (value: string): string | null => {
+  try {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const BufferCtor = (globalThis as any).Buffer;
+    if (typeof BufferCtor?.from === 'function') {
+      return BufferCtor.from(padded, 'base64').toString('utf8');
+    }
+    if (typeof globalThis.atob !== 'function') return null;
+    const binary = globalThis.atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const TextDecoderCtor = (globalThis as any).TextDecoder;
+    if (typeof TextDecoderCtor === 'function') {
+      return new TextDecoderCtor('utf-8').decode(bytes);
+    }
+    const escaped = Array.from(bytes, (byte) => `%${byte.toString(16).padStart(2, '0')}`).join('');
+    return decodeURIComponent(escaped);
+  } catch {
+    return null;
+  }
+};
+
 const decodeTokenClaims = (
   token: string
 ): { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-    return JSON.parse(Buffer.from(padded, 'base64').toString());
+    const decoded = decodeBase64UrlUtf8(payload);
+    return decoded ? JSON.parse(decoded) : null;
   } catch {
     return null;
   }
@@ -354,6 +406,32 @@ type AppShellProps = {
   initialAdminSection?: AdminSectionRoute;
   onOpenAdminSection?: (section: AdminSectionRoute) => void;
 };
+
+class RootErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('Root app render failed', error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+
+    return (
+      <SafeAreaView style={rootErrorStyles.container}>
+        <Text style={rootErrorStyles.title}>WanderBunnies could not start</Text>
+        <Text style={rootErrorStyles.message}>{this.state.error.message || String(this.state.error)}</Text>
+      </SafeAreaView>
+    );
+  }
+}
 
 const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', onOpenAdminSection }) => {
   const { viewportWidth, isNarrowLayout, isPhoneLayout } = useLayoutBreakpoints();
@@ -371,6 +449,32 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     initializeAppCheck();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+    const previous = {
+      htmlHeight: html.style.height,
+      bodyHeight: body.style.height,
+      bodyMargin: body.style.margin,
+      bodyOverflow: body.style.overflow,
+      rootHeight: root?.style.height ?? '',
+    };
+    html.style.height = '100%';
+    body.style.height = '100%';
+    body.style.margin = '0';
+    body.style.overflow = 'hidden';
+    if (root) root.style.height = '100%';
+    return () => {
+      html.style.height = previous.htmlHeight;
+      body.style.height = previous.bodyHeight;
+      body.style.margin = previous.bodyMargin;
+      body.style.overflow = previous.bodyOverflow;
+      if (root) root.style.height = previous.rootHeight;
+    };
   }, []);
 
   // React DevTools (and a few dev-tooling libraries) emit `performance.mark`
@@ -419,7 +523,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         ? ({
             paddingTop: 'env(safe-area-inset-top, 0px)',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-            minHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+            height: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+            minHeight: 0,
+            maxHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
           } as any)
         : null,
     [isWebIOSSafari, webViewportHeight]
@@ -458,6 +564,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
+  const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
+  const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
   const {
     deferFirstLoginRedirect,
     showResendConfirmation,
@@ -482,7 +590,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   } = useAuthFlowState({ backendUrl, userToken });
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
-  const isFollowingMode = Boolean(selectedFollowedTripId);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
@@ -496,6 +603,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
   const [shareTripModalOpen, setShareTripModalOpen] = useState(false);
   const [overviewEditSignal, setOverviewEditSignal] = useState(0);
+  const [goToDay1Signal, setGoToDay1Signal] = useState(0);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
@@ -607,6 +715,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
     [followedTrips]
   );
+  // True when the active trip is one the user only follows (read-only access), not a
+  // group trip they're a member of. Derived from followedTripById (not just
+  // selectedFollowedTripId) so it stays correct even if activeTripId is restored
+  // directly from a saved session without going through the "Following" tab flow.
+  const isFollowingMode = Boolean(
+    selectedFollowedTripId || (activeTripId && followedTripById.has(activeTripId))
+  );
   const selectedFollowedTrip = useMemo(
     () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
     [followedTripById, selectedFollowedTripId]
@@ -666,6 +781,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const [asyncItineraryByTrip, setAsyncItineraryByTrip] = useState<Record<string, AsyncItineraryTracker>>({});
+
+  // Restore any in-flight/just-finished AI itinerary jobs on login/refresh so the
+  // "generating..." banner (and polling) survives a page reload instead of vanishing.
+  useEffect(() => {
+    if (!userEmail) return;
+    let cancelled = false;
+    void loadAsyncItineraryByTripAsync(userEmail).then((stored) => {
+      if (cancelled) return;
+      const entries = Object.entries(stored).filter(
+        (entry): entry is [string, AsyncItineraryTracker] =>
+          Boolean(entry[1]) && typeof entry[1] === 'object' && typeof (entry[1] as any).jobId === 'string' && typeof (entry[1] as any).status === 'string'
+      );
+      if (!entries.length) return;
+      setAsyncItineraryByTrip((prev) => ({ ...Object.fromEntries(entries), ...prev }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userEmail]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    void saveAsyncItineraryByTripAsync(asyncItineraryByTrip, userEmail);
+  }, [asyncItineraryByTrip, userEmail]);
 
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
@@ -772,6 +911,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setActivePage(page);
   }, [activePage, isFollowingMode]);
 
+  // One-shot: when an AI itinerary job finishes, notify the user, jump them to that
+  // trip's Overview on Day 1, and clear the tracker so this doesn't refire. Clearing
+  // the tracker (rather than just flipping a "seen" flag) is what makes this safe to
+  // run on every render — once handled, the entry is gone from asyncItineraryByTrip.
+  useEffect(() => {
+    const completedEntry = Object.entries(asyncItineraryByTrip).find(([, tracker]) => tracker.status === 'completed');
+    if (!completedEntry) return;
+    const [tripId] = completedEntry;
+    const tripName = trips.find((t) => t.id === tripId)?.name ?? 'Your trip';
+    Alert.alert('Itinerary Ready', `Your AI-generated itinerary for ${tripName} is ready!`);
+    setActiveTripId(tripId);
+    requestPageChange('overview');
+    setGoToDay1Signal((prev) => prev + 1);
+    setAsyncItineraryByTrip((prev) => {
+      if (!prev[tripId]) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+  }, [asyncItineraryByTrip, trips, requestPageChange]);
+
   const handleSelectOwnedTrip = useCallback((tripId: string) => {
     setSelectedFollowedTripId(null);
     setActiveTripId(tripId);
@@ -802,7 +962,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
-      Linking.openURL(url);
+      // Linking.openURL rejects on native if no installed app handles the scheme;
+      // surface the error to the user instead of crashing with an unhandled rejection.
+      Linking.openURL(url).catch((err) => Alert.alert('Could not open map', err?.message ?? String(err)));
     }
   }, [mapApp]);
 
@@ -817,12 +979,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const saveCarRentalDraft = useCallback(async (rentalId?: string | null) => {
     if (isFollowingMode) return false;
     if (!activeTripId) {
-      alert('Select an active trip before adding a car rental.');
+      Alert.alert('Select an active trip before adding a car rental.');
       return false;
     }
     const result = buildCarRentalFromDraft(carDraft, defaultPayerId, memberIds);
     if (result.error || !result.rental) {
-      alert(result.error || 'Unable to add car rental.');
+      Alert.alert(result.error || 'Unable to add car rental.');
       return false;
     }
     const payload = {
@@ -836,7 +998,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || `Unable to ${rentalId ? 'update' : 'add'} car rental.`);
+      Alert.alert(data.error || `Unable to ${rentalId ? 'update' : 'add'} car rental.`);
       return false;
     }
     if (activeTripId && userToken && costTrackingAllowed) {
@@ -867,7 +1029,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
     if (isFollowingMode) return;
     if (!activeTripId) {
-      alert('Select an active trip before adding a car rental.');
+      Alert.alert('Select an active trip before adding a car rental.');
       return;
     }
     const res = await fetch(`${backendUrl}/api/car-rentals`, {
@@ -882,7 +1044,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to add car rental.');
+      Alert.alert(data.error || 'Unable to add car rental.');
       return;
     }
     if (activeTripId && userToken && costTrackingAllowed) {
@@ -905,7 +1067,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}`, { method: 'DELETE', headers: jsonHeaders });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete car rental.');
+      Alert.alert(data.error || 'Unable to delete car rental.');
       return;
     }
     if (activeTripId && userToken && costTrackingAllowed) {
@@ -932,7 +1094,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit vote');
+      Alert.alert(data.error || 'Unable to submit vote');
       return;
     }
     if (activeTripId && userToken) {
@@ -950,7 +1112,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit rating');
+      Alert.alert(data.error || 'Unable to submit rating');
       return;
     }
     if (activeTripId && userToken) {
@@ -991,7 +1153,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // Covered-by is naturally idempotent (PUT replaces the entire map), so it's
   // a safe candidate for retry-on-failure. Wrapped in useRetryableMutation so
   // transient network failures can be retried via the red banner instead of
-  // an alert() that forces the user to re-open the ledger.
+  // an Alert.alert() that forces the user to re-open the ledger.
   const coveredByMutation = useRetryableMutation<
     { tripId: string; rules: Record<string, string> },
     void
@@ -1005,22 +1167,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const saveCoveredBy = useCallback(async () => {
     if (!activeTrip?.id) {
-      alert('An active trip is required.');
+      Alert.alert('An active trip is required.');
       return;
     }
 
     const validation = validateCoveringRules(coveredBy);
     if (!validation.ok) {
-      alert(validation.error);
+      Alert.alert(validation.error);
       return;
     }
 
     const result = await coveredByMutation.run({ tripId: activeTrip.id, rules: coveredBy });
     if (result !== null) {
-      alert('Covering rules saved.');
+      Alert.alert('Covering rules saved.');
     }
     // Failure surfaces through <RetryableErrorBanner> rendered in the ledger
-    // branch below — no alert() so the user can retry in place.
+    // branch below — no Alert.alert() so the user can retry in place.
   }, [activeTrip?.id, coveredBy, coveredByMutation]);
 
   const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
@@ -1129,17 +1291,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const downloadCsv = (csvContent: string, fileName: string) => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') {
-      alert('CSV export is only available on web.');
-      return;
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    void exportCsv(csvContent, fileName).then((result) => {
+      if (result === 'unavailable' || result === 'failed') {
+        Alert.alert('CSV export', 'Could not export the CSV from this device.');
+      }
+    });
   };
 
   const logout = useCallback(() => {
@@ -1170,7 +1326,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     disconnectSocket();
     // PresenceProvider and ChatProvider reset their state automatically when
     // userToken or activeTripId becomes null after clearSession().
-    clearSession();
+    void clearSessionAsync();
   }, [clearSessionState, clearTripsData]);
   logoutRef.current = logout;
 
@@ -1201,18 +1357,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       });
     }
 
-    if (typeof Linking?.createURL !== 'function') {
-      // This should not happen in a standard Expo/React Native environment.
-      console.error('Linking.createURL is not available. OAuth redirect will likely fail.');
-      // Fallback to a URL that is unlikely to work for a native app redirect.
-      return `${backendUrl}/login`;
-    }
-
     const scheme =
       Constants.expoConfig?.scheme ||
       (Constants as any)?.manifest2?.extra?.expoClient?.scheme ||
       undefined;
-    return Linking.createURL('login', scheme ? { scheme } : undefined);
+    return ExpoLinking.createURL('login', scheme ? { scheme } : undefined);
   };
 
   const loginWithGoogle = async () => {
@@ -1226,13 +1375,26 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     try {
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
       if (result.type === 'success' && result.url) {
-        const { token, requirePasswordSetup } = extractTokenFromUrl(result.url);
+        const { token, authCode, authError, requirePasswordSetup } = extractTokenFromUrl(result.url);
         if (token) {
           handleAuthSuccess(token, undefined, { requirePasswordSetup });
+          return;
         }
+        if (authCode) {
+          await exchangeAuthCode(authCode);
+          return;
+        }
+        if (authError) {
+          setAuthErrorMessage(mapAuthErrorToMessage(authError));
+          return;
+        }
+        setAuthErrorMessage('Google sign-in returned without login credentials. Please try again.');
+      } else if (result.type !== 'cancel' && result.type !== 'dismiss') {
+        setAuthErrorMessage('Google sign-in could not be completed. Please try again.');
       }
     } catch (err) {
-      console.log('Auth session cancelled or failed', err);
+      console.log('Auth session failed', err);
+      setAuthErrorMessage((err as Error)?.message || 'Google sign-in could not be completed. Please try again.');
     }
   };
 
@@ -1259,16 +1421,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       homeAddress: '',
       preferredAirport: '',
       appearancePreference: 'auto',
+      temperatureUnit: 'fahrenheit',
     });
-    const previousSession = loadSession();
     const restoredTripId =
-      previousSession?.tripId ??
       loadLastActiveTripId(decoded?.email ?? null) ??
       activeTripId ??
       null;
     setActiveTripId(restoredTripId);
     const firstLogin = Boolean(firstLoginOverride);
     setIsFirstLogin(firstLogin);
+    setPremiumTrialWelcomeVisible(firstLogin && arePremiumTrialsEnabled());
     const mustSetPassword = Boolean(options?.requirePasswordSetup);
     setRequirePasswordSetup(mustSetPassword);
     if (mustSetPassword) {
@@ -1282,14 +1444,51 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, [], decodedRole);
+    void saveSessionAsync(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, [], decodedRole);
     },
     [activeTripId]
   );
 
+  const dismissPremiumTrialWelcome = useCallback(() => {
+    setPremiumTrialWelcomeVisible(false);
+  }, []);
+
+  const openPremiumPlansFromWelcome = useCallback(() => {
+    setPremiumTrialWelcomeVisible(false);
+    setPremiumPlanComparisonVisible(true);
+  }, []);
+
+  const dismissPremiumPlanComparison = useCallback(() => {
+    setPremiumPlanComparisonVisible(false);
+    setPremiumTrialWelcomeVisible(false);
+    setDeferFirstLoginRedirect(false);
+    setActivePage('account');
+    if (userToken) {
+      void saveSessionAsync(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
+    }
+  }, [activeTripId, pageHistory, setDeferFirstLoginRedirect, userEmail, userName, userRole, userToken]);
+
+  const exchangeAuthCode = useCallback(
+    async (authCode: string) => {
+      const exchangeRes = await fetch(`${backendUrl}/api/auth/exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: authCode }),
+      });
+      const exchangeData = await exchangeRes.json().catch(() => ({}));
+      if (!exchangeRes.ok || !exchangeData?.token) {
+        throw new Error(exchangeData?.error || 'Sign-in could not be completed.');
+      }
+      handleAuthSuccess(String(exchangeData.token), undefined, {
+        requirePasswordSetup: Boolean(exchangeData.requirePasswordSetup),
+      });
+    },
+    [handleAuthSuccess]
+  );
+
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { token, authError, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
+      const { token, authCode, authError, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {
         confirmEmailToken(token, event.url);
         return;
@@ -1300,6 +1499,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
       if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
+        return;
+      }
+      if (authCode) {
+        void exchangeAuthCode(authCode).catch((error) => {
+          setAuthErrorMessage((error as Error).message || 'Sign-in could not be completed.');
+        });
         return;
       }
       if (authError) {
@@ -1316,9 +1521,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         const data = await res.json().catch(() => ({}));
         const message = res.ok ? (data.message ?? 'Email confirmed. You can now log in.') : (data.error ?? 'Email confirmation failed.');
         setEmailConfirmationMessage(message);
-        alert(message);
+        Alert.alert(message);
       } catch {
-        alert('Email confirmation failed.');
+        Alert.alert('Email confirmation failed.');
       } finally {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const url = new URL(rawUrl);
@@ -1334,9 +1539,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         const data = await res.json().catch(() => ({}));
         const message = res.ok ? (data.message ?? 'Email confirmed.') : (data.error ?? 'Email confirmation failed.');
         setEmailConfirmationMessage(message);
-        alert(message);
+        Alert.alert(message);
       } catch {
-        alert('Email confirmation failed.');
+        Alert.alert('Email confirmation failed.');
       } finally {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const url = new URL(rawUrl);
@@ -1346,7 +1551,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
     };
 
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+    const subscription =
+      typeof Linking?.addEventListener === 'function'
+        ? Linking.addEventListener('url', handleDeepLink)
+        : null;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       // Use params captured at module load time (before React Navigation could strip them),
       // falling back to the current URL for deep links that arrive later.
@@ -1382,18 +1590,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       } else if (authCode) {
         void (async () => {
           try {
-            const exchangeRes = await fetch(`${backendUrl}/api/auth/exchange`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code: authCode }),
-            });
-            const exchangeData = await exchangeRes.json().catch(() => ({}));
-            if (!exchangeRes.ok || !exchangeData?.token) {
-              throw new Error(exchangeData?.error || 'Sign-in could not be completed.');
-            }
-            handleAuthSuccess(String(exchangeData.token), undefined, {
-              requirePasswordSetup: Boolean(exchangeData.requirePasswordSetup),
-            });
+            await exchangeAuthCode(authCode);
           } catch (error) {
             setAuthErrorMessage((error as Error).message || 'Sign-in could not be completed.');
           } finally {
@@ -1418,17 +1615,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
     }
     return () => {
-      subscription.remove();
+      subscription?.remove?.();
     };
-  }, [handleAuthSuccess]);
+  }, [exchangeAuthCode, handleAuthSuccess]);
 
   const completeInitialPasswordSetup = async () => {
     const result = await submitInitialPasswordSetup();
     if (!result.ok) {
-      alert(result.error);
+      Alert.alert(result.error);
       return;
     }
-    alert('Password set. You can now sign in with email/password too.');
+    Alert.alert('Password set. You can now sign in with email/password too.');
   };
 
   const loginWithPassword = async () => {
@@ -1463,24 +1660,24 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const resendConfirmationEmail = async () => {
     const result = await submitResendConfirmation(authForm.email);
     if (!result.ok) {
-      alert(result.error);
+      Alert.alert(result.error);
       return;
     }
-    alert(result.message);
+    Alert.alert(result.message);
   };
 
   const register = async () => {
     setAuthErrorMessage(null);
     if (!authForm.firstName.trim() || !authForm.lastName.trim()) {
-      alert('First name and last name are required');
+      Alert.alert('First name and last name are required');
       return;
     }
     if (!authForm.email.trim()) {
-      alert('Email is required');
+      Alert.alert('Email is required');
       return;
     }
     if (authForm.password !== authForm.passwordConfirm) {
-      alert('Passwords do not match');
+      Alert.alert('Passwords do not match');
       return;
     }
     try {
@@ -1497,21 +1694,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Registration failed');
+        Alert.alert(data.error || 'Registration failed');
         return;
       }
       if (data?.verificationRequired) {
-        alert(data.message || 'Check your email to confirm your account.');
+        Alert.alert(data.message || 'Check your email to confirm your account.');
         setAuthMode('login');
         return;
       }
       if (!data?.user || typeof data.token !== 'string') {
-        alert(data.error || 'Registration failed');
+        Alert.alert(data.error || 'Registration failed');
         return;
       }
       handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
-      alert((err as Error).message || 'Registration failed');
+      Alert.alert((err as Error).message || 'Registration failed');
     }
   };
 
@@ -1694,7 +1891,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const acceptInvite = async (invite: GroupInvite) => {
     const result = await acceptInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to accept invite');
+      Alert.alert(result.error || 'Unable to accept invite');
       return;
     }
     if (result.nextTripId) {
@@ -1713,7 +1910,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const rejectInvite = async (invite: GroupInvite) => {
     const result = await rejectInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to reject invite');
+      Alert.alert(result.error || 'Unable to reject invite');
       return;
     }
     fetchGroups();
@@ -1723,7 +1920,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const acceptPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
     const result = await acceptPendingTripShareInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to accept invite');
+      Alert.alert(result.error || 'Unable to accept invite');
       return;
     }
     if (result.nextTripId) {
@@ -1743,7 +1940,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const rejectPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
     const result = await rejectPendingTripShareInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to reject invite');
+      Alert.alert(result.error || 'Unable to reject invite');
       return;
     }
     fetchGroups();
@@ -1754,7 +1951,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const acceptPendingFollowCode = async () => {
     if (!pendingFollowCode) return;
     const error = await handleFollowTripByCode(pendingFollowCode);
-    if (!error) {
+    if (error) {
+      Alert.alert('Unable to Follow Trip', error);
+      setPendingFollowCode(null);
+    } else {
       setPendingFollowCode(null);
     }
   };
@@ -1970,7 +2170,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (pendingInviteModalOpen || invites.length || pendingTripShareInvites.length || pendingFollowCode) return;
     setDeferFirstLoginRedirect(false);
     setActivePage('account');
-    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
+    void saveSessionAsync(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
   }, [
     activeTripId,
     deferFirstLoginRedirect,
@@ -2003,8 +2203,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     if (userToken) return;
-    const session = loadSession();
-    if (session) {
+    let cancelled = false;
+    void loadSessionAsync().then((session) => {
+      if (cancelled || !session) return;
       const decoded = decodeTokenClaims(session.token);
       const restoredRole: 'user' | 'admin' =
         session.role === 'admin' || decoded?.role === 'admin' ? 'admin' : 'user';
@@ -2051,8 +2252,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setActivePage('home');
         }
       }
-    }
-  }, [userToken]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userToken, applySession]);
 
   // useFollowedTrips owns localStorage persistence for follow codes/payloads and
   // pendingFollowCode. This effect only handles the URL-query-param capture
@@ -2128,11 +2332,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const relationshipId = groupAddRelationship[groupId] ?? '';
 
     if (type === 'user' && !email.trim()) {
-      alert('Enter an email to add a user');
+      Alert.alert('Enter an email to add a user');
       return;
     }
     if (type === 'relationship' && !relationshipId) {
-      alert('Select a relationship');
+      Alert.alert('Select a relationship');
       return;
     }
 
@@ -2146,7 +2350,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } else {
       const rel = familyRelationships.find((r) => r.id === relationshipId);
       if (!rel) {
-        alert('Select a relationship');
+        Alert.alert('Select a relationship');
         return;
       }
       const relEmail = rel.relative?.email?.trim();
@@ -2158,7 +2362,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
     const result = await addGroupMemberRequest(groupId, payload);
     if (!result.ok) {
-      alert(result.error || 'Unable to add member');
+      Alert.alert(result.error || 'Unable to add member');
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
@@ -2169,7 +2373,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const removeMemberFromGroup = async (groupId: string, memberId: string) => {
     const result = await removeGroupMemberRequest(groupId, memberId);
     if (!result.ok) {
-      alert(result.error || 'Unable to remove member');
+      Alert.alert(result.error || 'Unable to remove member');
       return;
     }
   };
@@ -2177,7 +2381,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const cancelInvite = async (inviteId: string) => {
     const result = await cancelGroupInviteRequest(inviteId);
     if (!result.ok) {
-      alert(result.error || 'Unable to cancel invite');
+      Alert.alert(result.error || 'Unable to cancel invite');
       return;
     }
   };
@@ -2185,7 +2389,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const createTrip = async () => {
     const result = await submitCreateTripWizard();
     if (!result.ok) {
-      alert(result.error || 'Unable to create trip');
+      Alert.alert(result.error || 'Unable to create trip');
     }
   };
 
@@ -2217,7 +2421,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete trip');
+      Alert.alert(data.error || 'Unable to delete trip');
       return;
     }
     fetchTrips();
@@ -2226,7 +2430,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // PATCH /api/trips/:id/group is naturally idempotent (replaces the trip's
   // group with a fixed value). Wrapping in useRetryableMutation so a
   // transient network failure surfaces through the red banner below instead
-  // of an alert() — the user can retry without re-opening the dropdown.
+  // of an Alert.alert() — the user can retry without re-opening the dropdown.
   const tripGroupMutation = useRetryableMutation<
     { tripId: string; groupId: string },
     unknown
@@ -2243,7 +2447,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const result = await tripGroupMutation.run({ tripId, groupId });
     if (result === null) {
       // Failure is surfaced by <RetryableErrorBanner> in the top bar area —
-      // no alert() so the user can retry in place.
+      // no Alert.alert() so the user can retry in place.
       return;
     }
     setTripDropdownOpenId(null);
@@ -2278,7 +2482,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const res = await fetch(`${backendUrl}/api/groups/${groupId}`, { method: 'DELETE', headers });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete group');
+      Alert.alert(data.error || 'Unable to delete group');
       return;
     }
     fetchGroups();
@@ -2298,7 +2502,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Unable to delete lodging');
+        Alert.alert(data.error || 'Unable to delete lodging');
         return;
     }
     fetchLodgings();
@@ -2331,12 +2535,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
+    void saveSessionAsync(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
   }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, userRole]);
 
   useEffect(() => {
     if (!userEmail) return;
-    saveLastActiveTripId(activeTripId, userEmail);
+    void saveLastActiveTripIdAsync(activeTripId, userEmail);
   }, [activeTripId, userEmail]);
 
   const disabledPages = useMemo(() => {
@@ -2416,7 +2620,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Unable to unfollow trip');
+        Alert.alert(data.error || 'Unable to unfollow trip');
         return;
       }
       setFollowedTrips((prev) => prev.filter((trip) => trip.tripId !== tripId));
@@ -2430,6 +2634,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       style={styles.pageScroll}
       contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      nestedScrollEnabled
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator
     >
       <View style={styles.pageScrollInner}>{content}</View>
     </ScrollView>
@@ -2452,6 +2660,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               style={styles.homeButton}
               onPress={() => requestPageChange('home')}
               accessibilityLabel="Home"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.homeButtonText}>⌂</Text>
             </TouchableOpacity>
@@ -2462,6 +2671,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onPress={goBack}
               disabled={pageHistory.length === 0}
               accessibilityLabel="Back"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.backButtonText}>{'<'}</Text>
             </TouchableOpacity>
@@ -2472,12 +2682,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onPress={goForward}
               disabled={pageForwardHistory.length === 0}
               accessibilityLabel="Forward"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
           <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
-          <Text style={[styles.title, isPhoneLayout && styles.titleNarrow]} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.title, isPhoneLayout && styles.titleNarrow]}
+            numberOfLines={isPhoneLayout ? 2 : 1}
+            ellipsizeMode="tail"
+          >
             WanderBunnies
           </Text>
         </View>
@@ -2686,7 +2901,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
-              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+              <HorizontalTableScroll
+                style={styles.tableScroll}
+                contentContainerStyle={styles.tableScrollContent}
+              >
                 <View style={styles.table}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -2736,7 +2954,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     </View>
                   </View>
                 </View>
-              </ScrollView>
+              </HorizontalTableScroll>
             </View>
           ) : null}
 
@@ -2761,7 +2979,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onChangeMapApp={updateMapPreference}
                   appearancePreference={appearancePreference}
                   onChangeAppearancePreference={updateAppearancePreference}
-                  saveSession={saveSession}
+                  saveSession={saveSessionAsync}
                   headers={headers}
                   jsonHeaders={jsonHeaders}
                   airportOptions={flightAirportOptions}
@@ -2795,6 +3013,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               groupMembers={groupMembers}
               defaultPayerId={defaultPayerId}
               styles={styles}
+              theme={theme}
               onRefreshLodgings={fetchLodgings}
               onOpenMap={openMaps}
               formatMemberName={formatMemberName}
@@ -2933,7 +3152,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <Text style={styles.helperText}>Pending invites:</Text>
                     {inviteEmails.map((email) => (
                       <View key={email} style={[styles.memberPill, { paddingHorizontal: 8, paddingVertical: 2 }]}>
-                        <Text style={styles.cellText}>{email}</Text>
+                        <Text style={[styles.cellText, { flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="middle">{email}</Text>
                       </View>
                     ))}
                   </View>
@@ -3046,6 +3265,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   defaultPayerId={defaultPayerId}
                   styles={styles}
                   mapApp={mapApp}
+                  temperatureUnit={accountProfile.temperatureUnit}
                   aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
                   aiItineraryFailedMessage={
                     activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
@@ -3053,6 +3273,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       : null
                   }
                   editSignal={overviewEditSignal}
+                  goToDay1Signal={goToDay1Signal}
                   onUpdateCurrency={updateTripCurrency}
                   onOpenAddress={openMaps}
                   onRefreshTrips={fetchTrips}
@@ -3120,21 +3341,29 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
         </View>
       ) : (
-        <AuthForm
-          authMode={authMode}
-          setAuthMode={setAuthMode}
-          authForm={authForm}
-          setAuthForm={setAuthForm}
-          showResendConfirmation={showResendConfirmation}
-          setShowResendConfirmation={setShowResendConfirmation}
-          resendConfirmationLoading={resendConfirmationLoading}
-          resendConfirmationEmail={resendConfirmationEmail}
-          authErrorMessage={authErrorMessage}
-          loginWithPassword={loginWithPassword}
-          register={register}
-          loginWithGoogle={loginWithGoogle}
-          styles={styles}
-        />
+        <ScrollView
+          style={styles.signedOutScroll}
+          contentContainerStyle={[styles.signedOutScrollContent, iosSafariContentInsetStyle]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <AuthForm
+            authMode={authMode}
+            setAuthMode={setAuthMode}
+            authForm={authForm}
+            setAuthForm={setAuthForm}
+            showResendConfirmation={showResendConfirmation}
+            setShowResendConfirmation={setShowResendConfirmation}
+            resendConfirmationLoading={resendConfirmationLoading}
+            resendConfirmationEmail={resendConfirmationEmail}
+            authErrorMessage={authErrorMessage}
+            loginWithPassword={loginWithPassword}
+            register={register}
+            loginWithGoogle={loginWithGoogle}
+            styles={styles}
+          />
+        </ScrollView>
       )}
       {userToken && requirePasswordSetup ? (
         <View style={styles.wizardOverlay}>
@@ -3175,6 +3404,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      <PremiumTrialWelcomeDialog
+        visible={Boolean(userToken && premiumTrialWelcomeVisible && arePremiumTrialsEnabled())}
+        styles={styles}
+        onViewPlans={openPremiumPlansFromWelcome}
+        onDismiss={dismissPremiumTrialWelcome}
+      />
+      <PremiumPlanComparisonDialog
+        visible={Boolean(userToken && premiumPlanComparisonVisible && arePremiumTrialsEnabled())}
+        backendUrl={backendUrl}
+        token={userToken}
+        styles={styles}
+        onMaybeLater={dismissPremiumPlanComparison}
+      />
       {userToken ? (
         <PendingInvitesModal
           visible={pendingInviteModalOpen}
@@ -3224,6 +3466,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      <PermissionDeniedModal styles={styles} />
       {lodgingToDelete ? (
         <ConfirmDialog
           visible={true}
@@ -3336,6 +3579,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           >
             {() => renderAdminScreen('audit-log')}
           </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminBilling"
+            options={{ title: 'Admin Billing' }}
+          >
+            {() => renderAdminScreen('billing')}
+          </RootStack.Screen>
         </RootStack.Group>
       </RootStack.Navigator>
     </NavigationContainer>
@@ -3351,14 +3600,49 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <AppShell
-      initialAdminSection="overview"
-      onOpenAdminSection={openAdminSection}
-    />
+    <RootErrorBoundary>
+      <AppShell
+        initialAdminSection="overview"
+        onOpenAdminSection={openAdminSection}
+      />
+    </RootErrorBoundary>
   );
 };
 
-const buildStyles = (theme: AppTheme) => StyleSheet.create({
+const rootErrorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#102438',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  message: {
+    color: '#dce8f2',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+});
+
+const stripAndroidFontWeights = <T extends Record<string, any>>(styles: T): T => {
+  if (Platform.OS !== 'android') return styles;
+  return Object.fromEntries(
+    Object.entries(styles).map(([key, value]) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value) || !('fontWeight' in value)) {
+        return [key, value];
+      }
+      const { fontWeight: _fontWeight, ...rest } = value;
+      return [key, rest];
+    })
+  ) as T;
+};
+
+const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeights({
   container: {
     flex: 1,
     backgroundColor: theme.colors.backgroundAlt,
@@ -3374,6 +3658,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -3469,6 +3754,17 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
+  signedOutScroll: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+  },
+  signedOutScrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
   pageScroll: {
     flex: 1,
     width: '100%',
@@ -3523,7 +3819,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     position: 'relative',
     borderRadius: 20,
     overflow: 'hidden',
-    height: 180,
+    minHeight: 180,
     backgroundColor: theme.colors.surfaceMuted,
   },
   homeHeroCardPressed: {
@@ -3555,15 +3851,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     right: 20,
     bottom: 20,
     paddingRight: 150,
+    maxWidth: '100%',
   },
   homeHeroSubtitle: {
     color: '#e5e7eb',
     fontSize: 16,
+    lineHeight: 20,
   },
   homeHeroTitle: {
     color: '#fff',
     fontSize: 32,
     fontWeight: '700',
+    lineHeight: 38,
   },
   homeHeroChangeTripBadge: {
     position: 'absolute',
@@ -3573,6 +3872,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    maxWidth: '90%',
   },
   homeHeroChangeTripText: {
     color: '#FFFFFF',
@@ -3638,12 +3938,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     marginBottom: 12,
+    gap: 8,
   },
   homeModalTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: theme.colors.text,
+    flexShrink: 1,
   },
   homeModalClose: {
     width: 32,
@@ -3667,6 +3970,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeModalRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -3680,6 +3984,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   homeModalRowText: {
     flex: 1,
+    minWidth: 0,
   },
   homeModalRowTitle: {
     fontSize: 16,
@@ -3699,10 +4004,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     fontSize: theme.typography.h2,
     fontWeight: theme.typography.weightBold,
     color: theme.colors.text,
+    flex: 1,
     flexShrink: 1,
+    minWidth: 0,
   },
   titleNarrow: {
     fontSize: 18,
+    lineHeight: 22,
   },
   auth: {
     width: '100%',
@@ -3782,6 +4090,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     color: '#0B1726',
     fontWeight: theme.typography.weightBold,
   },
+  secondaryButton: {
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightBold,
+  },
   topBarActionButton: {
     minHeight: 38,
     justifyContent: 'center',
@@ -3797,14 +4114,16 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    maxWidth: '100%',
   },
   userNameButtonText: {
     color: theme.colors.text,
     fontWeight: theme.typography.weightSemibold,
+    flexShrink: 1,
   },
   smallButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   dangerButton: {
     backgroundColor: theme.colors.error,
@@ -3918,7 +4237,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderBottomWidth: 0,
   },
   table: {
-    width: '100%',
+    ...horizontalTableLayout.table,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 6,
@@ -4029,6 +4348,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     gap: 6,
+    maxWidth: '100%',
   },
   attendeeChipRemoving: {
     backgroundColor: theme.mode === 'dark' ? '#5A2630' : '#F8D7DA',
@@ -4039,6 +4359,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   attendeeText: {
     fontWeight: theme.typography.weightSemibold,
     color: theme.colors.text,
+    flexShrink: 1,
   },
   attendeeRemoveButton: {
     marginLeft: 4,
@@ -4293,6 +4614,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingVertical: 4,
+    maxWidth: '100%',
   },
   pendingBlock: {
     gap: 4,
@@ -4416,7 +4738,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     elevation: 24,
     overflow: 'hidden',
     maxHeight: 280,
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
@@ -4516,7 +4838,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 10,
     zIndex: 13000,
     elevation: 32,
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
@@ -4640,7 +4962,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     zIndex: 14000,
     elevation: 40, // keep above other inputs on native
     overflow: 'hidden',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
@@ -4650,10 +4972,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     position: 'relative',
   },
   tableScroll: {
-    overflow: 'visible',
+    ...horizontalTableLayout.scroll,
   },
   tableScrollContent: {
-    overflow: 'visible',
+    ...horizontalTableLayout.content,
   },  rangeContainer: {
     gap: 6,
     marginBottom: 8,
@@ -4707,7 +5029,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     padding: 8,
     maxHeight: 360,
     zIndex: 41000,
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     elevation: 60,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
@@ -4783,6 +5105,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     width: '100%',
     maxWidth: 1200,
     maxHeight: '90%',
+    flex: 1,
     alignSelf: 'center',
   },
   pendingInviteModal: {
@@ -4819,9 +5142,97 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 10,
     width: '100%',
     maxWidth: 420,
-    boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 4px 10px rgba(0,0,0,0.25)' } : null),
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  premiumTrialFeatureList: {
+    marginTop: 4,
+    marginBottom: 12,
+    gap: 2,
+  },
+  planComparisonModal: {
+    maxWidth: 560,
+  },
+  planComparisonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  planComparisonTier: {
+    flex: 1,
+    minWidth: 210,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  planComparisonTierPremium: {
+    borderColor: theme.colors.premium,
+    backgroundColor: theme.colors.surface,
+  },
+  planComparisonTierTitle: {
+    color: theme.colors.text,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemibold,
+    marginBottom: 6,
+  },
+  planComparisonFeatureList: {
+    gap: 4,
+  },
+  planComparisonFeature: {
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.small,
+    lineHeight: 20,
+  },
+  planComparisonOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 10,
+  },
+  planComparisonOption: {
+    flex: 1,
+    minWidth: 210,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: theme.colors.premium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 84,
+  },
+  planComparisonOptionTitle: {
+    color: '#fff',
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightSemibold,
+    marginBottom: 3,
+  },
+  planComparisonOptionPrice: {
+    color: '#fff',
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
+    textAlign: 'center',
+  },
+  planComparisonOptionTrial: {
+    color: '#fff',
+    fontSize: theme.typography.caption,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  planComparisonMaybeLater: {
+    alignSelf: 'center',
+    minWidth: 180,
+    marginTop: 4,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: theme.typography.small,
+    marginTop: 6,
+    marginBottom: 6,
   },
   payerChips: {
     flexDirection: 'row',
@@ -4863,6 +5274,6 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     flexWrap: 'wrap',
     gap: 4,
   },
-});
+}));
 
 export default App;

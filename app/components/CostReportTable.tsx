@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import HorizontalTableScroll from './HorizontalTableScroll';
 
 type Member = {
   id: string;
@@ -33,7 +34,10 @@ const CostReportTableComponent: React.FC<CostReportTableProps> = ({
   styles,
   formatMemberName,
 }) => (
-  <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+  <HorizontalTableScroll
+    style={styles.tableScroll}
+    contentContainerStyle={styles.tableScrollContent}
+  >
     <View style={styles.table}>
       <View style={[styles.tableRow, styles.tableHeader]}>
         <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -83,7 +87,7 @@ const CostReportTableComponent: React.FC<CostReportTableProps> = ({
         </View>
       </View>
     </View>
-  </ScrollView>
+  </HorizontalTableScroll>
 );
 
 const CostReportTable = memo(CostReportTableComponent);

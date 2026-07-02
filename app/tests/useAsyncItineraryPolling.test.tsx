@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React, { useState } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
@@ -68,11 +70,11 @@ describe('useAsyncItineraryPolling', () => {
     jest.clearAllMocks();
   });
 
-  it('removes completed jobs and refreshes page data once', async () => {
+  it('marks completed jobs as completed (with itineraryId) and refreshes page data once', async () => {
     const fetchMock = global.fetch as jest.Mock;
     const refreshPageData = jest.fn().mockResolvedValue(undefined);
 
-    fetchMock.mockImplementation(() => createJsonResponse({ status: 'completed' }));
+    fetchMock.mockImplementation(() => createJsonResponse({ status: 'completed', itineraryId: 'itin-1' }));
 
     const { result } = renderHook(() =>
       usePollingHarness({
@@ -85,7 +87,9 @@ describe('useAsyncItineraryPolling', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.trackers).toEqual({});
+      expect(result.current.trackers).toEqual({
+        tripA: { jobId: 'job-1', status: 'completed', itineraryId: 'itin-1', error: undefined },
+      });
     });
     expect(refreshPageData).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -109,6 +113,50 @@ describe('useAsyncItineraryPolling', () => {
         tripA: { jobId: 'job-2', status: 'failed', error: 'model overloaded' },
       });
     });
+  });
+
+  it('keeps polling across multiple unchanged-status ticks before detecting completion', async () => {
+    // Regression test: stillPending/completedCount must be derived from a synchronous
+    // snapshot, not read back out of a setState updater's closure immediately after
+    // calling it — that updater isn't guaranteed to run synchronously, and reading the
+    // closure variable too early silently reported "done" after the very first tick
+    // whenever the status hadn't changed, stopping polling forever.
+    const fetchMock = global.fetch as jest.Mock;
+    const refreshPageData = jest.fn().mockResolvedValue(undefined);
+    let callCount = 0;
+    fetchMock.mockImplementation(() => {
+      callCount += 1;
+      if (callCount < 3) return createJsonResponse({ status: 'pending' });
+      return createJsonResponse({ status: 'completed', itineraryId: 'itin-4' });
+    });
+
+    const { result } = renderHook(() =>
+      usePollingHarness({
+        initialTrackers: { tripA: { jobId: 'job-4', status: 'pending' } },
+        refreshPageData,
+        pollIntervalMs: 1000,
+      })
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(result.current.trackers.tripA.status).toBe('pending');
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(result.current.trackers.tripA.status).toBe('pending');
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    await waitFor(() => {
+      expect(result.current.trackers).toEqual({
+        tripA: { jobId: 'job-4', status: 'completed', itineraryId: 'itin-4', error: undefined },
+      });
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(refreshPageData).toHaveBeenCalledTimes(1);
   });
 
   it('suppresses overlapping polls while a request is still in flight', async () => {
@@ -147,13 +195,15 @@ describe('useAsyncItineraryPolling', () => {
       resolveFetch?.({
         ok: true,
         status: 200,
-        json: async () => ({ status: 'completed' }),
+        json: async () => ({ status: 'completed', itineraryId: 'itin-3' }),
       } as Response);
       await Promise.resolve();
     });
 
     await waitFor(() => {
-      expect(result.current.trackers).toEqual({});
+      expect(result.current.trackers).toEqual({
+        tripA: { jobId: 'job-3', status: 'completed', itineraryId: 'itin-3', error: undefined },
+      });
     });
     expect(refreshPageData).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);

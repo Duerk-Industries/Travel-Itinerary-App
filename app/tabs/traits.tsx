@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { TraitRecord } from './traitsLogic';
 import {
   PROMPT_CAR_OPTIONS,
@@ -184,11 +184,11 @@ export function TraitsTab<T extends TraitRecord>({
   const saveTraitSelections = async () => {
     if (!userToken) return;
     if (!traitAge.trim() || Number(traitAge) <= 0) {
-      alert('Enter your age to continue.');
+      Alert.alert('Enter your age to continue.');
       return;
     }
     if (!traitGender) {
-      alert('Select a gender option.');
+      Alert.alert('Select a gender option.');
       return;
     }
     const normalizedPromptTraits = normalizePromptTraits(promptTraits);
@@ -209,7 +209,7 @@ export function TraitsTab<T extends TraitRecord>({
     }).catch(() => null);
     if (!profileRes || !profileRes.ok) {
       const data = await profileRes?.json().catch(() => ({}));
-      alert(data?.error || 'Unable to save itinerary preference profile');
+      Alert.alert(data?.error || 'Unable to save itinerary preference profile');
       return;
     }
     const savedTrait = await profileRes.json().catch(() => null);
@@ -239,7 +239,7 @@ export function TraitsTab<T extends TraitRecord>({
     }).catch(() => undefined);
     await fetchTraitProfile();
     await fetchTraits();
-    alert('Traits saved');
+    Alert.alert('Traits saved');
   };
 
   return (

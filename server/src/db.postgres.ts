@@ -38,6 +38,17 @@ import {
   PackingListItem,
   PackingListTraveler,
   TripPackingList,
+  BillingCustomer,
+  BillingNotification,
+  BillingTrialUsage,
+  BillingSubscription,
+  StripeWebhookEvent,
+  BillingPlanKey,
+  BillingSubscriptionStatus,
+  BillingSubscriptionScope,
+  WebhookProcessingStatus,
+  BillingPlanConfig,
+  BillingPriceHistory,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -47,6 +58,7 @@ import fs from 'fs';
 import path from 'path';
 import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
+import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 
 
 type PoolCtor = typeof Pool;
@@ -63,23 +75,6 @@ const formatDate = (value: any) => {
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TRIP_SHARE_TOKEN_BYTES = 24;
-const DEFAULT_PACKING_LIST_ITEMS: Array<{ category: string; label: string }> = [
-  { category: 'Documents', label: 'Passport or government ID' },
-  { category: 'Documents', label: 'Travel confirmations' },
-  { category: 'Documents', label: 'Health insurance card' },
-  { category: 'Clothing', label: 'Daily outfits' },
-  { category: 'Clothing', label: 'Comfortable walking shoes' },
-  { category: 'Clothing', label: 'Sleepwear' },
-  { category: 'Clothing', label: 'Light jacket or sweater' },
-  { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
-  { category: 'Toiletries', label: 'Deodorant' },
-  { category: 'Toiletries', label: 'Personal medications' },
-  { category: 'Electronics', label: 'Phone charger' },
-  { category: 'Electronics', label: 'Power adapter' },
-  { category: 'Travel Day', label: 'Reusable water bottle' },
-  { category: 'Travel Day', label: 'Snacks' },
-];
-
 const normalizeEmail = (value: string): string => value.trim().toLowerCase();
 const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
 const isEmailLikeIdentifier = (value: string): boolean => value.includes('@');
@@ -439,6 +434,7 @@ export const initDb = async (): Promise<void> => {
       preferred_airport TEXT,
       map_preference TEXT,
       appearance_preference TEXT,
+      temperature_unit TEXT,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
       first_login_at TIMESTAMP,
@@ -456,6 +452,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS preferred_airport TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS map_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS appearance_preference TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS temperature_unit TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_login_at TIMESTAMP;`);
@@ -1188,6 +1185,11 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
+  // `billing_notifications` now lives in
+  // server/migrations/20260629_add_billing_notifications.sql — auto-applied
+  // by the runtime migration runner on boot. The drift-guard snapshot no
+  // longer lists this table.
+
   await p.query(`
     CREATE TABLE IF NOT EXISTS usage_counters (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1342,6 +1344,12 @@ export const initDb = async (): Promise<void> => {
     await del('user_emails');
     await del('web_users');
     await del('users');
+    await del('stripe_webhook_events');
+    await del('billing_checkout_claims');
+    await del('billing_subscriptions');
+    await del('billing_customers');
+    await del('billing_notifications');
+    await del('billing_trial_usage');
   }
 
   // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
@@ -2151,6 +2159,7 @@ export const getWebUserProfile = async (
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
+  temperatureUnit?: 'fahrenheit' | 'celsius' | null;
 } | null> => {
   const p = getPool();
   const { rows } = await p.query<{
@@ -2162,8 +2171,9 @@ export const getWebUserProfile = async (
     preferred_airport: string | null;
     map_preference: string | null;
     appearance_preference: string | null;
+    temperature_unit: string | null;
   }>(
-    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, appearance_preference FROM web_users WHERE id = $1 LIMIT 1`,
+    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, appearance_preference, temperature_unit FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (rows.length) {
@@ -2177,6 +2187,7 @@ export const getWebUserProfile = async (
       preferredAirport: row.preferred_airport ?? null,
       mapPreference: row.map_preference === 'google' || row.map_preference === 'apple' || row.map_preference === 'waze' ? row.map_preference : null,
       appearancePreference: row.appearance_preference === 'light' || row.appearance_preference === 'dark' || row.appearance_preference === 'auto' ? row.appearance_preference : null,
+      temperatureUnit: row.temperature_unit === 'fahrenheit' || row.temperature_unit === 'celsius' ? row.temperature_unit : null,
     };
   }
 
@@ -2202,6 +2213,7 @@ export const updateWebUserProfile = async (
     preferredAirport?: string;
     mapPreference?: string;
     appearancePreference?: string;
+    temperatureUnit?: string;
   }
 ): Promise<{
   id: string;
@@ -2212,6 +2224,7 @@ export const updateWebUserProfile = async (
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
+  temperatureUnit?: 'fahrenheit' | 'celsius' | null;
 }> => {
   const p = getPool();
   const client = await p.connect();
@@ -2253,6 +2266,10 @@ export const updateWebUserProfile = async (
       updates.appearancePreference === 'light' || updates.appearancePreference === 'dark' || updates.appearancePreference === 'auto'
         ? updates.appearancePreference
         : null;
+    const normalizedTemperatureUnit =
+      updates.temperatureUnit === 'fahrenheit' || updates.temperatureUnit === 'celsius'
+        ? updates.temperatureUnit
+        : null;
 
     const { rows } = await client.query(
       `
@@ -2263,7 +2280,8 @@ export const updateWebUserProfile = async (
         home_address = CASE WHEN $4::text IS NULL THEN home_address ELSE NULLIF($4::text, '') END,
         preferred_airport = CASE WHEN $5::text IS NULL THEN preferred_airport ELSE NULLIF($5::text, '') END,
         map_preference = CASE WHEN $6::text IS NULL THEN map_preference ELSE NULLIF($6::text, '') END,
-        appearance_preference = CASE WHEN $7::text IS NULL THEN appearance_preference ELSE NULLIF($7::text, '') END
+        appearance_preference = CASE WHEN $7::text IS NULL THEN appearance_preference ELSE NULLIF($7::text, '') END,
+        temperature_unit = CASE WHEN $8::text IS NULL THEN temperature_unit ELSE NULLIF($8::text, '') END
       WHERE id = $1
       RETURNING
         id,
@@ -2273,7 +2291,8 @@ export const updateWebUserProfile = async (
         home_address as "homeAddress",
         preferred_airport as "preferredAirport",
         map_preference as "mapPreference",
-        appearance_preference as "appearancePreference"
+        appearance_preference as "appearancePreference",
+        temperature_unit as "temperatureUnit"
     `,
       [
         userId,
@@ -2283,6 +2302,7 @@ export const updateWebUserProfile = async (
         typeof updates.preferredAirport === 'string' ? updates.preferredAirport.trim() : null,
         normalizedMapPreference,
         normalizedAppearancePreference,
+        normalizedTemperatureUnit,
       ]
     );
 
@@ -2995,6 +3015,18 @@ export const followTripByCode = async (
   if (!codeRow.rowCount) throw new Error('Invalid or expired follow code');
 
   const followCode = codeRow.rows[0];
+
+  // Block members from following their own trip — they already have full access.
+  const { rowCount: memberCheck } = await p.query(
+    `SELECT 1
+     FROM trips t
+     JOIN group_members gm ON gm.group_id = t.group_id AND gm.user_id = $2 AND gm.removed_at IS NULL
+     WHERE t.id = $1
+     LIMIT 1`,
+    [followCode.tripId, userId]
+  );
+  if (memberCheck) throw new Error('You are already a member of this trip and cannot follow it.');
+
   const inserted = await p.query(
     `INSERT INTO trip_followers (id, trip_id, follower_user_id, follow_code_id, role)
      VALUES ($1, $2, $3, $4, 'follower')
@@ -3058,6 +3090,9 @@ export const listFollowedTrips = async (
   userId: string
 ): Promise<Array<{ tripId: string; tripName: string; destination?: string | null; inviterName?: string | null }>> => {
   const p = getPool();
+  // Uses LEFT JOIN + IS NULL rather than `NOT EXISTS (...)` — pg-mem (the
+  // in-memory adapter used in tests) fails to resolve the outer alias in a
+  // correlated NOT EXISTS subquery here with "column ... does not exist".
   const { rows } = await p.query(
     `SELECT t.id as "tripId",
             t.name as "tripName",
@@ -3072,7 +3107,9 @@ export const listFollowedTrips = async (
      JOIN groups g ON g.id = t.group_id
      JOIN users u ON u.id = g.owner_id
      LEFT JOIN web_users wu ON wu.id = g.owner_id
+     LEFT JOIN group_members gm ON gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
      WHERE tf.follower_user_id = $1
+       AND gm.user_id IS NULL
      ORDER BY tf.created_at DESC`,
     [userId]
   );
@@ -4720,8 +4757,11 @@ export const getItemVoteSummaries = async (
   normalizedIds.forEach((id) => {
     result[id] = { netVotes: 0, userVote: null };
   });
+  const requestedIdByKey = new Map(normalizedIds.map((id) => [id.toLowerCase(), id]));
   rows.forEach((row: any) => {
-    result[row.itemId] = {
+    const itemId = String(row.itemId);
+    const resultKey = requestedIdByKey.get(itemId.toLowerCase()) ?? itemId;
+    result[resultKey] = {
       netVotes: Number(row.netVotes) || 0,
       userVote: row.userVote === 1 || row.userVote === -1 ? row.userVote : null,
     };
@@ -7245,8 +7285,14 @@ export const saveUserDemographics = async (
 
 export const listItineraries = async (userId: string): Promise<Array<Itinerary & { tripName: string }>> => {
   const p = getPool();
+  // Uses LEFT JOIN + IS NOT NULL rather than `EXISTS (...) OR EXISTS (...)`
+  // with correlated subqueries against two different outer tables — pg-mem
+  // (the in-memory adapter used in tests) fails to resolve the outer alias
+  // in that shape with "column ... does not exist". DISTINCT guards against
+  // a duplicate row in the rare case a user is both a group member and a
+  // trip follower for the same trip.
   const { rows } = await p.query(
-    `SELECT i.id,
+    `SELECT DISTINCT i.id,
             i.trip_id as "tripId",
             i.destination,
             i.days,
@@ -7256,19 +7302,9 @@ export const listItineraries = async (userId: string): Promise<Array<Itinerary &
      FROM itineraries i
      JOIN trips t ON t.id = i.trip_id
      JOIN groups g ON g.id = t.group_id
-     WHERE (
-       EXISTS (
-         SELECT 1 FROM group_members gm
-         WHERE gm.group_id = g.id
-           AND gm.user_id = $1
-           AND gm.removed_at IS NULL
-       )
-       OR EXISTS (
-         SELECT 1 FROM trip_followers tf
-         WHERE tf.trip_id = t.id
-           AND tf.follower_user_id = $1
-       )
-     )
+     LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1 AND gm.removed_at IS NULL
+     LEFT JOIN trip_followers tf ON tf.trip_id = t.id AND tf.follower_user_id = $1
+     WHERE gm.user_id IS NOT NULL OR tf.follower_user_id IS NOT NULL
      ORDER BY i.created_at DESC`,
     [userId]
   );
@@ -7287,7 +7323,7 @@ export const createItineraryRecord = async (
   if (!membership) throw new Error('You must belong to the trip group to save an itinerary');
   const dupe = await p.query(
     `SELECT 1 FROM itineraries
-     WHERE trip_id = $1 AND LOWER(destination) = LOWER($2) AND days = $3 AND COALESCE(budget,0) = COALESCE($4,0)
+     WHERE trip_id = $1 AND LOWER(destination) = LOWER($2) AND days = $3::integer AND COALESCE(budget,0) = COALESCE($4::numeric,0)
      LIMIT 1`,
     [tripId, destination.trim(), Math.max(1, Math.round(days)), budget ?? null]
   );
@@ -9793,4 +9829,705 @@ export const listUserAuthoredItems = async (
     expenses: expenses.rows,
     tripMessages: tripMessages.rows,
   };
+};
+
+// ---------------------------------------------------------------------------
+// Stripe Billing
+// ---------------------------------------------------------------------------
+
+const rowToBillingCustomer = (row: any): BillingCustomer => ({
+  id: row.id,
+  userId: row.user_id,
+  stripeCustomerId: row.stripe_customer_id,
+  emailSnapshot: row.email_snapshot ?? null,
+  livemode: row.livemode,
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
+const rowToBillingTrialUsage = (row: any): BillingTrialUsage => ({
+  id: row.id,
+  emailNormalized: row.email_normalized,
+  userId: row.user_id ?? null,
+  stripeCustomerId: row.stripe_customer_id ?? null,
+  stripeSubscriptionId: row.stripe_subscription_id ?? null,
+  trialUsedAt: row.trial_used_at instanceof Date ? row.trial_used_at.toISOString() : String(row.trial_used_at),
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
+const rowToBillingNotification = (row: any): BillingNotification => ({
+  id: row.id,
+  userId: row.user_id,
+  type: row.type,
+  notificationKey: row.notification_key,
+  title: row.title,
+  message: row.message,
+  stripeSubscriptionId: row.stripe_subscription_id ?? null,
+  stripeEventId: row.stripe_event_id ?? null,
+  emailSentAt: row.email_sent_at ? new Date(row.email_sent_at).toISOString() : null,
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
+const rowToBillingSubscription = (row: any): BillingSubscription => ({
+  id: row.id,
+  stripeSubscriptionId: row.stripe_subscription_id,
+  userId: row.user_id,
+  subscriptionScope: row.subscription_scope as BillingSubscriptionScope,
+  scopeOwnerId: row.scope_owner_id,
+  stripeCustomerId: row.stripe_customer_id,
+  stripePriceId: row.stripe_price_id,
+  planKey: row.plan_key as BillingPlanKey,
+  status: row.status as BillingSubscriptionStatus,
+  livemode: row.livemode,
+  cancelAtPeriodEnd: row.cancel_at_period_end,
+  cancelAt: row.cancel_at ? new Date(row.cancel_at).toISOString() : null,
+  currentPeriodStart: row.current_period_start ? new Date(row.current_period_start).toISOString() : null,
+  currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end).toISOString() : null,
+  trialEnd: row.trial_end ? new Date(row.trial_end).toISOString() : null,
+  endedAt: row.ended_at ? new Date(row.ended_at).toISOString() : null,
+  latestInvoiceId: row.latest_invoice_id ?? null,
+  pastDueSince: row.past_due_since ? new Date(row.past_due_since).toISOString() : null,
+  accessRevokedAt: row.access_revoked_at ? new Date(row.access_revoked_at).toISOString() : null,
+  accessRevocationReason: row.access_revocation_reason ?? null,
+  disputeId: row.dispute_id ?? null,
+  refundedAt: row.refunded_at ? new Date(row.refunded_at).toISOString() : null,
+  lastStripeEventCreated: row.last_stripe_event_created != null ? Number(row.last_stripe_event_created) : null,
+  lastSyncedAt: row.last_synced_at ? new Date(row.last_synced_at).toISOString() : null,
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
+const rowToWebhookEvent = (row: any): StripeWebhookEvent => ({
+  id: row.id,
+  stripeEventId: row.stripe_event_id,
+  eventType: row.event_type,
+  stripeObjectId: row.stripe_object_id ?? null,
+  livemode: row.livemode,
+  eventCreated: row.event_created != null ? Number(row.event_created) : null,
+  processingStatus: row.processing_status as WebhookProcessingStatus,
+  attemptCount: row.attempt_count,
+  lastError: row.last_error ?? null,
+  receivedAt: row.received_at instanceof Date ? row.received_at.toISOString() : String(row.received_at),
+  processedAt: row.processed_at ? new Date(row.processed_at).toISOString() : null,
+});
+
+export const getBillingCustomerByUserId = async (userId: string): Promise<BillingCustomer | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, user_id, stripe_customer_id, email_snapshot, livemode, created_at, updated_at
+     FROM billing_customers WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return rows[0] ? rowToBillingCustomer(rows[0]) : null;
+};
+
+export const getBillingCustomerByStripeId = async (stripeCustomerId: string): Promise<BillingCustomer | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, user_id, stripe_customer_id, email_snapshot, livemode, created_at, updated_at
+     FROM billing_customers WHERE stripe_customer_id = $1 LIMIT 1`,
+    [stripeCustomerId],
+  );
+  return rows[0] ? rowToBillingCustomer(rows[0]) : null;
+};
+
+export const upsertBillingCustomer = async (data: {
+  userId: string;
+  stripeCustomerId: string;
+  emailSnapshot?: string | null;
+  livemode: boolean;
+}): Promise<BillingCustomer> => {
+  const p = getPool();
+  const id = randomUUID();
+  const { rows } = await p.query(
+    `INSERT INTO billing_customers (id, user_id, stripe_customer_id, email_snapshot, livemode)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (user_id) DO UPDATE SET
+       email_snapshot = COALESCE(EXCLUDED.email_snapshot, billing_customers.email_snapshot),
+       updated_at = NOW()
+     RETURNING id, user_id, stripe_customer_id, email_snapshot, livemode, created_at, updated_at`,
+    [id, data.userId, data.stripeCustomerId, data.emailSnapshot ?? null, data.livemode],
+  );
+  return rowToBillingCustomer(rows[0]);
+};
+
+export const getBillingTrialUsageByEmail = async (
+  emailNormalized: string,
+): Promise<BillingTrialUsage | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_trial_usage WHERE email_normalized = $1 LIMIT 1`,
+    [emailNormalized],
+  );
+  return rows[0] ? rowToBillingTrialUsage(rows[0]) : null;
+};
+
+export const markBillingTrialUsed = async (data: {
+  emailNormalized: string;
+  userId?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  trialUsedAt?: Date | null;
+}): Promise<BillingTrialUsage> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO billing_trial_usage
+       (id, email_normalized, user_id, stripe_customer_id, stripe_subscription_id, trial_used_at, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()), NOW(), NOW())
+     ON CONFLICT (email_normalized) DO UPDATE SET
+       user_id = COALESCE(billing_trial_usage.user_id, EXCLUDED.user_id),
+       stripe_customer_id = COALESCE(billing_trial_usage.stripe_customer_id, EXCLUDED.stripe_customer_id),
+       stripe_subscription_id = COALESCE(billing_trial_usage.stripe_subscription_id, EXCLUDED.stripe_subscription_id),
+       trial_used_at = LEAST(billing_trial_usage.trial_used_at, EXCLUDED.trial_used_at),
+       updated_at = NOW()
+     RETURNING *`,
+    [
+      randomUUID(),
+      data.emailNormalized,
+      data.userId ?? null,
+      data.stripeCustomerId ?? null,
+      data.stripeSubscriptionId ?? null,
+      data.trialUsedAt ?? null,
+    ],
+  );
+  return rowToBillingTrialUsage(rows[0]);
+};
+
+export const claimBillingNotification = async (data: {
+  userId: string;
+  type: BillingNotification['type'];
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId?: string | null;
+  stripeEventId?: string | null;
+}): Promise<{ notification: BillingNotification; created: boolean }> => {
+  const p = getPool();
+  const inserted = await p.query(
+    `INSERT INTO billing_notifications
+       (id, user_id, type, notification_key, title, message, stripe_subscription_id, stripe_event_id, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
+     ON CONFLICT (notification_key) DO NOTHING
+     RETURNING *`,
+    [
+      randomUUID(),
+      data.userId,
+      data.type,
+      data.notificationKey,
+      data.title,
+      data.message,
+      data.stripeSubscriptionId ?? null,
+      data.stripeEventId ?? null,
+    ],
+  );
+  if (inserted.rows[0]) {
+    return { notification: rowToBillingNotification(inserted.rows[0]), created: true };
+  }
+  const { rows } = await p.query(
+    `SELECT * FROM billing_notifications WHERE notification_key = $1 LIMIT 1`,
+    [data.notificationKey],
+  );
+  return { notification: rowToBillingNotification(rows[0]), created: false };
+};
+
+export const markBillingNotificationEmailSent = async (
+  notificationId: string,
+  sentAt: Date = new Date(),
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_notifications SET email_sent_at = $2, updated_at = NOW() WHERE id = $1`,
+    [notificationId, sentAt],
+  );
+};
+
+export const listBillingNotificationsForUser = async (
+  userId: string,
+  limit = 10,
+): Promise<BillingNotification[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit],
+  );
+  return rows.map(rowToBillingNotification);
+};
+
+export const getBillingSubscriptionByStripeId = async (
+  stripeSubscriptionId: string,
+): Promise<BillingSubscription | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions WHERE stripe_subscription_id = $1 LIMIT 1`,
+    [stripeSubscriptionId],
+  );
+  return rows[0] ? rowToBillingSubscription(rows[0]) : null;
+};
+
+export const listActiveBillingSubscriptionsForUser = async (
+  userId: string,
+): Promise<BillingSubscription[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions
+     WHERE user_id = $1
+       AND (status NOT IN ('canceled', 'incomplete_expired') OR past_due_since IS NOT NULL)
+     ORDER BY created_at DESC`,
+    [userId],
+  );
+  return rows.map(rowToBillingSubscription);
+};
+
+export const claimBillingCheckout = async (data: {
+  userId: string;
+  claimToken: string;
+  planKey: BillingPlanKey;
+  expiresAt: Date;
+}): Promise<{ claimed: boolean; checkoutUrl: string | null }> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO billing_checkout_claims
+       (user_id, claim_token, plan_key, expires_at, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, NOW(), NOW())
+     ON CONFLICT (user_id) DO UPDATE SET
+       claim_token = EXCLUDED.claim_token,
+       plan_key = EXCLUDED.plan_key,
+       stripe_checkout_session_id = NULL,
+       checkout_url = NULL,
+       expires_at = EXCLUDED.expires_at,
+       updated_at = NOW()
+     WHERE billing_checkout_claims.expires_at <= NOW()
+     RETURNING claim_token, checkout_url`,
+    [data.userId, data.claimToken, data.planKey, data.expiresAt],
+  );
+  if (rows[0]?.claim_token === data.claimToken) {
+    return { claimed: true, checkoutUrl: rows[0].checkout_url ?? null };
+  }
+  const existing = await p.query(
+    `SELECT checkout_url FROM billing_checkout_claims WHERE user_id = $1 LIMIT 1`,
+    [data.userId],
+  );
+  return { claimed: false, checkoutUrl: existing.rows[0]?.checkout_url ?? null };
+};
+
+export const completeBillingCheckoutClaim = async (data: {
+  userId: string;
+  claimToken: string;
+  stripeCheckoutSessionId: string;
+  checkoutUrl: string;
+  expiresAt: Date;
+}): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_checkout_claims
+     SET stripe_checkout_session_id = $3, checkout_url = $4, expires_at = $5, updated_at = NOW()
+     WHERE user_id = $1 AND claim_token = $2`,
+    [data.userId, data.claimToken, data.stripeCheckoutSessionId, data.checkoutUrl, data.expiresAt],
+  );
+};
+
+export const releaseBillingCheckoutClaim = async (userId: string, claimToken: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `DELETE FROM billing_checkout_claims WHERE user_id = $1 AND claim_token = $2`,
+    [userId, claimToken],
+  );
+};
+
+export const clearBillingCheckoutClaim = async (userId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM billing_checkout_claims WHERE user_id = $1`, [userId]);
+};
+
+export const upsertBillingSubscription = async (data: {
+  stripeSubscriptionId: string;
+  userId: string;
+  subscriptionScope?: BillingSubscriptionScope;
+  scopeOwnerId: string;
+  stripeCustomerId: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  status: BillingSubscriptionStatus;
+  livemode: boolean;
+  cancelAtPeriodEnd: boolean;
+  cancelAt?: Date | null;
+  currentPeriodStart?: Date | null;
+  currentPeriodEnd?: Date | null;
+  trialEnd?: Date | null;
+  endedAt?: Date | null;
+  latestInvoiceId?: string | null;
+  pastDueSince?: Date | null;
+  accessRevokedAt?: Date | null;
+  accessRevocationReason?: string | null;
+  disputeId?: string | null;
+  refundedAt?: Date | null;
+  lastStripeEventCreated?: number | null;
+}): Promise<BillingSubscription> => {
+  const p = getPool();
+  const id = randomUUID();
+  const scope = data.subscriptionScope ?? 'individual';
+  const { rows } = await p.query(
+    `INSERT INTO billing_subscriptions (
+       id, stripe_subscription_id, user_id, subscription_scope, scope_owner_id,
+       stripe_customer_id, stripe_price_id, plan_key, status, livemode,
+       cancel_at_period_end, cancel_at, current_period_start, current_period_end,
+       trial_end, ended_at, latest_invoice_id, past_due_since,
+       access_revoked_at, access_revocation_reason, dispute_id, refunded_at,
+       last_stripe_event_created, last_synced_at
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+       $11, $12, $13, $14, $15, $16, $17, $18,
+       $19, $20, $21, $22, $23, NOW()
+     )
+     ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+       user_id                  = EXCLUDED.user_id,
+       subscription_scope       = EXCLUDED.subscription_scope,
+       scope_owner_id           = EXCLUDED.scope_owner_id,
+       stripe_customer_id       = EXCLUDED.stripe_customer_id,
+       stripe_price_id          = EXCLUDED.stripe_price_id,
+       plan_key                 = EXCLUDED.plan_key,
+       status                   = EXCLUDED.status,
+       cancel_at_period_end     = EXCLUDED.cancel_at_period_end,
+       cancel_at                = EXCLUDED.cancel_at,
+       current_period_start     = EXCLUDED.current_period_start,
+       current_period_end       = EXCLUDED.current_period_end,
+       trial_end                = EXCLUDED.trial_end,
+       ended_at                 = EXCLUDED.ended_at,
+       latest_invoice_id        = EXCLUDED.latest_invoice_id,
+       past_due_since           = COALESCE(EXCLUDED.past_due_since, billing_subscriptions.past_due_since),
+       access_revoked_at        = COALESCE(EXCLUDED.access_revoked_at, billing_subscriptions.access_revoked_at),
+       access_revocation_reason = COALESCE(EXCLUDED.access_revocation_reason, billing_subscriptions.access_revocation_reason),
+       dispute_id               = COALESCE(EXCLUDED.dispute_id, billing_subscriptions.dispute_id),
+       refunded_at              = COALESCE(EXCLUDED.refunded_at, billing_subscriptions.refunded_at),
+       last_stripe_event_created = EXCLUDED.last_stripe_event_created,
+       last_synced_at           = NOW(),
+       updated_at               = NOW()
+     RETURNING *`,
+    [
+      id, data.stripeSubscriptionId, data.userId, scope, data.scopeOwnerId,
+      data.stripeCustomerId, data.stripePriceId, data.planKey, data.status, data.livemode,
+      data.cancelAtPeriodEnd, data.cancelAt ?? null, data.currentPeriodStart ?? null,
+      data.currentPeriodEnd ?? null, data.trialEnd ?? null, data.endedAt ?? null,
+      data.latestInvoiceId ?? null, data.pastDueSince ?? null,
+      data.accessRevokedAt ?? null, data.accessRevocationReason ?? null,
+      data.disputeId ?? null, data.refundedAt ?? null,
+      data.lastStripeEventCreated ?? null,
+    ],
+  );
+  return rowToBillingSubscription(rows[0]);
+};
+
+export const revokeBillingSubscriptionAccess = async (
+  stripeSubscriptionId: string,
+  reason: string,
+  details?: { disputeId?: string | null; refundedAt?: Date | null },
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET access_revoked_at = COALESCE(access_revoked_at, NOW()),
+         access_revocation_reason = $2,
+         dispute_id = COALESCE($3, dispute_id),
+         refunded_at = COALESCE($4, refunded_at),
+         updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [stripeSubscriptionId, reason, details?.disputeId ?? null, details?.refundedAt ?? null],
+  );
+};
+
+export const restoreBillingSubscriptionAccess = async (
+  stripeSubscriptionId: string,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET access_revoked_at = NULL, access_revocation_reason = NULL, dispute_id = NULL,
+         refunded_at = NULL, updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [stripeSubscriptionId],
+  );
+};
+
+export const setPastDueSince = async (
+  stripeSubscriptionId: string,
+  since: Date,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET past_due_since = $2, updated_at = NOW()
+     WHERE stripe_subscription_id = $1 AND past_due_since IS NULL`,
+    [stripeSubscriptionId, since],
+  );
+};
+
+export const clearPastDueSince = async (stripeSubscriptionId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET past_due_since = NULL, updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [stripeSubscriptionId],
+  );
+};
+
+export const listStaleSubscriptionsForReconciliation = async (
+  olderThanMinutes: number,
+  limit: number,
+): Promise<BillingSubscription[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions
+     WHERE status NOT IN ('canceled', 'incomplete_expired')
+       AND (last_synced_at IS NULL OR last_synced_at < NOW() - ($1 * INTERVAL '1 minute'))
+     ORDER BY last_synced_at ASC NULLS FIRST
+     LIMIT $2`,
+    [olderThanMinutes, limit],
+  );
+  return rows.map(rowToBillingSubscription);
+};
+
+export const listPastDueBillingSubscriptions = async (): Promise<BillingSubscription[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions
+     WHERE past_due_since IS NOT NULL
+     ORDER BY past_due_since ASC`,
+  );
+  return rows.map(rowToBillingSubscription);
+};
+
+// Returns true if the event was newly claimed (i.e. not previously seen).
+// Returns false if a row with this stripe_event_id already exists.
+export const claimStripeWebhookEvent = async (data: {
+  stripeEventId: string;
+  eventType: string;
+  stripeObjectId?: string | null;
+  livemode: boolean;
+  eventCreated?: number | null;
+}): Promise<boolean> => {
+  const p = getPool();
+  const id = randomUUID();
+  const result = await p.query(
+    `INSERT INTO stripe_webhook_events
+       (id, stripe_event_id, event_type, stripe_object_id, livemode, event_created, processing_status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+     ON CONFLICT (stripe_event_id) DO UPDATE SET
+       processing_status = 'pending',
+       last_error = NULL
+     WHERE stripe_webhook_events.processing_status = 'failed'
+        OR (
+          stripe_webhook_events.processing_status = 'pending'
+          AND stripe_webhook_events.received_at < NOW() - INTERVAL '5 minutes'
+        )`,
+    [id, data.stripeEventId, data.eventType, data.stripeObjectId ?? null, data.livemode, data.eventCreated ?? null],
+  );
+  return (result.rowCount ?? 0) > 0;
+};
+
+export const markStripeWebhookEventProcessed = async (stripeEventId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE stripe_webhook_events
+     SET processing_status = 'processed', processed_at = NOW()
+     WHERE stripe_event_id = $1`,
+    [stripeEventId],
+  );
+};
+
+export const markStripeWebhookEventFailed = async (
+  stripeEventId: string,
+  error: string,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE stripe_webhook_events
+     SET processing_status = 'failed',
+         last_error = $2,
+         attempt_count = attempt_count + 1
+     WHERE stripe_event_id = $1`,
+    [stripeEventId, error],
+  );
+};
+
+export const getStripeWebhookEvent = async (stripeEventId: string): Promise<StripeWebhookEvent | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM stripe_webhook_events WHERE stripe_event_id = $1 LIMIT 1`,
+    [stripeEventId],
+  );
+  return rows[0] ? rowToWebhookEvent(rows[0]) : null;
+};
+
+// ---------------------------------------------------------------------------
+// Billing plan config
+// ---------------------------------------------------------------------------
+
+const rowToBillingPlanConfig = (row: any): BillingPlanConfig => ({
+  id: row.id,
+  planKey: row.plan_key as BillingPlanKey,
+  stripeProductId: row.stripe_product_id ?? null,
+  activeStripePriceId: row.active_stripe_price_id ?? null,
+  unitAmountCents: row.unit_amount_cents,
+  currency: row.currency,
+  interval: row.interval as 'month' | 'year',
+  trialDays: row.trial_days,
+  pastDueGraceDays: row.past_due_grace_days,
+  automaticTaxEnabled: row.automatic_tax_enabled,
+  promotionCodesEnabled: row.promotion_codes_enabled,
+  isCheckoutEnabled: row.is_checkout_enabled,
+  livemode: row.livemode ?? null,
+  version: row.version,
+  updatedBy: row.updated_by ?? null,
+  updatedAt: row.updated_at?.toISOString?.() ?? row.updated_at,
+});
+
+export const listBillingPlanConfigs = async (): Promise<BillingPlanConfig[]> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM billing_plan_config ORDER BY plan_key`);
+  return rows.map(rowToBillingPlanConfig);
+};
+
+export const getBillingPlanConfig = async (planKey: BillingPlanKey): Promise<BillingPlanConfig | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM billing_plan_config WHERE plan_key = $1 LIMIT 1`, [planKey]);
+  return rows[0] ? rowToBillingPlanConfig(rows[0]) : null;
+};
+
+export const upsertBillingPlanConfig = async (
+  data: Partial<Omit<BillingPlanConfig, 'id' | 'planKey'>> & { planKey: BillingPlanKey; updatedBy?: string | null },
+): Promise<BillingPlanConfig> => {
+  const p = getPool();
+  const existing = await getBillingPlanConfig(data.planKey);
+  const has = (key: keyof typeof data): boolean => Object.prototype.hasOwnProperty.call(data, key);
+
+  if (!existing) {
+    const id = randomUUID();
+    const { rows } = await p.query(
+      `INSERT INTO billing_plan_config
+         (id, plan_key, stripe_product_id, active_stripe_price_id, unit_amount_cents, currency,
+          interval, trial_days, past_due_grace_days, automatic_tax_enabled, promotion_codes_enabled,
+          is_checkout_enabled, livemode, updated_by, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+       RETURNING *`,
+      [
+        id, data.planKey,
+        has('stripeProductId') ? data.stripeProductId ?? null : null,
+        has('activeStripePriceId') ? data.activeStripePriceId ?? null : null,
+        data.unitAmountCents ?? 0, data.currency ?? 'usd',
+        data.interval ?? 'month', data.trialDays ?? 14, data.pastDueGraceDays ?? 14,
+        data.automaticTaxEnabled ?? true, data.promotionCodesEnabled ?? false,
+        data.isCheckoutEnabled ?? true, has('livemode') ? data.livemode ?? null : null,
+        data.updatedBy ?? null,
+      ],
+    );
+    return rowToBillingPlanConfig(rows[0]);
+  }
+
+  const { rows } = await p.query(
+    `UPDATE billing_plan_config SET
+       stripe_product_id = CASE WHEN $2 THEN $3 ELSE stripe_product_id END,
+       active_stripe_price_id = CASE WHEN $4 THEN $5 ELSE active_stripe_price_id END,
+       unit_amount_cents = COALESCE($6, unit_amount_cents),
+       currency = COALESCE($7, currency),
+       interval = COALESCE($8, interval),
+       trial_days = COALESCE($9, trial_days),
+       past_due_grace_days = COALESCE($10, past_due_grace_days),
+       automatic_tax_enabled = COALESCE($11, automatic_tax_enabled),
+       promotion_codes_enabled = COALESCE($12, promotion_codes_enabled),
+       is_checkout_enabled = COALESCE($13, is_checkout_enabled),
+       livemode = CASE WHEN $14 THEN $15 ELSE livemode END,
+       updated_by = $16,
+       version = version + 1,
+       updated_at = NOW()
+     WHERE plan_key = $1
+     RETURNING *`,
+    [
+      data.planKey,
+      has('stripeProductId'), data.stripeProductId ?? null,
+      has('activeStripePriceId'), data.activeStripePriceId ?? null,
+      data.unitAmountCents, data.currency, data.interval,
+      data.trialDays, data.pastDueGraceDays,
+      data.automaticTaxEnabled, data.promotionCodesEnabled,
+      data.isCheckoutEnabled,
+      has('livemode'), data.livemode ?? null,
+      data.updatedBy ?? null,
+    ],
+  );
+  return rowToBillingPlanConfig(rows[0]);
+};
+
+// ---------------------------------------------------------------------------
+// Billing price history
+// ---------------------------------------------------------------------------
+
+const rowToBillingPriceHistory = (row: any): BillingPriceHistory => ({
+  id: row.id,
+  stripePriceId: row.stripe_price_id,
+  planKey: row.plan_key as BillingPlanKey,
+  stripeProductId: row.stripe_product_id ?? null,
+  unitAmountCents: row.unit_amount_cents,
+  currency: row.currency,
+  interval: row.interval as 'month' | 'year',
+  livemode: row.livemode,
+  activeForNewCheckout: row.active_for_new_checkout,
+  createdBy: row.created_by ?? null,
+  createdAt: row.created_at?.toISOString?.() ?? row.created_at,
+  retiredAt: row.retired_at?.toISOString?.() ?? row.retired_at ?? null,
+});
+
+export const listBillingPriceHistory = async (planKey?: BillingPlanKey): Promise<BillingPriceHistory[]> => {
+  const p = getPool();
+  if (planKey) {
+    const { rows } = await p.query(
+      `SELECT * FROM billing_price_history WHERE plan_key = $1 ORDER BY created_at DESC`,
+      [planKey],
+    );
+    return rows.map(rowToBillingPriceHistory);
+  }
+  const { rows } = await p.query(`SELECT * FROM billing_price_history ORDER BY created_at DESC`);
+  return rows.map(rowToBillingPriceHistory);
+};
+
+export const insertBillingPriceHistory = async (data: {
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  livemode: boolean;
+  activeForNewCheckout: boolean;
+  createdBy: string | null;
+}): Promise<BillingPriceHistory> => {
+  const p = getPool();
+  const id = randomUUID();
+  const { rows } = await p.query(
+    `INSERT INTO billing_price_history
+       (id, stripe_price_id, plan_key, stripe_product_id, unit_amount_cents, currency,
+        interval, livemode, active_for_new_checkout, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     RETURNING *`,
+    [
+      id, data.stripePriceId, data.planKey, data.stripeProductId,
+      data.unitAmountCents, data.currency, data.interval, data.livemode,
+      data.activeForNewCheckout, data.createdBy,
+    ],
+  );
+  return rowToBillingPriceHistory(rows[0]);
+};
+
+export const deactivateOldPricesForPlan = async (
+  planKey: BillingPlanKey,
+  keepActivePriceId: string,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_price_history
+     SET active_for_new_checkout = FALSE, retired_at = NOW()
+     WHERE plan_key = $1 AND stripe_price_id != $2 AND active_for_new_checkout = TRUE`,
+    [planKey, keepActivePriceId],
+  );
 };

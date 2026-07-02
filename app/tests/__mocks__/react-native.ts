@@ -13,6 +13,7 @@ export const FlatList = 'FlatList';
 export const SectionList = 'SectionList';
 export const Switch = 'Switch';
 export const Modal = 'Modal';
+export const KeyboardAvoidingView = 'KeyboardAvoidingView';
 export const SafeAreaView = 'SafeAreaView';
 export const ActivityIndicator = 'ActivityIndicator';
 export const AsyncStorage = {
@@ -23,6 +24,10 @@ export const AsyncStorage = {
 export const AppState = {
   currentState: 'active',
   addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+};
+export const Linking = {
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  openURL: jest.fn(async () => undefined),
 };
 export const StyleSheet = {
   create: <T extends Record<string, any>>(styles: T) => styles,
@@ -50,10 +55,12 @@ export default {
   SectionList,
   Switch,
   Modal,
+  KeyboardAvoidingView,
   SafeAreaView,
   ActivityIndicator,
   AsyncStorage,
   AppState,
+  Linking,
   StyleSheet,
   useWindowDimensions,
   useColorScheme,

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import childProcess from 'child_process';
 import path from 'path';
 

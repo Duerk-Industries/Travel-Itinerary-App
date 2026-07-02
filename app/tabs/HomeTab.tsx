@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
@@ -62,6 +62,10 @@ const HomeTab: React.FC<HomeTabProps> = ({
   disabledPages,
   hiddenPages,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isPhoneLayout = viewportWidth < 680;
+  const isCompactLayout = viewportWidth < 520;
+  const heroHeight = Math.max(200, Math.min(320, viewportWidth * 0.42));
   const [heroImage, setHeroImage] = useState<string | null>(null);
   const [heroLoading, setHeroLoading] = useState<boolean>(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
@@ -182,10 +186,26 @@ const HomeTab: React.FC<HomeTabProps> = ({
         style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={[styles.homeScrollContent, { flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        contentInsetAdjustmentBehavior="automatic"
       >
         <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
-          <Text style={styles.homeTitle}>Your trip</Text>
-          <View style={[styles.row, { alignItems: 'center', gap: 8 }]}>
+          <Text style={[styles.homeTitle, { flexShrink: 1, minWidth: 0 }]}>Your trip</Text>
+          <View
+            style={[
+              styles.row,
+              {
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 8,
+                flex: 1,
+                minWidth: 0,
+                marginBottom: 0,
+              },
+            ]}
+          >
             {!hiddenPages?.has('create-trip') ? (
               <Pressable
                 testID="home-create-trip-button"
@@ -232,7 +252,11 @@ const HomeTab: React.FC<HomeTabProps> = ({
         </View>
         <Pressable
           testID="home-hero-card"
-          style={({ pressed }: { pressed: boolean }) => [styles.homeHeroCard, pressed && styles.homeHeroCardPressed]}
+          style={({ pressed }: { pressed: boolean }) => [
+            styles.homeHeroCard,
+            { height: heroHeight },
+            pressed && styles.homeHeroCardPressed,
+          ]}
           onPress={() => {
             if (hasTripsToSelect) {
               setShowTripPicker(true);
@@ -249,11 +273,27 @@ const HomeTab: React.FC<HomeTabProps> = ({
             <View style={styles.homeHeroFallback} />
           )}
           <View style={styles.homeHeroOverlay} />
-          <View style={styles.homeHeroTextWrap}>
-            {heroSubtitle ? <Text style={styles.homeHeroSubtitle}>{heroSubtitle}</Text> : null}
-            <Text style={styles.homeHeroTitle}>{heroTitle}</Text>
+          <View
+            style={[
+              styles.homeHeroTextWrap,
+              isCompactLayout && { left: 14, right: 14, bottom: 54, paddingRight: 0 },
+            ]}
+          >
+            {heroSubtitle ? (
+              <Text style={[styles.homeHeroSubtitle, isCompactLayout && { fontSize: 14 }]}>{heroSubtitle}</Text>
+            ) : null}
+            <Text
+              style={[styles.homeHeroTitle, isCompactLayout && { fontSize: 25, lineHeight: 30 }]}
+              numberOfLines={isCompactLayout ? 3 : 2}
+              ellipsizeMode="tail"
+            >
+              {heroTitle}
+            </Text>
           </View>
-          <View style={styles.homeHeroChangeTripBadge} pointerEvents="none">
+          <View
+            style={[styles.homeHeroChangeTripBadge, isCompactLayout && { left: 14, right: 'auto', bottom: 12 }]}
+            pointerEvents="none"
+          >
             <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
           </View>
         </Pressable>
@@ -280,7 +320,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
       </ScrollView>
 
       {showTripPicker ? (
-        <Modal transparent animationType="fade" visible>
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowTripPicker(false)}>
           <View style={styles.homeModalOverlay} testID="home-trip-modal">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
@@ -292,7 +332,11 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   <Text style={styles.homeModalCloseText}>✕</Text>
                 </Pressable>
               </View>
-              <ScrollView style={styles.homeModalList}>
+              <ScrollView
+                style={styles.homeModalList}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+              >
                 {sortedTrips.map((trip, idx) => (
                   <Pressable
                     key={trip.id}
@@ -350,7 +394,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
       ) : null}
 
       {showNoTripsDialog ? (
-        <Modal transparent animationType="fade" visible>
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowNoTripsDialog(false)}>
           <View style={styles.homeModalOverlay} testID="home-no-trips-dialog">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
@@ -391,7 +435,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
       ) : null}
 
       {showFollowDialog ? (
-        <Modal transparent animationType="fade" visible>
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowFollowDialog(false)}>
           <View style={styles.homeModalOverlay} testID="home-follow-dialog">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>

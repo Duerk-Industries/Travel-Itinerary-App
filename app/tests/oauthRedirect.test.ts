@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { buildWebOAuthRedirectUrl } from '../utils/oauthRedirect';
 
 describe('buildWebOAuthRedirectUrl', () => {

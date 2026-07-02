@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Constants from 'expo-constants';
+import { buildFollowShareLink } from '../utils/shareLinks';
+import { copyToClipboard } from '../utils/clipboard';
 
 type Trip = {
   id: string;
@@ -46,11 +49,12 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
 
   const shareLink = useMemo(() => {
     if (!followCode) return '';
-    if (typeof window !== 'undefined') {
-      const origin = window.location.origin || '';
-      return `${origin}/app?followCode=${encodeURIComponent(followCode)}`;
-    }
-    return followCode;
+    const webOrigin = typeof window !== 'undefined' ? window.location.origin || '' : '';
+    return buildFollowShareLink(followCode, {
+      platformOs: Platform.OS,
+      webOrigin,
+      scheme: Constants.expoConfig?.scheme,
+    });
   }, [followCode]);
 
   const loadShareData = async () => {
@@ -106,16 +110,10 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
 
   const copyShareLink = async () => {
     if (!shareLink) return;
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareLink);
-        setCopyFeedback('Link copied.');
-        return;
-      }
-      setCopyFeedback('Clipboard unavailable. Copy manually.');
-    } catch {
-      setCopyFeedback('Unable to copy link.');
-    }
+    const result = await copyToClipboard(shareLink);
+    if (result === 'copied') setCopyFeedback('Link copied.');
+    else if (result === 'unavailable') setCopyFeedback('Clipboard unavailable. Copy manually.');
+    else setCopyFeedback('Unable to copy link.');
   };
 
   const parseEmails = (raw: string): string[] => {

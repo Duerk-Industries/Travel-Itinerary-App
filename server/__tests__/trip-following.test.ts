@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
@@ -106,13 +108,23 @@ describe('Trip following (read-only)', () => {
       .expect(403);
   });
 
+  it('blocks trip owners/members from following their own trip', async () => {
+    const res = await request(app)
+      .post('/api/trips/follow')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ inviteCode });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/already a member/i);
+  });
+
   it('supports unfollow', async () => {
     await request(app).delete(`/api/trips/${tripId}/follow`).set('Authorization', `Bearer ${followerToken}`).expect(204);
     const followed = await request(app).get('/api/trips/followed').set('Authorization', `Bearer ${followerToken}`).expect(200);
     expect((followed.body as any[]).some((t: any) => t.tripId === tripId)).toBe(false);
   });
 
-  it('allows followers and members to discuss via trip comments', async () => {
+  it('excludes a trip from the followed list once the follower becomes a full group member', async () => {
+    // Re-follow (the previous test unfollowed) so there's a trip_followers row to go stale.
     await request(app)
       .post('/api/trips/follow')
       .set('Authorization', `Bearer ${followerToken}`)
@@ -122,6 +134,35 @@ describe('Trip following (read-only)', () => {
           throw new Error(`Expected follow status 200/201, got ${res.status}: ${JSON.stringify(res.body)}`);
         }
       });
+
+    const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
+    const groupId = groups.body[0]?.id as string;
+
+    const addMember = await request(app)
+      .post(`/api/groups/${groupId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: follower.email })
+      .expect(201);
+    const inviteId = addMember.body.inviteId as string;
+    expect(inviteId).toBeTruthy();
+
+    await request(app)
+      .post(`/api/groups/invites/${inviteId}/accept`)
+      .set('Authorization', `Bearer ${followerToken}`)
+      .expect(204);
+
+    // The follower is now a full group member with a leftover trip_followers row —
+    // the trip must no longer be reported as "followed" (it's a real member trip).
+    const followed = await request(app).get('/api/trips/followed').set('Authorization', `Bearer ${followerToken}`).expect(200);
+    expect((followed.body as any[]).some((t: any) => t.tripId === tripId)).toBe(false);
+
+    const ownedTrips = await request(app).get('/api/trips').set('Authorization', `Bearer ${followerToken}`).expect(200);
+    expect((ownedTrips.body as any[]).some((t: any) => t.id === tripId)).toBe(true);
+  });
+
+  it('allows followers and members to discuss via trip comments', async () => {
+    // The follower is now a full group member (from the previous test), so following
+    // is correctly blocked. Members can still post comments via ensureUserCanReadTrip.
 
     const post = await request(app)
       .post(`/api/trips/${tripId}/comments`)

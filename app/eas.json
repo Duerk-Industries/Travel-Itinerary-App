@@ -1,18 +1,32 @@
 {
   "cli": {
-    "version": ">= 16.28.0",
+    "version": ">= 20.2.0",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_NO_SENTRY_METRO": "1"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://duerk.org",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://fe91aa465308295ccd83ce3159bc55da@o4511453144416256.ingest.us.sentry.io/4511453154574336",
+        "SENTRY_ALLOW_FAILURE": "true"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://duerk.org",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://fe91aa465308295ccd83ce3159bc55da@o4511453144416256.ingest.us.sentry.io/4511453154574336",
+        "SENTRY_ALLOW_FAILURE": "true"
+      }
     }
   },
   "submit": {

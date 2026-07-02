@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 // Contract test: server/src/utils/{coveredBy,itineraryStatus}.ts maintain the
 // same behavior as packages/domain/src/{coveredBy,itineraryStatus}.ts.
 // Tsjest's __tests__ tsconfig lets us import across workspaces here even

@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import { act, renderHook } from '@testing-library/react-native';
 import { useTraits } from '../hooks/useTraits';

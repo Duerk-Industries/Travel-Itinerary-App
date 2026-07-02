@@ -2,7 +2,7 @@
   "name": "shared-trip-planner",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "main": "app/AppEntry.js",
   "workspaces": [
     "server",
     "app",
@@ -32,11 +32,15 @@
     "emulators:container": "docker build -f functions/Dockerfile.local -t travel-itinerary-emulators . && docker run --rm -p 4001:4001 -p 5001:5001 -p 8080:8080 -p 9099:9099 -p 9199:9199 travel-itinerary-emulators",
     "postinstall": "patch-package",
     "playwright:install": "node ./node_modules/@playwright/test/cli.js install",
-    "test:app": "npm --prefix app test",
-    "test:server": "npm --prefix server test",
+    "test:app": "npm --prefix app run test:sharded",
+    "test:app:all": "npm --prefix app test",
+    "test:app:shard": "npm --prefix app run test:shard --",
+    "test:server": "npm --prefix server run test:sharded",
+    "test:server:all": "npm --prefix server test",
+    "test:server:shard": "npm --prefix server run test:shard --",
     "locations:update": "tsx scripts/update-location-jsons.ts",
     "locations:upload": "tsx scripts/update-location-jsons.ts",
-    "emulators:start": "node scripts/select-latest-firebase-export.js && firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
+    "emulators:start": "node scripts/select-latest-firebase-export.mjs && npx --yes firebase-tools emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
     "images:migrate-cache": "tsx scripts/migrate-image-cache-to-storage.ts",
     "firestore:group-access:backfill": "tsx scripts/backfill-group-access.ts",
     "firestore:trip-access:backfill": "tsx scripts/backfill-trip-access.ts",
@@ -44,21 +48,45 @@
     "firestore:acl:apply": "tsx scripts/firestore-acl-backfill.ts --mode=apply --scope=all",
     "list-users": "tsx scripts/list_users.ts",
     "list-trips": "tsx scripts/list_trips_and_users.ts",
+    "billing:list-plans": "tsx scripts/list-billing-plans.ts",
+    "billing:link-customer": "tsx scripts/link-stripe-billing-customer.ts",
+    "billing:publish-price": "tsx scripts/publish-billing-price.ts",
     "accounts:seed": "tsx scripts/create-test-accounts.ts",
     "ingestion:debug-pdf": "tsx scripts/debug-ingestion-pdf.ts",
     "ingestion:corpus:build": "tsx scripts/build_ingestion_training_corpus.ts",
+    "cost-model": "npm --prefix server run cost-model -- --config server/config/cost-model.yaml --output dist/cost-model.csv",
     "destinations:generate": "tsx scripts/generate_destinations_csv.ts",
     "transport-hubs:generate": "tsx scripts/generate_destination_transport_hubs_csv.ts",
     "attractions:generate": "tsx server/scripts/generate_curated_attractions.ts",
     "attractions:backfill-geo": "tsx server/scripts/backfill_attractions_geography.ts",
-    "catalog:generate": "npm run destinations:generate && npm run attractions:generate && npm run transport-hubs:generate"
+    "catalog:generate": "npm run destinations:generate && npm run attractions:generate && npm run transport-hubs:generate",
+    "icons:android": "node scripts/generate-android-adaptive-icons.mjs",
+    "e2e:maestro": "maestro test .maestro/launch-smoke.yaml",
+    "e2e:maestro:all": "maestro test .maestro"
   },
   "overrides": {
     "glob": "13.0.5",
     "minimatch": "10.2.4",
     "@tootallnate/once": "3.0.1",
+    "@opentelemetry/core": "^2.8.0",
     "rimraf": "6.1.3",
     "postcss": "8.5.10",
+    "js-yaml": "4.2.0",
+    "@google-cloud/storage": {
+      "uuid": "^11.1.1"
+    },
+    "gaxios": {
+      "uuid": "^11.1.1"
+    },
+    "google-gax": {
+      "uuid": "^11.1.1"
+    },
+    "teeny-request": {
+      "uuid": "^11.1.1"
+    },
+    "xcode": {
+      "uuid": "^11.1.1"
+    },
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-test-renderer": "19.1.0"
@@ -75,6 +103,7 @@
     "react-native-dotenv": "^3.4.11",
     "react-refresh": "^0.18.0",
     "react-test-renderer": "19.1.0",
+    "sharp": "^0.34.5",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2"
   },
@@ -82,17 +111,15 @@
     "@expo/metro-runtime": "~6.1.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
-    "@react-native-firebase/app": "^23.8.6",
-    "@react-native-firebase/app-check": "^23.8.6",
-    "@react-native-firebase/auth": "^23.8.6",
+    "@sentry/react": "^10.53.1",
     "@types/react": "~19.1.10",
     "axios": "^1.13.5",
     "docling-sdk": "^2.0.4",
-    "expo": "^54.0.33",
-    "expo-web-browser": "~15.0.10",
-    "firebase": "^12.9.0",
-    "firebase-admin": "^13.8.0",
-    "firebase-tools": "^15.15.0",
+    "dotenv": "^16.6.1",
+    "expo": "~54.0.34",
+    "expo-web-browser": "~15.0.11",
+    "firebase": "^12.13.0",
+    "firebase-admin": "^13.10.0",
     "openai": "^6.22.0",
     "p-limit": "^7.3.0",
     "passport-google-oauth20": "^2.0.0",

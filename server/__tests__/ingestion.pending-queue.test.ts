@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import path from 'path';
 
 const setMemoryEnv = () => {

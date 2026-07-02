@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRetryableMutation } from '../hooks/useRetryableMutation';

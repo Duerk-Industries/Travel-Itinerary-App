@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { parseDto } from '../src/utils/dtoParse';
 import { createExpenseDto, listExpensesQueryDto } from '../src/routes/expenseDtos';
 

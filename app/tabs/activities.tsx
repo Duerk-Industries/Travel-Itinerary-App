@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
@@ -300,7 +301,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const openTourEditor = (tour?: Tour) => {
     if (readOnly) return;
     if (mode !== 'wizard' && !activeTripId) {
-      alert('Select an active trip before adding an activity.');
+      Alert.alert('Select an active trip before adding an activity.');
       return;
     }
     const base = tour
@@ -354,7 +355,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     if (!editingTour) return;
     const status = normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS);
     if (!shouldRelaxRequiredFields(status) && !editingTour.name.trim()) {
-      alert('Please enter an activity name.');
+      Alert.alert('Please enter an activity name.');
       return;
     }
     const cleanCost = (editingTour.cost || '').replace(/[^0-9.]/g, '');
@@ -382,7 +383,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       return;
     }
     if (!activeTripId) {
-      alert('Select an active trip before saving an activity.');
+      Alert.alert('Select an active trip before saving an activity.');
       return;
     }
     const method = editingTourId ? 'PUT' : 'POST';
@@ -406,7 +407,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         closeTourEditor();
       } catch (err: any) {
         console.error('saveActivity failed', err);
-        alert(err.message || 'Unable to save activity');
+        Alert.alert(err.message || 'Unable to save activity');
       }
     })();
   };
@@ -423,7 +424,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         if (!result.ok) throw new Error(result.error || 'Unable to delete activity');
         onDataChanged ? onDataChanged() : fetchTours();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => Alert.alert(err.message));
   };
 
   const voteOnTour = async (id: string, value: 1 | -1) => {
@@ -440,7 +441,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       }
       onDataChanged ? onDataChanged() : await fetchTours();
     } catch (err: any) {
-      alert(err?.message || 'Unable to submit vote');
+      Alert.alert(err?.message || 'Unable to submit vote');
     }
   };
 
@@ -458,7 +459,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       }
       onDataChanged ? onDataChanged() : await fetchTours();
     } catch (err: any) {
-      alert(err?.message || 'Unable to submit rating');
+      Alert.alert(err?.message || 'Unable to submit rating');
     }
   };
 
@@ -531,7 +532,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           }}
         />
       ) : null}
-      <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+      <HorizontalTableScroll
+        style={styles.tableScroll}
+        contentContainerStyle={styles.tableScrollContent}
+      >
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">
             {[
@@ -580,7 +584,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             </View>
           ))}
         </View>
-      </ScrollView>
+      </HorizontalTableScroll>
       <View style={{ marginTop: 8 }}>
             <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (

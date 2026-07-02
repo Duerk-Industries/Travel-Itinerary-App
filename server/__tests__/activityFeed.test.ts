@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { aggregateTripActivity } from '../src/services/activityFeed';
 import type { TripActivity } from '../src/types';
 

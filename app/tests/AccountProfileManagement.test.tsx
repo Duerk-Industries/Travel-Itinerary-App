@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AccountProfileManagement from '../tabs/AccountProfileManagement';
@@ -41,6 +43,7 @@ describe('AccountProfileManagement', () => {
       homeAddress: '123 Main St, Austin, TX',
       preferredAirport: 'AUS',
       appearancePreference: 'auto' as const,
+      temperatureUnit: 'fahrenheit' as const,
     },
     setAccountProfile: jest.fn(),
     setUserToken: jest.fn(),
@@ -65,7 +68,26 @@ describe('AccountProfileManagement', () => {
     expect(getByPlaceholderText('First name')).toBeTruthy();
     expect(getByText(/123 Main St, Austin/)).toBeTruthy();
     expect(getByPlaceholderText('Preferred airport (optional)')).toBeTruthy();
+    expect(getByText('Temperature')).toBeTruthy();
+    expect(getByText('Fahrenheit')).toBeTruthy();
+    expect(getByText('Celsius')).toBeTruthy();
     expect(getByText('Save Profile')).toBeTruthy();
+  });
+
+  it('updates the selected temperature preference', () => {
+    const setAccountProfile = jest.fn();
+    const { getByText } = render(
+      <AccountProfileManagement {...defaultProps} setAccountProfile={setAccountProfile} />
+    );
+
+    fireEvent.press(getByText('Celsius'));
+
+    expect(setAccountProfile).toHaveBeenCalledWith(expect.any(Function));
+    const updater = setAccountProfile.mock.calls[0][0];
+    expect(updater(defaultProps.accountProfile)).toEqual({
+      ...defaultProps.accountProfile,
+      temperatureUnit: 'celsius',
+    });
   });
 
   it('opens the home address editor dialog', () => {
@@ -74,6 +96,16 @@ describe('AccountProfileManagement', () => {
     expect(getByText('Home Address')).toBeTruthy();
     expect(getByPlaceholderText('Address line 1')).toBeTruthy();
     expect(getByPlaceholderText('Country')).toBeTruthy();
+  });
+
+  it('wraps the address editor fields in a height-capped scroll area so short screens can reach Save', () => {
+    const { getByText, getByTestId } = render(<AccountProfileManagement {...defaultProps} />);
+    fireEvent.press(getByText(/123 Main St, Austin/));
+
+    const scroll = getByTestId('address-editor-scroll');
+    expect(scroll.props.style.maxHeight).toEqual(expect.any(Number));
+    expect(getByText('Save Address')).toBeTruthy();
+    expect(getByText('Cancel')).toBeTruthy();
   });
 
   it('shows password editor when "Change Password" is clicked', () => {

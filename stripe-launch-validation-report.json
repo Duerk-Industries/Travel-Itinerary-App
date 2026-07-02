@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-07-01T09:26:00.7658079-04:00",
+  "backendUrl": "https://duerk.org",
+  "passed": 13,
+  "failed": 1,
+  "skipped": 8,
+  "results": [
+    {
+      "name": "Required local commands",
+      "status": "pass",
+      "details": "node/npm available",
+      "at": "2026-07-01T09:22:01.7893186-04:00"
+    },
+    {
+      "name": "Billing environment variables",
+      "status": "pass",
+      "details": "DB_PROVIDER=firebase",
+      "at": "2026-07-01T09:22:01.7930025-04:00"
+    },
+    {
+      "name": "Server TypeScript",
+      "status": "pass",
+      "details": "> server@0.1.0 typecheck\r\n> tsc --noEmit -p . server typecheck passed",
+      "at": "2026-07-01T09:22:08.2201074-04:00"
+    },
+    {
+      "name": "App TypeScript",
+      "status": "pass",
+      "details": "> app@0.1.0 typecheck\r\n> tsc --noEmit -p tsconfig.json app typecheck passed",
+      "at": "2026-07-01T09:22:22.0285572-04:00"
+    },
+    {
+      "name": "Server billing tests",
+      "status": "pass",
+      "details": "> server@0.1.0 test\r\n> node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config jest.projects.js --runInBand __tests__/billing-routes.test.ts __tests__/billing-webhook-workflows.test.ts __tests__/billing-reconciliation.test.ts __tests__/admin-billing-routes.test.ts __tests__/billing-entitlement.test.ts __tests__/billing-entitlement-users.test.ts __tests__/stripe-billing-config.test.ts\r\n\r\nPASS firebase __tests__/billing-routes.test.ts (87.112 s)\r\nPASS firebase __tests__/billing-webhook-workflows.test.ts (23.288 s)\r\nPASS firebase __tests__/billing-entitlement-users.test.ts (12.4 s)\r\nPASS firebase __tests__/admin-billing-routes.test.ts (10.324 s)\r\nPASS firebase __tests__/billing-reconciliation.test.ts (6.955 s)\r\nPASS firebase __tests__/billing-entitlement.test.ts\r\nPASS firebase __tests__/stripe-billing-config.test.ts\r\n\r\nTest Suites: 7 passed, 7 total\r\nTests:       114 passed, 114 total\r\nSnapshots:   0 total\r\nTime:        140.649 s\r\nRan all test suites matching __tests__/billing-routes.test.ts|__tests__/billing-webhook-workflows.test.ts|__tests__/billing-reconciliation.test.ts|__tests__/admin-billing-routes.test.ts|__tests__/billing-entitlement.test.ts|__tests__/billing-entitlement-users.test.ts|__tests__/stripe-billing-config.test.ts. server billing tests passed",
+      "at": "2026-07-01T09:24:43.4769394-04:00"
+    },
+    {
+      "name": "App billing tests",
+      "status": "pass",
+      "details": "> app@0.1.0 test\r\n> jest -c jest.config.js --runInBand tests/adminTab.billing.test.tsx tests/premiumSubscriptionPanel.test.tsx tests/premiumPlanComparisonDialog.test.tsx tests/premiumTrialWelcomeDialog.test.tsx tests/appStartup.test.tsx tests/billing.utils.test.ts tests/useBillingStatus.test.tsx\r\n\r\nPASS tests/appStartup.test.tsx\r\nPASS tests/useBillingStatus.test.tsx\r\nPASS tests/premiumPlanComparisonDialog.test.tsx\r\nPASS tests/adminTab.billing.test.tsx\r\nPASS tests/premiumSubscriptionPanel.test.tsx\r\nPASS tests/premiumTrialWelcomeDialog.test.tsx\r\nPASS tests/billing.utils.test.ts\r\n\r\nTest Suites: 7 passed, 7 total\r\nTests:       31 passed, 31 total\r\nSnapshots:   0 total\r\nTime:        5.142 s\r\nRan all test suites matching /tests\\\\adminTab.billing.test.tsx|tests\\\\premiumSubscriptionPanel.test.tsx|tests\\\\premiumPlanComparisonDialog.test.tsx|tests\\\\premiumTrialWelcomeDialog.test.tsx|tests\\\\appStartup.test.tsx|tests\\\\billing.utils.test.ts|tests\\\\useBillingStatus.test.tsx/i.\r\nJest did not exit one second after the test run has completed.\r\n\r\n'This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue. app billing tests passed",
+      "at": "2026-07-01T09:24:51.8199048-04:00"
+    },
+    {
+      "name": "Billing plan config",
+      "status": "pass",
+      "details": "monthly=price_1To77LE6C7vekdZhkbRbBwyI, annual=price_1To8YsE6C7vekdZhwwQkmjlt",
+      "at": "2026-07-01T09:24:55.9552133-04:00"
+    },
+    {
+      "name": "Stripe API key and product",
+      "status": "pass",
+      "details": "product=prod_UmtFSuyxNGf5hS, livemode=False",
+      "at": "2026-07-01T09:24:56.4560543-04:00"
+    },
+    {
+      "name": "Stripe monthly/annual prices",
+      "status": "pass",
+      "details": "Stripe prices retrievable and active",
+      "at": "2026-07-01T09:24:57.2338041-04:00"
+    },
+    {
+      "name": "Real Stripe sandbox smoke test",
+      "status": "pass",
+      "details": "> server@0.1.0 test\r\n> node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config jest.projects.js --runInBand __tests__/billing-stripe-sandbox.test.ts\r\n\r\nPASS firebase __tests__/billing-stripe-sandbox.test.ts (53.593 s)\r\n  Stripe sandbox ΓÇö real test-mode API\r\n    ΓêÜ GET /api/billing/status without Authorization header ΓåÆ 401 (6 ms)\r\n    ΓêÜ GET /api/billing/plans without Authorization header ΓåÆ 401 (5 ms)\r\n    ΓêÜ POST /api/billing/checkout-session without Authorization header ΓåÆ 401 (3 ms)\r\n    ΓêÜ POST /api/billing/portal-session without Authorization header ΓåÆ 401 (4 ms)\r\n    ΓêÜ GET /api/billing/status returns free-tier response for new user (387 ms)\r\n    ΓêÜ GET /api/billing/plans returns configured plans with correct amounts (131 ms)\r\n    ΓêÜ POST /api/billing/checkout-session creates a real Stripe Checkout URL (monthly) (928 ms)\r\n    ΓêÜ POST /api/billing/checkout-session creates a real Stripe Checkout URL (annual) (186 ms)\r\n    ΓêÜ POST /api/billing/checkout-session is idempotent with the same key ΓÇö returns exact same URL (376 ms)\r\n    ΓêÜ POST /api/billing/checkout-session rejects non-web clientPlatform with 400 (16 ms)\r\n    ΓêÜ POST /api/billing/checkout-session rejects unknown planKey with 400 (14 ms)\r\n    ΓêÜ GET /api/billing/plans ΓåÆ 503 when billing is disabled (15 ms)\r\n    ΓêÜ POST /api/billing/portal-session returns 404 for user with no billing customer (2789 ms)\r\n    ΓêÜ POST /api/billing/refresh reconciles billing state (986 ms)\r\n    ΓêÜ webhook when billing is disabled ΓåÆ 503 before signature is checked (3 ms)\r\n    ΓêÜ webhook with forged Stripe-Signature ΓåÆ 400 signature verification failed (10 ms)\r\n    ΓêÜ webhook without Stripe-Signature header ΓåÆ 400 missing signature (4 ms)\r\n    ΓêÜ webhook with valid signature but unrecognised event type ΓåÆ 200 with handled=false (18 ms)\r\n    ΓêÜ webhook checkout.session.completed with mode=payment ΓåÆ acknowledged without subscription processing (30 ms)\r\n    webhook simulation ΓÇö subscription lifecycle\r\n      ΓêÜ customer.subscription.created ΓåÆ subscription synced to DB and tier = premium (1595 ms)\r\n      ΓêÜ GET /api/billing/status ΓåÆ trialing, checkoutAvailable=false, portalAvailable=true (518 ms)\r\n      ΓêÜ POST /api/billing/portal-session ΓåÆ 201 with real Stripe portal URL (278 ms)\r\n      ΓêÜ POST /api/billing/checkout-session ΓåÆ 409 when user already has active subscription (117 ms)\r\n      ΓêÜ checkout.session.completed webhook ΓåÆ subscription snapshot applied, returns received=true (1035 ms)\r\n      ΓêÜ customer.subscription.updated (cancel_at_period_end=true) ΓåÆ DB reflects scheduled cancellation, user still premium (1621 ms)\r\n      ΓêÜ GET /api/billing/status ΓåÆ cancelAtPeriodEnd=true after update (394 ms)\r\n      ΓêÜ invoice.payment_action_required ΓåÆ subscription snapshot applied but pastDueSince NOT set (792 ms)\r\n      ΓêÜ invoice.payment_failed ΓåÆ pastDueSince recorded in DB (892 ms)\r\n      ΓêÜ invoice.payment_failed (second delivery) ΓåÆ pastDueSince preserved, not overwritten (840 ms)\r\n      ΓêÜ invoice.paid ΓåÆ pastDueSince cleared, tier remains premium (1094 ms)\r\n      ΓêÜ duplicate event delivery ΓåÆ second POST returns duplicate=true, DB unchanged (906 ms)\r\n      ΓêÜ customer.subscription.deleted ΓåÆ status=canceled in DB and tier = free (1899 ms)\r\n      ΓêÜ GET /api/billing/status ΓåÆ free tier and portalAvailable=false after subscription deleted (399 ms)\r\n    webhook simulation ΓÇö dispute revocation and restoration\r\n      ΓêÜ initial subscription synced to DB and user tier = premium (1456 ms)\r\n      ΓêÜ charge.dispute.created ΓåÆ accessRevokedAt set and tier = free (1259 ms)\r\n      ΓêÜ charge.dispute.closed (status=lost) ΓåÆ access stays revoked, tier remains free (219 ms)\r\n      ΓêÜ charge.dispute.closed (status=won) ΓåÆ accessRevokedAt cleared and tier = premium (1122 ms)\r\n      ΓêÜ GET /api/billing/status reflects premium tier after dispute won (373 ms)\r\n    webhook simulation ΓÇö full refund revocation\r\n      ΓêÜ initial subscription synced to DB and user tier = premium (1419 ms)\r\n      ΓêÜ partial refund + charge.refunded ΓåÆ no entitlement change, tier stays premium (1776 ms)\r\n      ΓêÜ refund.updated for partial refund ΓåÆ no entitlement change (re-evaluates same partial state) (390 ms)\r\n      ΓêÜ refund.failed for partial refund ΓåÆ no entitlement change (same handler as refund.updated, different event type) (560 ms)\r\n      ΓêÜ full refund + charge.refunded ΓåÆ accessRevokedAt set, accessRevocationReason=full_refund, tier = free (2541 ms)\r\n      ΓêÜ GET /api/billing/status ΓåÆ effectiveTier=free and accessRevoked=true after full refund (377 ms)\r\n\r\nTest Suites: 1 passed, 1 total\r\nTests:       44 passed, 44 total\r\nSnapshots:   0 total\r\nTime:        53.837 s, estimated 56 s\r\nRan all test suites matching __tests__/billing-stripe-sandbox.test.ts. sandbox smoke test passed",
+      "at": "2026-07-01T09:25:51.8505235-04:00"
+    },
+    {
+      "name": "Stripe Test Clock workflow",
+      "status": "fail",
+      "details": "C:\\Program Files\\PowerShell\\7\\pwsh.exe -ExecutionPolicy Bypass -File scripts/stripe-test-clock-workflow.ps1 -StripeApiKey [redacted] -UserId 43136023-f533-4a85-ace3-17f971e3bfcb -Email jobs.duerk@gmail.com -PublishMissingPrice -RunFailedPaymentFlow exited with 1. Output: Creating Stripe Test Clock... Clock: clock_1ToO9IE6C7vekdZhFtWMMJUI Creating Stripe Customer attached to clock... Customer: cus_Uo09TGBOD7Dlie Installing successful default card for trial-end payment... stripe-test-clock-workflow.ps1: Cannot bind argument to parameter 'Arguments' because it is an empty string.",
+      "at": "2026-07-01T09:25:57.7930693-04:00"
+    },
+    {
+      "name": "Cloud Scheduler / reconciliation environment variables",
+      "status": "pass",
+      "details": "BILLING_RECONCILE_ENABLED=true, BILLING_SCHEDULER_SECRET is set",
+      "at": "2026-07-01T09:25:57.7948985-04:00"
+    },
+    {
+      "name": "Cloud Scheduler job exists",
+      "status": "pass",
+      "details": "attemptDeadline: 180s\r\nhttpTarget:\r\n  body: e30=\r\n  headers:\r\n    Content-Type: application/json\r\n    User-Agent: Google-Cloud-Scheduler\r\n    X-Billing-Scheduler-Secret: [redacted]\r\n  httpMethod: POST\r\n  uri: https://duerk.org/api/internal/billing/reconcile\r\nlastAttemptTime: '2026-07-01T13:01:27.437393Z'\r\nname: projects/travel-itinerary-app-483623/locations/us-east4/jobs/billing-reconcile\r\nretryConfig:\r\n  maxBackoffDuration: 3600s\r\n  maxDoublings: 5\r\n  maxRetryDuration: 0s\r\n  minBackoffDuration: 5s\r\nschedule: '*/30 * * * *'\r\nscheduleTime: '2026-07-01T13:30:00.537484Z'\r\nstate: ENABLED\r\nstatus:\r\n  code: 14\r\ntimeZone: UTC\r\nuserUpdateTime: '2026-06-30T16:39:27.233024Z' job=billing-reconcile location=us-east4",
+      "at": "2026-07-01T09:25:59.1486908-04:00"
+    },
+    {
+      "name": "Cloud Scheduler manual run",
+      "status": "pass",
+      "details": " scheduler run triggered; verify Cloud Run logs for {\"ok\":true}",
+      "at": "2026-07-01T09:26:00.7598700-04:00"
+    },
+    {
+      "name": "Admin billing API checks",
+      "status": "skip",
+      "details": "Pass -AdminToken to query protected admin endpoints",
+      "at": "2026-07-01T09:26:00.7606245-04:00"
+    },
+    {
+      "name": "Manual verification required",
+      "status": "skip",
+      "details": "Stripe Dashboard: account activation, public details, branding, payout settings, and enforced team 2FA.",
+      "at": "2026-07-01T09:26:00.7615382-04:00"
+    },
+    {
+      "name": "Manual verification required",
+      "status": "skip",
+      "details": "Stripe Dashboard: Premium product tax code and monthly/annual prices under the same product.",
+      "at": "2026-07-01T09:26:00.7623327-04:00"
+    },
+    {
+      "name": "Manual verification required",
+      "status": "skip",
+      "details": "Stripe Dashboard: Stripe Tax origin, registrations, and product/price tax behavior.",
+      "at": "2026-07-01T09:26:00.7631036-04:00"
+    },
+    {
+      "name": "Manual verification required",
+      "status": "skip",
+      "details": "Stripe Dashboard: Customer Portal cancellation behavior, plan switching, payment methods, invoices, and return URL.",
+      "at": "2026-07-01T09:26:00.7637542-04:00"
+    },
+    {
+      "name": "Manual verification required",
+      "status": "skip",
+      "details": "App UI: new-account Premium comparison modal, Account Premium panel, checkout success/cancel URLs, and native \"manage on web\" copy.",
+      "at": "2026-07-01T09:26:00.7642673-04:00"
+    },
+    {
+      "name": "Manual verification required",
+      "status": "skip",
+      "details": "Webhook delivery: verify recent Stripe webhook events are 2xx and Cloud Run logs show no billing.webhook processing errors.",
+      "at": "2026-07-01T09:26:00.7648206-04:00"
+    },
+    {
+      "name": "Manual verification required",
+      "status": "skip",
+      "details": "Production cutover: separate live database/deployment, live Stripe keys/prices/webhook endpoint, and no test-mode IDs in production config.",
+      "at": "2026-07-01T09:26:00.7653955-04:00"
+    }
+  ]
+}

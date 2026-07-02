@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/transfers';
@@ -35,9 +35,9 @@ export type FlightEditingFormProps = {
   onAirportEnter: (target: Exclude<AirportTarget, null>, value: string) => void;
   setFlight: React.Dispatch<React.SetStateAction<FlightEditDraft | null>>;
   setPassengerIds: (ids: string[]) => void;
-  modalDepLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
-  modalArrLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
-  modalLayoverLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
+  modalDepLocationRef: React.RefObject<React.ElementRef<typeof TextInput> | null>;
+  modalArrLocationRef: React.RefObject<React.ElementRef<typeof TextInput> | null>;
+  modalLayoverLocationRef: React.RefObject<React.ElementRef<typeof TextInput> | null>;
   onClose: () => void;
   onSave: () => void;
 };
@@ -113,7 +113,18 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
-        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12, paddingBottom: 8 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flexShrink: 1 }}
+        >
+        <ScrollView
+          style={{ maxHeight: 420 }}
+          contentContainerStyle={{ paddingRight: 12, paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
+        >
           <Text style={styles.modalLabel}>Passengers</Text>
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
@@ -466,6 +477,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             })}
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
         <View style={[styles.row, { marginTop: 16 }]}>
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
             <Text style={styles.dangerButtonText}>Cancel</Text>

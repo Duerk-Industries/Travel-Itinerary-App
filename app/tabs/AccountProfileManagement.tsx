@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
+import { normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { AccountProfile } from './account';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -89,6 +90,11 @@ const formatHomeAddress = (address: AddressForm): string =>
     .filter(Boolean)
     .join(', ');
 
+const temperatureUnitOptions: Array<{ key: TemperatureUnit; label: string }> = [
+  { key: 'fahrenheit', label: 'Fahrenheit' },
+  { key: 'celsius', label: 'Celsius' },
+];
+
 interface AccountProfileManagementProps {
   backendUrl: string;
   userToken: string | null;
@@ -102,7 +108,7 @@ interface AccountProfileManagementProps {
   onChangeMapApp: (pref: MapApp) => void;
   appearancePreference: AppearancePreference;
   onChangeAppearancePreference: (pref: AppearancePreference) => void;
-  saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
+  saveSession: (token: string, name: string, page?: string, email?: string | null) => void | Promise<void>;
   headers: Headers;
   jsonHeaders: Headers;
   airportOptions: string[];
@@ -132,6 +138,8 @@ const AccountProfileManagement = ({
   logout,
   styles,
 }: AccountProfileManagementProps) => {
+  const { width, height } = useWindowDimensions();
+  const isCompactDialog = width < 480 || height < 700;
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -260,7 +268,7 @@ const AccountProfileManagement = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update profile');
+      Alert.alert(data.error || 'Unable to update profile');
       return;
     }
     const updatedUser = data.user ?? accountProfile;
@@ -270,12 +278,13 @@ const AccountProfileManagement = ({
     const nextAppearancePreference = isAppearancePreference(updatedUser.appearancePreference)
       ? updatedUser.appearancePreference
       : accountProfile.appearancePreference ?? appearancePreference;
+    const nextTemperatureUnit = normalizeTemperatureUnit(updatedUser.temperatureUnit, accountProfile.temperatureUnit ?? 'fahrenheit');
     onChangeMapApp(nextMapPreference);
     onChangeAppearancePreference(nextAppearancePreference);
     const fullName = `${updatedUser.firstName ?? ''} ${updatedUser.lastName ?? ''}`.trim() || 'Traveler';
     if (data.token) {
       setUserToken(data.token);
-      saveSession(data.token, fullName, activePage, updatedUser.email ?? accountProfile.email);
+      void saveSession(data.token, fullName, activePage, updatedUser.email ?? accountProfile.email);
     }
     setUserName(fullName);
     setUserEmail(updatedUser.email ?? null);
@@ -287,6 +296,7 @@ const AccountProfileManagement = ({
       preferredAirport: updatedUser.preferredAirport ?? '',
       mapPreference: nextMapPreference,
       appearancePreference: nextAppearancePreference,
+      temperatureUnit: nextTemperatureUnit,
     });
     setAccountMessage('Profile updated');
   };
@@ -294,7 +304,7 @@ const AccountProfileManagement = ({
   const handlePasswordChange = async () => {
     if (!userToken) return;
     if (passwordForm.newPassword !== passwordForm.newPasswordConfirm) {
-      alert('New passwords do not match');
+      Alert.alert('New passwords do not match');
       return;
     }
     setAccountMessage(null);
@@ -305,7 +315,7 @@ const AccountProfileManagement = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update password');
+      Alert.alert(data.error || 'Unable to update password');
       return;
     }
     setAccountMessage('Password updated');
@@ -318,7 +328,7 @@ const AccountProfileManagement = ({
     const res = await fetch(`${backendUrl}/api/account`, { method: 'DELETE', headers });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete account');
+      Alert.alert(data.error || 'Unable to delete account');
       return;
     }
     setShowDeleteConfirm(false);
@@ -336,7 +346,7 @@ const AccountProfileManagement = ({
   const handleAddEmail = async () => {
     const candidate = newEmail.trim().toLowerCase();
     if (!candidate) {
-      alert('Enter an email address.');
+      Alert.alert('Enter an email address.');
       return;
     }
     try {
@@ -348,14 +358,14 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to add email.');
+        Alert.alert(data.error || 'Unable to add email.');
         return;
       }
       setNewEmail('');
       await refreshAccountEmails();
-      alert('Email added. Check your inbox for the verification link.');
+      Alert.alert('Email added. Check your inbox for the verification link.');
     } catch (err) {
-      alert((err as Error).message || 'Unable to add email.');
+      Alert.alert((err as Error).message || 'Unable to add email.');
     } finally {
       setEmailActionBusy(false);
     }
@@ -370,12 +380,12 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to resend verification.');
+        Alert.alert(data.error || 'Unable to resend verification.');
         return;
       }
-      alert('Verification email sent.');
+      Alert.alert('Verification email sent.');
     } catch (err) {
-      alert((err as Error).message || 'Unable to resend verification.');
+      Alert.alert((err as Error).message || 'Unable to resend verification.');
     } finally {
       setEmailActionBusy(false);
     }
@@ -391,13 +401,13 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to set primary email.');
+        Alert.alert(data.error || 'Unable to set primary email.');
         return;
       }
       if (typeof data.token === 'string') {
         const fullName = `${accountProfile.firstName ?? ''} ${accountProfile.lastName ?? ''}`.trim() || 'Traveler';
         setUserToken(data.token);
-        saveSession(data.token, fullName, activePage, email);
+        void saveSession(data.token, fullName, activePage, email);
       }
       setAccountProfile((prev) => ({ ...prev, email }));
       setUserEmail(email);
@@ -407,7 +417,7 @@ const AccountProfileManagement = ({
         await refreshAccountEmails();
       }
     } catch (err) {
-      alert((err as Error).message || 'Unable to set primary email.');
+      Alert.alert((err as Error).message || 'Unable to set primary email.');
     } finally {
       setEmailActionBusy(false);
     }
@@ -422,7 +432,7 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to delete email.');
+        Alert.alert(data.error || 'Unable to delete email.');
         return;
       }
       if (Array.isArray(data.emails)) {
@@ -431,7 +441,7 @@ const AccountProfileManagement = ({
         await refreshAccountEmails();
       }
     } catch (err) {
-      alert((err as Error).message || 'Unable to delete email.');
+      Alert.alert((err as Error).message || 'Unable to delete email.');
     } finally {
       setEmailActionBusy(false);
     }
@@ -545,6 +555,30 @@ const AccountProfileManagement = ({
       <Text style={styles.helperText}>
         Selected: {appearanceOptions.find((opt) => opt.key === appearancePreference)?.label ?? 'Auto'}
       </Text>
+      <Text style={styles.modalLabel}>Temperature</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {temperatureUnitOptions.map((opt) => {
+          const selected = normalizeTemperatureUnit(accountProfile.temperatureUnit) === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              style={[
+                styles.mapOptionButton,
+                selected && styles.mapOptionActive,
+                { marginRight: 8, marginTop: 4 },
+              ]}
+              onPress={() => {
+                setAccountProfile((p) => ({ ...p, temperatureUnit: opt.key }));
+              }}
+            >
+              <Text style={[styles.mapOptionText, selected && styles.mapOptionActiveText]}>{opt.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
+      </Text>
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>
@@ -648,7 +682,14 @@ const AccountProfileManagement = ({
           styles={styles}
           onClose={() => setShowAddressEditor(false)}
           useNativeModal
+          cardStyle={isCompactDialog ? { width: '100%', maxHeight: '92%' } : undefined}
         >
+            <ScrollView
+              testID="address-editor-scroll"
+              style={{ maxHeight: isCompactDialog ? 380 : 440 }}
+              contentContainerStyle={{ gap: 10 }}
+              keyboardShouldPersistTaps="handled"
+            >
               <DraftTextInput
                 style={styles.input}
                 placeholder="Address line 1"
@@ -695,6 +736,7 @@ const AccountProfileManagement = ({
                   commitOnBlur={false}
                 />
               </View>
+            </ScrollView>
               <View style={styles.row}>
                 <TouchableOpacity
                   style={[styles.button, styles.dangerButton, { flex: 1 }]}

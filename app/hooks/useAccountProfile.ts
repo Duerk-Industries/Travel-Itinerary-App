@@ -9,6 +9,7 @@ import {
   loadStoredMapPreference,
   persistMapPreference,
 } from '../utils/mapLinks';
+import { type TemperatureUnit } from '../utils/temperatureUnit';
 
 export type AccountProfile = {
   firstName: string;
@@ -17,6 +18,7 @@ export type AccountProfile = {
   homeAddress: string;
   preferredAirport: string;
   appearancePreference: AppearancePreference;
+  temperatureUnit: TemperatureUnit;
   mapPreference?: MapApp;
   entitlements?: {
     costTracking?: boolean;
@@ -30,11 +32,12 @@ const EMPTY_PROFILE: AccountProfile = {
   homeAddress: '',
   preferredAirport: '',
   appearancePreference: 'auto',
+  temperatureUnit: 'fahrenheit',
 };
 
 /**
  * Owns the account-profile state cluster previously held inline in App.tsx:
- *   - `accountProfile` object (firstName/lastName/email/homeAddress/preferredAirport/appearancePreference)
+ *   - `accountProfile` object (firstName/lastName/email/homeAddress/preferredAirport/appearancePreference/temperatureUnit)
  *   - `mapApp` (standalone — read by map-link builders)
  *   - `appearancePreference` (standalone — drives the theme)
  *

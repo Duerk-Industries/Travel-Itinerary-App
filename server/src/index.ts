@@ -1,3 +1,5 @@
+// Must be first: initializes Sentry before http/express are instrumented.
+import './instrument';
 import { Server } from 'http';
 import { app, envLoadedFrom } from './app';
 import { initDb, refreshAirportsDaily } from './db';
@@ -7,6 +9,7 @@ import { doesApiLimitsConfigExist, getResolvedApiLimitsConfigPath } from './conf
 import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './config/authFlags';
 import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from './config/featureFlags';
 import { applyStartupFeatureFlagOverrides, seedEntitlementDefaults } from './services/entitlementService';
+import { seedDefaultTestAccountsIfEnabled } from './services/testAccountSeedService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
 import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
 import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
@@ -15,6 +18,10 @@ import { startGmailPollingScheduler } from './services/gmailPollingService';
 import { startRetentionScheduler } from './services/retentionService';
 import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
+import { startBillingReconciliationScheduler } from './billing/subscriptionReconciliationService';
+import { installShutdownHandlers } from './shutdown';
+import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './config/stripeBilling';
+import { getBillingPlanConfig } from './db';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -61,6 +68,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   if (envLoadedFrom) {
     logInfo(`[startup] env loaded from: ${envLoadedFrom}`);
   }
+  assertStripeBillingConfig();
   const portToUse = portOverride ?? defaultPort;
   const server = await new Promise<Server>((resolve, reject) => {
     const listeningServer = app.listen(portToUse, '0.0.0.0', () => {
@@ -77,6 +85,8 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await initDb();
     await seedEntitlementDefaults();
     await applyStartupFeatureFlagOverrides();
+    await warnIfStripePricesUnconfigured(getBillingPlanConfig);
+    await seedDefaultTestAccountsIfEnabled();
   } catch (err) {
     logError('[startup] initialization failed after binding port', err);
     server.close(() => process.exit(1));
@@ -112,6 +122,11 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   startRetentionScheduler();
   startIngestionMetricsScheduler();
   startFailedRetryScheduler();
+  startBillingReconciliationScheduler();
+
+  if (process.env.NODE_ENV !== 'test') {
+    installShutdownHandlers(server);
+  }
 
   return server;
 };

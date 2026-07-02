@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, expect, test } from '@jest/globals';
 import { buildFlightPayloadForCreate, createInitialFlightCreateDraft, filterAirportOptionLabels, normalizeFlightFromApi } from '../tabs/transfers';
 

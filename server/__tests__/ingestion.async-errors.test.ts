@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 const setMemoryEnv = () => {
   process.env.DB_PROVIDER = 'memory';
   process.env.USE_IN_MEMORY_DB = '1';

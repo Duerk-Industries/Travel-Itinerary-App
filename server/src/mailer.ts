@@ -3,6 +3,7 @@ import { getBackendUrl, getEnvValue } from './env';
 import { logError, logInfo } from './logger';
 import {
   sendShareEmailViaSmtpApi,
+  sendBillingTrialReminderEmailViaSmtpApi,
   sendTripInviteEmailViaSmtpApi,
   sendVerificationEmailViaSmtpApi,
 } from './apis/smtpCallers';
@@ -202,4 +203,41 @@ export const sendTripInviteEmailBestEffort = async (
   inviterEmail?: string | null
 ): Promise<{ sent: boolean; attempts: number }> => {
   return sendWithRetry(() => sendTripInviteEmail(to, tripName, inviterEmail), to);
+};
+
+export const sendBillingTrialEndingEmail = async (
+  to: string,
+  trialEnd: Date,
+): Promise<void> => {
+  const { transporter, from } = buildTransporter();
+  if (!transporter) {
+    throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
+  }
+  const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
+  const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
+  const trialEndLabel = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const subject = 'Your WanderBunnies Premium trial ends soon';
+  const body = [
+    'Hi,',
+    '',
+    `Your WanderBunnies Premium trial ends on ${trialEndLabel}.`,
+    'After the trial ends, your saved payment method will be charged unless you cancel before then.',
+    '',
+    'You can review or cancel your subscription from Account > Premium in WanderBunnies.',
+    '',
+    webUrl,
+  ].join('\n');
+  await sendBillingTrialReminderEmailViaSmtpApi(transporter, {
+    from,
+    to,
+    subject,
+    text: body,
+  });
+};
+
+export const sendBillingTrialEndingEmailBestEffort = async (
+  to: string,
+  trialEnd: Date,
+): Promise<{ sent: boolean; attempts: number }> => {
+  return sendWithRetry(() => sendBillingTrialEndingEmail(to, trialEnd), to);
 };

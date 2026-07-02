@@ -48,6 +48,8 @@ import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
 import { buildUserDataExport } from '../services/userDataExport';
+import { cancelAllSubscriptionsForUser, syncEmailToStripeCustomer } from '../billing/accountBillingLifecycle';
+import { accountPasswordRateLimit } from '../services/httpRateLimitService';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -139,8 +141,8 @@ router.get('/export', async (req, res) => {
 router.patch('/profile', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
   const body = req.body ?? {};
-  const { firstName, lastName, email, homeAddress, preferredAirport, mapPreference, appearancePreference } = req.body ?? {};
-  const hasAnyProfileField = ['firstName', 'lastName', 'email', 'homeAddress', 'preferredAirport', 'mapPreference', 'appearancePreference'].some((key) =>
+  const { firstName, lastName, email, homeAddress, preferredAirport, mapPreference, appearancePreference, temperatureUnit } = req.body ?? {};
+  const hasAnyProfileField = ['firstName', 'lastName', 'email', 'homeAddress', 'preferredAirport', 'mapPreference', 'appearancePreference', 'temperatureUnit'].some((key) =>
     Object.prototype.hasOwnProperty.call(body, key)
   );
   if (!hasAnyProfileField) {
@@ -156,6 +158,7 @@ router.patch('/profile', async (req, res) => {
       preferredAirport: typeof preferredAirport === 'string' ? preferredAirport.trim() : undefined,
       mapPreference: typeof mapPreference === 'string' ? mapPreference.trim().toLowerCase() : undefined,
       appearancePreference: typeof appearancePreference === 'string' ? appearancePreference.trim().toLowerCase() : undefined,
+      temperatureUnit: typeof temperatureUnit === 'string' ? temperatureUnit.trim().toLowerCase() : undefined,
     });
     const role = await getUserRole(updated.id);
     const token = createToken({ userId: updated.id, email: updated.email, provider: 'email', role });
@@ -268,6 +271,8 @@ router.patch('/emails/primary', async (req, res) => {
       afterState: { primaryEmail: email },
       reason: 'User changed primary email',
     });
+    // Best-effort sync to Stripe Customer — non-fatal on failure.
+    syncEmailToStripeCustomer(userId, email).catch(() => undefined);
     res.json({ emails, token });
   } catch (err: any) {
     if (err?.code === 'EMAIL_NOT_VERIFIED') {
@@ -315,7 +320,7 @@ router.delete('/emails/:email', async (req, res) => {
   }
 });
 
-router.patch('/password', async (req, res) => {
+router.patch('/password', accountPasswordRateLimit, async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { currentPassword, newPassword, newPasswordConfirm } = req.body ?? {};
   if (!newPassword || !newPasswordConfirm) {
@@ -477,6 +482,8 @@ router.delete('/', async (req, res) => {
       action: 'ACCOUNT_DELETED',
       reason: 'User initiated account deletion',
     });
+    // Cancel active Stripe subscriptions before wiping local records.
+    await cancelAllSubscriptionsForUser(userId);
     await deleteUserIngestionData(userId).catch(() => undefined);
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();

@@ -122,6 +122,9 @@ export type AuditAction =
   | 'FEATURE_FLAG_UPDATED'
   | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'
+  | 'BILLING_CONFIG_UPDATED'
+  | 'BILLING_PRICE_PUBLISHED'
+  | 'BILLING_RECONCILIATION_RUN'
   | 'RETENTION_TICK_RUN';
 
 export interface AuditLogEntry {
@@ -147,6 +150,7 @@ export interface WebUser {
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
+  temperatureUnit?: 'fahrenheit' | 'celsius' | null;
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;
@@ -692,4 +696,138 @@ export interface TripMessageRead {
   messageId: string;
   userId: string;
   readAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Stripe Billing
+// ---------------------------------------------------------------------------
+
+export type BillingSubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'unpaid'
+  | 'paused'
+  | 'canceled';
+
+export type BillingPlanKey = 'premium_monthly' | 'premium_annual';
+
+export type BillingSubscriptionScope = 'individual' | 'family';
+
+export type WebhookProcessingStatus = 'pending' | 'processed' | 'ignored' | 'failed';
+
+export interface BillingCustomer {
+  id: string;
+  userId: string;
+  stripeCustomerId: string;
+  emailSnapshot: string | null;
+  livemode: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingTrialUsage {
+  id: string;
+  emailNormalized: string;
+  userId: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  trialUsedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BillingNotificationType = 'premium_trial_will_end';
+
+export interface BillingNotification {
+  id: string;
+  userId: string;
+  type: BillingNotificationType;
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId: string | null;
+  stripeEventId: string | null;
+  emailSentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingSubscription {
+  id: string;
+  stripeSubscriptionId: string;
+  userId: string;
+  subscriptionScope: BillingSubscriptionScope;
+  scopeOwnerId: string;
+  stripeCustomerId: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  status: BillingSubscriptionStatus;
+  livemode: boolean;
+  cancelAtPeriodEnd: boolean;
+  cancelAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  trialEnd: string | null;
+  endedAt: string | null;
+  latestInvoiceId: string | null;
+  pastDueSince: string | null;
+  accessRevokedAt: string | null;
+  accessRevocationReason: string | null;
+  disputeId: string | null;
+  refundedAt: string | null;
+  lastStripeEventCreated: number | null;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StripeWebhookEvent {
+  id: string;
+  stripeEventId: string;
+  eventType: string;
+  stripeObjectId: string | null;
+  livemode: boolean;
+  eventCreated: number | null;
+  processingStatus: WebhookProcessingStatus;
+  attemptCount: number;
+  lastError: string | null;
+  receivedAt: string;
+  processedAt: string | null;
+}
+
+export interface BillingPlanConfig {
+  id: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  activeStripePriceId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  trialDays: number;
+  pastDueGraceDays: number;
+  automaticTaxEnabled: boolean;
+  promotionCodesEnabled: boolean;
+  isCheckoutEnabled: boolean;
+  livemode: boolean | null;
+  version: number;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+export interface BillingPriceHistory {
+  id: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  livemode: boolean;
+  activeForNewCheckout: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  retiredAt: string | null;
 }

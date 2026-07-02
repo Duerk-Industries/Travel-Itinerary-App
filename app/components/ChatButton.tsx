@@ -35,7 +35,7 @@ const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
 
 const styles = StyleSheet.create({
   fab: {
-    position: 'absolute' as any,
+    position: 'absolute',
     bottom: 24,
     right: 20,
     width: 56,
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   badge: {
-    position: 'absolute' as any,
+    position: 'absolute',
     top: 2,
     right: 2,
     minWidth: 18,

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Tests for usage counter tracking (incrementUsageCounter, atomicIncrementIfUnderLimit).
  * Tests the DB layer directly via the db facade without going through HTTP routes.

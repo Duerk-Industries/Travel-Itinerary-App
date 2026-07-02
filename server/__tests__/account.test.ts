@@ -1,3 +1,6 @@
+/// <reference types="jest" />
+/// <reference types="node" />
+
 import request from 'supertest';
 import { app } from '../src/app';
 import {
@@ -187,6 +190,7 @@ describe('Password validation', () => {
         preferredAirport: 'AUS',
         mapPreference: 'apple',
         appearancePreference: 'dark',
+        temperatureUnit: 'celsius',
       })
       .expect(200);
 
@@ -194,6 +198,7 @@ describe('Password validation', () => {
     expect(updateRes.body.user.preferredAirport).toBe('AUS');
     expect(updateRes.body.user.mapPreference).toBe('apple');
     expect(updateRes.body.user.appearancePreference).toBe('dark');
+    expect(updateRes.body.user.temperatureUnit).toBe('celsius');
 
     const profileRes = await request(app)
       .get('/api/account')
@@ -204,6 +209,7 @@ describe('Password validation', () => {
     expect(profileRes.body.preferredAirport).toBe('AUS');
     expect(profileRes.body.mapPreference).toBe('apple');
     expect(profileRes.body.appearancePreference).toBe('dark');
+    expect(profileRes.body.temperatureUnit).toBe('celsius');
 
     const clearRes = await request(app)
       .patch('/api/account/profile')
@@ -341,8 +347,9 @@ describe('Family relationships', () => {
 });
 
 describe('Account lifecycle API with shared trip', () => {
-  const owner = { email: 'acct-owner@example.com', firstName: 'Acct', lastName: 'Owner', password: 'testtest' };
-  const joiner = { email: 'acct-joiner@example.com', firstName: 'Acct', lastName: 'Joiner', password: 'testtest' };
+  const accountLifecycleId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const owner = { email: `acct-owner+${accountLifecycleId}@example.com`, firstName: 'Acct', lastName: 'Owner', password: 'testtest' };
+  const joiner = { email: `acct-joiner+${accountLifecycleId}@example.com`, firstName: 'Acct', lastName: 'Joiner', password: 'testtest' };
   let ownerToken: string;
   let tripId: string;
 
@@ -445,8 +452,9 @@ describe('Group user search', () => {
 });
 
 describe('Pending group invites', () => {
-  const owner = { email: 'invite-owner@example.com', firstName: 'Owner', lastName: 'Pending', password: 'testtest' };
-  const invitee = { email: 'invitee-login@example.com', firstName: 'Invitee', lastName: 'Login', password: 'testtest' };
+  const inviteTestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const owner = { email: `invite-owner+${inviteTestId}@example.com`, firstName: 'Owner', lastName: 'Pending', password: 'testtest' };
+  const invitee = { email: `invitee-login+${inviteTestId}@example.com`, firstName: 'Invitee', lastName: 'Login', password: 'testtest' };
   let ownerToken: string;
   let tripId: string;
   let rejectInviteeEmail: string | undefined;
@@ -741,12 +749,14 @@ describe('Account onboarding trip flow', () => {
 });
 
 describe('Web Authentication', () => {
+  const webAuthTestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const testUser = {
     firstName: 'WebAuth',
     lastName: 'Tester',
-    email: 'webauth@example.com',
+    email: `webauth+${webAuthTestId}@example.com`,
     password: 'password123',
   };
+  const expiredEmail = `expire-user+${webAuthTestId}@example.com`;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
@@ -755,7 +765,7 @@ describe('Web Authentication', () => {
   });
 
   afterAll(async () => {
-    await cleanupTestUsersByEmail([testUser.email, 'expire-user@example.com']);
+    await cleanupTestUsersByEmail([testUser.email, expiredEmail]);
     await closePool();
   });
 
@@ -819,7 +829,7 @@ describe('Web Authentication', () => {
     const expired = {
       firstName: 'Expire',
       lastName: 'Soon',
-      email: 'expire-user@example.com',
+      email: expiredEmail,
       password: 'password123',
     };
     await cleanupTestUsersByEmail([expired.email]);

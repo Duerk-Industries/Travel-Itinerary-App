@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
@@ -242,7 +243,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       receiptFileInputRef.current?.click?.();
       return;
     }
-    alert('Receipt scanning is available in a mobile web browser.');
+    Alert.alert('Receipt scanning is available in a mobile web browser.');
   };
 
   const applyParsedReceiptDraft = (parsed: ParsedReceiptExpenseDraft) => {
@@ -272,7 +273,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const handleReceiptFile = async (file: File | null | undefined) => {
     if (!costTrackingAllowed) {
-      alert('Expense tracking is a premium feature');
+      Alert.alert('Expense tracking is a premium feature');
       return;
     }
     if (!trip?.id || !file) return;
@@ -294,14 +295,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       if (!res.ok) {
         const message = data.error || 'Unable to scan receipt';
         setReceiptError(message);
-        alert(message);
+        Alert.alert(message);
         return;
       }
       applyParsedReceiptDraft(data as ParsedReceiptExpenseDraft);
     } catch (err) {
       const message = (err as Error).message || 'Unable to scan receipt';
       setReceiptError(message);
-      alert(message);
+      Alert.alert(message);
     } finally {
       setReceiptParsing(false);
       if (receiptFileInputRef.current) receiptFileInputRef.current.value = '';
@@ -310,23 +311,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const saveExpense = async () => {
     if (!costTrackingAllowed) {
-      alert('Expense tracking is a premium feature');
+      Alert.alert('Expense tracking is a premium feature');
       return;
     }
     if (!trip?.id) {
-      alert('Select an active trip before adding expenses.');
+      Alert.alert('Select an active trip before adding expenses.');
       return;
     }
     if (!draftForIds.length) {
-      alert('Select at least one traveler.');
+      Alert.alert('Select at least one traveler.');
       return;
     }
     if (!draftPayerIds.length) {
-      alert('Select at least one payer.');
+      Alert.alert('Select at least one payer.');
       return;
     }
     if (!draftDate) {
-      alert('Select a date.');
+      Alert.alert('Select a date.');
       return;
     }
     const tripCurrency = (trip.currency ?? 'USD').toUpperCase();
@@ -374,7 +375,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to save expense');
+        Alert.alert(data.error || 'Unable to save expense');
         return;
       }
       setExpenses((prev) => [data as Expense, ...prev.filter((e) => e.id !== data.id)]);
@@ -383,13 +384,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       setDraftNotes('');
       closeAddExpenseModal();
     } catch (err) {
-      alert((err as Error).message || 'Unable to save expense');
+      Alert.alert((err as Error).message || 'Unable to save expense');
     }
   };
 
   const deleteExpense = async (expense: Expense) => {
     if (!costTrackingAllowed) {
-      alert('Expense tracking is a premium feature');
+      Alert.alert('Expense tracking is a premium feature');
       return;
     }
     try {
@@ -399,13 +400,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Unable to delete expense');
+        Alert.alert(data.error || 'Unable to delete expense');
         return;
       }
       setExpenses((prev) => prev.filter((e) => e.id !== expense.id));
       setPendingDeleteExpense(null);
     } catch (err) {
-      alert((err as Error).message || 'Unable to delete expense');
+      Alert.alert((err as Error).message || 'Unable to delete expense');
     }
   };
 
@@ -691,7 +692,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           })}
         </ScrollView>
       ) : (
-        <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+        <HorizontalTableScroll
+          style={styles.tableScroll}
+          contentContainerStyle={styles.tableScrollContent}
+        >
           <View style={styles.table} testID="daily-expenses-table">
             <View style={[styles.tableRow, styles.tableHeader]}>
               {['Date', ...categoryOptions, 'Total'].map((header, index) => (
@@ -726,7 +730,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               </View>
             ))}
           </View>
-        </ScrollView>
+        </HorizontalTableScroll>
       )}
 
       {Platform.OS !== 'web' && datePickerVisible && NativeDateTimePicker ? (

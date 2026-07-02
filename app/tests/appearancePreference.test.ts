@@ -1,3 +1,8 @@
+/**
+ * @jest-environment node
+ */
+/// <reference types="jest" />
+/// <reference types="node" />
 import {
   isAppearancePreference,
   loadStoredAppearancePreference,

@@ -158,6 +158,7 @@ const repairExistingAccount = async (account: AccountInput): Promise<void> => {
 
 export const runCreateTestAccounts = async () => {
   requireLocalSeedAllowed();
+  process.env.FIREBASE_INIT_BACKFILL_PACKING ??= '0';
   const accountsPath = path.resolve(__dirname, '../test_inputs/default_accounts.json');
   const accounts = loadAccounts(accountsPath);
 

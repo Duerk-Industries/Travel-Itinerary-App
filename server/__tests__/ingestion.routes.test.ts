@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import path from 'path';
 import { INGESTION_MAX_FILE_BYTES } from '../src/ingestion/config';
 

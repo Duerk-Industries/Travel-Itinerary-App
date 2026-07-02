@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { getAppTheme, type AppTheme } from '../theme/theme';
 import { usePersistedState } from '../hooks/usePersistedState';
 import PackingListTable from '../components/PackingListTable';
@@ -8,7 +9,7 @@ import PackingListTable from '../components/PackingListTable';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -101,6 +102,20 @@ type AuditEntry = {
   beforeState: unknown;
   afterState: unknown;
   createdAt: string;
+};
+
+type BillingPlanConfig = {
+  planKey: 'premium_monthly' | 'premium_annual';
+  activeStripePriceId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  trialDays: number;
+  pastDueGraceDays: number;
+  automaticTaxEnabled: boolean;
+  promotionCodesEnabled: boolean;
+  isCheckoutEnabled: boolean;
+  livemode: boolean | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -198,6 +213,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
         { label: 'API Limits', section: 'api-limits' as AdminSection, desc: 'View API rate limits and current usage' },
+        { label: 'Billing', section: 'billing' as AdminSection, desc: 'Manage Premium pricing, trial, grace period, tax, and checkout' },
         { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
         { label: 'Metrics', section: 'metrics' as AdminSection, desc: 'In-process counters and cache hit rates' },
       ] as { label: string; section: AdminSection; desc: string }[]
@@ -1085,7 +1101,7 @@ const TiersSection: React.FC<{
             },
           ]}
         >
-          <ScrollView horizontal showsHorizontalScrollIndicator>
+          <HorizontalTableScroll>
             <View>
               <View
                 style={[
@@ -1248,7 +1264,7 @@ const TiersSection: React.FC<{
                 ))}
               </ScrollView>
             </View>
-          </ScrollView>
+          </HorizontalTableScroll>
         </View>
       ) : null}
 
@@ -2352,6 +2368,151 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
   );
 };
 
+const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [plans, setPlans] = useState<BillingPlanConfig[]>([]);
+  const [forms, setForms] = useState<Record<string, Record<string, string | boolean>>>({});
+  const [billingEnabled, setBillingEnabled] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const data = await apiFetch(backendUrl, headers, '/billing/config');
+      const nextPlans = (data.plans ?? []) as BillingPlanConfig[];
+      setPlans(nextPlans);
+      setBillingEnabled(Boolean(data.billingEnabled));
+      setForms(Object.fromEntries(nextPlans.map((plan) => [plan.planKey, {
+        unitAmountCents: String(plan.unitAmountCents),
+        trialDays: String(plan.trialDays),
+        pastDueGraceDays: String(plan.pastDueGraceDays),
+        automaticTaxEnabled: plan.automaticTaxEnabled,
+        promotionCodesEnabled: plan.promotionCodesEnabled,
+        isCheckoutEnabled: plan.isCheckoutEnabled,
+      }])));
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const update = (planKey: string, field: string, value: string | boolean) => {
+    setForms((current) => ({
+      ...current,
+      [planKey]: { ...current[planKey], [field]: value },
+    }));
+  };
+
+  const saveConfig = async (plan: BillingPlanConfig) => {
+    const form = forms[plan.planKey];
+    if (!form) return;
+    setSaving(plan.planKey);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, `/billing/config/${plan.planKey}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trialDays: Number(form.trialDays),
+          pastDueGraceDays: Number(form.pastDueGraceDays),
+          automaticTaxEnabled: form.automaticTaxEnabled,
+          promotionCodesEnabled: form.promotionCodesEnabled,
+          isCheckoutEnabled: form.isCheckoutEnabled,
+        }),
+      });
+      if (!plan.activeStripePriceId || Number(form.unitAmountCents) !== plan.unitAmountCents) {
+        await apiFetch(backendUrl, headers, `/billing/plans/${plan.planKey}/price`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unitAmountCents: Number(form.unitAmountCents), currency: plan.currency }),
+        });
+      }
+      setMessage(`${plan.interval === 'month' ? 'Monthly' : 'Annual'} plan updated.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <View style={localStyles.section} testID="admin-billing-section">
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Billing</Text>
+      <Text style={[localStyles.cardSub, { color: billingEnabled ? theme.colors.success : theme.colors.error, marginBottom: 12 }]}>
+        Stripe billing is {billingEnabled ? 'enabled' : 'disabled'} on this server.
+      </Text>
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {plans.map((plan) => {
+        const form = forms[plan.planKey];
+        if (!form) return null;
+        return (
+          <View key={plan.planKey} style={[localStyles.card, getCardStyle(theme)]}>
+            <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+              Premium {plan.interval === 'month' ? 'Monthly' : 'Annual'}
+            </Text>
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+              Active Price: {plan.activeStripePriceId ?? 'Not published'} ({plan.livemode ? 'live' : 'test'})
+            </Text>
+            {([
+              ['unitAmountCents', 'Price in cents'],
+              ['trialDays', 'Trial days'],
+              ['pastDueGraceDays', 'Past-due grace days'],
+            ] as const).map(([field, label]) => (
+              <View key={field}>
+                <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>{label}</Text>
+                <TextInput
+                  style={[localStyles.smallInput, getInputStyle(theme)]}
+                  keyboardType="numeric"
+                  value={String(form[field])}
+                  onChangeText={(value) => update(plan.planKey, field, value)}
+                  testID={`admin-billing-${plan.planKey}-${field}`}
+                />
+              </View>
+            ))}
+            {([
+              ['automaticTaxEnabled', 'Stripe Tax'],
+              ['promotionCodesEnabled', 'Promotion codes'],
+              ['isCheckoutEnabled', 'New checkout'],
+            ] as const).map(([field, label]) => {
+              const active = Boolean(form[field]);
+              return (
+                <View key={field} style={[localStyles.row, { marginTop: 10 }]}>
+                  <Text style={[localStyles.flex, { color: theme.colors.text }]}>{label}</Text>
+                  <TouchableOpacity
+                    style={[localStyles.smallButton, { backgroundColor: active ? theme.colors.success : theme.colors.alert }]}
+                    onPress={() => update(plan.planKey, field, !active)}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: active }}
+                  >
+                    <Text style={localStyles.smallButtonText}>{active ? 'On' : 'Off'}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            <TouchableOpacity
+              style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving === plan.planKey && localStyles.buttonDisabled]}
+              disabled={saving === plan.planKey}
+              onPress={() => saveConfig(plan)}
+              testID={`admin-billing-save-${plan.planKey}`}
+            >
+              <Text style={localStyles.smallButtonText}>{saving === plan.planKey ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Main AdminTab
 // ---------------------------------------------------------------------------
@@ -2410,6 +2571,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'metrics':
         return <MetricsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'billing':
+        return <BillingSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -2427,6 +2590,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     ingestion: 'Ingestion Ops',
     'api-limits': 'API Limits',
     metrics: 'Metrics',
+    billing: 'Billing',
   };
 
   return (
