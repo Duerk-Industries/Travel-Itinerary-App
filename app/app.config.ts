@@ -93,12 +93,16 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-web-browser',
-    // Sentry's Expo plugin:
-    //  - injects a Debug ID into native bundles during EAS build,
-    //  - uploads source maps when SENTRY_AUTH_TOKEN / SENTRY_ORG /
-    //    SENTRY_PROJECT are present in the build environment.
-    // Without those env vars, the plugin is a no-op — safe to merge before
-    // a Sentry account is provisioned.
+    // Sentry's Expo plugin always rewrites the native iOS/Android bundling
+    // build phase to route through `sentry-cli react-native xcode` /
+    // sentry.gradle, even without SENTRY_ORG/SENTRY_PROJECT/SENTRY_AUTH_TOKEN
+    // configured (checked in @sentry/react-native's plugin source —
+    // getSentryProperties() never returns null, so it's NOT a no-op). That
+    // wrapper is a real extra failure point in the step that produces the
+    // embedded JS bundle. Until SENTRY_ORG/PROJECT/AUTH_TOKEN are actually
+    // configured for real source-map upload, eas.json sets
+    // SENTRY_DISABLE_AUTO_UPLOAD=true so this step falls back to the plain
+    // (unwrapped) bundling script.
     [
       '@sentry/react-native/expo',
       {

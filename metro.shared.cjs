@@ -17,9 +17,7 @@ const { getDefaultConfig } = require('expo/metro-config');
 /**
  * Loads @sentry/react-native's Metro wrapper if the package is installed.
  * Kept lazy so a missing install (e.g. a fresh checkout before `npm
- * install`) doesn't break Metro startup — Sentry's wrapper only adds Debug
- * ID injection and stack-frame collapsing, both of which are no-ops at
- * runtime when SENTRY_AUTH_TOKEN / EXPO_PUBLIC_SENTRY_DSN aren't set.
+ * install`) doesn't break Metro startup.
  */
 const loadSentryWithMetroConfig = () => {
   try {
@@ -27,6 +25,18 @@ const loadSentryWithMetroConfig = () => {
   } catch {
     return null;
   }
+};
+
+const shouldUseSentryMetro = () => {
+  if (process.env.EXPO_NO_SENTRY_METRO === '1') return false;
+  if (process.env.SENTRY_ENABLE_METRO === '1') return true;
+
+  // @sentry/react-native 7.2.0's Metro serializer can crash during EAS native
+  // bundle embedding when Metro hands it an undefined bundle source while
+  // extracting the Debug ID. Runtime Sentry still initializes from
+  // EXPO_PUBLIC_SENTRY_DSN; this only disables the build-time Metro wrapper.
+  const isEasBuild = process.env.EAS_BUILD === 'true' || process.env.EAS_BUILD === '1';
+  return !isEasBuild;
 };
 
 /**
@@ -95,15 +105,10 @@ const createSharedMetroConfig = ({
   );
 
   // Wrap with Sentry last so it observes the fully-built resolver/transformer
-  // shape. The wrapper:
-  //  - injects a Debug ID into each bundle + source map (so uploaded source
-  //    maps match the running JS even when the release is unset),
-  //  - collapses Sentry's own frames from LogBox stack traces.
-  // Source-map UPLOAD happens later, during EAS build / `expo export` —
-  // gated by SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT being present in
-  // the build environment. None of that runs in dev unless you set it up.
+  // shape. EAS native builds skip this by default because the Sentry Metro
+  // serializer currently crashes before bundle embedding completes.
   const withSentryConfig = loadSentryWithMetroConfig();
-  if (withSentryConfig && process.env.EXPO_NO_SENTRY_METRO !== '1') {
+  if (withSentryConfig && shouldUseSentryMetro()) {
     return withSentryConfig(config, {
       // We don't ship session replay; opt out to keep the web bundle smaller.
       includeWebReplay: false,
