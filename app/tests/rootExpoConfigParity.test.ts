@@ -42,4 +42,17 @@ describe('root Expo/EAS config parity', () => {
     expect(rootConfig.android?.adaptiveIcon?.foregroundImage).toBe('./app/assets/wanderbunnies-android-foreground.png');
     expect(rootConfig.android?.adaptiveIcon?.monochromeImage).toBe('./app/assets/wanderbunnies-android-monochrome.png');
   });
+
+  it('resolves the root Sentry Expo plugin through the app workspace', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const rootModule = require('../../app.config');
+    const rootConfig = rootModule.default ?? rootModule;
+    const sentryPlugin = (rootConfig.plugins ?? []).find((entry: unknown) =>
+      Array.isArray(entry) && String(entry[0]).includes('@sentry'),
+    ) as [string, unknown] | undefined;
+
+    expect(sentryPlugin).toBeDefined();
+    expect(fs.existsSync(sentryPlugin![0])).toBe(true);
+    expect(path.resolve(sentryPlugin![0]).startsWith(path.join(appRoot, 'node_modules'))).toBe(true);
+  });
 });

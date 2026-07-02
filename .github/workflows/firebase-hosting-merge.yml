@@ -6,21 +6,47 @@ on:
   push:
     branches:
       - main
+
+permissions:
+  contents: read
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Checkout repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags --prune --depth=1 origin "+${GITHUB_REF}:refs/remotes/origin/event-ref"
+          git checkout --force refs/remotes/origin/event-ref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Node
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 20) throw new Error('Node 20 or newer is required');"
+
       - run: npm ci
-      - run: |
+      - name: Export web
+        shell: bash
+        run: |
+          set -euo pipefail
           cd app
           npx expo export --platform web --output-dir ../dist
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623 }}
-          channelId: live
-          projectId: travel-itinerary-app-483623
+
+      - name: Deploy Firebase Hosting
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx --yes firebase-tools deploy --only hosting --project travel-itinerary-app-483623 --non-interactive
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623 }}

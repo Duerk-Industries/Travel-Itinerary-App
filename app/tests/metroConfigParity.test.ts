@@ -216,4 +216,40 @@ describe('Metro config parity (root EAS config vs. app local config)', () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it('runtime app sources do not import server-only Stripe modules', () => {
+    const runtimeEntries = [
+      'App.tsx',
+      'AppEntry.js',
+      'AppRoot.js',
+      'components',
+      'contexts',
+      'hooks',
+      'tabs',
+      'theme',
+      'utils',
+    ];
+    const forbiddenImportPattern = /(?:from\s+['"]|require\(\s*['"])(?:stripe|@stripe\/[^'"]+|(?:\.\.\/)+server\/|.*server\/src\/billing\/|.*server\/src\/routes\/billingRoutes)(?:['"])/;
+    const offenders: string[] = [];
+
+    const visit = (target: string) => {
+      const stat = fs.statSync(target);
+      if (stat.isDirectory()) {
+        for (const child of fs.readdirSync(target)) {
+          visit(path.join(target, child));
+        }
+        return;
+      }
+      if (!/\.(tsx?|jsx?)$/.test(target) || /\.test\./.test(target)) return;
+      const source = fs.readFileSync(target, 'utf8');
+      if (forbiddenImportPattern.test(source)) {
+        offenders.push(path.relative(workspaceRoot, target).replace(/\\/g, '/'));
+      }
+    };
+
+    for (const entry of runtimeEntries) {
+      visit(path.join(appRoot, entry));
+    }
+    expect(offenders).toEqual([]);
+  });
 });

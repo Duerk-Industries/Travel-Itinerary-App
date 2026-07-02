@@ -5,18 +5,32 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   expo-eas-build:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags --prune --depth=1 origin "+${GITHUB_REF}:refs/remotes/origin/event-ref"
+          git checkout --force refs/remotes/origin/event-ref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+      - name: Verify Node
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 20) throw new Error('Node 20 or newer is required');"
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -24,13 +38,14 @@ jobs:
           # patch-package's postinstall is part of the install; allow it.
           HUSKY: 0
 
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-      - run: |
+      - name: Build native apps and export web
+        shell: bash
+        run: |
+          set -euo pipefail
           cd app
-          eas build --platform ios --profile production --non-interactive
-          eas build --platform android --profile production --non-interactive
+          npx --yes eas-cli@20.2.0 build --platform ios --profile production --non-interactive
+          npx --yes eas-cli@20.2.0 build --platform android --profile production --non-interactive
           # Replace Hosting content with Expo web export on main
           npm run export:web -- --output-dir ../public
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
