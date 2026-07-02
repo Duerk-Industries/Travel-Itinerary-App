@@ -3102,6 +3102,9 @@ export const listFollowedTrips = async (
   userId: string
 ): Promise<Array<{ tripId: string; tripName: string; destination?: string | null; inviterName?: string | null }>> => {
   const p = getPool();
+  // Uses LEFT JOIN + IS NULL rather than `NOT EXISTS (...)` — pg-mem (the
+  // in-memory adapter used in tests) fails to resolve the outer alias in a
+  // correlated NOT EXISTS subquery here with "column ... does not exist".
   const { rows } = await p.query(
     `SELECT t.id as "tripId",
             t.name as "tripName",
@@ -3116,11 +3119,9 @@ export const listFollowedTrips = async (
      JOIN groups g ON g.id = t.group_id
      JOIN users u ON u.id = g.owner_id
      LEFT JOIN web_users wu ON wu.id = g.owner_id
+     LEFT JOIN group_members gm ON gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
      WHERE tf.follower_user_id = $1
-       AND NOT EXISTS (
-         SELECT 1 FROM group_members gm
-         WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
-       )
+       AND gm.user_id IS NULL
      ORDER BY tf.created_at DESC`,
     [userId]
   );
@@ -7296,8 +7297,14 @@ export const saveUserDemographics = async (
 
 export const listItineraries = async (userId: string): Promise<Array<Itinerary & { tripName: string }>> => {
   const p = getPool();
+  // Uses LEFT JOIN + IS NOT NULL rather than `EXISTS (...) OR EXISTS (...)`
+  // with correlated subqueries against two different outer tables — pg-mem
+  // (the in-memory adapter used in tests) fails to resolve the outer alias
+  // in that shape with "column ... does not exist". DISTINCT guards against
+  // a duplicate row in the rare case a user is both a group member and a
+  // trip follower for the same trip.
   const { rows } = await p.query(
-    `SELECT i.id,
+    `SELECT DISTINCT i.id,
             i.trip_id as "tripId",
             i.destination,
             i.days,
@@ -7307,19 +7314,9 @@ export const listItineraries = async (userId: string): Promise<Array<Itinerary &
      FROM itineraries i
      JOIN trips t ON t.id = i.trip_id
      JOIN groups g ON g.id = t.group_id
-     WHERE (
-       EXISTS (
-         SELECT 1 FROM group_members gm
-         WHERE gm.group_id = g.id
-           AND gm.user_id = $1
-           AND gm.removed_at IS NULL
-       )
-       OR EXISTS (
-         SELECT 1 FROM trip_followers tf
-         WHERE tf.trip_id = t.id
-           AND tf.follower_user_id = $1
-       )
-     )
+     LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1 AND gm.removed_at IS NULL
+     LEFT JOIN trip_followers tf ON tf.trip_id = t.id AND tf.follower_user_id = $1
+     WHERE gm.user_id IS NOT NULL OR tf.follower_user_id IS NOT NULL
      ORDER BY i.created_at DESC`,
     [userId]
   );
@@ -7338,7 +7335,7 @@ export const createItineraryRecord = async (
   if (!membership) throw new Error('You must belong to the trip group to save an itinerary');
   const dupe = await p.query(
     `SELECT 1 FROM itineraries
-     WHERE trip_id = $1 AND LOWER(destination) = LOWER($2) AND days = $3 AND COALESCE(budget,0) = COALESCE($4,0)
+     WHERE trip_id = $1 AND LOWER(destination) = LOWER($2) AND days = $3::integer AND COALESCE(budget,0) = COALESCE($4::numeric,0)
      LIMIT 1`,
     [tripId, destination.trim(), Math.max(1, Math.round(days)), budget ?? null]
   );

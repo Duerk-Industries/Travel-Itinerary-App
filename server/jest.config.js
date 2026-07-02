@@ -14,5 +14,5 @@ module.exports = {
     '^.+\\.(ts|tsx)$': [tsJestTransformer, { tsconfig: '<rootDir>/tsconfig.jest.json' }],
   },
   testMatch: ['**/__tests__/**/*.test.ts'],
-  setupFiles: ['<rootDir>/__tests__/firebase-default-setup.ts'],
+  setupFiles: ['<rootDir>/__tests__/jest-setup.ts'],
 };

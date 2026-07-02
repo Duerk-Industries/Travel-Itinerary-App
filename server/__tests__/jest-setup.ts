@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 
 // Unified server test bootstrap.
 // Supports three DB providers via DB_PROVIDER env var:
@@ -15,9 +14,37 @@ const envPaths = [
   path.resolve(__dirname, '../../.secrets'),
 ];
 
+const parseEnvValue = (rawValue: string) => {
+  const value = rawValue.trim();
+  const quote = value[0];
+  if ((quote === '"' || quote === "'") && value.endsWith(quote)) {
+    const unquoted = value.slice(1, -1);
+    return quote === '"' ? unquoted.replace(/\\n/g, '\n').replace(/\\r/g, '\r') : unquoted;
+  }
+  const hashIndex = value.indexOf(' #');
+  return (hashIndex >= 0 ? value.slice(0, hashIndex) : value).trim();
+};
+
+const loadEnvFile = (envPath: string) => {
+  const contents = fs.readFileSync(envPath, 'utf8');
+  for (const line of contents.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const assignment = trimmed.startsWith('export ') ? trimmed.slice('export '.length).trim() : trimmed;
+    const equalsIndex = assignment.indexOf('=');
+    if (equalsIndex <= 0) continue;
+
+    const key = assignment.slice(0, equalsIndex).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || process.env[key] !== undefined) continue;
+
+    process.env[key] = parseEnvValue(assignment.slice(equalsIndex + 1));
+  }
+};
+
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: false });
+    loadEnvFile(envPath);
   }
 }
 
