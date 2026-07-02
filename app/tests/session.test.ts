@@ -7,10 +7,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   clearSession,
   clearSessionAsync,
+  loadAsyncItineraryByTrip,
+  loadAsyncItineraryByTripAsync,
   loadLastActiveTripId,
   loadLastActiveTripIdAsync,
   loadSession,
   loadSessionAsync,
+  saveAsyncItineraryByTrip,
+  saveAsyncItineraryByTripAsync,
   saveSession,
   saveSessionAsync,
 } from '../utils/session';
@@ -84,6 +88,21 @@ describe('session persistence', () => {
     expect(loadSession()).toBeNull();
   });
 
+  test('async itinerary tracker map survives a page refresh (round-trips per email)', () => {
+    saveAsyncItineraryByTrip({ 'trip-1': { jobId: 'job-1', status: 'pending' } }, 'traveler@example.com');
+    expect(loadAsyncItineraryByTrip('traveler@example.com')).toEqual({
+      'trip-1': { jobId: 'job-1', status: 'pending' },
+    });
+    // A different user on the same browser must not see it.
+    expect(loadAsyncItineraryByTrip('someone-else@example.com')).toEqual({});
+  });
+
+  test('saving an empty async itinerary map clears the stored entry for that email', () => {
+    saveAsyncItineraryByTrip({ 'trip-1': { jobId: 'job-1', status: 'pending' } }, 'traveler@example.com');
+    saveAsyncItineraryByTrip({}, 'traveler@example.com');
+    expect(loadAsyncItineraryByTrip('traveler@example.com')).toEqual({});
+  });
+
   describe('native AsyncStorage persistence', () => {
     let originalWindow: unknown;
 
@@ -128,6 +147,16 @@ describe('session persistence', () => {
 
       expect(await loadSessionAsync()).toBeNull();
       expect(await loadLastActiveTripIdAsync('native@example.com')).toBe('native-trip-2');
+    });
+
+    test('async itinerary tracker map round-trips via native AsyncStorage', async () => {
+      await saveAsyncItineraryByTripAsync(
+        { 'native-trip-1': { jobId: 'native-job-1', status: 'completed', itineraryId: 'itin-1' } },
+        'native@example.com'
+      );
+      expect(await loadAsyncItineraryByTripAsync('native@example.com')).toEqual({
+        'native-trip-1': { jobId: 'native-job-1', status: 'completed', itineraryId: 'itin-1' },
+      });
     });
 
     test('loadSessionAsync removes expired native sessions', async () => {

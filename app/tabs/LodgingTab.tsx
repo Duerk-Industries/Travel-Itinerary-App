@@ -217,6 +217,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           style={styles.tableScroll}
           contentContainerStyle={styles.tableScrollContent}
           testID="lodging-table-horizontal-scroll"
+          nestedScrollEnabled
+          directionalLockEnabled
         >
         <View style={[styles.table, styles.lodgingTable, { minWidth: 878 }]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>

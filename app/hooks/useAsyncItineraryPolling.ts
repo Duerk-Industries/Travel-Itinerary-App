@@ -3,8 +3,9 @@ import { usePolling } from './usePolling';
 
 export type AsyncItineraryTracker = {
   jobId: string;
-  status: 'pending' | 'failed';
+  status: 'pending' | 'completed' | 'failed';
   error?: string;
+  itineraryId?: string | null;
 };
 
 type UseAsyncItineraryPollingParams = {
@@ -38,7 +39,12 @@ export function useAsyncItineraryPolling({
   const enabled = Boolean(userToken) && hasPending;
 
   const poll = useCallback(async () => {
-    const currentPendingEntries = Object.entries(trackersRef.current).filter(
+    // Snapshot once up front rather than reading inside a setState updater — the updater
+    // isn't guaranteed to run synchronously, so deriving "is anything still pending" from
+    // its side effects (instead of this snapshot) raced and silently stopped polling after
+    // the first tick.
+    const currentTrackers = trackersRef.current;
+    const currentPendingEntries = Object.entries(currentTrackers).filter(
       ([, tracker]) => tracker.status === 'pending'
     );
     if (!currentPendingEntries.length) return { done: true };
@@ -55,7 +61,11 @@ export function useAsyncItineraryPolling({
           }
           const data = await res.json().catch(() => ({}));
           const status = String((data as any).status ?? '').toLowerCase();
-          if (status === 'completed') return [tripId, null] as const;
+          if (status === 'completed') {
+            const itineraryId =
+              (data as any).itineraryId ?? (data as any).result?.itineraryId ?? null;
+            return [tripId, { ...tracker, status: 'completed' as const, itineraryId, error: undefined }] as const;
+          }
           if (status === 'failed') {
             return [
               tripId,
@@ -70,34 +80,29 @@ export function useAsyncItineraryPolling({
     );
 
     let completedCount = 0;
-    let stillPending = false;
-
-    setAsyncItineraryByTrip((prev) => {
-      let changed = false;
-      const nextState = { ...prev };
-      for (const [tripId, nextTracker] of nextEntries) {
-        if (nextTracker === null) {
-          if (nextState[tripId]) {
-            delete nextState[tripId];
-            changed = true;
-            completedCount += 1;
-          }
-          continue;
-        }
-        const prevTracker = prev[tripId];
-        if (
-          !prevTracker ||
-          prevTracker.status !== nextTracker.status ||
-          prevTracker.error !== nextTracker.error ||
-          prevTracker.jobId !== nextTracker.jobId
-        ) {
-          nextState[tripId] = nextTracker;
-          changed = true;
+    let changed = false;
+    const nextState = { ...currentTrackers };
+    for (const [tripId, nextTracker] of nextEntries) {
+      const prevTracker = currentTrackers[tripId];
+      if (
+        !prevTracker ||
+        prevTracker.status !== nextTracker.status ||
+        prevTracker.error !== nextTracker.error ||
+        prevTracker.jobId !== nextTracker.jobId ||
+        prevTracker.itineraryId !== nextTracker.itineraryId
+      ) {
+        nextState[tripId] = nextTracker;
+        changed = true;
+        if (nextTracker.status === 'completed' && prevTracker?.status !== 'completed') {
+          completedCount += 1;
         }
       }
-      stillPending = Object.values(nextState).some((t) => t.status === 'pending');
-      return changed ? nextState : prev;
-    });
+    }
+    const stillPending = Object.values(nextState).some((t) => t.status === 'pending');
+
+    if (changed) {
+      setAsyncItineraryByTrip(nextState);
+    }
 
     if (completedCount > 0) {
       await refreshPageDataRef.current();

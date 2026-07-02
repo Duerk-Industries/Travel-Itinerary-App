@@ -158,4 +158,66 @@ describe('AI itinerary limits and idempotency', () => {
     const monthlyCount = await getUsageCounter(dedupeUser.userId, 'ai_itinerary_generations', getMonthWindowKey());
     expect(monthlyCount).toBe(1);
   });
+
+  it('passes the reserved monthly usage window into async generation jobs', async () => {
+    const asyncEmail = `itinerary-limits-test+async-${TS}@example.com`;
+    const asyncUser = await registerAndLoginWebUser({
+      firstName: 'AI',
+      lastName: 'Async',
+      email: asyncEmail,
+      password: 'TestPass1!',
+    });
+    const asyncGroupResponse = await request(app)
+      .post('/api/groups')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .send({ name: `Async Group ${TS}` })
+      .expect(201);
+    const asyncGroupId = asyncGroupResponse.body.id ?? asyncGroupResponse.body.group?.id;
+    const asyncTripResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .send({ name: `Async Trip ${TS}`, groupId: asyncGroupId, endDate: '2099-12-31' })
+      .expect(201);
+    const asyncTripId = asyncTripResponse.body.id ?? asyncTripResponse.body.trip?.id;
+
+    const promptPlanSpy = jest.spyOn(itineraryPromptPlanService, 'generateItineraryViaPromptPlan').mockResolvedValue({
+      planMarkdown: '# Day 1\nWalk the city.',
+      normalized: null,
+      route: null,
+      itinerary: null,
+      details: [],
+      generatedItems: { transfers: [], lodgings: [], activities: [], carRentals: [] },
+      tokenUsage: { totalTokens: 10 },
+      profile: null,
+    } as any);
+
+    const res = await request(app)
+      .post('/api/itinerary/async')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .set('Idempotency-Key', 'async-window')
+      .send({
+        tripId: asyncTripId,
+        country: 'France',
+        locations: ['Paris'],
+        days: 3,
+        budgetMin: 100,
+        budgetMax: 500,
+      })
+      .expect(202);
+
+    expect(res.body.jobId).toBeTruthy();
+    for (let attempt = 0; attempt < 20 && !promptPlanSpy.mock.calls.length; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    expect(promptPlanSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: asyncUser.userId,
+        tripIdSeed: asyncTripId,
+        usageWindowKey: getMonthWindowKey(),
+      })
+    );
+
+    await cleanupTestUsersByEmail([asyncEmail]);
+  });
 });

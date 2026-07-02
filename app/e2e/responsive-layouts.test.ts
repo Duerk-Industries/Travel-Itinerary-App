@@ -49,4 +49,12 @@ test.describe('Responsive layouts', () => {
     await expect(page.getByTestId('ledger-cards')).toBeVisible();
     await expect(page.getByTestId('ledger-table')).toHaveCount(0);
   });
+
+  test('home content remains vertically scrollable at phone width', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+
+    const lastNavigationItem = page.getByTestId('home-nav-cost');
+    await lastNavigationItem.scrollIntoViewIfNeeded();
+    await expect(lastNavigationItem).toBeVisible();
+  });
 });

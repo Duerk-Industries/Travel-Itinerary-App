@@ -6,7 +6,7 @@ import { User, UserRole } from './types';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
-import { getSeededTierForEmail } from './services/entitlementService';
+import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { getEnvValue } from './env';
 import { getAuthAudience, getAuthIssuer, getAuthSecret } from './authConfig';
 import { setRequestContextUserId } from './requestContext';
@@ -131,6 +131,7 @@ export const handleLogin = async (
 ): Promise<{ token: string; user: User }> => {
   const user = await findOrCreateUser(email, provider);
   await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
+  await ensureAdminBootstrap(user.id, user.email);
   const role = await getUserRole(user.id);
   const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
   return { token, user };

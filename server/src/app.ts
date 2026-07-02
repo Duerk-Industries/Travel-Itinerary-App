@@ -115,7 +115,7 @@ app.use(cors({
     return callback(new Error(msg));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key'],
   exposedHeaders: ['X-Request-Id'],
 }));
 app.use(express.json());

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const sessionKey = 'stp.session';
 const sessionTokenKey = 'stp.session.token';
 const lastTripByEmailKey = 'stp.session.lastTripByEmail';
+const asyncItineraryByEmailKey = 'stp.session.asyncItinerary';
 
 const resolveSessionDurationMs = (): number => {
   const raw =
@@ -69,6 +70,88 @@ const saveLastTripMapAsync = async (lastTrips: Record<string, string>): Promise<
   } catch {
     // Ignore storage failures; session persistence is best effort.
   }
+};
+
+// Pending/failed/completed AI itinerary generation jobs, persisted separately from the
+// main session blob (and keyed by email like lastTripByEmail) so a page refresh doesn't
+// lose the "generating..." banner, and one user's browser session can't see another's.
+const parseAsyncItineraryByEmailMap = (raw: string | null): Record<string, Record<string, unknown>> => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed as Record<string, Record<string, unknown>>;
+  } catch {
+    return {};
+  }
+};
+
+const loadAsyncItineraryByEmailMap = (): Record<string, Record<string, unknown>> => {
+  if (!canAccessWebStorage()) return {};
+  return parseAsyncItineraryByEmailMap(window.localStorage.getItem(asyncItineraryByEmailKey));
+};
+
+const saveAsyncItineraryByEmailMap = (value: Record<string, Record<string, unknown>>): void => {
+  if (!canAccessWebStorage()) return;
+  window.localStorage.setItem(asyncItineraryByEmailKey, JSON.stringify(value));
+};
+
+const loadAsyncItineraryByEmailMapAsync = async (): Promise<Record<string, Record<string, unknown>>> => {
+  if (canAccessWebStorage()) return loadAsyncItineraryByEmailMap();
+  try {
+    return parseAsyncItineraryByEmailMap(await AsyncStorage.getItem(asyncItineraryByEmailKey));
+  } catch {
+    return {};
+  }
+};
+
+const saveAsyncItineraryByEmailMapAsync = async (value: Record<string, Record<string, unknown>>): Promise<void> => {
+  if (canAccessWebStorage()) {
+    saveAsyncItineraryByEmailMap(value);
+    return;
+  }
+  try {
+    await AsyncStorage.setItem(asyncItineraryByEmailKey, JSON.stringify(value));
+  } catch {
+    // Ignore storage failures; this is a best-effort UX nicety.
+  }
+};
+
+export const loadAsyncItineraryByTrip = (email?: string | null): Record<string, unknown> => {
+  const ownerKey = normalizeTripOwnerKey(email);
+  if (!ownerKey) return {};
+  return loadAsyncItineraryByEmailMap()[ownerKey] ?? {};
+};
+
+export const loadAsyncItineraryByTripAsync = async (email?: string | null): Promise<Record<string, unknown>> => {
+  const ownerKey = normalizeTripOwnerKey(email);
+  if (!ownerKey) return {};
+  const all = await loadAsyncItineraryByEmailMapAsync();
+  return all[ownerKey] ?? {};
+};
+
+export const saveAsyncItineraryByTrip = (value: Record<string, unknown>, email?: string | null): void => {
+  const ownerKey = normalizeTripOwnerKey(email);
+  if (!ownerKey) return;
+  const all = loadAsyncItineraryByEmailMap();
+  if (value && Object.keys(value).length) {
+    all[ownerKey] = value;
+  } else {
+    delete all[ownerKey];
+  }
+  saveAsyncItineraryByEmailMap(all);
+};
+
+export const saveAsyncItineraryByTripAsync = async (value: Record<string, unknown>, email?: string | null): Promise<void> => {
+  const ownerKey = normalizeTripOwnerKey(email);
+  if (!ownerKey) return;
+  const all = await loadAsyncItineraryByEmailMapAsync();
+  if (value && Object.keys(value).length) {
+    all[ownerKey] = value;
+  } else {
+    delete all[ownerKey];
+  }
+  await saveAsyncItineraryByEmailMapAsync(all);
 };
 
 export type StoredSession = {

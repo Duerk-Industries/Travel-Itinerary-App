@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking,
+import { ActivityIndicator, Alert, Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -22,6 +22,7 @@ import {
 } from '../utils/overviewBuilder';
 import { type MapApp } from '../utils/mapLinks';
 import {
+  computeEndDateFromDuration,
   formatMonthYear,
 } from '../utils/tripDates';
 import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
@@ -206,6 +207,7 @@ type OverviewTabProps = {
   aiItineraryPending?: boolean;
   aiItineraryFailedMessage?: string | null;
   editSignal?: number;
+  goToDay1Signal?: number;
   onUpdateCurrency?: (tripId: string, currency: string) => void;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
@@ -399,6 +401,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   aiItineraryPending,
   aiItineraryFailedMessage,
   editSignal,
+  goToDay1Signal,
   onUpdateCurrency,
   onOpenAddress,
   onRefreshTrips,
@@ -414,6 +417,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
   const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
+  const dayHeroHeight = Math.max(190, Math.min(300, viewportWidth * (isPhoneLayout ? 0.52 : 0.3)));
+  const lodgingThumbnailSize = isPhoneLayout ? 64 : isTabletLayout ? 72 : 80;
   const stripResizeMode = useCallback((style: any) => {
     const flattened = StyleSheet.flatten(style);
     if (!flattened || typeof flattened !== 'object' || !('resizeMode' in flattened)) {
@@ -1021,8 +1026,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return { startDate: min, endDate: max };
   }, [flights, lodgings, tours, carRentals]);
 
-  const overviewStartDate = displayStartDate ?? eventDateBounds?.startDate ?? null;
-  const overviewEndDate = displayEndDate ?? eventDateBounds?.endDate ?? null;
+  // Trips created via the wizard's "Flexible Timeline" mode (month + duration,
+  // no exact dates) never get a startDate/endDate — synthesize a range from
+  // startMonth/startYear/durationDays so the day-by-day view doesn't collapse
+  // to a single fallback "today" entry.
+  const monthDurationDates = useMemo(() => {
+    const month = trip?.startMonth ?? null;
+    const year = trip?.startYear ?? null;
+    const days = trip?.durationDays ?? null;
+    if (!month || !year || !days) return null;
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = computeEndDateFromDuration(startDate, days);
+    return endDate ? { startDate, endDate } : null;
+  }, [trip?.startMonth, trip?.startYear, trip?.durationDays]);
+
+  const overviewStartDate = displayStartDate ?? monthDurationDates?.startDate ?? eventDateBounds?.startDate ?? null;
+  const overviewEndDate = displayEndDate ?? monthDurationDates?.endDate ?? eventDateBounds?.endDate ?? null;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
@@ -1138,6 +1157,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     buildDayCards();
   }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel, trip?.destination]);
 
+  // Lets App.tsx command "jump to Day 1" (e.g. when an AI itinerary finishes generating)
+  // without lifting selectedDay state up. Mirrors the editSignal nonce-prop pattern.
+  // dayCards is built asynchronously above, so the request is "armed" on signal change
+  // and applied once dayCards actually has data, rather than racing it.
+  const lastGoToDay1Signal = useRef(goToDay1Signal);
+  const [pendingGoToDay1, setPendingGoToDay1] = useState(false);
+  useEffect(() => {
+    if (goToDay1Signal !== undefined && goToDay1Signal !== lastGoToDay1Signal.current) {
+      lastGoToDay1Signal.current = goToDay1Signal;
+      setPendingGoToDay1(true);
+    }
+  }, [goToDay1Signal]);
+  useEffect(() => {
+    if (pendingGoToDay1 && dayCards.length) {
+      setSelectedDay(dayCards[0].date);
+      setPendingGoToDay1(false);
+    }
+  }, [pendingGoToDay1, dayCards]);
+
   useEffect(() => {
     const cache = async () => {
       if (!trip?.id || !dayCards.length) return;
@@ -1248,48 +1286,54 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel]);
 
   useEffect(() => {
+    let active = true;
+    const fetchOneImage = async (card: DayCard): Promise<[string, string] | null> => {
+      const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
+      const activities = itineraryDetails
+        .filter((detail) => detail.day === dayNumber)
+        .map((detail) => detail.activity)
+        .filter(Boolean);
+      const tourNames = tours
+        .filter((tour) => tour.date === card.date)
+        .map((tour) => tour.name)
+        .filter(Boolean);
+      const contextParts = [...activities, ...tourNames].filter(Boolean);
+      const context = contextParts.join(' | ').slice(0, 200);
+      try {
+        const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
+        const query = [
+          `location=${encodeURIComponent(baseLocation)}`,
+          `day=${encodeURIComponent(card.date)}`,
+          context ? `context=${encodeURIComponent(context)}` : '',
+        ]
+          .filter(Boolean)
+          .join('&');
+        const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
+        const data = await res.json().catch(() => ({}));
+        return data?.url ? [card.date, data.url] : null;
+      } catch {
+        return null;
+      }
+    };
     const fetchImages = async () => {
       if (!dayCards.length) return;
       const missingCards = dayCards.filter((card) => !dayImages[card.date]);
       if (!missingCards.length) return;
+      const results = await Promise.all(missingCards.map(fetchOneImage));
+      if (!active) return;
       const next: Record<string, string> = {};
-      for (let idx = 0; idx < missingCards.length; idx += 1) {
-        const card = missingCards[idx];
-        const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
-        const activities = itineraryDetails
-          .filter((detail) => detail.day === dayNumber)
-          .map((detail) => detail.activity)
-          .filter(Boolean);
-        const tourNames = tours
-          .filter((tour) => tour.date === card.date)
-          .map((tour) => tour.name)
-          .filter(Boolean);
-        const contextParts = [...activities, ...tourNames].filter(Boolean);
-        const context = contextParts.join(' | ').slice(0, 200);
-        try {
-          const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
-          const query = [
-            `location=${encodeURIComponent(baseLocation)}`,
-            `day=${encodeURIComponent(card.date)}`,
-            context ? `context=${encodeURIComponent(context)}` : '',
-          ]
-            .filter(Boolean)
-            .join('&');
-          const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
-          const data = await res.json().catch(() => ({}));
-          if (data?.url) {
-            next[card.date] = data.url;
-          }
-        } catch {
-          // ignore
-        }
-      }
+      results.forEach((entry) => {
+        if (entry) next[entry[0]] = entry[1];
+      });
       if (Object.keys(next).length) {
         setDayImages((prev) => ({ ...prev, ...next }));
       }
     };
     fetchImages().catch(() => undefined);
-  }, [backendUrl, headers, dayCards, dayImages, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -1924,18 +1968,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
-    if (!info) return 'Free day';
+    if (!info) return itineraryLoading ? 'Loading itinerary...' : 'Free day';
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) return activityDetails[0].activity;
     if (info.tours.length) return info.tours[0].name || 'Activity day';
     if (info.flights.length) return 'Travel day';
     if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
     if (info.rentals.length) return 'Drive day';
+    if (itineraryLoading) return 'Loading itinerary...';
     return 'Free day';
   };
 
   const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
-    if (!info) return ['No itinerary details yet.'];
+    if (!info) return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) {
       return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
@@ -1954,7 +1999,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
     }
     if (info.tours.length) return [];
-    return ['No itinerary details yet.'];
+    return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
   const renderDayBar = (activeDate: string | null) => (
@@ -2012,7 +2057,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             testID={testID}
             style={[
               styles.dayHeroCard,
-              isPhoneLayout ? { height: 150 } : isTabletLayout ? { height: 170 } : null,
+              { height: dayHeroHeight },
             ]}
             onPress={onPress}
             disabled={!onPress}
@@ -2046,9 +2091,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text
                 style={[
                   styles.dayHeroTitle,
-                  isPhoneLayout ? { fontSize: 18 } : isTabletLayout ? { fontSize: 20 } : null,
+                  isPhoneLayout ? { fontSize: 18, lineHeight: 23 } : isTabletLayout ? { fontSize: 20 } : null,
                 ]}
-                numberOfLines={2}
+                numberOfLines={isPhoneLayout ? 4 : 3}
                 ellipsizeMode="tail"
               >
                 {title}
@@ -2105,9 +2150,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <ScrollView
               ref={scrollRef}
               style={{ flex: 1, minHeight: 0 }}
-              contentContainerStyle={{ gap: isPhoneLayout ? 12 : 16, paddingTop: isPhoneLayout ? 48 : 56 }}
+              contentContainerStyle={{
+                gap: isPhoneLayout ? 12 : 16,
+                paddingTop: isPhoneLayout ? 48 : 56,
+                paddingBottom: 24,
+              }}
               onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              nestedScrollEnabled
+              contentInsetAdjustmentBehavior="automatic"
             >
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
@@ -2253,9 +2306,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         onPress={() => openLodgingDetails(lodging)}
                       >
                         {lodging.imageUrl ? (
-                          <Image style={lodgingImageStyle} source={getImageSource(lodging.imageUrl)} resizeMode="cover" />
+                          <Image
+                            style={[lodgingImageStyle, { width: lodgingThumbnailSize, height: lodgingThumbnailSize }]}
+                            source={getImageSource(lodging.imageUrl)}
+                            resizeMode="cover"
+                          />
                         ) : (
-                          <View style={styles.lodgingImageFallback} />
+                          <View
+                            style={[
+                              styles.lodgingImageFallback,
+                              { width: lodgingThumbnailSize, height: lodgingThumbnailSize },
+                            ]}
+                          />
                         )}
                         <View style={styles.dayInfoText}>
                           <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
@@ -2285,7 +2347,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   </TouchableOpacity>
                 </View>
                 {(activeDayInfo.details ?? []).length === 0 ? (
-                  <Text style={styles.helperText}>No items yet for this day.</Text>
+                  <Text style={styles.helperText}>
+                    {itineraryLoading ? 'Loading itinerary...' : 'No items yet for this day.'}
+                  </Text>
                 ) : (
                   (activeDayInfo.details ?? []).map((d) => {
                     const isActivity = !d.kind || d.kind === 'activity';
@@ -2308,7 +2372,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </View>
                           ) : d.kind === 'checklist' ? (
                             <View style={{ width: '100%' }}>
-                              <Text style={styles.dayInfoRoute}>{`✅ ${d.activity}`}</Text>
+                              <Text style={[styles.dayInfoRoute, { marginBottom: 4 }]}>{`📋 ${d.activity}`}</Text>
                               {(d.checklistItems ?? []).map((it) => {
                                 const checked = !!it.checkedBy;
                                 return (
@@ -2405,9 +2469,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <ScrollView
           ref={scrollRef}
           style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
+          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
           onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
         >
           <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
@@ -2463,9 +2531,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <ScrollView
         ref={scrollRef}
         style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
+        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
         onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        contentInsetAdjustmentBehavior="automatic"
       >
         <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
           <Text style={styles.sectionTitle}>Overview</Text>
@@ -3049,8 +3121,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
       {trip && aiItineraryPending ? (
-        <View style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}>
-          <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+        <View
+          style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}
+          testID="ai-itinerary-pending-banner"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator size="small" color="#2563eb" testID="ai-itinerary-pending-spinner" />
+            <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+          </View>
           <Text style={styles.helperText}>Your AI trip plan is being generated and will appear here automatically.</Text>
         </View>
       ) : null}

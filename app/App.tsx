@@ -57,13 +57,16 @@ import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } f
 import * as WebBrowser from 'expo-web-browser';
 import {
   clearSessionAsync,
+  loadAsyncItineraryByTripAsync,
   loadLastActiveTripId,
   loadSessionAsync,
+  saveAsyncItineraryByTripAsync,
   saveLastActiveTripIdAsync,
   saveSessionAsync,
 } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
@@ -75,6 +78,11 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
+import { installPermissionDeniedInterceptor } from './utils/permissionDeniedInterceptor';
+
+// Installed once at module load so every fetch in the app — regardless of
+// which tab/hook issues it — surfaces a permission-denied modal on a 403.
+installPermissionDeniedInterceptor();
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
 import { useTripMembers } from './hooks/useTripMembers';
@@ -443,6 +451,32 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     initializeAppCheck();
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+    const previous = {
+      htmlHeight: html.style.height,
+      bodyHeight: body.style.height,
+      bodyMargin: body.style.margin,
+      bodyOverflow: body.style.overflow,
+      rootHeight: root?.style.height ?? '',
+    };
+    html.style.height = '100%';
+    body.style.height = '100%';
+    body.style.margin = '0';
+    body.style.overflow = 'hidden';
+    if (root) root.style.height = '100%';
+    return () => {
+      html.style.height = previous.htmlHeight;
+      body.style.height = previous.bodyHeight;
+      body.style.margin = previous.bodyMargin;
+      body.style.overflow = previous.bodyOverflow;
+      if (root) root.style.height = previous.rootHeight;
+    };
+  }, []);
+
   // React DevTools (and a few dev-tooling libraries) emit `performance.mark`
   // on every component render in development. Browsers keep those entries
   // forever — Firefox in particular won't reclaim them, and after a long
@@ -489,7 +523,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         ? ({
             paddingTop: 'env(safe-area-inset-top, 0px)',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-            minHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+            height: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+            minHeight: 0,
+            maxHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
           } as any)
         : null,
     [isWebIOSSafari, webViewportHeight]
@@ -554,7 +590,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   } = useAuthFlowState({ backendUrl, userToken });
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
-  const isFollowingMode = Boolean(selectedFollowedTripId);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
@@ -568,6 +603,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
   const [shareTripModalOpen, setShareTripModalOpen] = useState(false);
   const [overviewEditSignal, setOverviewEditSignal] = useState(0);
+  const [goToDay1Signal, setGoToDay1Signal] = useState(0);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
@@ -679,6 +715,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
     [followedTrips]
   );
+  // True when the active trip is one the user only follows (read-only access), not a
+  // group trip they're a member of. Derived from followedTripById (not just
+  // selectedFollowedTripId) so it stays correct even if activeTripId is restored
+  // directly from a saved session without going through the "Following" tab flow.
+  const isFollowingMode = Boolean(
+    selectedFollowedTripId || (activeTripId && followedTripById.has(activeTripId))
+  );
   const selectedFollowedTrip = useMemo(
     () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
     [followedTripById, selectedFollowedTripId]
@@ -738,6 +781,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const [asyncItineraryByTrip, setAsyncItineraryByTrip] = useState<Record<string, AsyncItineraryTracker>>({});
+
+  // Restore any in-flight/just-finished AI itinerary jobs on login/refresh so the
+  // "generating..." banner (and polling) survives a page reload instead of vanishing.
+  useEffect(() => {
+    if (!userEmail) return;
+    let cancelled = false;
+    void loadAsyncItineraryByTripAsync(userEmail).then((stored) => {
+      if (cancelled) return;
+      const entries = Object.entries(stored).filter(
+        (entry): entry is [string, AsyncItineraryTracker] =>
+          Boolean(entry[1]) && typeof entry[1] === 'object' && typeof (entry[1] as any).jobId === 'string' && typeof (entry[1] as any).status === 'string'
+      );
+      if (!entries.length) return;
+      setAsyncItineraryByTrip((prev) => ({ ...Object.fromEntries(entries), ...prev }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userEmail]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    void saveAsyncItineraryByTripAsync(asyncItineraryByTrip, userEmail);
+  }, [asyncItineraryByTrip, userEmail]);
 
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
@@ -843,6 +910,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     setActivePage(page);
   }, [activePage, isFollowingMode]);
+
+  // One-shot: when an AI itinerary job finishes, notify the user, jump them to that
+  // trip's Overview on Day 1, and clear the tracker so this doesn't refire. Clearing
+  // the tracker (rather than just flipping a "seen" flag) is what makes this safe to
+  // run on every render — once handled, the entry is gone from asyncItineraryByTrip.
+  useEffect(() => {
+    const completedEntry = Object.entries(asyncItineraryByTrip).find(([, tracker]) => tracker.status === 'completed');
+    if (!completedEntry) return;
+    const [tripId] = completedEntry;
+    const tripName = trips.find((t) => t.id === tripId)?.name ?? 'Your trip';
+    Alert.alert('Itinerary Ready', `Your AI-generated itinerary for ${tripName} is ready!`);
+    setActiveTripId(tripId);
+    requestPageChange('overview');
+    setGoToDay1Signal((prev) => prev + 1);
+    setAsyncItineraryByTrip((prev) => {
+      if (!prev[tripId]) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+  }, [asyncItineraryByTrip, trips, requestPageChange]);
 
   const handleSelectOwnedTrip = useCallback((tripId: string) => {
     setSelectedFollowedTripId(null);
@@ -1287,17 +1375,26 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     try {
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
       if (result.type === 'success' && result.url) {
-        const { token, authCode, requirePasswordSetup } = extractTokenFromUrl(result.url);
+        const { token, authCode, authError, requirePasswordSetup } = extractTokenFromUrl(result.url);
         if (token) {
           handleAuthSuccess(token, undefined, { requirePasswordSetup });
           return;
         }
         if (authCode) {
           await exchangeAuthCode(authCode);
+          return;
         }
+        if (authError) {
+          setAuthErrorMessage(mapAuthErrorToMessage(authError));
+          return;
+        }
+        setAuthErrorMessage('Google sign-in returned without login credentials. Please try again.');
+      } else if (result.type !== 'cancel' && result.type !== 'dismiss') {
+        setAuthErrorMessage('Google sign-in could not be completed. Please try again.');
       }
     } catch (err) {
-      console.log('Auth session cancelled or failed', err);
+      console.log('Auth session failed', err);
+      setAuthErrorMessage((err as Error)?.message || 'Google sign-in could not be completed. Please try again.');
     }
   };
 
@@ -1854,7 +1951,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const acceptPendingFollowCode = async () => {
     if (!pendingFollowCode) return;
     const error = await handleFollowTripByCode(pendingFollowCode);
-    if (!error) {
+    if (error) {
+      Alert.alert('Unable to Follow Trip', error);
+      setPendingFollowCode(null);
+    } else {
       setPendingFollowCode(null);
     }
   };
@@ -2534,6 +2634,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       style={styles.pageScroll}
       contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      nestedScrollEnabled
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator
     >
       <View style={styles.pageScrollInner}>{content}</View>
     </ScrollView>
@@ -3169,6 +3273,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       : null
                   }
                   editSignal={overviewEditSignal}
+                  goToDay1Signal={goToDay1Signal}
                   onUpdateCurrency={updateTripCurrency}
                   onOpenAddress={openMaps}
                   onRefreshTrips={fetchTrips}
@@ -3236,21 +3341,29 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
         </View>
       ) : (
-        <AuthForm
-          authMode={authMode}
-          setAuthMode={setAuthMode}
-          authForm={authForm}
-          setAuthForm={setAuthForm}
-          showResendConfirmation={showResendConfirmation}
-          setShowResendConfirmation={setShowResendConfirmation}
-          resendConfirmationLoading={resendConfirmationLoading}
-          resendConfirmationEmail={resendConfirmationEmail}
-          authErrorMessage={authErrorMessage}
-          loginWithPassword={loginWithPassword}
-          register={register}
-          loginWithGoogle={loginWithGoogle}
-          styles={styles}
-        />
+        <ScrollView
+          style={styles.signedOutScroll}
+          contentContainerStyle={[styles.signedOutScrollContent, iosSafariContentInsetStyle]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <AuthForm
+            authMode={authMode}
+            setAuthMode={setAuthMode}
+            authForm={authForm}
+            setAuthForm={setAuthForm}
+            showResendConfirmation={showResendConfirmation}
+            setShowResendConfirmation={setShowResendConfirmation}
+            resendConfirmationLoading={resendConfirmationLoading}
+            resendConfirmationEmail={resendConfirmationEmail}
+            authErrorMessage={authErrorMessage}
+            loginWithPassword={loginWithPassword}
+            register={register}
+            loginWithGoogle={loginWithGoogle}
+            styles={styles}
+          />
+        </ScrollView>
       )}
       {userToken && requirePasswordSetup ? (
         <View style={styles.wizardOverlay}>
@@ -3353,6 +3466,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      <PermissionDeniedModal styles={styles} />
       {lodgingToDelete ? (
         <ConfirmDialog
           visible={true}
@@ -3639,6 +3753,17 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     minHeight: 0,
     position: 'relative',
     overflow: 'hidden',
+  },
+  signedOutScroll: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+  },
+  signedOutScrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   pageScroll: {
     flex: 1,
@@ -4980,6 +5105,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     width: '100%',
     maxWidth: 1200,
     maxHeight: '90%',
+    flex: 1,
     alignSelf: 'center',
   },
   pendingInviteModal: {

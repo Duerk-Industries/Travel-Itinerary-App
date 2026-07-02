@@ -3371,6 +3371,20 @@ export const followTripByCode = async (
   const tripId = String(codeData.tripId ?? '').trim();
   if (!tripId) throw new Error('Invalid or expired follow code');
 
+  // Block members from following their own trip — they already have full access.
+  const tripForGroup = await db.collection('trips').doc(tripId).get();
+  const groupId = tripForGroup.exists ? String((tripForGroup.data() as any).groupId ?? '') : '';
+  if (groupId) {
+    const memberSnap = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', userId)
+      .where('removedAt', '==', null)
+      .limit(1)
+      .get();
+    if (!memberSnap.empty) throw new Error('You are already a member of this trip and cannot follow it.');
+  }
+
   const existing = await db
     .collection('trip_followers')
     .where('tripId', '==', tripId)
@@ -3442,6 +3456,13 @@ export const listFollowedTrips = async (
     const tripDoc = await db.collection('trips').doc(tripId).get();
     if (!tripDoc.exists) continue;
     const trip = tripDoc.data() as any;
+    const activeMembership = await db
+      .collection('group_members')
+      .where('groupId', '==', trip.groupId)
+      .where('userId', '==', userId)
+      .where('removedAt', '==', null)
+      .get();
+    if (!activeMembership.empty) continue;
     const groupDoc = await db.collection('groups').doc(trip.groupId).get();
     const ownerId = groupDoc.exists ? (groupDoc.data() as any).ownerId : null;
     let inviterName: string | null = null;
@@ -4454,6 +4475,8 @@ export const getItineraryDetailContext = async (
   return { tripId, itineraryId };
 };
 
+const getReactionDocId = (detailId: string, userId: string): string => `${detailId}_${userId}`;
+
 export const castItineraryDetailReaction = async (
   userId: string,
   tripId: string,
@@ -4461,18 +4484,14 @@ export const castItineraryDetailReaction = async (
   value: 1 | -1
 ): Promise<void> => {
   const db = getDb();
-  const existing = await db
-    .collection('itinerary_detail_reactions')
-    .where('detailId', '==', detailId)
-    .where('userId', '==', userId)
-    .limit(1)
-    .get();
+  const ref = db.collection('itinerary_detail_reactions').doc(getReactionDocId(detailId, userId));
+  const existing = await ref.get();
   const payload = { tripId, detailId, userId, value, updatedAt: nowIso() };
-  if (!existing.empty) {
-    await existing.docs[0].ref.update(payload);
+  if (existing.exists) {
+    await ref.update(payload);
     return;
   }
-  await db.collection('itinerary_detail_reactions').doc(randomUUID()).set({ ...payload, createdAt: nowIso() });
+  await ref.set({ ...payload, createdAt: nowIso() });
 };
 
 export const clearItineraryDetailReaction = async (
@@ -4480,14 +4499,7 @@ export const clearItineraryDetailReaction = async (
   detailId: string
 ): Promise<void> => {
   const db = getDb();
-  const existing = await db
-    .collection('itinerary_detail_reactions')
-    .where('detailId', '==', detailId)
-    .where('userId', '==', userId)
-    .limit(1)
-    .get();
-  if (existing.empty) return;
-  await existing.docs[0].ref.delete();
+  await db.collection('itinerary_detail_reactions').doc(getReactionDocId(detailId, userId)).delete();
 };
 
 export const getItineraryDetailReactionSummaries = async (
@@ -6087,6 +6099,19 @@ export const getGenerationIdempotency = async (key: string) => {
   const doc = await db.collection('generation_idempotency').doc(key).get();
   if (!doc.exists) return null;
   const data = doc.data()!;
+  // responseBody is stored as a JSON string (see completeGenerationIdempotency) because
+  // Firestore rejects arrays nested directly inside arrays ("invalid nested entity"),
+  // which AI-generated itinerary plans can contain.
+  let responseBody: Record<string, unknown> | null = null;
+  if (typeof data.responseBody === 'string') {
+    try {
+      responseBody = JSON.parse(data.responseBody);
+    } catch {
+      responseBody = null;
+    }
+  } else if (data.responseBody && typeof data.responseBody === 'object') {
+    responseBody = data.responseBody;
+  }
   return {
     key: doc.id,
     userId: data.userId,
@@ -6095,7 +6120,7 @@ export const getGenerationIdempotency = async (key: string) => {
     windowKey: data.windowKey ?? null,
     status: data.status ?? 'pending',
     resultRef: data.resultRef ?? null,
-    responseBody: data.responseBody ?? null,
+    responseBody,
     errorMessage: data.errorMessage ?? null,
     createdAt: data.createdAt ?? nowIso(),
     expiresAt: data.expiresAt ?? nowIso(),
@@ -6138,10 +6163,13 @@ export const reserveGenerationIdempotency = async (params: {
 
 export const completeGenerationIdempotency = async (key: string, responseBody: Record<string, unknown>, resultRef?: string | null): Promise<void> => {
   const db = getDb();
+  // Stored as a JSON string, not a native Firestore map/array — AI-generated plans can
+  // contain arrays nested directly inside arrays, which Firestore rejects outright
+  // ("Property responseBody contains an invalid nested entity").
   await db.collection('generation_idempotency').doc(key).set({
     status: 'completed',
     resultRef: resultRef ?? null,
-    responseBody,
+    responseBody: JSON.stringify(responseBody),
     errorMessage: null,
   }, { merge: true });
 };

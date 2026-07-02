@@ -2544,8 +2544,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   return (
     <View style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-      <ScrollView style={[styles.card, { flex: 1, minHeight: 0 }]} contentContainerStyle={{ gap: 12, flexGrow: 1 }}>
-        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+      <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
+        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }]}>
           <View>
             <Text style={styles.sectionTitle}>Create Trip Wizard</Text>
             <Text style={styles.helperText}>
@@ -2560,8 +2560,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </TouchableOpacity>
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
-        {renderStepContent()}
-        <View style={styles.row}>
+        {/* Step content scrolls; nav buttons stay anchored below */}
+        <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ gap: 12, flexGrow: 1 }}>
+          {renderStepContent()}
+        </ScrollView>
+        <View style={[styles.row, { marginTop: 8 }]}>
           <TouchableOpacity
             style={[styles.button, styles.dangerButton, { flex: 1 }]}
             onPress={stepIndex === 0 ? onCancel : goBack}
@@ -2593,7 +2596,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </TouchableOpacity>
           )}
         </View>
-      </ScrollView>
+      </View>
       {showItineraryAirportSuggestions && itineraryAirportAnchor ? (
         <View style={[styles.passengerOverlay, { backgroundColor: 'transparent', zIndex: 52000, elevation: 80 }]}>
           <TouchableOpacity

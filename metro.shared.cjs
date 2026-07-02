@@ -30,6 +30,40 @@ const loadSentryWithMetroConfig = () => {
 };
 
 /**
+ * Loads @sentry/react-native's Metro wrapper if the package is installed.
+ * Kept lazy so a missing install (e.g. a fresh checkout before `npm
+<<<<<<< HEAD
+ * install`) doesn't break Metro startup — Sentry's wrapper only adds Debug
+ * ID injection and stack-frame collapsing, both of which are no-ops at
+ * runtime when SENTRY_AUTH_TOKEN / EXPO_PUBLIC_SENTRY_DSN aren't set.
+=======
+ * install`) doesn't break Metro startup.
+>>>>>>> origin/UI-Fixing
+ */
+const loadSentryWithMetroConfig = () => {
+  try {
+    return require('@sentry/react-native/metro').withSentryConfig;
+  } catch {
+    return null;
+  }
+};
+
+<<<<<<< HEAD
+=======
+const shouldUseSentryMetro = () => {
+  if (process.env.EXPO_NO_SENTRY_METRO === '1') return false;
+  if (process.env.SENTRY_ENABLE_METRO === '1') return true;
+
+  // @sentry/react-native 7.2.0's Metro serializer can crash during EAS native
+  // bundle embedding when Metro hands it an undefined bundle source while
+  // extracting the Debug ID. Runtime Sentry still initializes from
+  // EXPO_PUBLIC_SENTRY_DSN; this only disables the build-time Metro wrapper.
+  const isEasBuild = process.env.EAS_BUILD === 'true' || process.env.EAS_BUILD === '1';
+  return !isEasBuild;
+};
+
+>>>>>>> origin/UI-Fixing
+/**
  * engine.io-client's package.json declares a `browser` field map that
  * substitutes its `*.node.js` transport files with browser equivalents.
  * Metro's subpath browser-field handling is unreliable, so we mirror the

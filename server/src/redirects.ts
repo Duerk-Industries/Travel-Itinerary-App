@@ -13,6 +13,7 @@ type RedirectTokenExchangeRecord = RedirectTokenExchangePayload & {
 const REDIRECT_EXCHANGE_CODE_BYTES = 24;
 const REDIRECT_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 const redirectTokenExchangeStore = new Map<string, RedirectTokenExchangeRecord>();
+const DEFAULT_NATIVE_AUTH_REDIRECT_URIS = ['travelitineraryplanner://login'];
 
 const isHttpProtocol = (protocol: string): boolean => protocol === 'http:' || protocol === 'https:';
 
@@ -58,7 +59,16 @@ const getRedirectAllowlist = (webUrl: string): string[] => {
       entries.push(wwwCompanion);
     }
   }
+  entries.push(...DEFAULT_NATIVE_AUTH_REDIRECT_URIS);
   return entries;
+};
+
+const matchesNonHttpRedirectEntry = (redirectUri: string, entry: string): boolean => {
+  // A scheme-only entry intentionally allows all routes for that scheme.
+  if (entry.endsWith('://')) {
+    return redirectUri.startsWith(entry);
+  }
+  return redirectUri === entry || redirectUri.startsWith(`${entry}?`) || redirectUri.startsWith(`${entry}#`);
 };
 
 const normalizeRedirectUri = (raw: string, webUrl: string): string | null => {
@@ -120,7 +130,7 @@ export const isRedirectUriAllowed = (redirectUri: string, webUrl: string): boole
     if (allowedOrigin) {
       continue;
     }
-    if (redirectUri.startsWith(entry)) {
+    if (matchesNonHttpRedirectEntry(redirectUri, entry)) {
       return true;
     }
   }

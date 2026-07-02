@@ -54,8 +54,11 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
           >
             <ScrollView
               style={{ maxHeight: isCompact ? 520 : 440 }}
-              contentContainerStyle={{ paddingRight: 12 }}
+              contentContainerStyle={{ paddingRight: 12, paddingBottom: 16 }}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              nestedScrollEnabled
+              contentInsetAdjustmentBehavior="automatic"
             >
               <LodgingForm {...props} isCompact={isCompact} />
             </ScrollView>

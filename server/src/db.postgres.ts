@@ -3027,6 +3027,18 @@ export const followTripByCode = async (
   if (!codeRow.rowCount) throw new Error('Invalid or expired follow code');
 
   const followCode = codeRow.rows[0];
+
+  // Block members from following their own trip — they already have full access.
+  const { rowCount: memberCheck } = await p.query(
+    `SELECT 1
+     FROM trips t
+     JOIN group_members gm ON gm.group_id = t.group_id AND gm.user_id = $2 AND gm.removed_at IS NULL
+     WHERE t.id = $1
+     LIMIT 1`,
+    [followCode.tripId, userId]
+  );
+  if (memberCheck) throw new Error('You are already a member of this trip and cannot follow it.');
+
   const inserted = await p.query(
     `INSERT INTO trip_followers (id, trip_id, follower_user_id, follow_code_id, role)
      VALUES ($1, $2, $3, $4, 'follower')
@@ -3105,6 +3117,10 @@ export const listFollowedTrips = async (
      JOIN users u ON u.id = g.owner_id
      LEFT JOIN web_users wu ON wu.id = g.owner_id
      WHERE tf.follower_user_id = $1
+       AND NOT EXISTS (
+         SELECT 1 FROM group_members gm
+         WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
+       )
      ORDER BY tf.created_at DESC`,
     [userId]
   );
@@ -4752,8 +4768,11 @@ export const getItemVoteSummaries = async (
   normalizedIds.forEach((id) => {
     result[id] = { netVotes: 0, userVote: null };
   });
+  const requestedIdByKey = new Map(normalizedIds.map((id) => [id.toLowerCase(), id]));
   rows.forEach((row: any) => {
-    result[row.itemId] = {
+    const itemId = String(row.itemId);
+    const resultKey = requestedIdByKey.get(itemId.toLowerCase()) ?? itemId;
+    result[resultKey] = {
       netVotes: Number(row.netVotes) || 0,
       userVote: row.userVote === 1 || row.userVote === -1 ? row.userVote : null,
     };

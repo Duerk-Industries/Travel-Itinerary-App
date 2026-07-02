@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions, useWindowDimensions } from 'react-native';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
@@ -64,6 +64,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 680;
+  const isCompactLayout = viewportWidth < 520;
+  const heroHeight = Math.max(200, Math.min(320, viewportWidth * 0.42));
   const [heroImage, setHeroImage] = useState<string | null>(null);
   const [heroLoading, setHeroLoading] = useState<boolean>(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
@@ -184,6 +186,10 @@ const HomeTab: React.FC<HomeTabProps> = ({
         style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={[styles.homeScrollContent, { flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        contentInsetAdjustmentBehavior="automatic"
       >
         <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
           <Text style={[styles.homeTitle, { flexShrink: 1, minWidth: 0 }]}>Your trip</Text>
@@ -246,7 +252,11 @@ const HomeTab: React.FC<HomeTabProps> = ({
         </View>
         <Pressable
           testID="home-hero-card"
-          style={({ pressed }: { pressed: boolean }) => [styles.homeHeroCard, pressed && styles.homeHeroCardPressed]}
+          style={({ pressed }: { pressed: boolean }) => [
+            styles.homeHeroCard,
+            { height: heroHeight },
+            pressed && styles.homeHeroCardPressed,
+          ]}
           onPress={() => {
             if (hasTripsToSelect) {
               setShowTripPicker(true);
@@ -266,40 +276,25 @@ const HomeTab: React.FC<HomeTabProps> = ({
           <View
             style={[
               styles.homeHeroTextWrap,
-              isPhoneLayout && {
-                left: 16,
-                right: 16,
-                bottom: 56,
-                paddingRight: 0,
-              },
+              isCompactLayout && { left: 14, right: 14, bottom: 54, paddingRight: 0 },
             ]}
           >
             {heroSubtitle ? (
-              <Text style={styles.homeHeroSubtitle} numberOfLines={isPhoneLayout ? 2 : 1} ellipsizeMode="tail">
-                {heroSubtitle}
-              </Text>
+              <Text style={[styles.homeHeroSubtitle, isCompactLayout && { fontSize: 14 }]}>{heroSubtitle}</Text>
             ) : null}
             <Text
-              style={[styles.homeHeroTitle, isPhoneLayout && { fontSize: 24 }]}
-              numberOfLines={isPhoneLayout ? 3 : 2}
+              style={[styles.homeHeroTitle, isCompactLayout && { fontSize: 25, lineHeight: 30 }]}
+              numberOfLines={isCompactLayout ? 3 : 2}
               ellipsizeMode="tail"
             >
               {heroTitle}
             </Text>
           </View>
           <View
-            style={[
-              styles.homeHeroChangeTripBadge,
-              isPhoneLayout && {
-                left: 12,
-                right: 12,
-                bottom: 12,
-                borderRadius: 12,
-              },
-            ]}
+            style={[styles.homeHeroChangeTripBadge, isCompactLayout && { left: 14, right: 'auto', bottom: 12 }]}
             pointerEvents="none"
           >
-            <Text style={[styles.homeHeroChangeTripText, isPhoneLayout && { textAlign: 'center' }]}>Click to Change Trip</Text>
+            <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
           </View>
         </Pressable>
 
@@ -337,7 +332,11 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   <Text style={styles.homeModalCloseText}>✕</Text>
                 </Pressable>
               </View>
-              <ScrollView style={styles.homeModalList}>
+              <ScrollView
+                style={styles.homeModalList}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+              >
                 {sortedTrips.map((trip, idx) => (
                   <Pressable
                     key={trip.id}
