@@ -98,6 +98,16 @@ describe('AccountProfileManagement', () => {
     expect(getByPlaceholderText('Country')).toBeTruthy();
   });
 
+  it('wraps the address editor fields in a height-capped scroll area so short screens can reach Save', () => {
+    const { getByText, getByTestId } = render(<AccountProfileManagement {...defaultProps} />);
+    fireEvent.press(getByText(/123 Main St, Austin/));
+
+    const scroll = getByTestId('address-editor-scroll');
+    expect(scroll.props.style.maxHeight).toEqual(expect.any(Number));
+    expect(getByText('Save Address')).toBeTruthy();
+    expect(getByText('Cancel')).toBeTruthy();
+  });
+
   it('shows password editor when "Change Password" is clicked', () => {
     const { getByText, getByPlaceholderText } = render(<AccountProfileManagement {...defaultProps} />);
     fireEvent.press(getByText('Change Password'));

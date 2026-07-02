@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import DialogShell from './DialogShell';
 import {
   createCheckoutSession,
@@ -55,6 +55,8 @@ const PremiumPlanComparisonDialog: React.FC<PremiumPlanComparisonDialogProps> = 
   styles,
   onMaybeLater,
 }) => {
+  const { width, height } = useWindowDimensions();
+  const isCompact = width < 480 || height < 700;
   const [plans, setPlans] = useState<PlanInfo[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [actionPlan, setActionPlan] = useState<BillingPlanKey | null>(null);
@@ -188,38 +190,44 @@ const PremiumPlanComparisonDialog: React.FC<PremiumPlanComparisonDialogProps> = 
       onClose={onMaybeLater}
       testID="premium-plan-comparison-dialog"
       accessibilityRole="alert"
-      cardStyle={styles.planComparisonModal}
+      cardStyle={[styles.planComparisonModal, isCompact && { width: '100%', maxHeight: '92%' }]}
     >
-      <View style={styles.planComparisonGrid}>
-        <View style={styles.planComparisonTier}>
-          <Text style={styles.planComparisonTierTitle}>Basic</Text>
-          {renderFeatureList(FREE_FEATURES)}
+      <ScrollView
+        testID="premium-plan-comparison-scroll"
+        style={{ maxHeight: isCompact ? 380 : 480 }}
+        contentContainerStyle={{ paddingBottom: 8 }}
+      >
+        <View style={styles.planComparisonGrid}>
+          <View style={styles.planComparisonTier}>
+            <Text style={styles.planComparisonTierTitle}>Basic</Text>
+            {renderFeatureList(FREE_FEATURES)}
+          </View>
+          <View style={[styles.planComparisonTier, styles.planComparisonTierPremium]}>
+            <Text style={styles.planComparisonTierTitle}>Premium</Text>
+            {renderFeatureList(PREMIUM_FEATURES)}
+          </View>
         </View>
-        <View style={[styles.planComparisonTier, styles.planComparisonTierPremium]}>
-          <Text style={styles.planComparisonTierTitle}>Premium</Text>
-          {renderFeatureList(PREMIUM_FEATURES)}
+
+        <View style={styles.planComparisonOptions}>
+          {renderPlanButton(
+            'premium_monthly',
+            'Monthly',
+            monthlyPrice,
+            monthlyPlan && monthlyPlan.trialDays > 0 ? `${monthlyPlan.trialDays}-day free trial` : null,
+            checkoutDisabled || !monthlyPlan,
+          )}
+          {renderPlanButton(
+            'premium_annual',
+            'Annual',
+            annualPrice,
+            annualPlan && annualPlan.trialDays > 0 ? `${annualPlan.trialDays}-day free trial` : null,
+            checkoutDisabled || !annualPlan,
+          )}
         </View>
-      </View>
 
-      <View style={styles.planComparisonOptions}>
-        {renderPlanButton(
-          'premium_monthly',
-          'Monthly',
-          monthlyPrice,
-          monthlyPlan && monthlyPlan.trialDays > 0 ? `${monthlyPlan.trialDays}-day free trial` : null,
-          checkoutDisabled || !monthlyPlan,
-        )}
-        {renderPlanButton(
-          'premium_annual',
-          'Annual',
-          annualPrice,
-          annualPlan && annualPlan.trialDays > 0 ? `${annualPlan.trialDays}-day free trial` : null,
-          checkoutDisabled || !annualPlan,
-        )}
-      </View>
-
-      {loadingPlans ? <Text style={styles.helperText}>Loading current Premium prices...</Text> : null}
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {loadingPlans ? <Text style={styles.helperText}>Loading current Premium prices...</Text> : null}
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+      </ScrollView>
 
       <TouchableOpacity
         style={[styles.button, styles.secondaryButton, styles.planComparisonMaybeLater]}

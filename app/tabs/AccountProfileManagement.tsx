@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
@@ -138,6 +138,8 @@ const AccountProfileManagement = ({
   logout,
   styles,
 }: AccountProfileManagementProps) => {
+  const { width, height } = useWindowDimensions();
+  const isCompactDialog = width < 480 || height < 700;
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -680,7 +682,14 @@ const AccountProfileManagement = ({
           styles={styles}
           onClose={() => setShowAddressEditor(false)}
           useNativeModal
+          cardStyle={isCompactDialog ? { width: '100%', maxHeight: '92%' } : undefined}
         >
+            <ScrollView
+              testID="address-editor-scroll"
+              style={{ maxHeight: isCompactDialog ? 380 : 440 }}
+              contentContainerStyle={{ gap: 10 }}
+              keyboardShouldPersistTaps="handled"
+            >
               <DraftTextInput
                 style={styles.input}
                 placeholder="Address line 1"
@@ -727,6 +736,7 @@ const AccountProfileManagement = ({
                   commitOnBlur={false}
                 />
               </View>
+            </ScrollView>
               <View style={styles.row}>
                 <TouchableOpacity
                   style={[styles.button, styles.dangerButton, { flex: 1 }]}
