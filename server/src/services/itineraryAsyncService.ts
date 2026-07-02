@@ -70,6 +70,7 @@ type QueueInput = {
 };
 
 const jobs = new Map<string, AsyncItineraryJob>();
+const jobRuns = new Map<string, Promise<void>>();
 
 // Cap the in-memory job store so long-lived server processes don't accumulate
 // completed jobs indefinitely. We keep the most-recently-touched N jobs; this
@@ -748,18 +749,46 @@ export const enqueueAsyncItineraryJob = (input: QueueInput): AsyncItineraryJob =
   // a separate timer/interval that would also have to be cleaned up.
   pruneStaleJobs();
   logInfo(`[itinerary][async] queued job=${id} trip=${input.tripId}`);
-  setTimeout(() => {
-    void runJob(id, input);
-  }, 0);
+  const runPromise = new Promise<void>((resolve, reject) => {
+    setTimeout(() => {
+      runJob(id, input).then(resolve, reject);
+    }, 0);
+  });
+  jobRuns.set(id, runPromise);
+  runPromise.finally(() => {
+    if (jobRuns.get(id) === runPromise) {
+      jobRuns.delete(id);
+    }
+  }).catch(() => undefined);
   return job;
 };
 
 export const getAsyncItineraryJob = (jobId: string): AsyncItineraryJob | null => jobs.get(jobId) ?? null;
 
+const waitForJobForTest = async (jobId: string, timeoutMs = 10000): Promise<AsyncItineraryJob | null> => {
+  const runPromise = jobRuns.get(jobId);
+  if (runPromise) {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        runPromise,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error(`Timed out waiting for itinerary job ${jobId}`)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+  return getAsyncItineraryJob(jobId);
+};
+
 // Test-only helper. Lets the regression test exercise the prune logic
 // without having to enqueue thousands of real jobs.
 export const __testing = {
   jobs,
+  jobRuns,
+  waitForJob: waitForJobForTest,
   pruneStaleJobs,
   JOB_RETENTION_LIMIT,
   JOB_RETENTION_TTL_MS,

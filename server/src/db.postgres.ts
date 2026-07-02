@@ -1185,22 +1185,10 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS billing_notifications (
-      id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      user_id                UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      type                   TEXT NOT NULL,
-      notification_key       TEXT NOT NULL UNIQUE,
-      title                  TEXT NOT NULL,
-      message                TEXT NOT NULL,
-      stripe_subscription_id TEXT,
-      stripe_event_id        TEXT,
-      email_sent_at          TIMESTAMP,
-      created_at             TIMESTAMP NOT NULL DEFAULT NOW(),
-      updated_at             TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-  `);
-  await p.query(`CREATE INDEX IF NOT EXISTS idx_billing_notifications_user_created ON billing_notifications(user_id, created_at DESC);`);
+  // `billing_notifications` now lives in
+  // server/migrations/20260629_add_billing_notifications.sql — auto-applied
+  // by the runtime migration runner on boot. The drift-guard snapshot no
+  // longer lists this table.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS usage_counters (
