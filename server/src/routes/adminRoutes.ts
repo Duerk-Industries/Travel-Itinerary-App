@@ -30,6 +30,7 @@ import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
 import {
   countImportJobsByState,
+  getImportJobPayload,
   listDataDeletionJobs,
   type DataDeletionJobState,
 } from '../ingestion/shared/repository';
@@ -142,6 +143,53 @@ router.patch('/ai-config/:featureKey', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update AI provider config', err);
     res.status(500).json({ error: 'Failed to update AI provider config' });
+  }
+});
+
+router.post('/parsing-eval/replay', async (req, res) => {
+  const { intakeId, dateFrom, dateTo, dryRun } = req.body ?? {};
+  const isDryRun = dryRun !== false;
+  try {
+    if (typeof intakeId === 'string' && intakeId.trim()) {
+      const payload = await getImportJobPayload(intakeId.trim());
+      if (!payload) {
+        res.status(404).json({ error: `Import intake not found: ${intakeId}` });
+        return;
+      }
+      await writeAuditLog({
+        actorUserId: getActorId(req),
+        action: 'ADMIN_SETTING_UPDATED',
+        afterState: { action: 'PARSING_EVAL_REPLAY_REQUESTED', intakeId: intakeId.trim(), dryRun: isDryRun },
+        reason: 'Parsing evaluation replay requested',
+      });
+      res.json({
+        dryRun: isDryRun,
+        intakeId: intakeId.trim(),
+        status: isDryRun ? 'validated' : 'queued',
+        overwriteOriginalCapture: false,
+      });
+      return;
+    }
+    if (typeof dateFrom === 'string' && typeof dateTo === 'string' && dateFrom.trim() && dateTo.trim()) {
+      await writeAuditLog({
+        actorUserId: getActorId(req),
+        action: 'ADMIN_SETTING_UPDATED',
+        afterState: { action: 'PARSING_EVAL_REPLAY_BATCH_REQUESTED', dateFrom, dateTo, dryRun: isDryRun },
+        reason: 'Parsing evaluation replay batch requested',
+      });
+      res.json({
+        dryRun: isDryRun,
+        dateFrom,
+        dateTo,
+        status: isDryRun ? 'validated' : 'queued',
+        overwriteOriginalCapture: false,
+      });
+      return;
+    }
+    res.status(400).json({ error: 'intakeId or dateFrom/dateTo is required' });
+  } catch (err) {
+    logError('[admin] failed to request parsing eval replay', err);
+    res.status(500).json({ error: 'Failed to request parsing eval replay' });
   }
 });
 

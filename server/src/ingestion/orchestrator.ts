@@ -23,6 +23,7 @@ import { deleteTempBytes } from './shared/tempStorage';
 import { getJobQueue } from './worker/jobQueue';
 import { logError, logInfo } from '../logger';
 import { captureParsingInteraction } from '../ai/capture/parsingCapture';
+import { maybeRunShadowParse } from '../ai/services/shadowParseService';
 
 type PipelineOverrides = {
   extractFn?: typeof extractCandidates | ((
@@ -216,6 +217,11 @@ const processExistingImportJob = async (
       doc: normalized,
       result: finalExtraction,
       outcome: 'success',
+    });
+    void maybeRunShadowParse({
+      intakeId: job.id,
+      doc: normalized,
+      productionResult: finalExtraction,
     });
 
     if (Number(finalExtraction.usageMetrics.estimatedCostUsd ?? 0) > INGESTION_JOB_TOKEN_BUDGET_USD) {

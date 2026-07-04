@@ -7,6 +7,7 @@ import {
   appendUsageEvent,
   ensureCurrentUserTier, reserveGenerationIdempotency, getGenerationIdempotency,
   completeGenerationIdempotency, failGenerationIdempotency, countReservedOrCompletedUsage,
+  getAdminSetting, setAdminSetting,
 } from '../db';
 import { UserRole, TierKey } from '../types';
 import { logInfo, logError } from '../logger';
@@ -105,6 +106,15 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
     const feature = featureByKey.get(featureKey);
     if (!tier || !feature) continue;
     await upsertTierEntitlement(tier.id, feature.id, isAllowed);
+  }
+
+  for (const [key, value] of [
+    ['shadow_parse_sample_rate_percent', '10'],
+    ['shadow_parse_monthly_budget_usd', '20'],
+  ] as const) {
+    if (!(await getAdminSetting(key))) {
+      await setAdminSetting({ key, value, updatedBy: null });
+    }
   }
 };
 

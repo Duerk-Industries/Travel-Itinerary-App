@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordUsage } from '../services/entitlementService';
-import { estimateOpenAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
+import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
 
 type OpenAiMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -65,7 +65,8 @@ export const postOpenAiChatCompletion = async (params: {
     }
   );
   const usage = response.data?.usage;
-  const estimatedCostMicrosUsd = estimateOpenAiCostMicros({
+  const estimatedCostMicrosUsd = estimateAiCostMicros({
+    provider: 'OPENAI',
     model: params.payload.model,
     promptTokens: usage?.prompt_tokens ?? 0,
     completionTokens: usage?.completion_tokens ?? 0,

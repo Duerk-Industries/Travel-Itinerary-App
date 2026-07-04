@@ -20,12 +20,13 @@ const TRACKED_OPENAI_MODELS = ['gpt-4o-mini'] as const;
 
 export const getApiBudgetWindowKey = (now = new Date()): string => formatMonthWindowKey(now);
 
-export const estimateOpenAiCostMicros = (params: {
+export const estimateAiCostMicros = (params: {
+  provider: string;
   model: string;
   promptTokens: number;
   completionTokens: number;
 }): number | null => {
-  const providerConfig = getApiBudgetProviderConfig('OPENAI');
+  const providerConfig = getApiBudgetProviderConfig(params.provider);
   const modelPricing = providerConfig?.models?.[normalizeApiLimitKeyPart(params.model)];
   if (!modelPricing) return null;
   return Math.round(
@@ -33,6 +34,16 @@ export const estimateOpenAiCostMicros = (params: {
       params.completionTokens * modelPricing.outputCostPer1MTokensUsd
   );
 };
+
+export const estimateOpenAiCostMicros = (params: {
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+}): number | null =>
+  estimateAiCostMicros({
+    provider: 'OPENAI',
+    ...params,
+  });
 
 export const recordApiCost = async (params: {
   provider: string;

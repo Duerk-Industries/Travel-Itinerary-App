@@ -54,6 +54,23 @@ export const CAPTURE_ALLOWLISTS: Record<string, CaptureAllowlist> = {
       },
     },
   },
+  shadow_parse: {
+    payload: {
+      comparison: {
+        payload: {
+          productionItemCount: true,
+          llmItemCount: true,
+          agreementRate: true,
+          itemComparisons: {
+            payload: {
+              itemType: true,
+              agreementRate: true,
+            },
+          },
+        },
+      },
+    },
+  },
 };
 
 const copyAllowed = (value: unknown, allowlist?: Record<string, true | CaptureAllowlist>): unknown => {

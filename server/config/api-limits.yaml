@@ -118,6 +118,28 @@ budgeting:
       GPT_4O_MINI:
         inputCostPer1MTokensUsd: 0.15
         outputCostPer1MTokensUsd: 0.60
+  ANTHROPIC:
+    alertThresholdPercent: 80
+    models:
+      CLAUDE_3_5_HAIKU_LATEST:
+        inputCostPer1MTokensUsd: 0.80
+        outputCostPer1MTokensUsd: 4.00
+  GEMINI:
+    alertThresholdPercent: 80
+    models:
+      GEMINI_1_5_FLASH:
+        inputCostPer1MTokensUsd: 0.075
+        outputCostPer1MTokensUsd: 0.30
+  ZAI:
+    alertThresholdPercent: 80
+    models:
+      GLM_4_FLASH:
+        inputCostPer1MTokensUsd: 0.10
+        outputCostPer1MTokensUsd: 0.10
+  SHADOW_PARSE:
+    monthlyBudgetUsd: 20
+    alertThresholdPercent: 80
+    models: {}
 
 caching:
   attractions:
