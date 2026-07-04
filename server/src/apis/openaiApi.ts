@@ -11,6 +11,9 @@ type OpenAiMessage = {
 export type OpenAiChatCompletionRequest = {
   model: string;
   messages: OpenAiMessage[];
+  response_format?: {
+    type: 'json_object';
+  };
   temperature?: number;
   max_tokens?: number;
 };

@@ -12,13 +12,18 @@ import type { ExtractionConfig, ExtractionResult, NormalizedDocument, ParsedItem
 import type { ExtractionStrategy } from './index';
 import { detectSource, detectItemType } from './sourceDetection';
 import { upsertLearnedParser } from '../shared/repository';
-import { postOpenAiChatCompletion } from '../../apis/openaiApi';
+import { createAiCallContext } from '../../ai/registry/correlation';
+import { resolveProvider } from '../../ai/registry/aiProviderRegistry';
+import type { AiCallContext } from '../../ai/types/aiChat';
 import { isLocalEnv } from '../../env';
 import { getEnvFlag, getEnvValue } from '../../env';
 import { logInfo, logError } from '../../logger';
 
 const INGESTION_LLM_MAX_INPUT_CHARS = 6000;
 const INGESTION_DEBUG_LLM_MAX_CHARS = 4000;
+const INGESTION_LLM_CALLER = 'INGESTION_LLM_EXTRACT';
+const INGESTION_LLM_FEATURE_KEY = 'ingestion_llm_extract';
+const INGESTION_LLM_MODEL = 'gpt-4o-mini';
 const debugSnippet = (value: string): string =>
   value.length <= INGESTION_DEBUG_LLM_MAX_CHARS
     ? value
@@ -118,11 +123,29 @@ export class LlmExtractor implements ExtractionStrategy {
     let completionTokens = 0;
 
     try {
-      const response = await postOpenAiChatCompletion({
-        caller: 'INGESTION_LLM_EXTRACT',
-        apiKey,
-        payload: {
-          model: 'gpt-4o-mini',
+      const provider = resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER);
+      const ctx = createAiCallContext({
+        correlationId: config.correlationId,
+        jobId: config.importJobId,
+        featureKey: INGESTION_LLM_FEATURE_KEY,
+        userId: config.userId,
+        provider: provider.id,
+        model: INGESTION_LLM_MODEL,
+        callerId: INGESTION_LLM_CALLER,
+      }) as AiCallContext & {
+        apiKey?: string;
+        usageWindowKey?: string | null;
+        usageMetadata?: Record<string, unknown>;
+      };
+      ctx.apiKey = apiKey;
+      ctx.usageWindowKey = getMonthWindowKey();
+      ctx.usageMetadata = {
+        pipeline: 'ingestion_llm_extract',
+        strategyName: this.strategyName,
+      };
+      const response = await provider.chatCompletion(
+        {
+          model: INGESTION_LLM_MODEL,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: inputText },
@@ -130,15 +153,8 @@ export class LlmExtractor implements ExtractionStrategy {
           temperature: 0.1,
           max_tokens: 1200,
         },
-        usageContext: {
-          userId: config.userId,
-          windowKey: getMonthWindowKey(),
-          metadata: {
-            pipeline: 'ingestion_llm_extract',
-            strategyName: this.strategyName,
-          },
-        },
-      });
+        ctx
+      );
 
       responseText = response?.choices?.[0]?.message?.content ?? null;
       promptTokens = response?.usage?.prompt_tokens ?? 0;
