@@ -8,6 +8,8 @@ import { incrementMetric } from '../../metrics';
 import type { CaptureRecord } from '../types/captureRecord';
 import { serializeForProduction } from './allowlistSerializer';
 import { getAiCaptureBucket, getAiCaptureGcsTarget } from './gcsClient';
+import { evaluateParsingCaptureRecord } from '../evaluation/captureEvaluator';
+import type { EvaluationResult } from '../evaluation/qualityScore';
 
 const gzip = promisify(zlib.gzip);
 const LOCAL_CAPTURE_ROOT = path.resolve(__dirname, '../../../data/ai-capture');
@@ -30,8 +32,14 @@ const captureDate = (record: CaptureRecord): string => {
 const captureObjectPath = (record: CaptureRecord): string =>
   `${safePathPart(record.featureKey)}/${captureDate(record)}/${safePathPart(record.captureId)}.json.gz`;
 
+const evaluationObjectPath = (record: CaptureRecord): string =>
+  `${safePathPart(record.featureKey)}/${captureDate(record)}/${safePathPart(record.captureId)}.evaluation.json.gz`;
+
 const serializeRecord = async (record: CaptureRecord): Promise<Buffer> =>
   gzip(Buffer.from(JSON.stringify(record, null, 2), 'utf8'));
+
+const serializeJson = async (value: unknown): Promise<Buffer> =>
+  gzip(Buffer.from(JSON.stringify(value, null, 2), 'utf8'));
 
 const persistLocalCapture = async (record: CaptureRecord): Promise<void> => {
   const relativePath = captureObjectPath(record);
@@ -54,6 +62,41 @@ const persistGcsCapture = async (record: CaptureRecord): Promise<void> => {
     });
 };
 
+const persistLocalEvaluation = async (record: CaptureRecord, evaluation: EvaluationResult): Promise<void> => {
+  const targetPath = path.join(LOCAL_CAPTURE_ROOT, evaluationObjectPath(record));
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  await fs.writeFile(targetPath, await serializeJson(evaluation));
+};
+
+const persistGcsEvaluation = async (record: CaptureRecord, evaluation: EvaluationResult): Promise<void> => {
+  const target = getAiCaptureGcsTarget();
+  const objectName = `${target.objectPrefix}${evaluationObjectPath(record)}`;
+  await getAiCaptureBucket()
+    .file(objectName)
+    .save(await serializeJson(evaluation), {
+      resumable: false,
+      metadata: {
+        contentType: 'application/json',
+        contentEncoding: 'gzip',
+      },
+    });
+};
+
+const persistEvaluationIfNeeded = async (record: CaptureRecord, local: boolean): Promise<void> => {
+  if (record.featureKey !== 'parsing') return;
+  try {
+    const evaluation = evaluateParsingCaptureRecord(record);
+    if (!evaluation) return;
+    if (local) await persistLocalEvaluation(record, evaluation);
+    else await persistGcsEvaluation(record, evaluation);
+  } catch (err) {
+    logError('[ai-eval] parsing capture evaluation failed', {
+      captureId: record.captureId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+};
+
 const persistCaptureRecord = async (record: CaptureRecord): Promise<void> => {
   const local = isLocalEnv() || process.env.NODE_ENV === 'test';
   const recordToStore =
@@ -63,9 +106,11 @@ const persistCaptureRecord = async (record: CaptureRecord): Promise<void> => {
 
   if (local) {
     await persistLocalCapture(recordToStore);
+    await persistEvaluationIfNeeded(record, true);
     return;
   }
   await persistGcsCapture(recordToStore);
+  await persistEvaluationIfNeeded(record, false);
 };
 
 const persistWithRetries = async (record: CaptureRecord): Promise<void> => {
