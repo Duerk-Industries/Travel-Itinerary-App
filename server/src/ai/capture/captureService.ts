@@ -2,10 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import zlib from 'zlib';
 import { promisify } from 'util';
-import { isLocalEnv } from '../../env';
+import { getEnvFlag, isLocalEnv } from '../../env';
 import { logError } from '../../logger';
 import { incrementMetric } from '../../metrics';
 import type { CaptureRecord } from '../types/captureRecord';
+import { serializeForProduction } from './allowlistSerializer';
 import { getAiCaptureBucket, getAiCaptureGcsTarget } from './gcsClient';
 
 const gzip = promisify(zlib.gzip);
@@ -54,11 +55,17 @@ const persistGcsCapture = async (record: CaptureRecord): Promise<void> => {
 };
 
 const persistCaptureRecord = async (record: CaptureRecord): Promise<void> => {
-  if (isLocalEnv() || process.env.NODE_ENV === 'test') {
-    await persistLocalCapture(record);
+  const local = isLocalEnv() || process.env.NODE_ENV === 'test';
+  const recordToStore =
+    local && getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false })
+      ? record
+      : serializeForProduction(record);
+
+  if (local) {
+    await persistLocalCapture(recordToStore);
     return;
   }
-  await persistGcsCapture(record);
+  await persistGcsCapture(recordToStore);
 };
 
 const persistWithRetries = async (record: CaptureRecord): Promise<void> => {

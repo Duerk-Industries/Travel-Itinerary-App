@@ -20,5 +20,6 @@ export type CaptureRecord = {
     completionTokens?: number;
     totalTokens?: number;
   };
+  redactionApplied?: boolean;
   payload: Record<string, unknown>;
 };
