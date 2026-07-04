@@ -134,10 +134,12 @@ export class LlmExtractor implements ExtractionStrategy {
         callerId: INGESTION_LLM_CALLER,
       }) as AiCallContext & {
         apiKey?: string;
+        usageAccountingEnabled?: boolean;
         usageWindowKey?: string | null;
         usageMetadata?: Record<string, unknown>;
       };
       ctx.apiKey = apiKey;
+      ctx.usageAccountingEnabled = true;
       ctx.usageWindowKey = getMonthWindowKey();
       ctx.usageMetadata = {
         pipeline: 'ingestion_llm_extract',

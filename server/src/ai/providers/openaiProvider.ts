@@ -12,6 +12,7 @@ export const openaiProvider: AiChatProvider = {
   async chatCompletion(req: AiChatRequest, ctx: AiCallContext): Promise<AiChatResponse> {
     const compatibilityContext = ctx as AiCallContext & {
       apiKey?: string;
+      usageAccountingEnabled?: boolean;
       usageWindowKey?: string | null;
       usageMetadata?: Record<string, unknown>;
     };
@@ -29,7 +30,8 @@ export const openaiProvider: AiChatProvider = {
         temperature: req.temperature,
         max_tokens: req.max_tokens,
       },
-      usageContext: ctx.userId
+      skipApiUsageReservation: true,
+      usageContext: compatibilityContext.usageAccountingEnabled
         ? {
             userId: ctx.userId,
             windowKey: compatibilityContext.usageWindowKey,

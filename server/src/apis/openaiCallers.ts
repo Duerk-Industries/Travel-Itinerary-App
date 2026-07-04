@@ -42,10 +42,12 @@ const runOpenAiTextCompletion = async (params: {
     callerId: params.caller,
   }) as AiCallContext & {
     apiKey?: string;
+    usageAccountingEnabled?: boolean;
     usageWindowKey?: string | null;
     usageMetadata?: Record<string, unknown>;
   };
   ctx.apiKey = params.apiKey;
+  ctx.usageAccountingEnabled = Boolean(params.usageContext?.userId);
   ctx.usageWindowKey = params.usageContext?.windowKey;
   ctx.usageMetadata = params.usageContext?.metadata;
 
