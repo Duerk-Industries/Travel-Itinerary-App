@@ -89,6 +89,22 @@ export interface FeatureFlag {
   createdAt: string;
 }
 
+export interface AiProviderConfig {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy?: string | null;
+  updatedAt: string;
+}
+
+export interface AdminSetting {
+  key: string;
+  value: string;
+  updatedBy?: string | null;
+  updatedAt: string;
+}
+
 export interface UsageCounter {
   id: string;
   userId: string;
@@ -120,6 +136,8 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
+  | 'AI_PROVIDER_CONFIG_UPDATED'
+  | 'ADMIN_SETTING_UPDATED'
   | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'
   | 'BILLING_CONFIG_UPDATED'

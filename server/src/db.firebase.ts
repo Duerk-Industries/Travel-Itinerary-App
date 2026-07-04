@@ -50,6 +50,8 @@ import {
   BillingPlanConfig,
   BillingPlanKey,
   BillingPriceHistory,
+  AiProviderConfig,
+  AdminSetting,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -5879,6 +5881,80 @@ export const listFeatureFlags = async (): Promise<FeatureFlag[]> => {
 export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: string | null): Promise<void> => {
   const db = getDb();
   await db.collection('feature_flags').doc(key).set({ key, enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
+};
+
+const mapAiProviderConfigDoc = (id: string, data: FirebaseFirestore.DocumentData): AiProviderConfig => ({
+  featureKey: id,
+  provider: String(data.provider ?? 'openai'),
+  model: String(data.model ?? 'gpt-4o-mini'),
+  enabled: data.enabled !== false,
+  updatedBy: data.updatedBy ?? null,
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const getAiProviderConfig = async (featureKey: string): Promise<AiProviderConfig | null> => {
+  const doc = await getDb().collection('ai_provider_config').doc(featureKey).get();
+  return doc.exists ? mapAiProviderConfigDoc(doc.id, doc.data()!) : null;
+};
+
+export const listAiProviderConfigs = async (): Promise<AiProviderConfig[]> => {
+  const snap = await getDb().collection('ai_provider_config').get();
+  return snap.docs
+    .map((doc) => mapAiProviderConfigDoc(doc.id, doc.data()))
+    .sort((a, b) => a.featureKey.localeCompare(b.featureKey));
+};
+
+export const setAiProviderConfig = async (config: {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy: string | null;
+}): Promise<AiProviderConfig> => {
+  const updatedAt = nowIso();
+  await getDb().collection('ai_provider_config').doc(config.featureKey).set({
+    featureKey: config.featureKey,
+    provider: config.provider,
+    model: config.model,
+    enabled: config.enabled,
+    updatedBy: config.updatedBy,
+    updatedAt,
+  }, { merge: true });
+  return {
+    featureKey: config.featureKey,
+    provider: config.provider,
+    model: config.model,
+    enabled: config.enabled,
+    updatedBy: config.updatedBy,
+    updatedAt,
+  };
+};
+
+const mapAdminSettingDoc = (id: string, data: FirebaseFirestore.DocumentData): AdminSetting => ({
+  key: id,
+  value: String(data.value ?? ''),
+  updatedBy: data.updatedBy ?? null,
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const getAdminSetting = async (key: string): Promise<AdminSetting | null> => {
+  const doc = await getDb().collection('admin_settings').doc(key).get();
+  return doc.exists ? mapAdminSettingDoc(doc.id, doc.data()!) : null;
+};
+
+export const setAdminSetting = async (setting: {
+  key: string;
+  value: string;
+  updatedBy: string | null;
+}): Promise<AdminSetting> => {
+  const updatedAt = nowIso();
+  await getDb().collection('admin_settings').doc(setting.key).set({
+    key: setting.key,
+    value: setting.value,
+    updatedBy: setting.updatedBy,
+    updatedAt,
+  }, { merge: true });
+  return { ...setting, updatedAt };
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {

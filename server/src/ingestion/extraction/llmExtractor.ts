@@ -15,6 +15,7 @@ import { upsertLearnedParser } from '../shared/repository';
 import { createAiCallContext } from '../../ai/registry/correlation';
 import { resolveProvider } from '../../ai/registry/aiProviderRegistry';
 import type { AiCallContext } from '../../ai/types/aiChat';
+import { getActiveAiProvider } from '../../services/aiProviderConfigService';
 import { isLocalEnv } from '../../env';
 import { getEnvFlag, getEnvValue } from '../../env';
 import { logInfo, logError } from '../../logger';
@@ -123,14 +124,15 @@ export class LlmExtractor implements ExtractionStrategy {
     let completionTokens = 0;
 
     try {
-      const provider = resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER);
+      const activeConfig = await getActiveAiProvider(INGESTION_LLM_FEATURE_KEY);
+      const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER);
       const ctx = createAiCallContext({
         correlationId: config.correlationId,
         jobId: config.importJobId,
         featureKey: INGESTION_LLM_FEATURE_KEY,
         userId: config.userId,
         provider: provider.id,
-        model: INGESTION_LLM_MODEL,
+        model: activeConfig.model || INGESTION_LLM_MODEL,
         callerId: INGESTION_LLM_CALLER,
       }) as AiCallContext & {
         apiKey?: string;
@@ -147,7 +149,7 @@ export class LlmExtractor implements ExtractionStrategy {
       };
       const response = await provider.chatCompletion(
         {
-          model: INGESTION_LLM_MODEL,
+          model: activeConfig.model || INGESTION_LLM_MODEL,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: inputText },

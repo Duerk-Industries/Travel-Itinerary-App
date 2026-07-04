@@ -1,6 +1,7 @@
 import { createAiCallContext } from '../ai/registry/correlation';
 import { resolveProvider } from '../ai/registry/aiProviderRegistry';
 import type { AiCallContext } from '../ai/types/aiChat';
+import { getActiveAiProvider } from '../services/aiProviderConfigService';
 
 const OPENAI_CALLER_ITINERARY_GENERATE = 'ITINERARY_GENERATE_PLAN';
 const OPENAI_PROVIDER_ID = 'openai';
@@ -33,12 +34,13 @@ const runOpenAiTextCompletion = async (params: {
   maxTokens?: number;
   usageContext?: OpenAiCallerUsageContext;
 }): Promise<TextCompletionResult> => {
-  const provider = resolveProvider(AI_FEATURE_ITINERARY_GENERATION, params.caller);
+  const activeConfig = await getActiveAiProvider(AI_FEATURE_ITINERARY_GENERATION);
+  const provider = await resolveProvider(AI_FEATURE_ITINERARY_GENERATION, params.caller);
   const ctx = createAiCallContext({
     featureKey: AI_FEATURE_ITINERARY_GENERATION,
     userId: params.usageContext?.userId ?? 'anonymous',
     provider: provider.id || OPENAI_PROVIDER_ID,
-    model: OPENAI_DEFAULT_MODEL,
+    model: activeConfig.model || OPENAI_DEFAULT_MODEL,
     callerId: params.caller,
   }) as AiCallContext & {
     apiKey?: string;
@@ -53,7 +55,7 @@ const runOpenAiTextCompletion = async (params: {
 
   const data = await provider.chatCompletion(
     {
-      model: OPENAI_DEFAULT_MODEL,
+      model: activeConfig.model || OPENAI_DEFAULT_MODEL,
       messages: [
         { role: 'system', content: params.systemPrompt },
         { role: 'user', content: params.userPrompt },

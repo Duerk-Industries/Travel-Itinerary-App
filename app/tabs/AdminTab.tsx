@@ -9,7 +9,7 @@ import PackingListTable from '../components/PackingListTable';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -28,6 +28,16 @@ type QueueDepthSnapshot = {
 };
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
+
+type AiProviderOption = { id: string; configured: boolean; registered: boolean; supportedModels: string[] };
+type AiProviderFeatureConfig = {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
+};
 
 type TierLimit = { limitKey: string; limitValue: number };
 type TierEntitlement = { featureId: string; featureKey: string | null; isAllowed: boolean };
@@ -209,6 +219,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Users', section: 'users' as AdminSection, desc: 'Search users, change tiers and roles' },
         { label: 'Tiers', section: 'tiers' as AdminSection, desc: 'View and edit tier limits and entitlements' },
         { label: 'Feature Flags', section: 'features' as AdminSection, desc: 'Enable or disable feature flags' },
+        { label: 'AI Operations', section: 'ai-ops' as AdminSection, desc: 'Select providers and models per AI feature' },
         { label: 'Packing Defaults', section: 'packing-defaults' as AdminSection, desc: 'Edit the universal user packing list' },
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
@@ -2513,6 +2524,155 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
   );
 };
 
+const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [features, setFeatures] = useState<AiProviderFeatureConfig[]>([]);
+  const [providers, setProviders] = useState<AiProviderOption[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, AiProviderFeatureConfig>>({});
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch(backendUrl, headers, '/ai-config');
+      const loadedFeatures = (Array.isArray(data.features) ? data.features : []) as AiProviderFeatureConfig[];
+      setFeatures(loadedFeatures);
+      setProviders((Array.isArray(data.providers) ? data.providers : []) as AiProviderOption[]);
+      setDrafts(Object.fromEntries(loadedFeatures.map((item) => [item.featureKey, item])));
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to load AI config');
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const save = async (featureKey: string) => {
+    const draft = drafts[featureKey];
+    const reason = reasons[featureKey] ?? '';
+    if (!draft) return;
+    if (reason.trim().length < 3) {
+      setError('Reason is required.');
+      return;
+    }
+    setSaving(featureKey);
+    setError(null);
+    setSaveMsg(null);
+    try {
+      await apiFetch(backendUrl, headers, `/ai-config/${encodeURIComponent(featureKey)}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: draft.provider, model: draft.model, enabled: draft.enabled, reason }),
+      });
+      setSaveMsg(`Saved ${featureKey}`);
+      setReasons((prev) => ({ ...prev, [featureKey]: '' }));
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to save AI config');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+
+  return (
+    <View style={localStyles.section}>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>AI Operations</Text>
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {saveMsg ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
+      {features.map((feature) => {
+        const draft = drafts[feature.featureKey] ?? feature;
+        const selectedProvider = providers.find((provider) => provider.id === draft.provider);
+        const selectableProviders = providers.filter((provider) => provider.configured && provider.registered);
+        return (
+          <View key={feature.featureKey} style={[localStyles.card, getCardStyle(theme)]}>
+            <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{feature.featureKey}</Text>
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+              Last changed {feature.updatedAt ? new Date(feature.updatedAt).toLocaleString() : 'never'}
+              {feature.updatedBy ? ` by ${feature.updatedBy}` : ''}
+            </Text>
+            <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Provider</Text>
+            <View style={localStyles.tierButtons}>
+              {providers.map((provider) => {
+                const unavailable = !provider.configured || !provider.registered;
+                const active = draft.provider === provider.id;
+                return (
+                  <TouchableOpacity
+                    key={provider.id}
+                    disabled={unavailable}
+                    style={[
+                      localStyles.tierButton,
+                      active && localStyles.tierButtonActive,
+                      unavailable && localStyles.buttonDisabled,
+                      { borderColor: theme.colors.border },
+                    ]}
+                    onPress={() => setDrafts((prev) => ({
+                      ...prev,
+                      [feature.featureKey]: {
+                        ...draft,
+                        provider: provider.id,
+                        model: provider.supportedModels[0] ?? draft.model,
+                      },
+                    }))}
+                  >
+                    <Text style={[localStyles.tierButtonText, active && localStyles.tierButtonTextActive]}>
+                      {provider.id}{unavailable ? ' unavailable' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Model</Text>
+            <TextInput
+              style={[localStyles.input, getInputStyle(theme)]}
+              value={draft.model}
+              onChangeText={(model) => setDrafts((prev) => ({ ...prev, [feature.featureKey]: { ...draft, model } }))}
+              editable={Boolean(selectedProvider?.configured && selectedProvider?.registered)}
+            />
+            <TouchableOpacity
+              style={[localStyles.smallButton, { backgroundColor: draft.enabled ? theme.colors.success : theme.colors.alert }]}
+              onPress={() => setDrafts((prev) => ({ ...prev, [feature.featureKey]: { ...draft, enabled: !draft.enabled } }))}
+            >
+              <Text style={localStyles.smallButtonText}>{draft.enabled ? 'Enabled' : 'Disabled'}</Text>
+            </TouchableOpacity>
+            <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Reason</Text>
+            <TextInput
+              style={[localStyles.input, getInputStyle(theme)]}
+              value={reasons[feature.featureKey] ?? ''}
+              onChangeText={(value) => setReasons((prev) => ({ ...prev, [feature.featureKey]: value }))}
+              placeholder="Reason for audit log"
+              placeholderTextColor={theme.colors.textMuted}
+            />
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                { backgroundColor: theme.colors.cta },
+                (saving === feature.featureKey || selectableProviders.length === 0) && localStyles.buttonDisabled,
+              ]}
+              disabled={saving === feature.featureKey || selectableProviders.length === 0}
+              onPress={() => save(feature.featureKey)}
+            >
+              <Text style={localStyles.smallButtonText}>{saving === feature.featureKey ? 'Saving...' : 'Save config'}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Main AdminTab
 // ---------------------------------------------------------------------------
@@ -2544,6 +2704,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <OverviewSection onNav={goTo} theme={theme} />;
       case 'features':
         return <FeaturesSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'ai-ops':
+        return <AiOperationsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'packing-defaults':
         return <PackingListTable backendUrl={backendUrl} headers={headers} variant="admin" title="Universal packing defaults" />;
       case 'users':
@@ -2584,6 +2746,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     'user-detail': selectedUser?.email ?? 'User Detail',
     tiers: 'Tiers',
     features: 'Feature Flags',
+    'ai-ops': 'AI Operations',
     'packing-defaults': 'Packing Defaults',
     'user-data': 'User Data',
     'audit-log': 'Audit Log',

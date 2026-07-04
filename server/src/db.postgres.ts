@@ -49,6 +49,8 @@ import {
   WebhookProcessingStatus,
   BillingPlanConfig,
   BillingPriceHistory,
+  AiProviderConfig,
+  AdminSetting,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -1308,6 +1310,8 @@ export const initDb = async (): Promise<void> => {
     await del('generation_idempotency');
     await del('api_cost_counters');
     await del('api_usage_counters');
+    await del('admin_settings');
+    await del('ai_provider_config');
     await del('usage_events');
     await del('usage_counters');
     await del('user_tiers');
@@ -8733,6 +8737,137 @@ export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: s
      ON CONFLICT (key) DO UPDATE SET enabled = EXCLUDED.enabled, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
     [key, enabled, updatedBy]
   );
+};
+
+const mapAiProviderConfigRow = (r: {
+  feature_key: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updated_by: string | null;
+  updated_at: string | Date;
+}): AiProviderConfig => ({
+  featureKey: r.feature_key,
+  provider: r.provider,
+  model: r.model,
+  enabled: r.enabled,
+  updatedBy: r.updated_by,
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const getAiProviderConfig = async (featureKey: string): Promise<AiProviderConfig | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    feature_key: string;
+    provider: string;
+    model: string;
+    enabled: boolean;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `SELECT feature_key, provider, model, enabled, updated_by, updated_at
+     FROM ai_provider_config
+     WHERE feature_key = $1`,
+    [featureKey]
+  );
+  return rows[0] ? mapAiProviderConfigRow(rows[0]) : null;
+};
+
+export const listAiProviderConfigs = async (): Promise<AiProviderConfig[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    feature_key: string;
+    provider: string;
+    model: string;
+    enabled: boolean;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `SELECT feature_key, provider, model, enabled, updated_by, updated_at
+     FROM ai_provider_config
+     ORDER BY feature_key`
+  );
+  return rows.map(mapAiProviderConfigRow);
+};
+
+export const setAiProviderConfig = async (config: {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy: string | null;
+}): Promise<AiProviderConfig> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    feature_key: string;
+    provider: string;
+    model: string;
+    enabled: boolean;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `INSERT INTO ai_provider_config (feature_key, provider, model, enabled, updated_by, updated_at)
+     VALUES ($1, $2, $3, $4, $5, NOW())
+     ON CONFLICT (feature_key) DO UPDATE SET
+       provider = EXCLUDED.provider,
+       model = EXCLUDED.model,
+       enabled = EXCLUDED.enabled,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = NOW()
+     RETURNING feature_key, provider, model, enabled, updated_by, updated_at`,
+    [config.featureKey, config.provider, config.model, config.enabled, config.updatedBy]
+  );
+  return mapAiProviderConfigRow(rows[0]);
+};
+
+const mapAdminSettingRow = (r: {
+  key: string;
+  value: string;
+  updated_by: string | null;
+  updated_at: string | Date;
+}): AdminSetting => ({
+  key: r.key,
+  value: r.value,
+  updatedBy: r.updated_by,
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const getAdminSetting = async (key: string): Promise<AdminSetting | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    key: string;
+    value: string;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `SELECT key, value, updated_by, updated_at FROM admin_settings WHERE key = $1`,
+    [key]
+  );
+  return rows[0] ? mapAdminSettingRow(rows[0]) : null;
+};
+
+export const setAdminSetting = async (setting: {
+  key: string;
+  value: string;
+  updatedBy: string | null;
+}): Promise<AdminSetting> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    key: string;
+    value: string;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `INSERT INTO admin_settings (key, value, updated_by, updated_at)
+     VALUES ($1, $2, $3, NOW())
+     ON CONFLICT (key) DO UPDATE SET
+       value = EXCLUDED.value,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = NOW()
+     RETURNING key, value, updated_by, updated_at`,
+    [setting.key, setting.value, setting.updatedBy]
+  );
+  return mapAdminSettingRow(rows[0]);
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {

@@ -6,6 +6,7 @@ import {
   failAiCallAuthorization,
   finalizeAiCallAuthorization,
 } from '../../services/aiInvocationGuard';
+import { getActiveAiProvider } from '../../services/aiProviderConfigService';
 
 const providers = new Map<string, AiChatProvider>([[openaiProvider.id, openaiProvider]]);
 
@@ -34,5 +35,10 @@ export const registerAiProviderForTesting = (provider: AiChatProvider): void => 
   providers.set(provider.id, provider);
 };
 
-export const resolveProvider = (_featureKey: string, _callerId: string): AiChatProvider =>
-  wrapWithRegistryGuards(providers.get('openai') ?? openaiProvider);
+export const getRegisteredAiProviders = (): AiChatProvider[] =>
+  Array.from(providers.values()).sort((a, b) => a.id.localeCompare(b.id));
+
+export const resolveProvider = async (featureKey: string, _callerId: string): Promise<AiChatProvider> => {
+  const active = await getActiveAiProvider(featureKey);
+  return wrapWithRegistryGuards(providers.get(active.provider) ?? openaiProvider);
+};

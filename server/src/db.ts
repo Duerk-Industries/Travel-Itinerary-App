@@ -403,6 +403,16 @@ export const listFeatureFlags = async (...args: Parameters<ReturnType<typeof ada
   adapter().listFeatureFlags(...args);
 export const setFeatureFlag = async (...args: Parameters<ReturnType<typeof adapter>['setFeatureFlag']>) =>
   adapter().setFeatureFlag(...args);
+export const getAiProviderConfig = async (...args: Parameters<ReturnType<typeof adapter>['getAiProviderConfig']>) =>
+  adapter().getAiProviderConfig(...args);
+export const listAiProviderConfigs = async (...args: Parameters<ReturnType<typeof adapter>['listAiProviderConfigs']>) =>
+  adapter().listAiProviderConfigs(...args);
+export const setAiProviderConfig = async (...args: Parameters<ReturnType<typeof adapter>['setAiProviderConfig']>) =>
+  adapter().setAiProviderConfig(...args);
+export const getAdminSetting = async (...args: Parameters<ReturnType<typeof adapter>['getAdminSetting']>) =>
+  adapter().getAdminSetting(...args);
+export const setAdminSetting = async (...args: Parameters<ReturnType<typeof adapter>['setAdminSetting']>) =>
+  adapter().setAdminSetting(...args);
 export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['getUsageCounter']>) =>
   adapter().getUsageCounter(...args);
 export const setUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['setUsageCounter']>) =>

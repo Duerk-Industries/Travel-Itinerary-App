@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import {
   listFeatureFlags, setFeatureFlag, writeAuditLog,
+  listAiProviderConfigs,
   listTiers, getTierByKey, listTierLimits, listTierEntitlements, listFeatures,
   upsertTierLimit, upsertTierEntitlement,
   getUserRole, setUserRole, setUserTier, getCurrentUserTier,
@@ -11,6 +12,12 @@ import {
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
+import { getEnvValue } from '../env';
+import { getRegisteredAiProviders } from '../ai/registry/aiProviderRegistry';
+import {
+  clearAiProviderConfigCache,
+  setAiProviderConfigWithAudit,
+} from '../services/aiProviderConfigService';
 import {
   getApiBudgetProviderConfig,
   getApiLimitsConfig,
@@ -40,6 +47,103 @@ const requireReason = (reason: unknown): string | null => {
   if (typeof reason !== 'string' || reason.trim().length < 3) return null;
   return reason.trim();
 };
+
+const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract'] as const;
+const PROVIDER_ENV_KEYS: Record<string, string> = {
+  openai: 'OPENAI_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+  gemini: 'GEMINI_API_KEY',
+  zai: 'ZAI_API_KEY',
+};
+
+const getAiProviderOptions = () => {
+  const registered = new Set(getRegisteredAiProviders().map((provider) => provider.id));
+  for (const id of Object.keys(PROVIDER_ENV_KEYS)) registered.add(id);
+  return Array.from(registered)
+    .sort((a, b) => a.localeCompare(b))
+    .map((id) => ({
+      id,
+      configured: Boolean(getEnvValue(PROVIDER_ENV_KEYS[id] ?? `${id.toUpperCase()}_API_KEY`)),
+      registered: getRegisteredAiProviders().some((provider) => provider.id === id),
+      supportedModels: getRegisteredAiProviders().find((provider) => provider.id === id)?.supportedModels ?? [],
+    }));
+};
+
+// ---------------------------------------------------------------------------
+// AI provider config
+// ---------------------------------------------------------------------------
+
+router.get('/ai-config', async (_req, res) => {
+  try {
+    const stored = await listAiProviderConfigs();
+    const byFeature = new Map(stored.map((row) => [row.featureKey, row]));
+    const now = new Date().toISOString();
+    const features = AI_FEATURE_KEYS.map((featureKey) => {
+      const row = byFeature.get(featureKey);
+      return row ?? {
+        featureKey,
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        enabled: true,
+        updatedBy: null,
+        updatedAt: now,
+        source: 'default',
+      };
+    });
+    res.json({ features, providers: getAiProviderOptions() });
+  } catch (err) {
+    logError('[admin] failed to list AI provider config', err);
+    res.status(500).json({ error: 'Failed to list AI provider config' });
+  }
+});
+
+router.patch('/ai-config/:featureKey', async (req, res) => {
+  const featureKey = String(req.params.featureKey ?? '').trim();
+  const { provider, model, enabled, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!AI_FEATURE_KEYS.includes(featureKey as any)) {
+    res.status(404).json({ error: `Unknown AI feature key: ${featureKey}` });
+    return;
+  }
+  if (typeof provider !== 'string' || !provider.trim()) {
+    res.status(400).json({ error: 'provider is required' });
+    return;
+  }
+  if (typeof model !== 'string' || !model.trim()) {
+    res.status(400).json({ error: 'model is required' });
+    return;
+  }
+  if (typeof enabled !== 'boolean') {
+    res.status(400).json({ error: 'enabled boolean is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  const providerId = provider.trim().toLowerCase();
+  const providerOption = getAiProviderOptions().find((item) => item.id === providerId);
+  if (!providerOption?.configured || !providerOption.registered) {
+    res.status(400).json({ error: `Provider is not configured or registered: ${providerId}` });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const updated = await setAiProviderConfigWithAudit({
+      featureKey,
+      provider: providerId,
+      model: model.trim(),
+      enabled,
+      actorUserId: actorId,
+      reason: reasonStr,
+    });
+    clearAiProviderConfigCache(featureKey);
+    res.json({ config: updated, providers: getAiProviderOptions() });
+  } catch (err) {
+    logError('[admin] failed to update AI provider config', err);
+    res.status(500).json({ error: 'Failed to update AI provider config' });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Feature flags
