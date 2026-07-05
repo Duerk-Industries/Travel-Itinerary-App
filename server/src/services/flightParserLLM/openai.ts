@@ -2,13 +2,14 @@ import { FlightParserStrategy } from './strategy';
 import { logError } from '../../logger';
 import { OpenAI } from 'openai';
 import { ParsedFlight } from './types';
+import { getEnvValue } from '../../env';
 
 export class OpenAIFlightParser implements FlightParserStrategy {
   private openai: OpenAI;
 
   constructor() {
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: getEnvValue('OPENAI_API_KEY'),
     });
   }
 

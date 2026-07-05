@@ -1,10 +1,11 @@
 import { FlightParserStrategy } from './strategy';
 import { logError } from '../../logger';
 import { ParsedFlight } from './types';
+import { getEnvValue } from '../../env';
 
 export class GeminiFlightParser implements FlightParserStrategy {
   async parse(text: string): Promise<{ primary: Partial<ParsedFlight>; bulk: ParsedFlight[] }> {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = getEnvValue('GEMINI_API_KEY');
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY is not configured');
     }

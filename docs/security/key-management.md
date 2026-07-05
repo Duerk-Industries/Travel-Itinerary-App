@@ -22,6 +22,9 @@
    - `AUTH_SECRET`
    - `DATABASE_URL`
    - `OPENAI_API_KEY`
+   - `ANTHROPIC_API_KEY`
+   - `GEMINI_API_KEY`
+   - `ZAI_API_KEY`
    - `UNSPLASH_ACCESS_KEY`
    - `SMTP_USER`, `SMTP_PASS`
    - `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
@@ -38,7 +41,7 @@
    - Rebuild/redeploy client.
 2. OpenAI key
    - Create a new key in OpenAI dashboard.
-   - Replace `OPENAI_API_KEY` in `server/.env`.
+   - Replace `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, or `ZAI_API_KEY` in `server/.env`.
    - Revoke old key, then restart/redeploy server.
 3. Unsplash key
    - Regenerate/reissue in Unsplash developer settings.
@@ -58,4 +61,4 @@
 1. Ensure `.env`, `.local_env`, `.secrets`, `.secret` are ignored in all workspaces.
 2. Never commit service-account JSON keys; use env/secret manager values instead.
 3. Before commit, run a quick scan:
-   - `git grep -n "AIza\\|sk-\\|BEGIN PRIVATE KEY\\|OPENAI_API_KEY\\|SMTP_PASS\\|AUTH_SECRET"`
+   - `git grep -n "AIza\\|sk-\\|BEGIN PRIVATE KEY\\|OPENAI_API_KEY\\|ANTHROPIC_API_KEY\\|GEMINI_API_KEY\\|ZAI_API_KEY\\|SMTP_PASS\\|AUTH_SECRET"`

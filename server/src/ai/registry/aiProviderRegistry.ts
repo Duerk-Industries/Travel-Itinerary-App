@@ -1,5 +1,8 @@
 import type { AiChatProvider } from '../providers/AiChatProvider';
+import { anthropicProvider } from '../providers/anthropicProvider';
+import { geminiProvider } from '../providers/geminiProvider';
 import { openaiProvider } from '../providers/openaiProvider';
+import { zaiProvider } from '../providers/zaiProvider';
 import type { AiCallContext, AiChatRequest, AiChatResponse } from '../types/aiChat';
 import {
   authorizeAiCall,
@@ -9,7 +12,12 @@ import {
 import { getActiveAiProvider } from '../../services/aiProviderConfigService';
 import { withAiSpan } from '../tracing';
 
-const providers = new Map<string, AiChatProvider>([[openaiProvider.id, openaiProvider]]);
+const providers = new Map<string, AiChatProvider>([
+  [openaiProvider.id, openaiProvider],
+  [anthropicProvider.id, anthropicProvider],
+  [geminiProvider.id, geminiProvider],
+  [zaiProvider.id, zaiProvider],
+]);
 
 const wrapWithRegistryGuards = (provider: AiChatProvider): AiChatProvider => ({
   ...provider,
