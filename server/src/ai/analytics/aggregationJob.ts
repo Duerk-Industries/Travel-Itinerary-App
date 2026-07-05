@@ -2,6 +2,7 @@ import { listAiAnalyticsMetrics, upsertAiAnalyticsMetric } from '../../db';
 import { logError, logInfo } from '../../logger';
 import type { AiAnalyticsMetric, AiAnalyticsPeriodType } from '../../types';
 import { getApiBudgetProviderConfig } from '../../config/apiLimits';
+import type { CaptureRecord } from '../types/captureRecord';
 import { readLocalAiCaptureRecordsForDay } from './captureBrowser';
 import { detectAiMetricRegressions } from './regressionDetector';
 
@@ -61,7 +62,13 @@ const toMetric = (
 export const runAiDailyAggregation = async (params: { day?: string; jobId?: string } = {}) => {
   const day = params.day ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const jobId = params.jobId ?? `ai-analytics-${day}`;
-  const records = await readLocalAiCaptureRecordsForDay(day);
+  let records: CaptureRecord[] = [];
+  try {
+    records = await readLocalAiCaptureRecordsForDay(day);
+  } catch (err) {
+    logError('[ai-analytics] capture read failed', { jobId, day, error: err instanceof Error ? err.message : String(err) });
+    return { jobId, day, recordsProcessed: 0, metrics: [], error: 'capture_read_failed' };
+  }
   const daily = new Map<string, number>();
   const provider = new Map<string, number>();
   const prompt = new Map<string, number>();
@@ -123,17 +130,22 @@ export const runAiDailyAggregation = async (params: { day?: string; jobId?: stri
     metrics.push(toMetric('ai_cost_metrics', day, 'day', { provider: providerName, model }, metric, value));
   }
 
-  const persisted = await Promise.all(metrics.map((metric) => upsertAiAnalyticsMetric(metric)));
-  await rollupAiAnalytics({ day, jobId });
-  const baseline = await listAiAnalyticsMetrics({ periodType: 'day', limit: 500 });
-  detectAiMetricRegressions({
-    current: persisted,
-    baseline,
-    jobId,
-    alertThresholdPercent: getRegressionAlertThresholdPercent(),
-  });
-  logInfo(`[ai-analytics] completed jobId=${jobId} day=${day} records=${records.length} metrics=${persisted.length}`);
-  return { jobId, day, recordsProcessed: records.length, metrics: persisted };
+  try {
+    const persisted = await Promise.all(metrics.map((metric) => upsertAiAnalyticsMetric(metric)));
+    await rollupAiAnalytics({ day, jobId });
+    const baseline = await listAiAnalyticsMetrics({ periodType: 'day', limit: 500 });
+    detectAiMetricRegressions({
+      current: persisted,
+      baseline,
+      jobId,
+      alertThresholdPercent: getRegressionAlertThresholdPercent(),
+    });
+    logInfo(`[ai-analytics] completed jobId=${jobId} day=${day} records=${records.length} metrics=${persisted.length}`);
+    return { jobId, day, recordsProcessed: records.length, metrics: persisted };
+  } catch (err) {
+    logError('[ai-analytics] aggregation write failed', { jobId, day, error: err instanceof Error ? err.message : String(err) });
+    return { jobId, day, recordsProcessed: records.length, metrics: [], error: 'aggregation_write_failed' };
+  }
 };
 
 export const rollupAiAnalytics = async (params: { day: string; jobId?: string }): Promise<void> => {

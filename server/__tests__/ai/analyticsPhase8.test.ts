@@ -22,6 +22,8 @@ jest.mock('../../src/logger', () => ({
   logError: jest.fn(),
 }));
 
+const mockedLogger = require('../../src/logger') as { logError: jest.Mock; logInfo: jest.Mock };
+
 const mockedReadCaptures = readLocalAiCaptureRecordsForDay as jest.MockedFunction<typeof readLocalAiCaptureRecordsForDay>;
 const mockedUpsert = upsertAiAnalyticsMetric as jest.MockedFunction<typeof upsertAiAnalyticsMetric>;
 const mockedListMetrics = listAiAnalyticsMetrics as jest.MockedFunction<typeof listAiAnalyticsMetrics>;
@@ -92,6 +94,48 @@ describe('Phase 8 AI analytics', () => {
     // that means the config wiring broke.
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ alertThresholdPercent: 80 }));
     spy.mockRestore();
+  });
+
+  it('logs and returns an error result when capture reads fail', async () => {
+    mockedReadCaptures.mockRejectedValueOnce(new Error('archive unavailable'));
+
+    await expect(runAiDailyAggregation({ day: '2026-07-04', jobId: 'job-test' })).resolves.toMatchObject({
+      jobId: 'job-test',
+      day: '2026-07-04',
+      recordsProcessed: 0,
+      metrics: [],
+      error: 'capture_read_failed',
+    });
+    expect(mockedLogger.logError).toHaveBeenCalledWith(
+      '[ai-analytics] capture read failed',
+      expect.objectContaining({ jobId: 'job-test', day: '2026-07-04', error: 'archive unavailable' })
+    );
+  });
+
+  it('logs and returns an error result when metric persistence fails', async () => {
+    mockedReadCaptures.mockResolvedValue([
+      {
+        captureSchemaVersion: 1,
+        captureId: 'capture-1',
+        featureKey: 'parsing',
+        capturedAt: '2026-07-04T12:00:00.000Z',
+        outcome: 'success',
+        payload: {},
+      } as any,
+    ]);
+    mockedUpsert.mockRejectedValueOnce(new Error('db unavailable'));
+
+    await expect(runAiDailyAggregation({ day: '2026-07-04', jobId: 'job-test' })).resolves.toMatchObject({
+      jobId: 'job-test',
+      day: '2026-07-04',
+      recordsProcessed: 1,
+      metrics: [],
+      error: 'aggregation_write_failed',
+    });
+    expect(mockedLogger.logError).toHaveBeenCalledWith(
+      '[ai-analytics] aggregation write failed',
+      expect.objectContaining({ jobId: 'job-test', day: '2026-07-04', error: 'db unavailable' })
+    );
   });
 
   it('flags metric changes that exceed the configured threshold', () => {
