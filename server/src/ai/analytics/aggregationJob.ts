@@ -1,8 +1,18 @@
 import { listAiAnalyticsMetrics, upsertAiAnalyticsMetric } from '../../db';
 import { logError, logInfo } from '../../logger';
 import type { AiAnalyticsMetric, AiAnalyticsPeriodType } from '../../types';
+import { getApiBudgetProviderConfig } from '../../config/apiLimits';
 import { readLocalAiCaptureRecordsForDay } from './captureBrowser';
 import { detectAiMetricRegressions } from './regressionDetector';
+
+// Reuse the same alertThresholdPercent config surface api-limits.yaml already
+// exposes for provider cost budgets, rather than inventing a second,
+// disconnected alerting knob just for metric-regression detection. OPENAI is
+// the always-present reference provider, so its threshold is the sourced
+// default; falls back to regressionDetector's own hardcoded default only if
+// that block is ever removed from config.
+const getRegressionAlertThresholdPercent = (): number | undefined =>
+  getApiBudgetProviderConfig('OPENAI')?.alertThresholdPercent;
 
 const increment = (map: Map<string, number>, key: string, amount = 1): void => {
   map.set(key, (map.get(key) ?? 0) + amount);
@@ -116,7 +126,12 @@ export const runAiDailyAggregation = async (params: { day?: string; jobId?: stri
   const persisted = await Promise.all(metrics.map((metric) => upsertAiAnalyticsMetric(metric)));
   await rollupAiAnalytics({ day, jobId });
   const baseline = await listAiAnalyticsMetrics({ periodType: 'day', limit: 500 });
-  detectAiMetricRegressions({ current: persisted, baseline, jobId });
+  detectAiMetricRegressions({
+    current: persisted,
+    baseline,
+    jobId,
+    alertThresholdPercent: getRegressionAlertThresholdPercent(),
+  });
   logInfo(`[ai-analytics] completed jobId=${jobId} day=${day} records=${records.length} metrics=${persisted.length}`);
   return { jobId, day, recordsProcessed: records.length, metrics: persisted };
 };

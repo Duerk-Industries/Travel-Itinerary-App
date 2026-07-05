@@ -1554,6 +1554,38 @@ const runRenderStage = async (params: {
 };
 
 export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promise<ItineraryPromptPlanResult> => {
+  const tokenAcc = { promptTokens: 0, completionTokens: 0 };
+  const captureStages: ItineraryStageCapture[] = [];
+  try {
+    return await runGenerateItineraryViaPromptPlan(input, tokenAcc, captureStages);
+  } catch (err) {
+    // Stages accumulated before the throw (e.g. a network error mid-pipeline)
+    // must still be captured — otherwise a failed generation leaves nothing
+    // to debug from, even though several stages may have succeeded first.
+    captureItineraryInteraction({
+      captureId: input.captureId ?? input.tripIdSeed,
+      jobId: input.captureId ?? input.tripIdSeed,
+      userId: input.userId,
+      outcome: 'failure',
+      stages: captureStages,
+      tokenUsage: {
+        promptTokens: tokenAcc.promptTokens,
+        completionTokens: tokenAcc.completionTokens,
+        totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+      },
+      payload: {
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
+    throw err;
+  }
+};
+
+const runGenerateItineraryViaPromptPlan = async (
+  input: ServiceInput,
+  tokenAcc: { promptTokens: number; completionTokens: number },
+  captureStages: ItineraryStageCapture[]
+): Promise<ItineraryPromptPlanResult> => {
   const bundle = getPromptBundle();
   const promptRequest = buildPromptRequest(input);
   const mustSeePromptBlock = buildMustSeePromptBlock(promptRequest.ms ?? []);
@@ -1562,8 +1594,6 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
   );
 
-  const tokenAcc = { promptTokens: 0, completionTokens: 0 };
-  const captureStages: ItineraryStageCapture[] = [];
   const usageContext = input.userId
     ? {
         userId: input.userId,

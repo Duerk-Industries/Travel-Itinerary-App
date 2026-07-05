@@ -12,6 +12,7 @@ export type CaptureBrowserQuery = {
   captureId?: string;
   correlationId?: string;
   jobId?: string;
+  anonymousUserId?: string;
   provider?: string;
   model?: string;
   outcome?: string;
@@ -26,6 +27,7 @@ export type CaptureBrowserItem = {
   capturedAt: string;
   correlationId?: string;
   jobId?: string;
+  anonymousUserId?: string;
   provider?: string;
   model?: string;
   callerId?: string;
@@ -76,6 +78,7 @@ const matches = (record: CaptureRecord, query: CaptureBrowserQuery): boolean => 
   if (query.captureId && record.captureId !== query.captureId) return false;
   if (query.correlationId && record.correlationId !== query.correlationId) return false;
   if (query.jobId && record.jobId !== query.jobId) return false;
+  if (query.anonymousUserId && record.anonymousUserId !== query.anonymousUserId) return false;
   if (query.provider && record.provider !== query.provider) return false;
   if (query.model && record.model !== query.model) return false;
   if (query.outcome && record.outcome !== query.outcome) return false;
@@ -106,6 +109,7 @@ export const listLocalAiCaptures = async (query: CaptureBrowserQuery = {}): Prom
     capturedAt: record.capturedAt,
     correlationId: record.correlationId,
     jobId: record.jobId,
+    anonymousUserId: record.anonymousUserId,
     provider: record.provider,
     model: record.model,
     callerId: record.callerId,
@@ -114,6 +118,15 @@ export const listLocalAiCaptures = async (query: CaptureBrowserQuery = {}): Prom
     tokenUsage: record.tokenUsage,
     payloadSummary: payloadSummary(record.payload ?? {}),
   }));
+};
+
+export const getLocalAiCaptureRecord = async (captureId: string): Promise<CaptureRecord | null> => {
+  const files = await listFiles(LOCAL_CAPTURE_ROOT);
+  for (const file of files) {
+    const record = await readCapture(file);
+    if (record?.captureId === captureId) return record;
+  }
+  return null;
 };
 
 export const readLocalAiCaptureRecordsForDay = async (day: string): Promise<CaptureRecord[]> => {

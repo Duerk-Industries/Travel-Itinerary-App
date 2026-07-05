@@ -1,4 +1,5 @@
 import { getAiProviderConfig, setAiProviderConfig, writeAuditLog } from '../db';
+import { logError } from '../logger';
 import type { AiProviderConfig } from '../types';
 
 export type ActiveAiProviderConfig = {
@@ -42,7 +43,20 @@ const toActiveConfig = (featureKey: string, row: AiProviderConfig | null): Activ
 export const getActiveAiProvider = async (featureKey: string): Promise<ActiveAiProviderConfig> => {
   const cached = cache.get(featureKey);
   if (cached && Date.now() < cached.expiresAt) return cached.value;
-  const active = toActiveConfig(featureKey, await getAiProviderConfig(featureKey));
+
+  // Fail-open: a missing row already resolves to the default provider via
+  // toActiveConfig, but a thrown error (DB outage, un-migrated table, etc.)
+  // must not be allowed to take down itinerary generation or mail parsing —
+  // every other AI call sits behind this lookup. Same fail-open posture as
+  // entitlementService's isFeatureEnabled for feature flags.
+  let row: AiProviderConfig | null = null;
+  try {
+    row = await getAiProviderConfig(featureKey);
+  } catch (err) {
+    logError('[aiProviderConfigService] getAiProviderConfig failed, falling back to default provider', err);
+  }
+
+  const active = toActiveConfig(featureKey, row);
   cache.set(featureKey, { value: active, expiresAt: Date.now() + CACHE_TTL_MS });
   return active;
 };

@@ -45,6 +45,7 @@ type AiCaptureItem = {
   capturedAt: string;
   correlationId?: string;
   jobId?: string;
+  anonymousUserId?: string;
   provider?: string;
   model?: string;
   callerId?: string;
@@ -2562,6 +2563,7 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
   const [runtimeReason, setRuntimeReason] = useState('');
   const [captures, setCaptures] = useState<AiCaptureItem[]>([]);
   const [captureQuery, setCaptureQuery] = useState('');
+  const [captureAnonymousUserIdQuery, setCaptureAnonymousUserIdQuery] = useState('');
   const [analytics, setAnalytics] = useState<AiAnalyticsMetric[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -2651,8 +2653,10 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
     setSaving('capture-search');
     setError(null);
     try {
-      const encoded = encodeURIComponent(captureQuery.trim());
-      const suffix = encoded ? `&captureId=${encoded}` : '';
+      const params = new URLSearchParams();
+      if (captureQuery.trim()) params.set('captureId', captureQuery.trim());
+      if (captureAnonymousUserIdQuery.trim()) params.set('anonymousUserId', captureAnonymousUserIdQuery.trim());
+      const suffix = params.toString() ? `&${params.toString()}` : '';
       const data = await apiFetch(backendUrl, headers, `/ai-captures?limit=25${suffix}`);
       setCaptures((Array.isArray(data.captures) ? data.captures : []) as AiCaptureItem[]);
     } catch (err: any) {
@@ -2804,6 +2808,13 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
             placeholder="Capture ID"
             placeholderTextColor={theme.colors.textMuted}
           />
+          <TextInput
+            style={[localStyles.input, getInputStyle(theme), { flex: 1 }]}
+            value={captureAnonymousUserIdQuery}
+            onChangeText={setCaptureAnonymousUserIdQuery}
+            placeholder="Anonymous user ID"
+            placeholderTextColor={theme.colors.textMuted}
+          />
           <TouchableOpacity
             style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving === 'capture-search' && localStyles.buttonDisabled]}
             disabled={saving === 'capture-search'}
@@ -2817,6 +2828,7 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
             <Text style={[localStyles.tableCellPrimary, { color: theme.colors.text }]}>{capture.captureId}</Text>
             <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
               {capture.featureKey} - {capture.outcome} - {capture.provider ?? 'unknown'} / {capture.model ?? 'unknown'} - {new Date(capture.capturedAt).toLocaleString()}
+              {capture.anonymousUserId ? ` - user:${capture.anonymousUserId}` : ''}
             </Text>
           </View>
         ))}

@@ -14,8 +14,8 @@ describe('fieldEvaluator', () => {
       arrivalAirportCode: 'LAX',
       departureDate: '2026-08-01',
       arrivalDate: '2026-08-01',
-      departureTime: '09:30',
-      arrivalTime: '12:10',
+      departureTime: '9:30 AM',
+      arrivalTime: '12:10 PM',
       passengerName: 'Test Traveler',
       cost: 250,
     });
@@ -41,6 +41,8 @@ describe('fieldEvaluator', () => {
     expect(result.fields.find((field) => field.fieldName === 'flightNumber')?.formatValid).toBe(false);
     expect(result.fields.find((field) => field.fieldName === 'bookingReference')?.formatValid).toBe(false);
     expect(result.fields.find((field) => field.fieldName === 'departureAirportCode')?.formatValid).toBe(false);
+    expect(result.fields.find((field) => field.fieldName === 'departureTime')?.formatValid).toBe(true);
+    expect(result.fields.find((field) => field.fieldName === 'arrivalTime')?.formatValid).toBe(false);
     expect(scoreEvaluation('capture-2', [result]).scores.validationScore).toBeLessThan(100);
   });
 

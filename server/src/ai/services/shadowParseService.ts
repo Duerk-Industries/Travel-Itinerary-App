@@ -2,7 +2,7 @@ import type { ExtractionResult, NormalizedDocument } from '../../ingestion/contr
 import { INGESTION_LOGIC_VERSION } from '../../ingestion/config';
 import { LlmExtractor } from '../../ingestion/extraction/llmExtractor';
 import { getAdminSetting } from '../../db';
-import { getCurrentApiBudgetStatus } from '../../apis/providerBudgeting';
+import { getApiBudgetWindowKey, getCurrentApiBudgetStatus, recordApiCost } from '../../apis/providerBudgeting';
 import { logError, logInfo } from '../../logger';
 import { captureAiInteraction } from '../capture/captureService';
 import { compareExtractionResults } from '../evaluation/comparisonEngine';
@@ -56,6 +56,23 @@ export const maybeRunShadowParse = async (params: {
 
     const extractor = new LlmExtractor('ShadowLlmExtractor', 1, () => true);
     const llmResult = await extractor.extract(params.doc, buildShadowConfig(params.doc));
+
+    // The underlying LLM call itself is recorded under the real provider's cost
+    // bucket (e.g. OPENAI) by postOpenAiChatCompletion — that's correct for the
+    // provider's own monthly budget. But the shadow-mode $/month cap checked
+    // above via getCurrentApiBudgetStatus('SHADOW_PARSE') needs its OWN spend
+    // recorded under that synthetic key, or it never accrues and the cap is a
+    // no-op. Record it here, right after the call, using the cost the
+    // extractor already computed.
+    const shadowCostUsd = llmResult.usageMetrics.estimatedCostUsd ?? 0;
+    if (shadowCostUsd > 0) {
+      await recordApiCost({
+        provider: 'SHADOW_PARSE',
+        windowKey: getApiBudgetWindowKey(),
+        amountMicros: Math.round(shadowCostUsd * 1_000_000),
+      });
+    }
+
     const comparison = compareExtractionResults(params.productionResult, llmResult);
     captureAiInteraction({
       captureSchemaVersion: 1,

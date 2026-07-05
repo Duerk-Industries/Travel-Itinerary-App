@@ -59,8 +59,12 @@ const validateFormat = (value: unknown, formatName: string | null, spec: TravelF
 
 const parseIsoDate = (value: unknown): number | null => {
   const text = String(value ?? '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
-  const time = Date.parse(`${text}T00:00:00Z`);
+  // Extracted date fields are commonly stored as full ISO 8601 datetimes
+  // (see semanticFieldHelpers.ts parseIsoLikeDate), not bare dates — accept
+  // both so cross-field checks (e.g. check_out_date > check_in_date) aren't
+  // silently skipped against real data.
+  if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/.test(text)) return null;
+  const time = Date.parse(text.length === 10 ? `${text}T00:00:00Z` : text);
   return Number.isFinite(time) ? time : null;
 };
 

@@ -2,6 +2,7 @@
 /// <reference types="node" />
 
 import { runAiDailyAggregation } from '../../src/ai/analytics/aggregationJob';
+import * as regressionDetectorModule from '../../src/ai/analytics/regressionDetector';
 import { detectAiMetricRegressions } from '../../src/ai/analytics/regressionDetector';
 import { listAiAnalyticsMetrics, upsertAiAnalyticsMetric } from '../../src/db';
 import { readLocalAiCaptureRecordsForDay } from '../../src/ai/analytics/captureBrowser';
@@ -78,6 +79,19 @@ describe('Phase 8 AI analytics', () => {
       metricKey: 'estimated_cost_usd',
       metricValue: 0.01,
     }));
+  });
+
+  it('sources the regression alert threshold from api-limits.yaml instead of a hardcoded default', async () => {
+    const spy = jest.spyOn(regressionDetectorModule, 'detectAiMetricRegressions');
+    mockedReadCaptures.mockResolvedValue([]);
+
+    await runAiDailyAggregation({ day: '2026-07-04', jobId: 'job-test' });
+
+    // config/api-limits.yaml's budgeting.OPENAI.alertThresholdPercent is 80 —
+    // if this ever falls back to regressionDetector's hardcoded default (25),
+    // that means the config wiring broke.
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ alertThresholdPercent: 80 }));
+    spy.mockRestore();
   });
 
   it('flags metric changes that exceed the configured threshold', () => {

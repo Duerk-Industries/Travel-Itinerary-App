@@ -33,7 +33,6 @@ import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
 import {
   countImportJobsByState,
-  getImportJobPayload,
   listDataDeletionJobs,
   type DataDeletionJobState,
 } from '../ingestion/shared/repository';
@@ -42,6 +41,11 @@ import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
 import { listLocalAiCaptures } from '../ai/analytics/captureBrowser';
 import { runAiDailyAggregation } from '../ai/analytics/aggregationJob';
+import {
+  replayParsingIntake,
+  ReplayIntakeNotFoundError,
+  ReplaySourceUnavailableError,
+} from '../ai/replay/parsingReplayService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -157,43 +161,94 @@ router.post('/parsing-eval/replay', async (req, res) => {
   const isDryRun = dryRun !== false;
   try {
     if (typeof intakeId === 'string' && intakeId.trim()) {
-      const payload = await getImportJobPayload(intakeId.trim());
-      if (!payload) {
-        res.status(404).json({ error: `Import intake not found: ${intakeId}` });
-        return;
-      }
+      const trimmedIntakeId = intakeId.trim();
+      const result = await replayParsingIntake({ intakeId: trimmedIntakeId, dryRun: isDryRun });
       await writeAuditLog({
         actorUserId: getActorId(req),
         action: 'ADMIN_SETTING_UPDATED',
-        afterState: { action: 'PARSING_EVAL_REPLAY_REQUESTED', intakeId: intakeId.trim(), dryRun: isDryRun },
+        afterState: {
+          action: 'PARSING_EVAL_REPLAY_REQUESTED',
+          intakeId: trimmedIntakeId,
+          dryRun: isDryRun,
+          agreementRate: result.comparison.agreementRate,
+          persistedCaptureId: result.persistedCaptureId,
+        },
         reason: 'Parsing evaluation replay requested',
       });
       res.json({
         dryRun: isDryRun,
-        intakeId: intakeId.trim(),
-        status: isDryRun ? 'validated' : 'queued',
+        intakeId: trimmedIntakeId,
+        status: 'completed',
         overwriteOriginalCapture: false,
+        productionItemCount: result.productionItemCount,
+        llmItemCount: result.llmItemCount,
+        comparison: result.comparison,
+        persistedCaptureId: result.persistedCaptureId,
       });
       return;
     }
     if (typeof dateFrom === 'string' && typeof dateTo === 'string' && dateFrom.trim() && dateTo.trim()) {
+      // Bounded batch: enumerate intakes with a parsing capture in range and
+      // replay each one for real, capped to keep this endpoint's latency and
+      // LLM spend predictable. Larger batches should be split into multiple
+      // date-range calls rather than raising this cap.
+      const BATCH_LIMIT = 25;
+      const matches = await listLocalAiCaptures({ featureKey: 'parsing', dateFrom, dateTo, limit: BATCH_LIMIT });
+      const intakeIds = Array.from(new Set(matches.map((m) => m.jobId).filter((id): id is string => Boolean(id))));
+
+      const results = await Promise.all(
+        intakeIds.map(async (id) => {
+          try {
+            const result = await replayParsingIntake({ intakeId: id, dryRun: isDryRun });
+            return {
+              intakeId: id,
+              status: 'completed' as const,
+              agreementRate: result.comparison.agreementRate,
+              persistedCaptureId: result.persistedCaptureId,
+            };
+          } catch (err) {
+            return {
+              intakeId: id,
+              status: 'failed' as const,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        })
+      );
+
       await writeAuditLog({
         actorUserId: getActorId(req),
         action: 'ADMIN_SETTING_UPDATED',
-        afterState: { action: 'PARSING_EVAL_REPLAY_BATCH_REQUESTED', dateFrom, dateTo, dryRun: isDryRun },
+        afterState: {
+          action: 'PARSING_EVAL_REPLAY_BATCH_REQUESTED',
+          dateFrom,
+          dateTo,
+          dryRun: isDryRun,
+          intakeCount: intakeIds.length,
+        },
         reason: 'Parsing evaluation replay batch requested',
       });
       res.json({
         dryRun: isDryRun,
         dateFrom,
         dateTo,
-        status: isDryRun ? 'validated' : 'queued',
+        status: 'completed',
         overwriteOriginalCapture: false,
+        batchLimit: BATCH_LIMIT,
+        results,
       });
       return;
     }
     res.status(400).json({ error: 'intakeId or dateFrom/dateTo is required' });
   } catch (err) {
+    if (err instanceof ReplayIntakeNotFoundError) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
+    if (err instanceof ReplaySourceUnavailableError) {
+      res.status(409).json({ error: err.message, code: 'REPLAY_SOURCE_UNAVAILABLE' });
+      return;
+    }
     logError('[admin] failed to request parsing eval replay', err);
     res.status(500).json({ error: 'Failed to request parsing eval replay' });
   }
@@ -206,6 +261,7 @@ router.get('/ai-captures', async (req, res) => {
       captureId: typeof req.query.captureId === 'string' ? req.query.captureId : undefined,
       correlationId: typeof req.query.correlationId === 'string' ? req.query.correlationId : undefined,
       jobId: typeof req.query.jobId === 'string' ? req.query.jobId : undefined,
+      anonymousUserId: typeof req.query.anonymousUserId === 'string' ? req.query.anonymousUserId : undefined,
       provider: typeof req.query.provider === 'string' ? req.query.provider : undefined,
       model: typeof req.query.model === 'string' ? req.query.model : undefined,
       outcome: typeof req.query.outcome === 'string' ? req.query.outcome : undefined,

@@ -17,8 +17,8 @@ Item types match `ParsedItemType` in `server/src/ingestion/contracts/index.ts`: 
 | Flight number | Carrier + flight | Airline designator + 1–4 digits, e.g. `DL123` |
 | PNR / booking reference (IATA Type A/B) | Airline & many rail/car bookings | 6 characters, alphanumeric. Airlines commonly avoid visually ambiguous characters (`0`/`O`, `1`/`I`) but this isn't a hard rule — validate as `[A-Z0-9]{6}`, not stricter |
 | E-ticket number | Rarely user-facing in parsed confirmations | 13 digits (3-digit airline numeric code + 10-digit serial) — included for completeness, `typicallyPresent: false` since most confirmation emails don't surface it |
-| ISO 8601 date | All date fields | `YYYY-MM-DD` |
-| 24-hour time | All time fields | `HH:mm` |
+| ISO 8601 date | All date fields | `YYYY-MM-DD`, or a full ISO 8601 UTC datetime (`YYYY-MM-DDTHH:mm:ss[.sss]Z`) — the extraction pipeline stores dates as full timestamps (`semanticFieldHelpers.ts::parseIsoLikeDate`), not bare dates, so the ruleset accepts both |
+| 12-hour time | All time fields | `H:mm` + am/pm, case-insensitive, space before am/pm optional (e.g. `6:30 AM`, `10:20am`, `07:15 pm`) — `normalizeOutputTime` only standardizes case/spacing when its own regex matches; on non-matching input it passes the raw extracted text through unchanged, so real values vary |
 | ISO 4217 currency code | Cost fields | 3 uppercase letters, e.g. `USD` |
 
 Fields with **no universal standard** (hotel names, addresses, vendor-specific confirmation numbers) are intentionally *not* regex-validated — a wrong-shaped regex there produces false "invalid" flags more often than it catches real errors. Those fields use presence/blank-rate tracking only (§5d of the main plan), not format validation.
@@ -33,10 +33,11 @@ These three item types share the same field shape in `server/src/types.ts` (`Fli
 |---|---|---|---|---|
 | `carrier` | Yes | — | Free text | Airline/rail/bus operator name. No format standard; presence-only. |
 | `flightNumber` | Yes (flight only) | Yes | `^[A-Z0-9]{2}\d{1,4}$` | Airline designator + digits. N/A for bus/ferry; `typicallyPresent: false` for rail (train numbers vary widely, often not validated). |
-| `bookingReference` | No | Yes | `^[A-Z0-9]{6}$` | PNR. This is the field your original "6-letter code" almost certainly meant — corrected to alphanumeric, not letters-only. |
+| `bookingReference` (flight) | No | Yes | `^[A-Z0-9]{6}$` | PNR. This is the field your original "6-letter code" almost certainly meant — corrected to alphanumeric, not letters-only. |
+| `bookingReference` (rail / ferry_bus_transfer) | No | Yes (rail) / No (ferry_bus_transfer) | `^[A-Z0-9]{4,24}$` | **Not** validated as a PNR — rail and ground-transfer bookings are frequently OTA-intermediated (Klook, GetYourGuide), and the OTA's own reference (e.g. `PBB670152`, `GYGLMR82GZRZ`) isn't a real IATA PNR. PNR format only makes sense for an actual airline booking. |
 | `departureAirportCode` / `arrivalAirportCode` / `layoverLocationCode` | Yes (flight only) | Yes | `^[A-Z]{3}$` | IATA. Skip for rail/bus/ferry — use `departureLocation`/`arrivalLocation` free text instead. |
 | `departureDate` / `arrivalDate` | Yes | — | ISO 8601 date | |
-| `departureTime` / `arrivalTime` | Yes | — | `HH:mm` (24h) | |
+| `departureTime` / `arrivalTime` | Yes | — | `H:mm AM/PM` (12h) | |
 | `passengerName` | Yes | — | Free text | |
 | `cost` | No | Yes | Numeric, non-negative | Currency handled via trip-level currency, not per-item in current schema. |
 
@@ -48,7 +49,7 @@ Maps to `Lodging` in `server/src/types.ts` and `hotel` in `ParsedItemType`.
 |---|---|---|---|---|
 | `name` | Yes | — | Free text | No standard; presence-only. |
 | `check_in_date` / `check_out_date` | Yes | — | ISO 8601 date | `check_out_date` must be after `check_in_date` — a cross-field plausibility check, not a per-field regex. |
-| `confirmationNumber` | No | Yes | `^[A-Z0-9]{5,12}$` | Vendor-specific length/format, no universal standard — this range is a loose plausibility band (rejects obviously-wrong extractions like a full sentence), not a real format spec. Treat low-confidence, don't hard-fail on it. |
+| `confirmationNumber` | No | Yes | `^[A-Z0-9]{4,24}$` | Vendor-specific length/format, no universal standard — widened after real Booking.com confirmations (up to 20 digits) failed a tighter band. This range is a loose plausibility band (rejects obviously-wrong extractions like a full sentence), not a real format spec. Treat low-confidence, don't hard-fail on it. |
 | `address` | No | Yes | Free text | Presence-only. |
 | `rooms` | No | Yes | Positive integer | |
 | `total_cost` / `cost_per_night` | No | Yes | Numeric, non-negative | |
@@ -62,7 +63,7 @@ Maps to `CarRental` in `server/src/types.ts` and `car_rental` in `ParsedItemType
 | `vendor` | Yes | — | Free text | |
 | `pickupLocation` / `dropoffLocation` | Yes | — | Free text | Often an airport code embedded in a location string (e.g. "LAX - Airport") — do not force airport-code regex on the whole field; a `containsAirportCode: boolean` soft signal is more useful than a hard validator here. |
 | `pickupDate` / `dropoffDate` | Yes | — | ISO 8601 date | dropoff must be ≥ pickup. |
-| `reference` | No | Yes | `^[A-Z0-9]{5,10}$` | Same caveat as lodging `confirmationNumber` — vendor-specific, loose plausibility band only. |
+| `reference` | No | Yes | `^[A-Z0-9]{4,24}$` | Same caveat as lodging `confirmationNumber` — vendor-specific, loose plausibility band only. |
 | `model` | No | Yes | Free text | Often a class ("Economy", "SUV") rather than a literal model — presence-only. |
 | `cost` | No | Yes | Numeric, non-negative | |
 
@@ -74,9 +75,9 @@ Maps to `Activity` in `server/src/types.ts` and `tour_activity` in `ParsedItemTy
 |---|---|---|---|---|
 | `name` | Yes | — | Free text | |
 | `date` | Yes | — | ISO 8601 date | |
-| `startTime` | No | Yes | `HH:mm` (24h) | Many activity confirmations omit exact time. |
+| `startTime` | No | Yes | `H:mm AM/PM` (12h) | Many activity confirmations omit exact time. |
 | `startLocation` | No | Yes | Free text | |
-| `reference` | No | Yes | `^[A-Z0-9]{5,10}$` | Same loose plausibility band as lodging/car-rental — booking platforms (Viator, GetYourGuide, direct vendor) don't share a format standard. |
+| `reference` | No | Yes | `^[A-Z0-9]{4,24}$` | Same loose plausibility band as lodging/car-rental — booking platforms (Viator, GetYourGuide, direct vendor) don't share a format standard. |
 | `duration` | No | Yes | Free text (e.g. "2 hours") | No standard; presence-only. |
 | `cost` | No | Yes | Numeric, non-negative | |
 

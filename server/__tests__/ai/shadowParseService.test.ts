@@ -25,6 +25,8 @@ jest.mock('../../src/apis/providerBudgeting', () => ({
     budgetUsagePercent: 0,
     isOverBudget: false,
   })),
+  recordApiCost: jest.fn(async () => 0),
+  getApiBudgetWindowKey: jest.fn(() => '2026-07'),
 }));
 
 jest.mock('../../src/ai/capture/captureService', () => ({
@@ -65,6 +67,8 @@ jest.mock('../../src/ingestion/extraction/llmExtractor', () => ({
 const mockedCapture = captureAiInteraction as jest.MockedFunction<typeof captureAiInteraction>;
 const providerBudgeting = require('../../src/apis/providerBudgeting') as {
   getCurrentApiBudgetStatus: jest.Mock;
+  recordApiCost: jest.Mock;
+  getApiBudgetWindowKey: jest.Mock;
 };
 
 const doc: NormalizedDocument = {
@@ -126,6 +130,32 @@ describe('shadowParseService', () => {
       captureId: 'intake-1-shadow',
       featureKey: 'shadow_parse',
     }));
+  });
+
+  it('records shadow-call cost under the SHADOW_PARSE budget bucket, not OPENAI', async () => {
+    await maybeRunShadowParse({ intakeId: 'intake-1', doc, productionResult, randomValue: 0 });
+
+    // The extractor's mocked usageMetrics.estimatedCostUsd is 0.01 (see mock above).
+    expect(providerBudgeting.recordApiCost).toHaveBeenCalledWith({
+      provider: 'SHADOW_PARSE',
+      windowKey: '2026-07',
+      amountMicros: 10_000,
+    });
+  });
+
+  it('does not record cost when the extractor reports zero spend', async () => {
+    const { LlmExtractor } = require('../../src/ingestion/extraction/llmExtractor');
+    (LlmExtractor as jest.Mock).mockImplementationOnce(() => ({
+      extract: jest.fn(async () => ({
+        parsedItems: [],
+        usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'llm', modelName: 'gpt-4o-mini', estimatedCostUsd: 0 },
+        metadata: { logicVersion: 'v-test', extractedAt: '2026-07-04T00:00:00.000Z', strategyName: 'ShadowLlmExtractor' },
+      })),
+    }));
+
+    await maybeRunShadowParse({ intakeId: 'intake-1', doc, productionResult, randomValue: 0 });
+
+    expect(providerBudgeting.recordApiCost).not.toHaveBeenCalled();
   });
 
   it('skips without throwing when the shadow budget is exhausted', async () => {
