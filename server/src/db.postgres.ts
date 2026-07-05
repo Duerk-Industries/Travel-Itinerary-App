@@ -51,6 +51,9 @@ import {
   BillingPriceHistory,
   AiProviderConfig,
   AdminSetting,
+  AiAnalyticsMetric,
+  AiAnalyticsMetricTable,
+  AiAnalyticsPeriodType,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -8868,6 +8871,130 @@ export const setAdminSetting = async (setting: {
     [setting.key, setting.value, setting.updatedBy]
   );
   return mapAdminSettingRow(rows[0]);
+};
+
+const AI_ANALYTICS_TABLES = new Set<AiAnalyticsMetricTable>([
+  'ai_daily_metrics',
+  'ai_provider_metrics',
+  'ai_prompt_metrics',
+  'ai_parser_metrics',
+  'ai_field_metrics',
+  'ai_cost_metrics',
+]);
+
+const normalizeMetricDate = (value: string | Date): string => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toISOString().slice(0, 10);
+};
+
+const validateAnalyticsTable = (table: AiAnalyticsMetricTable): AiAnalyticsMetricTable => {
+  if (!AI_ANALYTICS_TABLES.has(table)) throw new Error(`Unsupported AI analytics table: ${table}`);
+  return table;
+};
+
+const mapAiAnalyticsRow = (
+  table: AiAnalyticsMetricTable,
+  row: Record<string, any>,
+): AiAnalyticsMetric => {
+  const dimensions: Record<string, string> = {};
+  for (const key of ['feature_key', 'provider', 'model', 'caller_id', 'parser_name', 'item_type', 'field_name']) {
+    if (row[key] != null) {
+      dimensions[key.replace(/_([a-z])/g, (_m, c) => c.toUpperCase())] = String(row[key]);
+    }
+  }
+  return {
+    table,
+    periodStart: normalizeMetricDate(row.period_start),
+    periodType: row.period_type as AiAnalyticsPeriodType,
+    dimensions,
+    metricKey: String(row.metric_key),
+    metricValue: Number(row.metric_value ?? 0),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  };
+};
+
+const getMetricColumns = (table: AiAnalyticsMetricTable): string[] => {
+  switch (table) {
+    case 'ai_daily_metrics':
+      return ['feature_key'];
+    case 'ai_provider_metrics':
+    case 'ai_cost_metrics':
+      return ['provider', 'model'];
+    case 'ai_prompt_metrics':
+      return ['feature_key', 'caller_id'];
+    case 'ai_parser_metrics':
+      return ['parser_name'];
+    case 'ai_field_metrics':
+      return ['item_type', 'field_name'];
+    default:
+      return [];
+  }
+};
+
+const snakeDimensionValue = (dimensions: Record<string, string>, column: string): string => {
+  const camel = column.replace(/_([a-z])/g, (_m, c) => c.toUpperCase());
+  return String(dimensions[camel] ?? dimensions[column] ?? 'unknown');
+};
+
+export const upsertAiAnalyticsMetric = async (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): Promise<AiAnalyticsMetric> => {
+  const table = validateAnalyticsTable(metric.table);
+  const p = getPool();
+  const dimensionColumns = getMetricColumns(table);
+  const columns = ['period_start', 'period_type', ...dimensionColumns, 'metric_key', 'metric_value'];
+  const conflictColumns = ['period_start', 'period_type', ...dimensionColumns, 'metric_key'];
+  const values = [
+    metric.periodStart,
+    metric.periodType,
+    ...dimensionColumns.map((column) => snakeDimensionValue(metric.dimensions, column)),
+    metric.metricKey,
+    metric.metricValue,
+  ];
+  const placeholders = values.map((_value, index) => `$${index + 1}`).join(', ');
+  const { rows } = await p.query(
+    `INSERT INTO ${table} (${columns.join(', ')}, updated_at)
+     VALUES (${placeholders}, NOW())
+     ON CONFLICT (${conflictColumns.join(', ')}) DO UPDATE SET
+       metric_value = EXCLUDED.metric_value,
+       updated_at = NOW()
+     RETURNING *`,
+    values
+  );
+  return mapAiAnalyticsRow(table, rows[0]);
+};
+
+export const listAiAnalyticsMetrics = async (options: {
+  table?: AiAnalyticsMetricTable;
+  periodType?: AiAnalyticsPeriodType;
+  periodStart?: string;
+  limit?: number;
+} = {}): Promise<AiAnalyticsMetric[]> => {
+  const p = getPool();
+  const tables = options.table ? [validateAnalyticsTable(options.table)] : Array.from(AI_ANALYTICS_TABLES);
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 250), 1000));
+  const out: AiAnalyticsMetric[] = [];
+  for (const table of tables) {
+    const params: unknown[] = [];
+    const where: string[] = [];
+    if (options.periodType) {
+      params.push(options.periodType);
+      where.push(`period_type = $${params.length}`);
+    }
+    if (options.periodStart) {
+      params.push(options.periodStart);
+      where.push(`period_start = $${params.length}`);
+    }
+    params.push(limit);
+    const { rows } = await p.query(
+      `SELECT * FROM ${table}
+       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+       ORDER BY period_start DESC, updated_at DESC
+       LIMIT $${params.length}`,
+      params
+    );
+    out.push(...rows.map((row) => mapAiAnalyticsRow(table, row)));
+  }
+  return out.sort((a, b) => b.periodStart.localeCompare(a.periodStart)).slice(0, limit);
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {

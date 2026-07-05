@@ -7,6 +7,7 @@ import {
   finalizeAiCallAuthorization,
 } from '../../services/aiInvocationGuard';
 import { getActiveAiProvider } from '../../services/aiProviderConfigService';
+import { withAiSpan } from '../tracing';
 
 const providers = new Map<string, AiChatProvider>([[openaiProvider.id, openaiProvider]]);
 
@@ -16,7 +17,14 @@ const wrapWithRegistryGuards = (provider: AiChatProvider): AiChatProvider => ({
     let authorization: Awaited<ReturnType<typeof authorizeAiCall>> | undefined;
     try {
       authorization = await authorizeAiCall(ctx);
-      const response = await provider.chatCompletion(req, ctx);
+      const response = await withAiSpan('ai.provider.chatCompletion', {
+        correlationId: ctx.correlationId,
+        jobId: ctx.jobId,
+        featureKey: ctx.featureKey,
+        provider: provider.id,
+        model: req.model,
+        callerId: ctx.callerId,
+      }, () => provider.chatCompletion(req, ctx));
       await finalizeAiCallAuthorization(ctx, authorization, {
         provider: provider.id,
         model: req.model,

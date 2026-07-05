@@ -413,6 +413,10 @@ export const getAdminSetting = async (...args: Parameters<ReturnType<typeof adap
   adapter().getAdminSetting(...args);
 export const setAdminSetting = async (...args: Parameters<ReturnType<typeof adapter>['setAdminSetting']>) =>
   adapter().setAdminSetting(...args);
+export const upsertAiAnalyticsMetric = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiAnalyticsMetric']>) =>
+  adapter().upsertAiAnalyticsMetric(...args);
+export const listAiAnalyticsMetrics = async (...args: Parameters<ReturnType<typeof adapter>['listAiAnalyticsMetrics']>) =>
+  adapter().listAiAnalyticsMetrics(...args);
 export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['getUsageCounter']>) =>
   adapter().getUsageCounter(...args);
 export const setUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['setUsageCounter']>) =>

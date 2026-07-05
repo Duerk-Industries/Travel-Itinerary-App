@@ -105,6 +105,26 @@ export interface AdminSetting {
   updatedAt: string;
 }
 
+export type AiAnalyticsMetricTable =
+  | 'ai_daily_metrics'
+  | 'ai_provider_metrics'
+  | 'ai_prompt_metrics'
+  | 'ai_parser_metrics'
+  | 'ai_field_metrics'
+  | 'ai_cost_metrics';
+
+export type AiAnalyticsPeriodType = 'day' | 'week' | 'month' | 'quarter';
+
+export interface AiAnalyticsMetric {
+  table: AiAnalyticsMetricTable;
+  periodStart: string;
+  periodType: AiAnalyticsPeriodType;
+  dimensions: Record<string, string>;
+  metricKey: string;
+  metricValue: number;
+  updatedAt: string;
+}
+
 export interface UsageCounter {
   id: string;
   userId: string;

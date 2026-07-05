@@ -3,6 +3,9 @@ import bodyParser from 'body-parser';
 import {
   listFeatureFlags, setFeatureFlag, writeAuditLog,
   listAiProviderConfigs,
+  getAdminSetting,
+  listAiAnalyticsMetrics,
+  setAdminSetting,
   listTiers, getTierByKey, listTierLimits, listTierEntitlements, listFeatures,
   upsertTierLimit, upsertTierEntitlement,
   getUserRole, setUserRole, setUserTier, getCurrentUserTier,
@@ -37,6 +40,8 @@ import {
 import { readDto } from '../utils/dtoParse';
 import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
+import { listLocalAiCaptures } from '../ai/analytics/captureBrowser';
+import { runAiDailyAggregation } from '../ai/analytics/aggregationJob';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -50,6 +55,7 @@ const requireReason = (reason: unknown): string | null => {
 };
 
 const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract'] as const;
+const AI_RUNTIME_SETTING_KEYS = ['shadow_parse_sample_rate_percent', 'shadow_parse_monthly_budget_usd'] as const;
 const PROVIDER_ENV_KEYS: Record<string, string> = {
   openai: 'OPENAI_API_KEY',
   anthropic: 'ANTHROPIC_API_KEY',
@@ -190,6 +196,124 @@ router.post('/parsing-eval/replay', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to request parsing eval replay', err);
     res.status(500).json({ error: 'Failed to request parsing eval replay' });
+  }
+});
+
+router.get('/ai-captures', async (req, res) => {
+  try {
+    const query = {
+      featureKey: typeof req.query.featureKey === 'string' ? req.query.featureKey : undefined,
+      captureId: typeof req.query.captureId === 'string' ? req.query.captureId : undefined,
+      correlationId: typeof req.query.correlationId === 'string' ? req.query.correlationId : undefined,
+      jobId: typeof req.query.jobId === 'string' ? req.query.jobId : undefined,
+      provider: typeof req.query.provider === 'string' ? req.query.provider : undefined,
+      model: typeof req.query.model === 'string' ? req.query.model : undefined,
+      outcome: typeof req.query.outcome === 'string' ? req.query.outcome : undefined,
+      dateFrom: typeof req.query.dateFrom === 'string' ? req.query.dateFrom : undefined,
+      dateTo: typeof req.query.dateTo === 'string' ? req.query.dateTo : undefined,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined,
+    };
+    const captures = await listLocalAiCaptures(query);
+    res.json({ captures, source: 'local_capture_archive' });
+  } catch (err) {
+    logError('[admin][ai-captures] failed to list captures', err);
+    res.status(500).json({ error: 'Failed to list AI captures' });
+  }
+});
+
+router.get('/analytics', async (req, res) => {
+  try {
+    const day = typeof req.query.day === 'string' && req.query.day.trim()
+      ? req.query.day.trim()
+      : new Date().toISOString().slice(0, 10);
+    const run = req.query.run === '1' || req.query.run === 'true';
+    const aggregation = run ? await runAiDailyAggregation({ day, jobId: `admin-ai-analytics-${day}` }) : null;
+    const metrics = await listAiAnalyticsMetrics({
+      periodType: 'day',
+      periodStart: day,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : 250,
+    });
+    res.json({
+      day,
+      aggregation,
+      metrics,
+      counters: getMetricCounterSnapshot(),
+    });
+  } catch (err) {
+    logError('[admin][ai-analytics] failed to load analytics', err);
+    res.status(500).json({ error: 'Failed to load AI analytics' });
+  }
+});
+
+router.get('/runtime-settings', async (_req, res) => {
+  try {
+    const settings = await Promise.all(AI_RUNTIME_SETTING_KEYS.map(async (key) => {
+      const row = await getAdminSetting(key);
+      return row ?? {
+        key,
+        value: key === 'shadow_parse_sample_rate_percent' ? '10' : '20',
+        updatedBy: null,
+        updatedAt: null,
+        source: 'default',
+      };
+    }));
+    res.json({ settings });
+  } catch (err) {
+    logError('[admin][runtime-settings] failed to load settings', err);
+    res.status(500).json({ error: 'Failed to load runtime settings' });
+  }
+});
+
+router.patch('/runtime-settings', async (req, res) => {
+  const { settings, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    res.status(400).json({ error: 'settings object is required' });
+    return;
+  }
+  const entries = Object.entries(settings as Record<string, unknown>)
+    .filter(([key]) => AI_RUNTIME_SETTING_KEYS.includes(key as any));
+  if (!entries.length) {
+    res.status(400).json({ error: 'No supported runtime settings provided' });
+    return;
+  }
+  for (const [key, value] of entries) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+      res.status(400).json({ error: `${key} must be a non-negative number` });
+      return;
+    }
+    if (key === 'shadow_parse_sample_rate_percent' && numeric > 100) {
+      res.status(400).json({ error: `${key} must be between 0 and 100` });
+      return;
+    }
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const before = await Promise.all(entries.map(([key]) => getAdminSetting(key)));
+    const updated = await Promise.all(entries.map(([key, value]) => setAdminSetting({
+      key,
+      value: String(value),
+      updatedBy: actorId,
+    })));
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'ADMIN_SETTING_UPDATED',
+      beforeState: { settings: before },
+      afterState: { settings: updated },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ settings: updated });
+  } catch (err) {
+    logError('[admin][runtime-settings] failed to update settings', err);
+    res.status(500).json({ error: 'Failed to update runtime settings' });
   }
 });
 

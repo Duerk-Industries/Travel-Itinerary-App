@@ -10,6 +10,7 @@ import { serializeForProduction } from './allowlistSerializer';
 import { getAiCaptureBucket, getAiCaptureGcsTarget } from './gcsClient';
 import { evaluateParsingCaptureRecord } from '../evaluation/captureEvaluator';
 import type { EvaluationResult } from '../evaluation/qualityScore';
+import { withAiSpan } from '../tracing';
 
 const gzip = promisify(zlib.gzip);
 const LOCAL_CAPTURE_ROOT = path.resolve(__dirname, '../../../data/ai-capture');
@@ -85,13 +86,23 @@ const persistGcsEvaluation = async (record: CaptureRecord, evaluation: Evaluatio
 const persistEvaluationIfNeeded = async (record: CaptureRecord, local: boolean): Promise<void> => {
   if (record.featureKey !== 'parsing') return;
   try {
-    const evaluation = evaluateParsingCaptureRecord(record);
+    const evaluation = await withAiSpan('ai.capture.evaluate', {
+      captureId: record.captureId,
+      correlationId: record.correlationId,
+      jobId: record.jobId,
+      featureKey: record.featureKey,
+      provider: record.provider,
+      model: record.model,
+      outcome: record.outcome,
+    }, async () => evaluateParsingCaptureRecord(record));
     if (!evaluation) return;
     if (local) await persistLocalEvaluation(record, evaluation);
     else await persistGcsEvaluation(record, evaluation);
   } catch (err) {
     logError('[ai-eval] parsing capture evaluation failed', {
       captureId: record.captureId,
+      correlationId: record.correlationId,
+      jobId: record.jobId,
       error: err instanceof Error ? err.message : String(err),
     });
   }
@@ -104,13 +115,24 @@ const persistCaptureRecord = async (record: CaptureRecord): Promise<void> => {
       ? record
       : serializeForProduction(record);
 
-  if (local) {
-    await persistLocalCapture(recordToStore);
-    await persistEvaluationIfNeeded(record, true);
-    return;
-  }
-  await persistGcsCapture(recordToStore);
-  await persistEvaluationIfNeeded(record, false);
+  await withAiSpan('ai.capture.persist', {
+    captureId: record.captureId,
+    correlationId: record.correlationId,
+    jobId: record.jobId,
+    featureKey: record.featureKey,
+    provider: record.provider,
+    model: record.model,
+    outcome: record.outcome,
+    latencyMs: record.latencyMs,
+  }, async () => {
+    if (local) {
+      await persistLocalCapture(recordToStore);
+      await persistEvaluationIfNeeded(record, true);
+      return;
+    }
+    await persistGcsCapture(recordToStore);
+    await persistEvaluationIfNeeded(record, false);
+  });
 };
 
 const persistWithRetries = async (record: CaptureRecord): Promise<void> => {
@@ -128,7 +150,14 @@ const persistWithRetries = async (record: CaptureRecord): Promise<void> => {
   incrementMetric('ai_capture.drop', { featureKey: record.featureKey });
   logError('[ai-capture] capture write failed after retries', {
     captureId: record.captureId,
+    correlationId: record.correlationId,
+    jobId: record.jobId,
     featureKey: record.featureKey,
+    provider: record.provider,
+    model: record.model,
+    outcome: record.outcome,
+    latencyMs: record.latencyMs,
+    estimatedCost: record.payload?.estimatedCostUsd,
     error: lastError instanceof Error ? lastError.message : String(lastError),
   });
 };

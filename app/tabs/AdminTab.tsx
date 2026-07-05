@@ -38,6 +38,28 @@ type AiProviderFeatureConfig = {
   updatedBy?: string | null;
   updatedAt?: string | null;
 };
+type AiRuntimeSetting = { key: string; value: string; updatedBy?: string | null; updatedAt?: string | null; source?: string };
+type AiCaptureItem = {
+  captureId: string;
+  featureKey: string;
+  capturedAt: string;
+  correlationId?: string;
+  jobId?: string;
+  provider?: string;
+  model?: string;
+  callerId?: string;
+  outcome: string;
+  latencyMs?: number;
+  payloadSummary?: Record<string, unknown>;
+};
+type AiAnalyticsMetric = {
+  table: string;
+  periodStart: string;
+  periodType: string;
+  dimensions: Record<string, string>;
+  metricKey: string;
+  metricValue: number;
+};
 
 type TierLimit = { limitKey: string; limitValue: number };
 type TierEntitlement = { featureId: string; featureKey: string | null; isAllowed: boolean };
@@ -2535,6 +2557,12 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [runtimeSettings, setRuntimeSettings] = useState<AiRuntimeSetting[]>([]);
+  const [runtimeDrafts, setRuntimeDrafts] = useState<Record<string, string>>({});
+  const [runtimeReason, setRuntimeReason] = useState('');
+  const [captures, setCaptures] = useState<AiCaptureItem[]>([]);
+  const [captureQuery, setCaptureQuery] = useState('');
+  const [analytics, setAnalytics] = useState<AiAnalyticsMetric[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
@@ -2542,11 +2570,21 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch(backendUrl, headers, '/ai-config');
+      const [data, runtimeData, capturesData, analyticsData] = await Promise.all([
+        apiFetch(backendUrl, headers, '/ai-config'),
+        apiFetch(backendUrl, headers, '/runtime-settings'),
+        apiFetch(backendUrl, headers, '/ai-captures?limit=10'),
+        apiFetch(backendUrl, headers, '/analytics?limit=40'),
+      ]);
       const loadedFeatures = (Array.isArray(data.features) ? data.features : []) as AiProviderFeatureConfig[];
+      const loadedSettings = (Array.isArray(runtimeData.settings) ? runtimeData.settings : []) as AiRuntimeSetting[];
       setFeatures(loadedFeatures);
       setProviders((Array.isArray(data.providers) ? data.providers : []) as AiProviderOption[]);
       setDrafts(Object.fromEntries(loadedFeatures.map((item) => [item.featureKey, item])));
+      setRuntimeSettings(loadedSettings);
+      setRuntimeDrafts(Object.fromEntries(loadedSettings.map((item) => [item.key, item.value])));
+      setCaptures((Array.isArray(capturesData.captures) ? capturesData.captures : []) as AiCaptureItem[]);
+      setAnalytics((Array.isArray(analyticsData.metrics) ? analyticsData.metrics : []) as AiAnalyticsMetric[]);
     } catch (err: any) {
       setError(err.message ?? 'Failed to load AI config');
     } finally {
@@ -2580,6 +2618,59 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
       await load();
     } catch (err: any) {
       setError(err.message ?? 'Failed to save AI config');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const saveRuntimeSettings = async () => {
+    if (runtimeReason.trim().length < 3) {
+      setError('Reason is required.');
+      return;
+    }
+    setSaving('runtime-settings');
+    setError(null);
+    setSaveMsg(null);
+    try {
+      await apiFetch(backendUrl, headers, '/runtime-settings', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: runtimeDrafts, reason: runtimeReason }),
+      });
+      setSaveMsg('Saved runtime settings');
+      setRuntimeReason('');
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to save runtime settings');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const searchCaptures = async () => {
+    setSaving('capture-search');
+    setError(null);
+    try {
+      const encoded = encodeURIComponent(captureQuery.trim());
+      const suffix = encoded ? `&captureId=${encoded}` : '';
+      const data = await apiFetch(backendUrl, headers, `/ai-captures?limit=25${suffix}`);
+      setCaptures((Array.isArray(data.captures) ? data.captures : []) as AiCaptureItem[]);
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to search captures');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const refreshAnalytics = async () => {
+    setSaving('analytics-refresh');
+    setError(null);
+    try {
+      const data = await apiFetch(backendUrl, headers, '/analytics?run=1&limit=60');
+      setAnalytics((Array.isArray(data.metrics) ? data.metrics : []) as AiAnalyticsMetric[]);
+      setSaveMsg('Analytics refreshed');
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to refresh analytics');
     } finally {
       setSaving(null);
     }
@@ -2669,6 +2760,88 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
           </View>
         );
       })}
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Runtime Settings</Text>
+        {runtimeSettings.map((setting) => (
+          <View key={setting.key} style={localStyles.inlineField}>
+            <View style={localStyles.inlineFieldLabel}>
+              <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>{setting.key}</Text>
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                {setting.updatedAt ? new Date(setting.updatedAt).toLocaleString() : 'default'}
+              </Text>
+            </View>
+            <TextInput
+              style={[localStyles.input, getInputStyle(theme), { flex: 1 }]}
+              value={runtimeDrafts[setting.key] ?? setting.value}
+              keyboardType="numeric"
+              onChangeText={(value) => setRuntimeDrafts((prev) => ({ ...prev, [setting.key]: value }))}
+            />
+          </View>
+        ))}
+        <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Reason</Text>
+        <TextInput
+          style={[localStyles.input, getInputStyle(theme)]}
+          value={runtimeReason}
+          onChangeText={setRuntimeReason}
+          placeholder="Reason for audit log"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TouchableOpacity
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving === 'runtime-settings' && localStyles.buttonDisabled]}
+          disabled={saving === 'runtime-settings'}
+          onPress={saveRuntimeSettings}
+        >
+          <Text style={localStyles.smallButtonText}>{saving === 'runtime-settings' ? 'Saving...' : 'Save settings'}</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Capture Browser</Text>
+        <View style={localStyles.inlineField}>
+          <TextInput
+            style={[localStyles.input, getInputStyle(theme), { flex: 1 }]}
+            value={captureQuery}
+            onChangeText={setCaptureQuery}
+            placeholder="Capture ID"
+            placeholderTextColor={theme.colors.textMuted}
+          />
+          <TouchableOpacity
+            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving === 'capture-search' && localStyles.buttonDisabled]}
+            disabled={saving === 'capture-search'}
+            onPress={searchCaptures}
+          >
+            <Text style={localStyles.smallButtonText}>Search</Text>
+          </TouchableOpacity>
+        </View>
+        {captures.map((capture) => (
+          <View key={`${capture.captureId}-${capture.capturedAt}`} style={localStyles.compactRow}>
+            <Text style={[localStyles.tableCellPrimary, { color: theme.colors.text }]}>{capture.captureId}</Text>
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+              {capture.featureKey} - {capture.outcome} - {capture.provider ?? 'unknown'} / {capture.model ?? 'unknown'} - {new Date(capture.capturedAt).toLocaleString()}
+            </Text>
+          </View>
+        ))}
+      </View>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Parser Evaluation</Text>
+        {analytics.filter((metric) => metric.table === 'ai_parser_metrics' || metric.table === 'ai_field_metrics').slice(0, 8).map((metric, index) => (
+          <Text key={`${metric.table}-${metric.metricKey}-${index}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {metric.table.replace('ai_', '').replace('_metrics', '')}: {metric.metricKey} = {metric.metricValue}
+          </Text>
+        ))}
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 12 }]}>Shadow Comparison</Text>
+        {analytics.filter((metric) => metric.table === 'ai_daily_metrics' || metric.table === 'ai_cost_metrics').slice(0, 8).map((metric, index) => (
+          <Text key={`${metric.table}-${metric.metricKey}-${index}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {metric.dimensions.featureKey ?? metric.dimensions.provider ?? metric.table}: {metric.metricKey} = {metric.metricValue}
+          </Text>
+        ))}
+        <TouchableOpacity
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving === 'analytics-refresh' && localStyles.buttonDisabled]}
+          disabled={saving === 'analytics-refresh'}
+          onPress={refreshAnalytics}
+        >
+          <Text style={localStyles.smallButtonText}>{saving === 'analytics-refresh' ? 'Refreshing...' : 'Refresh analytics'}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -2843,6 +3016,10 @@ const localStyles = StyleSheet.create({
   // Layout
   row: { flexDirection: 'row', alignItems: 'center' },
   flex: { flex: 1 },
+  inlineField: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  inlineFieldLabel: { minWidth: 220, flex: 1 },
+  compactRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ddd' },
+  tableCellPrimary: { fontSize: 13, fontWeight: '700' },
   // Badges
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 8 },
   badgeOn: { backgroundColor: '#27ae60' },

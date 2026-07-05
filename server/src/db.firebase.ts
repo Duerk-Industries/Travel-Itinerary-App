@@ -52,6 +52,9 @@ import {
   BillingPriceHistory,
   AiProviderConfig,
   AdminSetting,
+  AiAnalyticsMetric,
+  AiAnalyticsMetricTable,
+  AiAnalyticsPeriodType,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -5955,6 +5958,62 @@ export const setAdminSetting = async (setting: {
     updatedAt,
   }, { merge: true });
   return { ...setting, updatedAt };
+};
+
+const AI_ANALYTICS_TABLES: AiAnalyticsMetricTable[] = [
+  'ai_daily_metrics',
+  'ai_provider_metrics',
+  'ai_prompt_metrics',
+  'ai_parser_metrics',
+  'ai_field_metrics',
+  'ai_cost_metrics',
+];
+
+const metricDocId = (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): string => {
+  const dims = Object.entries(metric.dimensions)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${value}`)
+    .join('|');
+  return [metric.periodStart, metric.periodType, dims, metric.metricKey].join('|').replace(/[\/#?]/g, '_');
+};
+
+const mapAiAnalyticsDoc = (
+  table: AiAnalyticsMetricTable,
+  data: FirebaseFirestore.DocumentData,
+): AiAnalyticsMetric => ({
+  table,
+  periodStart: String(data.periodStart ?? ''),
+  periodType: (data.periodType ?? 'day') as AiAnalyticsPeriodType,
+  dimensions: data.dimensions && typeof data.dimensions === 'object' ? data.dimensions as Record<string, string> : {},
+  metricKey: String(data.metricKey ?? ''),
+  metricValue: Number(data.metricValue ?? 0),
+  updatedAt: String(data.updatedAt ?? nowIso()),
+});
+
+export const upsertAiAnalyticsMetric = async (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): Promise<AiAnalyticsMetric> => {
+  const updatedAt = nowIso();
+  const row = { ...metric, updatedAt };
+  await getDb().collection(metric.table).doc(metricDocId(metric)).set(row, { merge: true });
+  return row;
+};
+
+export const listAiAnalyticsMetrics = async (options: {
+  table?: AiAnalyticsMetricTable;
+  periodType?: AiAnalyticsPeriodType;
+  periodStart?: string;
+  limit?: number;
+} = {}): Promise<AiAnalyticsMetric[]> => {
+  const tables = options.table ? [options.table] : AI_ANALYTICS_TABLES;
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 250), 1000));
+  const out: AiAnalyticsMetric[] = [];
+  for (const table of tables) {
+    let query: FirebaseFirestore.Query = getDb().collection(table);
+    if (options.periodType) query = query.where('periodType', '==', options.periodType);
+    if (options.periodStart) query = query.where('periodStart', '==', options.periodStart);
+    const snap = await query.limit(limit).get();
+    out.push(...snap.docs.map((doc) => mapAiAnalyticsDoc(table, doc.data())));
+  }
+  return out.sort((a, b) => b.periodStart.localeCompare(a.periodStart)).slice(0, limit);
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {
