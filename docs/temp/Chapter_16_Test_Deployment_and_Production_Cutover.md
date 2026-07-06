@@ -356,23 +356,35 @@ manifest:
   "frontendArtifact": "github-actions-artifact://<runId>/dist.tgz",
   "frontendSha256": "...",
   "firestoreIndexesSha256": "...",
+  "configFingerprint": "...",
+  "builderRunId": "...",
   "builtAt": "..."
 }
 ```
+
+`configFingerprint` is a hash of deploy-relevant **non-secret** config
+names/versions (e.g. which `admin_settings`/`api-limits.yaml` keys this
+build expects to exist) — never secret values. It exists so cutover
+(§5.4 step 1) can catch "this build assumes config that production
+doesn't have yet" before touching production, not just "this is the
+right code." `builderRunId` traces the manifest back to the exact CI
+run that produced it, for retrieving build logs during an incident.
 
 This is the one build step both `deploy-test.sh` and
 `cutover-test-to-prod.sh` consume — nothing downstream ever rebuilds
 from source. The frontend export is archived and addressed by checksum
 for the same reason the backend is addressed by digest.
 
-**Artifact Custody**: While GitHub Actions artifacts are the starting point, **Google Cloud Storage (GCS)** is the preferred long-term store for the frontend `dist.tgz` to ensure artifacts outlive the GitHub retention window (default 90 days), allowing rollbacks to older "golden" versions.
-
-GitHub artifact retention is an explicit operational constraint, not an
-implementation detail. `cutover-test-to-prod.sh` must fail before
-touching production if the manifest's artifact has expired or cannot be
-downloaded. If the team needs rollback to a version older than the
-GitHub retention window, move frontend artifacts to GCS before relying
-on that rollback window operationally.
+**Artifact custody**: GitHub Actions artifacts are the starting point
+and are adequate for now — see §1 resolved decision 1 (GitHub's 90-day
+default retention has wide margin over `ROLLBACK_RETENTION_DAYS`'s
+7-day default). `cutover-test-to-prod.sh` must fail before touching
+production if the manifest's artifact has expired or cannot be
+downloaded. Revisit moving frontend artifacts to **Google Cloud Storage
+(GCS)** only if an actual rollback need ever arises for a build older
+than GitHub's retention window — don't move to GCS pre-emptively; that
+decision should be triggered by a real need, not treated as the
+default-preferred store from day one.
 
 ### 5.2 `scripts/deploy-test.sh`
 
@@ -398,7 +410,18 @@ on that rollback window operationally.
    freshly created or on request via `--reseed`.
 6. Run `scripts/smoke-test.sh <test URL>` (§6.2) and fail loudly if it
    doesn't pass — a "successful" test deploy that isn't actually
-   healthy defeats the purpose of having a test environment at all.
+   healthy defeats the purpose of having a test environment at all. **On
+   success, write `release-test-evidence.json`** alongside the release
+   manifest (§5.1) — a separate, equally immutable file recording the
+   smoke-test result, the tested service URL, and the exact digest/
+   checksum/`configFingerprint` that were actually exercised. The build
+   manifest answers "what was built"; this file answers "what was
+   proven to work in test" — keeping them separate means the manifest
+   never needs to be mutated after `build-release.sh` writes it (a
+   mutated "immutable" manifest would undermine the whole point of
+   addressing artifacts by digest/checksum). Cutover (§5.4 step 1)
+   requires both files and cross-checks that the evidence file's
+   recorded digest/checksum matches the manifest's.
 
 ### 5.3 `scripts/deploy-prod.sh`
 
@@ -441,8 +464,12 @@ only which code is running behind them changes.
    backend digest doesn't match what's live in test, so cutover can
    never silently promote something other than what was actually
    validated. Also verify the manifest's frontend checksum matches the
-   artifact deployed to the test Hosting site, or stop before touching
-   production.
+   artifact deployed to the test Hosting site, its `configFingerprint`
+   matches the deploy config cutover is about to use (catching "this
+   build assumes config production doesn't have yet" before it's a
+   production incident), and that `release-test-evidence.json` (§5.2
+   step 6) exists and records a successful smoke test for this exact
+   digest/checksum pair — or stop before touching production.
 2. Deploy that exact digest to `$PROD_SERVICE_NAME` as a **new
    revision with `--no-traffic`**, tagged (`--tag candidate`) so it's
    reachable at its own Cloud Run revision URL without receiving any
@@ -768,7 +795,7 @@ would remove even this shared-quota consideration.
 | 9.11 | Post-cutover monitoring window | The elevated-error-rate watch (§8.3) is confirmed to actually tighten the alert threshold for the configured window and revert afterward | a scheduled-task/cron unit test against the alerting config, not a live production exercise |
 | 9.12 | Canary-account exclusion check | The canary account never appears in Executive Dashboard aggregates (Chapter 15 §5.3), analytics rollups (Chapter 9), or any "all users" feature | a fixture-based test asserting the canary account's ID is filtered at the query layer, re-run whenever a new "all users" feature is added |
 | 9.13 | Canary-account data cleanup | After N simulated cutovers against a test canary account, the count of records owned by that account returns to its baseline after each cutover's step 8 runs — i.e. data does not accumulate release over release | integration test against a disposable canary fixture, run in CI; also verified that step 8 runs (and logs a result) even when the step-7 smoke test it follows has failed |
-| 9.14 | Release manifest integrity | A cutover fails if the manifest backend digest does not match the deployed test service or if the frontend artifact checksum does not match what was tested | mocked `gcloud run services describe` + fixture manifest + fixture artifact checksum test |
+| 9.14 | Release manifest integrity | A cutover fails if the manifest backend digest does not match the deployed test service, if the frontend artifact checksum does not match what was tested, if `configFingerprint` does not match the deploy config being used, or if `release-test-evidence.json` is missing or records a different digest/checksum than the manifest being promoted | mocked `gcloud run services describe` + fixture manifest + fixture evidence file + fixture artifact checksum test, one case per mismatch type |
 | 9.15 | Direct-prod bypass audit | `deploy-prod.sh` refuses to run without `--reason`, emits a bypass warning, and writes deployment audit evidence with that reason | script unit test around argument parsing and mocked audit write |
 | 9.16 | App-owner authorization | Production-affecting scripts refuse to run when `github.actor` is not Bryan or Tristan, and refuse to run at all (distinct failure message) when `github.actor` is unset/unavailable (i.e. not running inside a GitHub Actions workflow) | mocked `github.actor` context in `deploy-prod.sh`, `cutover-test-to-prod.sh`, `rollback.sh`, and `teardown-old-production.sh` — including the "not in Actions context" case |
 | 9.18 | Cutover duration SLO | End-to-end cutover (§5.4 steps 1–9) completes within 5 minutes; the golden-fixture regression gate (9.8) completes within 10 minutes, budgeted separately | timing assertion added to the CI job that runs cutover in a game-day/drill exercise, alerting if either budget is exceeded |
