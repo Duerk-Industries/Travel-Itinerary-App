@@ -61,9 +61,51 @@ Resolved owner decisions for the first implementation pass:
 3. An experiment must not include a provider whose vendor API key is
    merely present but whose adapter has not passed the current provider
    contract suite. "Configured" and "certified" are separate gates.
-4. Executive reporting remains admin-only for now. Keep its data layer
-   aggregate-only so a future read-only business-viewer role remains
-   possible without re-auditing raw-capture access.
+4. Executive reporting remains admin-only for now, and there is
+   deliberately **no distinct permission check beyond `requireAdmin`** in
+   this release — every current admin already has full capture access,
+   so a separate `requireCaptureAccess` gate would have nothing real to
+   differentiate yet (see the corrected §8 note). Product-owner approval
+   (decision 1) is likewise represented as the same `admin` role for now,
+   not a new distinct role — introduce a real product-owner /
+   read-only-analyst role only when someone who is *not* a full
+   engineering admin actually needs one of these capabilities. Keep the
+   data layer aggregate-only (already true by design) so that a future
+   role split doesn't require re-auditing for PII exposure — the
+   groundwork is in place without building the role itself prematurely.
+5. **Ground truth for judging LLM-vs-non-LLM parse quality is a
+   three-signal combination, not a single source**, in priority order:
+   (a) **admin review-queue decisions** (accept/reject/edit on a parsed
+   item) as the primary, authoritative signal — already captured by the
+   existing review-queue flow, reflects an actual human judgment on that
+   specific extraction, no new UI needed; (b) **user edits after
+   import** as a secondary signal for items an admin never reviewed
+   (most items, in practice) — a field the user changed after
+   assignment is treated as evidence the parse was wrong for that field,
+   weighted lower than an explicit review decision since it conflates
+   parse error with the user simply changing their mind; (c) **the
+   existing golden-fixture corpus** (extended with field-evaluator
+   assertions earlier in this platform's build-out) as a supplementary,
+   *offline* signal — precise and cheap to compute, but only covers
+   documents already in the fixture set, so it feeds the recommendation
+   engine's confidence/sample-size accounting rather than standing alone
+   as ground truth for live traffic. `ai_ab_test_metrics`' "ground-truth
+   agreement where available" column (§3.2) should track which of the
+   three signals backed each aggregated data point, so confidence
+   labeling (§3.6) can reflect signal quality, not just sample size.
+6. **First promotion threshold for ingestion parsing** is a combination,
+   not a single metric: a proposed variant must show (i) a positive
+   Parse Quality Score delta using the ground-truth combination above,
+   AND (ii) a non-worse validation-error rate (the field-format-valid
+   rate from the existing evaluator, Chapter 5) — cost is surfaced
+   (§4.3's composite score) but does **not** gate promotion for this
+   first release, since ingestion LLM spend is already bounded
+   separately by the existing shadow-parse budget cap (§3.4a). Both
+   conditions must clear `min_sample_size` (§3.6) before a promotion
+   action is even offered in the UI. This is a default, not a hardcoded
+   rule — expose the two thresholds via `admin_settings` so they can be
+   tightened or loosened without a code change once the team has real
+   data to calibrate against.
 
 Remaining recommendation before implementation: add a synthetic
 ingestion load harness for 10b so the circuit breaker can be tested
@@ -71,20 +113,20 @@ meaningfully before any live production experiment. Staging traffic
 alone is unlikely to produce enough failures quickly enough to validate
 auto-pause behavior.
 
-Remaining architecture questions:
-
-1. What is the ground-truth source for judging LLM-vs-non-LLM parse
-   quality: admin review decisions, user edits after import, explicit
-   fixture labels, or a combination?
-2. How long should experiment assignment and comparison metrics be
-   retained after an experiment completes? This affects storage cost,
-   executive trend history, and auditability of promotions.
-3. Should product-owner approval be represented as the same `admin`
-   role initially, or does the app need a distinct product-owner role
-   before recommendations/experiments ship?
-4. What is the first promotion threshold for ingestion parsing:
-   quality score delta, user-edit reduction, validation-error reduction,
-   cost ceiling, or an explicit combination?
+**Experiment data retention** (resolved): `ai_experiment_assignments`
+(raw, per-user rows) are retained for `EXPERIMENT_ASSIGNMENT_RETENTION_DAYS`
+(default 90, `admin_settings`-configurable) after an experiment reaches
+`completed` — long enough to answer "why did this specific user get this
+variant" during any post-hoc review, short enough not to accumulate
+indefinitely at the per-user grain. `ai_ab_test_metrics` (the daily
+aggregate table) is retained **indefinitely**, like every other
+analytics rollup in this platform (Chapter 9) — it's small (one row per
+experiment/variant/day, not per user) and is exactly what the Executive
+Dashboard's historical trend view and any future audit of a past
+promotion decision need. Deleting the raw assignment rows after the
+retention window does not affect the aggregate history at all, since
+the aggregation job (Phase 8.2) has already rolled them up by the time
+they'd be deleted.
 
 **Grounding check performed before writing this chapter:** the admin
 panel already has a real information-architecture pattern to extend —
@@ -103,7 +145,8 @@ or onto the file overall, is the concrete failure mode this chapter's
 
 | Existing (do not duplicate) | New in this chapter |
 |---|---|
-| `aiProviderRegistry` (resolves provider per feature) | Experiment-aware resolution: registry checks for an active experiment before falling back to `ai_provider_config` |
+| `aiProviderRegistry` (resolves provider per feature) | Experiment-aware resolution for `traffic_split` experiments only (§3.4) — checks for an active experiment before falling back to `ai_provider_config` |
+| `shadowParseService.ts` / `maybeRunShadowParse` (Phase 7's existing shadow-parse mechanism) | Extended, not duplicated, for `shadow_compare` experiments (§3.4a) — `ai_experiments` is the config/lifecycle layer on top of this existing execution engine |
 | `admin_settings` (generic scalar KV table) | Experiment/recommendation config values stored here where scalar (e.g. `recommendation_min_sample_size`); structured entities get their own tables (§3.2, §4.2) |
 | `ai_provider_config`, feature-flag-style 60s TTL cache | Same cache pattern reused for experiment-config lookups |
 | `providerBudgeting.ts`, `estimateAiCostMicros`, `api_cost_counters` | Recommendation engine's cost half reads from these, does not recompute cost independently |
@@ -136,8 +179,7 @@ parser strategy.
 
 ```sql
 CREATE TABLE ai_experiments (
-  experiment_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  per_experiment_salt UUID NOT NULL DEFAULT gen_random_uuid(), -- NEW: Prevents assignment bias across experiments
+  experiment_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- itself provides per-experiment decorrelation; see §3.3
   feature_key       TEXT NOT NULL,             -- 'itinerary_generation' | 'mail_parsing' | ...
   experiment_kind   TEXT NOT NULL DEFAULT 'shadow_compare', -- shadow_compare | traffic_split
   name              TEXT NOT NULL,
@@ -200,8 +242,21 @@ single user could get inconsistent itinerary quality across
 regenerations, which is confusing and also invalidates per-user quality
 comparisons.
 
-Assignment algorithm: `bucket = hash(assignmentKey + experimentId + per_experiment_salt) % 100`.
-Using a per-experiment salt ensures that if a user is in the "10% treatment group" for one experiment, they are not automatically in the 10% group for the next, which de-correlates results and prevents cohort bias.
+Assignment algorithm: `bucket = hash(assignmentKey + experimentId) % 100`.
+**Architect's call: `per_experiment_salt` (an earlier draft's extra
+column) is redundant and has been dropped.** Its stated purpose — make
+sure a user in the "10% treatment group" for one experiment isn't
+automatically in the 10% group for the next, decorrelating cohorts
+across experiments — is already fully provided by `experimentId` itself:
+since `ai_experiments.experiment_id` is `gen_random_uuid()`, it's already
+a uniformly random, independent value per experiment, so
+`hash(assignmentKey + experimentId)` for two different experiments is
+exactly as decorrelated as it would be with an additional random salt
+layered on top. A second random value doesn't add entropy or
+independence beyond what the first already provides — it would only
+matter if `experimentId` were predictable/sequential, which
+`gen_random_uuid()` rules out by construction. Removed the column from
+§3.2's schema to avoid carrying a field with no actual effect.
 Variants are laid out over `[0, 100)` in the order defined in
 `ai_experiments.variants`, each occupying a range sized by its
 `trafficPercent`. Any percentage not covered by explicit variants
@@ -236,26 +291,93 @@ or visible signal that it happened. Enforce this the same way other
 wired into whatever process performs salt rotation, not merely
 documented as a rule operators are expected to remember.
 
-### 3.4 Registry Integration
+### 3.4 Registry Integration — `traffic_split` Only
+
+This integration point is for **`traffic_split` experiments** — future
+scope (itinerary generation, or a parser rollout after shadow
+comparison has produced enough evidence), not the initial ingestion
+experiments, which integrate at a different point entirely (§3.4a).
 
 `aiProviderRegistry.resolveProvider(featureKey, ctx)` gains one step,
 inserted **before** the existing `ai_provider_config` lookup (Phase 5.3):
 
-1. Is there a `running` experiment for this `featureKey`? (60s-cached
-   lookup, same pattern as `getActiveAiProvider`.)
+1. Is there a `running`, `experiment_kind = 'traffic_split'` experiment
+   for this `featureKey`? (60s-cached lookup, same pattern as
+   `getActiveAiProvider`.)
 2. If yes, resolve/create the assignment (§3.3), tag `ctx.experimentId`
-   / `ctx.variantId`, then branch by `experiment_kind`:
-   - `shadow_compare`: production resolution remains unchanged; the
-     assigned variant runs only through the shadow/comparison path.
-   - `traffic_split`: use the assigned variant's provider/model/prompt
-     version/parser version instead of the configured default.
-3. If no running experiment, behavior is identical to Phase 5 — zero
-   change for features with no active experiment.
+   / `ctx.variantId`, and use the assigned variant's
+   provider/model/prompt version/parser version instead of the
+   configured default.
+3. If no running `traffic_split` experiment, behavior is identical to
+   Phase 5 — zero change for features with no active experiment.
 
 `experimentId`/`variantId` flow through to `AiCallContext`, and from
 there into capture records (Chapter 4 §5) and evaluation results
 (Chapter 5) exactly like `provider`/`model` already do — no new
 plumbing path, just two more fields on structures that already exist.
+
+### 3.4a `shadow_compare` Integration — Extends `shadowParseService.ts`, Does Not Duplicate It
+
+**This is the integration point the initial ingestion/parsing
+experiments actually use**, and it is deliberately *not* the registry
+path above. Grounding: the platform already has a working shadow-parse
+mechanism (Phase 7) — `maybeRunShadowParse()` in
+`server/src/ai/services/shadowParseService.ts`, invoked directly from
+the ingestion orchestrator (`server/src/ingestion/orchestrator.ts`)
+after the real production parse completes. It already samples a
+configurable percentage of traffic, runs the LLM extractor in parallel,
+records a comparison via the existing `comparisonEngine.ts`, and
+enforces its own monthly budget cap (`shadow_parse_monthly_budget_usd`,
+recorded under the shared `SHADOW_PARSE` cost bucket) — every property
+`experiment_kind = 'shadow_compare'` was specified to have. Building a
+second implementation of the same mechanism through the AI provider
+registry would mean two independently-maintained shadow-execution code
+paths for the same underlying behavior. Instead:
+
+1. `maybeRunShadowParse()` gains one additional lookup, before it reads
+   the global `shadow_parse_sample_rate_percent` from `admin_settings`:
+   is there a `running`, `experiment_kind = 'shadow_compare'` experiment
+   for `feature_key = 'ingestion_llm_extract'` (the same feature key
+   Phase 5's `ai_provider_config` already uses for this feature)? 60s
+   cached, same pattern as every other admin-config lookup in this
+   platform.
+2. **If yes:** resolve/create the assignment (§3.3) for the intake's
+   owning user, and use the experiment's own variant traffic-percent
+   allocation to decide whether *this* intake is sampled — in place of,
+   not in addition to, the global rate. Tag the resulting capture record
+   (already written by `maybeRunShadowParse`'s existing
+   `captureAiInteraction` call) with `experimentId`/`variantId`, the
+   same way `provider`/`model` are already tagged.
+3. **If no running `shadow_compare` experiment:** behavior is
+   byte-for-byte identical to today — the existing global-rate sampling
+   from `admin_settings` applies, unchanged. This is the same "zero
+   change when nothing is active" guarantee every other integration
+   point in this chapter provides.
+4. **The shared budget cap is not bypassed by an experiment.** An
+   active `shadow_compare` experiment does not get its own separate or
+   larger budget — `shadow_parse_monthly_budget_usd` remains the one
+   ceiling for all shadow-mode LLM spend, experiment-driven or not. If
+   the shared budget is exhausted, shadow calls skip silently regardless
+   of whether an experiment is currently sampling, exactly as they do
+   today.
+5. **No new comparison or metrics logic.** `ai_ab_test_metrics`'s daily
+   rollup for `shadow_compare` experiments is populated by the *same*
+   nightly aggregation job (Phase 8.2) reading the *same* capture
+   records `maybeRunShadowParse` already writes (now with
+   `experimentId`/`variantId` attached) — not a new metrics pipeline.
+   "Ground-truth agreement where available" (§3.2) is computed by the
+   *same* `compareExtractionResults`/`comparisonEngine.ts` this platform
+   already built and tested — not a second comparison engine.
+
+Net effect: `ai_experiments` becomes the **config and lifecycle layer**
+(named, time-boxed, admin-created, with `min_sample_size`/
+`max_duration_days`/promotion workflow) sitting on top of the
+**existing execution engine** (`shadowParseService.ts`), rather than a
+competing implementation of shadow parsing. The circuit breaker (§3.5)
+and statistical discipline (§3.6) apply here exactly as written; only
+the sampling-decision source (experiment-driven vs. global-rate) and
+the fact that shadow experiments never touch `aiProviderRegistry` at
+all are specific to this integration point.
 
 ### 3.5 Safety: Per-Variant Circuit Breaker
 
@@ -289,6 +411,20 @@ it right up to the pause" data — acceptable, since a variant that
 tripped the breaker was already disqualified from being a credible
 comparison candidate for that period regardless of what its assignment
 table says.
+
+**For `shadow_compare` experiments specifically** (§3.4a), "traffic
+share is redistributed to control" has no user-facing production
+traffic to redistribute — the shadow path's output was never serving
+real responses in the first place. Auto-pause here means: the
+experiment stops sampling that variant (assignments reassign to
+control the same way, so no further shadow-LLM calls are attempted for
+already-assigned users), which mainly protects the shared budget cap
+(§3.4a point 4) and comparison-data quality from a variant that's
+producing garbage — not user-facing safety, which was never at risk for
+a shadow comparison to begin with. This is a real difference in *what*
+the circuit breaker is protecting between the two `experiment_kind`
+values, worth keeping explicit rather than implying identical stakes
+for both.
 
 ### 3.6 Statistical Approach — Deliberately Conservative
 
@@ -660,10 +796,14 @@ dead end.
   small relative to capture-object volume and doesn't need the
   cost-conscious batching design applied to captures in Chapter 4/6.
 - **The per-variant circuit breaker (§3.5)** must evaluate cheaply
-  (rolling counters, not a full metrics-table scan) so it can run
-  inline in the registry's hot path without adding meaningful latency —
-  implement it as the same kind of atomic counter `usageLimiter.ts`
-  already uses for windowed rate limits, not a new counting mechanism.
+  (rolling counters, not a full metrics-table scan) so it can run inline
+  without adding meaningful latency wherever it's checked —
+  `aiProviderRegistry`'s hot path for `traffic_split` experiments (§3.4),
+  or `maybeRunShadowParse`'s existing call site for `shadow_compare`
+  experiments (§3.4a), which is already off the production-response hot
+  path by construction. Implement it as the same kind of atomic counter
+  `usageLimiter.ts` already uses for windowed rate limits, not a new
+  counting mechanism, regardless of which call site checks it.
 
 ## 7. Serviceability and Observability
 
@@ -686,7 +826,22 @@ dead end.
 - All new routes (`/api/admin/experiments/*`,
   `/api/admin/recommendations/*`, `/api/admin/ai-ops/executive`) sit
   behind `requireAdmin`, no exceptions.
-- **Role Split (Executive vs. Auditor)**: While the Executive Dashboard is aggregate-only, clicking a "Drill-down" link into operational detail (Captures/Parser Quality) must trigger a secondary check for `requireCaptureAccess`. This ensures a business user can see spend/quality trends without automatically gaining access to raw user PII.
+- **Corrected: no separate `requireCaptureAccess` gate for this
+  release.** An earlier draft of this section proposed a secondary
+  permission check for drill-down navigation from the Executive
+  Dashboard into Captures/Parser Quality. Dropped as premature: every
+  admin in this release already has full capture access, so a second
+  check would have nothing to actually differentiate yet — it would be
+  a permission gate that always passes, which is worse than no gate at
+  all (it looks like a real boundary when it isn't one). `requireAdmin`
+  on every route (above) is the real and only boundary today. The
+  design that *does* matter — keeping the Executive Dashboard's data
+  layer aggregate-only regardless of role checks — is covered below,
+  and is what actually makes a future role split (e.g. a real read-only
+  business-viewer role that should see spend trends but never drill
+  into Captures) safe to add later without re-auditing PII exposure.
+  Introduce `requireCaptureAccess` (or equivalent) only when that role
+  is actually built, not ahead of it.
 - Every mutating action — create/start/pause/promote an experiment;
   apply/dismiss a recommendation — writes to `audit_log` with the same
   `user/timestamp/action/target/result` shape as the rest of the
@@ -746,6 +901,17 @@ dead end.
   of the time as one variant; assert it auto-pauses within the
   configured window and traffic reroutes to control, with zero impact
   on requests assigned to other variants.
+- **`shadow_compare` extends, doesn't duplicate, `shadowParseService.ts`:**
+  with a `running` `shadow_compare` experiment configured, assert
+  `maybeRunShadowParse()` reads the experiment's variant traffic-percent
+  instead of `shadow_parse_sample_rate_percent`; with no running
+  experiment, assert behavior is byte-for-byte identical to the existing
+  `shadowParseService.test.ts` suite (same test file, no new mocks
+  needed for the "no experiment" case — this is the direct test of
+  §3.4a's "zero change when nothing is active" guarantee). Also assert
+  the shared `shadow_parse_monthly_budget_usd` cap still applies when an
+  experiment is driving sampling — an active experiment must not bypass
+  it.
 - **Recommendation scoring:** `computeRecommendationValue()` is a pure
   function over synthetic `ai_*_metrics` fixtures — test weight
   configurations, threshold behavior, and confidence-level derivation

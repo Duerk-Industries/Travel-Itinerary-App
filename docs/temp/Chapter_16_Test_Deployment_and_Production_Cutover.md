@@ -61,32 +61,70 @@ Resolved owner decisions for the first implementation pass:
    artifact custody next to the build that produced it. Revisit GCS or
    Artifact Registry if retention requirements exceed GitHub artifact
    retention or if deploys need to run without GitHub Actions context.
+   **Retention period: GitHub's own default (90 days) is sufficient** —
+   `ROLLBACK_RETENTION_DAYS` (§4) defaults to 7 days, so the artifact
+   retention window has wide margin over the rollback window it needs to
+   outlive. Ownership of increasing it, if ever needed, sits with
+   whoever maintains the CI workflow config (`.github/workflows/`) — no
+   new role or process required, just the standard PR-review path any
+   workflow-file change already goes through. Revisit only if an actual
+   rollback need arises for an artifact older than 90 days, which would
+   itself be a signal to move to GCS (per the "revisit" note above)
+   rather than just raising the GitHub retention number.
 2. Production cutover, rollback, and direct production deploy authority
-   is limited to the app owners: Bryan and Tristan.
+   is limited to the app owners: Bryan and Tristan. **Identity source:
+   the GitHub Actions `github.actor` context** (or the workflow's
+   OIDC-derived identity, if this pipeline ever authenticates to GCP via
+   Workload Identity Federation instead of a long-lived service-account
+   key) — checked against a small allowlist in the workflow/script, not
+   `gcloud auth list` or the Cloud Build service account identity,
+   neither of which naturally distinguishes "which human triggered
+   this." **Consequence, stated explicitly since it's a real
+   constraint, not a footnote:** this means `cutover-test-to-prod.sh`,
+   `rollback.sh`, `teardown-old-production.sh`, and `deploy-prod.sh`
+   must only be invoked through the GitHub Actions workflow, never as a
+   bare local script run — there is no `github.actor` to check outside
+   that context. `--dry-run` (§8.6) remains fine to run locally by
+   anyone, since it has no side effects requiring authorization; only
+   the real, mutating invocation is workflow-gated. If a genuine
+   break-glass need for local execution ever arises (e.g. GitHub Actions
+   itself is down during an incident), that needs its own explicit
+   decision — don't silently allow a `gcloud auth list` fallback path
+   that reintroduces the identity-source ambiguity this decision was
+   meant to close.
 3. Initial production canary write surface should align with the
    current AI rollout focus: ingestion/parsing smoke checks first,
    avoiding billing writes and avoiding broad user-visible data changes.
+   **The canary's ingestion/parsing check runs through `TestAiProvider`,
+   not real provider keys** — deterministic (no dependence on a live
+   vendor's current behavior/latency), zero real vendor cost on every
+   single cutover (this runs on every promotion, not occasionally, so a
+   real-key smoke check would mean recurring vendor spend purely for
+   plumbing verification), and it already exists as first-class platform
+   infrastructure (Chapter 3's testing provider) rather than something
+   this chapter needs to build. This does **not** mean production's real
+   provider adapters go unverified end-to-end — that's what Chapter 1's
+   provider contract suite (run against real credentials in CI, Phase
+   1.6) already covers; the cutover canary's job is narrower: confirm
+   the deployed candidate's ingestion pipeline is wired up and reachable
+   against production's real database, not re-prove the provider
+   adapters work.
 4. Production cutover is immediate 100% traffic for now. Keep
    `--staged 10,50,100` as an optional flag, not the default.
 5. Deployment evidence should be written to GitHub deployment records
    and Cloud Logging even if the app API is unavailable; `audit_log`
    remains the in-app audit trail when the API is healthy. Do not make
    `audit_log` the only source of truth for a failed cutover.
-
-Remaining architecture questions:
-
-1. What GitHub Actions artifact retention period is acceptable for the
-   first release pipeline, and who owns increasing it if rollback needs
-   exceed the default?
-2. What is the exact identity source for app-owner authorization:
-   GitHub actor, `gcloud auth list`, Cloud Build service account, or a
-   required signed approval in the workflow?
-3. Should the ingestion/parsing canary use the real provider keys with
-   low-budget production limits, or force the `TestAiProvider` path for
-   deterministic smoke checks?
-4. What is the maximum acceptable time for a full cutover including
-   candidate smoke, public smoke, and cleanup? This should become the
-   SLO for the deployment scripts.
+6. **Cutover duration SLO: under 5 minutes end-to-end for steps 1–9**
+   (§5.4), excluding the golden-fixture regression suite (9.8) which may
+   legitimately run longer — that gate should complete within 10 minutes
+   total, separately budgeted, since it's a broader correctness check
+   than the smoke suite and blocking cutover on it is intentional (§9.8)
+   even though it costs more time than the rest of the pipeline
+   combined. This turns §8.1's "low single-digit minutes" into a
+   concrete, testable number rather than a vague target — if the
+   pipeline ever exceeds either budget, that's a signal to profile
+   `smoke-test.sh` or the build step, not to quietly widen the SLO.
 
 ### Grounding: current production architecture (confirmed from the repo, not assumed)
 
@@ -380,11 +418,16 @@ enforce extra approval for this path, but the script itself should not
 make a direct production deploy feel indistinguishable from normal
 promotion.
 
-Authorization guardrail: the script checks the authenticated GitHub or
-`gcloud` identity against an allowlist containing Bryan and Tristan
-before it proceeds. This is deliberately a deployment-script check in
-addition to IAM permissions, because the runbook's human authority rule
-should be visible and testable in the deployment tooling itself.
+Authorization guardrail: the script checks `github.actor` (the GitHub
+Actions workflow's authenticated identity, per §1's resolved decision 2)
+against an allowlist containing Bryan and Tristan before it proceeds.
+This is deliberately a deployment-script check in addition to IAM
+permissions, because the runbook's human authority rule should be
+visible and testable in the deployment tooling itself. This check only
+resolves inside a GitHub Actions run — production-affecting scripts are
+not supported as bare local invocations (§1 decision 2's stated
+consequence), so there is no `gcloud`-identity fallback path to keep in
+sync with the GitHub allowlist.
 
 ### 5.4 `scripts/cutover-test-to-prod.sh` — the promotion
 
@@ -411,7 +454,14 @@ only which code is running behind them changes.
    exists permanently in production data for exactly this purpose
    (clearly named, excluded from user-facing analytics and from
    Chapter 15's Executive Dashboard numbers). If this fails, stop —
-   nothing has been exposed to real user traffic yet.
+   nothing has been exposed to real user traffic yet. **The
+   ingestion/parsing canary check runs through `TestAiProvider`, not a
+   real provider key** (§1 decision 3) — deterministic and free of
+   per-cutover vendor spend; it verifies the deployed candidate's
+   ingestion pipeline is correctly wired against production's real
+   database, not that the real provider adapters work end-to-end (that's
+   the provider contract suite's job, exercised separately in CI against
+   real credentials).
 4. **Important correction: production runs on Firestore, which has no
    versioned migration-file system at all — this step's "migration"
    framing only applies if this app is ever run against the Postgres
@@ -491,7 +541,27 @@ steps.
 The necessary companion to "keep old production as a rollback net." This script provides a **unified rollback plane**: it reverts *both* the Cloud Run revision and the Firebase Hosting version in a single atomic-feeling operation. This prevents "Version Mismatch" errors where a new frontend tries to call a rolled-back API.
 
 1. Shifts 100% of `$PROD_SERVICE_NAME` traffic back to the previous revision (`gcloud run services update-traffic ... --to-revisions <previous>=100`).
-2. Invokes `firebase hosting:rollback` for `$PROD_HOSTING_SITE`.
+2. **Deploy the frontend artifact from that previous revision's own
+   release manifest — do not call bare `firebase hosting:rollback`.**
+   `firebase hosting:rollback`'s default behavior reverts Hosting by
+   exactly one release, with no awareness of which backend revision it
+   was actually paired with. If a `deploy-prod.sh` bypass deploy (§5.3)
+   happened between the last cutover and this rollback — a real
+   possibility, since that path exists specifically for emergency
+   hotfixes — "one step back" on Hosting and "the previous tagged
+   revision" on Cloud Run could resolve to two artifacts that were never
+   actually deployed together, recreating the exact version-mismatch
+   risk this unified script exists to prevent. Instead: look up the
+   release manifest (§5.1) associated with the Cloud Run revision being
+   rolled back to, unpack and verify its frontend artifact's checksum
+   (the same step `deploy-test.sh`/`cutover-test-to-prod.sh` already
+   perform), and `firebase deploy --only hosting:$PROD_HOSTING_SITE`
+   that specific artifact explicitly. This is more verifiable than the
+   generic rollback command and reuses machinery this chapter already
+   built (§5.1's manifest, §5.4 step 1's checksum verification) rather
+   than trusting Firebase Hosting's own release-history pointer to have
+   stayed in sync with a separate Cloud Run revision history it has no
+   knowledge of.
 3. Validates the health of the restored pair via `smoke-test.sh`.
 
 ### 5.6 `scripts/teardown-old-production.sh`
@@ -687,9 +757,11 @@ would remove even this shared-quota consideration.
 | 9.2 | Post-deploy smoke suite | Health endpoint returns 200; a synthetic login succeeds; one itinerary-generation round trip (via the AI platform's `TestAiProvider` or a capped real key) returns a valid result; one parsing round trip against a fixture email/PDF succeeds; Socket.IO connects | `scripts/smoke-test.sh <base URL>`, run after every deploy and after cutover |
 | 9.3 | Environment isolation assertion | The deployed service's resolved Firestore database ID and AI capture bucket do not match the *other* environment's configured values | added assertion inside `smoke-test.sh`, environment-aware |
 | 9.4 | Migration additivity check | **SQL-migration path** (only relevant if a Postgres-backed environment is ever used): no migration file staged for a prod-bound deploy contains a destructive operation (`DROP COLUMN`, `DROP TABLE`, a narrowing type change) unless explicitly flagged as a "contract phase" migration. **Firestore path** (production today, §5.4 step 4): no new code path added in this deploy reads a field without a default/fallback for documents that predate that field — since there's no migration file to lint against for Firestore, this is a code-review checklist item, not an automatable static check, unless/until this codebase adopts a tracked Firestore backfill-ledger pattern | SQL: small lint step over new migration files, run in CI and before `deploy-prod.sh`. Firestore: PR review checklist item until a better mechanism exists |
+| 9.4a | Canary Safe Mode interception | An action that would normally send a real email, trigger a Stripe charge, or send a push notification is redirected to a mock/log-only sink when performed by the `is_internal_canary` account, and behaves normally for every other account | integration test asserting the relevant middleware short-circuits for a fixture user with `is_internal_canary: true`, covering each side-effect category (email, Stripe, push) individually — this must exist and pass before the production canary write (§5.4 step 3) is ever exercised for real, since it's the control that keeps that write from leaking into external systems |
 | 9.5 | Cutover dry-run | `cutover-test-to-prod.sh --dry-run` against a real test/prod pair produces the exact command sequence expected, with zero side effects | manual/CI exercise of the `--dry-run` flag from §8.6 |
 | 9.6 | Candidate-revision smoke test before traffic shift | The tagged, `--no-traffic` candidate revision (§5.4 step 2–3) passes the full smoke suite against production's real database *before* any user traffic reaches it | `smoke-test.sh` against the revision-tagged URL, gating step 5 of `cutover-test-to-prod.sh` |
 | 9.7 | Rollback drill | `rollback.sh` restores 100% API traffic to the previous Cloud Run revision and rolls Firebase Hosting back to the paired frontend version within a defined time budget | run as a periodic (e.g. quarterly) game-day exercise against test's own two-revision setup first, then verified available in production |
+| 9.7a | Rollback pairing correctness after a bypass deploy | Simulate cutover N, then a `deploy-prod.sh` bypass deploy N.5, then roll back — `rollback.sh` must deploy N's manifest-paired frontend (not "one Hosting release back," which would resolve to N.5's frontend) alongside N's Cloud Run revision | fixture test asserting the frontend artifact deployed by `rollback.sh` matches the target revision's own release manifest, not whatever Firebase Hosting's release history considers "previous" |
 | 9.8 | Regression/golden-fixture suite against the live candidate | Chapter 10's golden-fixture regression suite runs against the tagged candidate revision's URL, not just in CI against a local build — closes the gap between "tests passed pre-merge" and "this specific deployed artifact behaves correctly" | new CI job invoked from `cutover-test-to-prod.sh`, blocking before traffic shift |
 | 9.9 | Teardown safety check | `teardown-old-production.sh` refuses to delete a revision currently receiving nonzero traffic, and refuses to run without explicit typed confirmation | unit-testable against a mocked `gcloud run revisions list` response; also exercised via `--dry-run` |
 | 9.10 | Secret/config divergence check | Test and production `AUTH_SECRET`, vendor API keys, and `AI_HASH_SALT` are confirmed different values before a deploy is considered complete | assertion in `deploy-test.sh` comparing (hashed, never raw) secret fingerprints between the two Secret Manager entries |
@@ -698,7 +770,8 @@ would remove even this shared-quota consideration.
 | 9.13 | Canary-account data cleanup | After N simulated cutovers against a test canary account, the count of records owned by that account returns to its baseline after each cutover's step 8 runs — i.e. data does not accumulate release over release | integration test against a disposable canary fixture, run in CI; also verified that step 8 runs (and logs a result) even when the step-7 smoke test it follows has failed |
 | 9.14 | Release manifest integrity | A cutover fails if the manifest backend digest does not match the deployed test service or if the frontend artifact checksum does not match what was tested | mocked `gcloud run services describe` + fixture manifest + fixture artifact checksum test |
 | 9.15 | Direct-prod bypass audit | `deploy-prod.sh` refuses to run without `--reason`, emits a bypass warning, and writes deployment audit evidence with that reason | script unit test around argument parsing and mocked audit write |
-| 9.16 | App-owner authorization | Production-affecting scripts refuse to run when the authenticated identity is not Bryan or Tristan | mocked identity lookup in `deploy-prod.sh`, `cutover-test-to-prod.sh`, and `rollback.sh` |
+| 9.16 | App-owner authorization | Production-affecting scripts refuse to run when `github.actor` is not Bryan or Tristan, and refuse to run at all (distinct failure message) when `github.actor` is unset/unavailable (i.e. not running inside a GitHub Actions workflow) | mocked `github.actor` context in `deploy-prod.sh`, `cutover-test-to-prod.sh`, `rollback.sh`, and `teardown-old-production.sh` — including the "not in Actions context" case |
+| 9.18 | Cutover duration SLO | End-to-end cutover (§5.4 steps 1–9) completes within 5 minutes; the golden-fixture regression gate (9.8) completes within 10 minutes, budgeted separately | timing assertion added to the CI job that runs cutover in a game-day/drill exercise, alerting if either budget is exceeded |
 | 9.17 | Expired artifact refusal | Cutover fails before touching production when the GitHub Actions frontend artifact referenced by the release manifest has expired or cannot be downloaded | mocked GitHub artifact API response returning 404/expired |
 
 ---
