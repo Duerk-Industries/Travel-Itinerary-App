@@ -197,13 +197,21 @@ that gate for the real response path.
 
 ---
 
-## Deferred — Not part of this implementation plan
+## Phase 10 — Experimentation, Recommendations, and Deployment (Chapters 15–16)
 
-Per the Chapter 9 evaluation note, do **not** build these alongside Phases 0–9. Revisit only after Phases 0–9 have been stable in production for a meaningful period:
+**Goal:** move from manual observation to automated optimization and a industrial-grade deployment pipeline.
 
-- **A/B testing infrastructure** (traffic-split experimentation across providers/prompts/parsers). Shadow parsing (Phase 7) and manual replay already provide comparison without live traffic splitting.
-- **Automated recommendation engine** (auto-suggesting provider/prompt/parser changes). Ship the underlying metrics (Phase 8) first; an automated layer on top needs a track record of which thresholds actually correlate with a change being worth making.
-- **Executive dashboard** as a separate deliverable — treat it as an optional rollup view over Phase 8's data, not new design work.
+| Task | Detail |
+|---|---|
+| 10.1 | **AI Operations IA Refactor (10a)**: Land the `AiOpsSection` nested-router in `AdminTab.tsx`. Decompose the 3,000-line file into per-section components under `app/components/admin/aiOps/`. Implement deep-linking for all 10 sub-sections (`admin/ai-ops/executive`, etc.). |
+| 10.2 | **A/B Testing Infrastructure (10b)**: Implement `ai_experiments` and `ai_experiment_assignments` across all 3 DBs. **Must include `per_experiment_salt`** to prevent cohort bias. Implement the per-variant circuit breaker (rolling error-rate pause) in the registry hot-path. |
+| 10.3 | **Recommendation Engine (10c)**: Daily batch job computing composite cost+quality scores. **Must include `supporting_evidence_query`** for explainability. Rationales must be fixed-template only, no LLM-generation. |
+| 10.4 | **Executive Dashboard (10d)**: Aggregate-only trends (Spend vs Budget, Cost per Itinerary, Quality Trend). Implement the "Auditor" permission gate to prevent PII leakage during drill-downs. |
+| 10.5 | **Unified Build & Artifacts**: Implement `build-release.sh` producing a single image digest and a **GCS-stored** frontend artifact. |
+| 10.6 | **Code-Only Cutover & Rollback**: Implement `cutover-test-to-prod.sh` (candidate revision smoke-test) and a **unified `rollback.sh`** that reverts both Cloud Run and Firebase Hosting versions simultaneously. |
+| 10.7 | **Production Canary Safe-Mode**: Implement the `is_internal_canary` flag and middleware to intercept/mock side-effects (emails, billing) for the canary account during production smoke tests. |
+
+**Exit criteria:** an admin can run a salted experiment with auto-pause safety; a recommendation has been applied and its outcome measured; and a bad production cutover can be fully reverted (FE+BE) in < 60s.
 
 ---
 
