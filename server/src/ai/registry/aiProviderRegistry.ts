@@ -12,6 +12,7 @@ import {
 import { getActiveAiProvider } from '../../services/aiProviderConfigService';
 import { getProviderLimitKey } from '../../services/aiInvocationGuard';
 import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from '../../apis/providerBudgeting';
+import { recordUsage } from '../../services/entitlementService';
 import { logError } from '../../logger';
 import { withAiSpan } from '../tracing';
 import { getRunningExperiment } from '../experiments/experimentConfigService';
@@ -33,11 +34,69 @@ type ExperimentOutcomeContext = {
   controlVariantId: string;
 };
 
+type UsageAccountingContext = AiCallContext & {
+  usageAccountingEnabled?: boolean;
+  usageWindowKey?: string | null;
+  usageMetadata?: Record<string, unknown>;
+};
+
 const recordTrafficSplitOutcome = async (experimentContext: ExperimentOutcomeContext, success: boolean): Promise<void> => {
   try {
     await recordExperimentVariantOutcome({ ...experimentContext, success });
   } catch (err) {
     logError('[aiProviderRegistry] failed to record traffic_split circuit-breaker outcome', err);
+  }
+};
+
+const getMonthWindowKey = (): string => {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+};
+
+const recordNonOpenAiUsage = async (params: {
+  providerKey: string;
+  model: string;
+  ctx: UsageAccountingContext;
+  response: AiChatResponse;
+  estimatedCostMicrosUsd: number | null;
+}): Promise<void> => {
+  if (!params.ctx.usageAccountingEnabled || !params.ctx.userId) return;
+  const usageKeyPrefix = params.providerKey.toLowerCase();
+  const usage = params.response.usage;
+  const windowKey = params.ctx.usageWindowKey ?? getMonthWindowKey();
+  const budgetWindowKey = getApiBudgetWindowKey();
+  const baseMetadata = {
+    windowKey,
+    budgetWindowKey,
+    provider: params.providerKey,
+    caller: params.ctx.callerId,
+    model: params.model,
+    correlationId: params.ctx.correlationId,
+    requestId: params.ctx.requestId,
+    jobId: params.ctx.jobId ?? null,
+    featureKey: params.ctx.featureKey,
+    anonymousUserId: params.ctx.anonymousUserId,
+    tier: params.ctx.tier,
+    role: params.ctx.role,
+    callerId: params.ctx.callerId,
+    ...(params.ctx.usageMetadata ?? {}),
+  };
+  await recordUsage(params.ctx.userId, `api_calls_${usageKeyPrefix}`, 1, baseMetadata);
+  if ((usage?.prompt_tokens ?? 0) > 0) {
+    await recordUsage(params.ctx.userId, `${usageKeyPrefix}_prompt_tokens`, usage?.prompt_tokens ?? 0, baseMetadata);
+  }
+  if ((usage?.completion_tokens ?? 0) > 0) {
+    await recordUsage(params.ctx.userId, `${usageKeyPrefix}_completion_tokens`, usage?.completion_tokens ?? 0, baseMetadata);
+  }
+  if ((usage?.total_tokens ?? 0) > 0) {
+    await recordUsage(params.ctx.userId, `${usageKeyPrefix}_tokens`, usage?.total_tokens ?? 0, baseMetadata);
+  }
+  if ((params.estimatedCostMicrosUsd ?? 0) > 0) {
+    await recordUsage(params.ctx.userId, `${usageKeyPrefix}_estimated_cost_micros_usd`, params.estimatedCostMicrosUsd ?? 0, {
+      ...baseMetadata,
+      estimatedCostMicrosUsd: params.estimatedCostMicrosUsd,
+      estimatedCostUsd: (params.estimatedCostMicrosUsd ?? 0) / 1_000_000,
+    });
   }
 };
 
@@ -60,10 +119,11 @@ const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: Ex
       // again here would double-count. Every other provider has no such
       // internal accounting, so this is the one place their budgeting.yaml
       // pricing blocks actually get used instead of being decorative.
+      let estimatedCostMicros: number | null = null;
       if (provider.id !== 'openai' && response.usage) {
         try {
           const providerKey = getProviderLimitKey(provider.id);
-          const estimatedCostMicros = estimateAiCostMicros({
+          estimatedCostMicros = estimateAiCostMicros({
             provider: providerKey,
             model: req.model,
             promptTokens: response.usage.prompt_tokens ?? 0,
@@ -78,6 +138,19 @@ const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: Ex
           }
         } catch (err) {
           logError(`[aiProviderRegistry] failed to record cost for provider=${provider.id}`, err);
+        }
+      }
+      if (provider.id !== 'openai') {
+        try {
+          await recordNonOpenAiUsage({
+            providerKey: getProviderLimitKey(provider.id),
+            model: req.model,
+            ctx: ctx as UsageAccountingContext,
+            response,
+            estimatedCostMicrosUsd: estimatedCostMicros,
+          });
+        } catch (err) {
+          logError(`[aiProviderRegistry] failed to record usage for provider=${provider.id}`, err);
         }
       }
       await finalizeAiCallAuthorization(ctx, authorization, {

@@ -5,6 +5,8 @@ providers:
     overall: 1000
     callers:
       PARSE_FLIGHT_TEXT: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
 
   OPENAI:
     window: hour

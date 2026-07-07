@@ -16,6 +16,13 @@ jest.mock('../../src/services/aiProviderConfigService', () => ({
   })),
 }));
 
+jest.mock('../../src/services/entitlementService', () => ({
+  recordUsage: jest.fn(async () => undefined),
+  reserveGenerationUsage: jest.fn(),
+  finalizeGenerationUsage: jest.fn(),
+  failGenerationUsage: jest.fn(),
+}));
+
 jest.mock('../../src/services/aiInvocationGuard', () => {
   const actual = jest.requireActual('../../src/services/aiInvocationGuard');
   return {
@@ -50,6 +57,7 @@ import * as providerBudgeting from '../../src/apis/providerBudgeting';
 import * as aiProviderConfigService from '../../src/services/aiProviderConfigService';
 import * as experimentConfigService from '../../src/ai/experiments/experimentConfigService';
 import * as circuitBreaker from '../../src/ai/experiments/circuitBreaker';
+import { recordUsage } from '../../src/services/entitlementService';
 import { getOrCreateAiExperimentAssignment } from '../../src/db';
 import type { AiExperiment } from '../../src/types';
 
@@ -64,6 +72,7 @@ const mockedGetRunningExperiment = experimentConfigService.getRunningExperiment 
 const mockedGetOrCreateAssignment = getOrCreateAiExperimentAssignment as jest.MockedFunction<typeof getOrCreateAiExperimentAssignment>;
 const mockedIsTripped = circuitBreaker.isExperimentVariantTripped as jest.MockedFunction<typeof circuitBreaker.isExperimentVariantTripped>;
 const mockedRecordOutcome = circuitBreaker.recordExperimentVariantOutcome as jest.MockedFunction<typeof circuitBreaker.recordExperimentVariantOutcome>;
+const mockedRecordUsage = recordUsage as jest.MockedFunction<typeof recordUsage>;
 
 const request: AiChatRequest = {
   model: 'fake-model',
@@ -120,6 +129,42 @@ describe('aiProviderRegistry cost recording', () => {
     });
   });
 
+  it('records per-user usage for a non-openai provider when usage accounting is enabled', async () => {
+    const fakeProvider: AiChatProvider = {
+      id: 'fake-anthropic',
+      supportedModels: ['fake-model'],
+      chatCompletion: jest.fn(async () => fakeResponse),
+    };
+    registerAiProviderForTesting(fakeProvider);
+
+    const provider = await resolveProvider('mail_parsing', 'INGESTION_LLM_EXTRACT');
+    await provider.chatCompletion(request, {
+      ...context,
+      usageAccountingEnabled: true,
+      usageWindowKey: '2026-07',
+      usageMetadata: { pipeline: 'registry-test' },
+    } as AiCallContext & { usageAccountingEnabled: boolean; usageWindowKey: string; usageMetadata: Record<string, unknown> });
+
+    expect(mockedRecordUsage).toHaveBeenCalledWith(
+      'user-1',
+      'api_calls_fake_anthropic',
+      1,
+      expect.objectContaining({ provider: 'FAKE_ANTHROPIC', model: 'fake-model', pipeline: 'registry-test' }),
+    );
+    expect(mockedRecordUsage).toHaveBeenCalledWith(
+      'user-1',
+      'fake_anthropic_tokens',
+      15,
+      expect.objectContaining({ provider: 'FAKE_ANTHROPIC' }),
+    );
+    expect(mockedRecordUsage).toHaveBeenCalledWith(
+      'user-1',
+      'fake_anthropic_estimated_cost_micros_usd',
+      45_000,
+      expect.objectContaining({ estimatedCostUsd: 0.045 }),
+    );
+  });
+
   it('does not record cost twice for the openai provider (it records internally)', async () => {
     mockedGetActiveAiProvider.mockResolvedValueOnce({
       featureKey: 'mail_parsing',
@@ -141,6 +186,7 @@ describe('aiProviderRegistry cost recording', () => {
     await provider.chatCompletion(request, { ...context, provider: 'openai' });
 
     expect(mockedRecordApiCost).not.toHaveBeenCalled();
+    expect(mockedRecordUsage).not.toHaveBeenCalled();
   });
 
   it('does not record cost when estimateAiCostMicros has no pricing for the model', async () => {
