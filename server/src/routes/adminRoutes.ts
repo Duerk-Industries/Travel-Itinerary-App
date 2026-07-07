@@ -59,7 +59,12 @@ const requireReason = (reason: unknown): string | null => {
 };
 
 const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract'] as const;
-const AI_RUNTIME_SETTING_KEYS = ['shadow_parse_sample_rate_percent', 'shadow_parse_monthly_budget_usd'] as const;
+const AI_RUNTIME_SETTING_DEFAULTS = {
+  shadow_parse_sample_rate_percent: '10',
+  shadow_parse_monthly_budget_usd: '20',
+  ai_aggregation_run_hour_utc: '3',
+} as const;
+const AI_RUNTIME_SETTING_KEYS = Object.keys(AI_RUNTIME_SETTING_DEFAULTS) as Array<keyof typeof AI_RUNTIME_SETTING_DEFAULTS>;
 const PROVIDER_ENV_KEYS: Record<string, string> = {
   openai: 'OPENAI_API_KEY',
   anthropic: 'ANTHROPIC_API_KEY',
@@ -307,7 +312,7 @@ router.get('/runtime-settings', async (_req, res) => {
       const row = await getAdminSetting(key);
       return row ?? {
         key,
-        value: key === 'shadow_parse_sample_rate_percent' ? '10' : '20',
+        value: AI_RUNTIME_SETTING_DEFAULTS[key],
         updatedBy: null,
         updatedAt: null,
         source: 'default',
@@ -345,6 +350,10 @@ router.patch('/runtime-settings', async (req, res) => {
     }
     if (key === 'shadow_parse_sample_rate_percent' && numeric > 100) {
       res.status(400).json({ error: `${key} must be between 0 and 100` });
+      return;
+    }
+    if (key === 'ai_aggregation_run_hour_utc' && (!Number.isInteger(numeric) || numeric > 23)) {
+      res.status(400).json({ error: `${key} must be an integer between 0 and 23` });
       return;
     }
   }

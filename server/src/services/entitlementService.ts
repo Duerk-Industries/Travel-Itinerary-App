@@ -111,6 +111,7 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
   for (const [key, value] of [
     ['shadow_parse_sample_rate_percent', '10'],
     ['shadow_parse_monthly_budget_usd', '20'],
+    ['ai_aggregation_run_hour_utc', '3'],
   ] as const) {
     if (!(await getAdminSetting(key))) {
       await setAdminSetting({ key, value, updatedBy: null });

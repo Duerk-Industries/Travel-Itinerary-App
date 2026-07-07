@@ -162,12 +162,3 @@ export const rollupAiAnalytics = async (params: { day: string; jobId?: string })
     })));
   }
 };
-
-export const startAiAnalyticsAggregationJob = (): NodeJS.Timeout => {
-  const intervalMs = 24 * 60 * 60 * 1000;
-  return setInterval(() => {
-    runAiDailyAggregation().catch((err) => {
-      logError('[ai-analytics] scheduled aggregation failed', err);
-    });
-  }, intervalMs);
-};
