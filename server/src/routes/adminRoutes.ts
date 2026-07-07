@@ -104,6 +104,44 @@ const getAiProviderOptions = (certifiedProviderIds = new Set<string>()) => {
     }));
 };
 
+const getRuntimeSettingNumber = async (key: keyof typeof AI_RUNTIME_SETTING_DEFAULTS): Promise<number> => {
+  const row = await getAdminSetting(key);
+  const parsed = Number(row?.value ?? AI_RUNTIME_SETTING_DEFAULTS[key]);
+  return Number.isFinite(parsed) ? parsed : Number(AI_RUNTIME_SETTING_DEFAULTS[key]);
+};
+
+const assertExperimentPromotionAllowed = async (experimentId: string, winningVariantId: string): Promise<string | null> => {
+  const experiment = await getAiExperiment(experimentId);
+  if (!experiment) return 'Experiment not found';
+  const controlVariantId = experiment.controlVariantId ?? experiment.variants[0]?.variantId;
+  if (!controlVariantId) return 'Experiment has no control variant';
+  if (winningVariantId === controlVariantId) return null;
+  const metrics = await listAiAbTestMetrics({ experimentId, limit: 1000 });
+  const latestByVariant = new Map<string, typeof metrics[number]>();
+  for (const metric of metrics) {
+    const current = latestByVariant.get(metric.variantId);
+    if (!current || metric.day > current.day) latestByVariant.set(metric.variantId, metric);
+  }
+  const winner = latestByVariant.get(winningVariantId);
+  const control = latestByVariant.get(controlVariantId);
+  if (!winner || !control) return 'Promotion requires metrics for both the winning and control variants';
+  const minSampleSize = Math.max(experiment.minSampleSize, 1);
+  if (winner.requestCount < minSampleSize || control.requestCount < minSampleSize) {
+    return `Promotion requires at least ${minSampleSize} requests for both winning and control variants`;
+  }
+  const minQualityDelta = await getRuntimeSettingNumber('ingestion_parsing_promotion_quality_delta_min');
+  if (winner.avgQualityScore - control.avgQualityScore < minQualityDelta) {
+    return `Promotion requires quality delta >= ${minQualityDelta}`;
+  }
+  const maxValidationErrorDelta = await getRuntimeSettingNumber('ingestion_parsing_promotion_validation_error_max');
+  const winnerFailureRate = 1 - winner.successRate;
+  const controlFailureRate = 1 - control.successRate;
+  if (winnerFailureRate - controlFailureRate > maxValidationErrorDelta) {
+    return `Promotion requires non-worse validation error rate (max delta ${maxValidationErrorDelta})`;
+  }
+  return null;
+};
+
 // ---------------------------------------------------------------------------
 // AI provider config
 // ---------------------------------------------------------------------------
@@ -334,16 +372,31 @@ router.patch('/experiments/:experimentId', async (req, res) => {
       res.status(404).json({ error: 'Experiment not found' });
       return;
     }
+    const nextWinningVariantId = typeof winningVariantId === 'string' ? winningVariantId : null;
+    if (nextWinningVariantId) {
+      const promotionError = await assertExperimentPromotionAllowed(experimentId, nextWinningVariantId);
+      if (promotionError) {
+        res.status(400).json({ error: promotionError });
+        return;
+      }
+    }
     const after = await updateAiExperimentStatus({
       experimentId,
       status,
-      winningVariantId: typeof winningVariantId === 'string' ? winningVariantId : null,
+      winningVariantId: nextWinningVariantId,
     });
     await writeAuditLog({
       actorUserId: actorId,
-      action: winningVariantId ? 'AI_EXPERIMENT_PROMOTED' : 'AI_EXPERIMENT_STATUS_CHANGED',
+      action: nextWinningVariantId ? 'AI_EXPERIMENT_PROMOTED' : 'AI_EXPERIMENT_STATUS_CHANGED',
       beforeState: { experiment: before },
-      afterState: { experiment: after, actorRole: actorRole ?? 'engineering_admin' },
+      afterState: {
+        experiment: after,
+        actorRole: actorRole ?? 'engineering_admin',
+        promotionThresholds: nextWinningVariantId ? {
+          qualityDeltaMin: await getRuntimeSettingNumber('ingestion_parsing_promotion_quality_delta_min'),
+          validationErrorMax: await getRuntimeSettingNumber('ingestion_parsing_promotion_validation_error_max'),
+        } : undefined,
+      },
       reason: reasonStr,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'] ?? null,

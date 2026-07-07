@@ -2,20 +2,74 @@ import React from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../../theme/theme';
 import { aiOpsStyles, cardStyle, inputStyle } from './shared';
-import type { AiProviderFeatureConfig, AiProviderOption } from './types';
+import type { AiProviderCertification, AiProviderFeatureConfig, AiProviderOption } from './types';
 
 export const AiOpsProviders: React.FC<{
   theme: AppTheme;
   features: AiProviderFeatureConfig[];
   providers: AiProviderOption[];
+  certifications: AiProviderCertification[];
+  certificationVersion: string;
+  certificationReason: string;
   drafts: Record<string, AiProviderFeatureConfig>;
   reasons: Record<string, string>;
   saving: string | null;
+  setCertificationVersion: (value: string) => void;
+  setCertificationReason: (value: string) => void;
   setDrafts: React.Dispatch<React.SetStateAction<Record<string, AiProviderFeatureConfig>>>;
   setReasons: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onSave: (featureKey: string) => void;
-}> = ({ theme, features, providers, drafts, reasons, saving, setDrafts, setReasons, onSave }) => (
+  onCertify: (providerId: string, revoke?: boolean) => void;
+}> = ({ theme, features, providers, certifications, certificationVersion, certificationReason, drafts, reasons, saving, setCertificationVersion, setCertificationReason, setDrafts, setReasons, onSave, onCertify }) => (
   <>
+    <View style={[aiOpsStyles.card, cardStyle(theme)]}>
+      <Text style={[aiOpsStyles.cardTitle, { color: theme.colors.text }]}>Provider Certification</Text>
+      <TextInput
+        style={[aiOpsStyles.input, inputStyle(theme)]}
+        value={certificationVersion}
+        onChangeText={setCertificationVersion}
+        placeholder="Contract suite version or git SHA"
+        placeholderTextColor={theme.colors.textMuted}
+      />
+      <TextInput
+        style={[aiOpsStyles.input, inputStyle(theme)]}
+        value={certificationReason}
+        onChangeText={setCertificationReason}
+        placeholder="Reason for audit log"
+        placeholderTextColor={theme.colors.textMuted}
+      />
+      {providers.map((provider) => {
+        const certification = certifications.find((item) => item.providerId === provider.id);
+        const unavailable = !provider.registered;
+        return (
+          <View key={provider.id} style={aiOpsStyles.compactRow}>
+            <Text style={[aiOpsStyles.cardTitle, { color: theme.colors.text }]}>{provider.id}</Text>
+            <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>
+              {provider.registered ? 'registered' : 'not registered'} - {provider.configured ? 'configured' : 'not configured'}
+              {certification ? ` - certified ${certification.contractSuiteVersion}` : ' - not certified'}
+            </Text>
+            <View style={aiOpsStyles.rowWrap}>
+              <TouchableOpacity
+                style={[aiOpsStyles.button, { backgroundColor: theme.colors.cta }, (saving === `certify-${provider.id}` || unavailable) && aiOpsStyles.disabled]}
+                disabled={saving === `certify-${provider.id}` || unavailable}
+                onPress={() => onCertify(provider.id)}
+              >
+                <Text style={aiOpsStyles.buttonText}>{certification ? 'Re-certify' : 'Certify'}</Text>
+              </TouchableOpacity>
+              {certification ? (
+                <TouchableOpacity
+                  style={[aiOpsStyles.button, { backgroundColor: theme.colors.alert }, saving === `certify-${provider.id}` && aiOpsStyles.disabled]}
+                  disabled={saving === `certify-${provider.id}`}
+                  onPress={() => onCertify(provider.id, true)}
+                >
+                  <Text style={aiOpsStyles.buttonText}>Revoke</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+        );
+      })}
+    </View>
     {features.map((feature) => {
       const draft = drafts[feature.featureKey] ?? feature;
       const selectedProvider = providers.find((provider) => provider.id === draft.provider);

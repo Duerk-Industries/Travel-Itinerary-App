@@ -11,6 +11,13 @@ export type AiOpsSection =
   | 'ai-audit-log';
 
 export type AiProviderOption = { id: string; configured: boolean; registered: boolean; certified?: boolean; supportedModels: string[] };
+export type AiProviderCertification = {
+  providerId: string;
+  certifiedAt: string;
+  certifiedBy?: string | null;
+  contractSuiteVersion: string;
+  notes?: string | null;
+};
 export type AiProviderFeatureConfig = {
   featureKey: string;
   provider: string;
@@ -44,6 +51,21 @@ export type AiExperiment = {
   experimentKind: string;
   status: string;
   variants: Array<{ variantId: string; trafficPercent: number; provider?: string; model?: string }>;
+  controlVariantId?: string | null;
+  minSampleSize?: number;
+  winningVariantId?: string | null;
+};
+export type AiAbTestMetric = {
+  experimentId: string;
+  variantId: string;
+  day: string;
+  requestCount: number;
+  successRate: number;
+  avgQualityScore: number;
+  avgCostUsd: number;
+  avgLatencyMs: number;
+  groundTruthAgreement?: number | null;
+  groundTruthSignal?: string | null;
 };
 export type AiRecommendation = {
   recommendationId: string;

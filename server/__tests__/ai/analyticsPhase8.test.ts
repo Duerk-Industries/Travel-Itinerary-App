@@ -4,7 +4,7 @@
 import { runAiDailyAggregation } from '../../src/ai/analytics/aggregationJob';
 import * as regressionDetectorModule from '../../src/ai/analytics/regressionDetector';
 import { detectAiMetricRegressions } from '../../src/ai/analytics/regressionDetector';
-import { listAiAnalyticsMetrics, upsertAiAnalyticsMetric } from '../../src/db';
+import { listAiAnalyticsMetrics, upsertAiAbTestMetric, upsertAiAnalyticsMetric } from '../../src/db';
 import { readLocalAiCaptureRecordsForDay } from '../../src/ai/analytics/captureBrowser';
 import type { AiAnalyticsMetric } from '../../src/types';
 
@@ -14,6 +14,7 @@ jest.mock('../../src/ai/analytics/captureBrowser', () => ({
 
 jest.mock('../../src/db', () => ({
   upsertAiAnalyticsMetric: jest.fn(async (metric) => ({ ...metric, updatedAt: '2026-07-04T00:00:00.000Z' })),
+  upsertAiAbTestMetric: jest.fn(async (metric) => ({ ...metric, updatedAt: '2026-07-04T00:00:00.000Z' })),
   listAiAnalyticsMetrics: jest.fn(async () => []),
 }));
 
@@ -26,6 +27,7 @@ const mockedLogger = require('../../src/logger') as { logError: jest.Mock; logIn
 
 const mockedReadCaptures = readLocalAiCaptureRecordsForDay as jest.MockedFunction<typeof readLocalAiCaptureRecordsForDay>;
 const mockedUpsert = upsertAiAnalyticsMetric as jest.MockedFunction<typeof upsertAiAnalyticsMetric>;
+const mockedUpsertAbMetric = upsertAiAbTestMetric as jest.MockedFunction<typeof upsertAiAbTestMetric>;
 const mockedListMetrics = listAiAnalyticsMetrics as jest.MockedFunction<typeof listAiAnalyticsMetrics>;
 
 describe('Phase 8 AI analytics', () => {
@@ -94,6 +96,64 @@ describe('Phase 8 AI analytics', () => {
     // that means the config wiring broke.
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ alertThresholdPercent: 80 }));
     spy.mockRestore();
+  });
+
+  it('rolls shadow experiment captures into daily A/B metrics by variant', async () => {
+    mockedReadCaptures.mockResolvedValue([
+      {
+        captureSchemaVersion: 1,
+        captureId: 'capture-exp-1',
+        featureKey: 'shadow_parse',
+        capturedAt: '2026-07-04T12:00:00.000Z',
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        callerId: 'LLM_SHADOW_PARSE',
+        outcome: 'success',
+        latencyMs: 1200,
+        payload: {
+          experimentId: 'exp-1',
+          variantId: 'llm_shadow',
+          estimatedCostUsd: 0.02,
+          comparison: { agreementRate: 0.9 },
+          groundTruthAgreement: 0.95,
+          groundTruthSignal: 'admin_review',
+        },
+      },
+      {
+        captureSchemaVersion: 1,
+        captureId: 'capture-exp-2',
+        featureKey: 'shadow_parse',
+        capturedAt: '2026-07-04T12:10:00.000Z',
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        callerId: 'LLM_SHADOW_PARSE',
+        outcome: 'failure',
+        latencyMs: 800,
+        payload: {
+          experimentId: 'exp-1',
+          variantId: 'llm_shadow',
+          estimatedCostUsd: 0.01,
+          comparison: { agreementRate: 0.7 },
+          groundTruthAgreement: 0.75,
+          groundTruthSignal: 'admin_review',
+        },
+      },
+    ]);
+
+    await runAiDailyAggregation({ day: '2026-07-04', jobId: 'job-test' });
+
+    expect(mockedUpsertAbMetric).toHaveBeenCalledWith({
+      experimentId: 'exp-1',
+      variantId: 'llm_shadow',
+      day: '2026-07-04',
+      requestCount: 2,
+      successRate: 0.5,
+      avgQualityScore: 80,
+      avgCostUsd: 0.015,
+      avgLatencyMs: 1000,
+      groundTruthAgreement: 0.85,
+      groundTruthSignal: 'admin_review',
+    });
   });
 
   it('logs and returns an error result when capture reads fail', async () => {

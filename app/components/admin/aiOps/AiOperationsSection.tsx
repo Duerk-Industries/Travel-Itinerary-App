@@ -14,9 +14,11 @@ import { AiOpsShadowReplay } from './AiOpsShadowReplay';
 import { AiOpsNav, aiOpsStyles } from './shared';
 import type {
   AiAnalyticsMetric,
+  AiAbTestMetric,
   AiCaptureItem,
   AiExperiment,
   AiOpsSection,
+  AiProviderCertification,
   AiProviderFeatureConfig,
   AiProviderOption,
   AiRecommendation,
@@ -52,7 +54,12 @@ export const AiOperationsSection: React.FC<{
   const [captureAnonymousUserIdQuery, setCaptureAnonymousUserIdQuery] = useState('');
   const [analytics, setAnalytics] = useState<AiAnalyticsMetric[]>([]);
   const [experiments, setExperiments] = useState<AiExperiment[]>([]);
+  const [experimentMetrics, setExperimentMetrics] = useState<AiAbTestMetric[]>([]);
   const [recommendations, setRecommendations] = useState<AiRecommendation[]>([]);
+  const [certifications, setCertifications] = useState<AiProviderCertification[]>([]);
+  const [providerCertificationVersion, setProviderCertificationVersion] = useState('');
+  const [providerCertificationReason, setProviderCertificationReason] = useState('');
+  const [experimentReason, setExperimentReason] = useState('');
   const [executiveSummary, setExecutiveSummary] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -81,12 +88,14 @@ export const AiOperationsSection: React.FC<{
       const loadedSettings = (Array.isArray(runtimeData.settings) ? runtimeData.settings : []) as AiRuntimeSetting[];
       setFeatures(loadedFeatures);
       setProviders((Array.isArray(data.providers) ? data.providers : []) as AiProviderOption[]);
+      setCertifications((Array.isArray(data.certifications) ? data.certifications : []) as AiProviderCertification[]);
       setDrafts(Object.fromEntries(loadedFeatures.map((item) => [item.featureKey, item])));
       setRuntimeSettings(loadedSettings);
       setRuntimeDrafts(Object.fromEntries(loadedSettings.map((item) => [item.key, item.value])));
       setCaptures((Array.isArray(capturesData.captures) ? capturesData.captures : []) as AiCaptureItem[]);
       setAnalytics((Array.isArray(analyticsData.metrics) ? analyticsData.metrics : []) as AiAnalyticsMetric[]);
       setExperiments((Array.isArray(experimentsData.experiments) ? experimentsData.experiments : []) as AiExperiment[]);
+      setExperimentMetrics((Array.isArray(experimentsData.metrics) ? experimentsData.metrics : []) as AiAbTestMetric[]);
       setRecommendations((Array.isArray(recommendationsData.recommendations) ? recommendationsData.recommendations : []) as AiRecommendation[]);
       setExecutiveSummary(executiveData.summary ?? null);
     } catch (err: any) {
@@ -180,6 +189,99 @@ export const AiOperationsSection: React.FC<{
     }
   };
 
+  const certifyProvider = async (providerId: string, revoke = false) => {
+    const reason = providerCertificationReason.trim();
+    if (reason.length < 3) {
+      setError('Reason is required.');
+      return;
+    }
+    if (!revoke && providerCertificationVersion.trim().length < 3) {
+      setError('Contract suite version is required.');
+      return;
+    }
+    setSaving(`certify-${providerId}`);
+    setError(null);
+    setSaveMsg(null);
+    try {
+      await apiFetch(backendUrl, headers, `/providers/${encodeURIComponent(providerId)}/certify`, {
+        method: revoke ? 'DELETE' : 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractSuiteVersion: providerCertificationVersion,
+          reason,
+        }),
+      });
+      setSaveMsg(revoke ? `Revoked ${providerId} certification` : `Certified ${providerId}`);
+      setProviderCertificationReason('');
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to update provider certification');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const createShadowExperiment = async () => {
+    const reason = experimentReason.trim();
+    if (reason.length < 3) {
+      setError('Reason is required.');
+      return;
+    }
+    setSaving('experiment-create');
+    setError(null);
+    setSaveMsg(null);
+    try {
+      await apiFetch(backendUrl, headers, '/experiments', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          featureKey: 'ingestion_llm_extract',
+          experimentKind: 'shadow_compare',
+          name: `Ingestion parser shadow compare ${new Date().toISOString().slice(0, 10)}`,
+          variants: [
+            { variantId: 'control', trafficPercent: 80 },
+            { variantId: 'llm_shadow', trafficPercent: 20 },
+          ],
+          controlVariantId: 'control',
+          minSampleSize: 200,
+          maxDurationDays: 30,
+          reason,
+        }),
+      });
+      setSaveMsg('Created shadow compare experiment');
+      setExperimentReason('');
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to create experiment');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const updateExperimentStatus = async (experiment: AiExperiment, status: string, winningVariantId?: string) => {
+    const reason = experimentReason.trim();
+    if (reason.length < 3) {
+      setError('Reason is required.');
+      return;
+    }
+    setSaving(`experiment-${experiment.experimentId}`);
+    setError(null);
+    setSaveMsg(null);
+    try {
+      await apiFetch(backendUrl, headers, `/experiments/${encodeURIComponent(experiment.experimentId)}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, winningVariantId, reason }),
+      });
+      setSaveMsg(`Updated ${experiment.name}`);
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to update experiment');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   if (loading) return <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>Loading...</Text>;
 
   return (
@@ -189,12 +291,12 @@ export const AiOperationsSection: React.FC<{
       {saveMsg ? <Text style={[aiOpsStyles.save, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
       <AiOpsNav active={aiOpsSection} theme={theme} onSelect={goToAiOps} />
       {aiOpsSection === 'overview' ? <AiOpsOverview theme={theme} providerCount={providers.length} experimentCount={experiments.length} recommendationCount={recommendations.length} metricCount={analytics.length} /> : null}
-      {aiOpsSection === 'providers' ? <AiOpsProviders theme={theme} features={features} providers={providers} drafts={drafts} reasons={reasons} saving={saving} setDrafts={setDrafts} setReasons={setReasons} onSave={saveProviderConfig} /> : null}
+      {aiOpsSection === 'providers' ? <AiOpsProviders theme={theme} features={features} providers={providers} certifications={certifications} certificationVersion={providerCertificationVersion} certificationReason={providerCertificationReason} drafts={drafts} reasons={reasons} saving={saving} setCertificationVersion={setProviderCertificationVersion} setCertificationReason={setProviderCertificationReason} setDrafts={setDrafts} setReasons={setReasons} onSave={saveProviderConfig} onCertify={certifyProvider} /> : null}
       {aiOpsSection === 'runtime-settings' ? <AiOpsRuntimeSettings theme={theme} settings={runtimeSettings} drafts={runtimeDrafts} reason={runtimeReason} saving={saving} setDrafts={setRuntimeDrafts} setReason={setRuntimeReason} onSave={saveRuntimeSettings} /> : null}
       {aiOpsSection === 'captures' ? <AiOpsCaptures theme={theme} captures={captures} captureQuery={captureQuery} anonymousUserIdQuery={captureAnonymousUserIdQuery} saving={saving} setCaptureQuery={setCaptureQuery} setAnonymousUserIdQuery={setCaptureAnonymousUserIdQuery} onSearch={searchCaptures} /> : null}
       {aiOpsSection === 'parser-quality' ? <AiOpsParserQuality theme={theme} analytics={analytics} saving={saving} onRefresh={refreshAnalytics} /> : null}
       {aiOpsSection === 'shadow-replay' ? <AiOpsShadowReplay theme={theme} analytics={analytics} saving={saving} onRefresh={refreshAnalytics} title="Shadow Replay" /> : null}
-      {aiOpsSection === 'experiments' ? <AiOpsExperiments theme={theme} experiments={experiments} /> : null}
+      {aiOpsSection === 'experiments' ? <AiOpsExperiments theme={theme} experiments={experiments} metrics={experimentMetrics} reason={experimentReason} saving={saving} setReason={setExperimentReason} onCreate={createShadowExperiment} onUpdateStatus={updateExperimentStatus} /> : null}
       {aiOpsSection === 'recommendations' ? <AiOpsRecommendations theme={theme} recommendations={recommendations} /> : null}
       {aiOpsSection === 'executive' ? <AiOpsExecutiveDashboard theme={theme} summary={executiveSummary} /> : null}
       {aiOpsSection === 'ai-audit-log' ? <AiOpsAiAuditLog theme={theme} /> : null}

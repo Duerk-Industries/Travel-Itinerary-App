@@ -1,4 +1,4 @@
-import { listAiAnalyticsMetrics, upsertAiAnalyticsMetric } from '../../db';
+import { listAiAnalyticsMetrics, upsertAiAbTestMetric, upsertAiAnalyticsMetric } from '../../db';
 import { logError, logInfo } from '../../logger';
 import type { AiAnalyticsMetric, AiAnalyticsPeriodType } from '../../types';
 import { getApiBudgetProviderConfig } from '../../config/apiLimits';
@@ -20,6 +20,44 @@ const increment = (map: Map<string, number>, key: string, amount = 1): void => {
 };
 
 const metricKey = (...parts: string[]): string => parts.join('\u001f');
+
+type AbMetricAccumulator = {
+  requestCount: number;
+  successCount: number;
+  qualityScoreSum: number;
+  qualityScoreCount: number;
+  costUsdSum: number;
+  latencyMsSum: number;
+  latencyCount: number;
+  groundTruthAgreementSum: number;
+  groundTruthAgreementCount: number;
+  groundTruthSignals: Map<string, number>;
+};
+
+const numberOrNull = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getComparisonQualityScore = (payload: Record<string, unknown>): number | null => {
+  const comparison = payload.comparison && typeof payload.comparison === 'object'
+    ? payload.comparison as Record<string, unknown>
+    : null;
+  const agreementRate = numberOrNull(comparison?.agreementRate);
+  return agreementRate == null ? null : agreementRate * 100;
+};
+
+const dominantSignal = (signals: Map<string, number>): string | null => {
+  let selected: string | null = null;
+  let selectedCount = -1;
+  for (const [signal, count] of signals) {
+    if (count > selectedCount) {
+      selected = signal;
+      selectedCount = count;
+    }
+  }
+  return selected;
+};
 
 const startOfWeek = (day: string): string => {
   const date = new Date(`${day}T00:00:00.000Z`);
@@ -75,6 +113,7 @@ export const runAiDailyAggregation = async (params: { day?: string; jobId?: stri
   const parser = new Map<string, number>();
   const field = new Map<string, number>();
   const cost = new Map<string, number>();
+  const abMetrics = new Map<string, AbMetricAccumulator>();
 
   for (const record of records) {
     const providerName = record.provider ?? 'unknown';
@@ -101,6 +140,48 @@ export const runAiDailyAggregation = async (params: { day?: string; jobId?: stri
     const estimatedCostUsd = Number(record.payload.estimatedCostUsd ?? 0);
     if (Number.isFinite(estimatedCostUsd) && estimatedCostUsd > 0) {
       increment(cost, metricKey(providerName, model, 'estimated_cost_usd'), estimatedCostUsd);
+    }
+
+    const experimentId = typeof record.payload.experimentId === 'string' ? record.payload.experimentId : null;
+    const variantId = typeof record.payload.variantId === 'string' ? record.payload.variantId : null;
+    if (experimentId && variantId) {
+      const key = metricKey(experimentId, variantId, day);
+      const current = abMetrics.get(key) ?? {
+        requestCount: 0,
+        successCount: 0,
+        qualityScoreSum: 0,
+        qualityScoreCount: 0,
+        costUsdSum: 0,
+        latencyMsSum: 0,
+        latencyCount: 0,
+        groundTruthAgreementSum: 0,
+        groundTruthAgreementCount: 0,
+        groundTruthSignals: new Map<string, number>(),
+      };
+      current.requestCount += 1;
+      if (record.outcome === 'success') current.successCount += 1;
+      const qualityScore = numberOrNull(record.payload.qualityScore) ?? getComparisonQualityScore(record.payload);
+      if (qualityScore != null) {
+        current.qualityScoreSum += qualityScore;
+        current.qualityScoreCount += 1;
+      }
+      if (Number.isFinite(estimatedCostUsd) && estimatedCostUsd > 0) current.costUsdSum += estimatedCostUsd;
+      const latencyMs = numberOrNull(record.latencyMs);
+      if (latencyMs != null) {
+        current.latencyMsSum += latencyMs;
+        current.latencyCount += 1;
+      }
+      const groundTruthAgreement = numberOrNull(record.payload.groundTruthAgreement)
+        ?? numberOrNull((record.payload.comparison as Record<string, unknown> | undefined)?.agreementRate);
+      if (groundTruthAgreement != null) {
+        current.groundTruthAgreementSum += groundTruthAgreement;
+        current.groundTruthAgreementCount += 1;
+      }
+      const groundTruthSignal = typeof record.payload.groundTruthSignal === 'string'
+        ? record.payload.groundTruthSignal
+        : groundTruthAgreement != null ? 'comparison' : 'none';
+      current.groundTruthSignals.set(groundTruthSignal, (current.groundTruthSignals.get(groundTruthSignal) ?? 0) + 1);
+      abMetrics.set(key, current);
     }
   }
 
@@ -132,6 +213,21 @@ export const runAiDailyAggregation = async (params: { day?: string; jobId?: stri
 
   try {
     const persisted = await Promise.all(metrics.map((metric) => upsertAiAnalyticsMetric(metric)));
+    await Promise.all(Array.from(abMetrics.entries()).map(([key, item]) => {
+      const [experimentId, variantId, metricDay] = key.split('\u001f');
+      return upsertAiAbTestMetric({
+        experimentId,
+        variantId,
+        day: metricDay,
+        requestCount: item.requestCount,
+        successRate: item.requestCount ? item.successCount / item.requestCount : 0,
+        avgQualityScore: item.qualityScoreCount ? item.qualityScoreSum / item.qualityScoreCount : 0,
+        avgCostUsd: item.requestCount ? item.costUsdSum / item.requestCount : 0,
+        avgLatencyMs: item.latencyCount ? item.latencyMsSum / item.latencyCount : 0,
+        groundTruthAgreement: item.groundTruthAgreementCount ? item.groundTruthAgreementSum / item.groundTruthAgreementCount : null,
+        groundTruthSignal: dominantSignal(item.groundTruthSignals),
+      });
+    }));
     await rollupAiAnalytics({ day, jobId });
     const baseline = await listAiAnalyticsMetrics({ periodType: 'day', limit: 500 });
     detectAiMetricRegressions({

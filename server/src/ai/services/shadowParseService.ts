@@ -80,6 +80,7 @@ export const maybeRunShadowParse = async (params: {
 
     const extractor = new LlmExtractor('ShadowLlmExtractor', 1, () => true);
     let llmResult: ExtractionResult;
+    const startedAt = Date.now();
     try {
       llmResult = await extractor.extract(params.doc, buildShadowConfig(params.doc));
       if (experimentContext) {
@@ -121,6 +122,7 @@ export const maybeRunShadowParse = async (params: {
       model: llmResult.usageMetrics.modelName ?? undefined,
       callerId: 'LLM_SHADOW_PARSE',
       outcome: 'success',
+      latencyMs: Math.max(0, Date.now() - startedAt),
       tokenUsage: {
         promptTokens: llmResult.usageMetrics.tokensIn,
         completionTokens: llmResult.usageMetrics.tokensOut,
@@ -129,6 +131,7 @@ export const maybeRunShadowParse = async (params: {
       payload: {
         experimentId: experimentContext?.experimentId,
         variantId: experimentContext?.variantId,
+        estimatedCostUsd: shadowCostUsd,
         comparison,
       },
     });
