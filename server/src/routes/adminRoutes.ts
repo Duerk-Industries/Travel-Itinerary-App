@@ -81,6 +81,8 @@ const AI_RUNTIME_SETTING_DEFAULTS = {
   recommendation_weight_quality_ingestion_llm_extract: '0.7',
   recommendation_weight_cost_ingestion_llm_extract: '0.3',
   recommendation_min_delta_threshold: '0.05',
+  ai_experiment_circuit_breaker_min_requests: '20',
+  ai_experiment_circuit_breaker_failure_rate_threshold: '0.25',
 } as const;
 const AI_RUNTIME_SETTING_KEYS = Object.keys(AI_RUNTIME_SETTING_DEFAULTS) as Array<keyof typeof AI_RUNTIME_SETTING_DEFAULTS>;
 const PROVIDER_ENV_KEYS: Record<string, string> = {

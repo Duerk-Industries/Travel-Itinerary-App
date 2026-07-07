@@ -1,36 +1,49 @@
-/**
- * @jest-environment node
- */
 /// <reference types="jest" />
-/// <reference types="node" />
 
-import fs from 'node:fs';
-import path from 'node:path';
+import { aiOpsScreenBySection, linking } from '../navigationConfig';
+import type { AiOpsSection } from '../components/admin/aiOps/types';
 
-const appTsxPath = path.join(path.resolve(__dirname, '..'), 'App.tsx');
+const aiOpsSections: AiOpsSection[] = [
+  'overview',
+  'providers',
+  'experiments',
+  'recommendations',
+  'captures',
+  'parser-quality',
+  'shadow-replay',
+  'executive',
+  'runtime-settings',
+  'ai-audit-log',
+];
 
 describe('AI Ops deep links', () => {
-  const source = fs.readFileSync(appTsxPath, 'utf8');
+  const screens = linking.config!.screens as Record<string, string>;
 
-  it('declares flat admin AI Ops routes for every nested section', () => {
-    for (const route of [
-      'admin/ai-ops',
-      'admin/ai-ops/providers',
-      'admin/ai-ops/experiments',
-      'admin/ai-ops/recommendations',
-      'admin/ai-ops/captures',
-      'admin/ai-ops/parser-quality',
-      'admin/ai-ops/shadow-replay',
-      'admin/ai-ops/executive',
-      'admin/ai-ops/runtime-settings',
-      'admin/ai-ops/ai-audit-log',
-    ]) {
-      expect(source).toContain(route);
+  it('covers every AiOpsSection value with no gaps', () => {
+    expect(Object.keys(aiOpsScreenBySection).sort()).toEqual([...aiOpsSections].sort());
+  });
+
+  it('maps every AI Ops section to a screen with a declared, unique path in the real linking config', () => {
+    const seenPaths = new Set<string>();
+    for (const section of aiOpsSections) {
+      const screen = aiOpsScreenBySection[section];
+      expect(screen).toBeTruthy();
+
+      const path = screens[screen];
+      expect(path).toBeTruthy();
+      expect(seenPaths.has(path)).toBe(false);
+      seenPaths.add(path);
     }
   });
 
-  it('threads nested AI Ops section changes back through navigation', () => {
-    expect(source).toContain('onAiOpsSectionChange');
-    expect(source).toContain('aiOpsScreenBySection');
+  it('nests every non-overview AI Ops path under admin/ai-ops/ and roots the overview at admin/ai-ops', () => {
+    for (const section of aiOpsSections) {
+      const path = screens[aiOpsScreenBySection[section]];
+      if (section === 'overview') {
+        expect(path).toBe('admin/ai-ops');
+      } else {
+        expect(path).toBe(`admin/ai-ops/${section}`);
+      }
+    }
   });
 });

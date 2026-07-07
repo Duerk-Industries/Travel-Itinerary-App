@@ -17,6 +17,8 @@ import { withAiSpan } from '../tracing';
 import { getRunningExperiment } from '../experiments/experimentConfigService';
 import { resolveExperimentVariant } from '../experiments/assignment';
 import { getOrCreateAiExperimentAssignment } from '../../db';
+import { isExperimentVariantTripped, recordExperimentVariantOutcome } from '../experiments/circuitBreaker';
+import type { AiExperiment } from '../../types';
 
 const providers = new Map<string, AiChatProvider>([
   [openaiProvider.id, openaiProvider],
@@ -25,7 +27,21 @@ const providers = new Map<string, AiChatProvider>([
   [zaiProvider.id, zaiProvider],
 ]);
 
-const wrapWithRegistryGuards = (provider: AiChatProvider): AiChatProvider => ({
+type ExperimentOutcomeContext = {
+  experimentId: string;
+  variantId: string;
+  controlVariantId: string;
+};
+
+const recordTrafficSplitOutcome = async (experimentContext: ExperimentOutcomeContext, success: boolean): Promise<void> => {
+  try {
+    await recordExperimentVariantOutcome({ ...experimentContext, success });
+  } catch (err) {
+    logError('[aiProviderRegistry] failed to record traffic_split circuit-breaker outcome', err);
+  }
+};
+
+const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: ExperimentOutcomeContext): AiChatProvider => ({
   ...provider,
   async chatCompletion(req: AiChatRequest, ctx: AiCallContext): Promise<AiChatResponse> {
     let authorization: Awaited<ReturnType<typeof authorizeAiCall>> | undefined;
@@ -70,9 +86,11 @@ const wrapWithRegistryGuards = (provider: AiChatProvider): AiChatProvider => ({
         responseId: response.id ?? null,
         usage: response.usage ?? null,
       });
+      if (experimentContext) await recordTrafficSplitOutcome(experimentContext, true);
       return response;
     } catch (err) {
       await failAiCallAuthorization(ctx, authorization, err);
+      if (experimentContext) await recordTrafficSplitOutcome(experimentContext, false);
       throw err;
     }
   },
@@ -85,20 +103,48 @@ export const registerAiProviderForTesting = (provider: AiChatProvider): void => 
 export const getRegisteredAiProviders = (): AiChatProvider[] =>
   Array.from(providers.values()).sort((a, b) => a.id.localeCompare(b.id));
 
+const resolveTrafficSplitVariant = async (
+  featureKey: string,
+  callerId: string,
+  trafficSplit: AiExperiment,
+): Promise<AiChatProvider | null> => {
+  const assignmentKey = `${featureKey}:${callerId}`;
+  const resolved = resolveExperimentVariant(assignmentKey, trafficSplit);
+  const assignment = await getOrCreateAiExperimentAssignment({
+    assignmentKey,
+    experimentId: trafficSplit.experimentId,
+    variantId: resolved.variantId,
+  });
+  // `assignment.variantId` is the source of truth, not `resolved` — it may
+  // point at a still-live treatment variant, OR it may have been rewritten
+  // to `controlVariantId` by the circuit breaker (circuitBreaker.ts) after
+  // this exact variant tripped. `resolved` is always a *fresh* recomputation
+  // of the original hash-based assignment and knows nothing about that
+  // rewrite. Falling back to `resolved` when the stored variant isn't found
+  // among `variants[]` (which happens whenever the assignment now points at
+  // control, since control is not itself a member of that list) would
+  // silently re-derive and re-route to the very variant that was just
+  // disabled — defeating the circuit breaker entirely for this experiment
+  // kind. If the stored assignment isn't a live treatment variant, this
+  // request is on control: fall through to the normal `ai_provider_config`
+  // path below, not back to `resolved`.
+  const assignedVariant = trafficSplit.variants.find((variant) => variant.variantId === assignment.variantId);
+  if (!assignedVariant) return null;
+  if (isExperimentVariantTripped(trafficSplit.experimentId, assignedVariant.variantId)) return null;
+  if (!assignedVariant.provider || !providers.has(assignedVariant.provider)) return null;
+  const controlVariantId = trafficSplit.controlVariantId ?? trafficSplit.variants[0]?.variantId ?? assignedVariant.variantId;
+  return wrapWithRegistryGuards(providers.get(assignedVariant.provider) ?? openaiProvider, {
+    experimentId: trafficSplit.experimentId,
+    variantId: assignedVariant.variantId,
+    controlVariantId,
+  });
+};
+
 export const resolveProvider = async (featureKey: string, _callerId: string): Promise<AiChatProvider> => {
   const trafficSplit = await getRunningExperiment(featureKey, 'traffic_split');
   if (trafficSplit) {
-    const assignmentKey = `${featureKey}:${_callerId}`;
-    const resolved = resolveExperimentVariant(assignmentKey, trafficSplit);
-    const assignment = await getOrCreateAiExperimentAssignment({
-      assignmentKey,
-      experimentId: trafficSplit.experimentId,
-      variantId: resolved.variantId,
-    });
-    const assignedVariant = trafficSplit.variants.find((variant) => variant.variantId === assignment.variantId) ?? resolved;
-    if (assignedVariant.provider && providers.has(assignedVariant.provider)) {
-      return wrapWithRegistryGuards(providers.get(assignedVariant.provider) ?? openaiProvider);
-    }
+    const resolvedProvider = await resolveTrafficSplitVariant(featureKey, _callerId, trafficSplit);
+    if (resolvedProvider) return resolvedProvider;
   }
   const active = await getActiveAiProvider(featureKey);
   return wrapWithRegistryGuards(providers.get(active.provider) ?? openaiProvider);

@@ -60,6 +60,7 @@ export const AiOperationsSection: React.FC<{
   const [providerCertificationVersion, setProviderCertificationVersion] = useState('');
   const [providerCertificationReason, setProviderCertificationReason] = useState('');
   const [experimentReason, setExperimentReason] = useState('');
+  const [recommendationReason, setRecommendationReason] = useState('');
   const [executiveSummary, setExecutiveSummary] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -282,6 +283,31 @@ export const AiOperationsSection: React.FC<{
     }
   };
 
+  const updateRecommendationStatus = async (recommendation: AiRecommendation, action: 'apply' | 'dismiss') => {
+    const reason = recommendationReason.trim();
+    if (reason.length < 3) {
+      setError('Reason is required.');
+      return;
+    }
+    setSaving(`recommendation-${recommendation.recommendationId}`);
+    setError(null);
+    setSaveMsg(null);
+    try {
+      await apiFetch(backendUrl, headers, `/recommendations/${encodeURIComponent(recommendation.recommendationId)}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, reason }),
+      });
+      setSaveMsg(action === 'apply' ? `Applied ${recommendation.recommendationType}` : `Dismissed ${recommendation.recommendationType}`);
+      setRecommendationReason('');
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to update recommendation');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   if (loading) return <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>Loading...</Text>;
 
   return (
@@ -297,7 +323,7 @@ export const AiOperationsSection: React.FC<{
       {aiOpsSection === 'parser-quality' ? <AiOpsParserQuality theme={theme} analytics={analytics} saving={saving} onRefresh={refreshAnalytics} /> : null}
       {aiOpsSection === 'shadow-replay' ? <AiOpsShadowReplay theme={theme} analytics={analytics} saving={saving} onRefresh={refreshAnalytics} title="Shadow Replay" /> : null}
       {aiOpsSection === 'experiments' ? <AiOpsExperiments theme={theme} experiments={experiments} metrics={experimentMetrics} reason={experimentReason} saving={saving} setReason={setExperimentReason} onCreate={createShadowExperiment} onUpdateStatus={updateExperimentStatus} /> : null}
-      {aiOpsSection === 'recommendations' ? <AiOpsRecommendations theme={theme} recommendations={recommendations} /> : null}
+      {aiOpsSection === 'recommendations' ? <AiOpsRecommendations theme={theme} recommendations={recommendations} reason={recommendationReason} saving={saving} setReason={setRecommendationReason} onApply={(recommendation) => updateRecommendationStatus(recommendation, 'apply')} onDismiss={(recommendation) => updateRecommendationStatus(recommendation, 'dismiss')} /> : null}
       {aiOpsSection === 'executive' ? <AiOpsExecutiveDashboard theme={theme} summary={executiveSummary} /> : null}
       {aiOpsSection === 'ai-audit-log' ? <AiOpsAiAuditLog theme={theme} /> : null}
     </View>

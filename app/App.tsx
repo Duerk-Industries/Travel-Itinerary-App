@@ -13,11 +13,20 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-context';
-import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
-import type { AiOpsSection } from './tabs/AdminTab';
+import {
+  adminScreenBySection,
+  adminSectionByScreen,
+  aiOpsScreenBySection,
+  linking,
+  navigationRef,
+  type AdminSectionRoute,
+  type AiOpsSectionRoute,
+  type RootStackParamList,
+} from './navigationConfig';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
@@ -186,99 +195,7 @@ type Page =
   | 'following'
   | 'admin';
 
-type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'ai-ops' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'billing';
-type AiOpsSectionRoute = AiOpsSection;
-
-type RootStackParamList = {
-  Main: undefined;
-  AdminOverview: undefined;
-  AdminUsers: undefined;
-  AdminTiers: undefined;
-  AdminFeatures: undefined;
-  AdminUserData: undefined;
-  AdminAuditLog: undefined;
-  AdminBilling: undefined;
-  AdminAiOpsOverview: undefined;
-  AdminAiOpsProviders: undefined;
-  AdminAiOpsExperiments: undefined;
-  AdminAiOpsRecommendations: undefined;
-  AdminAiOpsCaptures: undefined;
-  AdminAiOpsParserQuality: undefined;
-  AdminAiOpsShadowReplay: undefined;
-  AdminAiOpsExecutive: undefined;
-  AdminAiOpsRuntimeSettings: undefined;
-  AdminAiOpsAiAuditLog: undefined;
-};
-
 const RootStack = createNativeStackNavigator<RootStackParamList>();
-const navigationRef = createNavigationContainerRef<RootStackParamList>();
-
-const adminScreenBySection: Partial<Record<AdminSectionRoute, keyof RootStackParamList>> = {
-  overview: 'AdminOverview',
-  users: 'AdminUsers',
-  tiers: 'AdminTiers',
-  features: 'AdminFeatures',
-  'user-data': 'AdminUserData',
-  'audit-log': 'AdminAuditLog',
-  billing: 'AdminBilling',
-  'ai-ops': 'AdminAiOpsOverview',
-  // 'ingestion' and 'api-limits' are handled internally by AdminTab, no separate screen needed
-};
-
-const aiOpsScreenBySection: Record<AiOpsSectionRoute, keyof RootStackParamList> = {
-  overview: 'AdminAiOpsOverview',
-  providers: 'AdminAiOpsProviders',
-  experiments: 'AdminAiOpsExperiments',
-  recommendations: 'AdminAiOpsRecommendations',
-  captures: 'AdminAiOpsCaptures',
-  'parser-quality': 'AdminAiOpsParserQuality',
-  'shadow-replay': 'AdminAiOpsShadowReplay',
-  executive: 'AdminAiOpsExecutive',
-  'runtime-settings': 'AdminAiOpsRuntimeSettings',
-  'ai-audit-log': 'AdminAiOpsAiAuditLog',
-};
-
-const adminSectionByScreen: Partial<Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute>> = {
-  AdminOverview: 'overview',
-  AdminUsers: 'users',
-  AdminTiers: 'tiers',
-  AdminFeatures: 'features',
-  AdminUserData: 'user-data',
-  AdminAuditLog: 'audit-log',
-  AdminBilling: 'billing',
-  AdminAiOpsOverview: 'overview',
-};
-
-// IMPORTANT: this scheme MUST match `expo.scheme` in app.json, otherwise
-// React Navigation builds deep-link URLs that don't open the installed app.
-const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [
-    'travelitineraryplanner://',
-    ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
-  ],
-  config: {
-    screens: {
-      Main: '',
-      AdminOverview: 'admin',
-      AdminUsers: 'admin/users',
-      AdminTiers: 'admin/tiers',
-      AdminFeatures: 'admin/features',
-      AdminUserData: 'admin/user-data',
-      AdminAuditLog: 'admin/audit-log',
-      AdminBilling: 'admin/billing',
-      AdminAiOpsOverview: 'admin/ai-ops',
-      AdminAiOpsProviders: 'admin/ai-ops/providers',
-      AdminAiOpsExperiments: 'admin/ai-ops/experiments',
-      AdminAiOpsRecommendations: 'admin/ai-ops/recommendations',
-      AdminAiOpsCaptures: 'admin/ai-ops/captures',
-      AdminAiOpsParserQuality: 'admin/ai-ops/parser-quality',
-      AdminAiOpsShadowReplay: 'admin/ai-ops/shadow-replay',
-      AdminAiOpsExecutive: 'admin/ai-ops/executive',
-      AdminAiOpsRuntimeSettings: 'admin/ai-ops/runtime-settings',
-      AdminAiOpsAiAuditLog: 'admin/ai-ops/ai-audit-log',
-    },
-  },
-};
 
 const resolveBackendUrl = (): string =>
   resolveConfiguredBackendUrl({

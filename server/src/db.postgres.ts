@@ -9490,8 +9490,8 @@ export const updateAiRecommendationStatus = async (params: {
 
 export const updateAiRecommendationOutcome = async (params: {
   recommendationId: string;
-  outcomeQualityDelta: number;
-  outcomeCostDeltaUsdMonthly: number;
+  outcomeQualityDelta: number | null;
+  outcomeCostDeltaUsdMonthly: number | null;
   measuredAt?: string;
 }): Promise<AiRecommendation> => {
   const p = getPool();
