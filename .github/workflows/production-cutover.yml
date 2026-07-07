@@ -1,0 +1,40 @@
+name: Production Path - Cutover
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_manifest:
+        description: "Path to release manifest validated in test"
+        required: true
+      test_evidence:
+        description: "Path to release-test-evidence.json"
+        required: true
+      staged:
+        description: "Use staged traffic shift"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+jobs:
+  cutover:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate gcloud
+        run: |
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/gcp-service-account.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/gcp-service-account.json"
+          gcloud config set project "$GCLOUD_PROJECT_ID"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
+      - name: Cut over test release to production
+        run: |
+          args=(--release-manifest "${{ inputs.release_manifest }}" --test-evidence "${{ inputs.test_evidence }}")
+          if [[ "${{ inputs.staged }}" == "true" ]]; then args+=(--staged); fi
+          bash scripts/cutover-test-to-prod.sh "${args[@]}"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}

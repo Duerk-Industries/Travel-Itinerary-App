@@ -1,0 +1,33 @@
+name: Production Path - Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_manifest:
+        description: "Manifest paired to the rollback target"
+        required: true
+      revision:
+        description: "Cloud Run revision to receive 100% traffic"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate gcloud
+        run: |
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/gcp-service-account.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/gcp-service-account.json"
+          gcloud config set project "$GCLOUD_PROJECT_ID"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
+      - name: Roll back production
+        run: bash scripts/rollback.sh --release-manifest "${{ inputs.release_manifest }}" --revision "${{ inputs.revision }}"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}

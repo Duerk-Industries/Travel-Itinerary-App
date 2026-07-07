@@ -1,0 +1,48 @@
+name: Production Path - Deploy Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      reseed:
+        description: "Reseed synthetic fixture data"
+        required: false
+        default: "false"
+      release_manifest:
+        description: "Optional existing release manifest path"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Authenticate gcloud
+        run: |
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/gcp-service-account.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/gcp-service-account.json"
+          gcloud config set project "$GCLOUD_PROJECT_ID"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
+      - name: Deploy test
+        run: |
+          args=()
+          if [[ "${{ inputs.reseed }}" == "true" ]]; then args+=(--reseed); fi
+          if [[ -n "${{ inputs.release_manifest }}" ]]; then args+=(--release-manifest "${{ inputs.release_manifest }}"); fi
+          bash scripts/deploy-test.sh "${args[@]}"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase-11-release-output
+          path: dist/release

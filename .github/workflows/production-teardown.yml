@@ -1,0 +1,30 @@
+name: Production Path - Teardown Old Revisions
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type yes-delete to remove old 0%-traffic revisions"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate gcloud
+        run: |
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/gcp-service-account.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/gcp-service-account.json"
+          gcloud config set project "$GCLOUD_PROJECT_ID"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
+      - name: Teardown old production revisions
+        run: bash scripts/teardown-old-production.sh --confirm "${{ inputs.confirm }}"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}

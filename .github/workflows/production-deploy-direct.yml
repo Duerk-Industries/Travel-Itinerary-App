@@ -1,0 +1,42 @@
+name: Production Path - Direct Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Emergency reason for bypassing test cutover"
+        required: true
+      release_manifest:
+        description: "Optional existing release manifest path"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-direct:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Authenticate gcloud
+        run: |
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/gcp-service-account.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/gcp-service-account.json"
+          gcloud config set project "$GCLOUD_PROJECT_ID"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
+      - name: Direct production deploy
+        run: |
+          args=(--reason "${{ inputs.reason }}")
+          if [[ -n "${{ inputs.release_manifest }}" ]]; then args+=(--release-manifest "${{ inputs.release_manifest }}"); fi
+          bash scripts/deploy-prod.sh "${args[@]}"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}

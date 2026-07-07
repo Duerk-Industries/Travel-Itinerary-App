@@ -1,0 +1,21 @@
+# Copy to scripts/deploy.config and fill in real values. scripts/deploy.config
+# is intentionally git-ignored.
+
+ARTIFACT_REGISTRY_REPO=us-east5-docker.pkg.dev/travel-itinerary-app-483623/travel-itinerary-app
+ROLLBACK_RETENTION_DAYS=7
+
+TEST_SERVICE_NAME=travel-itinerary-app-test
+TEST_REGION=us-east5
+TEST_HOSTING_SITE=travel-itinerary-app-test
+TEST_DOMAIN=https://test.duerk.org
+TEST_FIRESTORE_DATABASE_ID=travel-itinerary-app-test-database
+TEST_RUNTIME_SERVICE_ACCOUNT=travel-itinerary-app-test-sa@travel-itinerary-app-483623.iam.gserviceaccount.com
+TEST_AI_CAPTURE_BUCKET=travel-itinerary-app-test-ai-captures
+
+PROD_SERVICE_NAME=travel-itinerary-app
+PROD_REGION=us-east5
+PROD_HOSTING_SITE=travel-itinerary-app
+PROD_DOMAIN=https://duerk.org
+PROD_FIRESTORE_DATABASE_ID=travel-itinerary-app-database
+PROD_RUNTIME_SERVICE_ACCOUNT=travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com
+PROD_AI_CAPTURE_BUCKET=travel-itinerary-app-ai-captures
