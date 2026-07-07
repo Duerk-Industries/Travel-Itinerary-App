@@ -3580,7 +3580,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           openAdminSection(nextSection as AdminSectionRoute);
         }}
         onAiOpsSectionChange={(nextSection) => {
-          const screen = aiOpsScreenBySection[nextSection];
+          const screen = aiOpsScreenBySection[nextSection as AiOpsSectionRoute];
           if (screen && navigationRef.isReady()) {
             navigationRef.navigate(screen as any);
           }
