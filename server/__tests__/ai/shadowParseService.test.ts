@@ -5,6 +5,7 @@ import type { ExtractionResult, NormalizedDocument } from '../../src/ingestion/c
 import { captureAiInteraction } from '../../src/ai/capture/captureService';
 import { compareExtractionResults } from '../../src/ai/evaluation/comparisonEngine';
 import { maybeRunShadowParse, __shadowParseShouldSampleForTests } from '../../src/ai/services/shadowParseService';
+import { getRunningExperiment } from '../../src/ai/experiments/experimentConfigService';
 
 jest.mock('../../src/db', () => ({
   getAdminSetting: jest.fn(async (key: string) => {
@@ -12,6 +13,16 @@ jest.mock('../../src/db', () => ({
     if (key === 'shadow_parse_monthly_budget_usd') return { key, value: '20', updatedAt: new Date().toISOString() };
     return null;
   }),
+  getOrCreateAiExperimentAssignment: jest.fn(async (assignment) => ({
+    assignmentKey: assignment.assignmentKey,
+    experimentId: assignment.experimentId,
+    variantId: assignment.variantId,
+    assignedAt: '2026-07-04T00:00:00.000Z',
+  })),
+}));
+
+jest.mock('../../src/ai/experiments/experimentConfigService', () => ({
+  getRunningExperiment: jest.fn(async () => null),
 }));
 
 jest.mock('../../src/apis/providerBudgeting', () => ({
@@ -65,6 +76,8 @@ jest.mock('../../src/ingestion/extraction/llmExtractor', () => ({
 }));
 
 const mockedCapture = captureAiInteraction as jest.MockedFunction<typeof captureAiInteraction>;
+const mockedGetRunningExperiment = getRunningExperiment as jest.MockedFunction<typeof getRunningExperiment>;
+const mockedDb = require('../../src/db') as { getAdminSetting: jest.Mock };
 const providerBudgeting = require('../../src/apis/providerBudgeting') as {
   getCurrentApiBudgetStatus: jest.Mock;
   recordApiCost: jest.Mock;
@@ -120,6 +133,12 @@ const productionResult: ExtractionResult = {
 describe('shadowParseService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedGetRunningExperiment.mockResolvedValue(null);
+    mockedDb.getAdminSetting.mockImplementation(async (key: string) => {
+      if (key === 'shadow_parse_sample_rate_percent') return { key, value: '100', updatedAt: new Date().toISOString() };
+      if (key === 'shadow_parse_monthly_budget_usd') return { key, value: '20', updatedAt: new Date().toISOString() };
+      return null;
+    });
   });
 
   it('returns void and writes shadow output only through capture', async () => {
@@ -172,6 +191,39 @@ describe('shadowParseService', () => {
 
     await expect(maybeRunShadowParse({ intakeId: 'intake-1', doc, productionResult, randomValue: 0 })).resolves.toBeUndefined();
     expect(mockedCapture).not.toHaveBeenCalled();
+  });
+
+  it('uses a running shadow experiment instead of the global sample rate and tags the capture', async () => {
+    mockedDb.getAdminSetting.mockImplementation(async (key: string) => {
+      if (key === 'shadow_parse_sample_rate_percent') return { key, value: '0', updatedAt: new Date().toISOString() };
+      if (key === 'shadow_parse_monthly_budget_usd') return { key, value: '20', updatedAt: new Date().toISOString() };
+      return null;
+    });
+    mockedGetRunningExperiment.mockResolvedValueOnce({
+      experimentId: 'exp-shadow',
+      featureKey: 'ingestion_llm_extract',
+      experimentKind: 'shadow_compare',
+      name: 'Shadow compare',
+      status: 'running',
+      controlVariantId: 'control',
+      variants: [
+        { variantId: 'llm_shadow', trafficPercent: 100 },
+        { variantId: 'control', trafficPercent: 0 },
+      ],
+      minSampleSize: 200,
+      maxDurationDays: 30,
+      createdAt: '2026-07-04T00:00:00.000Z',
+      updatedAt: '2026-07-04T00:00:00.000Z',
+    });
+
+    await maybeRunShadowParse({ intakeId: 'intake-1', doc, productionResult, randomValue: 0.99 });
+
+    expect(mockedCapture).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({
+        experimentId: 'exp-shadow',
+        variantId: 'llm_shadow',
+      }),
+    }));
   });
 
   it('sampling helper respects configured percentage deterministically', () => {

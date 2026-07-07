@@ -1011,6 +1011,40 @@ describe('Admin routes', () => {
     });
   });
 
+  describe('AI provider certification routes', () => {
+    it('requires contract metadata and writes an audit entry when certifying a provider', async () => {
+      await request(app)
+        .post('/api/admin/providers/openai/certify')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'Missing contract suite version' })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).toMatch(/contractSuiteVersion/i);
+        });
+
+      const reason = `Certify OpenAI provider ${Date.now()}`;
+      await request(app)
+        .post('/api/admin/providers/openai/certify')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          contractSuiteVersion: 'contract-suite-route-test',
+          reason,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.certification).toEqual(expect.objectContaining({
+            providerId: 'openai',
+            contractSuiteVersion: 'contract-suite-route-test',
+          }));
+        });
+
+      const audit = await listAuditLog({ action: 'AI_PROVIDER_CERTIFIED' as any });
+      const entry = audit.entries.find((item) => item.actorUserId === adminUserId && item.reason === reason);
+      expect(entry).toBeTruthy();
+      expect((entry!.afterState as any).certification.providerId).toBe('openai');
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // GET /api/admin/ingestion-queue-depth
   // ---------------------------------------------------------------------------
