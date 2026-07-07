@@ -11,7 +11,7 @@ CONFIRM=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
-    --confirm) CONFIRM="$2"; shift 2 ;;
+    --confirm) CONFIRM="${2%$'\r'}"; shift 2 ;;
     *) fail "Unknown argument: $1" ;;
   esac
 done

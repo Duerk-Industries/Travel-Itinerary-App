@@ -10,7 +10,8 @@ describe('Phase 11 rollback pairing', () => {
   it('requires a release manifest and never uses bare Firebase Hosting rollback', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/rollback.sh'), 'utf8');
     expect(source).toMatch(/--release-manifest is required/);
-    expect(source).toContain('frontendArtifact');
+    expect(source).toContain('prepare_frontend_from_manifest');
+    expect(source).toContain('firebase.hosting.generated.json');
     expect(source).not.toMatch(/hosting:rollback|firebase hosting:rollback/);
   });
 });

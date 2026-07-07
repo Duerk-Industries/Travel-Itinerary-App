@@ -28,6 +28,9 @@ require_github_actor "$DRY_RUN"
 node -e "const v=require('./scripts/lib/phase11-validators'); const m=v.readJson(process.argv[1]); const e=v.readJson(process.argv[2]); v.validateReleaseManifest(m); v.validateTestEvidence(m,e);" "$MANIFEST" "$EVIDENCE"
 
 BACKEND_DIGEST="$(json_get "$MANIFEST" backendImageDigest)"
+WORK_DIR="$REPO_ROOT/dist/cutover-prod"
+prepare_frontend_from_manifest "$MANIFEST" "$WORK_DIR/frontend"
+write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE" "$WORK_DIR/frontend" "$PROD_SERVICE_NAME" "$PROD_REGION"
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$PROD_SERVICE_NAME" --image "$BACKEND_DIGEST" --region "$PROD_REGION" --no-traffic --tag candidate --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT"
   bash "$SCRIPT_DIR/smoke-test.sh" --base-url "$PROD_DOMAIN" --environment prod-candidate
@@ -38,7 +41,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
   else
     gcloud run services update-traffic "$PROD_SERVICE_NAME" --region "$PROD_REGION" --to-tags candidate=100
   fi
-  firebase deploy --only hosting
+  firebase deploy --config "$WORK_DIR/firebase.hosting.generated.json" --only hosting
   bash "$SCRIPT_DIR/smoke-test.sh" --base-url "$PROD_DOMAIN" --environment production
 fi
 write_log_json "$REPO_ROOT/dist/release/cutover-$(date -u +%Y%m%d%H%M%S).json" \

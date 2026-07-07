@@ -35,11 +35,9 @@ FRONTEND_ARTIFACT="$(json_get "$MANIFEST" frontendArtifact)"
 FRONTEND_SHA="$(json_get "$MANIFEST" frontendSha256)"
 CONFIG_FINGERPRINT="$(json_get "$MANIFEST" configFingerprint)"
 WORK_DIR="$REPO_ROOT/dist/deploy-test"
-mkdir -p "$WORK_DIR/frontend"
-tar -xzf "$FRONTEND_ARTIFACT" -C "$WORK_DIR/frontend"
-ACTUAL_FRONTEND_SHA="$(sha256_file "$FRONTEND_ARTIFACT")"
-[[ "$ACTUAL_FRONTEND_SHA" == "$FRONTEND_SHA" ]] || fail "Frontend artifact checksum mismatch"
+prepare_frontend_from_manifest "$MANIFEST" "$WORK_DIR/frontend"
 render_template "$SCRIPT_DIR/firebase.hosting.test.template.json" "$WORK_DIR/firebase.hosting.test.json"
+write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$TEST_HOSTING_SITE" "$WORK_DIR/frontend" "$TEST_SERVICE_NAME" "$TEST_REGION"
 
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$TEST_SERVICE_NAME" \
@@ -51,6 +49,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
   if [[ "$RESEED" == "1" ]]; then
     (cd "$REPO_ROOT" && npm run accounts:seed)
   fi
+  firebase deploy --config "$WORK_DIR/firebase.hosting.generated.json" --only hosting
   bash "$SCRIPT_DIR/smoke-test.sh" --base-url "$TEST_DOMAIN" --environment test
 fi
 

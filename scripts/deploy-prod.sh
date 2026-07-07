@@ -33,6 +33,9 @@ if [[ -z "$MANIFEST" ]]; then
 fi
 node -e "const v=require('./scripts/lib/phase11-validators'); v.validateReleaseManifest(v.readJson(process.argv[1]));" "$MANIFEST"
 BACKEND_DIGEST="$(json_get "$MANIFEST" backendImageDigest)"
+WORK_DIR="$REPO_ROOT/dist/deploy-prod"
+prepare_frontend_from_manifest "$MANIFEST" "$WORK_DIR/frontend"
+write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE" "$WORK_DIR/frontend" "$PROD_SERVICE_NAME" "$PROD_REGION"
 
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$PROD_SERVICE_NAME" \
@@ -40,7 +43,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
     --region "$PROD_REGION" \
     --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" \
     --update-env-vars "WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET"
-  firebase deploy --only "hosting:$PROD_HOSTING_SITE"
+  firebase deploy --config "$WORK_DIR/firebase.hosting.generated.json" --only hosting
 fi
 
 write_log_json "$REPO_ROOT/dist/release/direct-prod-deploy-$(date -u +%Y%m%d%H%M%S).json" \

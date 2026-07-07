@@ -10,6 +10,7 @@ describe('Phase 11 teardown safety', () => {
   it('requires typed confirmation and skips nonzero-traffic revisions', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/teardown-old-production.sh'), 'utf8');
     expect(source).toContain('yes-delete');
+    expect(source).toContain('CONFIRM="${2%$\'\\r\'}"');
     expect(source).toMatch(/traffic.*!= "0"/);
     expect(source).toContain('gcloud run revisions delete');
   });
