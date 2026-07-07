@@ -6,6 +6,10 @@ import { getApiBudgetWindowKey, getCurrentApiBudgetStatus, recordApiCost } from 
 import { logError, logInfo } from '../../logger';
 import { captureAiInteraction } from '../capture/captureService';
 import { compareExtractionResults } from '../evaluation/comparisonEngine';
+import { getRunningExperiment } from '../experiments/experimentConfigService';
+import { resolveExperimentVariant } from '../experiments/assignment';
+import { getOrCreateAiExperimentAssignment } from '../../db';
+import { isExperimentVariantTripped, recordExperimentVariantOutcome } from '../experiments/circuitBreaker';
 
 const DEFAULT_SAMPLE_RATE_PERCENT = 10;
 const DEFAULT_SHADOW_BUDGET_USD = 20;
@@ -40,8 +44,28 @@ export const maybeRunShadowParse = async (params: {
   randomValue?: number;
 }): Promise<void> => {
   try {
-    const sampleRatePercent = await parseSettingNumber('shadow_parse_sample_rate_percent', DEFAULT_SAMPLE_RATE_PERCENT);
-    if (!shouldSample(sampleRatePercent, params.randomValue)) return;
+    const runningExperiment = await getRunningExperiment('ingestion_llm_extract', 'shadow_compare');
+    let experimentContext: { experimentId: string; variantId: string; controlVariantId: string } | null = null;
+    if (runningExperiment) {
+      const assignmentKey = params.doc.userId ?? params.doc.normalizedContentHash ?? params.intakeId;
+      const resolved = resolveExperimentVariant(assignmentKey, runningExperiment);
+      const assignment = await getOrCreateAiExperimentAssignment({
+        assignmentKey,
+        experimentId: runningExperiment.experimentId,
+        variantId: resolved.variantId,
+      });
+      const controlVariantId = runningExperiment.controlVariantId ?? runningExperiment.variants[0]?.variantId ?? assignment.variantId;
+      if (assignment.variantId === controlVariantId) return;
+      if (isExperimentVariantTripped(runningExperiment.experimentId, assignment.variantId)) return;
+      experimentContext = {
+        experimentId: runningExperiment.experimentId,
+        variantId: assignment.variantId,
+        controlVariantId,
+      };
+    } else {
+      const sampleRatePercent = await parseSettingNumber('shadow_parse_sample_rate_percent', DEFAULT_SAMPLE_RATE_PERCENT);
+      if (!shouldSample(sampleRatePercent, params.randomValue)) return;
+    }
 
     const budgetLimitUsd = await parseSettingNumber('shadow_parse_monthly_budget_usd', DEFAULT_SHADOW_BUDGET_USD);
     const budgetStatus = await getCurrentApiBudgetStatus('SHADOW_PARSE');
@@ -55,7 +79,18 @@ export const maybeRunShadowParse = async (params: {
     loggedBudgetExhausted = false;
 
     const extractor = new LlmExtractor('ShadowLlmExtractor', 1, () => true);
-    const llmResult = await extractor.extract(params.doc, buildShadowConfig(params.doc));
+    let llmResult: ExtractionResult;
+    try {
+      llmResult = await extractor.extract(params.doc, buildShadowConfig(params.doc));
+      if (experimentContext) {
+        await recordExperimentVariantOutcome({ ...experimentContext, success: true });
+      }
+    } catch (err) {
+      if (experimentContext) {
+        await recordExperimentVariantOutcome({ ...experimentContext, success: false });
+      }
+      throw err;
+    }
 
     // The underlying LLM call itself is recorded under the real provider's cost
     // bucket (e.g. OPENAI) by postOpenAiChatCompletion — that's correct for the
@@ -92,6 +127,8 @@ export const maybeRunShadowParse = async (params: {
         totalTokens: llmResult.usageMetrics.tokensIn + llmResult.usageMetrics.tokensOut,
       },
       payload: {
+        experimentId: experimentContext?.experimentId,
+        variantId: experimentContext?.variantId,
         comparison,
       },
     });

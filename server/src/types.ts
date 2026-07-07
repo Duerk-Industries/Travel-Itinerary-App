@@ -125,6 +125,91 @@ export interface AiAnalyticsMetric {
   updatedAt: string;
 }
 
+export type AiExperimentKind = 'shadow_compare' | 'traffic_split';
+export type AiExperimentStatus = 'draft' | 'running' | 'paused' | 'completed';
+
+export interface AiExperimentVariant {
+  variantId: string;
+  provider?: string;
+  model?: string;
+  promptVersion?: string;
+  parserVersion?: string;
+  trafficPercent: number;
+}
+
+export interface AiExperiment {
+  experimentId: string;
+  featureKey: string;
+  experimentKind: AiExperimentKind;
+  name: string;
+  status: AiExperimentStatus;
+  variants: AiExperimentVariant[];
+  controlVariantId?: string | null;
+  minSampleSize: number;
+  maxDurationDays: number;
+  startedAt?: string | null;
+  endsAt?: string | null;
+  winningVariantId?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiExperimentAssignment {
+  assignmentKey: string;
+  experimentId: string;
+  variantId: string;
+  originalVariantId?: string | null;
+  assignedAt: string;
+  reassignedAt?: string | null;
+}
+
+export interface AiAbTestMetric {
+  experimentId: string;
+  variantId: string;
+  day: string;
+  requestCount: number;
+  successRate: number;
+  avgQualityScore: number;
+  avgCostUsd: number;
+  avgLatencyMs: number;
+  groundTruthAgreement?: number | null;
+  groundTruthSignal?: string | null;
+  updatedAt: string;
+}
+
+export interface AiProviderCertification {
+  providerId: string;
+  certifiedAt: string;
+  certifiedBy?: string | null;
+  contractSuiteVersion: string;
+  notes?: string | null;
+}
+
+export type AiRecommendationStatus = 'proposed' | 'applied' | 'dismissed' | 'expired';
+
+export interface AiRecommendation {
+  recommendationId: string;
+  recommendationType: string;
+  featureKey: string;
+  subjectCurrent: Record<string, unknown>;
+  subjectProposed: Record<string, unknown>;
+  rationale: string;
+  qualityDeltaEstimate: number;
+  costDeltaEstimateUsdMonthly: number;
+  confidence: 'low' | 'medium' | 'high' | string;
+  supportingEvidenceRef?: string | null;
+  supportingEvidenceQuery?: Record<string, unknown> | null;
+  engineVersion: string;
+  status: AiRecommendationStatus;
+  createdAt: string;
+  respondedBy?: string | null;
+  respondedAt?: string | null;
+  outcomeMeasuredAt?: string | null;
+  outcomeQualityDelta?: number | null;
+  outcomeCostDeltaUsdMonthly?: number | null;
+}
+
 export interface UsageCounter {
   id: string;
   userId: string;
@@ -157,6 +242,13 @@ export type AuditAction =
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
   | 'AI_PROVIDER_CONFIG_UPDATED'
+  | 'AI_PROVIDER_CERTIFIED'
+  | 'AI_PROVIDER_CERTIFICATION_REVOKED'
+  | 'AI_EXPERIMENT_CREATED'
+  | 'AI_EXPERIMENT_STATUS_CHANGED'
+  | 'AI_EXPERIMENT_PROMOTED'
+  | 'AI_RECOMMENDATION_APPLIED'
+  | 'AI_RECOMMENDATION_DISMISSED'
   | 'ADMIN_SETTING_UPDATED'
   | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'

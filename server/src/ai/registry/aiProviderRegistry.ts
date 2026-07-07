@@ -14,6 +14,9 @@ import { getProviderLimitKey } from '../../services/aiInvocationGuard';
 import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from '../../apis/providerBudgeting';
 import { logError } from '../../logger';
 import { withAiSpan } from '../tracing';
+import { getRunningExperiment } from '../experiments/experimentConfigService';
+import { resolveExperimentVariant } from '../experiments/assignment';
+import { getOrCreateAiExperimentAssignment } from '../../db';
 
 const providers = new Map<string, AiChatProvider>([
   [openaiProvider.id, openaiProvider],
@@ -83,6 +86,20 @@ export const getRegisteredAiProviders = (): AiChatProvider[] =>
   Array.from(providers.values()).sort((a, b) => a.id.localeCompare(b.id));
 
 export const resolveProvider = async (featureKey: string, _callerId: string): Promise<AiChatProvider> => {
+  const trafficSplit = await getRunningExperiment(featureKey, 'traffic_split');
+  if (trafficSplit) {
+    const assignmentKey = `${featureKey}:${_callerId}`;
+    const resolved = resolveExperimentVariant(assignmentKey, trafficSplit);
+    const assignment = await getOrCreateAiExperimentAssignment({
+      assignmentKey,
+      experimentId: trafficSplit.experimentId,
+      variantId: resolved.variantId,
+    });
+    const assignedVariant = trafficSplit.variants.find((variant) => variant.variantId === assignment.variantId) ?? resolved;
+    if (assignedVariant.provider && providers.has(assignedVariant.provider)) {
+      return wrapWithRegistryGuards(providers.get(assignedVariant.provider) ?? openaiProvider);
+    }
+  }
   const active = await getActiveAiProvider(featureKey);
   return wrapWithRegistryGuards(providers.get(active.provider) ?? openaiProvider);
 };

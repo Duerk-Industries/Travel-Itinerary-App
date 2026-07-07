@@ -417,6 +417,36 @@ export const upsertAiAnalyticsMetric = async (...args: Parameters<ReturnType<typ
   adapter().upsertAiAnalyticsMetric(...args);
 export const listAiAnalyticsMetrics = async (...args: Parameters<ReturnType<typeof adapter>['listAiAnalyticsMetrics']>) =>
   adapter().listAiAnalyticsMetrics(...args);
+export const createAiExperiment = async (...args: Parameters<ReturnType<typeof adapter>['createAiExperiment']>) =>
+  adapter().createAiExperiment(...args);
+export const listAiExperiments = async (...args: Parameters<ReturnType<typeof adapter>['listAiExperiments']>) =>
+  adapter().listAiExperiments(...args);
+export const getAiExperiment = async (...args: Parameters<ReturnType<typeof adapter>['getAiExperiment']>) =>
+  adapter().getAiExperiment(...args);
+export const updateAiExperimentStatus = async (...args: Parameters<ReturnType<typeof adapter>['updateAiExperimentStatus']>) =>
+  adapter().updateAiExperimentStatus(...args);
+export const getOrCreateAiExperimentAssignment = async (...args: Parameters<ReturnType<typeof adapter>['getOrCreateAiExperimentAssignment']>) =>
+  adapter().getOrCreateAiExperimentAssignment(...args);
+export const reassignAiExperimentVariantToControl = async (...args: Parameters<ReturnType<typeof adapter>['reassignAiExperimentVariantToControl']>) =>
+  adapter().reassignAiExperimentVariantToControl(...args);
+export const upsertAiAbTestMetric = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiAbTestMetric']>) =>
+  adapter().upsertAiAbTestMetric(...args);
+export const listAiAbTestMetrics = async (...args: Parameters<ReturnType<typeof adapter>['listAiAbTestMetrics']>) =>
+  adapter().listAiAbTestMetrics(...args);
+export const getAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['getAiProviderCertification']>) =>
+  adapter().getAiProviderCertification(...args);
+export const listAiProviderCertifications = async (...args: Parameters<ReturnType<typeof adapter>['listAiProviderCertifications']>) =>
+  adapter().listAiProviderCertifications(...args);
+export const setAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['setAiProviderCertification']>) =>
+  adapter().setAiProviderCertification(...args);
+export const deleteAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['deleteAiProviderCertification']>) =>
+  adapter().deleteAiProviderCertification(...args);
+export const upsertAiRecommendation = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiRecommendation']>) =>
+  adapter().upsertAiRecommendation(...args);
+export const listAiRecommendations = async (...args: Parameters<ReturnType<typeof adapter>['listAiRecommendations']>) =>
+  adapter().listAiRecommendations(...args);
+export const updateAiRecommendationStatus = async (...args: Parameters<ReturnType<typeof adapter>['updateAiRecommendationStatus']>) =>
+  adapter().updateAiRecommendationStatus(...args);
 export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['getUsageCounter']>) =>
   adapter().getUsageCounter(...args);
 export const setUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['setUsageCounter']>) =>

@@ -2,6 +2,7 @@ import { getAdminSetting } from '../../db';
 import { getEnvFlag } from '../../env';
 import { logError, logInfo } from '../../logger';
 import { runAiDailyAggregation } from './aggregationJob';
+import { expireStaleRecommendations } from '../recommendations/feedbackLoop';
 
 export const DEFAULT_AI_AGGREGATION_RUN_HOUR_UTC = 3;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -38,7 +39,9 @@ export const getConfiguredAiAggregationRunHourUtc = async (): Promise<number> =>
 export const runScheduledAggregationTick = async (params: { now?: Date } = {}) => {
   const day = new Date((params.now ?? new Date()).getTime() - MS_PER_DAY).toISOString().slice(0, 10);
   try {
-    return await runAiDailyAggregation({ day, jobId: `scheduled-ai-analytics-${day}` });
+    const result = await runAiDailyAggregation({ day, jobId: `scheduled-ai-analytics-${day}` });
+    await expireStaleRecommendations();
+    return result;
   } catch (err) {
     logError('[ai-analytics] scheduled aggregation failed', err);
     return { jobId: `scheduled-ai-analytics-${day}`, day, recordsProcessed: 0, metrics: [], error: 'scheduled_aggregation_failed' };

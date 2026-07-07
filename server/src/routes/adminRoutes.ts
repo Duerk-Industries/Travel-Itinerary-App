@@ -3,6 +3,16 @@ import bodyParser from 'body-parser';
 import {
   listFeatureFlags, setFeatureFlag, writeAuditLog,
   listAiProviderConfigs,
+  createAiExperiment,
+  listAiExperiments,
+  getAiExperiment,
+  updateAiExperimentStatus,
+  listAiAbTestMetrics,
+  setAiProviderCertification,
+  deleteAiProviderCertification,
+  listAiProviderCertifications,
+  listAiRecommendations,
+  updateAiRecommendationStatus,
   getAdminSetting,
   listAiAnalyticsMetrics,
   setAdminSetting,
@@ -46,6 +56,9 @@ import {
   ReplayIntakeNotFoundError,
   ReplaySourceUnavailableError,
 } from '../ai/replay/parsingReplayService';
+import { isProviderCertified } from '../ai/experiments/certification';
+import { getAiExecutiveSummary } from '../ai/analytics/executiveSummary';
+import { clearExperimentConfigCache } from '../ai/experiments/experimentConfigService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -63,6 +76,11 @@ const AI_RUNTIME_SETTING_DEFAULTS = {
   shadow_parse_sample_rate_percent: '10',
   shadow_parse_monthly_budget_usd: '20',
   ai_aggregation_run_hour_utc: '3',
+  ingestion_parsing_promotion_quality_delta_min: '1',
+  ingestion_parsing_promotion_validation_error_max: '0',
+  recommendation_weight_quality_ingestion_llm_extract: '0.7',
+  recommendation_weight_cost_ingestion_llm_extract: '0.3',
+  recommendation_min_delta_threshold: '0.05',
 } as const;
 const AI_RUNTIME_SETTING_KEYS = Object.keys(AI_RUNTIME_SETTING_DEFAULTS) as Array<keyof typeof AI_RUNTIME_SETTING_DEFAULTS>;
 const PROVIDER_ENV_KEYS: Record<string, string> = {
@@ -72,7 +90,7 @@ const PROVIDER_ENV_KEYS: Record<string, string> = {
   zai: 'ZAI_API_KEY',
 };
 
-const getAiProviderOptions = () => {
+const getAiProviderOptions = (certifiedProviderIds = new Set<string>()) => {
   const registered = new Set(getRegisteredAiProviders().map((provider) => provider.id));
   for (const id of Object.keys(PROVIDER_ENV_KEYS)) registered.add(id);
   return Array.from(registered)
@@ -81,6 +99,7 @@ const getAiProviderOptions = () => {
       id,
       configured: Boolean(getEnvValue(PROVIDER_ENV_KEYS[id] ?? `${id.toUpperCase()}_API_KEY`)),
       registered: getRegisteredAiProviders().some((provider) => provider.id === id),
+      certified: certifiedProviderIds.has(id),
       supportedModels: getRegisteredAiProviders().find((provider) => provider.id === id)?.supportedModels ?? [],
     }));
 };
@@ -92,6 +111,8 @@ const getAiProviderOptions = () => {
 router.get('/ai-config', async (_req, res) => {
   try {
     const stored = await listAiProviderConfigs();
+    const certifications = await listAiProviderCertifications();
+    const certifiedProviderIds = new Set(certifications.map((cert) => cert.providerId));
     const byFeature = new Map(stored.map((row) => [row.featureKey, row]));
     const now = new Date().toISOString();
     const features = AI_FEATURE_KEYS.map((featureKey) => {
@@ -106,7 +127,7 @@ router.get('/ai-config', async (_req, res) => {
         source: 'default',
       };
     });
-    res.json({ features, providers: getAiProviderOptions() });
+    res.json({ features, providers: getAiProviderOptions(certifiedProviderIds), certifications });
   } catch (err) {
     logError('[admin] failed to list AI provider config', err);
     res.status(500).json({ error: 'Failed to list AI provider config' });
@@ -138,7 +159,8 @@ router.patch('/ai-config/:featureKey', async (req, res) => {
     return;
   }
   const providerId = provider.trim().toLowerCase();
-  const providerOption = getAiProviderOptions().find((item) => item.id === providerId);
+  const certifications = await listAiProviderCertifications();
+  const providerOption = getAiProviderOptions(new Set(certifications.map((cert) => cert.providerId))).find((item) => item.id === providerId);
   if (!providerOption?.configured || !providerOption.registered) {
     res.status(400).json({ error: `Provider is not configured or registered: ${providerId}` });
     return;
@@ -154,10 +176,240 @@ router.patch('/ai-config/:featureKey', async (req, res) => {
       reason: reasonStr,
     });
     clearAiProviderConfigCache(featureKey);
-    res.json({ config: updated, providers: getAiProviderOptions() });
+    res.json({ config: updated, providers: getAiProviderOptions(new Set(certifications.map((cert) => cert.providerId))) });
   } catch (err) {
     logError('[admin] failed to update AI provider config', err);
     res.status(500).json({ error: 'Failed to update AI provider config' });
+  }
+});
+
+router.post('/providers/:providerId/certify', async (req, res) => {
+  const providerId = String(req.params.providerId ?? '').trim().toLowerCase();
+  const { contractSuiteVersion, notes, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!getRegisteredAiProviders().some((provider) => provider.id === providerId)) {
+    res.status(404).json({ error: `Unknown provider: ${providerId}` });
+    return;
+  }
+  if (typeof contractSuiteVersion !== 'string' || contractSuiteVersion.trim().length < 3) {
+    res.status(400).json({ error: 'contractSuiteVersion is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const certification = await setAiProviderCertification({
+      providerId,
+      certifiedBy: actorId,
+      contractSuiteVersion: contractSuiteVersion.trim(),
+      notes: typeof notes === 'string' ? notes : null,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'AI_PROVIDER_CERTIFIED',
+      afterState: { certification },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ certification });
+  } catch (err) {
+    logError('[admin] failed to certify AI provider', err);
+    res.status(500).json({ error: 'Failed to certify AI provider' });
+  }
+});
+
+router.delete('/providers/:providerId/certify', async (req, res) => {
+  const providerId = String(req.params.providerId ?? '').trim().toLowerCase();
+  const reasonStr = requireReason(req.body?.reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    await deleteAiProviderCertification(providerId);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'AI_PROVIDER_CERTIFICATION_REVOKED',
+      afterState: { providerId },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ providerId, revoked: true });
+  } catch (err) {
+    logError('[admin] failed to revoke AI provider certification', err);
+    res.status(500).json({ error: 'Failed to revoke AI provider certification' });
+  }
+});
+
+router.get('/experiments', async (req, res) => {
+  try {
+    const experiments = await listAiExperiments({
+      featureKey: typeof req.query.featureKey === 'string' ? req.query.featureKey : undefined,
+      status: typeof req.query.status === 'string' ? req.query.status as any : undefined,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : 100,
+    });
+    const metrics = await listAiAbTestMetrics({ limit: 500 });
+    res.json({ experiments, metrics });
+  } catch (err) {
+    logError('[admin] failed to list AI experiments', err);
+    res.status(500).json({ error: 'Failed to list AI experiments' });
+  }
+});
+
+router.post('/experiments', async (req, res) => {
+  const { featureKey, experimentKind, name, variants, controlVariantId, minSampleSize, maxDurationDays, reason, actorRole } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (typeof featureKey !== 'string' || !featureKey.trim()) {
+    res.status(400).json({ error: 'featureKey is required' });
+    return;
+  }
+  if (typeof name !== 'string' || !name.trim()) {
+    res.status(400).json({ error: 'name is required' });
+    return;
+  }
+  if (!Array.isArray(variants) || variants.length < 1) {
+    res.status(400).json({ error: 'variants array is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    for (const variant of variants) {
+      if (variant.provider && !(await isProviderCertified(String(variant.provider)))) {
+        res.status(400).json({ error: `Provider is not certified: ${variant.provider}` });
+        return;
+      }
+    }
+    const actorId = getActorId(req);
+    const experiment = await createAiExperiment({
+      featureKey: featureKey.trim(),
+      experimentKind: experimentKind === 'traffic_split' ? 'traffic_split' : 'shadow_compare',
+      name: name.trim(),
+      variants,
+      controlVariantId: typeof controlVariantId === 'string' ? controlVariantId : null,
+      minSampleSize: Number(minSampleSize) || 200,
+      maxDurationDays: Number(maxDurationDays) || 30,
+      createdBy: actorId,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'AI_EXPERIMENT_CREATED',
+      afterState: { experiment, actorRole: actorRole ?? 'engineering_admin' },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    clearExperimentConfigCache();
+    res.status(201).json({ experiment });
+  } catch (err) {
+    logError('[admin] failed to create AI experiment', err);
+    res.status(500).json({ error: 'Failed to create AI experiment' });
+  }
+});
+
+router.patch('/experiments/:experimentId', async (req, res) => {
+  const experimentId = String(req.params.experimentId ?? '');
+  const { status, winningVariantId, reason, actorRole } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!['draft', 'running', 'paused', 'completed'].includes(String(status))) {
+    res.status(400).json({ error: 'valid status is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const before = await getAiExperiment(experimentId);
+    if (!before) {
+      res.status(404).json({ error: 'Experiment not found' });
+      return;
+    }
+    const after = await updateAiExperimentStatus({
+      experimentId,
+      status,
+      winningVariantId: typeof winningVariantId === 'string' ? winningVariantId : null,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: winningVariantId ? 'AI_EXPERIMENT_PROMOTED' : 'AI_EXPERIMENT_STATUS_CHANGED',
+      beforeState: { experiment: before },
+      afterState: { experiment: after, actorRole: actorRole ?? 'engineering_admin' },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    clearExperimentConfigCache();
+    res.json({ experiment: after });
+  } catch (err) {
+    logError('[admin] failed to update AI experiment', err);
+    res.status(500).json({ error: 'Failed to update AI experiment' });
+  }
+});
+
+router.get('/recommendations', async (req, res) => {
+  try {
+    const recommendations = await listAiRecommendations({
+      status: typeof req.query.status === 'string' ? req.query.status as any : undefined,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : 100,
+    });
+    res.json({ recommendations });
+  } catch (err) {
+    logError('[admin] failed to list AI recommendations', err);
+    res.status(500).json({ error: 'Failed to list AI recommendations' });
+  }
+});
+
+router.patch('/recommendations/:recommendationId', async (req, res) => {
+  const recommendationId = String(req.params.recommendationId ?? '');
+  const action = String(req.body?.action ?? '');
+  const reasonStr = requireReason(req.body?.reason);
+  if (!['apply', 'dismiss'].includes(action)) {
+    res.status(400).json({ error: 'action must be apply or dismiss' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const recommendation = await updateAiRecommendationStatus({
+      recommendationId,
+      status: action === 'apply' ? 'applied' : 'dismissed',
+      respondedBy: actorId,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: action === 'apply' ? 'AI_RECOMMENDATION_APPLIED' : 'AI_RECOMMENDATION_DISMISSED',
+      afterState: { recommendation },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ recommendation });
+  } catch (err) {
+    logError('[admin] failed to update AI recommendation', err);
+    res.status(500).json({ error: 'Failed to update AI recommendation' });
+  }
+});
+
+router.get('/ai-ops/executive', async (req, res) => {
+  try {
+    const range = req.query.range === '90d' || req.query.range === '180d' ? req.query.range : '30d';
+    res.json({ summary: await getAiExecutiveSummary(range) });
+  } catch (err) {
+    logError('[admin] failed to load AI executive summary', err);
+    res.status(500).json({ error: 'Failed to load AI executive summary' });
   }
 });
 

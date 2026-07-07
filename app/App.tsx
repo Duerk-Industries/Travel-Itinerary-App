@@ -17,6 +17,7 @@ import { NavigationContainer, createNavigationContainerRef, type LinkingOptions 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
+import type { AiOpsSection } from './tabs/AdminTab';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
@@ -185,7 +186,8 @@ type Page =
   | 'following'
   | 'admin';
 
-type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'billing';
+type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'ai-ops' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'billing';
+type AiOpsSectionRoute = AiOpsSection;
 
 type RootStackParamList = {
   Main: undefined;
@@ -196,6 +198,16 @@ type RootStackParamList = {
   AdminUserData: undefined;
   AdminAuditLog: undefined;
   AdminBilling: undefined;
+  AdminAiOpsOverview: undefined;
+  AdminAiOpsProviders: undefined;
+  AdminAiOpsExperiments: undefined;
+  AdminAiOpsRecommendations: undefined;
+  AdminAiOpsCaptures: undefined;
+  AdminAiOpsParserQuality: undefined;
+  AdminAiOpsShadowReplay: undefined;
+  AdminAiOpsExecutive: undefined;
+  AdminAiOpsRuntimeSettings: undefined;
+  AdminAiOpsAiAuditLog: undefined;
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -209,10 +221,24 @@ const adminScreenBySection: Partial<Record<AdminSectionRoute, keyof RootStackPar
   'user-data': 'AdminUserData',
   'audit-log': 'AdminAuditLog',
   billing: 'AdminBilling',
+  'ai-ops': 'AdminAiOpsOverview',
   // 'ingestion' and 'api-limits' are handled internally by AdminTab, no separate screen needed
 };
 
-const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute> = {
+const aiOpsScreenBySection: Record<AiOpsSectionRoute, keyof RootStackParamList> = {
+  overview: 'AdminAiOpsOverview',
+  providers: 'AdminAiOpsProviders',
+  experiments: 'AdminAiOpsExperiments',
+  recommendations: 'AdminAiOpsRecommendations',
+  captures: 'AdminAiOpsCaptures',
+  'parser-quality': 'AdminAiOpsParserQuality',
+  'shadow-replay': 'AdminAiOpsShadowReplay',
+  executive: 'AdminAiOpsExecutive',
+  'runtime-settings': 'AdminAiOpsRuntimeSettings',
+  'ai-audit-log': 'AdminAiOpsAiAuditLog',
+};
+
+const adminSectionByScreen: Partial<Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute>> = {
   AdminOverview: 'overview',
   AdminUsers: 'users',
   AdminTiers: 'tiers',
@@ -220,6 +246,7 @@ const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, Ad
   AdminUserData: 'user-data',
   AdminAuditLog: 'audit-log',
   AdminBilling: 'billing',
+  AdminAiOpsOverview: 'overview',
 };
 
 // IMPORTANT: this scheme MUST match `expo.scheme` in app.json, otherwise
@@ -239,6 +266,16 @@ const linking: LinkingOptions<RootStackParamList> = {
       AdminUserData: 'admin/user-data',
       AdminAuditLog: 'admin/audit-log',
       AdminBilling: 'admin/billing',
+      AdminAiOpsOverview: 'admin/ai-ops',
+      AdminAiOpsProviders: 'admin/ai-ops/providers',
+      AdminAiOpsExperiments: 'admin/ai-ops/experiments',
+      AdminAiOpsRecommendations: 'admin/ai-ops/recommendations',
+      AdminAiOpsCaptures: 'admin/ai-ops/captures',
+      AdminAiOpsParserQuality: 'admin/ai-ops/parser-quality',
+      AdminAiOpsShadowReplay: 'admin/ai-ops/shadow-replay',
+      AdminAiOpsExecutive: 'admin/ai-ops/executive',
+      AdminAiOpsRuntimeSettings: 'admin/ai-ops/runtime-settings',
+      AdminAiOpsAiAuditLog: 'admin/ai-ops/ai-audit-log',
     },
   },
 };
@@ -3531,6 +3568,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     </Suspense>
   );
 
+  const renderAdminAiOpsScreen = (aiOpsSection: AiOpsSectionRoute) => (
+    <Suspense fallback={<LazyTabFallback label="Loading admin…" testID="lazy-admin-fallback" />}>
+      <AdminTab
+        backendUrl={backendUrl}
+        headers={headers}
+        initialSection="ai-ops"
+        initialAiOpsSection={aiOpsSection}
+        onSectionChange={(nextSection) => {
+          if (nextSection === 'user-detail') return;
+          openAdminSection(nextSection as AdminSectionRoute);
+        }}
+        onAiOpsSectionChange={(nextSection) => {
+          const screen = aiOpsScreenBySection[nextSection];
+          if (screen && navigationRef.isReady()) {
+            navigationRef.navigate(screen as any);
+          }
+        }}
+      />
+    </Suspense>
+  );
+
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <RootStack.Navigator>
@@ -3584,6 +3642,36 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             options={{ title: 'Admin Billing' }}
           >
             {() => renderAdminScreen('billing')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsOverview" options={{ title: 'AI Operations' }}>
+            {() => renderAdminAiOpsScreen('overview')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsProviders" options={{ title: 'AI Providers' }}>
+            {() => renderAdminAiOpsScreen('providers')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsExperiments" options={{ title: 'AI Experiments' }}>
+            {() => renderAdminAiOpsScreen('experiments')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsRecommendations" options={{ title: 'AI Recommendations' }}>
+            {() => renderAdminAiOpsScreen('recommendations')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsCaptures" options={{ title: 'AI Captures' }}>
+            {() => renderAdminAiOpsScreen('captures')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsParserQuality" options={{ title: 'Parser Quality' }}>
+            {() => renderAdminAiOpsScreen('parser-quality')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsShadowReplay" options={{ title: 'Shadow Replay' }}>
+            {() => renderAdminAiOpsScreen('shadow-replay')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsExecutive" options={{ title: 'Executive Dashboard' }}>
+            {() => renderAdminAiOpsScreen('executive')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsRuntimeSettings" options={{ title: 'AI Runtime Settings' }}>
+            {() => renderAdminAiOpsScreen('runtime-settings')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsAiAuditLog" options={{ title: 'AI Audit Log' }}>
+            {() => renderAdminAiOpsScreen('ai-audit-log')}
           </RootStack.Screen>
         </RootStack.Group>
       </RootStack.Navigator>

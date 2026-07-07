@@ -54,6 +54,11 @@ import {
   AiAnalyticsMetric,
   AiAnalyticsMetricTable,
   AiAnalyticsPeriodType,
+  AiExperiment,
+  AiExperimentAssignment,
+  AiAbTestMetric,
+  AiProviderCertification,
+  AiRecommendation,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -1284,6 +1289,87 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action  ON audit_log(action, created_at DESC);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);`);
 
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_experiments (
+      experiment_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      feature_key         TEXT NOT NULL,
+      experiment_kind     TEXT NOT NULL DEFAULT 'shadow_compare',
+      name                TEXT NOT NULL,
+      status              TEXT NOT NULL DEFAULT 'draft',
+      variants            JSONB NOT NULL,
+      control_variant_id  TEXT,
+      min_sample_size     INTEGER NOT NULL DEFAULT 200,
+      max_duration_days   INTEGER NOT NULL DEFAULT 30,
+      started_at          TIMESTAMP,
+      ends_at             TIMESTAMP,
+      winning_variant_id  TEXT,
+      created_by          UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_ai_experiments_feature_kind_status ON ai_experiments(feature_key, experiment_kind, status);`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_experiment_assignments (
+      assignment_key      TEXT NOT NULL,
+      experiment_id       UUID NOT NULL REFERENCES ai_experiments(experiment_id) ON DELETE CASCADE,
+      variant_id          TEXT NOT NULL,
+      original_variant_id TEXT,
+      assigned_at         TIMESTAMP NOT NULL DEFAULT NOW(),
+      reassigned_at       TIMESTAMP,
+      PRIMARY KEY (assignment_key, experiment_id)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_ab_test_metrics (
+      experiment_id           UUID NOT NULL REFERENCES ai_experiments(experiment_id) ON DELETE CASCADE,
+      variant_id              TEXT NOT NULL,
+      day                     DATE NOT NULL,
+      request_count           INTEGER NOT NULL DEFAULT 0,
+      success_rate            DOUBLE PRECISION NOT NULL DEFAULT 0,
+      avg_quality_score       DOUBLE PRECISION NOT NULL DEFAULT 0,
+      avg_cost_usd            DOUBLE PRECISION NOT NULL DEFAULT 0,
+      avg_latency_ms          DOUBLE PRECISION NOT NULL DEFAULT 0,
+      ground_truth_agreement  DOUBLE PRECISION,
+      ground_truth_signal     TEXT,
+      updated_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (experiment_id, variant_id, day)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_provider_certifications (
+      provider_id             TEXT PRIMARY KEY,
+      certified_at            TIMESTAMP NOT NULL DEFAULT NOW(),
+      certified_by            UUID REFERENCES users(id) ON DELETE SET NULL,
+      contract_suite_version  TEXT NOT NULL,
+      notes                   TEXT
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_recommendations (
+      recommendation_id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      recommendation_type                TEXT NOT NULL,
+      feature_key                        TEXT NOT NULL,
+      subject_current                    JSONB NOT NULL DEFAULT '{}'::jsonb,
+      subject_proposed                   JSONB NOT NULL DEFAULT '{}'::jsonb,
+      rationale                          TEXT NOT NULL,
+      quality_delta_estimate             DOUBLE PRECISION NOT NULL DEFAULT 0,
+      cost_delta_estimate_usd_monthly    DOUBLE PRECISION NOT NULL DEFAULT 0,
+      confidence                         TEXT NOT NULL DEFAULT 'low',
+      supporting_evidence_ref            TEXT,
+      supporting_evidence_query          JSONB,
+      engine_version                     TEXT NOT NULL,
+      status                             TEXT NOT NULL DEFAULT 'proposed',
+      created_at                         TIMESTAMP NOT NULL DEFAULT NOW(),
+      responded_by                       UUID REFERENCES users(id) ON DELETE SET NULL,
+      responded_at                       TIMESTAMP,
+      outcome_measured_at                TIMESTAMP,
+      outcome_quality_delta              DOUBLE PRECISION,
+      outcome_cost_delta_usd_monthly     DOUBLE PRECISION
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_ai_recommendations_status_created ON ai_recommendations(status, created_at DESC);`);
+
   // Run pending migrations BEFORE the USE_IN_MEMORY_DB cleanup block below
   // so migration-backed tables (cut over from inline CREATE TABLE) exist in
   // time for the DELETE-ALL test-isolation sweep to touch them.
@@ -1310,6 +1396,11 @@ export const initDb = async (): Promise<void> => {
       try { await p.query(`DELETE FROM ${tbl}`); } catch { /* table absent, skip */ }
     };
     await del('audit_log');
+    await del('ai_recommendations');
+    await del('ai_provider_certifications');
+    await del('ai_ab_test_metrics');
+    await del('ai_experiment_assignments');
+    await del('ai_experiments');
     await del('generation_idempotency');
     await del('api_cost_counters');
     await del('api_usage_counters');
@@ -8995,6 +9086,372 @@ export const listAiAnalyticsMetrics = async (options: {
     out.push(...rows.map((row) => mapAiAnalyticsRow(table, row)));
   }
   return out.sort((a, b) => b.periodStart.localeCompare(a.periodStart)).slice(0, limit);
+};
+
+const toIsoOrNull = (value: string | Date | null | undefined): string | null =>
+  value == null ? null : new Date(value).toISOString();
+
+const mapAiExperimentRow = (r: Record<string, any>): AiExperiment => ({
+  experimentId: String(r.experiment_id),
+  featureKey: String(r.feature_key),
+  experimentKind: r.experiment_kind,
+  name: String(r.name),
+  status: r.status,
+  variants: Array.isArray(r.variants) ? r.variants : JSON.parse(r.variants ?? '[]'),
+  controlVariantId: r.control_variant_id ?? null,
+  minSampleSize: Number(r.min_sample_size ?? 200),
+  maxDurationDays: Number(r.max_duration_days ?? 30),
+  startedAt: toIsoOrNull(r.started_at),
+  endsAt: toIsoOrNull(r.ends_at),
+  winningVariantId: r.winning_variant_id ?? null,
+  createdBy: r.created_by ?? null,
+  createdAt: new Date(r.created_at).toISOString(),
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const createAiExperiment = async (experiment: {
+  featureKey: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  name: string;
+  variants: AiExperiment['variants'];
+  controlVariantId?: string | null;
+  minSampleSize?: number;
+  maxDurationDays?: number;
+  createdBy?: string | null;
+}): Promise<AiExperiment> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_experiments
+       (feature_key, experiment_kind, name, variants, control_variant_id, min_sample_size, max_duration_days, created_by)
+     VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)
+     RETURNING *`,
+    [
+      experiment.featureKey,
+      experiment.experimentKind ?? 'shadow_compare',
+      experiment.name,
+      JSON.stringify(experiment.variants),
+      experiment.controlVariantId ?? null,
+      experiment.minSampleSize ?? 200,
+      experiment.maxDurationDays ?? 30,
+      experiment.createdBy ?? null,
+    ],
+  );
+  return mapAiExperimentRow(rows[0]);
+};
+
+export const listAiExperiments = async (options: {
+  featureKey?: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  status?: AiExperiment['status'];
+  limit?: number;
+} = {}): Promise<AiExperiment[]> => {
+  const p = getPool();
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.featureKey) {
+    params.push(options.featureKey);
+    where.push(`feature_key = $${params.length}`);
+  }
+  if (options.experimentKind) {
+    params.push(options.experimentKind);
+    where.push(`experiment_kind = $${params.length}`);
+  }
+  if (options.status) {
+    params.push(options.status);
+    where.push(`status = $${params.length}`);
+  }
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 100), 500));
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_experiments
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY created_at DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiExperimentRow);
+};
+
+export const getAiExperiment = async (experimentId: string): Promise<AiExperiment | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM ai_experiments WHERE experiment_id = $1`, [experimentId]);
+  return rows[0] ? mapAiExperimentRow(rows[0]) : null;
+};
+
+export const updateAiExperimentStatus = async (params: {
+  experimentId: string;
+  status: AiExperiment['status'];
+  winningVariantId?: string | null;
+}): Promise<AiExperiment> => {
+  const p = getPool();
+  const startedExpr = params.status === 'running' ? `COALESCE(started_at, NOW())` : `started_at`;
+  const { rows } = await p.query(
+    `UPDATE ai_experiments
+     SET status = $2,
+         started_at = ${startedExpr},
+         ends_at = CASE WHEN $2 = 'completed' THEN COALESCE(ends_at, NOW()) ELSE ends_at END,
+         winning_variant_id = COALESCE($3, winning_variant_id),
+         updated_at = NOW()
+     WHERE experiment_id = $1
+     RETURNING *`,
+    [params.experimentId, params.status, params.winningVariantId ?? null],
+  );
+  if (!rows[0]) throw new Error(`AI experiment not found: ${params.experimentId}`);
+  return mapAiExperimentRow(rows[0]);
+};
+
+const mapAiExperimentAssignmentRow = (r: Record<string, any>): AiExperimentAssignment => ({
+  assignmentKey: String(r.assignment_key),
+  experimentId: String(r.experiment_id),
+  variantId: String(r.variant_id),
+  originalVariantId: r.original_variant_id ?? null,
+  assignedAt: new Date(r.assigned_at).toISOString(),
+  reassignedAt: toIsoOrNull(r.reassigned_at),
+});
+
+export const getOrCreateAiExperimentAssignment = async (assignment: {
+  assignmentKey: string;
+  experimentId: string;
+  variantId: string;
+}): Promise<AiExperimentAssignment> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_experiment_assignments (assignment_key, experiment_id, variant_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (assignment_key, experiment_id) DO UPDATE SET assignment_key = EXCLUDED.assignment_key
+     RETURNING *`,
+    [assignment.assignmentKey, assignment.experimentId, assignment.variantId],
+  );
+  return mapAiExperimentAssignmentRow(rows[0]);
+};
+
+export const reassignAiExperimentVariantToControl = async (params: {
+  experimentId: string;
+  variantId: string;
+  controlVariantId: string;
+}): Promise<number> => {
+  const p = getPool();
+  const result = await p.query(
+    `UPDATE ai_experiment_assignments
+     SET variant_id = $3,
+         original_variant_id = COALESCE(original_variant_id, variant_id),
+         reassigned_at = NOW()
+     WHERE experiment_id = $1 AND variant_id = $2`,
+    [params.experimentId, params.variantId, params.controlVariantId],
+  );
+  return result.rowCount ?? 0;
+};
+
+const mapAiAbTestMetricRow = (r: Record<string, any>): AiAbTestMetric => ({
+  experimentId: String(r.experiment_id),
+  variantId: String(r.variant_id),
+  day: normalizeMetricDate(r.day),
+  requestCount: Number(r.request_count ?? 0),
+  successRate: Number(r.success_rate ?? 0),
+  avgQualityScore: Number(r.avg_quality_score ?? 0),
+  avgCostUsd: Number(r.avg_cost_usd ?? 0),
+  avgLatencyMs: Number(r.avg_latency_ms ?? 0),
+  groundTruthAgreement: r.ground_truth_agreement == null ? null : Number(r.ground_truth_agreement),
+  groundTruthSignal: r.ground_truth_signal ?? null,
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const upsertAiAbTestMetric = async (metric: Omit<AiAbTestMetric, 'updatedAt'>): Promise<AiAbTestMetric> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_ab_test_metrics
+       (experiment_id, variant_id, day, request_count, success_rate, avg_quality_score, avg_cost_usd, avg_latency_ms, ground_truth_agreement, ground_truth_signal, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+     ON CONFLICT (experiment_id, variant_id, day) DO UPDATE SET
+       request_count = EXCLUDED.request_count,
+       success_rate = EXCLUDED.success_rate,
+       avg_quality_score = EXCLUDED.avg_quality_score,
+       avg_cost_usd = EXCLUDED.avg_cost_usd,
+       avg_latency_ms = EXCLUDED.avg_latency_ms,
+       ground_truth_agreement = EXCLUDED.ground_truth_agreement,
+       ground_truth_signal = EXCLUDED.ground_truth_signal,
+       updated_at = NOW()
+     RETURNING *`,
+    [
+      metric.experimentId,
+      metric.variantId,
+      metric.day,
+      metric.requestCount,
+      metric.successRate,
+      metric.avgQualityScore,
+      metric.avgCostUsd,
+      metric.avgLatencyMs,
+      metric.groundTruthAgreement ?? null,
+      metric.groundTruthSignal ?? null,
+    ],
+  );
+  return mapAiAbTestMetricRow(rows[0]);
+};
+
+export const listAiAbTestMetrics = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiAbTestMetric[]> => {
+  const p = getPool();
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 250), 1000));
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.experimentId) {
+    params.push(options.experimentId);
+    where.push(`experiment_id = $${params.length}`);
+  }
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_ab_test_metrics
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY day DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiAbTestMetricRow);
+};
+
+const mapAiProviderCertificationRow = (r: Record<string, any>): AiProviderCertification => ({
+  providerId: String(r.provider_id),
+  certifiedAt: new Date(r.certified_at).toISOString(),
+  certifiedBy: r.certified_by ?? null,
+  contractSuiteVersion: String(r.contract_suite_version),
+  notes: r.notes ?? null,
+});
+
+export const getAiProviderCertification = async (providerId: string): Promise<AiProviderCertification | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM ai_provider_certifications WHERE provider_id = $1`, [providerId]);
+  return rows[0] ? mapAiProviderCertificationRow(rows[0]) : null;
+};
+
+export const listAiProviderCertifications = async (): Promise<AiProviderCertification[]> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM ai_provider_certifications ORDER BY provider_id`);
+  return rows.map(mapAiProviderCertificationRow);
+};
+
+export const setAiProviderCertification = async (cert: {
+  providerId: string;
+  certifiedBy: string | null;
+  contractSuiteVersion: string;
+  notes?: string | null;
+}): Promise<AiProviderCertification> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_provider_certifications (provider_id, certified_at, certified_by, contract_suite_version, notes)
+     VALUES ($1, NOW(), $2, $3, $4)
+     ON CONFLICT (provider_id) DO UPDATE SET
+       certified_at = NOW(),
+       certified_by = EXCLUDED.certified_by,
+       contract_suite_version = EXCLUDED.contract_suite_version,
+       notes = EXCLUDED.notes
+     RETURNING *`,
+    [cert.providerId, cert.certifiedBy, cert.contractSuiteVersion, cert.notes ?? null],
+  );
+  return mapAiProviderCertificationRow(rows[0]);
+};
+
+export const deleteAiProviderCertification = async (providerId: string): Promise<void> => {
+  await getPool().query(`DELETE FROM ai_provider_certifications WHERE provider_id = $1`, [providerId]);
+};
+
+const mapAiRecommendationRow = (r: Record<string, any>): AiRecommendation => ({
+  recommendationId: String(r.recommendation_id),
+  recommendationType: String(r.recommendation_type),
+  featureKey: String(r.feature_key),
+  subjectCurrent: typeof r.subject_current === 'string' ? JSON.parse(r.subject_current) : (r.subject_current ?? {}),
+  subjectProposed: typeof r.subject_proposed === 'string' ? JSON.parse(r.subject_proposed) : (r.subject_proposed ?? {}),
+  rationale: String(r.rationale),
+  qualityDeltaEstimate: Number(r.quality_delta_estimate ?? 0),
+  costDeltaEstimateUsdMonthly: Number(r.cost_delta_estimate_usd_monthly ?? 0),
+  confidence: String(r.confidence ?? 'low'),
+  supportingEvidenceRef: r.supporting_evidence_ref ?? null,
+  supportingEvidenceQuery: typeof r.supporting_evidence_query === 'string' ? JSON.parse(r.supporting_evidence_query) : (r.supporting_evidence_query ?? null),
+  engineVersion: String(r.engine_version),
+  status: r.status,
+  createdAt: new Date(r.created_at).toISOString(),
+  respondedBy: r.responded_by ?? null,
+  respondedAt: toIsoOrNull(r.responded_at),
+  outcomeMeasuredAt: toIsoOrNull(r.outcome_measured_at),
+  outcomeQualityDelta: r.outcome_quality_delta == null ? null : Number(r.outcome_quality_delta),
+  outcomeCostDeltaUsdMonthly: r.outcome_cost_delta_usd_monthly == null ? null : Number(r.outcome_cost_delta_usd_monthly),
+});
+
+export const upsertAiRecommendation = async (rec: Partial<AiRecommendation> & {
+  recommendationType: string;
+  featureKey: string;
+  subjectCurrent: Record<string, unknown>;
+  subjectProposed: Record<string, unknown>;
+  rationale: string;
+  engineVersion: string;
+}): Promise<AiRecommendation> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_recommendations
+       (recommendation_id, recommendation_type, feature_key, subject_current, subject_proposed, rationale,
+        quality_delta_estimate, cost_delta_estimate_usd_monthly, confidence, supporting_evidence_ref,
+        supporting_evidence_query, engine_version, status)
+     VALUES (COALESCE($1::uuid, uuid_generate_v4()), $2, $3, $4::jsonb, $5::jsonb, $6, $7, $8, $9, $10, $11::jsonb, $12, COALESCE($13, 'proposed'))
+     ON CONFLICT (recommendation_id) DO UPDATE SET
+       rationale = EXCLUDED.rationale,
+       quality_delta_estimate = EXCLUDED.quality_delta_estimate,
+       cost_delta_estimate_usd_monthly = EXCLUDED.cost_delta_estimate_usd_monthly,
+       confidence = EXCLUDED.confidence,
+       supporting_evidence_ref = EXCLUDED.supporting_evidence_ref,
+       supporting_evidence_query = EXCLUDED.supporting_evidence_query
+     RETURNING *`,
+    [
+      rec.recommendationId ?? null,
+      rec.recommendationType,
+      rec.featureKey,
+      JSON.stringify(rec.subjectCurrent),
+      JSON.stringify(rec.subjectProposed),
+      rec.rationale,
+      rec.qualityDeltaEstimate ?? 0,
+      rec.costDeltaEstimateUsdMonthly ?? 0,
+      rec.confidence ?? 'low',
+      rec.supportingEvidenceRef ?? null,
+      JSON.stringify(rec.supportingEvidenceQuery ?? null),
+      rec.engineVersion,
+      rec.status ?? 'proposed',
+    ],
+  );
+  return mapAiRecommendationRow(rows[0]);
+};
+
+export const listAiRecommendations = async (options: { status?: AiRecommendation['status']; limit?: number } = {}): Promise<AiRecommendation[]> => {
+  const p = getPool();
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.status) {
+    params.push(options.status);
+    where.push(`status = $${params.length}`);
+  }
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 100), 500));
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_recommendations
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY created_at DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiRecommendationRow);
+};
+
+export const updateAiRecommendationStatus = async (params: {
+  recommendationId: string;
+  status: AiRecommendation['status'];
+  respondedBy: string | null;
+}): Promise<AiRecommendation> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `UPDATE ai_recommendations
+     SET status = $2, responded_by = $3, responded_at = NOW()
+     WHERE recommendation_id = $1
+     RETURNING *`,
+    [params.recommendationId, params.status, params.respondedBy],
+  );
+  if (!rows[0]) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationRow(rows[0]);
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {

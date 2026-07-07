@@ -10,6 +10,7 @@ import PackingListTable from '../components/PackingListTable';
 // ---------------------------------------------------------------------------
 
 type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
+export type AiOpsSection = 'overview' | 'providers' | 'experiments' | 'recommendations' | 'captures' | 'parser-quality' | 'shadow-replay' | 'executive' | 'runtime-settings' | 'ai-audit-log';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -29,7 +30,7 @@ type QueueDepthSnapshot = {
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
 
-type AiProviderOption = { id: string; configured: boolean; registered: boolean; supportedModels: string[] };
+type AiProviderOption = { id: string; configured: boolean; registered: boolean; certified?: boolean; supportedModels: string[] };
 type AiProviderFeatureConfig = {
   featureKey: string;
   provider: string;
@@ -60,6 +61,27 @@ type AiAnalyticsMetric = {
   dimensions: Record<string, string>;
   metricKey: string;
   metricValue: number;
+};
+type AiExperiment = {
+  experimentId: string;
+  name: string;
+  featureKey: string;
+  experimentKind: string;
+  status: string;
+  variants: Array<{ variantId: string; trafficPercent: number; provider?: string; model?: string }>;
+  createdAt: string;
+  updatedAt: string;
+};
+type AiRecommendation = {
+  recommendationId: string;
+  recommendationType: string;
+  featureKey: string;
+  rationale: string;
+  confidence: string;
+  status: string;
+  qualityDeltaEstimate: number;
+  costDeltaEstimateUsdMonthly: number;
+  createdAt: string;
 };
 
 type TierLimit = { limitKey: string; limitValue: number };
@@ -159,7 +181,9 @@ type AdminTabProps = {
   backendUrl: string;
   headers: Record<string, string>;
   initialSection?: AdminSection;
+  initialAiOpsSection?: AiOpsSection;
   onSectionChange?: (section: AdminSection) => void;
+  onAiOpsSectionChange?: (section: AiOpsSection) => void;
 };
 
 type IngestionMetrics = {
@@ -2547,11 +2571,19 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
   );
 };
 
-const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+const AiOperationsSection: React.FC<{
+  backendUrl: string;
+  headers: Record<string, string>;
+  initialAiOpsSection?: AiOpsSection;
+  onAiOpsSectionChange?: (section: AiOpsSection) => void;
+} & ThemedSectionProps> = ({
   backendUrl,
   headers,
+  initialAiOpsSection = 'overview',
+  onAiOpsSectionChange,
   theme,
 }) => {
+  const [aiOpsSection, setAiOpsSection] = useState<AiOpsSection>(initialAiOpsSection);
   const [features, setFeatures] = useState<AiProviderFeatureConfig[]>([]);
   const [providers, setProviders] = useState<AiProviderOption[]>([]);
   const [drafts, setDrafts] = useState<Record<string, AiProviderFeatureConfig>>({});
@@ -2565,18 +2597,33 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
   const [captureQuery, setCaptureQuery] = useState('');
   const [captureAnonymousUserIdQuery, setCaptureAnonymousUserIdQuery] = useState('');
   const [analytics, setAnalytics] = useState<AiAnalyticsMetric[]>([]);
+  const [experiments, setExperiments] = useState<AiExperiment[]>([]);
+  const [recommendations, setRecommendations] = useState<AiRecommendation[]>([]);
+  const [executiveSummary, setExecutiveSummary] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAiOpsSection(initialAiOpsSection);
+  }, [initialAiOpsSection]);
+
+  const goToAiOps = (next: AiOpsSection) => {
+    setAiOpsSection(next);
+    onAiOpsSectionChange?.(next);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [data, runtimeData, capturesData, analyticsData] = await Promise.all([
+      const [data, runtimeData, capturesData, analyticsData, experimentsData, recommendationsData, executiveData] = await Promise.all([
         apiFetch(backendUrl, headers, '/ai-config'),
         apiFetch(backendUrl, headers, '/runtime-settings'),
         apiFetch(backendUrl, headers, '/ai-captures?limit=10'),
         apiFetch(backendUrl, headers, '/analytics?limit=40'),
+        apiFetch(backendUrl, headers, '/experiments?limit=25'),
+        apiFetch(backendUrl, headers, '/recommendations?limit=25'),
+        apiFetch(backendUrl, headers, '/ai-ops/executive'),
       ]);
       const loadedFeatures = (Array.isArray(data.features) ? data.features : []) as AiProviderFeatureConfig[];
       const loadedSettings = (Array.isArray(runtimeData.settings) ? runtimeData.settings : []) as AiRuntimeSetting[];
@@ -2587,6 +2634,9 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
       setRuntimeDrafts(Object.fromEntries(loadedSettings.map((item) => [item.key, item.value])));
       setCaptures((Array.isArray(capturesData.captures) ? capturesData.captures : []) as AiCaptureItem[]);
       setAnalytics((Array.isArray(analyticsData.metrics) ? analyticsData.metrics : []) as AiAnalyticsMetric[]);
+      setExperiments((Array.isArray(experimentsData.experiments) ? experimentsData.experiments : []) as AiExperiment[]);
+      setRecommendations((Array.isArray(recommendationsData.recommendations) ? recommendationsData.recommendations : []) as AiRecommendation[]);
+      setExecutiveSummary(executiveData.summary ?? null);
     } catch (err: any) {
       setError(err.message ?? 'Failed to load AI config');
     } finally {
@@ -2682,12 +2732,52 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
 
   if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
 
+  const aiOpsSections: Array<{ key: AiOpsSection; label: string }> = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'providers', label: 'Providers' },
+    { key: 'experiments', label: 'Experiments' },
+    { key: 'recommendations', label: 'Recommendations' },
+    { key: 'captures', label: 'Captures' },
+    { key: 'parser-quality', label: 'Parser Quality' },
+    { key: 'shadow-replay', label: 'Shadow Replay' },
+    { key: 'executive', label: 'Executive' },
+    { key: 'runtime-settings', label: 'Runtime Settings' },
+    { key: 'ai-audit-log', label: 'AI Audit Log' },
+  ];
+
   return (
     <View style={localStyles.section}>
       <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>AI Operations</Text>
       {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
       {saveMsg ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
-      {features.map((feature) => {
+      <View style={localStyles.tierButtons}>
+        {aiOpsSections.map((item) => (
+          <TouchableOpacity
+            key={item.key}
+            style={[
+              localStyles.tierButton,
+              aiOpsSection === item.key && localStyles.tierButtonActive,
+              { borderColor: theme.colors.border },
+            ]}
+            onPress={() => goToAiOps(item.key)}
+          >
+            <Text style={[localStyles.tierButtonText, aiOpsSection === item.key && localStyles.tierButtonTextActive]}>
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {aiOpsSection === 'overview' ? (
+        <View style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>AI Operations Overview</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {providers.length} providers, {experiments.length} experiments, {recommendations.length} recommendations, {analytics.length} aggregate metrics.
+          </Text>
+        </View>
+      ) : null}
+
+      {aiOpsSection === 'providers' ? features.map((feature) => {
         const draft = drafts[feature.featureKey] ?? feature;
         const selectedProvider = providers.find((provider) => provider.id === draft.provider);
         const selectableProviders = providers.filter((provider) => provider.configured && provider.registered);
@@ -2723,7 +2813,7 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
                     }))}
                   >
                     <Text style={[localStyles.tierButtonText, active && localStyles.tierButtonTextActive]}>
-                      {provider.id}{unavailable ? ' unavailable' : ''}
+                      {provider.id}{provider.certified ? ' certified' : ''}{unavailable ? ' unavailable' : ''}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -2763,7 +2853,9 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
             </TouchableOpacity>
           </View>
         );
-      })}
+      }) : null}
+
+      {aiOpsSection === 'runtime-settings' ? (
       <View style={[localStyles.card, getCardStyle(theme)]}>
         <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Runtime Settings</Text>
         {runtimeSettings.map((setting) => (
@@ -2798,6 +2890,9 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
           <Text style={localStyles.smallButtonText}>{saving === 'runtime-settings' ? 'Saving...' : 'Save settings'}</Text>
         </TouchableOpacity>
       </View>
+      ) : null}
+
+      {aiOpsSection === 'captures' ? (
       <View style={[localStyles.card, getCardStyle(theme)]}>
         <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Capture Browser</Text>
         <View style={localStyles.inlineField}>
@@ -2833,6 +2928,9 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
           </View>
         ))}
       </View>
+      ) : null}
+
+      {aiOpsSection === 'parser-quality' || aiOpsSection === 'shadow-replay' ? (
       <View style={[localStyles.card, getCardStyle(theme)]}>
         <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Parser Evaluation</Text>
         {analytics.filter((metric) => metric.table === 'ai_parser_metrics' || metric.table === 'ai_field_metrics').slice(0, 8).map((metric, index) => (
@@ -2854,6 +2952,60 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
           <Text style={localStyles.smallButtonText}>{saving === 'analytics-refresh' ? 'Refreshing...' : 'Refresh analytics'}</Text>
         </TouchableOpacity>
       </View>
+      ) : null}
+
+      {aiOpsSection === 'experiments' ? (
+        <View style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Experiments</Text>
+          {experiments.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No experiments running.</Text> : null}
+          {experiments.map((experiment) => (
+            <View key={experiment.experimentId} style={localStyles.compactRow}>
+              <Text style={[localStyles.tableCellPrimary, { color: theme.colors.text }]}>{experiment.name}</Text>
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                {experiment.featureKey} - {experiment.experimentKind} - {experiment.status} - {experiment.variants.length} variants
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {aiOpsSection === 'recommendations' ? (
+        <View style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Recommendations</Text>
+          {recommendations.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No recommendations proposed.</Text> : null}
+          {recommendations.map((recommendation) => (
+            <View key={recommendation.recommendationId} style={localStyles.compactRow}>
+              <Text style={[localStyles.tableCellPrimary, { color: theme.colors.text }]}>{recommendation.recommendationType}</Text>
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                {recommendation.featureKey} - {recommendation.status} - {recommendation.confidence}
+              </Text>
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{recommendation.rationale}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {aiOpsSection === 'executive' ? (
+        <View style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Executive Dashboard</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            Estimated spend: ${Number(executiveSummary?.spend?.estimatedUsd ?? 0).toFixed(2)}
+          </Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            Captures: {Number(executiveSummary?.throughput?.captures ?? 0)}
+          </Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            Average experiment quality: {Number(executiveSummary?.quality?.avgExperimentQuality ?? 0).toFixed(1)}
+          </Text>
+        </View>
+      ) : null}
+
+      {aiOpsSection === 'ai-audit-log' ? (
+        <View style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>AI Audit Log</Text>
+          <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>Use the main Audit Log filtered to AI actions.</Text>
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -2862,7 +3014,14 @@ const AiOperationsSection: React.FC<{ backendUrl: string; headers: Record<string
 // Main AdminTab
 // ---------------------------------------------------------------------------
 
-const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection = 'overview', onSectionChange }) => {
+const AdminTab: React.FC<AdminTabProps> = ({
+  backendUrl,
+  headers,
+  initialSection = 'overview',
+  initialAiOpsSection = 'overview',
+  onSectionChange,
+  onAiOpsSectionChange,
+}) => {
   const colorScheme = useColorScheme();
   const theme = getAppTheme('auto', colorScheme);
   const [section, setSection] = useState<AdminSection>(initialSection);
@@ -2890,7 +3049,15 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
       case 'features':
         return <FeaturesSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'ai-ops':
-        return <AiOperationsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+        return (
+          <AiOperationsSection
+            backendUrl={backendUrl}
+            headers={headers}
+            initialAiOpsSection={initialAiOpsSection}
+            onAiOpsSectionChange={onAiOpsSectionChange}
+            theme={theme}
+          />
+        );
       case 'packing-defaults':
         return <PackingListTable backendUrl={backendUrl} headers={headers} variant="admin" title="Universal packing defaults" />;
       case 'users':

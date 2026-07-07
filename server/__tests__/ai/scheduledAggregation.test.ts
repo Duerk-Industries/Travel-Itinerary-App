@@ -12,6 +12,8 @@ import { runAiDailyAggregation } from '../../src/ai/analytics/aggregationJob';
 
 jest.mock('../../src/db', () => ({
   getAdminSetting: jest.fn(),
+  listAiRecommendations: jest.fn(async () => []),
+  updateAiRecommendationStatus: jest.fn(),
 }));
 
 jest.mock('../../src/ai/analytics/aggregationJob', () => ({
