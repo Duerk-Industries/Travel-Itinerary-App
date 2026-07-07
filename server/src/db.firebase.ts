@@ -6155,6 +6155,37 @@ export const reassignAiExperimentVariantToControl = async (params: {
   return snap.size;
 };
 
+export const listAiExperimentAssignments = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiExperimentAssignment[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_experiment_assignments');
+  if (options.experimentId) query = query.where('experimentId', '==', options.experimentId);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 500), 2000))).get();
+  return snap.docs.map((doc) => mapAiAssignmentDoc(doc.data()))
+    .sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
+};
+
+export const deleteCompletedAiExperimentAssignmentsOlderThan = async (cutoffIso: string): Promise<number> => {
+  const experiments = await getDb().collection('ai_experiments')
+    .where('status', '==', 'completed')
+    .get();
+  const eligibleIds = new Set(
+    experiments.docs
+      .map((doc) => ({ id: doc.id, endsAt: String(doc.data().endsAt ?? '') }))
+      .filter((row) => row.endsAt && row.endsAt < cutoffIso)
+      .map((row) => row.id),
+  );
+  if (!eligibleIds.size) return 0;
+  const assignments = await getDb().collection('ai_experiment_assignments').get();
+  const batch = getDb().batch();
+  let deleted = 0;
+  assignments.docs.forEach((doc) => {
+    if (!eligibleIds.has(String(doc.data().experimentId))) return;
+    batch.delete(doc.ref);
+    deleted += 1;
+  });
+  if (deleted > 0) await batch.commit();
+  return deleted;
+};
+
 const abMetricDocId = (metric: Pick<AiAbTestMetric, 'experimentId' | 'variantId' | 'day'>): string =>
   `${metric.experimentId}_${metric.variantId}_${metric.day}`.replace(/[\/#?]/g, '_');
 
@@ -6289,6 +6320,23 @@ export const updateAiRecommendationStatus = async (params: {
 }): Promise<AiRecommendation> => {
   const ref = getDb().collection('ai_recommendations').doc(params.recommendationId);
   await ref.set({ status: params.status, respondedBy: params.respondedBy, respondedAt: nowIso() }, { merge: true });
+  const updated = await ref.get();
+  if (!updated.exists) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationDoc(updated.id, updated.data()!);
+};
+
+export const updateAiRecommendationOutcome = async (params: {
+  recommendationId: string;
+  outcomeQualityDelta: number;
+  outcomeCostDeltaUsdMonthly: number;
+  measuredAt?: string;
+}): Promise<AiRecommendation> => {
+  const ref = getDb().collection('ai_recommendations').doc(params.recommendationId);
+  await ref.set({
+    outcomeMeasuredAt: params.measuredAt ?? nowIso(),
+    outcomeQualityDelta: params.outcomeQualityDelta,
+    outcomeCostDeltaUsdMonthly: params.outcomeCostDeltaUsdMonthly,
+  }, { merge: true });
   const updated = await ref.get();
   if (!updated.exists) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
   return mapAiRecommendationDoc(updated.id, updated.data()!);

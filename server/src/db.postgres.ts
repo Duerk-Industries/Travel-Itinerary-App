@@ -9242,6 +9242,40 @@ export const reassignAiExperimentVariantToControl = async (params: {
   return result.rowCount ?? 0;
 };
 
+export const listAiExperimentAssignments = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiExperimentAssignment[]> => {
+  const p = getPool();
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.experimentId) {
+    params.push(options.experimentId);
+    where.push(`experiment_id = $${params.length}`);
+  }
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 500), 2000));
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_experiment_assignments
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY assigned_at DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiExperimentAssignmentRow);
+};
+
+export const deleteCompletedAiExperimentAssignmentsOlderThan = async (cutoffIso: string): Promise<number> => {
+  const p = getPool();
+  const result = await p.query(
+    `DELETE FROM ai_experiment_assignments a
+     USING ai_experiments e
+     WHERE a.experiment_id = e.experiment_id
+       AND e.status = 'completed'
+       AND e.ends_at IS NOT NULL
+       AND e.ends_at < $1`,
+    [cutoffIso],
+  );
+  return result.rowCount ?? 0;
+};
+
 const mapAiAbTestMetricRow = (r: Record<string, any>): AiAbTestMetric => ({
   experimentId: String(r.experiment_id),
   variantId: String(r.variant_id),
@@ -9449,6 +9483,31 @@ export const updateAiRecommendationStatus = async (params: {
      WHERE recommendation_id = $1
      RETURNING *`,
     [params.recommendationId, params.status, params.respondedBy],
+  );
+  if (!rows[0]) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationRow(rows[0]);
+};
+
+export const updateAiRecommendationOutcome = async (params: {
+  recommendationId: string;
+  outcomeQualityDelta: number;
+  outcomeCostDeltaUsdMonthly: number;
+  measuredAt?: string;
+}): Promise<AiRecommendation> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `UPDATE ai_recommendations
+     SET outcome_measured_at = COALESCE($2::timestamp, NOW()),
+         outcome_quality_delta = $3,
+         outcome_cost_delta_usd_monthly = $4
+     WHERE recommendation_id = $1
+     RETURNING *`,
+    [
+      params.recommendationId,
+      params.measuredAt ?? null,
+      params.outcomeQualityDelta,
+      params.outcomeCostDeltaUsdMonthly,
+    ],
   );
   if (!rows[0]) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
   return mapAiRecommendationRow(rows[0]);

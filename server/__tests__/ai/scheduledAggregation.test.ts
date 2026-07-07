@@ -14,6 +14,13 @@ jest.mock('../../src/db', () => ({
   getAdminSetting: jest.fn(),
   listAiRecommendations: jest.fn(async () => []),
   updateAiRecommendationStatus: jest.fn(),
+  listAiExperiments: jest.fn(async () => []),
+  updateAiExperimentStatus: jest.fn(),
+  deleteCompletedAiExperimentAssignmentsOlderThan: jest.fn(async () => 0),
+  listAiAbTestMetrics: jest.fn(async () => []),
+  upsertAiRecommendation: jest.fn(),
+  listAiAnalyticsMetrics: jest.fn(async () => []),
+  updateAiRecommendationOutcome: jest.fn(),
 }));
 
 jest.mock('../../src/ai/analytics/aggregationJob', () => ({
