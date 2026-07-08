@@ -32,6 +32,7 @@ export interface User {
   emailVerified?: boolean;
   emailVerifiedAt?: string | null;
   role: UserRole;
+  is_internal_canary?: boolean;
 }
 
 export interface Tier {
@@ -255,7 +256,11 @@ export type AuditAction =
   | 'BILLING_CONFIG_UPDATED'
   | 'BILLING_PRICE_PUBLISHED'
   | 'BILLING_RECONCILIATION_RUN'
-  | 'RETENTION_TICK_RUN';
+  | 'RETENTION_TICK_RUN'
+  | 'DEPLOY_CUTOVER'
+  | 'DEPLOY_DIRECT_PROD'
+  | 'DEPLOY_ROLLBACK'
+  | 'DEPLOY_TEARDOWN';
 
 export interface AuditLogEntry {
   id: string;

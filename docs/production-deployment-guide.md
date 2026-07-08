@@ -32,17 +32,26 @@ same scripts with `workflow_dispatch` inputs.
    - test Firebase Hosting site and DNS
    - test runtime service account
    - separate low-budget test vendor/API secrets
-   - permanent production canary account with `is_internal_canary: true`
 
-4. Configure GitHub environments:
+4. Set `CANARY_ACCOUNT_EMAIL` (server env var) and `DEPLOY_WORKER_SHARED_SECRET`
+   (server env var) on the production Cloud Run service, matching the same
+   two values in `scripts/deploy.config`. The server bootstraps the canary
+   account automatically on startup — with `is_internal_canary: true` — the
+   first time it sees `CANARY_ACCOUNT_EMAIL` set; there is no manual account
+   creation step. `DEPLOY_WORKER_SHARED_SECRET` authorizes the deploy
+   scripts' calls to the server's internal `/api/internal/deploy/*`
+   endpoints (canary smoke write/cleanup, durable audit_log writes).
+
+5. Configure GitHub environments:
 
    - `test`
    - `production` with required manual approval
 
-5. Configure GitHub secrets used by the workflows:
+6. Configure GitHub secrets used by the workflows:
 
    - `GCP_SERVICE_ACCOUNT_KEY`
    - `GCLOUD_PROJECT_ID`
+   - `DEPLOY_WORKER_SHARED_SECRET` (same value as the server env var above)
 
 ## Local Dry Runs
 
@@ -126,17 +135,33 @@ What the script does before touching production:
 1. Requires an authorized `GITHUB_ACTOR` unless `--dry-run` is used.
 2. Validates the manifest shape.
 3. Validates test evidence matches the manifest backend digest, frontend SHA,
-   and config fingerprint.
-4. Prepares the exact frontend artifact referenced by the manifest.
+   and config fingerprint (file-to-file consistency).
+4. **Verifies against live infrastructure**, not just the files: confirms the
+   digest recorded in the manifest is what's actually deployed to
+   `TEST_SERVICE_NAME` right now, fetches `deploy-marker.json` from the live
+   test Hosting site and confirms its `gitSha` matches the manifest, and
+   recomputes `configFingerprint` from the deploy config cutover is about to
+   use (catching drift since the build, not just drift the evidence file
+   happens to record).
+5. Prepares the exact frontend artifact referenced by the manifest.
 
 Production actions:
 
-1. Deploys the digest-pinned backend image as a candidate Cloud Run revision.
-2. Runs smoke checks against the candidate.
+1. Deploys the digest-pinned backend image as a candidate Cloud Run revision
+   (`--no-traffic --tag candidate`).
+2. Writes a small canary-account record via the candidate revision's own
+   tagged URL, then smoke-tests **that candidate URL** (not the public
+   production domain, which still serves the outgoing revision at this
+   point) against production's real database.
 3. Shifts traffic to the candidate.
 4. Deploys the manifest-paired frontend artifact to production Hosting.
 5. Runs smoke checks against the public production domain.
-6. Writes cutover evidence under `dist/release`.
+6. Deletes the canary record created in step 2, regardless of whether step 5
+   passed, so the canary account's data footprint never grows across
+   cutovers.
+7. Writes cutover evidence under `dist/release` and to the `audit_log` table
+   via the internal deploy API (best-effort — a failed audit write logs a
+   warning but does not fail the cutover).
 
 ## Direct to Production
 
@@ -162,7 +187,9 @@ The script requires:
 - production deployment config values
 
 It prints a bypass warning, deploys the digest-pinned backend, deploys the
-manifest-paired frontend artifact, and writes direct-deploy evidence.
+manifest-paired frontend artifact, smoke-tests the public production domain,
+and writes direct-deploy evidence both to `dist/release` and to the
+`audit_log` table via the internal deploy API.
 
 ## Rollback
 
@@ -182,7 +209,11 @@ bash scripts/rollback.sh \
 ```
 
 Rollback never calls bare Firebase Hosting rollback. It deploys the frontend
-artifact from the same release manifest as the backend revision.
+artifact from the same release manifest as the backend revision, and refuses
+to proceed if the target `--revision`'s live image digest does not match
+`--release-manifest`'s `backendImageDigest` — this catches a mistyped
+revision/manifest pairing before it recreates the version-mismatch problem
+the unified script exists to prevent.
 
 ## Teardown Old Production Revisions
 
@@ -199,8 +230,10 @@ Equivalent script:
 bash scripts/teardown-old-production.sh --confirm yes-delete
 ```
 
-The script refuses to run without typed confirmation and skips revisions that
-have nonzero traffic.
+The script refuses to run without typed confirmation, skips revisions that
+have nonzero traffic, and skips revisions younger than
+`ROLLBACK_RETENTION_DAYS` — only revisions that are both 0%-traffic and past
+the retention window are deleted.
 
 ## Current State
 
@@ -210,7 +243,8 @@ Use this before and after deploy operations:
 bash scripts/current-state.sh
 ```
 
-It prints current Cloud Run state for test and production.
+It prints current Cloud Run state for test and production, including the
+deployed image digest and the `app-git-sha` label set at deploy time.
 
 ## Required Validation Before Production
 

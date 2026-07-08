@@ -12,7 +12,7 @@ require_github_actor() {
     exit 1
   fi
   case "$actor" in
-    Bryan|bryan|Tristan|tristan|duerk-industries|bduerk)
+    Bryan|bryan|Tristan|tristan)
       return 0
       ;;
     *)

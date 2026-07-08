@@ -36,6 +36,13 @@ else
   (cd "$REPO_ROOT/app" && npm run export:web -- --output-dir "$FRONTEND_DIR")
 fi
 
+# Served alongside the frontend so cutover-test-to-prod.sh can confirm the
+# artifact actually live on the test Hosting site is this exact build,
+# rather than trusting an internally-consistent-but-unverified evidence file
+# (Chapter 16 §5.4 step 1).
+node -e "const fs=require('fs'); fs.writeFileSync(process.argv[1] + '/deploy-marker.json', JSON.stringify({gitSha: process.argv[2], builderRunId: process.argv[3]}, null, 2) + '\n');" \
+  "$FRONTEND_DIR" "$GIT_SHA" "$BUILDER_RUN_ID"
+
 tar -czf "$FRONTEND_ARCHIVE" -C "$FRONTEND_DIR" .
 FRONTEND_SHA="$(sha256_file "$FRONTEND_ARCHIVE")"
 INDEX_SHA="$(sha256_file "$REPO_ROOT/firestore.indexes.json")"

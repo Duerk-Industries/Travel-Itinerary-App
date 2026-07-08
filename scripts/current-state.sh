@@ -11,7 +11,7 @@ describe_service() {
   echo "== $label =="
   gcloud run services describe "$service" \
     --region "$region" \
-    --format='table(status.latestReadyRevisionName,status.traffic[].revisionName,status.traffic[].percent,status.url)' || true
+    --format='table(status.latestReadyRevisionName,spec.template.spec.containers[0].image,metadata.labels.app-git-sha,status.traffic[].revisionName,status.traffic[].percent,status.url)' || true
 }
 
 describe_service test "$TEST_SERVICE_NAME" "$TEST_REGION"

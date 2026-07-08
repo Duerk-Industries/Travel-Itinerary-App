@@ -18,7 +18,8 @@ done
 
 [[ "$CONFIRM" == "yes-delete" ]] || fail "--confirm yes-delete is required"
 load_deploy_config
-require_vars PROD_SERVICE_NAME PROD_REGION ROLLBACK_RETENTION_DAYS
+require_vars PROD_SERVICE_NAME PROD_REGION PROD_DOMAIN ROLLBACK_RETENTION_DAYS
+DEPLOY_AUDIT_API_URL="${DEPLOY_AUDIT_API_URL:-${PROD_DOMAIN%/}/api/internal/deploy}"
 require_github_actor "$DRY_RUN"
 
 if [[ "$DRY_RUN" == "1" ]]; then
@@ -26,13 +27,27 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
+SERVICE_JSON="$(gcloud run services describe "$PROD_SERVICE_NAME" --region "$PROD_REGION" --format=json)"
+CUTOFF_EPOCH="$(node -e "console.log(Math.floor(Date.now()/1000) - Number(process.argv[1]) * 86400);" "$ROLLBACK_RETENTION_DAYS")"
+DELETED=()
+
 mapfile -t revisions < <(gcloud run revisions list --service "$PROD_SERVICE_NAME" --region "$PROD_REGION" --format='value(metadata.name,status.conditions[0].lastTransitionTime)')
 for row in "${revisions[@]}"; do
   revision="${row%%$'\t'*}"
-  traffic="$(gcloud run services describe "$PROD_SERVICE_NAME" --region "$PROD_REGION" --format=json | node -e "const s=JSON.parse(require('fs').readFileSync(0,'utf8')); const r=process.argv[1]; const t=(s.status.traffic||[]).find(x=>x.revisionName===r); process.stdout.write(String(t?.percent||0));" "$revision")"
+  last_transition="${row#*$'\t'}"
+  traffic="$(echo "$SERVICE_JSON" | node -e "const s=JSON.parse(require('fs').readFileSync(0,'utf8')); const r=process.argv[1]; const t=(s.status.traffic||[]).find(x=>x.revisionName===r); process.stdout.write(String(t?.percent||0));" "$revision")"
   if [[ "$traffic" != "0" ]]; then
     echo "Skipping $revision because traffic=$traffic"
     continue
   fi
+  revision_epoch="$(node -e "const d=new Date(process.argv[1]); process.stdout.write(isNaN(d.getTime())?'0':String(Math.floor(d.getTime()/1000)));" "$last_transition")"
+  if [[ -z "$revision_epoch" || "$revision_epoch" == "0" || "$revision_epoch" -gt "$CUTOFF_EPOCH" ]]; then
+    echo "Skipping $revision because it is younger than $ROLLBACK_RETENTION_DAYS days (lastTransitionTime=$last_transition)"
+    continue
+  fi
   gcloud run revisions delete "$revision" --region "$PROD_REGION" --quiet
+  DELETED+=("$revision")
 done
+
+write_deploy_audit_log "DEPLOY_TEARDOWN" "Teardown of 0%-traffic revisions older than $ROLLBACK_RETENTION_DAYS days" "" \
+  "$(node -e "console.log(JSON.stringify({service: process.argv[1], deletedRevisions: process.argv.slice(2)}))" "$PROD_SERVICE_NAME" "${DELETED[@]}")"

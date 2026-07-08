@@ -931,6 +931,14 @@ export const initDb = async (): Promise<void> => {
   ) {
     await backfillUserPackingLists();
   }
+
+  // Permanent canary fixture (Chapter 16 §6) used by cutover-test-to-prod.sh's
+  // smoke write/cleanup. Only bootstrapped when explicitly configured — most
+  // environments (local/dev/CI) have no canary account and shouldn't get one.
+  const canaryAccountEmail = getEnvValue('CANARY_ACCOUNT_EMAIL');
+  if (canaryAccountEmail) {
+    await ensureCanaryAccountBootstrap(canaryAccountEmail);
+  }
 };
 
 export const closePool = async (): Promise<void> => {
@@ -1259,7 +1267,7 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   const found = await findUserByEmailDoc(email);
   if (!found) return null;
   const data = found.data as User;
-  return { id: found.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+  return { id: found.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole, is_internal_canary: data.is_internal_canary === true };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
@@ -1269,9 +1277,32 @@ export const findUserByIdentifier = async (identifier: string): Promise<User | n
     if (usersByUsername.empty) return null;
     const doc = usersByUsername.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+    return { id: doc.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole, is_internal_canary: data.is_internal_canary === true };
   }
   return findUserByEmail(normalized);
+};
+
+export const isInternalCanaryAccount = async (userId: string): Promise<boolean> => {
+  const doc = await getDb().collection('users').doc(userId).get();
+  if (!doc.exists) return false;
+  return (doc.data() as User | undefined)?.is_internal_canary === true;
+};
+
+export const ensureCanaryAccountBootstrap = async (email: string): Promise<{ id: string }> => {
+  const existing = await findUserByEmailDoc(email);
+  if (existing) {
+    await getDb().collection('users').doc(existing.id).set({ is_internal_canary: true }, { merge: true });
+    return { id: existing.id };
+  }
+  const doc = getDb().collection('users').doc();
+  await doc.set({
+    email: normalizeEmail(email),
+    provider: 'email',
+    role: 'user',
+    is_internal_canary: true,
+    createdAt: nowIso(),
+  });
+  return { id: doc.id };
 };
 
 export const createWebUser = async (

@@ -7,6 +7,7 @@ import {
   sendTripInviteEmailViaSmtpApi,
   sendVerificationEmailViaSmtpApi,
 } from './apis/smtpCallers';
+import { isCanaryRecipientEmail } from './middleware/canarySafeMode';
 
 const isMailEnabled = (): boolean => {
   const raw = String(process.env.MAIL_ENABLED ?? '').trim().toLowerCase();
@@ -43,6 +44,7 @@ export const isEmailConfigured = (): boolean => {
 };
 
 export const sendShareEmail = async (to: string, subject: string, body: string): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendShareEmail')) return;
   const { transporter, from } = buildTransporter();
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -113,6 +115,7 @@ const sendWithRetry = async (
 };
 
 export const sendVerificationEmail = async (to: string, token: string): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendVerificationEmail')) return;
   const { transporter, from } = buildTransporter();
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -148,6 +151,7 @@ export const sendVerificationEmailBestEffort = async (
     return sendWithRetry(() => sendVerificationEmail(to, token), to);
   }
   const sender = async () => {
+    if (await isCanaryRecipientEmail(to, 'sendVerificationEmailBestEffort')) return;
     const { transporter, from } = buildTransporter();
     if (!transporter) {
       throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -172,6 +176,7 @@ export const sendVerificationEmailBestEffort = async (
 
 
 export const sendTripInviteEmail = async (to: string, tripName: string, inviterEmail?: string | null): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendTripInviteEmail')) return;
   const { transporter, from } = buildTransporter();
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -209,6 +214,7 @@ export const sendBillingTrialEndingEmail = async (
   to: string,
   trialEnd: Date,
 ): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendBillingTrialEndingEmail')) return;
   const { transporter, from } = buildTransporter();
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');

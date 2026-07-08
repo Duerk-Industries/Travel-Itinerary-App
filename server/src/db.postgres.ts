@@ -430,6 +430,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_internal_canary BOOLEAN NOT NULL DEFAULT FALSE;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_normalized ON users(username_normalized);`);
 
 
@@ -1624,6 +1625,14 @@ export const initDb = async (): Promise<void> => {
   // from the historical bootstrap. Disable via
   // INGESTION_MIGRATIONS_ON_BOOT=false when running against a DB where
   // migrations are applied out-of-band (e.g. a prod migration job).
+
+  // Permanent canary fixture (Chapter 16 §6) used by cutover-test-to-prod.sh's
+  // smoke write/cleanup. Only bootstrapped when explicitly configured — most
+  // environments (local/dev/CI) have no canary account and shouldn't get one.
+  const canaryAccountEmail = getEnvValue('CANARY_ACCOUNT_EMAIL');
+  if (canaryAccountEmail) {
+    await ensureCanaryAccountBootstrap(canaryAccountEmail);
+  }
 };
 
 
@@ -1754,6 +1763,35 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   const row = rows[0] as any;
   if (!row) return null;
   return { ...row, passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [] };
+};
+
+export const isInternalCanaryAccount = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ is_internal_canary: boolean }>(
+    `SELECT is_internal_canary FROM users WHERE id = $1`,
+    [userId]
+  );
+  return rows[0]?.is_internal_canary === true;
+};
+
+export const ensureCanaryAccountBootstrap = async (email: string): Promise<{ id: string }> => {
+  const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await findUserByEmail(normalizedEmail);
+  if (existing) {
+    await p.query(`UPDATE users SET is_internal_canary = TRUE WHERE id = $1`, [existing.id]);
+    return { id: existing.id };
+  }
+  const id = randomUUID();
+  await p.query(
+    `INSERT INTO users (id, email, provider, email_verified, is_internal_canary) VALUES ($1, $2, 'email', TRUE, TRUE)`,
+    [id, normalizedEmail]
+  );
+  await p.query(
+    `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified, verified_at) VALUES ($1, $2, $3, $4, TRUE, TRUE, NOW()) ON CONFLICT DO NOTHING`,
+    [randomUUID(), id, normalizedEmail, normalizedEmail]
+  );
+  return { id };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {

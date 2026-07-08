@@ -35,6 +35,10 @@ export const ensureDefaultGroupForUser = async (...args: Parameters<ReturnType<t
   adapter().ensureDefaultGroupForUser(...args);
 export const findUserByEmail = async (email: string): Promise<User | null> => adapter().findUserByEmail(email);
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => adapter().findUserByIdentifier(identifier);
+export const isInternalCanaryAccount = async (...args: Parameters<ReturnType<typeof adapter>['isInternalCanaryAccount']>) =>
+  adapter().isInternalCanaryAccount(...args);
+export const ensureCanaryAccountBootstrap = async (...args: Parameters<ReturnType<typeof adapter>['ensureCanaryAccountBootstrap']>) =>
+  adapter().ensureCanaryAccountBootstrap(...args);
 export const getUserById = async (...args: Parameters<ReturnType<typeof adapter>['getUserById']>) =>
   adapter().getUserById(...args);
 export const createWebUser = async (...args: Parameters<ReturnType<typeof adapter>['createWebUser']>) =>

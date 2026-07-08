@@ -21,6 +21,7 @@ done
 [[ "${#REASON}" -ge 8 ]] || fail "--reason is required for direct production deploy"
 load_deploy_config
 require_vars PROD_SERVICE_NAME PROD_REGION PROD_HOSTING_SITE PROD_DOMAIN PROD_FIRESTORE_DATABASE_ID PROD_RUNTIME_SERVICE_ACCOUNT PROD_AI_CAPTURE_BUCKET
+DEPLOY_AUDIT_API_URL="${DEPLOY_AUDIT_API_URL:-${PROD_DOMAIN%/}/api/internal/deploy}"
 require_github_actor "$DRY_RUN"
 
 echo "WARNING: direct production deploy bypasses test cutover. Reason: $REASON" >&2
@@ -33,18 +34,23 @@ if [[ -z "$MANIFEST" ]]; then
 fi
 node -e "const v=require('./scripts/lib/phase11-validators'); v.validateReleaseManifest(v.readJson(process.argv[1]));" "$MANIFEST"
 BACKEND_DIGEST="$(json_get "$MANIFEST" backendImageDigest)"
+MANIFEST_GIT_SHA="$(json_get "$MANIFEST" gitSha)"
 WORK_DIR="$REPO_ROOT/dist/deploy-prod"
 prepare_frontend_from_manifest "$MANIFEST" "$WORK_DIR/frontend"
-write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE" "$WORK_DIR/frontend" "$PROD_SERVICE_NAME" "$PROD_REGION"
+write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE" "$WORK_DIR/frontend" "$PROD_SERVICE_NAME" "$PROD_REGION" "$PROD_DOMAIN"
 
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$PROD_SERVICE_NAME" \
     --image "$BACKEND_DIGEST" \
     --region "$PROD_REGION" \
     --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" \
+    --update-labels "app-git-sha=$MANIFEST_GIT_SHA" \
     --update-env-vars "WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET"
-  firebase deploy --config "$WORK_DIR/firebase.hosting.generated.json" --only hosting
+  firebase_deploy_hosting "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE"
+  bash "$SCRIPT_DIR/smoke-test.sh" --base-url "$PROD_DOMAIN" --environment production-direct
 fi
 
 write_log_json "$REPO_ROOT/dist/release/direct-prod-deploy-$(date -u +%Y%m%d%H%M%S).json" \
   "operation=deploy-prod" "reason=$REASON" "actor=${GITHUB_ACTOR:-local}" "releaseManifest=$MANIFEST" "targetService=$PROD_SERVICE_NAME"
+write_deploy_audit_log "DEPLOY_DIRECT_PROD" "$REASON" "$MANIFEST" \
+  "$(node -e "console.log(JSON.stringify({backendImageDigest: process.argv[1]}))" "$BACKEND_DIGEST")"

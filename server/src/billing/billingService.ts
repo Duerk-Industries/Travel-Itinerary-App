@@ -21,6 +21,7 @@ import {
 import { BillingCustomer, BillingPlanKey, BillingSubscription, TierKey, UserRole } from '../types';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
+import { isCanaryUserId } from '../middleware/canarySafeMode';
 import {
   PLAN_DEFAULTS,
   SUPPORTED_PLAN_KEYS,
@@ -159,6 +160,9 @@ export const createCheckoutSession = async (params: {
   livemode: boolean;
 }): Promise<CreateCheckoutSessionResult> => {
   const { userId, email, planKey, idempotencyKey, livemode } = params;
+  if (await isCanaryUserId(userId, 'createCheckoutSession')) {
+    throw new Error('Billing checkout is disabled for the internal canary account.');
+  }
   const claimToken = `${idempotencyKey}:${Date.now()}`;
   const claimExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
 

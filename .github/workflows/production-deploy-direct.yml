@@ -25,11 +25,12 @@ jobs:
           node-version: "20"
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Authenticate gcloud
+      - name: Authenticate gcloud and Firebase
         run: |
           printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/gcp-service-account.json"
           gcloud auth activate-service-account --key-file="$RUNNER_TEMP/gcp-service-account.json"
           gcloud config set project "$GCLOUD_PROJECT_ID"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gcp-service-account.json" >> "$GITHUB_ENV"
         env:
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
@@ -40,3 +41,10 @@ jobs:
           bash scripts/deploy-prod.sh "${args[@]}"
         env:
           GITHUB_ACTOR: ${{ github.actor }}
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
+          DEPLOY_WORKER_SHARED_SECRET: ${{ secrets.DEPLOY_WORKER_SHARED_SECRET }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase-11-direct-deploy-output
+          path: dist/release
