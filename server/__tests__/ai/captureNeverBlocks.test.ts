@@ -6,6 +6,21 @@ import { generateItineraryViaPromptPlan } from '../../src/services/itineraryProm
 import { captureAiInteraction } from '../../src/ai/capture/captureService';
 
 jest.mock('axios');
+jest.mock('../../src/apis/openaiCallers', () => {
+  const actual = jest.requireActual('../../src/apis/openaiCallers');
+  return {
+    ...actual,
+    runItineraryPromptStageViaOpenAi: jest.fn(async () => {
+      const axios = require('axios') as jest.Mocked<typeof import('axios')>;
+      const response = await axios.post('/test-itinerary-prompt-stage');
+      return {
+        text: response.data?.choices?.[0]?.message?.content ?? null,
+        promptTokens: response.data?.usage?.prompt_tokens ?? 0,
+        completionTokens: response.data?.usage?.completion_tokens ?? 0,
+      };
+    }),
+  };
+});
 jest.mock('../../src/services/attractionsCatalogService', () => ({
   getAttractionPromptBlockForDestinations: jest.fn(async () => ({
     shortlistByDestination: {},

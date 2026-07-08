@@ -29,6 +29,11 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 // Snapshot of every `CREATE TABLE IF NOT EXISTS <name>` that currently lives
 // inline in `db.postgres.ts`. Keep alphabetical for diff readability.
 const EXPECTED_INLINE_TABLES: ReadonlySet<string> = new Set([
+  'ai_ab_test_metrics',
+  'ai_experiment_assignments',
+  'ai_experiments',
+  'ai_provider_certifications',
+  'ai_recommendations',
   'airports',
   'api_cost_counters',
   'api_usage_counters',

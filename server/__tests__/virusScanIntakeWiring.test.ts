@@ -16,6 +16,8 @@ const setEnv = () => {
 };
 
 describe('virus scan adapter — per-file wiring', () => {
+  let getVirusScannerSpy: jest.SpyInstance | null = null;
+
   beforeEach(async () => {
     jest.resetModules();
     setEnv();
@@ -24,7 +26,8 @@ describe('virus scan adapter — per-file wiring', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    getVirusScannerSpy?.mockRestore();
+    getVirusScannerSpy = null;
   });
 
   it('buildWebhookPayload calls scanBuffer on the active adapter with the file bytes + name', async () => {
@@ -36,7 +39,7 @@ describe('virus scan adapter — per-file wiring', () => {
       scannedAt: new Date().toISOString(),
       provider: 'fake_http',
     }));
-    jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
+    getVirusScannerSpy = jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
       name: 'fake_http',
       scanBatch: async () => ({ status: 'PASSED', scannedAt: new Date().toISOString(), provider: 'fake_http' }),
       scanBuffer,
@@ -63,7 +66,7 @@ describe('virus scan adapter — per-file wiring', () => {
     const { buildWebhookPayload } = require('../src/ingestion/intake') as typeof import('../src/ingestion/intake');
     const providers = require('../src/ingestion/virusScanProviders') as typeof import('../src/ingestion/virusScanProviders');
 
-    jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
+    getVirusScannerSpy = jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
       name: 'fake_http',
       scanBatch: async () => ({ status: 'PASSED', scannedAt: new Date().toISOString(), provider: 'fake_http' }),
       scanBuffer: async () => ({
@@ -91,7 +94,7 @@ describe('virus scan adapter — per-file wiring', () => {
     const metrics = require('../src/metrics') as typeof import('../src/metrics');
     metrics.resetMetricCountersForTests();
 
-    jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
+    getVirusScannerSpy = jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
       name: 'fake_http',
       scanBatch: async () => ({ status: 'PASSED', scannedAt: new Date().toISOString(), provider: 'fake_http' }),
       scanBuffer: async () => ({ status: 'PASSED', scannedAt: new Date().toISOString(), provider: 'fake_http' }),
@@ -119,7 +122,7 @@ describe('virus scan adapter — per-file wiring', () => {
     const providers = require('../src/ingestion/virusScanProviders') as typeof import('../src/ingestion/virusScanProviders');
 
     // Adapter with no scanBuffer method (matches the stub).
-    jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
+    getVirusScannerSpy = jest.spyOn(providers, 'getVirusScanner').mockReturnValue({
       name: 'legacy_stub',
       scanBatch: async () => ({
         status: 'SKIPPED',

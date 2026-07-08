@@ -22,6 +22,7 @@ module.exports = {
       displayName: 'firebase',
       testMatch: ['**/__tests__/**/*.test.ts'],
       setupFiles: ['<rootDir>/__tests__/jest-setup.ts'],
+      setupFilesAfterEnv: ['<rootDir>/__tests__/jest-after-env.ts'],
     },
   ],
 };

@@ -244,6 +244,14 @@ function getPool(): Pool {
       const pgMem = db.adapters.createPg();
       db.public.registerFunction({ name: 'to_char', args: [DataType.date, DataType.text], returns: DataType.text, implementation: formatDate });
       db.public.registerFunction({ name: 'to_char', args: [DataType.timestamp, DataType.text], returns: DataType.text, implementation: formatDate });
+      const leastDate = (a: Date | string | null, b: Date | string | null) => {
+        if (a == null) return b;
+        if (b == null) return a;
+        return new Date(a).getTime() <= new Date(b).getTime() ? a : b;
+      };
+      db.public.registerFunction({ name: 'least', args: [DataType.timestamp, DataType.timestamp], returns: DataType.timestamp, implementation: leastDate });
+      db.public.registerFunction({ name: 'least', args: [DataType.timestamptz, DataType.timestamptz], returns: DataType.timestamptz, implementation: leastDate });
+      db.public.registerFunction({ name: 'trim', args: [DataType.text], returns: DataType.text, implementation: (value: string | null) => (value ?? '').trim() });
       db.public.registerFunction({
         name: 'nullif',
         args: [DataType.text, DataType.text],
@@ -11126,21 +11134,44 @@ export const claimStripeWebhookEvent = async (data: {
 }): Promise<boolean> => {
   const p = getPool();
   const id = randomUUID();
-  const result = await p.query(
+  const stalePendingCutoff = new Date(Date.now() - 5 * 60 * 1000);
+  const existing = await p.query(
+    `SELECT processing_status, received_at
+     FROM stripe_webhook_events
+     WHERE stripe_event_id = $1
+     LIMIT 1`,
+    [data.stripeEventId],
+  );
+  if (existing.rows.length > 0) {
+    const row = existing.rows[0];
+    const status = String(row.processing_status ?? '');
+    const receivedAt = row.received_at ? new Date(row.received_at) : null;
+    const shouldReclaim =
+      status === 'failed' ||
+      (status === 'pending' && receivedAt !== null && receivedAt.getTime() < stalePendingCutoff.getTime());
+    if (!shouldReclaim) return false;
+    const reclaimed = await p.query(
+      `UPDATE stripe_webhook_events
+       SET
+         processing_status = 'pending',
+         last_error = NULL
+       WHERE stripe_event_id = $1
+       RETURNING stripe_event_id`,
+      [data.stripeEventId],
+    );
+    return reclaimed.rows.length > 0;
+  }
+
+  const inserted = await p.query(
     `INSERT INTO stripe_webhook_events
        (id, stripe_event_id, event_type, stripe_object_id, livemode, event_created, processing_status)
      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-     ON CONFLICT (stripe_event_id) DO UPDATE SET
-       processing_status = 'pending',
-       last_error = NULL
-     WHERE stripe_webhook_events.processing_status = 'failed'
-        OR (
-          stripe_webhook_events.processing_status = 'pending'
-          AND stripe_webhook_events.received_at < NOW() - INTERVAL '5 minutes'
-        )`,
+     ON CONFLICT (stripe_event_id) DO NOTHING
+     RETURNING stripe_event_id`,
     [id, data.stripeEventId, data.eventType, data.stripeObjectId ?? null, data.livemode, data.eventCreated ?? null],
   );
-  return (result.rowCount ?? 0) > 0;
+  if (inserted.rows.length > 0) return true;
+  return false;
 };
 
 export const markStripeWebhookEventProcessed = async (stripeEventId: string): Promise<void> => {
