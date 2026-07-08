@@ -67,6 +67,9 @@ jest.restoreAllMocks = () => {
 };
 
 process.env.NODE_ENV = process.env.NODE_ENV ?? 'test';
+if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.trim() === 'development-secret') {
+  process.env.AUTH_SECRET = 'jest-auth-secret';
+}
 process.env.DB_PROVIDER = process.env.JEST_DB_PROVIDER ?? 'memory';
 process.env.GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT_ID ?? 'jest-firebase-test-project';
 process.env.INGESTION_JOB_QUEUE_MODE = 'in_process';
