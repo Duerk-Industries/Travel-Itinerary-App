@@ -166,16 +166,22 @@ describe('ingestion routes', () => {
     const user = { firstName: 'Upload', lastName: 'Size', email: 'upload-size@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    const oversizedBuffer = Buffer.alloc(INGESTION_MAX_FILE_BYTES + 1, 0x20);
-    const res = await request(app)
-      .post('/api/ingestion/upload')
-      .set({ Authorization: `Bearer ${token}` })
-      .attach('files', oversizedBuffer, { filename: 'too-large.pdf', contentType: 'application/pdf' })
-      .expect(400);
+    try {
+      const oversizedBuffer = Buffer.alloc(INGESTION_MAX_FILE_BYTES + 1, 0x20);
+      const res = await request(app)
+        .post('/api/ingestion/upload')
+        .set({ Authorization: `Bearer ${token}` })
+        .attach('files', oversizedBuffer, { filename: 'too-large.pdf', contentType: 'application/pdf' })
+        .expect(400);
 
-    expect(res.body.code).toBe('file_too_large');
-    expect(String(res.body.error)).toContain('10MB');
+      expect(res.body.code).toBe('file_too_large');
+      expect(String(res.body.error)).toContain('10MB');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[ingestion][upload] rejected code=file_too_large'));
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
 });
