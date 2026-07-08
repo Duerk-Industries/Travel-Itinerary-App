@@ -1,13 +1,17 @@
 import { postOpenAiChatCompletion } from '../../apis/openaiApi';
 import { getEnvValue } from '../../env';
+import { getConfiguredProviderModels } from '../../services/aiProviderConfigService';
 import type { AiCallContext, AiChatRequest, AiChatResponse } from '../types/aiChat';
 import type { AiChatProvider } from './AiChatProvider';
 
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
+const OPENAI_SUPPORTED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'];
 
 export const openaiProvider: AiChatProvider = {
   id: 'openai',
-  supportedModels: [OPENAI_DEFAULT_MODEL],
+  get supportedModels(): string[] {
+    return getConfiguredProviderModels('openai', OPENAI_SUPPORTED_MODELS);
+  },
 
   async chatCompletion(req: AiChatRequest, ctx: AiCallContext): Promise<AiChatResponse> {
     const compatibilityContext = ctx as AiCallContext & {

@@ -219,7 +219,7 @@ export type ItineraryPromptPlanResult = {
 };
 
 type ServiceInput = {
-  apiKey: string;
+  apiKey?: string;
   userId?: string;
   usageWindowKey?: string;
   destinations: string[];
@@ -1437,7 +1437,7 @@ const hasVisibleText = (value: unknown): boolean => {
 };
 
 const runJsonStage = async <T>(params: {
-  apiKey: string;
+  apiKey?: string;
   caller:
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P0_NORM
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE
@@ -1510,7 +1510,7 @@ const runJsonStage = async <T>(params: {
 };
 
 const runRenderStage = async (params: {
-  apiKey: string;
+  apiKey?: string;
   template: PromptTemplate;
   replacements: Record<string, string>;
   acc?: { promptTokens: number; completionTokens: number };

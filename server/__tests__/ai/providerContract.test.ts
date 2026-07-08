@@ -5,6 +5,7 @@ import type { AiCallContext, AiChatRequest } from '../../src/ai/types/aiChat';
 import type { AiChatProvider } from '../../src/ai/providers/AiChatProvider';
 import { TestAiProvider } from '../../src/ai/testing/testAiProvider';
 import { openaiProvider } from '../../src/ai/providers/openaiProvider';
+import { openaiCompatibleProvider } from '../../src/ai/providers/openaiCompatibleProvider';
 import { anthropicProvider } from '../../src/ai/providers/anthropicProvider';
 import { geminiProvider } from '../../src/ai/providers/geminiProvider';
 import { zaiProvider } from '../../src/ai/providers/zaiProvider';
@@ -52,6 +53,9 @@ const runProviderContract = (name: string, getProvider: () => AiChatProvider) =>
       delete process.env.GEMINI_API_KEY;
       delete process.env.ZAI_API_KEY;
       delete process.env.ZAI_BASE_URL;
+      delete process.env.OPENAI_COMPATIBLE_API_KEY;
+      delete process.env.OPENAI_COMPATIBLE_BASE_URL;
+      delete process.env.OPENAI_COMPATIBLE_MODELS;
     });
 
     it('normalizes chat responses and token usage', async () => {
@@ -89,6 +93,15 @@ const runProviderContract = (name: string, getProvider: () => AiChatProvider) =>
       }
       if (name === 'zaiProvider') {
         process.env.ZAI_API_KEY = 'test-zai-key';
+        mockedAxios.post.mockResolvedValueOnce({
+          data: {
+            choices: [{ message: { content: '{"ok":true}' } }],
+            usage: { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20 },
+          },
+        });
+      }
+      if (name === 'openaiCompatibleProvider') {
+        process.env.OPENAI_COMPATIBLE_API_KEY = 'test-compatible-key';
         mockedAxios.post.mockResolvedValueOnce({
           data: {
             choices: [{ message: { content: '{"ok":true}' } }],
@@ -172,6 +185,21 @@ const runProviderContract = (name: string, getProvider: () => AiChatProvider) =>
           }),
           expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test-zai-key' }) })
         );
+        return;
+      }
+      if (name === 'openaiCompatibleProvider') {
+        process.env.OPENAI_COMPATIBLE_API_KEY = 'test-compatible-key';
+        process.env.OPENAI_COMPATIBLE_BASE_URL = 'http://localhost:4321/v1';
+        mockedAxios.post.mockResolvedValueOnce({ data: { choices: [{ message: { content: 'ok' } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } } });
+        await getProvider().chatCompletion(request, context);
+        expect(mockedAxios.post).toHaveBeenCalledWith(
+          'http://localhost:4321/v1/chat/completions',
+          expect.objectContaining({
+            model: request.model,
+            messages: request.messages,
+          }),
+          expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test-compatible-key' }) })
+        );
       }
     });
 
@@ -205,6 +233,7 @@ const runProviderContract = (name: string, getProvider: () => AiChatProvider) =>
 };
 
 runProviderContract('openaiProvider', () => openaiProvider);
+runProviderContract('openaiCompatibleProvider', () => openaiCompatibleProvider);
 runProviderContract('anthropicProvider', () => anthropicProvider);
 runProviderContract('geminiProvider', () => geminiProvider);
 runProviderContract('zaiProvider', () => zaiProvider);

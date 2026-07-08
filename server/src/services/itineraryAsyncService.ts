@@ -46,7 +46,7 @@ export type AsyncItineraryJob = {
 };
 
 type QueueInput = {
-  apiKey: string;
+  apiKey?: string;
   userId: string;
   tripId: string;
   itineraryId?: string;

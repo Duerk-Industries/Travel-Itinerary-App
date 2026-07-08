@@ -5,22 +5,22 @@ import type { AiCallContext, AiChatRequest, AiChatResponse } from '../types/aiCh
 import type { AiChatProvider } from './AiChatProvider';
 import { normalizeProviderError } from './providerErrors';
 
-const ZAI_DEFAULT_MODEL = 'glm-4.7';
-const ZAI_SUPPORTED_MODELS = ['glm-4.7', 'glm-4.5-air', 'glm-4.5'];
-const ZAI_DEFAULT_BASE_URL = 'https://api.z.ai/api/paas/v4';
+const OPENAI_COMPATIBLE_DEFAULT_MODEL = 'gpt-4o-mini';
+const OPENAI_COMPATIBLE_DEFAULT_BASE_URL = 'http://localhost:1234/v1';
 
 const baseUrl = (): string =>
-  (getEnvValue('ZAI_BASE_URL', { defaultValue: ZAI_DEFAULT_BASE_URL }) ?? ZAI_DEFAULT_BASE_URL).replace(/\/+$/, '');
+  (getEnvValue('OPENAI_COMPATIBLE_BASE_URL', { defaultValue: OPENAI_COMPATIBLE_DEFAULT_BASE_URL }) ??
+    OPENAI_COMPATIBLE_DEFAULT_BASE_URL).replace(/\/+$/, '');
 
-export const zaiProvider: AiChatProvider = {
-  id: 'zai',
+export const openaiCompatibleProvider: AiChatProvider = {
+  id: 'openai_compatible',
   get supportedModels(): string[] {
-    return getConfiguredProviderModels('zai', ZAI_SUPPORTED_MODELS);
+    return getConfiguredProviderModels('openai_compatible', [OPENAI_COMPATIBLE_DEFAULT_MODEL]);
   },
 
   async chatCompletion(req: AiChatRequest, _ctx: AiCallContext): Promise<AiChatResponse> {
-    const apiKey = getEnvValue('ZAI_API_KEY', { required: true });
-    if (!apiKey) throw new Error('Missing required env var: ZAI_API_KEY');
+    const apiKey = getEnvValue('OPENAI_COMPATIBLE_API_KEY', { required: true });
+    if (!apiKey) throw new Error('Missing required env var: OPENAI_COMPATIBLE_API_KEY');
     try {
       const response = await axios.post<AiChatResponse>(
         `${baseUrl()}/chat/completions`,
@@ -40,7 +40,7 @@ export const zaiProvider: AiChatProvider = {
       );
       return response.data;
     } catch (err) {
-      throw normalizeProviderError('zai', err);
+      throw normalizeProviderError('openai_compatible', err);
     }
   },
 };

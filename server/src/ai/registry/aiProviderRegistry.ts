@@ -1,6 +1,7 @@
 import type { AiChatProvider } from '../providers/AiChatProvider';
 import { anthropicProvider } from '../providers/anthropicProvider';
 import { geminiProvider } from '../providers/geminiProvider';
+import { openaiCompatibleProvider } from '../providers/openaiCompatibleProvider';
 import { openaiProvider } from '../providers/openaiProvider';
 import { zaiProvider } from '../providers/zaiProvider';
 import type { AiCallContext, AiChatRequest, AiChatResponse } from '../types/aiChat';
@@ -26,6 +27,7 @@ const providers = new Map<string, AiChatProvider>([
   [anthropicProvider.id, anthropicProvider],
   [geminiProvider.id, geminiProvider],
   [zaiProvider.id, zaiProvider],
+  [openaiCompatibleProvider.id, openaiCompatibleProvider],
 ]);
 
 type ExperimentOutcomeContext = {

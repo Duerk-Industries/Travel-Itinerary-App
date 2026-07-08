@@ -1,10 +1,16 @@
 import axios from 'axios';
 import { getEnvValue } from '../../env';
+import { getConfiguredProviderModels } from '../../services/aiProviderConfigService';
 import type { AiCallContext, AiChatMessage, AiChatRequest, AiChatResponse } from '../types/aiChat';
 import type { AiChatProvider } from './AiChatProvider';
 import { normalizeProviderError } from './providerErrors';
 
 const ANTHROPIC_DEFAULT_MODEL = 'claude-sonnet-4-5';
+const ANTHROPIC_SUPPORTED_MODELS = [
+  'claude-sonnet-4-5',
+  'claude-3-7-sonnet-latest',
+  'claude-3-5-haiku-latest',
+];
 const ANTHROPIC_API_VERSION = '2023-06-01';
 
 type AnthropicMessage = {
@@ -36,7 +42,9 @@ const contentText = (content: unknown): string => {
 
 export const anthropicProvider: AiChatProvider = {
   id: 'anthropic',
-  supportedModels: [ANTHROPIC_DEFAULT_MODEL],
+  get supportedModels(): string[] {
+    return getConfiguredProviderModels('anthropic', ANTHROPIC_SUPPORTED_MODELS);
+  },
 
   async chatCompletion(req: AiChatRequest, _ctx: AiCallContext): Promise<AiChatResponse> {
     const apiKey = getEnvValue('ANTHROPIC_API_KEY', { required: true });

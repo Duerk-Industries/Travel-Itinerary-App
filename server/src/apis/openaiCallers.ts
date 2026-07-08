@@ -26,7 +26,7 @@ type OpenAiCallerUsageContext = {
 };
 
 const runOpenAiTextCompletion = async (params: {
-  apiKey: string;
+  apiKey?: string;
   caller: string;
   systemPrompt: string;
   userPrompt: string;
@@ -48,7 +48,9 @@ const runOpenAiTextCompletion = async (params: {
     usageWindowKey?: string | null;
     usageMetadata?: Record<string, unknown>;
   };
-  ctx.apiKey = params.apiKey;
+  if (params.apiKey) {
+    ctx.apiKey = params.apiKey;
+  }
   ctx.usageAccountingEnabled = Boolean(params.usageContext?.userId);
   ctx.usageWindowKey = params.usageContext?.windowKey;
   ctx.usageMetadata = params.usageContext?.metadata;
@@ -74,7 +76,7 @@ const runOpenAiTextCompletion = async (params: {
 };
 
 export const generateItineraryPlanViaOpenAi = async (params: {
-  apiKey: string;
+  apiKey?: string;
   prompt: string;
   usageContext?: OpenAiCallerUsageContext;
 }): Promise<string | null> => {
@@ -91,7 +93,7 @@ export const generateItineraryPlanViaOpenAi = async (params: {
 };
 
 export const runItineraryPromptStageViaOpenAi = async (params: {
-  apiKey: string;
+  apiKey?: string;
   caller:
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P0_NORM
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE

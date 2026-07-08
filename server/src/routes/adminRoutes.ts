@@ -25,10 +25,11 @@ import {
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
-import { getEnvValue } from '../env';
 import { getRegisteredAiProviders } from '../ai/registry/aiProviderRegistry';
 import {
   clearAiProviderConfigCache,
+  getActiveAiProvider,
+  getConfiguredProviderApiKey,
   setAiProviderConfigWithAudit,
 } from '../services/aiProviderConfigService';
 import {
@@ -85,21 +86,13 @@ const AI_RUNTIME_SETTING_DEFAULTS = {
   ai_experiment_circuit_breaker_failure_rate_threshold: '0.25',
 } as const;
 const AI_RUNTIME_SETTING_KEYS = Object.keys(AI_RUNTIME_SETTING_DEFAULTS) as Array<keyof typeof AI_RUNTIME_SETTING_DEFAULTS>;
-const PROVIDER_ENV_KEYS: Record<string, string> = {
-  openai: 'OPENAI_API_KEY',
-  anthropic: 'ANTHROPIC_API_KEY',
-  gemini: 'GEMINI_API_KEY',
-  zai: 'ZAI_API_KEY',
-};
-
 const getAiProviderOptions = (certifiedProviderIds = new Set<string>()) => {
   const registered = new Set(getRegisteredAiProviders().map((provider) => provider.id));
-  for (const id of Object.keys(PROVIDER_ENV_KEYS)) registered.add(id);
   return Array.from(registered)
     .sort((a, b) => a.localeCompare(b))
     .map((id) => ({
       id,
-      configured: Boolean(getEnvValue(PROVIDER_ENV_KEYS[id] ?? `${id.toUpperCase()}_API_KEY`)),
+      configured: Boolean(getConfiguredProviderApiKey(id)),
       registered: getRegisteredAiProviders().some((provider) => provider.id === id),
       certified: certifiedProviderIds.has(id),
       supportedModels: getRegisteredAiProviders().find((provider) => provider.id === id)?.supportedModels ?? [],
@@ -154,19 +147,10 @@ router.get('/ai-config', async (_req, res) => {
     const certifications = await listAiProviderCertifications();
     const certifiedProviderIds = new Set(certifications.map((cert) => cert.providerId));
     const byFeature = new Map(stored.map((row) => [row.featureKey, row]));
-    const now = new Date().toISOString();
-    const features = AI_FEATURE_KEYS.map((featureKey) => {
+    const features = await Promise.all(AI_FEATURE_KEYS.map(async (featureKey) => {
       const row = byFeature.get(featureKey);
-      return row ?? {
-        featureKey,
-        provider: 'openai',
-        model: 'gpt-4o-mini',
-        enabled: true,
-        updatedBy: null,
-        updatedAt: now,
-        source: 'default',
-      };
-    });
+      return row ?? await getActiveAiProvider(featureKey);
+    }));
     res.json({ features, providers: getAiProviderOptions(certifiedProviderIds), certifications });
   } catch (err) {
     logError('[admin] failed to list AI provider config', err);

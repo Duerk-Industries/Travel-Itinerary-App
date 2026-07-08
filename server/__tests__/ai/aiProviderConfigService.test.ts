@@ -26,6 +26,16 @@ describe('aiProviderConfigService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     clearAiProviderConfigCache();
+    delete process.env.AI_ITINERARY_PROVIDER;
+    delete process.env.AI_ITINERARY_MODEL;
+    delete process.env.AI_INGESTION_LLM_PROVIDER;
+    delete process.env.AI_INGESTION_LLM_MODEL;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.ZAI_API_KEY;
+    delete process.env.OPENAI_COMPATIBLE_API_KEY;
+    delete process.env.OPENAI_COMPATIBLE_MODELS;
   });
 
   it('falls open to the OpenAI default when no config row exists', async () => {
@@ -36,6 +46,60 @@ describe('aiProviderConfigService', () => {
       provider: 'openai',
       model: 'gpt-4o-mini',
       source: 'default',
+    });
+  });
+
+  it('uses env-selected itinerary provider and model when no config row exists', async () => {
+    process.env.AI_ITINERARY_PROVIDER = 'anthropic';
+    process.env.AI_ITINERARY_MODEL = 'claude-sonnet-4-5';
+    process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
+    mockedGetAiProviderConfig.mockResolvedValueOnce(null);
+
+    await expect(getActiveAiProvider('itinerary_generation')).resolves.toMatchObject({
+      featureKey: 'itinerary_generation',
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5',
+      source: 'env',
+    });
+  });
+
+  it('falls back to the first configured provider key in env when no explicit provider is set', async () => {
+    process.env.GEMINI_API_KEY = 'test-gemini-key';
+    mockedGetAiProviderConfig.mockResolvedValueOnce(null);
+
+    await expect(getActiveAiProvider('itinerary_generation')).resolves.toMatchObject({
+      featureKey: 'itinerary_generation',
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
+      source: 'env',
+    });
+  });
+
+  it('uses the custom openai-compatible provider when selected in env', async () => {
+    process.env.AI_ITINERARY_PROVIDER = 'openai_compatible';
+    process.env.OPENAI_COMPATIBLE_API_KEY = 'test-compatible-key';
+    process.env.OPENAI_COMPATIBLE_MODELS = 'qwen2.5-coder-32b-instruct,llama-3.1-8b';
+    mockedGetAiProviderConfig.mockResolvedValueOnce(null);
+
+    await expect(getActiveAiProvider('itinerary_generation')).resolves.toMatchObject({
+      featureKey: 'itinerary_generation',
+      provider: 'openai_compatible',
+      model: 'qwen2.5-coder-32b-instruct',
+      source: 'env',
+    });
+  });
+
+  it('uses env-selected provider and model for ingestion llm extraction when no config row exists', async () => {
+    process.env.AI_INGESTION_LLM_PROVIDER = 'gemini';
+    process.env.AI_INGESTION_LLM_MODEL = 'gemini-2.5-pro';
+    process.env.GEMINI_API_KEY = 'test-gemini-key';
+    mockedGetAiProviderConfig.mockResolvedValueOnce(null);
+
+    await expect(getActiveAiProvider('ingestion_llm_extract')).resolves.toMatchObject({
+      featureKey: 'ingestion_llm_extract',
+      provider: 'gemini',
+      model: 'gemini-2.5-pro',
+      source: 'env',
     });
   });
 

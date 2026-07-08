@@ -2,7 +2,7 @@
  * Real LLM-backed extractor for travel document ingestion.
  *
  * - Only runs when isLocalEnv() is true (dev/local environment)
- * - Calls OpenAI gpt-4o-mini to extract structured travel fields
+ * - Calls the active AI provider to extract structured travel fields
  * - When extraction succeeds, auto-generates regex patterns and stores them
  *   as a learned source parser for future use (parser learning)
  */
@@ -15,9 +15,13 @@ import { upsertLearnedParser } from '../shared/repository';
 import { createAiCallContext } from '../../ai/registry/correlation';
 import { resolveProvider } from '../../ai/registry/aiProviderRegistry';
 import type { AiCallContext } from '../../ai/types/aiChat';
-import { getActiveAiProvider } from '../../services/aiProviderConfigService';
+import {
+  getActiveAiProvider,
+  getConfiguredProviderApiKey,
+  getProviderApiKeyEnvVar,
+} from '../../services/aiProviderConfigService';
 import { isLocalEnv } from '../../env';
-import { getEnvFlag, getEnvValue } from '../../env';
+import { getEnvFlag } from '../../env';
 import { logInfo, logError } from '../../logger';
 
 const INGESTION_LLM_MAX_INPUT_CHARS = 6000;
@@ -111,28 +115,33 @@ export class LlmExtractor implements ExtractionStrategy {
   async extract(doc: NormalizedDocument, config: ExtractionConfig): Promise<ExtractionResult> {
     if (!this.canRun(config)) return emptyResult(config, this.strategyName);
 
-    const apiKey = getEnvValue('OPENAI_API_KEY');
-    if (!apiKey) {
-      logInfo('[ingestion][llm] No OPENAI_API_KEY configured, skipping LLM extraction');
-      return emptyResult(config, this.strategyName);
-    }
-
     const inputText = doc.normalizedText.slice(0, INGESTION_LLM_MAX_INPUT_CHARS);
 
     let responseText: string | null = null;
     let promptTokens = 0;
     let completionTokens = 0;
+    let providerId = 'llm';
+    let modelName = INGESTION_LLM_MODEL;
 
     try {
       const activeConfig = await getActiveAiProvider(INGESTION_LLM_FEATURE_KEY);
+      const apiKey = getConfiguredProviderApiKey(activeConfig.provider);
+      if (!apiKey) {
+        logInfo(
+          `[ingestion][llm] No ${getProviderApiKeyEnvVar(activeConfig.provider)} configured for provider=${activeConfig.provider}, skipping LLM extraction`
+        );
+        return emptyResult(config, this.strategyName);
+      }
       const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER);
+      providerId = provider.id;
+      modelName = activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
       const ctx = createAiCallContext({
         correlationId: config.correlationId,
         jobId: config.importJobId,
         featureKey: INGESTION_LLM_FEATURE_KEY,
         userId: config.userId,
         provider: provider.id,
-        model: activeConfig.model || INGESTION_LLM_MODEL,
+        model: modelName,
         callerId: INGESTION_LLM_CALLER,
       }) as AiCallContext & {
         apiKey?: string;
@@ -149,7 +158,7 @@ export class LlmExtractor implements ExtractionStrategy {
       };
       const response = await provider.chatCompletion(
         {
-          model: activeConfig.model || INGESTION_LLM_MODEL,
+          model: modelName,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: inputText },
@@ -164,7 +173,7 @@ export class LlmExtractor implements ExtractionStrategy {
       promptTokens = response?.usage?.prompt_tokens ?? 0;
       completionTokens = response?.usage?.completion_tokens ?? 0;
     } catch (err: any) {
-      logError(`[ingestion][llm] OpenAI call failed: ${err.message ?? err}`);
+      logError(`[ingestion][llm] provider call failed: ${err.message ?? err}`);
       return emptyResult(config, this.strategyName);
     }
 
@@ -279,8 +288,8 @@ export class LlmExtractor implements ExtractionStrategy {
       usageMetrics: {
         tokensIn: promptTokens,
         tokensOut: completionTokens,
-        provider: 'llm',
-        modelName: 'gpt-4o-mini',
+        provider: providerId,
+        modelName,
         estimatedCostUsd: estimatedCost,
       },
       metadata: {

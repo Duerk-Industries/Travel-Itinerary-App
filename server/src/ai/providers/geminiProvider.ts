@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { getEnvValue } from '../../env';
+import { getConfiguredProviderModels } from '../../services/aiProviderConfigService';
 import type { AiCallContext, AiChatMessage, AiChatRequest, AiChatResponse } from '../types/aiChat';
 import type { AiChatProvider } from './AiChatProvider';
 import { normalizeProviderError } from './providerErrors';
 
 const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash';
+const GEMINI_SUPPORTED_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
 
 const roleForGemini = (role: AiChatMessage['role']): 'user' | 'model' =>
   role === 'assistant' ? 'model' : 'user';
@@ -30,7 +32,9 @@ const candidateText = (candidate: any): string =>
 
 export const geminiProvider: AiChatProvider = {
   id: 'gemini',
-  supportedModels: [GEMINI_DEFAULT_MODEL],
+  get supportedModels(): string[] {
+    return getConfiguredProviderModels('gemini', GEMINI_SUPPORTED_MODELS);
+  },
 
   async chatCompletion(req: AiChatRequest, _ctx: AiCallContext): Promise<AiChatResponse> {
     const apiKey = getEnvValue('GEMINI_API_KEY', { required: true });

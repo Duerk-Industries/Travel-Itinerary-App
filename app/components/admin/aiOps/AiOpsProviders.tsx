@@ -108,10 +108,40 @@ export const AiOpsProviders: React.FC<{
               );
             })}
           </View>
+          {selectedProvider?.supportedModels?.length ? (
+            <>
+              <Text style={[aiOpsStyles.cardSub, { color: theme.colors.textMuted }]}>Suggested models</Text>
+              <View style={aiOpsStyles.rowWrap}>
+                {selectedProvider.supportedModels.map((modelId) => {
+                  const active = draft.model === modelId;
+                  return (
+                    <TouchableOpacity
+                      key={`${feature.featureKey}-${selectedProvider.id}-${modelId}`}
+                      style={[
+                        aiOpsStyles.navButton,
+                        active && aiOpsStyles.navButtonActive,
+                        { borderColor: theme.colors.border },
+                      ]}
+                      onPress={() => setDrafts((prev) => ({
+                        ...prev,
+                        [feature.featureKey]: { ...draft, model: modelId },
+                      }))}
+                    >
+                      <Text style={[aiOpsStyles.navText, { color: theme.colors.text }, active && aiOpsStyles.navTextActive]}>
+                        {modelId}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
           <TextInput
             style={[aiOpsStyles.input, inputStyle(theme)]}
             value={draft.model}
             onChangeText={(model) => setDrafts((prev) => ({ ...prev, [feature.featureKey]: { ...draft, model } }))}
+            placeholder="Model id"
+            placeholderTextColor={theme.colors.textMuted}
             editable={Boolean(selectedProvider?.configured && selectedProvider?.registered)}
           />
           <TouchableOpacity
