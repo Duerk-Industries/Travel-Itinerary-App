@@ -14,6 +14,13 @@ export type ItineraryStageCapture = {
   completionTokens: number;
   responseChars: number;
   parseError?: string;
+  // Raw prompt/response text for this stage. Only populated when
+  // ENABLE_RAW_AI_CAPTURE is set (and captures are stored locally). These are
+  // NOT on the capture allowlist, so serializeForProduction strips them — the
+  // raw text only ever lands in local/dev capture files, never in production.
+  systemPrompt?: string;
+  userPrompt?: string;
+  responseText?: string;
 };
 
 export const captureItineraryInteraction = (params: {

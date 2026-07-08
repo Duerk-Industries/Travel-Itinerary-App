@@ -72,8 +72,11 @@ let destinationGeoCache:
   | null = null;
 
 const normalizeWhitespace = (value: string): string => value.replace(/\s+/g, ' ').trim();
+// Fold hyphens (and other separators) to spaces so a hyphenated catalog slug
+// ("new-york-city") and a typed destination name ("New York City") normalize to
+// the same key. slugify() below re-inserts hyphens, so its output is unchanged.
 const normalizeTextKey = (value: string): string =>
-  normalizeWhitespace(String(value ?? '').toLowerCase().replace(/[^a-z0-9\s-]/g, ' '));
+  normalizeWhitespace(String(value ?? '').toLowerCase().replace(/[^a-z0-9\s]/g, ' '));
 const slugify = (value: string): string =>
   normalizeTextKey(value)
     .replace(/\s+/g, '-')
@@ -1162,7 +1165,15 @@ export const syncAttractionsCatalogFromCsvToDbOnStartup = async (): Promise<void
       return;
     }
     for (const row of rows) {
-      await upsertAttractionCatalogEntry(row);
+      // Canonicalize the destination key to the same space-separated form the
+      // lookup uses (normalizeDestinationKey). The CSV stores hyphenated slugs
+      // like "new-york-city"; storing them verbatim meant queries for
+      // "New York City" -> "new york city" never matched. Single-word cities
+      // (e.g. "boston") were unaffected, which is why only those worked.
+      await upsertAttractionCatalogEntry({
+        ...row,
+        destinationKey: normalizeDestinationKey(row.destinationKey) || row.destinationKey,
+      });
     }
     logInfo(`[attractions] startup CSV import completed rows=${rows.length}`);
   } catch (err) {

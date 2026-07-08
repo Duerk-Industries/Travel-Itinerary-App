@@ -1436,6 +1436,20 @@ const hasVisibleText = (value: unknown): boolean => {
   return /[A-Za-z0-9]/.test(text);
 };
 
+// Raw prompt/response text is only attached to a stage capture when
+// ENABLE_RAW_AI_CAPTURE is set. Kept out of the default path so we don't hold
+// full prompt/response strings in memory for every generation. Even when
+// populated, the capture allowlist strips these unless the record is stored
+// locally with raw capture enabled (see allowlistSerializer / captureService).
+export const buildRawStageCapture = (
+  systemPrompt: string,
+  userPrompt: string,
+  responseText: string | null | undefined
+): Pick<ItineraryStageCapture, 'systemPrompt' | 'userPrompt' | 'responseText'> | Record<string, never> => {
+  if (!getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false })) return {};
+  return { systemPrompt, userPrompt, responseText: String(responseText ?? '') };
+};
+
 const runJsonStage = async <T>(params: {
   apiKey?: string;
   caller:
@@ -1483,6 +1497,7 @@ const runJsonStage = async <T>(params: {
     promptTokens: result.promptTokens,
     completionTokens: result.completionTokens,
     responseChars: String(result.text ?? '').length,
+    ...buildRawStageCapture(sys, usr, result.text),
   };
   if (!result.text) {
     logError(`[itinerary] ${params.caller} returned empty response; using fallback`);
@@ -1549,6 +1564,7 @@ const runRenderStage = async (params: {
     completionTokens: result.completionTokens,
     responseChars: String(result.text ?? '').length,
     ...(result.text ? {} : { parseError: 'empty_response' }),
+    ...buildRawStageCapture(sys, usr, result.text),
   });
   return result.text;
 };

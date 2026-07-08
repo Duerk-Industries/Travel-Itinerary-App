@@ -2568,7 +2568,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         method: 'DELETE',
         headers,
       });
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401) {
         logout();
         return;
       }

@@ -94,6 +94,52 @@ describe('allowlistSerializer', () => {
     });
   });
 
+  it('strips raw itinerary prompt/response text from production capture output', () => {
+    const record: CaptureRecord = {
+      captureSchemaVersion: 1,
+      captureId: 'capture-raw',
+      featureKey: 'itinerary_generation',
+      capturedAt: '2026-07-04T12:00:00.000Z',
+      outcome: 'success',
+      payload: {
+        destinationCount: 1,
+        days: 5,
+        stages: [
+          {
+            stage: 'p0_norm',
+            callerId: 'ITINERARY_PLAN_P0_NORM',
+            startedAt: '2026-07-04T12:00:00.000Z',
+            completedAt: '2026-07-04T12:00:01.000Z',
+            latencyMs: 1000,
+            outcome: 'success',
+            promptTokens: 10,
+            completionTokens: 5,
+            responseChars: 42,
+            systemPrompt: 'SYSTEM: plan a trip for user secret-prompt-marker',
+            userPrompt: 'USER: destinations=Paris secret-user-marker',
+            responseText: '{"normalized":"secret-response-marker"}',
+          },
+        ],
+      },
+    };
+
+    const output = serializeForProduction(record);
+    const text = serializedText(output);
+
+    // The raw text must never survive into a production capture.
+    expect(text).not.toContain('secret-prompt-marker');
+    expect(text).not.toContain('secret-user-marker');
+    expect(text).not.toContain('secret-response-marker');
+
+    const stage = (output.payload as any).stages[0];
+    expect(stage.systemPrompt).toBeUndefined();
+    expect(stage.userPrompt).toBeUndefined();
+    expect(stage.responseText).toBeUndefined();
+    // Non-raw diagnostic fields are still retained.
+    expect(stage.stage).toBe('p0_norm');
+    expect(stage.responseChars).toBe(42);
+  });
+
   it('redacts allowed diagnostic free-text fragments', () => {
     const record: CaptureRecord = {
       captureSchemaVersion: 1,
