@@ -83,7 +83,10 @@ exit 1
     execFileSync('bash', [
       '-lc',
       [
-        `export PATH=${shellQuote(`${toBashPath(workDir)}:/usr/local/bin:/usr/bin:/bin`)}`,
+        // Prepend workDir (the fake gcloud) rather than replacing $PATH
+        // outright, so real tools this script also shells out to (node,
+        // etc.) stay resolvable.
+        `export PATH=${shellQuote(toBashPath(workDir))}":$PATH"`,
         `export DEPLOY_CONFIG_FILE=${shellQuote(toBashPath(deployConfigPath))}`,
         'export GITHUB_ACTOR=Bryan',
         `${shellQuote(toBashPath(path.join(root, 'scripts/teardown-old-production.sh')))} --confirm yes-delete`,

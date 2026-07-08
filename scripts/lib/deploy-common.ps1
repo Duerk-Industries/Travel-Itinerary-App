@@ -41,9 +41,11 @@ function Get-Sha256File([string]$FilePath) {
   return (Get-FileHash -LiteralPath $FilePath -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
-# Delegates to phase11-validators.js so manifest/evidence validation and the
-# configFingerprint hash stay defined in exactly one place, regardless of
-# which shell (bash or PowerShell) ran a given deploy step.
+# Generic dotted-path JSON property getter (mirrors deploy-common.sh's
+# json_get). Manifest/evidence *validation* and the configFingerprint hash
+# themselves are separate node -e calls into phase11-validators.js made
+# directly by each top-level script, identically on both bash and
+# PowerShell -- this helper is just how both read individual fields back out.
 function Get-JsonValue([string]$FilePath, [string]$PropertyPath) {
   $result = & node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); const value=process.argv[2].split('.').reduce((o,k)=>o==null?undefined:o[k], data); if (value == null) process.exit(2); process.stdout.write(String(value));" $FilePath $PropertyPath
   if ($LASTEXITCODE -ne 0) { Fail "JSON property '$PropertyPath' not found in $FilePath" }

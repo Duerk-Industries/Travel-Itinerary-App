@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\deploy-common.ps1')
 . (Join-Path $PSScriptRoot 'lib\require-github-actor.ps1')
 
+$ConfirmDelete = $ConfirmDelete.TrimEnd("`r")
 if ($ConfirmDelete -ne 'yes-delete') { Fail '-ConfirmDelete yes-delete is required' }
 Import-DeployConfig
 Assert-RequiredVars @('PROD_SERVICE_NAME', 'PROD_REGION', 'PROD_DOMAIN', 'ROLLBACK_RETENTION_DAYS')

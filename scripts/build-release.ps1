@@ -52,7 +52,8 @@ if ($LASTEXITCODE -ne 0) { Fail 'Failed to archive frontend build' }
 $frontendSha = Get-Sha256File $frontendArchive
 $indexSha = Get-Sha256File (Join-Path $Script:RepoRoot 'firestore.indexes.json')
 $configFingerprint = Get-ConfigFingerprint
-$imageDigest = "$($env:ARTIFACT_REGISTRY_REPO)/backend:${shortSha}@sha256:$(('a' * 40 + '0' * 24))"
+$dryRunDigestHex = ($gitSha.Substring(0, [Math]::Min(40, $gitSha.Length)).PadRight(40, '0')) + ('0' * 24)
+$imageDigest = "$($env:ARTIFACT_REGISTRY_REPO)/backend:${shortSha}@sha256:$dryRunDigestHex"
 
 if (-not $DryRun) {
   $imageTag = "$($env:ARTIFACT_REGISTRY_REPO)/backend:$shortSha"
