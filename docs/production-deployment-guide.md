@@ -8,8 +8,19 @@ This guide covers the scripted Phase 11 deployment path:
 - roll back production to a manifest-paired frontend/backend release
 - tear down old 0%-traffic production revisions
 
-The scripts are the source of truth. The GitHub Actions workflows call these
-same scripts with `workflow_dispatch` inputs.
+The scripts are the source of truth. The GitHub Actions workflows call the
+bash (`.sh`) versions with `workflow_dispatch` inputs (CI runs on
+`ubuntu-latest`).
+
+Every script also has a `.ps1` counterpart for running these operations
+locally from PowerShell on Windows without Git Bash or WSL — same flags
+(PowerShell-cased), same behavior, both delegate manifest/evidence
+validation and the `configFingerprint` hash to the same
+`scripts/lib/phase11-validators.js` so a manifest built in one shell
+validates identically in the other. All examples below are given in bash;
+swap `bash scripts/x.sh --flag value` for `.\scripts\x.ps1 -Flag value`
+(e.g. `--dry-run` → `-DryRun`, `--release-manifest <path>` →
+`-ReleaseManifest <path>`).
 
 ## One-Time Setup
 
