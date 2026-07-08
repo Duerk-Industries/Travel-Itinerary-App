@@ -31,12 +31,12 @@ $manifestConfigFingerprint = Get-JsonValue $ReleaseManifest 'configFingerprint'
 # validateTestEvidence above only checks the manifest and evidence JSON
 # files are internally consistent with each other -- it does not prove the
 # artifacts were actually live in test. These checks close that gap.
-$liveTestImage = Get-LiveServiceImage -Service $env:TEST_SERVICE_NAME -Region $env:TEST_REGION
-if ($liveTestImage -notlike "*$backendDigest*") {
-  Fail "Cutover refused: image currently deployed to $($env:TEST_SERVICE_NAME) ($liveTestImage) does not match the manifest's backendImageDigest ($backendDigest)."
-}
-
 if (-not $DryRun) {
+  $liveTestImage = Get-LiveServiceImage -Service $env:TEST_SERVICE_NAME -Region $env:TEST_REGION
+  if ($liveTestImage -notlike "*$backendDigest*") {
+    Fail "Cutover refused: image currently deployed to $($env:TEST_SERVICE_NAME) ($liveTestImage) does not match the manifest's backendImageDigest ($backendDigest)."
+  }
+
   try {
     $testMarkerJson = Invoke-RestMethod -Uri "$($env:TEST_DOMAIN.TrimEnd('/'))/deploy-marker.json" -Method Get
   } catch {

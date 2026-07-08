@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import { shellQuote, toBashPath } from './bashPath';
 
 const root = path.resolve(__dirname, '../../..');
 
@@ -61,7 +62,7 @@ REVISIONS
   exit 0
 fi
 if [[ "$1 $2" == "run revisions" && "$3" == "delete" ]]; then
-  echo "$4" >> "${deletedLog.replace(/\\/g, '/')}"
+  echo "$4" >> "${toBashPath(deletedLog)}"
   exit 0
 fi
 echo "unhandled fake gcloud invocation: $*" >&2
@@ -79,13 +80,15 @@ exit 1
     const deployConfigPath = path.join(workDir, 'deploy.config');
     fs.writeFileSync(deployConfigPath, deployConfig);
 
-    execFileSync('bash', [path.join(root, 'scripts/teardown-old-production.sh'), '--confirm', 'yes-delete'], {
-      env: {
-        ...process.env,
-        PATH: `${workDir}${path.delimiter}${process.env.PATH}`,
-        DEPLOY_CONFIG_FILE: deployConfigPath,
-        GITHUB_ACTOR: 'Bryan',
-      },
+    execFileSync('bash', [
+      '-lc',
+      [
+        `export PATH=${shellQuote(`${toBashPath(workDir)}:/usr/local/bin:/usr/bin:/bin`)}`,
+        `export DEPLOY_CONFIG_FILE=${shellQuote(toBashPath(deployConfigPath))}`,
+        'export GITHUB_ACTOR=Bryan',
+        `${shellQuote(toBashPath(path.join(root, 'scripts/teardown-old-production.sh')))} --confirm yes-delete`,
+      ].join('; '),
+    ], {
       cwd: root,
       stdio: 'pipe',
     });

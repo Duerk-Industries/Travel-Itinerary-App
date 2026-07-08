@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import { shellQuote, toBashPath } from './bashPath';
 
 const root = path.resolve(__dirname, '../../..');
 
@@ -59,14 +60,16 @@ exit 1
     try {
       execFileSync(
         'bash',
-        [path.join(root, 'scripts/rollback.sh'), '--release-manifest', manifestPath, '--revision', 'svc-00042-mismatched'],
+        [
+          '-lc',
+          [
+            `export PATH=${shellQuote(`${toBashPath(workDir)}:/usr/local/bin:/usr/bin:/bin`)}`,
+            `export DEPLOY_CONFIG_FILE=${shellQuote(toBashPath(deployConfigPath))}`,
+            'export GITHUB_ACTOR=Bryan',
+            `${shellQuote(toBashPath(path.join(root, 'scripts/rollback.sh')))} --release-manifest ${shellQuote(toBashPath(manifestPath))} --revision svc-00042-mismatched`,
+          ].join('; '),
+        ],
         {
-          env: {
-            ...process.env,
-            PATH: `${workDir}${path.delimiter}${process.env.PATH}`,
-            DEPLOY_CONFIG_FILE: deployConfigPath,
-            GITHUB_ACTOR: 'Bryan',
-          },
           cwd: root,
           stdio: 'pipe',
         },

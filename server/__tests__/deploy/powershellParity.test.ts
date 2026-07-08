@@ -56,4 +56,22 @@ describe('Phase 11 PowerShell script parity', () => {
     const cutover = fs.readFileSync(path.join(root, 'scripts/cutover-test-to-prod.ps1'), 'utf8');
     expect(cutover).toContain('phase11-validators');
   });
+
+  it.each([
+    ['build-release', ['deploy-marker.json', 'frontendSha256', 'configFingerprint'], ['deploy-marker.json', 'frontendSha256', 'configFingerprint']],
+    ['deploy-test', ['Config fingerprint drift', 'firebase.hosting.generated.json', 'firebase_deploy_hosting'], ['Config fingerprint drift', 'firebase.hosting.generated.json', 'Invoke-FirebaseHostingDeploy']],
+    ['deploy-prod', ['DEPLOY_DIRECT_PROD', 'direct production deploy bypasses test cutover', 'firebase_deploy_hosting'], ['DEPLOY_DIRECT_PROD', 'direct production deploy bypasses test cutover', 'Invoke-FirebaseHostingDeploy']],
+    ['cutover-test-to-prod', ['live_service_image', 'canary-smoke-cleanup', 'DEPLOY_CUTOVER', 'prod-candidate'], ['Get-LiveServiceImage', 'canary-smoke-cleanup', 'DEPLOY_CUTOVER', 'prod-candidate']],
+    ['rollback', ['backendImageDigest', 'DEPLOY_ROLLBACK', 'firebase_deploy_hosting'], ['backendImageDigest', 'DEPLOY_ROLLBACK', 'Invoke-FirebaseHostingDeploy']],
+    ['teardown-old-production', ['ROLLBACK_RETENTION_DAYS', 'DEPLOY_TEARDOWN', 'gcloud run revisions delete'], ['ROLLBACK_RETENTION_DAYS', 'DEPLOY_TEARDOWN', 'gcloud run revisions delete']],
+  ])('%s.sh and %s.ps1 carry equivalent load-bearing behavior markers', (name, bashMarkers, powershellMarkers) => {
+    const bash = fs.readFileSync(path.join(root, 'scripts', `${name}.sh`), 'utf8');
+    const powershell = fs.readFileSync(path.join(root, 'scripts', `${name}.ps1`), 'utf8');
+    for (const marker of bashMarkers) {
+      expect(bash).toContain(marker);
+    }
+    for (const marker of powershellMarkers) {
+      expect(powershell).toContain(marker);
+    }
+  });
 });

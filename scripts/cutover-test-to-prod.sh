@@ -36,13 +36,13 @@ MANIFEST_CONFIG_FINGERPRINT="$(json_get "$MANIFEST" configFingerprint)"
 # validateTestEvidence above only checks the manifest and evidence JSON
 # files are internally consistent with each other -- it does not prove the
 # artifacts were actually live in test. These checks close that gap.
-LIVE_TEST_IMAGE="$(live_service_image "$TEST_SERVICE_NAME" "$TEST_REGION")"
-case "$LIVE_TEST_IMAGE" in
-  *"$BACKEND_DIGEST"*) : ;;
-  *) fail "Cutover refused: image currently deployed to $TEST_SERVICE_NAME ($LIVE_TEST_IMAGE) does not match the manifest's backendImageDigest ($BACKEND_DIGEST)." ;;
-esac
-
 if [[ "$DRY_RUN" != "1" ]]; then
+  LIVE_TEST_IMAGE="$(live_service_image "$TEST_SERVICE_NAME" "$TEST_REGION")"
+  case "$LIVE_TEST_IMAGE" in
+    *"$BACKEND_DIGEST"*) : ;;
+    *) fail "Cutover refused: image currently deployed to $TEST_SERVICE_NAME ($LIVE_TEST_IMAGE) does not match the manifest's backendImageDigest ($BACKEND_DIGEST)." ;;
+  esac
+
   TEST_MARKER_JSON="$(curl -sS -f "${TEST_DOMAIN%/}/deploy-marker.json")" || fail "Cutover refused: could not fetch deploy-marker.json from $TEST_DOMAIN to verify the live test frontend artifact."
   TEST_MARKER_GIT_SHA="$(echo "$TEST_MARKER_JSON" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).gitSha || '');")"
   [[ "$TEST_MARKER_GIT_SHA" == "$MANIFEST_GIT_SHA" ]] || fail "Cutover refused: frontend artifact live at $TEST_DOMAIN (gitSha=$TEST_MARKER_GIT_SHA) does not match the manifest being promoted (gitSha=$MANIFEST_GIT_SHA)."

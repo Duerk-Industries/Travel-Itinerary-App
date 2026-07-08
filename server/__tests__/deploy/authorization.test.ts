@@ -4,16 +4,19 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import { shellQuote, toBashPath } from './bashPath';
 
 const root = path.resolve(__dirname, '../../..');
 const guardPath = path.join(root, 'scripts/lib/require-github-actor.sh');
+const guardBashPath = toBashPath(guardPath);
 
 const runGuard = (actor: string | undefined, dryRun = '0'): { code: number; stderr: string } => {
   try {
+    const actorExport = actor === undefined ? 'unset GITHUB_ACTOR' : `export GITHUB_ACTOR=${shellQuote(actor)}`;
     execFileSync(
       'bash',
-      ['-c', `source "${guardPath}" && require_github_actor "$1"`, 'require-github-actor-test', dryRun],
-      { env: { ...process.env, GITHUB_ACTOR: actor }, stdio: 'pipe' },
+      ['-lc', `${actorExport}; source ${shellQuote(guardBashPath)} && require_github_actor ${shellQuote(dryRun)}`],
+      { stdio: 'pipe' },
     );
     return { code: 0, stderr: '' };
   } catch (err: any) {
