@@ -5,6 +5,26 @@ import { generateItineraryViaPromptPlan } from '../src/services/itineraryPromptP
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
 
 jest.mock('axios');
+jest.mock('../src/ai/experiments/experimentConfigService', () => ({
+  getRunningExperiment: jest.fn(async () => null),
+  clearExperimentConfigCache: jest.fn(),
+}));
+jest.mock('../src/services/aiProviderConfigService', () => ({
+  getConfiguredProviderApiKey: jest.fn(() => 'test-key'),
+  getConfiguredProviderModels: jest.fn((_providerId: string, fallbackModels: string[]) => fallbackModels),
+  getProviderApiKeyEnvVar: jest.fn((providerId: string) => `${providerId.toUpperCase()}_API_KEY`),
+  getProviderModelsEnvVar: jest.fn((providerId: string) => `${providerId.toUpperCase()}_MODELS`),
+  getActiveAiProvider: jest.fn(async (featureKey: string) => ({
+    featureKey,
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    enabled: true,
+    source: 'default',
+    updatedBy: null,
+    updatedAt: null,
+  })),
+  clearAiProviderConfigCache: jest.fn(),
+}));
 jest.mock('../src/services/attractionsCatalogService', () => ({
   getAttractionPromptBlockForDestinations: jest.fn(async () => ({ shortlistByDestination: {}, promptBlock: 'none' })),
 }));
