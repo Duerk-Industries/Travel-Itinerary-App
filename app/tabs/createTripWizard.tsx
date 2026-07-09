@@ -1198,18 +1198,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           participants: participantPayload,
         }),
       });
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
       setWizardError('Session expired. Please log in again.');
       onUnauthorized?.();
       return;
     }
     const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setWizardError(data.error || 'Unable to create trip');
-        return;
-      }
+    if (!res.ok) {
+      setWizardError(data.error || 'Unable to create trip');
+      return;
+    }
 
-      const tripId = data.trip?.id as string | undefined;
+    const tripId = data.trip?.id as string | undefined;
       if (!tripId) {
         setWizardError('Trip created but no id was returned.');
         return;

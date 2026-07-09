@@ -30,6 +30,7 @@ import billingRoutes from './routes/billingRoutes';
 import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
 import internalBillingRoutes from './routes/internalBillingRoutes';
+import internalDeployRoutes from './routes/internalDeployRoutes';
 import prometheusRoutes from './routes/prometheusRoutes';
 
 import { loadEnv } from './env_loader';
@@ -220,12 +221,17 @@ import {
 } from './redirects';
 import { logError } from './logger';
 import { assertNoPubliclyExposedServerSecrets } from './secrets';
+import { canarySafeMode } from './middleware/canarySafeMode';
 
 assertSafeAuthSecretConfig();
 assertNoPubliclyExposedServerSecrets();
 
 initPassport();
 app.use(passport.initialize());
+// Default res.locals.canarySafeMode = false here; `authenticate()` (auth.ts)
+// re-derives the real value from the DB once req.user is resolved, since
+// canary status isn't embedded in the JWT payload.
+app.use(canarySafeMode);
 const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
 
 const redirectToLoginWithError = (req: express.Request, res: express.Response, webUrl: string, code: string) => {
@@ -365,6 +371,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);
 app.use('/api/internal/billing', internalBillingRoutes);
+app.use('/api/internal/deploy', internalDeployRoutes);
 app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);

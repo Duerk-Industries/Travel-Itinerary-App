@@ -4,12 +4,15 @@ import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { getAppTheme, type AppTheme } from '../theme/theme';
 import { usePersistedState } from '../hooks/usePersistedState';
 import PackingListTable from '../components/PackingListTable';
+import { AiOperationsSection } from '../components/admin/aiOps/AiOperationsSection';
+import type { AiOpsSection } from '../components/admin/aiOps/types';
+export type { AiOpsSection } from '../components/admin/aiOps/types';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -28,6 +31,60 @@ type QueueDepthSnapshot = {
 };
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
+
+type AiProviderOption = { id: string; configured: boolean; registered: boolean; certified?: boolean; supportedModels: string[] };
+type AiProviderFeatureConfig = {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
+};
+type AiRuntimeSetting = { key: string; value: string; updatedBy?: string | null; updatedAt?: string | null; source?: string };
+type AiCaptureItem = {
+  captureId: string;
+  featureKey: string;
+  capturedAt: string;
+  correlationId?: string;
+  jobId?: string;
+  anonymousUserId?: string;
+  provider?: string;
+  model?: string;
+  callerId?: string;
+  outcome: string;
+  latencyMs?: number;
+  payloadSummary?: Record<string, unknown>;
+};
+type AiAnalyticsMetric = {
+  table: string;
+  periodStart: string;
+  periodType: string;
+  dimensions: Record<string, string>;
+  metricKey: string;
+  metricValue: number;
+};
+type AiExperiment = {
+  experimentId: string;
+  name: string;
+  featureKey: string;
+  experimentKind: string;
+  status: string;
+  variants: Array<{ variantId: string; trafficPercent: number; provider?: string; model?: string }>;
+  createdAt: string;
+  updatedAt: string;
+};
+type AiRecommendation = {
+  recommendationId: string;
+  recommendationType: string;
+  featureKey: string;
+  rationale: string;
+  confidence: string;
+  status: string;
+  qualityDeltaEstimate: number;
+  costDeltaEstimateUsdMonthly: number;
+  createdAt: string;
+};
 
 type TierLimit = { limitKey: string; limitValue: number };
 type TierEntitlement = { featureId: string; featureKey: string | null; isAllowed: boolean };
@@ -126,7 +183,9 @@ type AdminTabProps = {
   backendUrl: string;
   headers: Record<string, string>;
   initialSection?: AdminSection;
+  initialAiOpsSection?: AiOpsSection;
   onSectionChange?: (section: AdminSection) => void;
+  onAiOpsSectionChange?: (section: AiOpsSection) => void;
 };
 
 type IngestionMetrics = {
@@ -209,6 +268,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Users', section: 'users' as AdminSection, desc: 'Search users, change tiers and roles' },
         { label: 'Tiers', section: 'tiers' as AdminSection, desc: 'View and edit tier limits and entitlements' },
         { label: 'Feature Flags', section: 'features' as AdminSection, desc: 'Enable or disable feature flags' },
+        { label: 'AI Operations', section: 'ai-ops' as AdminSection, desc: 'Select providers and models per AI feature' },
         { label: 'Packing Defaults', section: 'packing-defaults' as AdminSection, desc: 'Edit the universal user packing list' },
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
@@ -2517,7 +2577,14 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
 // Main AdminTab
 // ---------------------------------------------------------------------------
 
-const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection = 'overview', onSectionChange }) => {
+const AdminTab: React.FC<AdminTabProps> = ({
+  backendUrl,
+  headers,
+  initialSection = 'overview',
+  initialAiOpsSection = 'overview',
+  onSectionChange,
+  onAiOpsSectionChange,
+}) => {
   const colorScheme = useColorScheme();
   const theme = getAppTheme('auto', colorScheme);
   const [section, setSection] = useState<AdminSection>(initialSection);
@@ -2544,6 +2611,16 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <OverviewSection onNav={goTo} theme={theme} />;
       case 'features':
         return <FeaturesSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'ai-ops':
+        return (
+          <AiOperationsSection
+            backendUrl={backendUrl}
+            headers={headers}
+            initialAiOpsSection={initialAiOpsSection}
+            onAiOpsSectionChange={onAiOpsSectionChange}
+            theme={theme}
+          />
+        );
       case 'packing-defaults':
         return <PackingListTable backendUrl={backendUrl} headers={headers} variant="admin" title="Universal packing defaults" />;
       case 'users':
@@ -2584,6 +2661,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     'user-detail': selectedUser?.email ?? 'User Detail',
     tiers: 'Tiers',
     features: 'Feature Flags',
+    'ai-ops': 'AI Operations',
     'packing-defaults': 'Packing Defaults',
     'user-data': 'User Data',
     'audit-log': 'Audit Log',
@@ -2680,6 +2758,10 @@ const localStyles = StyleSheet.create({
   // Layout
   row: { flexDirection: 'row', alignItems: 'center' },
   flex: { flex: 1 },
+  inlineField: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  inlineFieldLabel: { minWidth: 220, flex: 1 },
+  compactRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ddd' },
+  tableCellPrimary: { fontSize: 13, fontWeight: '700' },
   // Badges
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 8 },
   badgeOn: { backgroundColor: '#27ae60' },

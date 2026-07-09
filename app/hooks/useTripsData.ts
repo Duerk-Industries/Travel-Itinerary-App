@@ -53,7 +53,7 @@ const normalizeGroup = (group: GroupView): GroupView => ({
 });
 
 const isUnauthorizedStatus = (status: number, requirePasswordSetup: boolean): boolean =>
-  status === 401 || (status === 403 && !requirePasswordSetup);
+  status === 401 || (status === 403 && requirePasswordSetup);
 
 export const useTripsData = ({
   activeTripId,
@@ -81,9 +81,6 @@ export const useTripsData = ({
       if (error instanceof ApiClientError) {
         if (isUnauthorizedStatus(error.status, requirePasswordSetup)) {
           onUnauthorized?.();
-          return undefined;
-        }
-        if (error.status === 403) {
           return undefined;
         }
         return error.message;

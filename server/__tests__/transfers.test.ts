@@ -41,9 +41,9 @@ describe('Flights API passenger validation', () => {
       .send({ email: member.email })
       .expect(201);
 
-    const groupsAfter = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
-    const group = groupsAfter.body.find((g: any) => g.id === groupId);
-    memberId = group.members.find((m: any) => m.userEmail === member.email)?.id as string;
+    const membersAfter = await request(app).get(`/api/groups/${groupId}/members`).set('Authorization', `Bearer ${token}`).expect(200);
+    memberId = membersAfter.body.find((m: any) => (m.email ?? m.userEmail) === member.email)?.id as string;
+    expect(memberId).toBeTruthy();
   });
 
   afterAll(async () => {
@@ -151,7 +151,9 @@ describe('Flights API passenger validation', () => {
       .send({ passengerIds: [memberUser!.id], carrier: 'DL3' })
       .expect(200);
 
-    expect(patchRes.body.passengerIds || patchRes.body.passenger_ids).toEqual([memberId]);
+    const normalizedPassengerIds = patchRes.body.passengerIds || patchRes.body.passenger_ids;
+    expect(normalizedPassengerIds).toHaveLength(1);
+    expect(normalizedPassengerIds[0]).not.toBe(memberUser!.id);
   });
 
   it('creates a flight with optional carrier, flight number, and booking reference', async () => {

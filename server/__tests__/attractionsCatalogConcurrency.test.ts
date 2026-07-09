@@ -139,7 +139,9 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
   it('syncs cached destination rows to CSV without forcing discovery refresh', async () => {
     const previousNodeEnv = process.env.NODE_ENV;
     const previousCsvPath = process.env.ATTRACTIONS_CSV_LOCAL_PATH;
+    const previousE2eMode = process.env.E2E_MODE;
     process.env.NODE_ENV = 'development';
+    process.env.E2E_MODE = '1';
     process.env.ATTRACTIONS_CSV_LOCAL_PATH = 'server/data/attractions_catalog.csv';
 
     const mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as any);
@@ -176,6 +178,8 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
     else process.env.NODE_ENV = previousNodeEnv;
     if (previousCsvPath === undefined) delete process.env.ATTRACTIONS_CSV_LOCAL_PATH;
     else process.env.ATTRACTIONS_CSV_LOCAL_PATH = previousCsvPath;
+    if (previousE2eMode === undefined) delete process.env.E2E_MODE;
+    else process.env.E2E_MODE = previousE2eMode;
   });
 
   it('filters out weakly related cross-city discoveries during refresh', async () => {

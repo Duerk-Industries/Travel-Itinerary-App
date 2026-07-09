@@ -13,6 +13,10 @@ import { logError, logInfo } from '../logger';
 import type { ActivityType, AttractionCatalogEntry } from '../types';
 import { getApiCacheSetting } from '../config/apiLimits';
 import {
+  captureItineraryInteraction,
+  type ItineraryStageCapture,
+} from '../ai/capture/itineraryCapture';
+import {
   getAttractionPromptBlockForDestinations,
 } from './attractionsCatalogService';
 import { scoreActivityTypeByPreferences, type InterestWeights } from './activityTypeInterestWeights';
@@ -215,7 +219,7 @@ export type ItineraryPromptPlanResult = {
 };
 
 type ServiceInput = {
-  apiKey: string;
+  apiKey?: string;
   userId?: string;
   usageWindowKey?: string;
   destinations: string[];
@@ -248,6 +252,7 @@ type ServiceInput = {
   tripStartMonth?: number | null;
   tripStartYear?: number | null;
   tripIdSeed?: string;
+  captureId?: string;
 };
 
 type PromptTemplate = {
@@ -1431,8 +1436,22 @@ const hasVisibleText = (value: unknown): boolean => {
   return /[A-Za-z0-9]/.test(text);
 };
 
+// Raw prompt/response text is only attached to a stage capture when
+// ENABLE_RAW_AI_CAPTURE is set. Kept out of the default path so we don't hold
+// full prompt/response strings in memory for every generation. Even when
+// populated, the capture allowlist strips these unless the record is stored
+// locally with raw capture enabled (see allowlistSerializer / captureService).
+export const buildRawStageCapture = (
+  systemPrompt: string,
+  userPrompt: string,
+  responseText: string | null | undefined
+): Pick<ItineraryStageCapture, 'systemPrompt' | 'userPrompt' | 'responseText'> | Record<string, never> => {
+  if (!getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false })) return {};
+  return { systemPrompt, userPrompt, responseText: String(responseText ?? '') };
+};
+
 const runJsonStage = async <T>(params: {
-  apiKey: string;
+  apiKey?: string;
   caller:
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P0_NORM
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE
@@ -1443,6 +1462,7 @@ const runJsonStage = async <T>(params: {
   maxTokens: number;
   fallbackValue: T;
   acc?: { promptTokens: number; completionTokens: number };
+  captureStages?: ItineraryStageCapture[];
   usageContext?: {
     userId: string;
     windowKey?: string | null;
@@ -1451,6 +1471,8 @@ const runJsonStage = async <T>(params: {
 }): Promise<T> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
+  const startedMs = Date.now();
+  const startedAt = new Date(startedMs).toISOString();
   logInfo(`[itinerary] stage start caller=${params.caller} maxTokens=${params.maxTokens}`);
   const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
@@ -1464,28 +1486,50 @@ const runJsonStage = async <T>(params: {
     params.acc.promptTokens += result.promptTokens;
     params.acc.completionTokens += result.completionTokens;
   }
+  const completedAt = new Date().toISOString();
+  const stageCapture: ItineraryStageCapture = {
+    stage: params.template.id,
+    callerId: params.caller,
+    startedAt,
+    completedAt,
+    latencyMs: Date.now() - startedMs,
+    outcome: 'success',
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    responseChars: String(result.text ?? '').length,
+    ...buildRawStageCapture(sys, usr, result.text),
+  };
   if (!result.text) {
     logError(`[itinerary] ${params.caller} returned empty response; using fallback`);
+    params.captureStages?.push({ ...stageCapture, outcome: 'failure', parseError: 'empty_response' });
     return params.fallbackValue;
   }
   logInfo(`[itinerary] stage response caller=${params.caller} chars=${result.text.length}`);
   try {
-    return parseModelJson<T>(result.text);
+    const parsed = parseModelJson<T>(result.text);
+    params.captureStages?.push(stageCapture);
+    return parsed;
   } catch (err) {
     const snippet = String(result.text).slice(0, 600).replace(/\s+/g, ' ');
     logError(`[itinerary] ${params.caller} JSON parse failed; using fallback`, {
       error: err instanceof Error ? err.message : String(err),
       snippet,
     });
+    params.captureStages?.push({
+      ...stageCapture,
+      outcome: 'failure',
+      parseError: err instanceof Error ? err.message : String(err),
+    });
     return params.fallbackValue;
   }
 };
 
 const runRenderStage = async (params: {
-  apiKey: string;
+  apiKey?: string;
   template: PromptTemplate;
   replacements: Record<string, string>;
   acc?: { promptTokens: number; completionTokens: number };
+  captureStages?: ItineraryStageCapture[];
   usageContext?: {
     userId: string;
     windowKey?: string | null;
@@ -1494,6 +1538,8 @@ const runRenderStage = async (params: {
 }): Promise<string | null> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
+  const startedMs = Date.now();
+  const startedAt = new Date(startedMs).toISOString();
   logInfo('[itinerary] stage start caller=ITINERARY_PLAN_P4_RENDER maxTokens=900');
   const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
@@ -1507,10 +1553,55 @@ const runRenderStage = async (params: {
     params.acc.promptTokens += result.promptTokens;
     params.acc.completionTokens += result.completionTokens;
   }
+  params.captureStages?.push({
+    stage: params.template.id,
+    callerId: OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    latencyMs: Date.now() - startedMs,
+    outcome: result.text ? 'success' : 'failure',
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    responseChars: String(result.text ?? '').length,
+    ...(result.text ? {} : { parseError: 'empty_response' }),
+    ...buildRawStageCapture(sys, usr, result.text),
+  });
   return result.text;
 };
 
 export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promise<ItineraryPromptPlanResult> => {
+  const tokenAcc = { promptTokens: 0, completionTokens: 0 };
+  const captureStages: ItineraryStageCapture[] = [];
+  try {
+    return await runGenerateItineraryViaPromptPlan(input, tokenAcc, captureStages);
+  } catch (err) {
+    // Stages accumulated before the throw (e.g. a network error mid-pipeline)
+    // must still be captured — otherwise a failed generation leaves nothing
+    // to debug from, even though several stages may have succeeded first.
+    captureItineraryInteraction({
+      captureId: input.captureId ?? input.tripIdSeed,
+      jobId: input.captureId ?? input.tripIdSeed,
+      userId: input.userId,
+      outcome: 'failure',
+      stages: captureStages,
+      tokenUsage: {
+        promptTokens: tokenAcc.promptTokens,
+        completionTokens: tokenAcc.completionTokens,
+        totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+      },
+      payload: {
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
+    throw err;
+  }
+};
+
+const runGenerateItineraryViaPromptPlan = async (
+  input: ServiceInput,
+  tokenAcc: { promptTokens: number; completionTokens: number },
+  captureStages: ItineraryStageCapture[]
+): Promise<ItineraryPromptPlanResult> => {
   const bundle = getPromptBundle();
   const promptRequest = buildPromptRequest(input);
   const mustSeePromptBlock = buildMustSeePromptBlock(promptRequest.ms ?? []);
@@ -1519,7 +1610,6 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
   );
 
-  const tokenAcc = { promptTokens: 0, completionTokens: 0 };
   const usageContext = input.userId
     ? {
         userId: input.userId,
@@ -1542,6 +1632,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 700,
     fallbackValue: {},
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const normalized = sanitizeNorm(normRaw, promptRequest);
@@ -1596,6 +1687,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 1200,
     fallbackValue: {},
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const route = sanitizeRoute(routeRaw, normalized, promptRequest);
@@ -1616,6 +1708,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
     fallbackValue: {},
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const dayItinerary = sanitizeItinerary(dayRaw, route, normalized, promptRequest);
@@ -1634,6 +1727,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 1400,
     fallbackValue: dayItinerary,
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const itinerary = enforceShortlistGrounding(
@@ -1667,6 +1761,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
       FINAL_JSON: JSON.stringify(itineraryWithMustSee),
     },
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const renderedMarkdown = String(render ?? '')
@@ -1690,6 +1785,28 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
   );
+  captureItineraryInteraction({
+    captureId: input.captureId ?? input.tripIdSeed,
+    jobId: input.captureId ?? input.tripIdSeed,
+    userId: input.userId,
+    outcome: 'success',
+    stages: captureStages,
+    tokenUsage: {
+      promptTokens: tokenAcc.promptTokens,
+      completionTokens: tokenAcc.completionTokens,
+      totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+    },
+    payload: {
+      destinationCount: promptRequest.d.length,
+      days: promptRequest.dur ?? input.days,
+      detailCount: safeDetails.length,
+      transfersCount: items.transfers.length,
+      lodgingsCount: items.lodgings.length,
+      activitiesCount: items.activities.length,
+      carRentalsCount: items.carRentals.length,
+      usedRenderFallback: planMarkdown === fallbackMarkdown,
+    },
+  });
 
   return {
     promptRequest,

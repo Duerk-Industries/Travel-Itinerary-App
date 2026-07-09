@@ -46,7 +46,7 @@ export type AsyncItineraryJob = {
 };
 
 type QueueInput = {
-  apiKey: string;
+  apiKey?: string;
   userId: string;
   tripId: string;
   itineraryId?: string;
@@ -671,6 +671,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripStartMonth: input.tripStartMonth,
       tripStartYear: input.tripStartYear,
       tripIdSeed: input.tripId,
+      captureId: jobId,
       usageWindowKey: input.usageWindowKey,
     });
 

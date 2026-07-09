@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordUsage } from '../services/entitlementService';
-import { estimateOpenAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
+import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
 
 type OpenAiMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -11,6 +11,9 @@ type OpenAiMessage = {
 export type OpenAiChatCompletionRequest = {
   model: string;
   messages: OpenAiMessage[];
+  response_format?: {
+    type: 'json_object';
+  };
   temperature?: number;
   max_tokens?: number;
 };
@@ -46,8 +49,11 @@ export const postOpenAiChatCompletion = async (params: {
   apiKey: string;
   payload: OpenAiChatCompletionRequest;
   usageContext?: OpenAiUsageContext;
+  skipApiUsageReservation?: boolean;
 }): Promise<OpenAiChatCompletionResponse> => {
-  await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
+  if (!params.skipApiUsageReservation) {
+    await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
+  }
   const response = await axios.post<OpenAiChatCompletionResponse>(
     'https://api.openai.com/v1/chat/completions',
     params.payload,
@@ -59,7 +65,8 @@ export const postOpenAiChatCompletion = async (params: {
     }
   );
   const usage = response.data?.usage;
-  const estimatedCostMicrosUsd = estimateOpenAiCostMicros({
+  const estimatedCostMicrosUsd = estimateAiCostMicros({
+    provider: 'OPENAI',
     model: params.payload.model,
     promptTokens: usage?.prompt_tokens ?? 0,
     completionTokens: usage?.completion_tokens ?? 0,

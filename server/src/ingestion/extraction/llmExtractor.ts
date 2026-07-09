@@ -2,7 +2,7 @@
  * Real LLM-backed extractor for travel document ingestion.
  *
  * - Only runs when isLocalEnv() is true (dev/local environment)
- * - Calls OpenAI gpt-4o-mini to extract structured travel fields
+ * - Calls the active AI provider to extract structured travel fields
  * - When extraction succeeds, auto-generates regex patterns and stores them
  *   as a learned source parser for future use (parser learning)
  */
@@ -12,13 +12,23 @@ import type { ExtractionConfig, ExtractionResult, NormalizedDocument, ParsedItem
 import type { ExtractionStrategy } from './index';
 import { detectSource, detectItemType } from './sourceDetection';
 import { upsertLearnedParser } from '../shared/repository';
-import { postOpenAiChatCompletion } from '../../apis/openaiApi';
+import { createAiCallContext } from '../../ai/registry/correlation';
+import { resolveProvider } from '../../ai/registry/aiProviderRegistry';
+import type { AiCallContext } from '../../ai/types/aiChat';
+import {
+  getActiveAiProvider,
+  getConfiguredProviderApiKey,
+  getProviderApiKeyEnvVar,
+} from '../../services/aiProviderConfigService';
 import { isLocalEnv } from '../../env';
-import { getEnvFlag, getEnvValue } from '../../env';
+import { getEnvFlag } from '../../env';
 import { logInfo, logError } from '../../logger';
 
 const INGESTION_LLM_MAX_INPUT_CHARS = 6000;
 const INGESTION_DEBUG_LLM_MAX_CHARS = 4000;
+const INGESTION_LLM_CALLER = 'INGESTION_LLM_EXTRACT';
+const INGESTION_LLM_FEATURE_KEY = 'ingestion_llm_extract';
+const INGESTION_LLM_MODEL = 'gpt-4o-mini';
 const debugSnippet = (value: string): string =>
   value.length <= INGESTION_DEBUG_LLM_MAX_CHARS
     ? value
@@ -105,24 +115,50 @@ export class LlmExtractor implements ExtractionStrategy {
   async extract(doc: NormalizedDocument, config: ExtractionConfig): Promise<ExtractionResult> {
     if (!this.canRun(config)) return emptyResult(config, this.strategyName);
 
-    const apiKey = getEnvValue('OPENAI_API_KEY');
-    if (!apiKey) {
-      logInfo('[ingestion][llm] No OPENAI_API_KEY configured, skipping LLM extraction');
-      return emptyResult(config, this.strategyName);
-    }
-
     const inputText = doc.normalizedText.slice(0, INGESTION_LLM_MAX_INPUT_CHARS);
 
     let responseText: string | null = null;
     let promptTokens = 0;
     let completionTokens = 0;
+    let providerId = 'llm';
+    let modelName = INGESTION_LLM_MODEL;
 
     try {
-      const response = await postOpenAiChatCompletion({
-        caller: 'INGESTION_LLM_EXTRACT',
-        apiKey,
-        payload: {
-          model: 'gpt-4o-mini',
+      const activeConfig = await getActiveAiProvider(INGESTION_LLM_FEATURE_KEY);
+      const apiKey = getConfiguredProviderApiKey(activeConfig.provider);
+      if (!apiKey) {
+        logInfo(
+          `[ingestion][llm] No ${getProviderApiKeyEnvVar(activeConfig.provider)} configured for provider=${activeConfig.provider}, skipping LLM extraction`
+        );
+        return emptyResult(config, this.strategyName);
+      }
+      const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER);
+      providerId = provider.id;
+      modelName = activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
+      const ctx = createAiCallContext({
+        correlationId: config.correlationId,
+        jobId: config.importJobId,
+        featureKey: INGESTION_LLM_FEATURE_KEY,
+        userId: config.userId,
+        provider: provider.id,
+        model: modelName,
+        callerId: INGESTION_LLM_CALLER,
+      }) as AiCallContext & {
+        apiKey?: string;
+        usageAccountingEnabled?: boolean;
+        usageWindowKey?: string | null;
+        usageMetadata?: Record<string, unknown>;
+      };
+      ctx.apiKey = apiKey;
+      ctx.usageAccountingEnabled = true;
+      ctx.usageWindowKey = getMonthWindowKey();
+      ctx.usageMetadata = {
+        pipeline: 'ingestion_llm_extract',
+        strategyName: this.strategyName,
+      };
+      const response = await provider.chatCompletion(
+        {
+          model: modelName,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: inputText },
@@ -130,21 +166,14 @@ export class LlmExtractor implements ExtractionStrategy {
           temperature: 0.1,
           max_tokens: 1200,
         },
-        usageContext: {
-          userId: config.userId,
-          windowKey: getMonthWindowKey(),
-          metadata: {
-            pipeline: 'ingestion_llm_extract',
-            strategyName: this.strategyName,
-          },
-        },
-      });
+        ctx
+      );
 
       responseText = response?.choices?.[0]?.message?.content ?? null;
       promptTokens = response?.usage?.prompt_tokens ?? 0;
       completionTokens = response?.usage?.completion_tokens ?? 0;
     } catch (err: any) {
-      logError(`[ingestion][llm] OpenAI call failed: ${err.message ?? err}`);
+      logError(`[ingestion][llm] provider call failed: ${err.message ?? err}`);
       return emptyResult(config, this.strategyName);
     }
 
@@ -259,8 +288,8 @@ export class LlmExtractor implements ExtractionStrategy {
       usageMetrics: {
         tokensIn: promptTokens,
         tokensOut: completionTokens,
-        provider: 'llm',
-        modelName: 'gpt-4o-mini',
+        provider: providerId,
+        modelName,
         estimatedCostUsd: estimatedCost,
       },
       metadata: {

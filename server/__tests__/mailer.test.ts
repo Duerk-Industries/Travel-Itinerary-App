@@ -9,6 +9,9 @@ jest.mock('nodemailer', () => ({
         sendMail: mockSendMail,
     })),
 }));
+jest.mock('../src/apis/smtpApi', () => ({
+  sendSmtpMail: jest.fn(async ({ transporter, message }: any) => transporter.sendMail(message)),
+}));
 
 const nodemailer = require('nodemailer');
 

@@ -36,8 +36,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd app
-          npx expo export --platform web --output-dir ../dist
+          npm --prefix app run export:web -- --output-dir ../dist
 
       - name: Deploy Firebase Hosting preview
         shell: bash

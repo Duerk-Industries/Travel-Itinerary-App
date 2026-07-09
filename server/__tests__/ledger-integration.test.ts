@@ -107,7 +107,6 @@ describe('Ledger integration data setup', () => {
         checkInDate: '2026-02-02',
         checkOutDate: '2026-02-05',
         rooms: 2,
-        refundBy: '',
         totalCost: 600,
         costPerNight: 100,
         address: '123 Test St',

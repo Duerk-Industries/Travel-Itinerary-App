@@ -22,6 +22,7 @@ import { startBillingReconciliationScheduler } from './billing/subscriptionRecon
 import { installShutdownHandlers } from './shutdown';
 import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './config/stripeBilling';
 import { getBillingPlanConfig } from './db';
+import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -123,6 +124,9 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   startIngestionMetricsScheduler();
   startFailedRetryScheduler();
   startBillingReconciliationScheduler();
+  if (process.env.NODE_ENV !== 'test') {
+    startScheduledAggregation();
+  }
 
   if (process.env.NODE_ENV !== 'test') {
     installShutdownHandlers(server);

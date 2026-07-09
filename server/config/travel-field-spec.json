@@ -1,0 +1,101 @@
+{
+  "$comment": "Machine-readable counterpart to docs/travel-field-spec.md. Keep both in sync — the markdown explains why a rule exists, this file is what the evaluator actually runs. Loaded once at startup by a travelFieldSpec.ts loader, same convention as server/src/config/apiLimits.ts loading api-limits.yaml.",
+  "version": 1,
+  "formats": {
+    "AIRPORT_CODE": { "pattern": "^[A-Z]{3}$", "description": "IATA airport code" },
+    "FLIGHT_NUMBER": { "pattern": "^[A-Z0-9]{2}\\d{1,4}$", "description": "IATA airline designator + 1-4 digits" },
+    "PNR": { "pattern": "^[A-Z0-9]{6}$", "description": "IATA Type A/B booking reference, 6 alphanumeric characters" },
+    "LOOSE_CONFIRMATION_4_24": { "pattern": "^[A-Z0-9]{4,24}$", "description": "Vendor-specific confirmation/reference number; plausibility band only, not a real standard. Widened from an earlier 5-12 char band after real Booking.com hotel confirmations (up to 20 digits) failed it" },
+    "ISO_DATE": { "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z?)?$", "description": "ISO 8601 date, or full ISO 8601 datetime — extracted date fields throughout this codebase are stored as full UTC timestamps (see semanticFieldHelpers.ts parseIsoLikeDate), not bare dates" },
+    "TIME_12H": { "pattern": "^(1[0-2]|0?[1-9]):[0-5]\\d\\s*[AaPp][Mm]$", "description": "12-hour clock with am/pm — case and the space before am/pm both vary in real extracted values (normalizeOutputTime only normalizes when its own regex matches, otherwise it passes the raw extracted text through unchanged), so both must be accepted rather than assumed" },
+    "CURRENCY_CODE": { "pattern": "^[A-Z]{3}$", "description": "ISO 4217 currency code" },
+    "POSITIVE_INTEGER": { "pattern": "^[1-9]\\d*$", "description": "Positive integer" },
+    "NON_NEGATIVE_NUMBER": { "pattern": "^\\d+(\\.\\d+)?$", "description": "Non-negative decimal" }
+  },
+  "itemTypes": {
+    "flight": {
+      "fields": {
+        "carrier": { "required": true, "typicallyPresent": true, "format": null },
+        "flightNumber": { "required": true, "typicallyPresent": true, "format": "FLIGHT_NUMBER" },
+        "bookingReference": { "required": false, "typicallyPresent": true, "format": "PNR" },
+        "departureAirportCode": { "required": true, "typicallyPresent": true, "format": "AIRPORT_CODE" },
+        "arrivalAirportCode": { "required": true, "typicallyPresent": true, "format": "AIRPORT_CODE" },
+        "layoverLocationCode": { "required": false, "typicallyPresent": false, "format": "AIRPORT_CODE" },
+        "departureDate": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "arrivalDate": { "required": false, "typicallyPresent": true, "format": "ISO_DATE" },
+        "departureTime": { "required": true, "typicallyPresent": true, "format": "TIME_12H" },
+        "arrivalTime": { "required": true, "typicallyPresent": true, "format": "TIME_12H" },
+        "passengerName": { "required": true, "typicallyPresent": true, "format": null },
+        "cost": { "required": false, "typicallyPresent": true, "format": "NON_NEGATIVE_NUMBER" }
+      }
+    },
+    "rail": {
+      "fields": {
+        "carrier": { "required": true, "typicallyPresent": true, "format": null },
+        "flightNumber": { "required": false, "typicallyPresent": false, "format": null, "$comment": "train number varies too widely by operator to validate a shape" },
+        "bookingReference": { "required": false, "typicallyPresent": true, "format": "LOOSE_CONFIRMATION_4_24", "$comment": "rail bookings are frequently intermediated by an OTA (e.g. Klook) whose own reference is not a real IATA PNR — PNR format only applies to actual airline bookings" },
+        "departureDate": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "arrivalDate": { "required": false, "typicallyPresent": true, "format": "ISO_DATE" },
+        "departureTime": { "required": true, "typicallyPresent": true, "format": "TIME_12H" },
+        "arrivalTime": { "required": true, "typicallyPresent": true, "format": "TIME_12H" },
+        "departureLocation": { "required": true, "typicallyPresent": true, "format": null },
+        "arrivalLocation": { "required": true, "typicallyPresent": true, "format": null },
+        "passengerName": { "required": true, "typicallyPresent": true, "format": null },
+        "cost": { "required": false, "typicallyPresent": true, "format": "NON_NEGATIVE_NUMBER" }
+      }
+    },
+    "ferry_bus_transfer": {
+      "fields": {
+        "carrier": { "required": true, "typicallyPresent": true, "format": null },
+        "bookingReference": { "required": false, "typicallyPresent": false, "format": "LOOSE_CONFIRMATION_4_24", "$comment": "same as rail — ferry/bus/private-transfer bookings are commonly OTA-intermediated (Klook, GetYourGuide), not real IATA PNRs" },
+        "departureDate": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "departureTime": { "required": true, "typicallyPresent": true, "format": "TIME_12H" },
+        "departureLocation": { "required": true, "typicallyPresent": true, "format": null },
+        "arrivalLocation": { "required": true, "typicallyPresent": true, "format": null },
+        "passengerName": { "required": true, "typicallyPresent": true, "format": null },
+        "cost": { "required": false, "typicallyPresent": true, "format": "NON_NEGATIVE_NUMBER" }
+      }
+    },
+    "hotel": {
+      "fields": {
+        "name": { "required": true, "typicallyPresent": true, "format": null },
+        "check_in_date": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "check_out_date": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "confirmationNumber": { "required": false, "typicallyPresent": true, "format": "LOOSE_CONFIRMATION_4_24" },
+        "address": { "required": false, "typicallyPresent": true, "format": null },
+        "rooms": { "required": false, "typicallyPresent": true, "format": "POSITIVE_INTEGER" },
+        "total_cost": { "required": false, "typicallyPresent": true, "format": "NON_NEGATIVE_NUMBER" },
+        "cost_per_night": { "required": false, "typicallyPresent": true, "format": "NON_NEGATIVE_NUMBER" }
+      },
+      "crossFieldChecks": [
+        { "rule": "check_out_date > check_in_date", "onFail": "flag_implausible" }
+      ]
+    },
+    "car_rental": {
+      "fields": {
+        "vendor": { "required": true, "typicallyPresent": true, "format": null },
+        "pickupLocation": { "required": true, "typicallyPresent": true, "format": null },
+        "dropoffLocation": { "required": true, "typicallyPresent": true, "format": null },
+        "pickupDate": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "dropoffDate": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "reference": { "required": false, "typicallyPresent": true, "format": "LOOSE_CONFIRMATION_4_24" },
+        "model": { "required": false, "typicallyPresent": true, "format": null },
+        "cost": { "required": false, "typicallyPresent": true, "format": "NON_NEGATIVE_NUMBER" }
+      },
+      "crossFieldChecks": [
+        { "rule": "dropoffDate >= pickupDate", "onFail": "flag_implausible" }
+      ]
+    },
+    "tour_activity": {
+      "fields": {
+        "name": { "required": true, "typicallyPresent": true, "format": null },
+        "date": { "required": true, "typicallyPresent": true, "format": "ISO_DATE" },
+        "startTime": { "required": false, "typicallyPresent": true, "format": "TIME_12H" },
+        "startLocation": { "required": false, "typicallyPresent": true, "format": null },
+        "reference": { "required": false, "typicallyPresent": true, "format": "LOOSE_CONFIRMATION_4_24" },
+        "duration": { "required": false, "typicallyPresent": true, "format": null },
+        "cost": { "required": false, "typicallyPresent": true, "format": "NON_NEGATIVE_NUMBER" }
+      }
+    }
+  }
+}

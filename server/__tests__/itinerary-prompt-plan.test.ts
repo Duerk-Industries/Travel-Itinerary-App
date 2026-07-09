@@ -5,6 +5,44 @@ import { generateItineraryViaPromptPlan } from '../src/services/itineraryPromptP
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
 
 jest.mock('axios');
+jest.mock('../src/apis/openaiCallers', () => {
+  const actual = jest.requireActual('../src/apis/openaiCallers');
+  return {
+    ...actual,
+    runItineraryPromptStageViaOpenAi: jest.fn(async () => {
+      const axios = require('axios') as jest.Mocked<typeof import('axios')>;
+      const response = await axios.post('/test-itinerary-prompt-stage');
+      return {
+        text: response.data?.choices?.[0]?.message?.content ?? null,
+        promptTokens: response.data?.usage?.prompt_tokens ?? 0,
+        completionTokens: response.data?.usage?.completion_tokens ?? 0,
+      };
+    }),
+  };
+});
+jest.mock('../src/ai/capture/itineraryCapture', () => ({
+  captureItineraryInteraction: jest.fn(),
+}));
+jest.mock('../src/ai/experiments/experimentConfigService', () => ({
+  getRunningExperiment: jest.fn(async () => null),
+  clearExperimentConfigCache: jest.fn(),
+}));
+jest.mock('../src/services/aiProviderConfigService', () => ({
+  getConfiguredProviderApiKey: jest.fn(() => 'test-key'),
+  getConfiguredProviderModels: jest.fn((_providerId: string, fallbackModels: string[]) => fallbackModels),
+  getProviderApiKeyEnvVar: jest.fn((providerId: string) => `${providerId.toUpperCase()}_API_KEY`),
+  getProviderModelsEnvVar: jest.fn((providerId: string) => `${providerId.toUpperCase()}_MODELS`),
+  getActiveAiProvider: jest.fn(async (featureKey: string) => ({
+    featureKey,
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    enabled: true,
+    source: 'default',
+    updatedBy: null,
+    updatedAt: null,
+  })),
+  clearAiProviderConfigCache: jest.fn(),
+}));
 jest.mock('../src/services/attractionsCatalogService', () => ({
   getAttractionPromptBlockForDestinations: jest.fn(async () => ({ shortlistByDestination: {}, promptBlock: 'none' })),
 }));

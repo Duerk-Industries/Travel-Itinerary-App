@@ -77,12 +77,12 @@ describe('AI itinerary limits and idempotency', () => {
       });
 
   it('counts only successful generations toward the monthly limit', async () => {
-    jest
+    const promptPlanSpy = jest
       .spyOn(itineraryPromptPlanService, 'generateItineraryViaPromptPlan')
       .mockRejectedValueOnce(new Error('transient upstream failure'));
 
     await postGenerate('fail-once').expect(500);
-    jest.restoreAllMocks();
+    promptPlanSpy.mockRestore();
     jest.spyOn(itineraryPromptPlanService, 'generateItineraryViaPromptPlan').mockResolvedValue({
       planMarkdown: '# Day 1\nArrive in Paris.',
       normalized: null,

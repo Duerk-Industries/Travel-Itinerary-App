@@ -2,6 +2,20 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import {
   listFeatureFlags, setFeatureFlag, writeAuditLog,
+  listAiProviderConfigs,
+  createAiExperiment,
+  listAiExperiments,
+  getAiExperiment,
+  updateAiExperimentStatus,
+  listAiAbTestMetrics,
+  setAiProviderCertification,
+  deleteAiProviderCertification,
+  listAiProviderCertifications,
+  listAiRecommendations,
+  updateAiRecommendationStatus,
+  getAdminSetting,
+  listAiAnalyticsMetrics,
+  setAdminSetting,
   listTiers, getTierByKey, listTierLimits, listTierEntitlements, listFeatures,
   upsertTierLimit, upsertTierEntitlement,
   getUserRole, setUserRole, setUserTier, getCurrentUserTier,
@@ -11,6 +25,13 @@ import {
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
+import { getRegisteredAiProviders } from '../ai/registry/aiProviderRegistry';
+import {
+  clearAiProviderConfigCache,
+  getActiveAiProvider,
+  getConfiguredProviderApiKey,
+  setAiProviderConfigWithAudit,
+} from '../services/aiProviderConfigService';
 import {
   getApiBudgetProviderConfig,
   getApiLimitsConfig,
@@ -29,6 +50,16 @@ import {
 import { readDto } from '../utils/dtoParse';
 import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
+import { listLocalAiCaptures } from '../ai/analytics/captureBrowser';
+import { runAiDailyAggregation } from '../ai/analytics/aggregationJob';
+import {
+  replayParsingIntake,
+  ReplayIntakeNotFoundError,
+  ReplaySourceUnavailableError,
+} from '../ai/replay/parsingReplayService';
+import { isProviderCertified } from '../ai/experiments/certification';
+import { getAiExecutiveSummary } from '../ai/analytics/executiveSummary';
+import { clearExperimentConfigCache } from '../ai/experiments/experimentConfigService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -40,6 +71,607 @@ const requireReason = (reason: unknown): string | null => {
   if (typeof reason !== 'string' || reason.trim().length < 3) return null;
   return reason.trim();
 };
+
+const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract'] as const;
+const AI_RUNTIME_SETTING_DEFAULTS = {
+  shadow_parse_sample_rate_percent: '10',
+  shadow_parse_monthly_budget_usd: '20',
+  ai_aggregation_run_hour_utc: '3',
+  ingestion_parsing_promotion_quality_delta_min: '1',
+  ingestion_parsing_promotion_validation_error_max: '0',
+  recommendation_weight_quality_ingestion_llm_extract: '0.7',
+  recommendation_weight_cost_ingestion_llm_extract: '0.3',
+  recommendation_min_delta_threshold: '0.05',
+  ai_experiment_circuit_breaker_min_requests: '20',
+  ai_experiment_circuit_breaker_failure_rate_threshold: '0.25',
+} as const;
+const AI_RUNTIME_SETTING_KEYS = Object.keys(AI_RUNTIME_SETTING_DEFAULTS) as Array<keyof typeof AI_RUNTIME_SETTING_DEFAULTS>;
+const getAiProviderOptions = (certifiedProviderIds = new Set<string>()) => {
+  const registered = new Set(getRegisteredAiProviders().map((provider) => provider.id));
+  return Array.from(registered)
+    .sort((a, b) => a.localeCompare(b))
+    .map((id) => ({
+      id,
+      configured: Boolean(getConfiguredProviderApiKey(id)),
+      registered: getRegisteredAiProviders().some((provider) => provider.id === id),
+      certified: certifiedProviderIds.has(id),
+      supportedModels: getRegisteredAiProviders().find((provider) => provider.id === id)?.supportedModels ?? [],
+    }));
+};
+
+const getRuntimeSettingNumber = async (key: keyof typeof AI_RUNTIME_SETTING_DEFAULTS): Promise<number> => {
+  const row = await getAdminSetting(key);
+  const parsed = Number(row?.value ?? AI_RUNTIME_SETTING_DEFAULTS[key]);
+  return Number.isFinite(parsed) ? parsed : Number(AI_RUNTIME_SETTING_DEFAULTS[key]);
+};
+
+const assertExperimentPromotionAllowed = async (experimentId: string, winningVariantId: string): Promise<string | null> => {
+  const experiment = await getAiExperiment(experimentId);
+  if (!experiment) return 'Experiment not found';
+  const controlVariantId = experiment.controlVariantId ?? experiment.variants[0]?.variantId;
+  if (!controlVariantId) return 'Experiment has no control variant';
+  if (winningVariantId === controlVariantId) return null;
+  const metrics = await listAiAbTestMetrics({ experimentId, limit: 1000 });
+  const latestByVariant = new Map<string, typeof metrics[number]>();
+  for (const metric of metrics) {
+    const current = latestByVariant.get(metric.variantId);
+    if (!current || metric.day > current.day) latestByVariant.set(metric.variantId, metric);
+  }
+  const winner = latestByVariant.get(winningVariantId);
+  const control = latestByVariant.get(controlVariantId);
+  if (!winner || !control) return 'Promotion requires metrics for both the winning and control variants';
+  const minSampleSize = Math.max(experiment.minSampleSize, 1);
+  if (winner.requestCount < minSampleSize || control.requestCount < minSampleSize) {
+    return `Promotion requires at least ${minSampleSize} requests for both winning and control variants`;
+  }
+  const minQualityDelta = await getRuntimeSettingNumber('ingestion_parsing_promotion_quality_delta_min');
+  if (winner.avgQualityScore - control.avgQualityScore < minQualityDelta) {
+    return `Promotion requires quality delta >= ${minQualityDelta}`;
+  }
+  const maxValidationErrorDelta = await getRuntimeSettingNumber('ingestion_parsing_promotion_validation_error_max');
+  const winnerFailureRate = 1 - winner.successRate;
+  const controlFailureRate = 1 - control.successRate;
+  if (winnerFailureRate - controlFailureRate > maxValidationErrorDelta) {
+    return `Promotion requires non-worse validation error rate (max delta ${maxValidationErrorDelta})`;
+  }
+  return null;
+};
+
+// ---------------------------------------------------------------------------
+// AI provider config
+// ---------------------------------------------------------------------------
+
+router.get('/ai-config', async (_req, res) => {
+  try {
+    const stored = await listAiProviderConfigs();
+    const certifications = await listAiProviderCertifications();
+    const certifiedProviderIds = new Set(certifications.map((cert) => cert.providerId));
+    const byFeature = new Map(stored.map((row) => [row.featureKey, row]));
+    const features = await Promise.all(AI_FEATURE_KEYS.map(async (featureKey) => {
+      const row = byFeature.get(featureKey);
+      return row ?? await getActiveAiProvider(featureKey);
+    }));
+    res.json({ features, providers: getAiProviderOptions(certifiedProviderIds), certifications });
+  } catch (err) {
+    logError('[admin] failed to list AI provider config', err);
+    res.status(500).json({ error: 'Failed to list AI provider config' });
+  }
+});
+
+router.patch('/ai-config/:featureKey', async (req, res) => {
+  const featureKey = String(req.params.featureKey ?? '').trim();
+  const { provider, model, enabled, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!AI_FEATURE_KEYS.includes(featureKey as any)) {
+    res.status(404).json({ error: `Unknown AI feature key: ${featureKey}` });
+    return;
+  }
+  if (typeof provider !== 'string' || !provider.trim()) {
+    res.status(400).json({ error: 'provider is required' });
+    return;
+  }
+  if (typeof model !== 'string' || !model.trim()) {
+    res.status(400).json({ error: 'model is required' });
+    return;
+  }
+  if (typeof enabled !== 'boolean') {
+    res.status(400).json({ error: 'enabled boolean is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  const providerId = provider.trim().toLowerCase();
+  const certifications = await listAiProviderCertifications();
+  const providerOption = getAiProviderOptions(new Set(certifications.map((cert) => cert.providerId))).find((item) => item.id === providerId);
+  if (!providerOption?.configured || !providerOption.registered) {
+    res.status(400).json({ error: `Provider is not configured or registered: ${providerId}` });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const updated = await setAiProviderConfigWithAudit({
+      featureKey,
+      provider: providerId,
+      model: model.trim(),
+      enabled,
+      actorUserId: actorId,
+      reason: reasonStr,
+    });
+    clearAiProviderConfigCache(featureKey);
+    res.json({ config: updated, providers: getAiProviderOptions(new Set(certifications.map((cert) => cert.providerId))) });
+  } catch (err) {
+    logError('[admin] failed to update AI provider config', err);
+    res.status(500).json({ error: 'Failed to update AI provider config' });
+  }
+});
+
+router.post('/providers/:providerId/certify', async (req, res) => {
+  const providerId = String(req.params.providerId ?? '').trim().toLowerCase();
+  const { contractSuiteVersion, notes, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!getRegisteredAiProviders().some((provider) => provider.id === providerId)) {
+    res.status(404).json({ error: `Unknown provider: ${providerId}` });
+    return;
+  }
+  if (typeof contractSuiteVersion !== 'string' || contractSuiteVersion.trim().length < 3) {
+    res.status(400).json({ error: 'contractSuiteVersion is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const certification = await setAiProviderCertification({
+      providerId,
+      certifiedBy: actorId,
+      contractSuiteVersion: contractSuiteVersion.trim(),
+      notes: typeof notes === 'string' ? notes : null,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'AI_PROVIDER_CERTIFIED',
+      afterState: { certification },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ certification });
+  } catch (err) {
+    logError('[admin] failed to certify AI provider', err);
+    res.status(500).json({ error: 'Failed to certify AI provider' });
+  }
+});
+
+router.delete('/providers/:providerId/certify', async (req, res) => {
+  const providerId = String(req.params.providerId ?? '').trim().toLowerCase();
+  const reasonStr = requireReason(req.body?.reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    await deleteAiProviderCertification(providerId);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'AI_PROVIDER_CERTIFICATION_REVOKED',
+      afterState: { providerId },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ providerId, revoked: true });
+  } catch (err) {
+    logError('[admin] failed to revoke AI provider certification', err);
+    res.status(500).json({ error: 'Failed to revoke AI provider certification' });
+  }
+});
+
+router.get('/experiments', async (req, res) => {
+  try {
+    const experiments = await listAiExperiments({
+      featureKey: typeof req.query.featureKey === 'string' ? req.query.featureKey : undefined,
+      status: typeof req.query.status === 'string' ? req.query.status as any : undefined,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : 100,
+    });
+    const metrics = await listAiAbTestMetrics({ limit: 500 });
+    res.json({ experiments, metrics });
+  } catch (err) {
+    logError('[admin] failed to list AI experiments', err);
+    res.status(500).json({ error: 'Failed to list AI experiments' });
+  }
+});
+
+router.post('/experiments', async (req, res) => {
+  const { featureKey, experimentKind, name, variants, controlVariantId, minSampleSize, maxDurationDays, reason, actorRole } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (typeof featureKey !== 'string' || !featureKey.trim()) {
+    res.status(400).json({ error: 'featureKey is required' });
+    return;
+  }
+  if (typeof name !== 'string' || !name.trim()) {
+    res.status(400).json({ error: 'name is required' });
+    return;
+  }
+  if (!Array.isArray(variants) || variants.length < 1) {
+    res.status(400).json({ error: 'variants array is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    for (const variant of variants) {
+      if (variant.provider && !(await isProviderCertified(String(variant.provider)))) {
+        res.status(400).json({ error: `Provider is not certified: ${variant.provider}` });
+        return;
+      }
+    }
+    const actorId = getActorId(req);
+    const experiment = await createAiExperiment({
+      featureKey: featureKey.trim(),
+      experimentKind: experimentKind === 'traffic_split' ? 'traffic_split' : 'shadow_compare',
+      name: name.trim(),
+      variants,
+      controlVariantId: typeof controlVariantId === 'string' ? controlVariantId : null,
+      minSampleSize: Number(minSampleSize) || 200,
+      maxDurationDays: Number(maxDurationDays) || 30,
+      createdBy: actorId,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'AI_EXPERIMENT_CREATED',
+      afterState: { experiment, actorRole: actorRole ?? 'engineering_admin' },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    clearExperimentConfigCache();
+    res.status(201).json({ experiment });
+  } catch (err) {
+    logError('[admin] failed to create AI experiment', err);
+    res.status(500).json({ error: 'Failed to create AI experiment' });
+  }
+});
+
+router.patch('/experiments/:experimentId', async (req, res) => {
+  const experimentId = String(req.params.experimentId ?? '');
+  const { status, winningVariantId, reason, actorRole } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!['draft', 'running', 'paused', 'completed'].includes(String(status))) {
+    res.status(400).json({ error: 'valid status is required' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const before = await getAiExperiment(experimentId);
+    if (!before) {
+      res.status(404).json({ error: 'Experiment not found' });
+      return;
+    }
+    const nextWinningVariantId = typeof winningVariantId === 'string' ? winningVariantId : null;
+    if (nextWinningVariantId) {
+      const promotionError = await assertExperimentPromotionAllowed(experimentId, nextWinningVariantId);
+      if (promotionError) {
+        res.status(400).json({ error: promotionError });
+        return;
+      }
+    }
+    const after = await updateAiExperimentStatus({
+      experimentId,
+      status,
+      winningVariantId: nextWinningVariantId,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: nextWinningVariantId ? 'AI_EXPERIMENT_PROMOTED' : 'AI_EXPERIMENT_STATUS_CHANGED',
+      beforeState: { experiment: before },
+      afterState: {
+        experiment: after,
+        actorRole: actorRole ?? 'engineering_admin',
+        promotionThresholds: nextWinningVariantId ? {
+          qualityDeltaMin: await getRuntimeSettingNumber('ingestion_parsing_promotion_quality_delta_min'),
+          validationErrorMax: await getRuntimeSettingNumber('ingestion_parsing_promotion_validation_error_max'),
+        } : undefined,
+      },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    clearExperimentConfigCache();
+    res.json({ experiment: after });
+  } catch (err) {
+    logError('[admin] failed to update AI experiment', err);
+    res.status(500).json({ error: 'Failed to update AI experiment' });
+  }
+});
+
+router.get('/recommendations', async (req, res) => {
+  try {
+    const recommendations = await listAiRecommendations({
+      status: typeof req.query.status === 'string' ? req.query.status as any : undefined,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : 100,
+    });
+    res.json({ recommendations });
+  } catch (err) {
+    logError('[admin] failed to list AI recommendations', err);
+    res.status(500).json({ error: 'Failed to list AI recommendations' });
+  }
+});
+
+router.patch('/recommendations/:recommendationId', async (req, res) => {
+  const recommendationId = String(req.params.recommendationId ?? '');
+  const action = String(req.body?.action ?? '');
+  const reasonStr = requireReason(req.body?.reason);
+  if (!['apply', 'dismiss'].includes(action)) {
+    res.status(400).json({ error: 'action must be apply or dismiss' });
+    return;
+  }
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const recommendation = await updateAiRecommendationStatus({
+      recommendationId,
+      status: action === 'apply' ? 'applied' : 'dismissed',
+      respondedBy: actorId,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: action === 'apply' ? 'AI_RECOMMENDATION_APPLIED' : 'AI_RECOMMENDATION_DISMISSED',
+      afterState: { recommendation },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ recommendation });
+  } catch (err) {
+    logError('[admin] failed to update AI recommendation', err);
+    res.status(500).json({ error: 'Failed to update AI recommendation' });
+  }
+});
+
+router.get('/ai-ops/executive', async (req, res) => {
+  try {
+    const range = req.query.range === '90d' || req.query.range === '180d' ? req.query.range : '30d';
+    res.json({ summary: await getAiExecutiveSummary(range) });
+  } catch (err) {
+    logError('[admin] failed to load AI executive summary', err);
+    res.status(500).json({ error: 'Failed to load AI executive summary' });
+  }
+});
+
+router.post('/parsing-eval/replay', async (req, res) => {
+  const { intakeId, dateFrom, dateTo, dryRun } = req.body ?? {};
+  const isDryRun = dryRun !== false;
+  try {
+    if (typeof intakeId === 'string' && intakeId.trim()) {
+      const trimmedIntakeId = intakeId.trim();
+      const result = await replayParsingIntake({ intakeId: trimmedIntakeId, dryRun: isDryRun });
+      await writeAuditLog({
+        actorUserId: getActorId(req),
+        action: 'ADMIN_SETTING_UPDATED',
+        afterState: {
+          action: 'PARSING_EVAL_REPLAY_REQUESTED',
+          intakeId: trimmedIntakeId,
+          dryRun: isDryRun,
+          agreementRate: result.comparison.agreementRate,
+          persistedCaptureId: result.persistedCaptureId,
+        },
+        reason: 'Parsing evaluation replay requested',
+      });
+      res.json({
+        dryRun: isDryRun,
+        intakeId: trimmedIntakeId,
+        status: 'completed',
+        overwriteOriginalCapture: false,
+        productionItemCount: result.productionItemCount,
+        llmItemCount: result.llmItemCount,
+        comparison: result.comparison,
+        persistedCaptureId: result.persistedCaptureId,
+      });
+      return;
+    }
+    if (typeof dateFrom === 'string' && typeof dateTo === 'string' && dateFrom.trim() && dateTo.trim()) {
+      // Bounded batch: enumerate intakes with a parsing capture in range and
+      // replay each one for real, capped to keep this endpoint's latency and
+      // LLM spend predictable. Larger batches should be split into multiple
+      // date-range calls rather than raising this cap.
+      const BATCH_LIMIT = 25;
+      const matches = await listLocalAiCaptures({ featureKey: 'parsing', dateFrom, dateTo, limit: BATCH_LIMIT });
+      const intakeIds = Array.from(new Set(matches.map((m) => m.jobId).filter((id): id is string => Boolean(id))));
+
+      const results = await Promise.all(
+        intakeIds.map(async (id) => {
+          try {
+            const result = await replayParsingIntake({ intakeId: id, dryRun: isDryRun });
+            return {
+              intakeId: id,
+              status: 'completed' as const,
+              agreementRate: result.comparison.agreementRate,
+              persistedCaptureId: result.persistedCaptureId,
+            };
+          } catch (err) {
+            return {
+              intakeId: id,
+              status: 'failed' as const,
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
+        })
+      );
+
+      await writeAuditLog({
+        actorUserId: getActorId(req),
+        action: 'ADMIN_SETTING_UPDATED',
+        afterState: {
+          action: 'PARSING_EVAL_REPLAY_BATCH_REQUESTED',
+          dateFrom,
+          dateTo,
+          dryRun: isDryRun,
+          intakeCount: intakeIds.length,
+        },
+        reason: 'Parsing evaluation replay batch requested',
+      });
+      res.json({
+        dryRun: isDryRun,
+        dateFrom,
+        dateTo,
+        status: 'completed',
+        overwriteOriginalCapture: false,
+        batchLimit: BATCH_LIMIT,
+        results,
+      });
+      return;
+    }
+    res.status(400).json({ error: 'intakeId or dateFrom/dateTo is required' });
+  } catch (err) {
+    if (err instanceof ReplayIntakeNotFoundError) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
+    if (err instanceof ReplaySourceUnavailableError) {
+      res.status(409).json({ error: err.message, code: 'REPLAY_SOURCE_UNAVAILABLE' });
+      return;
+    }
+    logError('[admin] failed to request parsing eval replay', err);
+    res.status(500).json({ error: 'Failed to request parsing eval replay' });
+  }
+});
+
+router.get('/ai-captures', async (req, res) => {
+  try {
+    const query = {
+      featureKey: typeof req.query.featureKey === 'string' ? req.query.featureKey : undefined,
+      captureId: typeof req.query.captureId === 'string' ? req.query.captureId : undefined,
+      correlationId: typeof req.query.correlationId === 'string' ? req.query.correlationId : undefined,
+      jobId: typeof req.query.jobId === 'string' ? req.query.jobId : undefined,
+      anonymousUserId: typeof req.query.anonymousUserId === 'string' ? req.query.anonymousUserId : undefined,
+      provider: typeof req.query.provider === 'string' ? req.query.provider : undefined,
+      model: typeof req.query.model === 'string' ? req.query.model : undefined,
+      outcome: typeof req.query.outcome === 'string' ? req.query.outcome : undefined,
+      dateFrom: typeof req.query.dateFrom === 'string' ? req.query.dateFrom : undefined,
+      dateTo: typeof req.query.dateTo === 'string' ? req.query.dateTo : undefined,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined,
+    };
+    const captures = await listLocalAiCaptures(query);
+    res.json({ captures, source: 'local_capture_archive' });
+  } catch (err) {
+    logError('[admin][ai-captures] failed to list captures', err);
+    res.status(500).json({ error: 'Failed to list AI captures' });
+  }
+});
+
+router.get('/analytics', async (req, res) => {
+  try {
+    const day = typeof req.query.day === 'string' && req.query.day.trim()
+      ? req.query.day.trim()
+      : new Date().toISOString().slice(0, 10);
+    const run = req.query.run === '1' || req.query.run === 'true';
+    const aggregation = run ? await runAiDailyAggregation({ day, jobId: `admin-ai-analytics-${day}` }) : null;
+    const metrics = await listAiAnalyticsMetrics({
+      periodType: 'day',
+      periodStart: day,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : 250,
+    });
+    res.json({
+      day,
+      aggregation,
+      metrics,
+      counters: getMetricCounterSnapshot(),
+    });
+  } catch (err) {
+    logError('[admin][ai-analytics] failed to load analytics', err);
+    res.status(500).json({ error: 'Failed to load AI analytics' });
+  }
+});
+
+router.get('/runtime-settings', async (_req, res) => {
+  try {
+    const settings = await Promise.all(AI_RUNTIME_SETTING_KEYS.map(async (key) => {
+      const row = await getAdminSetting(key);
+      return row ?? {
+        key,
+        value: AI_RUNTIME_SETTING_DEFAULTS[key],
+        updatedBy: null,
+        updatedAt: null,
+        source: 'default',
+      };
+    }));
+    res.json({ settings });
+  } catch (err) {
+    logError('[admin][runtime-settings] failed to load settings', err);
+    res.status(500).json({ error: 'Failed to load runtime settings' });
+  }
+});
+
+router.patch('/runtime-settings', async (req, res) => {
+  const { settings, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    res.status(400).json({ error: 'settings object is required' });
+    return;
+  }
+  const entries = Object.entries(settings as Record<string, unknown>)
+    .filter(([key]) => AI_RUNTIME_SETTING_KEYS.includes(key as any));
+  if (!entries.length) {
+    res.status(400).json({ error: 'No supported runtime settings provided' });
+    return;
+  }
+  for (const [key, value] of entries) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+      res.status(400).json({ error: `${key} must be a non-negative number` });
+      return;
+    }
+    if (key === 'shadow_parse_sample_rate_percent' && numeric > 100) {
+      res.status(400).json({ error: `${key} must be between 0 and 100` });
+      return;
+    }
+    if (key === 'ai_aggregation_run_hour_utc' && (!Number.isInteger(numeric) || numeric > 23)) {
+      res.status(400).json({ error: `${key} must be an integer between 0 and 23` });
+      return;
+    }
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const before = await Promise.all(entries.map(([key]) => getAdminSetting(key)));
+    const updated = await Promise.all(entries.map(([key, value]) => setAdminSetting({
+      key,
+      value: String(value),
+      updatedBy: actorId,
+    })));
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'ADMIN_SETTING_UPDATED',
+      beforeState: { settings: before },
+      afterState: { settings: updated },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ settings: updated });
+  } catch (err) {
+    logError('[admin][runtime-settings] failed to update settings', err);
+    res.status(500).json({ error: 'Failed to update runtime settings' });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Feature flags

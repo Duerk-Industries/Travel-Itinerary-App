@@ -49,6 +49,16 @@ import {
   WebhookProcessingStatus,
   BillingPlanConfig,
   BillingPriceHistory,
+  AiProviderConfig,
+  AdminSetting,
+  AiAnalyticsMetric,
+  AiAnalyticsMetricTable,
+  AiAnalyticsPeriodType,
+  AiExperiment,
+  AiExperimentAssignment,
+  AiAbTestMetric,
+  AiProviderCertification,
+  AiRecommendation,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -234,6 +244,14 @@ function getPool(): Pool {
       const pgMem = db.adapters.createPg();
       db.public.registerFunction({ name: 'to_char', args: [DataType.date, DataType.text], returns: DataType.text, implementation: formatDate });
       db.public.registerFunction({ name: 'to_char', args: [DataType.timestamp, DataType.text], returns: DataType.text, implementation: formatDate });
+      const leastDate = (a: Date | string | null, b: Date | string | null) => {
+        if (a == null) return b;
+        if (b == null) return a;
+        return new Date(a).getTime() <= new Date(b).getTime() ? a : b;
+      };
+      db.public.registerFunction({ name: 'least', args: [DataType.timestamp, DataType.timestamp], returns: DataType.timestamp, implementation: leastDate });
+      db.public.registerFunction({ name: 'least', args: [DataType.timestamptz, DataType.timestamptz], returns: DataType.timestamptz, implementation: leastDate });
+      db.public.registerFunction({ name: 'trim', args: [DataType.text], returns: DataType.text, implementation: (value: string | null) => (value ?? '').trim() });
       db.public.registerFunction({
         name: 'nullif',
         args: [DataType.text, DataType.text],
@@ -420,6 +438,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_internal_canary BOOLEAN NOT NULL DEFAULT FALSE;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_normalized ON users(username_normalized);`);
 
 
@@ -1279,6 +1298,87 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action  ON audit_log(action, created_at DESC);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);`);
 
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_experiments (
+      experiment_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      feature_key         TEXT NOT NULL,
+      experiment_kind     TEXT NOT NULL DEFAULT 'shadow_compare',
+      name                TEXT NOT NULL,
+      status              TEXT NOT NULL DEFAULT 'draft',
+      variants            JSONB NOT NULL,
+      control_variant_id  TEXT,
+      min_sample_size     INTEGER NOT NULL DEFAULT 200,
+      max_duration_days   INTEGER NOT NULL DEFAULT 30,
+      started_at          TIMESTAMP,
+      ends_at             TIMESTAMP,
+      winning_variant_id  TEXT,
+      created_by          UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_ai_experiments_feature_kind_status ON ai_experiments(feature_key, experiment_kind, status);`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_experiment_assignments (
+      assignment_key      TEXT NOT NULL,
+      experiment_id       UUID NOT NULL REFERENCES ai_experiments(experiment_id) ON DELETE CASCADE,
+      variant_id          TEXT NOT NULL,
+      original_variant_id TEXT,
+      assigned_at         TIMESTAMP NOT NULL DEFAULT NOW(),
+      reassigned_at       TIMESTAMP,
+      PRIMARY KEY (assignment_key, experiment_id)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_ab_test_metrics (
+      experiment_id           UUID NOT NULL REFERENCES ai_experiments(experiment_id) ON DELETE CASCADE,
+      variant_id              TEXT NOT NULL,
+      day                     DATE NOT NULL,
+      request_count           INTEGER NOT NULL DEFAULT 0,
+      success_rate            DOUBLE PRECISION NOT NULL DEFAULT 0,
+      avg_quality_score       DOUBLE PRECISION NOT NULL DEFAULT 0,
+      avg_cost_usd            DOUBLE PRECISION NOT NULL DEFAULT 0,
+      avg_latency_ms          DOUBLE PRECISION NOT NULL DEFAULT 0,
+      ground_truth_agreement  DOUBLE PRECISION,
+      ground_truth_signal     TEXT,
+      updated_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (experiment_id, variant_id, day)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_provider_certifications (
+      provider_id             TEXT PRIMARY KEY,
+      certified_at            TIMESTAMP NOT NULL DEFAULT NOW(),
+      certified_by            UUID REFERENCES users(id) ON DELETE SET NULL,
+      contract_suite_version  TEXT NOT NULL,
+      notes                   TEXT
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ai_recommendations (
+      recommendation_id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      recommendation_type                TEXT NOT NULL,
+      feature_key                        TEXT NOT NULL,
+      subject_current                    JSONB NOT NULL DEFAULT '{}'::jsonb,
+      subject_proposed                   JSONB NOT NULL DEFAULT '{}'::jsonb,
+      rationale                          TEXT NOT NULL,
+      quality_delta_estimate             DOUBLE PRECISION NOT NULL DEFAULT 0,
+      cost_delta_estimate_usd_monthly    DOUBLE PRECISION NOT NULL DEFAULT 0,
+      confidence                         TEXT NOT NULL DEFAULT 'low',
+      supporting_evidence_ref            TEXT,
+      supporting_evidence_query          JSONB,
+      engine_version                     TEXT NOT NULL,
+      status                             TEXT NOT NULL DEFAULT 'proposed',
+      created_at                         TIMESTAMP NOT NULL DEFAULT NOW(),
+      responded_by                       UUID REFERENCES users(id) ON DELETE SET NULL,
+      responded_at                       TIMESTAMP,
+      outcome_measured_at                TIMESTAMP,
+      outcome_quality_delta              DOUBLE PRECISION,
+      outcome_cost_delta_usd_monthly     DOUBLE PRECISION
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_ai_recommendations_status_created ON ai_recommendations(status, created_at DESC);`);
+
   // Run pending migrations BEFORE the USE_IN_MEMORY_DB cleanup block below
   // so migration-backed tables (cut over from inline CREATE TABLE) exist in
   // time for the DELETE-ALL test-isolation sweep to touch them.
@@ -1305,9 +1405,16 @@ export const initDb = async (): Promise<void> => {
       try { await p.query(`DELETE FROM ${tbl}`); } catch { /* table absent, skip */ }
     };
     await del('audit_log');
+    await del('ai_recommendations');
+    await del('ai_provider_certifications');
+    await del('ai_ab_test_metrics');
+    await del('ai_experiment_assignments');
+    await del('ai_experiments');
     await del('generation_idempotency');
     await del('api_cost_counters');
     await del('api_usage_counters');
+    await del('admin_settings');
+    await del('ai_provider_config');
     await del('usage_events');
     await del('usage_counters');
     await del('user_tiers');
@@ -1526,6 +1633,14 @@ export const initDb = async (): Promise<void> => {
   // from the historical bootstrap. Disable via
   // INGESTION_MIGRATIONS_ON_BOOT=false when running against a DB where
   // migrations are applied out-of-band (e.g. a prod migration job).
+
+  // Permanent canary fixture (Chapter 16 §6) used by cutover-test-to-prod.sh's
+  // smoke write/cleanup. Only bootstrapped when explicitly configured — most
+  // environments (local/dev/CI) have no canary account and shouldn't get one.
+  const canaryAccountEmail = getEnvValue('CANARY_ACCOUNT_EMAIL');
+  if (canaryAccountEmail) {
+    await ensureCanaryAccountBootstrap(canaryAccountEmail);
+  }
 };
 
 
@@ -1656,6 +1771,35 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   const row = rows[0] as any;
   if (!row) return null;
   return { ...row, passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [] };
+};
+
+export const isInternalCanaryAccount = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ is_internal_canary: boolean }>(
+    `SELECT is_internal_canary FROM users WHERE id = $1`,
+    [userId]
+  );
+  return rows[0]?.is_internal_canary === true;
+};
+
+export const ensureCanaryAccountBootstrap = async (email: string): Promise<{ id: string }> => {
+  const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await findUserByEmail(normalizedEmail);
+  if (existing) {
+    await p.query(`UPDATE users SET is_internal_canary = TRUE WHERE id = $1`, [existing.id]);
+    return { id: existing.id };
+  }
+  const id = randomUUID();
+  await p.query(
+    `INSERT INTO users (id, email, provider, email_verified, is_internal_canary) VALUES ($1, $2, 'email', TRUE, TRUE)`,
+    [id, normalizedEmail]
+  );
+  await p.query(
+    `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified, verified_at) VALUES ($1, $2, $3, $4, TRUE, TRUE, NOW()) ON CONFLICT DO NOTHING`,
+    [randomUUID(), id, normalizedEmail, normalizedEmail]
+  );
+  return { id };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
@@ -8735,6 +8879,686 @@ export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: s
   );
 };
 
+const mapAiProviderConfigRow = (r: {
+  feature_key: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updated_by: string | null;
+  updated_at: string | Date;
+}): AiProviderConfig => ({
+  featureKey: r.feature_key,
+  provider: r.provider,
+  model: r.model,
+  enabled: r.enabled,
+  updatedBy: r.updated_by,
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const getAiProviderConfig = async (featureKey: string): Promise<AiProviderConfig | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    feature_key: string;
+    provider: string;
+    model: string;
+    enabled: boolean;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `SELECT feature_key, provider, model, enabled, updated_by, updated_at
+     FROM ai_provider_config
+     WHERE feature_key = $1`,
+    [featureKey]
+  );
+  return rows[0] ? mapAiProviderConfigRow(rows[0]) : null;
+};
+
+export const listAiProviderConfigs = async (): Promise<AiProviderConfig[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    feature_key: string;
+    provider: string;
+    model: string;
+    enabled: boolean;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `SELECT feature_key, provider, model, enabled, updated_by, updated_at
+     FROM ai_provider_config
+     ORDER BY feature_key`
+  );
+  return rows.map(mapAiProviderConfigRow);
+};
+
+export const setAiProviderConfig = async (config: {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy: string | null;
+}): Promise<AiProviderConfig> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    feature_key: string;
+    provider: string;
+    model: string;
+    enabled: boolean;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `INSERT INTO ai_provider_config (feature_key, provider, model, enabled, updated_by, updated_at)
+     VALUES ($1, $2, $3, $4, $5, NOW())
+     ON CONFLICT (feature_key) DO UPDATE SET
+       provider = EXCLUDED.provider,
+       model = EXCLUDED.model,
+       enabled = EXCLUDED.enabled,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = NOW()
+     RETURNING feature_key, provider, model, enabled, updated_by, updated_at`,
+    [config.featureKey, config.provider, config.model, config.enabled, config.updatedBy]
+  );
+  return mapAiProviderConfigRow(rows[0]);
+};
+
+const mapAdminSettingRow = (r: {
+  key: string;
+  value: string;
+  updated_by: string | null;
+  updated_at: string | Date;
+}): AdminSetting => ({
+  key: r.key,
+  value: r.value,
+  updatedBy: r.updated_by,
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const getAdminSetting = async (key: string): Promise<AdminSetting | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    key: string;
+    value: string;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `SELECT key, value, updated_by, updated_at FROM admin_settings WHERE key = $1`,
+    [key]
+  );
+  return rows[0] ? mapAdminSettingRow(rows[0]) : null;
+};
+
+export const setAdminSetting = async (setting: {
+  key: string;
+  value: string;
+  updatedBy: string | null;
+}): Promise<AdminSetting> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    key: string;
+    value: string;
+    updated_by: string | null;
+    updated_at: string;
+  }>(
+    `INSERT INTO admin_settings (key, value, updated_by, updated_at)
+     VALUES ($1, $2, $3, NOW())
+     ON CONFLICT (key) DO UPDATE SET
+       value = EXCLUDED.value,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = NOW()
+     RETURNING key, value, updated_by, updated_at`,
+    [setting.key, setting.value, setting.updatedBy]
+  );
+  return mapAdminSettingRow(rows[0]);
+};
+
+const AI_ANALYTICS_TABLES = new Set<AiAnalyticsMetricTable>([
+  'ai_daily_metrics',
+  'ai_provider_metrics',
+  'ai_prompt_metrics',
+  'ai_parser_metrics',
+  'ai_field_metrics',
+  'ai_cost_metrics',
+]);
+
+const normalizeMetricDate = (value: string | Date): string => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toISOString().slice(0, 10);
+};
+
+const validateAnalyticsTable = (table: AiAnalyticsMetricTable): AiAnalyticsMetricTable => {
+  if (!AI_ANALYTICS_TABLES.has(table)) throw new Error(`Unsupported AI analytics table: ${table}`);
+  return table;
+};
+
+const mapAiAnalyticsRow = (
+  table: AiAnalyticsMetricTable,
+  row: Record<string, any>,
+): AiAnalyticsMetric => {
+  const dimensions: Record<string, string> = {};
+  for (const key of ['feature_key', 'provider', 'model', 'caller_id', 'parser_name', 'item_type', 'field_name']) {
+    if (row[key] != null) {
+      dimensions[key.replace(/_([a-z])/g, (_m, c) => c.toUpperCase())] = String(row[key]);
+    }
+  }
+  return {
+    table,
+    periodStart: normalizeMetricDate(row.period_start),
+    periodType: row.period_type as AiAnalyticsPeriodType,
+    dimensions,
+    metricKey: String(row.metric_key),
+    metricValue: Number(row.metric_value ?? 0),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  };
+};
+
+const getMetricColumns = (table: AiAnalyticsMetricTable): string[] => {
+  switch (table) {
+    case 'ai_daily_metrics':
+      return ['feature_key'];
+    case 'ai_provider_metrics':
+    case 'ai_cost_metrics':
+      return ['provider', 'model'];
+    case 'ai_prompt_metrics':
+      return ['feature_key', 'caller_id'];
+    case 'ai_parser_metrics':
+      return ['parser_name'];
+    case 'ai_field_metrics':
+      return ['item_type', 'field_name'];
+    default:
+      return [];
+  }
+};
+
+const snakeDimensionValue = (dimensions: Record<string, string>, column: string): string => {
+  const camel = column.replace(/_([a-z])/g, (_m, c) => c.toUpperCase());
+  return String(dimensions[camel] ?? dimensions[column] ?? 'unknown');
+};
+
+export const upsertAiAnalyticsMetric = async (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): Promise<AiAnalyticsMetric> => {
+  const table = validateAnalyticsTable(metric.table);
+  const p = getPool();
+  const dimensionColumns = getMetricColumns(table);
+  const columns = ['period_start', 'period_type', ...dimensionColumns, 'metric_key', 'metric_value'];
+  const conflictColumns = ['period_start', 'period_type', ...dimensionColumns, 'metric_key'];
+  const values = [
+    metric.periodStart,
+    metric.periodType,
+    ...dimensionColumns.map((column) => snakeDimensionValue(metric.dimensions, column)),
+    metric.metricKey,
+    metric.metricValue,
+  ];
+  const placeholders = values.map((_value, index) => `$${index + 1}`).join(', ');
+  const { rows } = await p.query(
+    `INSERT INTO ${table} (${columns.join(', ')}, updated_at)
+     VALUES (${placeholders}, NOW())
+     ON CONFLICT (${conflictColumns.join(', ')}) DO UPDATE SET
+       metric_value = EXCLUDED.metric_value,
+       updated_at = NOW()
+     RETURNING *`,
+    values
+  );
+  return mapAiAnalyticsRow(table, rows[0]);
+};
+
+export const listAiAnalyticsMetrics = async (options: {
+  table?: AiAnalyticsMetricTable;
+  periodType?: AiAnalyticsPeriodType;
+  periodStart?: string;
+  limit?: number;
+} = {}): Promise<AiAnalyticsMetric[]> => {
+  const p = getPool();
+  const tables = options.table ? [validateAnalyticsTable(options.table)] : Array.from(AI_ANALYTICS_TABLES);
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 250), 1000));
+  const out: AiAnalyticsMetric[] = [];
+  for (const table of tables) {
+    const params: unknown[] = [];
+    const where: string[] = [];
+    if (options.periodType) {
+      params.push(options.periodType);
+      where.push(`period_type = $${params.length}`);
+    }
+    if (options.periodStart) {
+      params.push(options.periodStart);
+      where.push(`period_start = $${params.length}`);
+    }
+    params.push(limit);
+    const { rows } = await p.query(
+      `SELECT * FROM ${table}
+       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+       ORDER BY period_start DESC, updated_at DESC
+       LIMIT $${params.length}`,
+      params
+    );
+    out.push(...rows.map((row) => mapAiAnalyticsRow(table, row)));
+  }
+  return out.sort((a, b) => b.periodStart.localeCompare(a.periodStart)).slice(0, limit);
+};
+
+const toIsoOrNull = (value: string | Date | null | undefined): string | null =>
+  value == null ? null : new Date(value).toISOString();
+
+const mapAiExperimentRow = (r: Record<string, any>): AiExperiment => ({
+  experimentId: String(r.experiment_id),
+  featureKey: String(r.feature_key),
+  experimentKind: r.experiment_kind,
+  name: String(r.name),
+  status: r.status,
+  variants: Array.isArray(r.variants) ? r.variants : JSON.parse(r.variants ?? '[]'),
+  controlVariantId: r.control_variant_id ?? null,
+  minSampleSize: Number(r.min_sample_size ?? 200),
+  maxDurationDays: Number(r.max_duration_days ?? 30),
+  startedAt: toIsoOrNull(r.started_at),
+  endsAt: toIsoOrNull(r.ends_at),
+  winningVariantId: r.winning_variant_id ?? null,
+  createdBy: r.created_by ?? null,
+  createdAt: new Date(r.created_at).toISOString(),
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const createAiExperiment = async (experiment: {
+  featureKey: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  name: string;
+  variants: AiExperiment['variants'];
+  controlVariantId?: string | null;
+  minSampleSize?: number;
+  maxDurationDays?: number;
+  createdBy?: string | null;
+}): Promise<AiExperiment> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_experiments
+       (feature_key, experiment_kind, name, variants, control_variant_id, min_sample_size, max_duration_days, created_by)
+     VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)
+     RETURNING *`,
+    [
+      experiment.featureKey,
+      experiment.experimentKind ?? 'shadow_compare',
+      experiment.name,
+      JSON.stringify(experiment.variants),
+      experiment.controlVariantId ?? null,
+      experiment.minSampleSize ?? 200,
+      experiment.maxDurationDays ?? 30,
+      experiment.createdBy ?? null,
+    ],
+  );
+  return mapAiExperimentRow(rows[0]);
+};
+
+export const listAiExperiments = async (options: {
+  featureKey?: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  status?: AiExperiment['status'];
+  limit?: number;
+} = {}): Promise<AiExperiment[]> => {
+  const p = getPool();
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.featureKey) {
+    params.push(options.featureKey);
+    where.push(`feature_key = $${params.length}`);
+  }
+  if (options.experimentKind) {
+    params.push(options.experimentKind);
+    where.push(`experiment_kind = $${params.length}`);
+  }
+  if (options.status) {
+    params.push(options.status);
+    where.push(`status = $${params.length}`);
+  }
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 100), 500));
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_experiments
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY created_at DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiExperimentRow);
+};
+
+export const getAiExperiment = async (experimentId: string): Promise<AiExperiment | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM ai_experiments WHERE experiment_id = $1`, [experimentId]);
+  return rows[0] ? mapAiExperimentRow(rows[0]) : null;
+};
+
+export const updateAiExperimentStatus = async (params: {
+  experimentId: string;
+  status: AiExperiment['status'];
+  winningVariantId?: string | null;
+}): Promise<AiExperiment> => {
+  const p = getPool();
+  const startedExpr = params.status === 'running' ? `COALESCE(started_at, NOW())` : `started_at`;
+  const { rows } = await p.query(
+    `UPDATE ai_experiments
+     SET status = $2,
+         started_at = ${startedExpr},
+         ends_at = CASE WHEN $2 = 'completed' THEN COALESCE(ends_at, NOW()) ELSE ends_at END,
+         winning_variant_id = COALESCE($3, winning_variant_id),
+         updated_at = NOW()
+     WHERE experiment_id = $1
+     RETURNING *`,
+    [params.experimentId, params.status, params.winningVariantId ?? null],
+  );
+  if (!rows[0]) throw new Error(`AI experiment not found: ${params.experimentId}`);
+  return mapAiExperimentRow(rows[0]);
+};
+
+const mapAiExperimentAssignmentRow = (r: Record<string, any>): AiExperimentAssignment => ({
+  assignmentKey: String(r.assignment_key),
+  experimentId: String(r.experiment_id),
+  variantId: String(r.variant_id),
+  originalVariantId: r.original_variant_id ?? null,
+  assignedAt: new Date(r.assigned_at).toISOString(),
+  reassignedAt: toIsoOrNull(r.reassigned_at),
+});
+
+export const getOrCreateAiExperimentAssignment = async (assignment: {
+  assignmentKey: string;
+  experimentId: string;
+  variantId: string;
+}): Promise<AiExperimentAssignment> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_experiment_assignments (assignment_key, experiment_id, variant_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (assignment_key, experiment_id) DO UPDATE SET assignment_key = EXCLUDED.assignment_key
+     RETURNING *`,
+    [assignment.assignmentKey, assignment.experimentId, assignment.variantId],
+  );
+  return mapAiExperimentAssignmentRow(rows[0]);
+};
+
+export const reassignAiExperimentVariantToControl = async (params: {
+  experimentId: string;
+  variantId: string;
+  controlVariantId: string;
+}): Promise<number> => {
+  const p = getPool();
+  const result = await p.query(
+    `UPDATE ai_experiment_assignments
+     SET variant_id = $3,
+         original_variant_id = COALESCE(original_variant_id, variant_id),
+         reassigned_at = NOW()
+     WHERE experiment_id = $1 AND variant_id = $2`,
+    [params.experimentId, params.variantId, params.controlVariantId],
+  );
+  return result.rowCount ?? 0;
+};
+
+export const listAiExperimentAssignments = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiExperimentAssignment[]> => {
+  const p = getPool();
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.experimentId) {
+    params.push(options.experimentId);
+    where.push(`experiment_id = $${params.length}`);
+  }
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 500), 2000));
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_experiment_assignments
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY assigned_at DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiExperimentAssignmentRow);
+};
+
+export const deleteCompletedAiExperimentAssignmentsOlderThan = async (cutoffIso: string): Promise<number> => {
+  const p = getPool();
+  const result = await p.query(
+    `DELETE FROM ai_experiment_assignments a
+     USING ai_experiments e
+     WHERE a.experiment_id = e.experiment_id
+       AND e.status = 'completed'
+       AND e.ends_at IS NOT NULL
+       AND e.ends_at < $1`,
+    [cutoffIso],
+  );
+  return result.rowCount ?? 0;
+};
+
+const mapAiAbTestMetricRow = (r: Record<string, any>): AiAbTestMetric => ({
+  experimentId: String(r.experiment_id),
+  variantId: String(r.variant_id),
+  day: normalizeMetricDate(r.day),
+  requestCount: Number(r.request_count ?? 0),
+  successRate: Number(r.success_rate ?? 0),
+  avgQualityScore: Number(r.avg_quality_score ?? 0),
+  avgCostUsd: Number(r.avg_cost_usd ?? 0),
+  avgLatencyMs: Number(r.avg_latency_ms ?? 0),
+  groundTruthAgreement: r.ground_truth_agreement == null ? null : Number(r.ground_truth_agreement),
+  groundTruthSignal: r.ground_truth_signal ?? null,
+  updatedAt: new Date(r.updated_at).toISOString(),
+});
+
+export const upsertAiAbTestMetric = async (metric: Omit<AiAbTestMetric, 'updatedAt'>): Promise<AiAbTestMetric> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_ab_test_metrics
+       (experiment_id, variant_id, day, request_count, success_rate, avg_quality_score, avg_cost_usd, avg_latency_ms, ground_truth_agreement, ground_truth_signal, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+     ON CONFLICT (experiment_id, variant_id, day) DO UPDATE SET
+       request_count = EXCLUDED.request_count,
+       success_rate = EXCLUDED.success_rate,
+       avg_quality_score = EXCLUDED.avg_quality_score,
+       avg_cost_usd = EXCLUDED.avg_cost_usd,
+       avg_latency_ms = EXCLUDED.avg_latency_ms,
+       ground_truth_agreement = EXCLUDED.ground_truth_agreement,
+       ground_truth_signal = EXCLUDED.ground_truth_signal,
+       updated_at = NOW()
+     RETURNING *`,
+    [
+      metric.experimentId,
+      metric.variantId,
+      metric.day,
+      metric.requestCount,
+      metric.successRate,
+      metric.avgQualityScore,
+      metric.avgCostUsd,
+      metric.avgLatencyMs,
+      metric.groundTruthAgreement ?? null,
+      metric.groundTruthSignal ?? null,
+    ],
+  );
+  return mapAiAbTestMetricRow(rows[0]);
+};
+
+export const listAiAbTestMetrics = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiAbTestMetric[]> => {
+  const p = getPool();
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 250), 1000));
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.experimentId) {
+    params.push(options.experimentId);
+    where.push(`experiment_id = $${params.length}`);
+  }
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_ab_test_metrics
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY day DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiAbTestMetricRow);
+};
+
+const mapAiProviderCertificationRow = (r: Record<string, any>): AiProviderCertification => ({
+  providerId: String(r.provider_id),
+  certifiedAt: new Date(r.certified_at).toISOString(),
+  certifiedBy: r.certified_by ?? null,
+  contractSuiteVersion: String(r.contract_suite_version),
+  notes: r.notes ?? null,
+});
+
+export const getAiProviderCertification = async (providerId: string): Promise<AiProviderCertification | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM ai_provider_certifications WHERE provider_id = $1`, [providerId]);
+  return rows[0] ? mapAiProviderCertificationRow(rows[0]) : null;
+};
+
+export const listAiProviderCertifications = async (): Promise<AiProviderCertification[]> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM ai_provider_certifications ORDER BY provider_id`);
+  return rows.map(mapAiProviderCertificationRow);
+};
+
+export const setAiProviderCertification = async (cert: {
+  providerId: string;
+  certifiedBy: string | null;
+  contractSuiteVersion: string;
+  notes?: string | null;
+}): Promise<AiProviderCertification> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_provider_certifications (provider_id, certified_at, certified_by, contract_suite_version, notes)
+     VALUES ($1, NOW(), $2, $3, $4)
+     ON CONFLICT (provider_id) DO UPDATE SET
+       certified_at = NOW(),
+       certified_by = EXCLUDED.certified_by,
+       contract_suite_version = EXCLUDED.contract_suite_version,
+       notes = EXCLUDED.notes
+     RETURNING *`,
+    [cert.providerId, cert.certifiedBy, cert.contractSuiteVersion, cert.notes ?? null],
+  );
+  return mapAiProviderCertificationRow(rows[0]);
+};
+
+export const deleteAiProviderCertification = async (providerId: string): Promise<void> => {
+  await getPool().query(`DELETE FROM ai_provider_certifications WHERE provider_id = $1`, [providerId]);
+};
+
+const mapAiRecommendationRow = (r: Record<string, any>): AiRecommendation => ({
+  recommendationId: String(r.recommendation_id),
+  recommendationType: String(r.recommendation_type),
+  featureKey: String(r.feature_key),
+  subjectCurrent: typeof r.subject_current === 'string' ? JSON.parse(r.subject_current) : (r.subject_current ?? {}),
+  subjectProposed: typeof r.subject_proposed === 'string' ? JSON.parse(r.subject_proposed) : (r.subject_proposed ?? {}),
+  rationale: String(r.rationale),
+  qualityDeltaEstimate: Number(r.quality_delta_estimate ?? 0),
+  costDeltaEstimateUsdMonthly: Number(r.cost_delta_estimate_usd_monthly ?? 0),
+  confidence: String(r.confidence ?? 'low'),
+  supportingEvidenceRef: r.supporting_evidence_ref ?? null,
+  supportingEvidenceQuery: typeof r.supporting_evidence_query === 'string' ? JSON.parse(r.supporting_evidence_query) : (r.supporting_evidence_query ?? null),
+  engineVersion: String(r.engine_version),
+  status: r.status,
+  createdAt: new Date(r.created_at).toISOString(),
+  respondedBy: r.responded_by ?? null,
+  respondedAt: toIsoOrNull(r.responded_at),
+  outcomeMeasuredAt: toIsoOrNull(r.outcome_measured_at),
+  outcomeQualityDelta: r.outcome_quality_delta == null ? null : Number(r.outcome_quality_delta),
+  outcomeCostDeltaUsdMonthly: r.outcome_cost_delta_usd_monthly == null ? null : Number(r.outcome_cost_delta_usd_monthly),
+});
+
+export const upsertAiRecommendation = async (rec: Partial<AiRecommendation> & {
+  recommendationType: string;
+  featureKey: string;
+  subjectCurrent: Record<string, unknown>;
+  subjectProposed: Record<string, unknown>;
+  rationale: string;
+  engineVersion: string;
+}): Promise<AiRecommendation> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO ai_recommendations
+       (recommendation_id, recommendation_type, feature_key, subject_current, subject_proposed, rationale,
+        quality_delta_estimate, cost_delta_estimate_usd_monthly, confidence, supporting_evidence_ref,
+        supporting_evidence_query, engine_version, status)
+     VALUES (COALESCE($1::uuid, uuid_generate_v4()), $2, $3, $4::jsonb, $5::jsonb, $6, $7, $8, $9, $10, $11::jsonb, $12, COALESCE($13, 'proposed'))
+     ON CONFLICT (recommendation_id) DO UPDATE SET
+       rationale = EXCLUDED.rationale,
+       quality_delta_estimate = EXCLUDED.quality_delta_estimate,
+       cost_delta_estimate_usd_monthly = EXCLUDED.cost_delta_estimate_usd_monthly,
+       confidence = EXCLUDED.confidence,
+       supporting_evidence_ref = EXCLUDED.supporting_evidence_ref,
+       supporting_evidence_query = EXCLUDED.supporting_evidence_query
+     RETURNING *`,
+    [
+      rec.recommendationId ?? null,
+      rec.recommendationType,
+      rec.featureKey,
+      JSON.stringify(rec.subjectCurrent),
+      JSON.stringify(rec.subjectProposed),
+      rec.rationale,
+      rec.qualityDeltaEstimate ?? 0,
+      rec.costDeltaEstimateUsdMonthly ?? 0,
+      rec.confidence ?? 'low',
+      rec.supportingEvidenceRef ?? null,
+      JSON.stringify(rec.supportingEvidenceQuery ?? null),
+      rec.engineVersion,
+      rec.status ?? 'proposed',
+    ],
+  );
+  return mapAiRecommendationRow(rows[0]);
+};
+
+export const listAiRecommendations = async (options: { status?: AiRecommendation['status']; limit?: number } = {}): Promise<AiRecommendation[]> => {
+  const p = getPool();
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (options.status) {
+    params.push(options.status);
+    where.push(`status = $${params.length}`);
+  }
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 100), 500));
+  params.push(limit);
+  const { rows } = await p.query(
+    `SELECT * FROM ai_recommendations
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ORDER BY created_at DESC
+     LIMIT $${params.length}`,
+    params,
+  );
+  return rows.map(mapAiRecommendationRow);
+};
+
+export const updateAiRecommendationStatus = async (params: {
+  recommendationId: string;
+  status: AiRecommendation['status'];
+  respondedBy: string | null;
+}): Promise<AiRecommendation> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `UPDATE ai_recommendations
+     SET status = $2, responded_by = $3, responded_at = NOW()
+     WHERE recommendation_id = $1
+     RETURNING *`,
+    [params.recommendationId, params.status, params.respondedBy],
+  );
+  if (!rows[0]) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationRow(rows[0]);
+};
+
+export const updateAiRecommendationOutcome = async (params: {
+  recommendationId: string;
+  outcomeQualityDelta: number | null;
+  outcomeCostDeltaUsdMonthly: number | null;
+  measuredAt?: string;
+}): Promise<AiRecommendation> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `UPDATE ai_recommendations
+     SET outcome_measured_at = COALESCE($2::timestamp, NOW()),
+         outcome_quality_delta = $3,
+         outcome_cost_delta_usd_monthly = $4
+     WHERE recommendation_id = $1
+     RETURNING *`,
+    [
+      params.recommendationId,
+      params.measuredAt ?? null,
+      params.outcomeQualityDelta,
+      params.outcomeCostDeltaUsdMonthly,
+    ],
+  );
+  if (!rows[0]) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationRow(rows[0]);
+};
+
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {
   const p = getPool();
   const { rows } = await p.query<{ count: string }>(
@@ -10310,21 +11134,44 @@ export const claimStripeWebhookEvent = async (data: {
 }): Promise<boolean> => {
   const p = getPool();
   const id = randomUUID();
-  const result = await p.query(
+  const stalePendingCutoff = new Date(Date.now() - 5 * 60 * 1000);
+  const existing = await p.query(
+    `SELECT processing_status, received_at
+     FROM stripe_webhook_events
+     WHERE stripe_event_id = $1
+     LIMIT 1`,
+    [data.stripeEventId],
+  );
+  if (existing.rows.length > 0) {
+    const row = existing.rows[0];
+    const status = String(row.processing_status ?? '');
+    const receivedAt = row.received_at ? new Date(row.received_at) : null;
+    const shouldReclaim =
+      status === 'failed' ||
+      (status === 'pending' && receivedAt !== null && receivedAt.getTime() < stalePendingCutoff.getTime());
+    if (!shouldReclaim) return false;
+    const reclaimed = await p.query(
+      `UPDATE stripe_webhook_events
+       SET
+         processing_status = 'pending',
+         last_error = NULL
+       WHERE stripe_event_id = $1
+       RETURNING stripe_event_id`,
+      [data.stripeEventId],
+    );
+    return reclaimed.rows.length > 0;
+  }
+
+  const inserted = await p.query(
     `INSERT INTO stripe_webhook_events
        (id, stripe_event_id, event_type, stripe_object_id, livemode, event_created, processing_status)
      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-     ON CONFLICT (stripe_event_id) DO UPDATE SET
-       processing_status = 'pending',
-       last_error = NULL
-     WHERE stripe_webhook_events.processing_status = 'failed'
-        OR (
-          stripe_webhook_events.processing_status = 'pending'
-          AND stripe_webhook_events.received_at < NOW() - INTERVAL '5 minutes'
-        )`,
+     ON CONFLICT (stripe_event_id) DO NOTHING
+     RETURNING stripe_event_id`,
     [id, data.stripeEventId, data.eventType, data.stripeObjectId ?? null, data.livemode, data.eventCreated ?? null],
   );
-  return (result.rowCount ?? 0) > 0;
+  if (inserted.rows.length > 0) return true;
+  return false;
 };
 
 export const markStripeWebhookEventProcessed = async (stripeEventId: string): Promise<void> => {

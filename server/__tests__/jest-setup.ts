@@ -3,9 +3,9 @@ import path from 'path';
 
 // Unified server test bootstrap.
 // Supports three DB providers via DB_PROVIDER env var:
-//   - firebase  (default) — requires Firestore emulator at FIRESTORE_EMULATOR_HOST
+//   - memory    (default) — in-process pg-mem, no external dependencies
 //   - postgres  — requires DATABASE_URL
-//   - memory    — in-process pg-mem, no external dependencies
+//   - firebase  — requires Firestore emulator at FIRESTORE_EMULATOR_HOST
 
 const envPaths = [
   path.resolve(__dirname, '../.env'),
@@ -50,15 +50,27 @@ for (const envPath of envPaths) {
 
 jest.setTimeout(30000);
 
-if (process.env.SHOW_TEST_LOGS !== '1') {
+const suppressConsoleForTests = () => {
+  if (process.env.SHOW_TEST_LOGS === '1') return;
   if (!(console.log as any)._isMockFunction) jest.spyOn(console, 'log').mockImplementation(() => {});
   if (!(console.info as any)._isMockFunction) jest.spyOn(console, 'info').mockImplementation(() => {});
   if (!(console.warn as any)._isMockFunction) jest.spyOn(console, 'warn').mockImplementation(() => {});
   if (!(console.error as any)._isMockFunction) jest.spyOn(console, 'error').mockImplementation(() => {});
-}
+};
+
+suppressConsoleForTests();
+const restoreAllMocks = jest.restoreAllMocks.bind(jest);
+jest.restoreAllMocks = () => {
+  const result = restoreAllMocks();
+  suppressConsoleForTests();
+  return result;
+};
 
 process.env.NODE_ENV = process.env.NODE_ENV ?? 'test';
-process.env.DB_PROVIDER = process.env.DB_PROVIDER ?? 'firebase';
+if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.trim() === 'development-secret') {
+  process.env.AUTH_SECRET = 'jest-auth-secret';
+}
+process.env.DB_PROVIDER = process.env.JEST_DB_PROVIDER ?? 'memory';
 process.env.GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT_ID ?? 'jest-firebase-test-project';
 process.env.INGESTION_JOB_QUEUE_MODE = 'in_process';
 
@@ -77,6 +89,14 @@ if (process.env.DB_PROVIDER === 'memory') {
   };
   db.public.registerFunction({ name: 'to_char', args: [DataType.date, DataType.text], returns: DataType.text, implementation: formatDate });
   db.public.registerFunction({ name: 'to_char', args: [DataType.timestamp, DataType.text], returns: DataType.text, implementation: formatDate });
+  const leastDate = (a: Date | string | null, b: Date | string | null) => {
+    if (a == null) return b;
+    if (b == null) return a;
+    return new Date(a).getTime() <= new Date(b).getTime() ? a : b;
+  };
+  db.public.registerFunction({ name: 'least', args: [DataType.timestamp, DataType.timestamp], returns: DataType.timestamp, implementation: leastDate });
+  db.public.registerFunction({ name: 'least', args: [DataType.timestamptz, DataType.timestamptz], returns: DataType.timestamptz, implementation: leastDate });
+  db.public.registerFunction({ name: 'trim', args: [DataType.text], returns: DataType.text, implementation: (value: string | null) => (value ?? '').trim() });
   db.public.registerFunction({
     name: 'nullif',
     args: [DataType.text, DataType.text],

@@ -27,65 +27,71 @@ const TS = Date.now();
 const EMAIL = `billing-routes-test+${TS}@example.com`;
 const PASSWORD = 'BillingTest1!';
 
-const makeFakeStripe = (overrides: Record<string, any> = {}) => ({
-  customers: {
-    create: jest.fn().mockResolvedValue({ id: 'cus_test_fake' }),
-    update: jest.fn().mockResolvedValue({}),
-  },
-  checkout: {
-    sessions: {
-      create: jest.fn().mockResolvedValue({
-        id: 'cs_test_fake',
-        url: 'https://checkout.stripe.com/pay/cs_test_fake',
+const makeFakeStripe = (overrides: Record<string, any> = {}) => {
+  let customerCreateCount = 0;
+  return {
+    customers: {
+      create: jest.fn().mockImplementation(async () => {
+        customerCreateCount += 1;
+        return { id: customerCreateCount === 1 ? 'cus_test_fake' : `cus_test_fake_${customerCreateCount}` };
       }),
+      update: jest.fn().mockResolvedValue({}),
     },
-  },
-  billingPortal: {
-    sessions: {
-      create: jest.fn().mockResolvedValue({
-        url: 'https://billing.stripe.com/session/test',
-      }),
-    },
-  },
-  subscriptions: {
-    list: jest.fn().mockResolvedValue({ data: [] }),
-    retrieve: jest.fn().mockResolvedValue({
-      id: 'sub_test',
-      status: 'active',
-      livemode: false,
-      customer: 'cus_test_fake',
-      cancel_at_period_end: false,
-      cancel_at: null,
-      trial_end: null,
-      ended_at: null,
-      latest_invoice: null,
-      metadata: { userId: '', planKey: 'premium_monthly' },
-      // current_period_start/end live on items.data[0] in Stripe API v2026-06-24.dahlia —
-      // mapStripeSubscriptionToUpsert reads sub.items.data[0]?.current_period_{start,end}.
-      items: {
-        data: [{
-          price: { id: 'price_test_monthly' },
-          current_period_start: Math.floor(Date.now() / 1000),
-          current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
-        }],
+    checkout: {
+      sessions: {
+        create: jest.fn().mockResolvedValue({
+          id: 'cs_test_fake',
+          url: 'https://checkout.stripe.com/pay/cs_test_fake',
+        }),
       },
-    }),
-    cancel: jest.fn().mockResolvedValue({}),
-  },
-  invoices: {
-    retrieve: jest.fn().mockResolvedValue({
-      id: 'in_test',
-      parent: { subscription_details: { subscription: 'sub_test' } },
-    }),
-  },
-  charges: {
-    retrieve: jest.fn().mockResolvedValue({ id: 'ch_test', invoice: 'in_test' }),
-  },
-  webhooks: {
-    constructEvent: jest.fn(),
-  },
-  ...overrides,
-});
+    },
+    billingPortal: {
+      sessions: {
+        create: jest.fn().mockResolvedValue({
+          url: 'https://billing.stripe.com/session/test',
+        }),
+      },
+    },
+    subscriptions: {
+      list: jest.fn().mockResolvedValue({ data: [] }),
+      retrieve: jest.fn().mockResolvedValue({
+        id: 'sub_test',
+        status: 'active',
+        livemode: false,
+        customer: 'cus_test_fake',
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_end: null,
+        ended_at: null,
+        latest_invoice: null,
+        metadata: { userId: '', planKey: 'premium_monthly' },
+        // current_period_start/end live on items.data[0] in Stripe API v2026-06-24.dahlia —
+        // mapStripeSubscriptionToUpsert reads sub.items.data[0]?.current_period_{start,end}.
+        items: {
+          data: [{
+            price: { id: 'price_test_monthly' },
+            current_period_start: Math.floor(Date.now() / 1000),
+            current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
+          }],
+        },
+      }),
+      cancel: jest.fn().mockResolvedValue({}),
+    },
+    invoices: {
+      retrieve: jest.fn().mockResolvedValue({
+        id: 'in_test',
+        parent: { subscription_details: { subscription: 'sub_test' } },
+      }),
+    },
+    charges: {
+      retrieve: jest.fn().mockResolvedValue({ id: 'ch_test', invoice: 'in_test' }),
+    },
+    webhooks: {
+      constructEvent: jest.fn(),
+    },
+    ...overrides,
+  };
+};
 
 describe('Billing routes', () => {
   let token: string;

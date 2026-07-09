@@ -1,10 +1,11 @@
 import { FlightParserStrategy } from './strategy';
 import { GeminiFlightParser } from './gemini';
 import { OpenAIFlightParser } from './openai';
+import { getEnvValue } from '../../env';
 
 export class FlightParserConfigurator {
   static getParser(): FlightParserStrategy {
-    const provider = process.env.LLM_PROVIDER?.toLowerCase() || 'gemini';
+    const provider = getEnvValue('LLM_PROVIDER', { defaultValue: 'gemini' })?.toLowerCase() || 'gemini';
     
     if (provider === 'openai') {
       return new OpenAIFlightParser();

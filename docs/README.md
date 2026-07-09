@@ -24,6 +24,7 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 ## Deployment, Operations, and Infrastructure
 
 - [Deployment Runbook](../DEPLOYMENT-GCP-FIREBASE.md)
+- [Production Deployment Guide](production-deployment-guide.md)
 - [Admin Notes](admin.md)
 - [Feature Flags](feature-flags.md)
 - [Tiers](tiers.md)

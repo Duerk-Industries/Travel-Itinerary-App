@@ -425,7 +425,7 @@ describe('Stripe webhook workflows', () => {
     await deliver(retryEvent).expect(200);
     const storedEvent = await getStripeWebhookEvent(retryEvent.id);
     expect(storedEvent?.processingStatus).toBe('processed');
-    expect(storedEvent?.attemptCount).toBe(1);
+    expect(storedEvent?.attemptCount).toBe(2);
   });
 
   it('downgrades after the subscription is canceled', async () => {

@@ -50,6 +50,16 @@ import {
   BillingPlanConfig,
   BillingPlanKey,
   BillingPriceHistory,
+  AiProviderConfig,
+  AdminSetting,
+  AiAnalyticsMetric,
+  AiAnalyticsMetricTable,
+  AiAnalyticsPeriodType,
+  AiExperiment,
+  AiExperimentAssignment,
+  AiAbTestMetric,
+  AiProviderCertification,
+  AiRecommendation,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -921,6 +931,14 @@ export const initDb = async (): Promise<void> => {
   ) {
     await backfillUserPackingLists();
   }
+
+  // Permanent canary fixture (Chapter 16 §6) used by cutover-test-to-prod.sh's
+  // smoke write/cleanup. Only bootstrapped when explicitly configured — most
+  // environments (local/dev/CI) have no canary account and shouldn't get one.
+  const canaryAccountEmail = getEnvValue('CANARY_ACCOUNT_EMAIL');
+  if (canaryAccountEmail) {
+    await ensureCanaryAccountBootstrap(canaryAccountEmail);
+  }
 };
 
 export const closePool = async (): Promise<void> => {
@@ -1249,7 +1267,7 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   const found = await findUserByEmailDoc(email);
   if (!found) return null;
   const data = found.data as User;
-  return { id: found.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+  return { id: found.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole, is_internal_canary: data.is_internal_canary === true };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
@@ -1259,9 +1277,32 @@ export const findUserByIdentifier = async (identifier: string): Promise<User | n
     if (usersByUsername.empty) return null;
     const doc = usersByUsername.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+    return { id: doc.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole, is_internal_canary: data.is_internal_canary === true };
   }
   return findUserByEmail(normalized);
+};
+
+export const isInternalCanaryAccount = async (userId: string): Promise<boolean> => {
+  const doc = await getDb().collection('users').doc(userId).get();
+  if (!doc.exists) return false;
+  return (doc.data() as User | undefined)?.is_internal_canary === true;
+};
+
+export const ensureCanaryAccountBootstrap = async (email: string): Promise<{ id: string }> => {
+  const existing = await findUserByEmailDoc(email);
+  if (existing) {
+    await getDb().collection('users').doc(existing.id).set({ is_internal_canary: true }, { merge: true });
+    return { id: existing.id };
+  }
+  const doc = getDb().collection('users').doc();
+  await doc.set({
+    email: normalizeEmail(email),
+    provider: 'email',
+    role: 'user',
+    is_internal_canary: true,
+    createdAt: nowIso(),
+  });
+  return { id: doc.id };
 };
 
 export const createWebUser = async (
@@ -5879,6 +5920,457 @@ export const listFeatureFlags = async (): Promise<FeatureFlag[]> => {
 export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: string | null): Promise<void> => {
   const db = getDb();
   await db.collection('feature_flags').doc(key).set({ key, enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
+};
+
+const mapAiProviderConfigDoc = (id: string, data: FirebaseFirestore.DocumentData): AiProviderConfig => ({
+  featureKey: id,
+  provider: String(data.provider ?? 'openai'),
+  model: String(data.model ?? 'gpt-4o-mini'),
+  enabled: data.enabled !== false,
+  updatedBy: data.updatedBy ?? null,
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const getAiProviderConfig = async (featureKey: string): Promise<AiProviderConfig | null> => {
+  const doc = await getDb().collection('ai_provider_config').doc(featureKey).get();
+  return doc.exists ? mapAiProviderConfigDoc(doc.id, doc.data()!) : null;
+};
+
+export const listAiProviderConfigs = async (): Promise<AiProviderConfig[]> => {
+  const snap = await getDb().collection('ai_provider_config').get();
+  return snap.docs
+    .map((doc) => mapAiProviderConfigDoc(doc.id, doc.data()))
+    .sort((a, b) => a.featureKey.localeCompare(b.featureKey));
+};
+
+export const setAiProviderConfig = async (config: {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy: string | null;
+}): Promise<AiProviderConfig> => {
+  const updatedAt = nowIso();
+  await getDb().collection('ai_provider_config').doc(config.featureKey).set({
+    featureKey: config.featureKey,
+    provider: config.provider,
+    model: config.model,
+    enabled: config.enabled,
+    updatedBy: config.updatedBy,
+    updatedAt,
+  }, { merge: true });
+  return {
+    featureKey: config.featureKey,
+    provider: config.provider,
+    model: config.model,
+    enabled: config.enabled,
+    updatedBy: config.updatedBy,
+    updatedAt,
+  };
+};
+
+const mapAdminSettingDoc = (id: string, data: FirebaseFirestore.DocumentData): AdminSetting => ({
+  key: id,
+  value: String(data.value ?? ''),
+  updatedBy: data.updatedBy ?? null,
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const getAdminSetting = async (key: string): Promise<AdminSetting | null> => {
+  const doc = await getDb().collection('admin_settings').doc(key).get();
+  return doc.exists ? mapAdminSettingDoc(doc.id, doc.data()!) : null;
+};
+
+export const setAdminSetting = async (setting: {
+  key: string;
+  value: string;
+  updatedBy: string | null;
+}): Promise<AdminSetting> => {
+  const updatedAt = nowIso();
+  await getDb().collection('admin_settings').doc(setting.key).set({
+    key: setting.key,
+    value: setting.value,
+    updatedBy: setting.updatedBy,
+    updatedAt,
+  }, { merge: true });
+  return { ...setting, updatedAt };
+};
+
+const AI_ANALYTICS_TABLES: AiAnalyticsMetricTable[] = [
+  'ai_daily_metrics',
+  'ai_provider_metrics',
+  'ai_prompt_metrics',
+  'ai_parser_metrics',
+  'ai_field_metrics',
+  'ai_cost_metrics',
+];
+
+const metricDocId = (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): string => {
+  const dims = Object.entries(metric.dimensions)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${value}`)
+    .join('|');
+  return [metric.periodStart, metric.periodType, dims, metric.metricKey].join('|').replace(/[\/#?]/g, '_');
+};
+
+const mapAiAnalyticsDoc = (
+  table: AiAnalyticsMetricTable,
+  data: FirebaseFirestore.DocumentData,
+): AiAnalyticsMetric => ({
+  table,
+  periodStart: String(data.periodStart ?? ''),
+  periodType: (data.periodType ?? 'day') as AiAnalyticsPeriodType,
+  dimensions: data.dimensions && typeof data.dimensions === 'object' ? data.dimensions as Record<string, string> : {},
+  metricKey: String(data.metricKey ?? ''),
+  metricValue: Number(data.metricValue ?? 0),
+  updatedAt: String(data.updatedAt ?? nowIso()),
+});
+
+export const upsertAiAnalyticsMetric = async (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): Promise<AiAnalyticsMetric> => {
+  const updatedAt = nowIso();
+  const row = { ...metric, updatedAt };
+  await getDb().collection(metric.table).doc(metricDocId(metric)).set(row, { merge: true });
+  return row;
+};
+
+export const listAiAnalyticsMetrics = async (options: {
+  table?: AiAnalyticsMetricTable;
+  periodType?: AiAnalyticsPeriodType;
+  periodStart?: string;
+  limit?: number;
+} = {}): Promise<AiAnalyticsMetric[]> => {
+  const tables = options.table ? [options.table] : AI_ANALYTICS_TABLES;
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 250), 1000));
+  const out: AiAnalyticsMetric[] = [];
+  for (const table of tables) {
+    let query: FirebaseFirestore.Query = getDb().collection(table);
+    if (options.periodType) query = query.where('periodType', '==', options.periodType);
+    if (options.periodStart) query = query.where('periodStart', '==', options.periodStart);
+    const snap = await query.limit(limit).get();
+    out.push(...snap.docs.map((doc) => mapAiAnalyticsDoc(table, doc.data())));
+  }
+  return out.sort((a, b) => b.periodStart.localeCompare(a.periodStart)).slice(0, limit);
+};
+
+const mapAiExperimentDoc = (id: string, data: FirebaseFirestore.DocumentData): AiExperiment => ({
+  experimentId: id,
+  featureKey: String(data.featureKey ?? ''),
+  experimentKind: data.experimentKind ?? 'shadow_compare',
+  name: String(data.name ?? ''),
+  status: data.status ?? 'draft',
+  variants: Array.isArray(data.variants) ? data.variants : [],
+  controlVariantId: data.controlVariantId ?? null,
+  minSampleSize: Number(data.minSampleSize ?? 200),
+  maxDurationDays: Number(data.maxDurationDays ?? 30),
+  startedAt: data.startedAt ?? null,
+  endsAt: data.endsAt ?? null,
+  winningVariantId: data.winningVariantId ?? null,
+  createdBy: data.createdBy ?? null,
+  createdAt: String(data.createdAt ?? nowIso()),
+  updatedAt: String(data.updatedAt ?? nowIso()),
+});
+
+export const createAiExperiment = async (experiment: {
+  featureKey: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  name: string;
+  variants: AiExperiment['variants'];
+  controlVariantId?: string | null;
+  minSampleSize?: number;
+  maxDurationDays?: number;
+  createdBy?: string | null;
+}): Promise<AiExperiment> => {
+  const ref = getDb().collection('ai_experiments').doc(randomUUID());
+  const now = nowIso();
+  const row = {
+    featureKey: experiment.featureKey,
+    experimentKind: experiment.experimentKind ?? 'shadow_compare',
+    name: experiment.name,
+    status: 'draft',
+    variants: experiment.variants,
+    controlVariantId: experiment.controlVariantId ?? null,
+    minSampleSize: experiment.minSampleSize ?? 200,
+    maxDurationDays: experiment.maxDurationDays ?? 30,
+    startedAt: null,
+    endsAt: null,
+    winningVariantId: null,
+    createdBy: experiment.createdBy ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await ref.set(row);
+  return mapAiExperimentDoc(ref.id, row);
+};
+
+export const listAiExperiments = async (options: {
+  featureKey?: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  status?: AiExperiment['status'];
+  limit?: number;
+} = {}): Promise<AiExperiment[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_experiments');
+  if (options.featureKey) query = query.where('featureKey', '==', options.featureKey);
+  if (options.experimentKind) query = query.where('experimentKind', '==', options.experimentKind);
+  if (options.status) query = query.where('status', '==', options.status);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 100), 500))).get();
+  return snap.docs.map((doc) => mapAiExperimentDoc(doc.id, doc.data()))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const getAiExperiment = async (experimentId: string): Promise<AiExperiment | null> => {
+  const doc = await getDb().collection('ai_experiments').doc(experimentId).get();
+  return doc.exists ? mapAiExperimentDoc(doc.id, doc.data()!) : null;
+};
+
+export const updateAiExperimentStatus = async (params: {
+  experimentId: string;
+  status: AiExperiment['status'];
+  winningVariantId?: string | null;
+}): Promise<AiExperiment> => {
+  const ref = getDb().collection('ai_experiments').doc(params.experimentId);
+  const current = await ref.get();
+  if (!current.exists) throw new Error(`AI experiment not found: ${params.experimentId}`);
+  const data = current.data()!;
+  const patch: Record<string, unknown> = { status: params.status, updatedAt: nowIso() };
+  if (params.status === 'running' && !data.startedAt) patch.startedAt = nowIso();
+  if (params.status === 'completed' && !data.endsAt) patch.endsAt = nowIso();
+  if (params.winningVariantId) patch.winningVariantId = params.winningVariantId;
+  await ref.set(patch, { merge: true });
+  const updated = await ref.get();
+  return mapAiExperimentDoc(updated.id, updated.data()!);
+};
+
+const assignmentDocId = (assignmentKey: string, experimentId: string): string =>
+  `${experimentId}_${assignmentKey}`.replace(/[\/#?]/g, '_');
+
+const mapAiAssignmentDoc = (data: FirebaseFirestore.DocumentData): AiExperimentAssignment => ({
+  assignmentKey: String(data.assignmentKey),
+  experimentId: String(data.experimentId),
+  variantId: String(data.variantId),
+  originalVariantId: data.originalVariantId ?? null,
+  assignedAt: String(data.assignedAt ?? nowIso()),
+  reassignedAt: data.reassignedAt ?? null,
+});
+
+export const getOrCreateAiExperimentAssignment = async (assignment: {
+  assignmentKey: string;
+  experimentId: string;
+  variantId: string;
+}): Promise<AiExperimentAssignment> => {
+  const ref = getDb().collection('ai_experiment_assignments').doc(assignmentDocId(assignment.assignmentKey, assignment.experimentId));
+  return getDb().runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (existing.exists) return mapAiAssignmentDoc(existing.data()!);
+    const row = { ...assignment, assignedAt: nowIso(), originalVariantId: null, reassignedAt: null };
+    tx.set(ref, row);
+    return mapAiAssignmentDoc(row);
+  });
+};
+
+export const reassignAiExperimentVariantToControl = async (params: {
+  experimentId: string;
+  variantId: string;
+  controlVariantId: string;
+}): Promise<number> => {
+  const snap = await getDb().collection('ai_experiment_assignments')
+    .where('experimentId', '==', params.experimentId)
+    .where('variantId', '==', params.variantId)
+    .get();
+  const batch = getDb().batch();
+  snap.docs.forEach((doc) => batch.set(doc.ref, {
+    variantId: params.controlVariantId,
+    originalVariantId: doc.data().originalVariantId ?? params.variantId,
+    reassignedAt: nowIso(),
+  }, { merge: true }));
+  await batch.commit();
+  return snap.size;
+};
+
+export const listAiExperimentAssignments = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiExperimentAssignment[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_experiment_assignments');
+  if (options.experimentId) query = query.where('experimentId', '==', options.experimentId);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 500), 2000))).get();
+  return snap.docs.map((doc) => mapAiAssignmentDoc(doc.data()))
+    .sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
+};
+
+export const deleteCompletedAiExperimentAssignmentsOlderThan = async (cutoffIso: string): Promise<number> => {
+  const experiments = await getDb().collection('ai_experiments')
+    .where('status', '==', 'completed')
+    .get();
+  const eligibleIds = new Set(
+    experiments.docs
+      .map((doc) => ({ id: doc.id, endsAt: String(doc.data().endsAt ?? '') }))
+      .filter((row) => row.endsAt && row.endsAt < cutoffIso)
+      .map((row) => row.id),
+  );
+  if (!eligibleIds.size) return 0;
+  const assignments = await getDb().collection('ai_experiment_assignments').get();
+  const batch = getDb().batch();
+  let deleted = 0;
+  assignments.docs.forEach((doc) => {
+    if (!eligibleIds.has(String(doc.data().experimentId))) return;
+    batch.delete(doc.ref);
+    deleted += 1;
+  });
+  if (deleted > 0) await batch.commit();
+  return deleted;
+};
+
+const abMetricDocId = (metric: Pick<AiAbTestMetric, 'experimentId' | 'variantId' | 'day'>): string =>
+  `${metric.experimentId}_${metric.variantId}_${metric.day}`.replace(/[\/#?]/g, '_');
+
+const mapAiAbMetricDoc = (data: FirebaseFirestore.DocumentData): AiAbTestMetric => ({
+  experimentId: String(data.experimentId),
+  variantId: String(data.variantId),
+  day: String(data.day),
+  requestCount: Number(data.requestCount ?? 0),
+  successRate: Number(data.successRate ?? 0),
+  avgQualityScore: Number(data.avgQualityScore ?? 0),
+  avgCostUsd: Number(data.avgCostUsd ?? 0),
+  avgLatencyMs: Number(data.avgLatencyMs ?? 0),
+  groundTruthAgreement: data.groundTruthAgreement ?? null,
+  groundTruthSignal: data.groundTruthSignal ?? null,
+  updatedAt: String(data.updatedAt ?? nowIso()),
+});
+
+export const upsertAiAbTestMetric = async (metric: Omit<AiAbTestMetric, 'updatedAt'>): Promise<AiAbTestMetric> => {
+  const row = { ...metric, updatedAt: nowIso() };
+  await getDb().collection('ai_ab_test_metrics').doc(abMetricDocId(metric)).set(row, { merge: true });
+  return row;
+};
+
+export const listAiAbTestMetrics = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiAbTestMetric[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_ab_test_metrics');
+  if (options.experimentId) query = query.where('experimentId', '==', options.experimentId);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 250), 1000))).get();
+  return snap.docs.map((doc) => mapAiAbMetricDoc(doc.data())).sort((a, b) => b.day.localeCompare(a.day));
+};
+
+const mapAiProviderCertificationDoc = (id: string, data: FirebaseFirestore.DocumentData): AiProviderCertification => ({
+  providerId: id,
+  certifiedAt: String(data.certifiedAt ?? nowIso()),
+  certifiedBy: data.certifiedBy ?? null,
+  contractSuiteVersion: String(data.contractSuiteVersion ?? ''),
+  notes: data.notes ?? null,
+});
+
+export const getAiProviderCertification = async (providerId: string): Promise<AiProviderCertification | null> => {
+  const doc = await getDb().collection('ai_provider_certifications').doc(providerId).get();
+  return doc.exists ? mapAiProviderCertificationDoc(doc.id, doc.data()!) : null;
+};
+
+export const listAiProviderCertifications = async (): Promise<AiProviderCertification[]> => {
+  const snap = await getDb().collection('ai_provider_certifications').get();
+  return snap.docs.map((doc) => mapAiProviderCertificationDoc(doc.id, doc.data())).sort((a, b) => a.providerId.localeCompare(b.providerId));
+};
+
+export const setAiProviderCertification = async (cert: {
+  providerId: string;
+  certifiedBy: string | null;
+  contractSuiteVersion: string;
+  notes?: string | null;
+}): Promise<AiProviderCertification> => {
+  const row = {
+    providerId: cert.providerId,
+    certifiedAt: nowIso(),
+    certifiedBy: cert.certifiedBy,
+    contractSuiteVersion: cert.contractSuiteVersion,
+    notes: cert.notes ?? null,
+  };
+  await getDb().collection('ai_provider_certifications').doc(cert.providerId).set(row, { merge: true });
+  return row;
+};
+
+export const deleteAiProviderCertification = async (providerId: string): Promise<void> => {
+  await getDb().collection('ai_provider_certifications').doc(providerId).delete();
+};
+
+const mapAiRecommendationDoc = (id: string, data: FirebaseFirestore.DocumentData): AiRecommendation => ({
+  recommendationId: id,
+  recommendationType: String(data.recommendationType ?? ''),
+  featureKey: String(data.featureKey ?? ''),
+  subjectCurrent: data.subjectCurrent ?? {},
+  subjectProposed: data.subjectProposed ?? {},
+  rationale: String(data.rationale ?? ''),
+  qualityDeltaEstimate: Number(data.qualityDeltaEstimate ?? 0),
+  costDeltaEstimateUsdMonthly: Number(data.costDeltaEstimateUsdMonthly ?? 0),
+  confidence: String(data.confidence ?? 'low'),
+  supportingEvidenceRef: data.supportingEvidenceRef ?? null,
+  supportingEvidenceQuery: data.supportingEvidenceQuery ?? null,
+  engineVersion: String(data.engineVersion ?? ''),
+  status: data.status ?? 'proposed',
+  createdAt: String(data.createdAt ?? nowIso()),
+  respondedBy: data.respondedBy ?? null,
+  respondedAt: data.respondedAt ?? null,
+  outcomeMeasuredAt: data.outcomeMeasuredAt ?? null,
+  outcomeQualityDelta: data.outcomeQualityDelta ?? null,
+  outcomeCostDeltaUsdMonthly: data.outcomeCostDeltaUsdMonthly ?? null,
+});
+
+export const upsertAiRecommendation = async (rec: Partial<AiRecommendation> & {
+  recommendationType: string;
+  featureKey: string;
+  subjectCurrent: Record<string, unknown>;
+  subjectProposed: Record<string, unknown>;
+  rationale: string;
+  engineVersion: string;
+}): Promise<AiRecommendation> => {
+  const id = rec.recommendationId ?? randomUUID();
+  const current = await getDb().collection('ai_recommendations').doc(id).get();
+  const row = {
+    recommendationType: rec.recommendationType,
+    featureKey: rec.featureKey,
+    subjectCurrent: rec.subjectCurrent,
+    subjectProposed: rec.subjectProposed,
+    rationale: rec.rationale,
+    qualityDeltaEstimate: rec.qualityDeltaEstimate ?? 0,
+    costDeltaEstimateUsdMonthly: rec.costDeltaEstimateUsdMonthly ?? 0,
+    confidence: rec.confidence ?? 'low',
+    supportingEvidenceRef: rec.supportingEvidenceRef ?? null,
+    supportingEvidenceQuery: rec.supportingEvidenceQuery ?? null,
+    engineVersion: rec.engineVersion,
+    status: rec.status ?? 'proposed',
+    createdAt: current.exists ? current.data()!.createdAt ?? nowIso() : nowIso(),
+  };
+  await getDb().collection('ai_recommendations').doc(id).set(row, { merge: true });
+  return mapAiRecommendationDoc(id, row);
+};
+
+export const listAiRecommendations = async (options: { status?: AiRecommendation['status']; limit?: number } = {}): Promise<AiRecommendation[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_recommendations');
+  if (options.status) query = query.where('status', '==', options.status);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 100), 500))).get();
+  return snap.docs.map((doc) => mapAiRecommendationDoc(doc.id, doc.data())).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const updateAiRecommendationStatus = async (params: {
+  recommendationId: string;
+  status: AiRecommendation['status'];
+  respondedBy: string | null;
+}): Promise<AiRecommendation> => {
+  const ref = getDb().collection('ai_recommendations').doc(params.recommendationId);
+  await ref.set({ status: params.status, respondedBy: params.respondedBy, respondedAt: nowIso() }, { merge: true });
+  const updated = await ref.get();
+  if (!updated.exists) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationDoc(updated.id, updated.data()!);
+};
+
+export const updateAiRecommendationOutcome = async (params: {
+  recommendationId: string;
+  outcomeQualityDelta: number | null;
+  outcomeCostDeltaUsdMonthly: number | null;
+  measuredAt?: string;
+}): Promise<AiRecommendation> => {
+  const ref = getDb().collection('ai_recommendations').doc(params.recommendationId);
+  await ref.set({
+    outcomeMeasuredAt: params.measuredAt ?? nowIso(),
+    outcomeQualityDelta: params.outcomeQualityDelta,
+    outcomeCostDeltaUsdMonthly: params.outcomeCostDeltaUsdMonthly,
+  }, { merge: true });
+  const updated = await ref.get();
+  if (!updated.exists) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationDoc(updated.id, updated.data()!);
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {

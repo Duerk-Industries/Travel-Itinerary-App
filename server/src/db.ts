@@ -35,6 +35,10 @@ export const ensureDefaultGroupForUser = async (...args: Parameters<ReturnType<t
   adapter().ensureDefaultGroupForUser(...args);
 export const findUserByEmail = async (email: string): Promise<User | null> => adapter().findUserByEmail(email);
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => adapter().findUserByIdentifier(identifier);
+export const isInternalCanaryAccount = async (...args: Parameters<ReturnType<typeof adapter>['isInternalCanaryAccount']>) =>
+  adapter().isInternalCanaryAccount(...args);
+export const ensureCanaryAccountBootstrap = async (...args: Parameters<ReturnType<typeof adapter>['ensureCanaryAccountBootstrap']>) =>
+  adapter().ensureCanaryAccountBootstrap(...args);
 export const getUserById = async (...args: Parameters<ReturnType<typeof adapter>['getUserById']>) =>
   adapter().getUserById(...args);
 export const createWebUser = async (...args: Parameters<ReturnType<typeof adapter>['createWebUser']>) =>
@@ -403,6 +407,56 @@ export const listFeatureFlags = async (...args: Parameters<ReturnType<typeof ada
   adapter().listFeatureFlags(...args);
 export const setFeatureFlag = async (...args: Parameters<ReturnType<typeof adapter>['setFeatureFlag']>) =>
   adapter().setFeatureFlag(...args);
+export const getAiProviderConfig = async (...args: Parameters<ReturnType<typeof adapter>['getAiProviderConfig']>) =>
+  adapter().getAiProviderConfig(...args);
+export const listAiProviderConfigs = async (...args: Parameters<ReturnType<typeof adapter>['listAiProviderConfigs']>) =>
+  adapter().listAiProviderConfigs(...args);
+export const setAiProviderConfig = async (...args: Parameters<ReturnType<typeof adapter>['setAiProviderConfig']>) =>
+  adapter().setAiProviderConfig(...args);
+export const getAdminSetting = async (...args: Parameters<ReturnType<typeof adapter>['getAdminSetting']>) =>
+  adapter().getAdminSetting(...args);
+export const setAdminSetting = async (...args: Parameters<ReturnType<typeof adapter>['setAdminSetting']>) =>
+  adapter().setAdminSetting(...args);
+export const upsertAiAnalyticsMetric = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiAnalyticsMetric']>) =>
+  adapter().upsertAiAnalyticsMetric(...args);
+export const listAiAnalyticsMetrics = async (...args: Parameters<ReturnType<typeof adapter>['listAiAnalyticsMetrics']>) =>
+  adapter().listAiAnalyticsMetrics(...args);
+export const createAiExperiment = async (...args: Parameters<ReturnType<typeof adapter>['createAiExperiment']>) =>
+  adapter().createAiExperiment(...args);
+export const listAiExperiments = async (...args: Parameters<ReturnType<typeof adapter>['listAiExperiments']>) =>
+  adapter().listAiExperiments(...args);
+export const getAiExperiment = async (...args: Parameters<ReturnType<typeof adapter>['getAiExperiment']>) =>
+  adapter().getAiExperiment(...args);
+export const updateAiExperimentStatus = async (...args: Parameters<ReturnType<typeof adapter>['updateAiExperimentStatus']>) =>
+  adapter().updateAiExperimentStatus(...args);
+export const getOrCreateAiExperimentAssignment = async (...args: Parameters<ReturnType<typeof adapter>['getOrCreateAiExperimentAssignment']>) =>
+  adapter().getOrCreateAiExperimentAssignment(...args);
+export const reassignAiExperimentVariantToControl = async (...args: Parameters<ReturnType<typeof adapter>['reassignAiExperimentVariantToControl']>) =>
+  adapter().reassignAiExperimentVariantToControl(...args);
+export const listAiExperimentAssignments = async (...args: Parameters<ReturnType<typeof adapter>['listAiExperimentAssignments']>) =>
+  adapter().listAiExperimentAssignments(...args);
+export const deleteCompletedAiExperimentAssignmentsOlderThan = async (...args: Parameters<ReturnType<typeof adapter>['deleteCompletedAiExperimentAssignmentsOlderThan']>) =>
+  adapter().deleteCompletedAiExperimentAssignmentsOlderThan(...args);
+export const upsertAiAbTestMetric = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiAbTestMetric']>) =>
+  adapter().upsertAiAbTestMetric(...args);
+export const listAiAbTestMetrics = async (...args: Parameters<ReturnType<typeof adapter>['listAiAbTestMetrics']>) =>
+  adapter().listAiAbTestMetrics(...args);
+export const getAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['getAiProviderCertification']>) =>
+  adapter().getAiProviderCertification(...args);
+export const listAiProviderCertifications = async (...args: Parameters<ReturnType<typeof adapter>['listAiProviderCertifications']>) =>
+  adapter().listAiProviderCertifications(...args);
+export const setAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['setAiProviderCertification']>) =>
+  adapter().setAiProviderCertification(...args);
+export const deleteAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['deleteAiProviderCertification']>) =>
+  adapter().deleteAiProviderCertification(...args);
+export const upsertAiRecommendation = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiRecommendation']>) =>
+  adapter().upsertAiRecommendation(...args);
+export const listAiRecommendations = async (...args: Parameters<ReturnType<typeof adapter>['listAiRecommendations']>) =>
+  adapter().listAiRecommendations(...args);
+export const updateAiRecommendationStatus = async (...args: Parameters<ReturnType<typeof adapter>['updateAiRecommendationStatus']>) =>
+  adapter().updateAiRecommendationStatus(...args);
+export const updateAiRecommendationOutcome = async (...args: Parameters<ReturnType<typeof adapter>['updateAiRecommendationOutcome']>) =>
+  adapter().updateAiRecommendationOutcome(...args);
 export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['getUsageCounter']>) =>
   adapter().getUsageCounter(...args);
 export const setUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['setUsageCounter']>) =>

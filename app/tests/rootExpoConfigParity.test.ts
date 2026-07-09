@@ -53,6 +53,8 @@ describe('root Expo/EAS config parity', () => {
 
     expect(sentryPlugin).toBeDefined();
     expect(fs.existsSync(sentryPlugin![0])).toBe(true);
-    expect(path.resolve(sentryPlugin![0]).startsWith(path.join(appRoot, 'node_modules'))).toBe(true);
+    const resolvedPlugin = path.resolve(sentryPlugin![0]);
+    expect(resolvedPlugin.startsWith(path.join(appRoot, 'node_modules')) ||
+      resolvedPlugin.startsWith(path.join(workspaceRoot, 'node_modules'))).toBe(true);
   });
 });
