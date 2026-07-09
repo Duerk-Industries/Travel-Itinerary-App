@@ -221,6 +221,8 @@ export type ItineraryPromptPlanResult = {
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
 };
 
+export type MustSeeAttractionInput = string | { name: string; destinationName?: string | null };
+
 export type ItineraryPromptPlanServiceInput = {
   apiKey?: string;
   userId?: string;
@@ -233,7 +235,7 @@ export type ItineraryPromptPlanServiceInput = {
   days: number;
   budgetMin: number;
   budgetMax: number;
-  mustSeeAttractions?: string[];
+  mustSeeAttractions?: MustSeeAttractionInput[];
   departureAirport?: string;
   tripStyle?: string;
   promptTraits?: {
@@ -741,26 +743,32 @@ const normalizeDestinations = (destinations: string[]): string[] => {
   return pruneDestinationHierarchy(cleaned);
 };
 
-const normalizeMustSeeAttractions = (items: string[] | undefined): string[] => {
+type NormalizedMustSeeAttraction = { name: string; destinationName?: string };
+
+const normalizeMustSeeAttractions = (
+  items: MustSeeAttractionInput[] | undefined
+): NormalizedMustSeeAttraction[] => {
   const seen = new Set<string>();
-  const out: string[] = [];
+  const out: NormalizedMustSeeAttraction[] = [];
   for (const raw of items ?? []) {
-    const value = normalizeText(raw);
+    const isObject = typeof raw === 'object' && raw !== null;
+    const value = normalizeText(isObject ? raw.name : raw);
     if (!value) continue;
     const key = value.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(value);
+    const destinationName = isObject ? normalizeText(raw.destinationName ?? '') : '';
+    out.push(destinationName ? { name: value, destinationName } : { name: value });
     if (out.length >= 20) break;
   }
   return out;
 };
 
-const buildMustSeePromptBlock = (mustSeeAttractions: string[]): string => {
+const buildMustSeePromptBlock = (mustSeeAttractions: NormalizedMustSeeAttraction[]): string => {
   if (!mustSeeAttractions.length) return '';
   const lines = ['Must-see attractions selected by travelers (prioritize these):'];
-  mustSeeAttractions.forEach((name, idx) => {
-    lines.push(`${idx + 1}. ${name}`);
+  mustSeeAttractions.forEach((item, idx) => {
+    lines.push(`${idx + 1}. ${item.name}`);
   });
   return lines.join('\n');
 };
@@ -785,7 +793,7 @@ const buildPromptRequest = (input: ItineraryPromptPlanServiceInput): PromptReq =
     budgetMin: Math.max(0, Math.round(input.budgetMin)),
     budgetMax: Math.max(Math.round(input.budgetMin), Math.round(input.budgetMax)),
     tripStyle: String(input.tripStyle ?? '').trim() || undefined,
-    ms: mustSeeAttractions,
+    ms: mustSeeAttractions.map((item) => item.name),
   };
 
   if (isIsoDate(input.tripStartDate) && isIsoDate(input.tripEndDate)) {
@@ -1243,11 +1251,10 @@ const enforceAttractionDestinationConsistency = (
 
 const enforceMustSeeAttractions = (
   itinerary: PromptItinerary,
-  mustSeeAttractions: string[]
+  mustSeeAttractions: NormalizedMustSeeAttraction[],
+  requestedDestinations: string[]
 ): PromptItinerary => {
-  const required = normalizeMustSeeAttractions(mustSeeAttractions);
-  if (!required.length) return itinerary;
-  const normalizedRequired = required.map((item) => normalizeText(item));
+  if (!mustSeeAttractions.length) return itinerary;
   const present = new Set<string>();
   itinerary.dy.forEach((day) => {
     day.it.forEach((item) => {
@@ -1260,15 +1267,28 @@ const enforceMustSeeAttractions = (
     const noteText = Array.isArray(day.ln) ? day.ln.join(' ') : '';
     return !/travel day:\s*no activities scheduled/i.test(noteText);
   });
-  const targetDays = candidateDays.length ? candidateDays : itinerary.dy;
-  if (!targetDays.length) return itinerary;
+  const allTargetDays = candidateDays.length ? candidateDays : itinerary.dy;
+  if (!allTargetDays.length) return itinerary;
 
-  let targetCursor = 0;
-  for (const mustSee of normalizedRequired) {
-    const key = mustSee.toLowerCase();
+  // Prefer days whose base destination matches the attraction's tagged
+  // destination (from the must-see picker, e.g. a Boston attraction should
+  // only be inserted on a Boston day); fall back to any target day when no
+  // destination hint is provided or no day matches it.
+  const findDaysForDestination = (destinationName?: string): PromptDay[] => {
+    if (!destinationName) return [];
+    const canonical = canonicalizeToRequestedLocality(destinationName, requestedDestinations);
+    const key = normalizeLocalityKey(canonical);
+    if (!key) return [];
+    return allTargetDays.filter((day) => normalizeLocalityKey(day.b) === key);
+  };
+
+  for (const mustSee of mustSeeAttractions) {
+    const key = mustSee.name.toLowerCase();
     if (!key || present.has(key)) continue;
-    const day = targetDays[targetCursor % targetDays.length];
-    targetCursor += 1;
+    const destinationDays = findDaysForDestination(mustSee.destinationName);
+    const pool = destinationDays.length ? destinationDays : allTargetDays;
+    const day = pool.reduce((min, candidate) => (candidate.it.length < min.it.length ? candidate : min), pool[0]);
+
     const genericIndex = day.it.findIndex((item) => {
       const text = normalizeText(item[2]);
       return (
@@ -1278,17 +1298,17 @@ const enforceMustSeeAttractions = (
     });
     if (genericIndex >= 0) {
       const current = day.it[genericIndex];
-      day.it[genericIndex] = [current[0], current[1], mustSee];
+      day.it[genericIndex] = [current[0], current[1], mustSee.name];
       present.add(key);
       continue;
     }
-    if (day.it.length < 5) {
-      day.it.push(['D', 'A', mustSee]);
+    if (day.it.length < MAX_ITEMS_PER_DAY) {
+      day.it.push(['D', 'A', mustSee.name]);
       present.add(key);
       continue;
     }
     const current = day.it[0];
-    day.it[0] = [current[0], current[1], mustSee];
+    day.it[0] = [current[0], current[1], mustSee.name];
     present.add(key);
   }
 
@@ -1304,10 +1324,41 @@ const mapProfile = (norm: PromptNorm): ItineraryPromptProfile => ({
   weights: norm.w,
 });
 
-const mapTimeCodeToTime = (code: PromptDayTimeCode): string => {
-  if (code === 'M') return '09:00';
-  if (code === 'E') return '19:00';
-  return '13:00';
+const DEFAULT_ACTIVITY_DURATION_MINUTES = 120;
+const ITEM_GAP_MINUTES = 15;
+
+const timeStringToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map((part) => Number(part) || 0);
+  return hours * 60 + minutes;
+};
+
+const minutesToTimeString = (minutes: number): string => {
+  const wrapped = ((minutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(wrapped / 60);
+  const mins = wrapped % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+};
+
+// Sequences same-day items sharing a time-of-day code (morning/day/evening)
+// so back-to-back attractions don't collide on the same clock time — each
+// subsequent item starts after the previous one's estimated duration + a
+// short buffer, rather than every "D" (daytime) item defaulting to 13:00.
+const computeDayItemSchedule = (
+  day: PromptDay,
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>
+): Array<{ startTime: string; durationMinutes: number }> => {
+  const clockByTimeCode: Record<PromptDayTimeCode, number> = {
+    M: timeStringToMinutes('09:00'),
+    D: timeStringToMinutes('13:00'),
+    E: timeStringToMinutes('19:00'),
+  };
+  return day.it.map(([timeCode, , text]) => {
+    const durationMetadata = durationMetadataByName?.get(normalizeText(text).toLowerCase());
+    const durationMinutes = durationMetadata?.estimatedDurationMinutes ?? DEFAULT_ACTIVITY_DURATION_MINUTES;
+    const startMinutes = clockByTimeCode[timeCode] ?? clockByTimeCode.D;
+    clockByTimeCode[timeCode] = startMinutes + durationMinutes + ITEM_GAP_MINUTES;
+    return { startTime: minutesToTimeString(startMinutes), durationMinutes };
+  });
 };
 
 const transferDurationHours = (td: unknown): number | null => {
@@ -1498,12 +1549,14 @@ const mapItems = (
     address: base.l,
   }));
 
-  const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) =>
-    day.it.map(([timeCode, activityCode, text]) => {
+  const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) => {
+    const schedule = computeDayItemSchedule(day, durationMetadataByName);
+    return day.it.map(([, activityCode, text], index) => {
       const mapped = ACTIVITY_CODE_TO_LONG[activityCode];
       const closest = pickActivityTypeForPreferences(text, mapped, preferenceWeights);
       const durationMetadata = durationMetadataByName?.get(normalizeText(text).toLowerCase());
-      const duration = durationMetadata ? formatMinutesAsDuration(durationMetadata.estimatedDurationMinutes) : '2h';
+      const { startTime, durationMinutes } = schedule[index];
+      const duration = formatMinutesAsDuration(durationMinutes);
       const baseNotes = buildGeneratedActivityDescription(day, text, closest);
       const notes = durationMetadata?.requiresPreOrderTickets
         ? `${baseNotes} Tickets may need to be pre-ordered.`
@@ -1514,7 +1567,7 @@ const mapItems = (
         date: day.dt,
         name: text,
         startLocation: day.b || itinerary.eh,
-        startTime: mapTimeCodeToTime(timeCode),
+        startTime,
         duration,
         cost: '',
         freeCancelBy: '',
@@ -1522,8 +1575,8 @@ const mapItems = (
         reference: '',
         notes,
       };
-    })
-  );
+    });
+  });
 
   const carRentals: ItineraryGeneratedCarRental[] = itinerary.rc
     ? [
@@ -1551,24 +1604,28 @@ const mapItems = (
 
 const buildDetails = (
   itinerary: PromptItinerary,
-  transferNotesByDay?: Map<number, TransferNote[]>
+  transferNotesByDay?: Map<number, TransferNote[]>,
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>
 ): ItineraryGeneratedDetail[] =>
-  itinerary.dy.flatMap((day) => [
-    ...day.it.map(([timeCode, _activityCode, text]) => ({
-      day: day.d,
-      time: mapTimeCodeToTime(timeCode),
-      activity: text,
-      cost: null,
-    })),
-    ...(transferNotesByDay?.get(day.d) ?? []).map((note) => ({
-      day: day.d,
-      time: null,
-      activity: note.activity,
-      cost: null,
-      kind: 'note' as const,
-      noteBody: note.noteBody,
-    })),
-  ]);
+  itinerary.dy.flatMap((day) => {
+    const schedule = computeDayItemSchedule(day, durationMetadataByName);
+    return [
+      ...day.it.map(([, _activityCode, text], index) => ({
+        day: day.d,
+        time: schedule[index].startTime,
+        activity: text,
+        cost: null,
+      })),
+      ...(transferNotesByDay?.get(day.d) ?? []).map((note) => ({
+        day: day.d,
+        time: null,
+        activity: note.activity,
+        cost: null,
+        kind: 'note' as const,
+        noteBody: note.noteBody,
+      })),
+    ];
+  });
 
 const renderMarkdownFallback = (itinerary: PromptItinerary, profile: ItineraryPromptProfile): string => {
   const lines: string[] = [];
@@ -1777,7 +1834,8 @@ const runGenerateItineraryViaPromptPlan = async (
 ): Promise<ItineraryPromptPlanResult> => {
   const bundle = getPromptBundle();
   const promptRequest = buildPromptRequest(input);
-  const mustSeePromptBlock = buildMustSeePromptBlock(promptRequest.ms ?? []);
+  const normalizedMustSee = normalizeMustSeeAttractions(input.mustSeeAttractions);
+  const mustSeePromptBlock = buildMustSeePromptBlock(normalizedMustSee);
   const allowAttractionDiscovery = getEnvFlag('ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED', { defaultValue: false });
   logInfo(
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
@@ -1930,7 +1988,7 @@ const runGenerateItineraryViaPromptPlan = async (
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length} activityBlockedDays=${blockedActivityDates.size}`
   );
   const profile = mapProfile(normalized);
-  const itineraryWithMustSee = enforceMustSeeAttractions(filteredItinerary, promptRequest.ms ?? []);
+  const itineraryWithMustSee = enforceMustSeeAttractions(filteredItinerary, normalizedMustSee, promptRequest.d);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     itineraryWithMustSee,
     normalized,
@@ -1955,7 +2013,7 @@ const runGenerateItineraryViaPromptPlan = async (
   logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
   const fallbackMarkdown = renderMarkdownFallback(itineraryWithMustSee, profile);
   const planMarkdown = hasVisibleText(renderedMarkdown) ? renderedMarkdown : fallbackMarkdown;
-  const details = buildDetails(itineraryWithMustSee, transferNotesByDay);
+  const details = buildDetails(itineraryWithMustSee, transferNotesByDay, durationMetadataByName);
   const safeDetails = details.length
     ? details
     : [

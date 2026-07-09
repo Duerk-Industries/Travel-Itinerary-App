@@ -1285,7 +1285,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   body: JSON.stringify({
                     country: destination,
                     locations: locationNames,
-                    mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
+                    mustSeeAttractions: selectedMustSeeAttractions
+                      .filter((item) => item.name)
+                      .map((item) =>
+                        item.destinationName ? { name: item.name, destinationName: item.destinationName } : item.name
+                      ),
                     days,
                     budgetMin: budgetRange.min,
                     budgetMax: budgetRange.max,

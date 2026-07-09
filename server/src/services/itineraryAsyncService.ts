@@ -20,6 +20,7 @@ import {
   generateItineraryViaPromptPlan,
   type ItineraryGeneratedItems,
   type ItineraryGeneratedTransfer,
+  type MustSeeAttractionInput,
 } from './itineraryPromptPlanService';
 import type { ActivityType } from '../types';
 
@@ -52,7 +53,7 @@ type QueueInput = {
   itineraryId?: string;
   destinationSummary: string;
   locations: string[];
-  mustSeeAttractions?: string[];
+  mustSeeAttractions?: MustSeeAttractionInput[];
   days: number;
   budgetMin: number;
   budgetMax: number;
@@ -663,7 +664,18 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       userId: input.userId,
       destinations: input.locations.length ? input.locations : [input.destinationSummary],
       mustSeeAttractions: Array.isArray(input.mustSeeAttractions)
-        ? input.mustSeeAttractions.map((item) => safeString(item)).filter(Boolean)
+        ? (input.mustSeeAttractions
+            .map((item) => {
+              if (item && typeof item === 'object') {
+                const name = safeString((item as any).name);
+                if (!name) return null;
+                const destinationName = safeString((item as any).destinationName ?? '');
+                return destinationName ? { name, destinationName } : { name };
+              }
+              const name = safeString(item);
+              return name || null;
+            })
+            .filter(Boolean) as MustSeeAttractionInput[])
         : [],
       days: input.days,
       budgetMin: input.budgetMin,

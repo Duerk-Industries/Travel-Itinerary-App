@@ -5,7 +5,7 @@ import { getTripById, getWebUserProfile, listTraitsForGroupTrip } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
-import { generateItineraryViaPromptPlan } from '../services/itineraryPromptPlanService';
+import { generateItineraryViaPromptPlan, type MustSeeAttractionInput } from '../services/itineraryPromptPlanService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
@@ -24,6 +24,25 @@ import {
   getConfiguredProviderApiKey,
   getProviderApiKeyEnvVar,
 } from '../services/aiProviderConfigService';
+
+// Accepts either a plain attraction name or `{ name, destinationName }` so the
+// generator can place must-see attractions on the correct destination's day.
+const parseMustSeeAttractions = (raw: unknown): MustSeeAttractionInput[] => {
+  if (!Array.isArray(raw)) return [];
+  const out: MustSeeAttractionInput[] = [];
+  for (const value of raw) {
+    if (value && typeof value === 'object') {
+      const name = String((value as any).name ?? '').trim();
+      if (!name) continue;
+      const destinationName = String((value as any).destinationName ?? '').trim();
+      out.push(destinationName ? { name, destinationName } : { name });
+      continue;
+    }
+    const name = String(value ?? '').trim();
+    if (name) out.push(name);
+  }
+  return out;
+};
 
 // Returns a UTC monthly window key, e.g. "2026-03"
 const getMonthWindowKey = (): string => {
@@ -183,9 +202,7 @@ router.post('/', async (req, res) => {
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
-  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
-    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
-    : [];
+  const selectedMustSeeAttractions = parseMustSeeAttractions(mustSeeAttractions);
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
     : String(country ?? '').trim();
@@ -371,9 +388,7 @@ router.post('/async', async (req, res) => {
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
-  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
-    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
-    : [];
+  const selectedMustSeeAttractions = parseMustSeeAttractions(mustSeeAttractions);
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
     : String(country ?? '').trim();
