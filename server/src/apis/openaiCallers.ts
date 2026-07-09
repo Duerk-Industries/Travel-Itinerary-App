@@ -17,6 +17,8 @@ type TextCompletionResult = {
   text: string | null;
   promptTokens: number;
   completionTokens: number;
+  provider: string;
+  model: string;
 };
 
 type OpenAiCallerUsageContext = {
@@ -32,15 +34,19 @@ const runOpenAiTextCompletion = async (params: {
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
+  providerOverride?: string;
+  modelOverride?: string;
   usageContext?: OpenAiCallerUsageContext;
 }): Promise<TextCompletionResult> => {
   const activeConfig = await getActiveAiProvider(AI_FEATURE_ITINERARY_GENERATION);
-  const provider = await resolveProvider(AI_FEATURE_ITINERARY_GENERATION, params.caller);
+  const providerId = params.providerOverride || activeConfig.provider || OPENAI_PROVIDER_ID;
+  const model = params.modelOverride || activeConfig.model || OPENAI_DEFAULT_MODEL;
+  const provider = await resolveProvider(AI_FEATURE_ITINERARY_GENERATION, params.caller, params.providerOverride);
   const ctx = createAiCallContext({
     featureKey: AI_FEATURE_ITINERARY_GENERATION,
     userId: params.usageContext?.userId ?? 'anonymous',
-    provider: provider.id || OPENAI_PROVIDER_ID,
-    model: activeConfig.model || OPENAI_DEFAULT_MODEL,
+    provider: provider.id || providerId,
+    model,
     callerId: params.caller,
   }) as AiCallContext & {
     apiKey?: string;
@@ -57,7 +63,7 @@ const runOpenAiTextCompletion = async (params: {
 
   const data = await provider.chatCompletion(
     {
-      model: activeConfig.model || OPENAI_DEFAULT_MODEL,
+      model,
       messages: [
         { role: 'system', content: params.systemPrompt },
         { role: 'user', content: params.userPrompt },
@@ -72,12 +78,16 @@ const runOpenAiTextCompletion = async (params: {
     text: data?.choices?.[0]?.message?.content ?? null,
     promptTokens: data?.usage?.prompt_tokens ?? 0,
     completionTokens: data?.usage?.completion_tokens ?? 0,
+    provider: provider.id || providerId,
+    model,
   };
 };
 
 export const generateItineraryPlanViaOpenAi = async (params: {
   apiKey?: string;
   prompt: string;
+  providerOverride?: string;
+  modelOverride?: string;
   usageContext?: OpenAiCallerUsageContext;
 }): Promise<string | null> => {
   const result = await runOpenAiTextCompletion({
@@ -87,6 +97,8 @@ export const generateItineraryPlanViaOpenAi = async (params: {
     userPrompt: params.prompt,
     temperature: 0.7,
     maxTokens: 500,
+    providerOverride: params.providerOverride,
+    modelOverride: params.modelOverride,
     usageContext: params.usageContext,
   });
   return result.text;
@@ -103,6 +115,8 @@ export const runItineraryPromptStageViaOpenAi = async (params: {
   systemPrompt: string;
   userPrompt: string;
   maxTokens?: number;
+  providerOverride?: string;
+  modelOverride?: string;
   usageContext?: OpenAiCallerUsageContext;
 }): Promise<TextCompletionResult> => {
   return runOpenAiTextCompletion({
@@ -112,6 +126,8 @@ export const runItineraryPromptStageViaOpenAi = async (params: {
     userPrompt: params.userPrompt,
     temperature: 0.2,
     maxTokens: params.maxTokens,
+    providerOverride: params.providerOverride,
+    modelOverride: params.modelOverride,
     usageContext: params.usageContext,
   });
 };

@@ -1,0 +1,207 @@
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+
+type ReplayRun = {
+  provider?: string;
+  model?: string;
+  label?: string;
+};
+
+type ReplayFile = {
+  request?: Record<string, unknown>;
+  runs?: ReplayRun[];
+  outputDir?: string;
+  captureRaw?: boolean;
+};
+
+type CliOptions = {
+  requestPath: string | null;
+  outputDir: string | null;
+  runs: ReplayRun[];
+  captureRaw: boolean;
+  help: boolean;
+};
+
+const usage = `Usage:
+  npm --prefix server run replay:itinerary -- --request ./request.json --models openai:gpt-4o-mini,anthropic:claude-sonnet-4-5
+
+Options:
+  --request, -r <file>     JSON file containing either the service request or { "request": ..., "runs": [...] }.
+  --out, -o <dir>          Directory for replay result JSON files. Defaults to server/data/ai-replay/<timestamp>.
+  --models <list>          Comma-separated provider:model entries. Overrides runs in the file.
+  --provider <provider>    Single provider override, used with --model.
+  --model <model>          Single model override, used with --provider.
+  --raw-capture            Sets ENABLE_RAW_AI_CAPTURE=1 for this replay process.
+  --help                   Show this help.
+`;
+
+const loadEnv = () => {
+  const rootDir = path.resolve(__dirname, '../..');
+  for (const relativePath of ['.env', '.local_env', 'server/.env', 'server/.local_env']) {
+    const envPath = path.join(rootDir, relativePath);
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath, override: false });
+    }
+  }
+};
+
+const parseProviderModel = (value: string): ReplayRun => {
+  const [provider, ...modelParts] = value.split(':');
+  return {
+    provider: provider?.trim() || undefined,
+    model: modelParts.join(':').trim() || undefined,
+  };
+};
+
+const parseArgs = (argv: string[]): CliOptions => {
+  const options: CliOptions = {
+    requestPath: null,
+    outputDir: null,
+    runs: [],
+    captureRaw: false,
+    help: false,
+  };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    const next = argv[i + 1];
+    if (arg === '--help' || arg === '-h') {
+      options.help = true;
+    } else if (arg === '--request' || arg === '-r') {
+      options.requestPath = next ?? null;
+      i += 1;
+    } else if (arg === '--out' || arg === '-o') {
+      options.outputDir = next ?? null;
+      i += 1;
+    } else if (arg === '--models') {
+      options.runs = String(next ?? '')
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map(parseProviderModel);
+      i += 1;
+    } else if (arg === '--provider') {
+      options.runs[0] = { ...(options.runs[0] ?? {}), provider: next };
+      i += 1;
+    } else if (arg === '--model') {
+      options.runs[0] = { ...(options.runs[0] ?? {}), model: next };
+      i += 1;
+    } else if (arg === '--raw-capture') {
+      options.captureRaw = true;
+    } else if (!options.requestPath && !arg.startsWith('-')) {
+      options.requestPath = arg;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+  return options;
+};
+
+const readJson = (filePath: string): ReplayFile | Record<string, unknown> => {
+  const absolute = path.resolve(filePath);
+  return JSON.parse(fs.readFileSync(absolute, 'utf8'));
+};
+
+const timestamp = (): string => new Date().toISOString().replace(/[:.]/g, '-');
+
+const safeFilePart = (value: string): string =>
+  value
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 100) || 'run';
+
+const normalizeRuns = (cliRuns: ReplayRun[], fileRuns: ReplayRun[] | undefined, requestProvider: unknown): ReplayRun[] => {
+  const selected = cliRuns.length ? cliRuns : Array.isArray(fileRuns) ? fileRuns : [];
+  if (selected.length) return selected;
+  const provider = requestProvider && typeof requestProvider === 'object' ? (requestProvider as ReplayRun) : null;
+  return [{ provider: provider?.provider, model: provider?.model, label: 'default' }];
+};
+
+const validateRequest = (request: Record<string, unknown>) => {
+  const destinations = request.destinations;
+  if (!Array.isArray(destinations) || destinations.length === 0) {
+    throw new Error('request.destinations must be a non-empty string array');
+  }
+  const days = Number(request.days);
+  if (!Number.isFinite(days) || days <= 0) {
+    throw new Error('request.days must be a positive number');
+  }
+  const budgetMin = Number(request.budgetMin);
+  const budgetMax = Number(request.budgetMax);
+  if (!Number.isFinite(budgetMin) || !Number.isFinite(budgetMax) || budgetMin < 0 || budgetMax < budgetMin) {
+    throw new Error('request.budgetMin and request.budgetMax must be a valid range');
+  }
+};
+
+const main = async () => {
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help || !options.requestPath) {
+    process.stdout.write(usage);
+    process.exit(options.help ? 0 : 1);
+  }
+
+  loadEnv();
+  const file = readJson(options.requestPath);
+  const wrapper = file as ReplayFile;
+  process.env.NODE_ENV = process.env.NODE_ENV ?? 'development';
+  process.env.E2E_MODE = process.env.E2E_MODE ?? '1';
+  process.env.DB_PROVIDER = process.env.DB_PROVIDER ?? 'memory';
+  process.env.USE_IN_MEMORY_DB = process.env.USE_IN_MEMORY_DB ?? '1';
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'pg-mem://localhost/itinerary-replay';
+  process.env.AUTH_SECRET = process.env.AUTH_SECRET && process.env.AUTH_SECRET !== 'development-secret'
+    ? process.env.AUTH_SECRET
+    : 'itinerary-replay-secret';
+  if (options.captureRaw || wrapper.captureRaw) process.env.ENABLE_RAW_AI_CAPTURE = '1';
+
+  const request = (wrapper.request && typeof wrapper.request === 'object' ? wrapper.request : file) as Record<string, unknown>;
+  validateRequest(request);
+  const runs = normalizeRuns(options.runs, wrapper.runs, request.aiProvider);
+  const outputDir = path.resolve(options.outputDir ?? wrapper.outputDir ?? path.join(__dirname, '../data/ai-replay', timestamp()));
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const { initDb } = await import('../src/db');
+  const { generateItineraryViaPromptPlan } = await import('../src/services/itineraryPromptPlanService');
+  const { clearAiProviderConfigCache } = await import('../src/services/aiProviderConfigService');
+  await initDb();
+
+  const summary: Array<Record<string, unknown>> = [];
+  for (let i = 0; i < runs.length; i += 1) {
+    const run = runs[i];
+    clearAiProviderConfigCache('itinerary_generation');
+    const label = run.label || [run.provider, run.model].filter(Boolean).join('-') || `run-${i + 1}`;
+    const captureId = `${safeFilePart(String(request.captureId ?? request.tripIdSeed ?? 'itinerary-replay'))}-${safeFilePart(label)}-${Date.now()}`;
+    const startedAt = new Date().toISOString();
+    try {
+      const result = await generateItineraryViaPromptPlan({
+        ...(request as any),
+        aiProvider: {
+          ...((request.aiProvider && typeof request.aiProvider === 'object') ? request.aiProvider : {}),
+          ...(run.provider ? { provider: run.provider } : {}),
+          ...(run.model ? { model: run.model } : {}),
+        },
+        captureId,
+      });
+      const outputPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.json`);
+      fs.writeFileSync(outputPath, JSON.stringify({ run, captureId, startedAt, completedAt: new Date().toISOString(), result }, null, 2));
+      summary.push({ run, captureId, ok: true, outputPath, totalTokens: result.tokenUsage.totalTokens });
+      process.stdout.write(`[itinerary-replay] ok label=${label} output=${outputPath}\n`);
+    } catch (err) {
+      const outputPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.error.json`);
+      const error = err instanceof Error ? { message: err.message, stack: err.stack } : { message: String(err) };
+      fs.writeFileSync(outputPath, JSON.stringify({ run, captureId, startedAt, completedAt: new Date().toISOString(), error }, null, 2));
+      summary.push({ run, captureId, ok: false, outputPath, error: error.message });
+      process.stderr.write(`[itinerary-replay] failed label=${label} output=${outputPath} error=${error.message}\n`);
+    }
+  }
+
+  const summaryPath = path.join(outputDir, 'summary.json');
+  fs.writeFileSync(summaryPath, JSON.stringify({ requestPath: path.resolve(options.requestPath), outputDir, runs: summary }, null, 2));
+  process.stdout.write(`[itinerary-replay] summary=${summaryPath}\n`);
+  if (summary.some((run) => run.ok === false)) process.exitCode = 1;
+};
+
+main().catch((err) => {
+  process.stderr.write(`${err instanceof Error ? err.stack ?? err.message : String(err)}\n`);
+  process.exit(1);
+});

@@ -218,10 +218,14 @@ export type ItineraryPromptPlanResult = {
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
 };
 
-type ServiceInput = {
+export type ItineraryPromptPlanServiceInput = {
   apiKey?: string;
   userId?: string;
   usageWindowKey?: string;
+  aiProvider?: {
+    provider?: string;
+    model?: string;
+  };
   destinations: string[];
   days: number;
   budgetMin: number;
@@ -701,7 +705,7 @@ const normalizeWeights = (weights: PromptWeights): PromptWeights => {
   return scaled;
 };
 
-const normalizePromptTraitInput = (input?: ServiceInput['promptTraits']) => {
+const normalizePromptTraitInput = (input?: ItineraryPromptPlanServiceInput['promptTraits']) => {
   const tt = input?.tt ?? {};
   const ut = input?.ut ?? {};
   return {
@@ -758,7 +762,7 @@ const buildMustSeePromptBlock = (mustSeeAttractions: string[]): string => {
   return lines.join('\n');
 };
 
-const buildPromptRequest = (input: ServiceInput): PromptReq => {
+const buildPromptRequest = (input: ItineraryPromptPlanServiceInput): PromptReq => {
   const destinations = normalizeDestinations(input.destinations);
   const mustSeeAttractions = normalizeMustSeeAttractions(input.mustSeeAttractions);
   const seed = String(input.tripIdSeed ?? destinations.join('|'));
@@ -1452,6 +1456,7 @@ export const buildRawStageCapture = (
 
 const runJsonStage = async <T>(params: {
   apiKey?: string;
+  aiProvider?: ItineraryPromptPlanServiceInput['aiProvider'];
   caller:
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P0_NORM
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE
@@ -1476,6 +1481,8 @@ const runJsonStage = async <T>(params: {
   logInfo(`[itinerary] stage start caller=${params.caller} maxTokens=${params.maxTokens}`);
   const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
+    providerOverride: params.aiProvider?.provider,
+    modelOverride: params.aiProvider?.model,
     caller: params.caller,
     systemPrompt: sys,
     userPrompt: usr,
@@ -1526,6 +1533,7 @@ const runJsonStage = async <T>(params: {
 
 const runRenderStage = async (params: {
   apiKey?: string;
+  aiProvider?: ItineraryPromptPlanServiceInput['aiProvider'];
   template: PromptTemplate;
   replacements: Record<string, string>;
   acc?: { promptTokens: number; completionTokens: number };
@@ -1543,6 +1551,8 @@ const runRenderStage = async (params: {
   logInfo('[itinerary] stage start caller=ITINERARY_PLAN_P4_RENDER maxTokens=900');
   const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
+    providerOverride: params.aiProvider?.provider,
+    modelOverride: params.aiProvider?.model,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
     systemPrompt: sys,
     userPrompt: usr,
@@ -1569,7 +1579,7 @@ const runRenderStage = async (params: {
   return result.text;
 };
 
-export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promise<ItineraryPromptPlanResult> => {
+export const generateItineraryViaPromptPlan = async (input: ItineraryPromptPlanServiceInput): Promise<ItineraryPromptPlanResult> => {
   const tokenAcc = { promptTokens: 0, completionTokens: 0 };
   const captureStages: ItineraryStageCapture[] = [];
   try {
@@ -1582,6 +1592,8 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
       captureId: input.captureId ?? input.tripIdSeed,
       jobId: input.captureId ?? input.tripIdSeed,
       userId: input.userId,
+      provider: input.aiProvider?.provider,
+      model: input.aiProvider?.model,
       outcome: 'failure',
       stages: captureStages,
       tokenUsage: {
@@ -1598,7 +1610,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
 };
 
 const runGenerateItineraryViaPromptPlan = async (
-  input: ServiceInput,
+  input: ItineraryPromptPlanServiceInput,
   tokenAcc: { promptTokens: number; completionTokens: number },
   captureStages: ItineraryStageCapture[]
 ): Promise<ItineraryPromptPlanResult> => {
@@ -1623,6 +1635,7 @@ const runGenerateItineraryViaPromptPlan = async (
 
   const normRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P0_NORM,
     template: bundle.p0,
     replacements: {
@@ -1676,6 +1689,7 @@ const runGenerateItineraryViaPromptPlan = async (
 
   const routeRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
     template: bundle.p1,
     replacements: {
@@ -1697,6 +1711,7 @@ const runGenerateItineraryViaPromptPlan = async (
 
   const dayRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
     template: bundle.p2,
     replacements: {
@@ -1718,6 +1733,7 @@ const runGenerateItineraryViaPromptPlan = async (
 
   const validatedRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE,
     template: bundle.p3,
     replacements: {
@@ -1756,6 +1772,7 @@ const runGenerateItineraryViaPromptPlan = async (
 
   const render = await runRenderStage({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     template: bundle.p4,
     replacements: {
       FINAL_JSON: JSON.stringify(itineraryWithMustSee),
@@ -1789,6 +1806,8 @@ const runGenerateItineraryViaPromptPlan = async (
     captureId: input.captureId ?? input.tripIdSeed,
     jobId: input.captureId ?? input.tripIdSeed,
     userId: input.userId,
+    provider: input.aiProvider?.provider,
+    model: input.aiProvider?.model,
     outcome: 'success',
     stages: captureStages,
     tokenUsage: {
