@@ -87,6 +87,12 @@ const getUnsplashAccessKeyOrThrow = (): string => {
 const isMissingDefaultCredentialsError = (error: unknown): boolean =>
   String(error instanceof Error ? error.message : error ?? '').includes('Could not load the default credentials');
 
+const isGcsSigningCredentialsError = (error: unknown): boolean => {
+  const message = String(error instanceof Error ? error.message : error ?? '');
+  const name = error instanceof Error ? error.name : '';
+  return name === 'SigningError' || message.includes('Cannot sign data without `client_email`');
+};
+
 const disableImageCache = (reason: string) => {
   imageCacheDisabledReason = reason;
   if (!imageCacheDisableLogged) {
@@ -123,6 +129,10 @@ async function readCachedImageUrlFromGcs(filepath: string): Promise<string | nul
   } catch (error) {
     if (isMissingDefaultCredentialsError(error)) {
       disableImageCache('Google Cloud default credentials are unavailable in this environment');
+      return null;
+    }
+    if (isGcsSigningCredentialsError(error)) {
+      disableImageCache('Google Cloud credentials cannot sign cached image URLs in this environment');
       return null;
     }
     console.error('Error checking cache:', error);
@@ -173,6 +183,10 @@ async function cacheImage(filepath: string, imageUrl: string): Promise<string> {
   } catch (error) {
     if (isMissingDefaultCredentialsError(error)) {
       disableImageCache('Google Cloud default credentials are unavailable in this environment');
+      return imageUrl;
+    }
+    if (isGcsSigningCredentialsError(error)) {
+      disableImageCache('Google Cloud credentials cannot sign cached image URLs in this environment');
       return imageUrl;
     }
     console.error('Error caching image:', error);

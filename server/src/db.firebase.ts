@@ -2441,6 +2441,79 @@ export const updateTripCovering = async (
   return coveredBy ?? {};
 };
 
+// Deletes every artifact scoped to a trip once the last active traveler has
+// left it — Firestore has no FK cascade, so (unlike the Postgres adapter,
+// which relies on ON DELETE CASCADE for most of these tables) each
+// collection must be cleared explicitly here.
+const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
+  const db = getDb();
+
+  const deleteQueryBatch = async (query: any): Promise<void> => {
+    const snap = await query.get();
+    if (!snap.size) return;
+    const batch = db.batch();
+    snap.docs.forEach((doc: any) => batch.delete(doc.ref));
+    await batch.commit();
+  };
+
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+
+  // Itineraries + their details/checklist items/reactions.
+  const itinerariesSnap = await db.collection('itineraries').where('tripId', '==', tripId).get();
+  for (const itineraryDoc of itinerariesSnap.docs) {
+    const detailsSnap = await db.collection('itinerary_details').where('itineraryId', '==', itineraryDoc.id).get();
+    const detailIds = detailsSnap.docs.map((d) => d.id);
+    for (const ids of chunk(detailIds)) {
+      await deleteQueryBatch(db.collection('itinerary_checklist_items').where('detailId', 'in', ids));
+    }
+    if (detailsSnap.size) {
+      const batch = db.batch();
+      detailsSnap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+    await itineraryDoc.ref.delete();
+  }
+  await deleteQueryBatch(db.collection('itinerary_detail_reactions').where('tripId', '==', tripId));
+
+  // Chat: messages, their per-message reads, and the per-user watermark.
+  const messagesSnap = await db.collection('trip_messages').where('tripId', '==', tripId).get();
+  const messageIds = messagesSnap.docs.map((d) => d.id);
+  for (const ids of chunk(messageIds)) {
+    await deleteQueryBatch(db.collection('message_reads').where('messageId', 'in', ids));
+  }
+  if (messagesSnap.size) {
+    const batch = db.batch();
+    messagesSnap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
+  await deleteQueryBatch(db.collection('chat_read_watermarks').where('tripId', '==', tripId));
+
+  // Packing list nested subcollections are keyed directly by tripId.
+  await deleteQueryBatch(tripPackingCollection(tripId));
+  await deleteQueryBatch(tripPackingChecksCollection(tripId));
+
+  // Remaining trip-scoped collections and booking records (deleted
+  // unconditionally here regardless of remaining traveler ids, since the
+  // trip itself is going away).
+  await deleteQueryBatch(db.collection('car_rentals').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('item_votes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_activity').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_comments').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_followers').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('follow_codes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_share_invites').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_payments').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_removals').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('expenses').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('flights').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('lodgings').where('trip_id', '==', tripId));
+  await deleteQueryBatch(db.collection('tours').where('tripId', '==', tripId));
+};
+
 export const deleteTrip = async (userId: string, tripId: string): Promise<void> => {
   const db = getDb();
   const trip = await db.collection('trips').doc(tripId).get();
@@ -2470,11 +2543,8 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
     .filter((id) => typeof id === 'string' && id.length && !removedUserIds.has(id)).length;
 
   if (activeUserCount === 0) {
-    const expenses = await db.collection('expenses').where('tripId', '==', tripId).get();
-    const batch = db.batch();
-    expenses.forEach((doc) => batch.delete(doc.ref));
-    batch.delete(trip.ref);
-    await batch.commit();
+    await deleteAllTripArtifacts(tripId);
+    await trip.ref.delete();
     await clearTripAccessForTrip(tripId);
     await incrementAdminUserTripCount(userId, -1);
     return;

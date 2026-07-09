@@ -562,6 +562,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
+  const [tripToDelete, setTripToDelete] = useState<{ id: string; name: string; isLastTraveler: boolean } | null>(null);
+  const [tripDeleteCheckingId, setTripDeleteCheckingId] = useState<string | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -2378,7 +2380,47 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       Alert.alert(data.error || 'Unable to delete trip');
       return;
     }
+    // Drop any in-flight async itinerary tracker for this trip so its poller
+    // doesn't keep hitting a trip the user no longer belongs to.
+    setAsyncItineraryByTrip((prev) => {
+      if (!(tripId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+    // If the deleted trip was the one currently open, every effect keyed on
+    // activeTripId (flights/lodgings/expenses/etc.) would otherwise keep
+    // fetching against a trip the user no longer has access to and surface a
+    // spurious "not authorized" permission-denied modal. Exit the trip first
+    // and land on the trip list ("account") page instead.
+    if (activeTripId === tripId) {
+      setActiveTripId(null);
+      setActivePage('account');
+    }
     fetchTrips();
+  };
+
+  // Determines whether the current user is the last active traveler on the
+  // trip's group before opening the confirmation dialog, since deleting as
+  // the last traveler permanently removes the trip and every artifact in it
+  // for everyone (see server deleteTrip), not just the current user.
+  const confirmDeleteTrip = async (trip: { id: string; name: string }) => {
+    if (!userToken) return;
+    setTripDeleteCheckingId(trip.id);
+    let isLastTraveler = false;
+    try {
+      const res = await fetch(`${backendUrl}/api/account/trips/${trip.id}/members`, { headers });
+      if (res.ok) {
+        const members = await res.json();
+        const realMembers = Array.isArray(members) ? members.filter((m: any) => m?.userId) : [];
+        isLastTraveler = realMembers.length <= 1;
+      }
+    } catch {
+      // Best-effort check; fall back to the generic "leave trip" copy below.
+    } finally {
+      setTripDeleteCheckingId(null);
+    }
+    setTripToDelete({ id: trip.id, name: trip.name, isLastTraveler });
   };
 
   // PATCH /api/trips/:id/group is naturally idempotent (replaces the trip's
@@ -3194,8 +3236,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     >
                       <Text style={styles.buttonText}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
-                      <Text style={styles.dangerButtonText}>Delete</Text>
+                    <TouchableOpacity
+                      style={[styles.button, styles.dangerButton]}
+                      onPress={() => confirmDeleteTrip(trip)}
+                      disabled={tripDeleteCheckingId === trip.id}
+                    >
+                      <Text style={styles.dangerButtonText}>
+                        {tripDeleteCheckingId === trip.id ? 'Checking…' : 'Delete'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -3432,6 +3480,26 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           }}
           onCancel={() => setLodgingToDelete(null)}
           styles={styles}
+        />
+      ) : null}
+      {tripToDelete ? (
+        <ConfirmDialog
+          visible={true}
+          title={tripToDelete.isLastTraveler ? 'Delete Trip Permanently' : 'Leave Trip'}
+          message={
+            tripToDelete.isLastTraveler
+              ? `You're the last traveler on "${tripToDelete.name}". Deleting it will permanently remove the trip and everything in it — flights, lodging, activities, itineraries, expenses, and messages — for everyone. This cannot be undone.`
+              : `Are you sure you want to leave "${tripToDelete.name}"? You'll be removed from this trip, but it will remain for the other travelers.`
+          }
+          confirmLabel={tripToDelete.isLastTraveler ? 'Delete Trip' : 'Leave Trip'}
+          onConfirm={() => {
+            const tripId = tripToDelete.id;
+            setTripToDelete(null);
+            deleteTrip(tripId);
+          }}
+          onCancel={() => setTripToDelete(null)}
+          styles={styles}
+          testID="trip-delete-confirm-dialog"
         />
       ) : null}
       {showLodgingDetails && selectedLodging ? (
