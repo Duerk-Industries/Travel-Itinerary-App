@@ -370,7 +370,13 @@ const persistResult = async (params: {
   userId: string;
   tripId: string;
   itineraryId: string;
-  details: Array<{ day: number; activity: string; cost: number | null }>;
+  details: Array<{
+    day: number;
+    activity: string;
+    cost: number | null;
+    kind?: 'activity' | 'place' | 'note' | 'checklist';
+    noteBody?: string | null;
+  }>;
   generatedItems: ItineraryGeneratedItems;
   currentUserPreferredAirport?: string | null;
 }): Promise<{
@@ -396,6 +402,8 @@ const persistResult = async (params: {
       time: null,
       activity: safeString(detail.activity),
       cost: detail.cost ?? null,
+      kind: detail.kind ?? 'activity',
+      noteBody: detail.noteBody ?? null,
     });
     detailKeys.add(key);
     detailsCount += 1;

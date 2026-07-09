@@ -21,6 +21,7 @@ import {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  AttractionDurationMetadata,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -854,6 +855,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_attraction_dest_key ON locations(source_type, (LOWER(COALESCE(payload->>'destinationKey', ''))));`);
   // Partial index on category for shortlist blob lookups
   await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_shortlist_blob ON locations(id) WHERE source_type = 'attraction_shortlist_blob';`);
+  // Partial index for attraction duration/metadata cache lookups
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_duration_metadata ON locations(id) WHERE source_type = 'attraction_duration_metadata';`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_duration_metadata_dest_key ON locations(source_type, (LOWER(COALESCE(payload->>'destinationKey', '')))) WHERE source_type = 'attraction_duration_metadata';`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_removals (
@@ -6982,6 +6986,36 @@ const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
   return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
 };
 
+const toDurationMetadataId = (destinationKey: string, name: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-dur:${clean(destinationKey)}:${clean(name)}`.slice(0, 180);
+};
+
+const toAttractionDurationMetadata = (row: any): AttractionDurationMetadata | null => {
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const name = String(payload.name ?? '').trim();
+  const estimatedDurationMinutes = Number(payload.estimatedDurationMinutes);
+  if (!destinationKey || !name || !Number.isFinite(estimatedDurationMinutes)) return null;
+  return {
+    id: row.id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionDurationMetadata['activityType'],
+    estimatedDurationMinutes,
+    durationSource: payload.durationSource === 'override' ? 'override' : 'heuristic',
+    requiresPreOrderTickets: Boolean(payload.requiresPreOrderTickets),
+    preOrderNotes: typeof payload.preOrderNotes === 'string' ? payload.preOrderNotes : null,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
+};
+
 export const searchLocations = async (
   _userId: string,
   query: string,
@@ -7198,6 +7232,82 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
   const parsed = toAttractionShortlistBlob(rows[0]);
   if (!parsed) {
     throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
+};
+
+export const getAttractionDurationMetadata = async (
+  _userId: string,
+  destinationKey: string,
+  name: string
+): Promise<AttractionDurationMetadata | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const cleanName = String(name ?? '').trim().toLowerCase();
+  if (!key || !cleanName) return null;
+  const id = toDurationMetadataId(key, cleanName);
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE id = $1
+        AND source_type = 'attraction_duration_metadata'
+      LIMIT 1`,
+    [id]
+  );
+  if (!rows.length) return null;
+  return toAttractionDurationMetadata(rows[0]);
+};
+
+export const listAttractionDurationMetadataByDestination = async (
+  _userId: string,
+  destinationKey: string
+): Promise<AttractionDurationMetadata[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE source_type = 'attraction_duration_metadata'
+        AND LOWER(COALESCE(payload->>'destinationKey', '')) = $1`,
+    [key]
+  );
+  return rows.map(toAttractionDurationMetadata).filter(Boolean) as AttractionDurationMetadata[];
+};
+
+export const upsertAttractionDurationMetadata = async (
+  entry: AttractionDurationMetadata
+): Promise<AttractionDurationMetadata> => {
+  const p = getPool();
+  const id = toDurationMetadataId(entry.destinationKey, entry.name);
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    name: entry.name,
+    activityType: entry.activityType,
+    estimatedDurationMinutes: Number(entry.estimatedDurationMinutes) || 0,
+    durationSource: entry.durationSource ?? 'heuristic',
+    requiresPreOrderTickets: Boolean(entry.requiresPreOrderTickets),
+    preOrderNotes: entry.preOrderNotes ?? null,
+    updatedAt: entry.updatedAt,
+  };
+  const searchName = `${entry.name} ${entry.destinationDisplayName} attraction duration`.toLowerCase();
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, address, search_name, payload, updated_at)
+     VALUES ($1, 'attraction_duration_metadata', 'attraction_duration_metadata', $2, NULL, $3, $4::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       source_type = 'attraction_duration_metadata',
+       category = 'attraction_duration_metadata',
+       name = EXCLUDED.name,
+       search_name = EXCLUDED.search_name,
+       payload = locations.payload || EXCLUDED.payload,
+       updated_at = NOW()
+     RETURNING id, payload, updated_at as "updatedAt"`,
+    [id, entry.name, searchName, JSON.stringify(payload)]
+  );
+  const parsed = toAttractionDurationMetadata(rows[0]);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction duration metadata after upsert.');
   }
   return parsed;
 };

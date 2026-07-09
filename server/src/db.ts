@@ -16,6 +16,7 @@ import type {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  AttractionDurationMetadata,
   TripActivity,
   TripComment,
   CarRental,
@@ -272,6 +273,15 @@ export const getAttractionShortlistBlob = async (
 export const upsertAttractionShortlistBlob = async (
   ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionShortlistBlob']>
 ) => adapter().upsertAttractionShortlistBlob(...args);
+export const getAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getAttractionDurationMetadata']>
+): Promise<AttractionDurationMetadata | null> => adapter().getAttractionDurationMetadata(...args);
+export const listAttractionDurationMetadataByDestination = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listAttractionDurationMetadataByDestination']>
+): Promise<AttractionDurationMetadata[]> => adapter().listAttractionDurationMetadataByDestination(...args);
+export const upsertAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionDurationMetadata']>
+) => adapter().upsertAttractionDurationMetadata(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>

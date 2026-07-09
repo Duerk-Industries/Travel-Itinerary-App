@@ -253,6 +253,7 @@ export type AuditAction =
   | 'ADMIN_SETTING_UPDATED'
   | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'
+  | 'API_CACHING_CONFIG_UPDATED'
   | 'BILLING_CONFIG_UPDATED'
   | 'BILLING_PRICE_PUBLISHED'
   | 'BILLING_RECONCILIATION_RUN'
@@ -459,6 +460,19 @@ export interface AttractionShortlistBlob {
   promptBlock: string;
   compact: string;
   itemCount: number;
+  updatedAt: string;
+}
+
+export interface AttractionDurationMetadata {
+  id: string;
+  destinationKey: string;
+  destinationDisplayName: string;
+  name: string;
+  activityType: ActivityType;
+  estimatedDurationMinutes: number;
+  durationSource: 'heuristic' | 'override';
+  requiresPreOrderTickets: boolean;
+  preOrderNotes?: string | null;
   updatedAt: string;
 }
 
@@ -689,6 +703,8 @@ export interface ItineraryGeneratedDetail {
   time: string | null;
   activity: string;
   cost: number | null;
+  kind?: ItineraryDetailKind;
+  noteBody?: string | null;
 }
 
 export interface PlaceDetailsCache {

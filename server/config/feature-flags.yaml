@@ -67,3 +67,6 @@ flags:
   premium_trials:
     enabled: true
     description: "Enable Premium free trial offers, trial eligibility tracking, and trial-ending reminders"
+  attractions_transfer_directions_api:
+    enabled: false
+    description: "Use Google Directions/Distance Matrix API for inter-attraction transfer time instead of the haversine heuristic"

@@ -269,6 +269,30 @@ export const updateApiLimitProviderConfig = (
   return loadConfigFromFile();
 };
 
+export const updateApiCachingConfig = (
+  group: string,
+  nextGroupValues: Record<string, number>
+): ApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  const rawConfig = loadRawConfigFromFile();
+  const normalizedGroup = normalizeApiLimitKeyPart(group);
+  const rawCaching = { ...(rawConfig.caching ?? {}) };
+  rawCaching[normalizedGroup] = Object.fromEntries(
+    Object.entries(nextGroupValues)
+      .map(([key, value]) => [normalizeApiLimitKeyPart(key), Math.floor(value)])
+      .sort(([a], [b]) => String(a).localeCompare(String(b)))
+  );
+  const nextRawConfig: RawApiLimitsConfig = {
+    providers: rawConfig.providers ?? {},
+    budgeting: rawConfig.budgeting ?? {},
+    caching: Object.fromEntries(Object.entries(rawCaching).sort(([a], [b]) => String(a).localeCompare(String(b)))),
+  };
+
+  fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');
+  invalidateConfigCache();
+  return loadConfigFromFile();
+};
+
 export const updateApiBudgetProviderConfig = (
   provider: string,
   nextBudgeting: {

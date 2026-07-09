@@ -24,6 +24,7 @@ import {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  AttractionDurationMetadata,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -3957,6 +3958,36 @@ const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
   return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
 };
 
+const toDurationMetadataId = (destinationKey: string, name: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-dur:${clean(destinationKey)}:${clean(name)}`.slice(0, 180);
+};
+
+const toAttractionDurationMetadata = (id: string, data: any): AttractionDurationMetadata | null => {
+  const payload = data?.payload && typeof data.payload === 'object' ? data.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const name = String(payload.name ?? '').trim();
+  const estimatedDurationMinutes = Number(payload.estimatedDurationMinutes);
+  if (!destinationKey || !name || !Number.isFinite(estimatedDurationMinutes)) return null;
+  return {
+    id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionDurationMetadata['activityType'],
+    estimatedDurationMinutes,
+    durationSource: payload.durationSource === 'override' ? 'override' : 'heuristic',
+    requiresPreOrderTickets: Boolean(payload.requiresPreOrderTickets),
+    preOrderNotes: typeof payload.preOrderNotes === 'string' ? payload.preOrderNotes : null,
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
+};
+
 export const searchLocations = async (
   _userId: string,
   query: string,
@@ -4162,6 +4193,84 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
   const parsed = toAttractionShortlistBlob(saved.id, saved.data() as any);
   if (!parsed) {
     throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
+};
+
+export const getAttractionDurationMetadata = async (
+  _userId: string,
+  destinationKey: string,
+  name: string
+): Promise<AttractionDurationMetadata | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const cleanName = String(name ?? '').trim().toLowerCase();
+  if (!key || !cleanName) return null;
+  const id = toDurationMetadataId(key, cleanName);
+  const db = getDb();
+  const doc = await db.collection('locations').doc(id).get();
+  if (!doc.exists) return null;
+  return toAttractionDurationMetadata(doc.id, doc.data() as any);
+};
+
+export const listAttractionDurationMetadataByDestination = async (
+  _userId: string,
+  destinationKey: string
+): Promise<AttractionDurationMetadata[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const db = getDb();
+  const snapshot = await db
+    .collection('locations')
+    .where('sourceType', '==', 'attraction_duration_metadata')
+    .where('destinationKey', '==', key)
+    .get();
+  return snapshot.docs
+    .map((doc) => toAttractionDurationMetadata(doc.id, doc.data()))
+    .filter(Boolean) as AttractionDurationMetadata[];
+};
+
+export const upsertAttractionDurationMetadata = async (
+  entry: AttractionDurationMetadata
+): Promise<AttractionDurationMetadata> => {
+  const db = getDb();
+  const id = toDurationMetadataId(entry.destinationKey, entry.name);
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    name: entry.name,
+    activityType: entry.activityType,
+    estimatedDurationMinutes: Number(entry.estimatedDurationMinutes) || 0,
+    durationSource: entry.durationSource ?? 'heuristic',
+    requiresPreOrderTickets: Boolean(entry.requiresPreOrderTickets),
+    preOrderNotes: entry.preOrderNotes ?? null,
+    updatedAt: entry.updatedAt,
+  };
+  const docRef = db.collection('locations').doc(id);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    tx.set(
+      docRef,
+      {
+        id,
+        sourceType: 'attraction_duration_metadata',
+        category: 'attraction_duration_metadata',
+        name: entry.name,
+        address: null,
+        searchName: `${entry.name} ${entry.destinationDisplayName} attraction duration`.toLowerCase(),
+        // Top-level destinationKey for indexed Firestore compound queries
+        destinationKey: String(entry.destinationKey ?? '').trim().toLowerCase(),
+        payload: mergedPayload,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+  });
+  const saved = await docRef.get();
+  const parsed = toAttractionDurationMetadata(saved.id, saved.data() as any);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction duration metadata after upsert.');
   }
   return parsed;
 };

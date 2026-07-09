@@ -2091,6 +2091,9 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
 }) => {
   const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
   const [providerForms, setProviderForms] = useState<Record<string, ApiLimitProviderForm>>({});
+  const [caching, setCaching] = useState<Record<string, Record<string, number>>>({});
+  const [cachingForms, setCachingForms] = useState<Record<string, { values: Record<string, string>; reason: string }>>({});
+  const [savingCachingGroup, setSavingCachingGroup] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -2126,6 +2129,19 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
                 ])
               ),
               callers: Object.fromEntries(provider.callers.map((caller) => [caller.caller, String(caller.limit)])),
+            },
+          ])
+        )
+      );
+      const nextCaching = ((data as any).caching ?? {}) as Record<string, Record<string, number>>;
+      setCaching(nextCaching);
+      setCachingForms(
+        Object.fromEntries(
+          Object.entries(nextCaching).map(([group, values]) => [
+            group,
+            {
+              values: Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value)])),
+              reason: '',
             },
           ])
         )
@@ -2184,6 +2200,63 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
         },
       },
     }));
+  };
+
+  const updateCachingValue = (group: string, key: string, value: string) => {
+    setCachingForms((current) => ({
+      ...current,
+      [group]: {
+        reason: current[group]?.reason ?? '',
+        values: {
+          ...(current[group]?.values ?? {}),
+          [key]: value,
+        },
+      },
+    }));
+  };
+
+  const updateCachingReason = (group: string, reason: string) => {
+    setCachingForms((current) => ({
+      ...current,
+      [group]: {
+        values: current[group]?.values ?? {},
+        reason,
+      },
+    }));
+  };
+
+  const saveCachingGroup = async (group: string) => {
+    const form = cachingForms[group];
+    if (!form) return;
+    if (form.reason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+    const parsedValues = Object.fromEntries(
+      Object.entries(caching[group] ?? {}).map(([key]) => [key, Number(form.values[key] ?? '')])
+    );
+    const invalidValue = Object.entries(parsedValues).find(([, value]) => !Number.isFinite(value) || value <= 0);
+    if (invalidValue) {
+      setError(`${invalidValue[0]} must be a positive number.`);
+      return;
+    }
+
+    setSavingCachingGroup(group);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, `/api-limits/caching/${group}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: parsedValues, reason: form.reason.trim() }),
+      });
+      setMessage(`${group} caching settings updated.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingCachingGroup(null);
+    }
   };
 
   const saveProvider = async (provider: ApiLimitProvider) => {
@@ -2418,6 +2491,44 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             onPress={() => saveProvider(provider)}
           >
             <Text style={localStyles.smallButtonText}>Save {provider.provider}</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Caching</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+        Cache retention/refresh settings, in days unless otherwise noted.
+      </Text>
+      {Object.entries(caching).map(([group, values]) => (
+        <View key={group} style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{group}</Text>
+          {Object.keys(values).map((key) => (
+            <View key={key} style={localStyles.apiLimitCallerRow}>
+              <View style={localStyles.flex}>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{key}</Text>
+              </View>
+              <TextInput
+                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                placeholder={key}
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                value={cachingForms[group]?.values[key] ?? ''}
+                onChangeText={(value: string) => updateCachingValue(group, key, value)}
+              />
+            </View>
+          ))}
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Reason for change (required)"
+            placeholderTextColor={theme.colors.textMuted}
+            value={cachingForms[group]?.reason ?? ''}
+            onChangeText={(value: string) => updateCachingReason(group, value)}
+          />
+          <TouchableOpacity
+            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingCachingGroup === group && localStyles.buttonDisabled]}
+            disabled={savingCachingGroup === group}
+            onPress={() => saveCachingGroup(group)}
+          >
+            <Text style={localStyles.smallButtonText}>Save {group}</Text>
           </TouchableOpacity>
         </View>
       ))}

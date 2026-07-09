@@ -37,6 +37,7 @@ import {
   getApiLimitsConfig,
   normalizeApiLimitKeyPart,
   updateApiBudgetProviderConfig,
+  updateApiCachingConfig,
   updateApiLimitProviderConfig,
 } from '../config/apiLimits';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
@@ -1370,6 +1371,60 @@ router.patch('/api-limits/:provider', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update api limits', err);
     res.status(500).json({ error: 'Failed to update API limits' });
+  }
+});
+
+router.patch('/api-limits/caching/:group', async (req, res) => {
+  const { group } = req.params;
+  const { values, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (typeof values !== 'object' || values === null || Array.isArray(values)) {
+    res.status(400).json({ error: 'values must be an object of positive integer settings' });
+    return;
+  }
+
+  try {
+    const config = getApiLimitsConfig();
+    const normalizedGroup = normalizeApiLimitKeyPart(group);
+    const currentGroup = config.caching[normalizedGroup];
+    if (!currentGroup) {
+      res.status(404).json({ error: `Caching group not found: ${group}` });
+      return;
+    }
+
+    const normalizedValues = Object.fromEntries(
+      Object.entries(values as Record<string, unknown>).map(([key, value]) => [normalizeApiLimitKeyPart(key), Number(value)])
+    );
+    const unknownKeys = Object.keys(normalizedValues).filter((key) => !(key in currentGroup));
+    if (unknownKeys.length > 0) {
+      res.status(400).json({ error: `Unknown caching settings: ${unknownKeys.join(', ')}` });
+      return;
+    }
+    const invalid = Object.entries(normalizedValues).filter(([, value]) => !Number.isFinite(value) || value <= 0);
+    if (invalid.length > 0) {
+      res.status(400).json({ error: 'All caching settings must be positive integers' });
+      return;
+    }
+
+    const merged = { ...currentGroup, ...normalizedValues };
+    const actorId = getActorId(req);
+    updateApiCachingConfig(normalizedGroup, merged);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'API_CACHING_CONFIG_UPDATED',
+      beforeState: { group: normalizedGroup, values: currentGroup },
+      afterState: { group: normalizedGroup, values: merged },
+      reason: reasonStr,
+    });
+
+    res.json({ group: normalizedGroup, values: merged });
+  } catch (err) {
+    logError('[admin] failed to update api caching config', err);
+    res.status(500).json({ error: 'Failed to update API caching config' });
   }
 });
 
