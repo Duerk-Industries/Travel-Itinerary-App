@@ -1,4 +1,4 @@
-# Itinerary Generation Request Replay
+# AI Request Replay
 
 This document describes how to save itinerary-generation AI calls, how to replay the same request against multiple providers/models, and what fields the request accepts.
 
@@ -212,4 +212,83 @@ ANTHROPIC_MODELS=claude-sonnet-4-5
 GEMINI_MODELS=gemini-2.5-flash
 ZAI_MODELS=glm-4.7
 OPENAI_COMPATIBLE_MODELS=llama-3.1-8b-instruct
+```
+
+## Parsing Replay Command
+
+You can also replay parsing requests against multiple AI models from the command line.
+
+Replay an existing intake/import job id:
+
+```bash
+npm --prefix server run replay:parsing -- \
+  --intake <intakeId> \
+  --models openai:gpt-4o-mini,anthropic:claude-sonnet-4-5
+```
+
+This path uses the existing parsing replay service. It requires the original import payload and source bytes to still be available through the configured DB/storage backend. Use `--dry-run` to avoid persisting replay captures.
+
+Replay a standalone normalized document JSON file:
+
+```bash
+npm --prefix server run replay:parsing -- \
+  --request ./server/data/ai-replay/parsing/example-parse-request.json \
+  --models openai:gpt-4o-mini,gemini:gemini-2.5-flash \
+  --persist-capture
+```
+
+Outputs are written to `server/data/ai-replay/parsing/<timestamp>/` by default. Each output includes the selected provider/model, parsed LLM result, optional comparison report, and any error details.
+
+### Parsing Replay JSON Format
+
+```json
+{
+  "outputDir": "server/data/ai-replay/parsing/hotel-comparison",
+  "runs": [
+    { "provider": "openai", "model": "gpt-4o-mini", "label": "openai-mini" },
+    { "provider": "anthropic", "model": "claude-sonnet-4-5", "label": "claude-sonnet" }
+  ],
+  "doc": {
+    "importJobId": "hotel-email-001",
+    "userId": "cli-replay-user",
+    "sourceType": "GMAIL_IMPORT",
+    "sourceId": "gmail",
+    "originalFilename": "hotel-confirmation.txt",
+    "mimeType": "text/plain",
+    "contentHash": "hotel-email-001",
+    "normalizedContentHash": "hotel-email-001-normalized",
+    "normalizedText": "Hotel confirmation text goes here...",
+    "extractedTextSource": "text",
+    "normalizationQuality": "FULL_TEXT",
+    "rawSourceReference": "local:hotel-confirmation.txt",
+    "metadata": {},
+    "receivedAt": "2026-07-09T00:00:00.000Z",
+    "correlationId": "hotel-email-001"
+  },
+  "productionItems": [
+    {
+      "itemType": "hotel",
+      "providerVendor": "Example Hotel",
+      "confirmationNumber": "ABC123",
+      "confidenceScore": 0.91,
+      "reviewStatus": "READY_FOR_REVIEW",
+      "extractedFields": {
+        "name": "Example Hotel",
+        "checkInDate": "2026-09-10",
+        "checkOutDate": "2026-09-12"
+      }
+    }
+  ]
+}
+```
+
+`doc.normalizedText` is the key required field for standalone parsing replay. The script fills defaults for missing metadata fields, but supplying the full `NormalizedDocument` makes comparisons easier to trace.
+
+`productionItems` is optional. When present, the script compares each model's parsed output against those captured/expected items using the same comparison engine as shadow parsing.
+
+Parsing provider defaults are controlled by:
+
+```bash
+AI_INGESTION_LLM_PROVIDER=openai
+AI_INGESTION_LLM_MODEL=gpt-4o-mini
 ```

@@ -83,6 +83,10 @@ const toProductionCandidate = (item: Record<string, unknown>, intakeId: string):
 export const replayParsingIntake = async (params: {
   intakeId: string;
   dryRun: boolean;
+  aiProvider?: {
+    provider?: string;
+    model?: string;
+  };
 }): Promise<ParsingReplayResult> => {
   const { intakeId, dryRun } = params;
 
@@ -115,6 +119,7 @@ export const replayParsingIntake = async (params: {
     allowSmallLlm: true,
     allowLargeLlm: true,
     tokenBudgetUsd: 1,
+    aiProvider: params.aiProvider,
     contentHash: doc.normalizedContentHash,
     userId: doc.userId,
     importJobId: doc.importJobId,

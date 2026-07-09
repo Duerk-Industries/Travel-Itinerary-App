@@ -125,16 +125,19 @@ export class LlmExtractor implements ExtractionStrategy {
 
     try {
       const activeConfig = await getActiveAiProvider(INGESTION_LLM_FEATURE_KEY);
-      const apiKey = getConfiguredProviderApiKey(activeConfig.provider);
+      const providerOverride = config.aiProvider?.provider;
+      const modelOverride = config.aiProvider?.model;
+      const selectedProvider = providerOverride || activeConfig.provider;
+      const apiKey = getConfiguredProviderApiKey(selectedProvider);
       if (!apiKey) {
         logInfo(
-          `[ingestion][llm] No ${getProviderApiKeyEnvVar(activeConfig.provider)} configured for provider=${activeConfig.provider}, skipping LLM extraction`
+          `[ingestion][llm] No ${getProviderApiKeyEnvVar(selectedProvider)} configured for provider=${selectedProvider}, skipping LLM extraction`
         );
         return emptyResult(config, this.strategyName);
       }
-      const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER);
+      const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER, providerOverride);
       providerId = provider.id;
-      modelName = activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
+      modelName = modelOverride || activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
       const ctx = createAiCallContext({
         correlationId: config.correlationId,
         jobId: config.importJobId,

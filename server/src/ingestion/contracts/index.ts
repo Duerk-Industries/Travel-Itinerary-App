@@ -136,6 +136,10 @@ export interface ExtractionConfig {
   allowSmallLlm: boolean;
   allowLargeLlm: boolean;
   tokenBudgetUsd: number;
+  aiProvider?: {
+    provider?: string;
+    model?: string;
+  };
   contentHash: string;
   userId: string;
   importJobId: string;
