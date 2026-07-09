@@ -106,7 +106,15 @@ Use a wrapped file when comparing multiple models:
 }
 ```
 
-The script also accepts an unwrapped service request object directly. CLI `--models` overrides the file's `runs`.
+The script also accepts these input shapes directly:
+
+- An unwrapped service request object with `destinations`.
+- The API route body shape with `locations` or `country`.
+- A compact prompt request object with `"$": "req1"`.
+- A saved replay output containing `result.promptRequest`.
+- A raw `itinerary_generation` capture record, as long as it was captured with `ENABLE_RAW_AI_CAPTURE=1` so the first stage contains `userPrompt`.
+
+CLI `--models` overrides the file's `runs`.
 
 ## Service Request Fields
 

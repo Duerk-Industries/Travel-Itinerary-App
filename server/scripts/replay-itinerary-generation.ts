@@ -99,6 +99,12 @@ const parseArgs = (argv: string[]): CliOptions => {
 
 const readJson = (filePath: string): ReplayFile | Record<string, unknown> => {
   const absolute = path.resolve(filePath);
+  if (!fs.existsSync(absolute)) {
+    const serverRelative = path.resolve(__dirname, '..', filePath);
+    if (fs.existsSync(serverRelative)) {
+      return JSON.parse(fs.readFileSync(serverRelative, 'utf8'));
+    }
+  }
   return JSON.parse(fs.readFileSync(absolute, 'utf8'));
 };
 
@@ -118,10 +124,98 @@ const normalizeRuns = (cliRuns: ReplayRun[], fileRuns: ReplayRun[] | undefined, 
   return [{ provider: provider?.provider, model: provider?.model, label: 'default' }];
 };
 
+const extractJsonBetween = (text: string, startMarker: string, endMarker: RegExp): Record<string, unknown> | null => {
+  const start = text.indexOf(startMarker);
+  if (start < 0) return null;
+  const afterStart = text.slice(start + startMarker.length);
+  const end = afterStart.search(endMarker);
+  const candidate = (end >= 0 ? afterStart.slice(0, end) : afterStart).trim();
+  if (!candidate) return null;
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+};
+
+const extractPromptRequestFromCapture = (value: Record<string, unknown>): Record<string, unknown> | null => {
+  const stages = (value.payload as any)?.stages;
+  if (!Array.isArray(stages)) return null;
+  const normStage = stages.find((stage) => stage?.stage === 'p0_norm') ?? stages[0];
+  const userPrompt = typeof normStage?.userPrompt === 'string' ? normStage.userPrompt : '';
+  return extractJsonBetween(userPrompt, 'INPUT (JSON):', /\n\s*\n(?:RULES:|OUTPUT|$)/);
+};
+
+const compactPromptRequestToServiceRequest = (promptRequest: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> => ({
+  destinations: Array.isArray(promptRequest.d) ? promptRequest.d : [],
+  days: Number(promptRequest.dur ?? (source.payload as any)?.days ?? 1),
+  budgetMin: Number(promptRequest.budgetMin ?? 0),
+  budgetMax: Number(promptRequest.budgetMax ?? promptRequest.rs ?? 0),
+  mustSeeAttractions: Array.isArray(promptRequest.ms) ? promptRequest.ms : [],
+  departureAirport: typeof promptRequest.s === 'string' ? promptRequest.s : undefined,
+  tripStyle: typeof promptRequest.tripStyle === 'string' ? promptRequest.tripStyle : undefined,
+  promptTraits: {
+    tt: promptRequest.tt && typeof promptRequest.tt === 'object' ? promptRequest.tt : undefined,
+    ut: promptRequest.ut && typeof promptRequest.ut === 'object' ? promptRequest.ut : undefined,
+  },
+  groupTraits: [],
+  tripStartDate: typeof promptRequest.sd === 'string' ? promptRequest.sd : null,
+  tripEndDate: typeof promptRequest.ed === 'string' ? promptRequest.ed : null,
+  userId: typeof source.userId === 'string' ? source.userId : undefined,
+  tripIdSeed: typeof source.jobId === 'string' ? source.jobId : typeof source.captureId === 'string' ? source.captureId : undefined,
+});
+
+const apiRouteBodyToServiceRequest = (request: Record<string, unknown>): Record<string, unknown> => {
+  const locations = Array.isArray(request.locations)
+    ? request.locations.map((value) => String(value ?? '').trim()).filter(Boolean)
+    : [];
+  const country = String(request.country ?? '').trim();
+  return {
+    destinations: locations.length ? locations : country ? [country] : [],
+    days: request.days,
+    budgetMin: request.budgetMin,
+    budgetMax: request.budgetMax,
+    mustSeeAttractions: Array.isArray(request.mustSeeAttractions) ? request.mustSeeAttractions : [],
+    departureAirport: request.departureAirport,
+    tripStyle: request.tripStyle,
+    promptTraits: {
+      tt: request.tt && typeof request.tt === 'object' ? request.tt : undefined,
+      ut: request.ut && typeof request.ut === 'object' ? request.ut : undefined,
+    },
+    groupTraits: [],
+    tripIdSeed: request.tripId,
+  };
+};
+
+const resolveReplayRequest = (file: ReplayFile | Record<string, unknown>): Record<string, unknown> => {
+  const wrapper = file as ReplayFile;
+  const candidate = (wrapper.request && typeof wrapper.request === 'object' ? wrapper.request : file) as Record<string, unknown>;
+  if (Array.isArray(candidate.destinations)) return candidate;
+  if ((candidate.result as any)?.promptRequest) {
+    return compactPromptRequestToServiceRequest((candidate.result as any).promptRequest, candidate);
+  }
+  if ((candidate.promptRequest as any)?.$ === 'req1') {
+    return compactPromptRequestToServiceRequest(candidate.promptRequest as Record<string, unknown>, candidate);
+  }
+  if ((candidate as any).$ === 'req1') {
+    return compactPromptRequestToServiceRequest(candidate, candidate);
+  }
+  if (Array.isArray(candidate.locations) || typeof candidate.country === 'string') {
+    return apiRouteBodyToServiceRequest(candidate);
+  }
+  if (candidate.featureKey === 'itinerary_generation') {
+    const promptRequest = extractPromptRequestFromCapture(candidate);
+    if (promptRequest) return compactPromptRequestToServiceRequest(promptRequest, candidate);
+  }
+  return candidate;
+};
+
 const validateRequest = (request: Record<string, unknown>) => {
   const destinations = request.destinations;
   if (!Array.isArray(destinations) || destinations.length === 0) {
-    throw new Error('request.destinations must be a non-empty string array');
+    throw new Error(
+      'request.destinations must be a non-empty string array. Supported inputs are: service request, API route body, compact promptRequest, or raw itinerary_generation capture with raw stage prompts.'
+    );
   }
   const days = Number(request.days);
   if (!Number.isFinite(days) || days <= 0) {
@@ -154,7 +248,7 @@ const main = async () => {
     : 'itinerary-replay-secret';
   if (options.captureRaw || wrapper.captureRaw) process.env.ENABLE_RAW_AI_CAPTURE = '1';
 
-  const request = (wrapper.request && typeof wrapper.request === 'object' ? wrapper.request : file) as Record<string, unknown>;
+  const request = resolveReplayRequest(file);
   validateRequest(request);
   const runs = normalizeRuns(options.runs, wrapper.runs, request.aiProvider);
   const outputDir = path.resolve(options.outputDir ?? wrapper.outputDir ?? path.join(__dirname, '../data/ai-replay', timestamp()));

@@ -1,0 +1,672 @@
+{
+  "run": {
+    "provider": "openai",
+    "model": "gpt-4o-mini"
+  },
+  "captureId": "364a84b4-213f-452b-9db6-6e0efcf48bc9-openai-gpt-4o-mini-1783568672867",
+  "startedAt": "2026-07-09T03:44:32.867Z",
+  "completedAt": "2026-07-09T03:44:59.756Z",
+  "result": {
+    "promptRequest": {
+      "$": "req1",
+      "d": [
+        "Boston",
+        "New York City"
+      ],
+      "dur": 7,
+      "s": "CLE",
+      "p": [],
+      "tt": {
+        "p": "B",
+        "c": "M",
+        "mob": "M",
+        "car": "P",
+        "is": "mixed",
+        "w": {
+          "outdoors": 3,
+          "adventure": 2,
+          "culture": 24,
+          "food": 8,
+          "nightlife": 18,
+          "relax": 2,
+          "photography": 18,
+          "authentic_local": 2,
+          "iconic_landmarks": 23
+        }
+      },
+      "ut": {
+        "i": [],
+        "eb": false,
+        "no": true
+      },
+      "rs": 2475,
+      "budgetMin": 1500,
+      "budgetMax": 4000,
+      "ms": [
+        "Museum of Modern Art",
+        "Isabella Stewart Gardner Museum",
+        "Freedom Trail",
+        "John F. Kennedy Presidential Library and Museum",
+        "American Museum of Natural History",
+        "Metropolitan Museum of Art",
+        "Central Park"
+      ],
+      "sd": "2026-07-19",
+      "ed": "2026-07-25"
+    },
+    "normalized": {
+      "$": "norm1",
+      "sd": "2026-07-19",
+      "ed": "2026-07-25",
+      "p": "B",
+      "c": "M",
+      "mob": "M",
+      "car": "P",
+      "w": {
+        "outdoors": 15,
+        "adventure": 10,
+        "culture": 15,
+        "food": 15,
+        "nightlife": 10,
+        "relax": 10,
+        "photography": 10,
+        "authentic_local": 8,
+        "iconic_landmarks": 7
+      },
+      "a": [],
+      "is": "mixed"
+    },
+    "route": {
+      "$": "r1",
+      "eh": "CLE",
+      "xh": "CLE",
+      "b": [
+        {
+          "l": "Boston",
+          "ci": "2026-07-19",
+          "co": "2026-07-23",
+          "dn": [
+            "Boston",
+            "Boston",
+            "Boston",
+            "Boston"
+          ]
+        },
+        {
+          "l": "New York City",
+          "ci": "2026-07-23",
+          "co": "2026-07-25",
+          "dn": [
+            "Boston",
+            "Boston",
+            "Boston"
+          ]
+        }
+      ],
+      "x": [
+        {
+          "dt": "2026-07-23",
+          "m": "Train",
+          "fr": "Boston",
+          "to": "New York City"
+        }
+      ],
+      "rc": null,
+      "w": {
+        "outdoors": 3,
+        "adventure": 2,
+        "culture": 24,
+        "food": 8,
+        "nightlife": 18,
+        "relax": 2,
+        "photography": 18,
+        "authentic_local": 2,
+        "iconic_landmarks": 23
+      },
+      "a": []
+    },
+    "itinerary": {
+      "$": "it1",
+      "eh": "CLE",
+      "xh": "CLE",
+      "b": [
+        {
+          "l": "Boston",
+          "ci": "2026-07-19",
+          "co": "2026-07-23",
+          "dn": [
+            "Boston",
+            "Boston",
+            "Boston",
+            "Boston"
+          ]
+        },
+        {
+          "l": "New York City",
+          "ci": "2026-07-23",
+          "co": "2026-07-25",
+          "dn": [
+            "New York City",
+            "New York City"
+          ]
+        }
+      ],
+      "x": [
+        {
+          "dt": "2026-07-23",
+          "m": "Train",
+          "fr": "Boston",
+          "to": "New York City"
+        }
+      ],
+      "rc": null,
+      "dy": [
+        {
+          "d": 1,
+          "dt": "2026-07-19",
+          "b": "Boston",
+          "it": [],
+          "me": [
+            "BQ",
+            "LC",
+            "DL"
+          ],
+          "sl": "Explore Boston's rich cultural scene.",
+          "ln": [
+            "Start early to maximize museum visits.",
+            "Travel day: no activities scheduled"
+          ],
+          "cf": "M"
+        },
+        {
+          "d": 2,
+          "dt": "2026-07-20",
+          "b": "Boston",
+          "it": [
+            [
+              "M",
+              "A",
+              "John F. Kennedy Presidential Library and Museum"
+            ],
+            [
+              "D",
+              "O",
+              "Explore the historic district in Boston"
+            ],
+            [
+              "E",
+              "E",
+              "evening stroll along the waterfront"
+            ],
+            [
+              "D",
+              "A",
+              "Museum of Modern Art"
+            ]
+          ],
+          "me": [
+            "BQ",
+            "LC",
+            "DL"
+          ],
+          "sl": "Enjoy a mix of history and relaxation.",
+          "ln": [
+            "Consider parking near the library for convenience."
+          ],
+          "cf": "M"
+        },
+        {
+          "d": 3,
+          "dt": "2026-07-21",
+          "b": "Boston",
+          "it": [
+            [
+              "M",
+              "A",
+              "American Museum of Natural History"
+            ],
+            [
+              "D",
+              "O",
+              "local café in Boston"
+            ],
+            [
+              "E",
+              "E",
+              "evening event at a local venue"
+            ],
+            [
+              "D",
+              "A",
+              "Isabella Stewart Gardner Museum"
+            ]
+          ],
+          "me": [
+            "BQ",
+            "LC",
+            "DL"
+          ],
+          "sl": "Delve into natural history and enjoy local dining.",
+          "ln": [
+            "Check for evening event tickets in advance."
+          ],
+          "cf": "M"
+        },
+        {
+          "d": 4,
+          "dt": "2026-07-22",
+          "b": "Boston",
+          "it": [
+            [
+              "M",
+              "A",
+              "Metropolitan Museum of Art"
+            ],
+            [
+              "D",
+              "O",
+              "casual eatery in Boston"
+            ],
+            [
+              "E",
+              "E",
+              "night walk in Central Park"
+            ],
+            [
+              "D",
+              "A",
+              "Freedom Trail"
+            ]
+          ],
+          "me": [
+            "BQ",
+            "LC",
+            "DL"
+          ],
+          "sl": "Art exploration followed by a scenic evening.",
+          "ln": [
+            "Plan to arrive early at the museum."
+          ],
+          "cf": "M"
+        },
+        {
+          "d": 5,
+          "dt": "2026-07-23",
+          "b": "New York City",
+          "it": [
+            [
+              "M",
+              "T",
+              "Train to New York City"
+            ],
+            [
+              "D",
+              "A",
+              "Central Park"
+            ]
+          ],
+          "me": [
+            "BQ",
+            "LC",
+            "DL"
+          ],
+          "sl": "Travel day with light activities.",
+          "ln": [
+            "Arrive at the station early for a smooth transfer."
+          ],
+          "cf": "M"
+        }
+      ],
+      "a": [],
+      "cf": "M"
+    },
+    "planMarkdown": "## Trip Overview\n- Dates: July 19, 2026 - July 25, 2026, Comfortable pace\n- Entry/Exit hubs: Cleveland (CLE)\n\n## Bases & Lodging\n- Boston: July 19, 2026 - July 23, 2026, Placeholder lodging name\n- New York City: July 23, 2026 - July 25, 2026, Placeholder lodging name\n\n## Transfers\n- July 23, 2026: Train from Boston to New York City\n\n## Day-by-day\n- Day 1 (July 19, 2026) — Boston\n  - Morning: \n  - Day: \n  - Evening: \n  - Meals: Breakfast, Lunch, Dinner\n  - Notes: Start early to maximize museum visits. Travel day: no activities scheduled.\n\n- Day 2 (July 20, 2026) — Boston\n  - Morning: John F. Kennedy Presidential Library and Museum\n  - Day: Explore the historic district in Boston\n  - Evening: Evening stroll along the waterfront\n  - Meals: Breakfast, Lunch, Dinner\n  - Notes: Consider parking near the library for convenience.\n\n- Day 3 (July 21, 2026) — Boston\n  - Morning: American Museum of Natural History\n  - Day: Local café in Boston\n  - Evening: Evening event at a local venue\n  - Meals: Breakfast, Lunch, Dinner\n  - Notes: Check for evening event tickets in advance.\n\n- Day 4 (July 22, 2026) — Boston\n  - Morning: Metropolitan Museum of Art\n  - Day: Casual eatery in Boston\n  - Evening: Night walk in Central Park\n  - Meals: Breakfast, Lunch, Dinner\n  - Notes: Plan to arrive early at the museum.\n\n- Day 5 (July 23, 2026) — New York City\n  - Morning: Train to New York City\n  - Day: Central Park\n  - Evening: \n  - Meals: Breakfast, Lunch\n  - Notes: Arrive at the station early for a smooth transfer.",
+    "details": [
+      {
+        "day": 2,
+        "time": "09:00",
+        "activity": "John F. Kennedy Presidential Library and Museum",
+        "cost": null
+      },
+      {
+        "day": 2,
+        "time": "13:00",
+        "activity": "Explore the historic district in Boston",
+        "cost": null
+      },
+      {
+        "day": 2,
+        "time": "19:00",
+        "activity": "evening stroll along the waterfront",
+        "cost": null
+      },
+      {
+        "day": 2,
+        "time": "13:00",
+        "activity": "Museum of Modern Art",
+        "cost": null
+      },
+      {
+        "day": 3,
+        "time": "09:00",
+        "activity": "American Museum of Natural History",
+        "cost": null
+      },
+      {
+        "day": 3,
+        "time": "13:00",
+        "activity": "local café in Boston",
+        "cost": null
+      },
+      {
+        "day": 3,
+        "time": "19:00",
+        "activity": "evening event at a local venue",
+        "cost": null
+      },
+      {
+        "day": 3,
+        "time": "13:00",
+        "activity": "Isabella Stewart Gardner Museum",
+        "cost": null
+      },
+      {
+        "day": 4,
+        "time": "09:00",
+        "activity": "Metropolitan Museum of Art",
+        "cost": null
+      },
+      {
+        "day": 4,
+        "time": "13:00",
+        "activity": "casual eatery in Boston",
+        "cost": null
+      },
+      {
+        "day": 4,
+        "time": "19:00",
+        "activity": "night walk in Central Park",
+        "cost": null
+      },
+      {
+        "day": 4,
+        "time": "13:00",
+        "activity": "Freedom Trail",
+        "cost": null
+      },
+      {
+        "day": 5,
+        "time": "09:00",
+        "activity": "Train to New York City",
+        "cost": null
+      },
+      {
+        "day": 5,
+        "time": "13:00",
+        "activity": "Central Park",
+        "cost": null
+      }
+    ],
+    "generatedItems": {
+      "transfers": [
+        {
+          "status": "Needed",
+          "transferType": "Train",
+          "departureDate": "2026-07-23",
+          "arrivalDate": "2026-07-23",
+          "departureLocation": "Boston",
+          "arrivalLocation": "New York City",
+          "departureTime": "09:00",
+          "arrivalTime": "11:00",
+          "carrier": "",
+          "flightNumber": "",
+          "bookingReference": ""
+        }
+      ],
+      "lodgings": [
+        {
+          "status": "Needed",
+          "name": "Lodging at 'Boston'",
+          "checkInDate": "2026-07-19",
+          "checkOutDate": "2026-07-23",
+          "rooms": "1",
+          "totalCost": "",
+          "costPerNight": "",
+          "address": "Boston"
+        },
+        {
+          "status": "Needed",
+          "name": "Lodging at 'New York City'",
+          "checkInDate": "2026-07-23",
+          "checkOutDate": "2026-07-25",
+          "rooms": "1",
+          "totalCost": "",
+          "costPerNight": "",
+          "address": "New York City"
+        }
+      ],
+      "activities": [
+        {
+          "status": "Proposed",
+          "activityType": "Ticketed Attraction",
+          "date": "2026-07-20",
+          "name": "John F. Kennedy Presidential Library and Museum",
+          "startLocation": "Boston",
+          "startTime": "09:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "John F. Kennedy Presidential Library and Museum is a ticketed attraction based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Consider parking near the library for convenience."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Sights & Landmarks",
+          "date": "2026-07-20",
+          "name": "Explore the historic district in Boston",
+          "startLocation": "Boston",
+          "startTime": "13:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "Explore the historic district in Boston is a sights & landmarks based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Consider parking near the library for convenience."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Sights & Landmarks",
+          "date": "2026-07-20",
+          "name": "evening stroll along the waterfront",
+          "startLocation": "Boston",
+          "startTime": "19:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "evening stroll along the waterfront is a sights & landmarks based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Consider parking near the library for convenience."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Ticketed Attraction",
+          "date": "2026-07-20",
+          "name": "Museum of Modern Art",
+          "startLocation": "Boston",
+          "startTime": "13:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "Museum of Modern Art is a ticketed attraction based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Consider parking near the library for convenience."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Ticketed Attraction",
+          "date": "2026-07-21",
+          "name": "American Museum of Natural History",
+          "startLocation": "Boston",
+          "startTime": "09:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "American Museum of Natural History is a ticketed attraction based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Check for evening event tickets in advance."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Sights & Landmarks",
+          "date": "2026-07-21",
+          "name": "local café in Boston",
+          "startLocation": "Boston",
+          "startTime": "13:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "local café in Boston is a sights & landmarks based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Check for evening event tickets in advance."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Sights & Landmarks",
+          "date": "2026-07-21",
+          "name": "evening event at a local venue",
+          "startLocation": "Boston",
+          "startTime": "19:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "evening event at a local venue is a sights & landmarks based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Check for evening event tickets in advance."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Ticketed Attraction",
+          "date": "2026-07-21",
+          "name": "Isabella Stewart Gardner Museum",
+          "startLocation": "Boston",
+          "startTime": "13:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "Isabella Stewart Gardner Museum is a ticketed attraction based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Check for evening event tickets in advance."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Ticketed Attraction",
+          "date": "2026-07-22",
+          "name": "Metropolitan Museum of Art",
+          "startLocation": "Boston",
+          "startTime": "09:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "Metropolitan Museum of Art is a ticketed attraction based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Plan to arrive early at the museum."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Sights & Landmarks",
+          "date": "2026-07-22",
+          "name": "casual eatery in Boston",
+          "startLocation": "Boston",
+          "startTime": "13:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "casual eatery in Boston is a sights & landmarks based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Plan to arrive early at the museum."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Outdoor Activity",
+          "date": "2026-07-22",
+          "name": "night walk in Central Park",
+          "startLocation": "Boston",
+          "startTime": "19:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "night walk in Central Park is a outdoor activity based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Plan to arrive early at the museum."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Hike",
+          "date": "2026-07-22",
+          "name": "Freedom Trail",
+          "startLocation": "Boston",
+          "startTime": "13:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "Freedom Trail is a hike based around Boston. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Plan to arrive early at the museum."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Tour",
+          "date": "2026-07-23",
+          "name": "Train to New York City",
+          "startLocation": "New York City",
+          "startTime": "09:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "Train to New York City is a tour based around New York City. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Arrive at the station early for a smooth transfer."
+        },
+        {
+          "status": "Proposed",
+          "activityType": "Outdoor Activity",
+          "date": "2026-07-23",
+          "name": "Central Park",
+          "startLocation": "New York City",
+          "startTime": "13:00",
+          "duration": "2h",
+          "cost": "",
+          "freeCancelBy": "",
+          "bookedOn": "",
+          "reference": "",
+          "notes": "Central Park is a outdoor activity based around New York City. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience. Things to know: Arrive at the station early for a smooth transfer."
+        }
+      ],
+      "carRentals": []
+    },
+    "profile": {
+      "pace": "Balanced",
+      "comfort": "Midrange",
+      "mobility": "Medium",
+      "carPreference": "PublicTransitOnly",
+      "interactionStyle": "Mixed",
+      "weights": {
+        "outdoors": 15,
+        "adventure": 10,
+        "culture": 15,
+        "food": 15,
+        "nightlife": 10,
+        "relax": 10,
+        "photography": 10,
+        "authentic_local": 8,
+        "iconic_landmarks": 7
+      }
+    },
+    "tokenUsage": {
+      "promptTokens": 5877,
+      "completionTokens": 2250,
+      "totalTokens": 8127
+    }
+  }
+}
