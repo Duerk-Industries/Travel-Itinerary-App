@@ -527,15 +527,16 @@ const persistResult = async (params: {
   let lodgingsCount = 0;
   for (const lodging of lodgings) {
     const checkInDate = safeString(lodging.checkInDate) || today;
+    const checkOutDate = safeString(lodging.checkOutDate) || addDays(checkInDate, 1);
     const totalCost = Number(safeString(lodging.totalCost)) || 0;
-    const nights = Math.max(1, Math.round((new Date(addDays(checkInDate, 1)).getTime() - new Date(checkInDate).getTime()) / 86400000));
+    const nights = Math.max(1, Math.round((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / 86400000));
     const saved = await insertLodging({
       userId: params.userId,
       tripId: params.tripId,
       status: 'Needed',
       name: safeString(lodging.name) || 'Suggested lodging',
       checkInDate,
-      checkOutDate: safeString(lodging.checkOutDate) || addDays(checkInDate, 1),
+      checkOutDate,
       rooms: Number(safeString(lodging.rooms)) || 1,
       refundBy: null,
       totalCost,

@@ -3,6 +3,7 @@
 import request from 'supertest';
 import { app } from '../src/app';
 import { closePool, initDb, getUsageCounter } from '../src/db';
+import * as db from '../src/db';
 import { registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 import * as itineraryPromptPlanService from '../src/services/itineraryPromptPlanService';
 import { __testing as asyncItineraryTesting } from '../src/services/itineraryAsyncService';
@@ -221,6 +222,84 @@ describe('AI itinerary limits and idempotency', () => {
 
     const job = await asyncItineraryTesting.waitForJob(res.body.jobId);
     expect(job?.status).toBe('completed');
+
+    await cleanupTestUsersByEmail([asyncEmail]);
+  });
+
+  it('persists generated lodging cost per night using the generated checkout date', async () => {
+    const asyncEmail = `itinerary-limits-test+lodging-${TS}@example.com`;
+    const asyncUser = await registerAndLoginWebUser({
+      firstName: 'AI',
+      lastName: 'Lodging',
+      email: asyncEmail,
+      password: 'TestPass1!',
+    });
+    const asyncGroupResponse = await request(app)
+      .post('/api/groups')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .send({ name: `Async Lodging Group ${TS}` })
+      .expect(201);
+    const asyncGroupId = asyncGroupResponse.body.id ?? asyncGroupResponse.body.group?.id;
+    const asyncTripResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .send({ name: `Async Lodging Trip ${TS}`, groupId: asyncGroupId, endDate: '2099-12-31' })
+      .expect(201);
+    const asyncTripId = asyncTripResponse.body.id ?? asyncTripResponse.body.trip?.id;
+    const insertLodgingSpy = jest.spyOn(db, 'insertLodging');
+
+    jest.spyOn(itineraryPromptPlanService, 'generateItineraryViaPromptPlan').mockResolvedValue({
+      planMarkdown: '# Day 1\nCheck in.',
+      normalized: null,
+      route: null,
+      itinerary: null,
+      details: [],
+      generatedItems: {
+        transfers: [],
+        lodgings: [
+          {
+            status: 'Needed',
+            name: 'Suggested base',
+            checkInDate: '2026-07-01',
+            checkOutDate: '2026-07-05',
+            rooms: '1',
+            totalCost: '800',
+            costPerNight: '',
+            address: 'Boston',
+          },
+        ],
+        activities: [],
+        carRentals: [],
+      },
+      tokenUsage: { totalTokens: 10 },
+      profile: null,
+    } as any);
+
+    const res = await request(app)
+      .post('/api/itinerary/async')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .set('Idempotency-Key', 'async-lodging-nightly-cost')
+      .send({
+        tripId: asyncTripId,
+        country: 'United States',
+        locations: ['Boston'],
+        days: 4,
+        budgetMin: 100,
+        budgetMax: 1000,
+      })
+      .expect(202);
+
+    const job = await asyncItineraryTesting.waitForJob(res.body.jobId);
+    expect(job?.status).toBe('completed');
+
+    expect(insertLodgingSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tripId: asyncTripId,
+        name: 'Suggested base',
+        checkOutDate: '2026-07-05',
+        costPerNight: 200,
+      })
+    );
 
     await cleanupTestUsersByEmail([asyncEmail]);
   });

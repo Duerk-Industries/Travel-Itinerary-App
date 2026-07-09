@@ -1045,6 +1045,37 @@ describe('Admin routes', () => {
     });
   });
 
+  describe('PATCH /api/admin/api-limits/caching/:group', () => {
+    it('rejects fractional caching settings instead of silently flooring them', async () => {
+      const originalConfigPath = process.env.API_LIMITS_CONFIG_PATH;
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-api-caching-'));
+      const tempConfigPath = path.join(tempDir, 'api-limits.yaml');
+      fs.copyFileSync(path.join(__dirname, '..', 'config', 'api-limits.yaml'), tempConfigPath);
+      process.env.API_LIMITS_CONFIG_PATH = tempConfigPath;
+
+      try {
+        await request(app)
+          .patch('/api/admin/api-limits/caching/attractions')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            values: { refreshDays: 1.5 },
+            reason: 'Reject fractional cache settings',
+          })
+          .expect(400);
+
+        const updatedYaml = fs.readFileSync(tempConfigPath, 'utf8');
+        expect(updatedYaml).not.toContain('refreshDays: 1');
+      } finally {
+        if (originalConfigPath) {
+          process.env.API_LIMITS_CONFIG_PATH = originalConfigPath;
+        } else {
+          delete process.env.API_LIMITS_CONFIG_PATH;
+        }
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // GET /api/admin/ingestion-queue-depth
   // ---------------------------------------------------------------------------

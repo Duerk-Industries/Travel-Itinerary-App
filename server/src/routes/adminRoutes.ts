@@ -1404,7 +1404,7 @@ router.patch('/api-limits/caching/:group', async (req, res) => {
       res.status(400).json({ error: `Unknown caching settings: ${unknownKeys.join(', ')}` });
       return;
     }
-    const invalid = Object.entries(normalizedValues).filter(([, value]) => !Number.isFinite(value) || value <= 0);
+    const invalid = Object.entries(normalizedValues).filter(([, value]) => !Number.isFinite(value) || value <= 0 || !Number.isInteger(value));
     if (invalid.length > 0) {
       res.status(400).json({ error: 'All caching settings must be positive integers' });
       return;
