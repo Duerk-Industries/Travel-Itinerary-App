@@ -1198,6 +1198,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           name: details.name.trim(),
           description: description.trim() || undefined,
           locationIds: selectedLocations.map((location) => location.id),
+          mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
           startDate: dates.mode === 'range' ? dates.startDate || undefined : undefined,
           endDate: dates.mode === 'range' ? dates.endDate || undefined : undefined,
           startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,

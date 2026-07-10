@@ -190,6 +190,7 @@ export type Trip = {
   description?: string | null;
   destination?: string | null;
   locationIds?: string[];
+  mustSeeAttractions?: string[];
   departureCity?: string | null;
   departureLocation?: string | null;
   departureAirport?: string | null;

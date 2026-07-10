@@ -464,12 +464,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
   const [showAddLodging, setShowAddLodging] = useState(false);
-  const [locationNames, setLocationNames] = useState<string[]>([]);
+  const [tripLocationOptions, setTripLocationOptions] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     const ids = Array.isArray(trip?.locationIds) ? trip!.locationIds : [];
     if (!ids.length) {
-      setLocationNames([]);
+      setTripLocationOptions([]);
       return;
     }
     let active = true;
@@ -481,17 +481,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (!active) return;
-        const names = Array.isArray(data) ? data.map((item: any) => String(item?.name ?? '')).filter(Boolean) : [];
-        setLocationNames(names);
+        const options = Array.isArray(data)
+          ? data
+              .map((item: any) => ({ id: String(item?.place_id ?? item?.id ?? ''), name: String(item?.name ?? '') }))
+              .filter((item: { id: string; name: string }) => item.name)
+          : [];
+        setTripLocationOptions(options);
       })
       .catch(() => {
-        if (active) setLocationNames([]);
+        if (active) setTripLocationOptions([]);
       });
     return () => {
       active = false;
     };
   }, [backendUrl, headers, trip?.id, trip?.locationIds]);
+  const locationNames = useMemo(() => tripLocationOptions.map((o) => o.name), [tripLocationOptions]);
   const tripLocationLabel = locationNames.length ? locationNames.join(', ') : trip?.destination || '';
+  const tripAttractionsLabel = Array.isArray(trip?.mustSeeAttractions) ? trip!.mustSeeAttractions.join(', ') : '';
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
@@ -2165,6 +2171,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
               {tripLocationLabel ? <Text style={styles.helperText}>{tripLocationLabel}</Text> : null}
+              {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
               {narrativeLines.length ? (
@@ -2487,6 +2494,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
           <Text style={styles.flightTitle}>{trip.name}</Text>
           {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
+          {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
           {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
           {!dateRange && monthLabel && trip.durationDays ? (
             <Text style={styles.helperText}>
@@ -2563,6 +2571,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
         <Text style={styles.flightTitle}>{trip.name}</Text>
         {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
+        {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
         {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
         {!dateRange && monthLabel && trip.durationDays ? (
           <Text style={styles.helperText}>
@@ -3302,6 +3311,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <PlacePickerDialog
           visible
           defaultDay={addPopoverDay ?? 1}
+          backendUrl={backendUrl}
+          headers={headers}
+          selectedLocationIds={tripLocationOptions.map((o) => o.id)}
+          selectedLocationNames={locationNames}
           onSubmit={handleAddPlace}
           onCancel={closeAllAddDialogs}
         />

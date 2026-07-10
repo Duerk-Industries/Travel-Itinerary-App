@@ -2216,6 +2216,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
         description: data.description ?? null,
         destination: data.destination ?? null,
         locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
+        mustSeeAttractions: Array.isArray(data.mustSeeAttractions) ? data.mustSeeAttractions : [],
         startDate: data.startDate ?? null,
         endDate: data.endDate ?? null,
         startMonth: data.startMonth ?? null,
@@ -2253,6 +2254,7 @@ export const createTrip = async (
     description: details.description ?? null,
     destination: details.destination ?? null,
     locationIds: Array.isArray(details.locationIds) ? details.locationIds : [],
+    mustSeeAttractions: Array.isArray(details.mustSeeAttractions) ? details.mustSeeAttractions : [],
     startDate: details.startDate ?? null,
     endDate: details.endDate ?? null,
     startMonth: details.startMonth ?? null,
@@ -2288,6 +2290,7 @@ export const updateTripDetails = async (
       description: updates.description ?? data.description ?? null,
       destination: updates.destination ?? data.destination ?? null,
       locationIds: Array.isArray(updates.locationIds) ? updates.locationIds : (Array.isArray(data.locationIds) ? data.locationIds : []),
+      mustSeeAttractions: Array.isArray(updates.mustSeeAttractions) ? updates.mustSeeAttractions : (Array.isArray(data.mustSeeAttractions) ? data.mustSeeAttractions : []),
       startDate: updates.startDate ?? data.startDate ?? null,
       endDate: updates.endDate ?? data.endDate ?? null,
       startMonth: updates.startMonth ?? data.startMonth ?? null,
@@ -2457,6 +2460,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   description?: string | null;
   destination?: string | null;
   locationIds?: string[];
+  mustSeeAttractions?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -2474,6 +2478,7 @@ export const createTripWithGroupAndMembers = async (payload: {
     description: payload.description ?? null,
     destination: payload.destination ?? null,
     locationIds: Array.isArray(payload.locationIds) ? payload.locationIds : [],
+    mustSeeAttractions: Array.isArray(payload.mustSeeAttractions) ? payload.mustSeeAttractions : [],
     startDate: payload.startDate ?? null,
     endDate: payload.endDate ?? null,
     startMonth: payload.startMonth ?? null,

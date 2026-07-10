@@ -225,6 +225,7 @@ export interface Trip {
   description?: string | null;
   destination?: string | null;
   locationIds?: string[];
+  mustSeeAttractions?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;

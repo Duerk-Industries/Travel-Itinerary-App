@@ -55,6 +55,12 @@ const normalizeLocationIds = (value: unknown): string[] => {
   return Array.from(new Set(ids));
 };
 
+const normalizeMustSeeAttractions = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const names = value.map((name) => String(name ?? '').trim()).filter(Boolean);
+  return Array.from(new Set(names));
+};
+
 const parseActivityCursor = (raw: unknown): { createdAt: string; id: string } | null => {
   const value = String(raw ?? '').trim();
   if (!value) return null;
@@ -516,7 +522,7 @@ router.put('/:id/covered-by', async (req, res) => {
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const { name, groupId, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
+  const { name, groupId, description, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
   if (!name || !groupId) {
     res.status(400).json({ error: 'name and groupId are required' });
     return;
@@ -532,6 +538,7 @@ router.post('/', async (req, res) => {
       description: typeof description === 'string' ? description.trim() || null : null,
       destination: null,
       locationIds: normalizeLocationIds(locationIds),
+      mustSeeAttractions: normalizeMustSeeAttractions(mustSeeAttractions),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
@@ -558,7 +565,7 @@ router.post('/', async (req, res) => {
 router.post('/wizard', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const { name, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
+  const { name, description, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
   if (!name || !String(name).trim()) {
     res.status(400).json({ error: 'Trip name is required' });
     return;
@@ -611,6 +618,7 @@ router.post('/wizard', async (req, res) => {
       description: typeof description === 'string' ? description.trim() || null : null,
       destination: null,
       locationIds: normalizeLocationIds(locationIds),
+      mustSeeAttractions: normalizeMustSeeAttractions(mustSeeAttractions),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
@@ -693,8 +701,8 @@ router.patch('/:id/group', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const { description, locationIds, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
-  if (description == null && locationIds == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
+  const { description, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
+  if (description == null && locationIds == null && mustSeeAttractions == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
   }
@@ -707,6 +715,7 @@ router.patch('/:id', async (req, res) => {
       description: typeof description === 'string' ? description : null,
       destination: null,
       locationIds: locationIds == null ? undefined : normalizeLocationIds(locationIds),
+      mustSeeAttractions: mustSeeAttractions == null ? undefined : normalizeMustSeeAttractions(mustSeeAttractions),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,

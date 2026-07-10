@@ -585,6 +585,7 @@ export const initDb = async (): Promise<void> => {
       description TEXT,
       destination TEXT,
       location_ids JSONB DEFAULT '[]'::jsonb,
+      must_see_attractions JSONB DEFAULT '[]'::jsonb,
       start_date DATE,
       end_date DATE,
       start_month INTEGER,
@@ -598,6 +599,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS location_ids JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS must_see_attractions JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_date DATE;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS end_date DATE;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_month INTEGER;`);
@@ -608,6 +610,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
   await p.query(`UPDATE trips SET covered_by = '{}'::jsonb WHERE covered_by IS NULL;`);
   await p.query(`UPDATE trips SET location_ids = '[]'::jsonb WHERE location_ids IS NULL;`);
+  await p.query(`UPDATE trips SET must_see_attractions = '[]'::jsonb WHERE must_see_attractions IS NULL;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS universal_packing_list_items (
@@ -3568,6 +3571,7 @@ export const updateTripDetails = async (
     description?: string | null;
     destination?: string | null;
     locationIds?: string[];
+    mustSeeAttractions?: string[];
     startDate?: string | null;
     endDate?: string | null;
     startMonth?: number | null;
@@ -3591,7 +3595,8 @@ export const updateTripDetails = async (
          start_month = CASE WHEN $7 = 'month' THEN $8::int WHEN $7 = 'range' THEN NULL ELSE start_month END,
          start_year = CASE WHEN $7 = 'month' THEN $9::int WHEN $7 = 'range' THEN NULL ELSE start_year END,
          duration_days = CASE WHEN $7 = 'month' THEN $10::int WHEN $7 = 'range' THEN NULL ELSE duration_days END,
-         currency = COALESCE($11, currency)
+         currency = COALESCE($11, currency),
+         must_see_attractions = COALESCE($12::jsonb, must_see_attractions)
      WHERE id = $6
      RETURNING id,
        group_id as "groupId",
@@ -3599,6 +3604,7 @@ export const updateTripDetails = async (
        description,
        destination,
        COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+       COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
        start_date as "startDate",
        end_date as "endDate",
        start_month as "startMonth",
@@ -3619,6 +3625,7 @@ export const updateTripDetails = async (
       updates.startYear ?? null,
       updates.durationDays ?? null,
       updates.currency ?? null,
+      Array.isArray(updates.mustSeeAttractions) ? JSON.stringify(updates.mustSeeAttractions) : null,
     ]
   );
   if (!rows.length) throw new Error('Trip not found');
@@ -5851,6 +5858,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               t.description,
               t.destination,
               COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
+              COALESCE(t.must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
               t.start_date as "startDate",
               t.end_date as "endDate",
               t.start_month as "startMonth",
@@ -5877,6 +5885,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.description,
             t.destination,
             COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
+            COALESCE(t.must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
             t.start_date as "startDate",
             t.end_date as "endDate",
             t.start_month as "startMonth",
@@ -5907,6 +5916,7 @@ export const createTrip = async (
     description?: string | null;
     destination?: string | null;
     locationIds?: string[];
+    mustSeeAttractions?: string[];
     startDate?: string | null;
     endDate?: string | null;
     startMonth?: number | null;
@@ -5940,14 +5950,15 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING id,
                group_id as "groupId",
                name,
                description,
                destination,
                COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+               COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
                start_date as "startDate",
                end_date as "endDate",
                start_month as "startMonth",
@@ -5970,6 +5981,7 @@ export const createTrip = async (
       details?.durationDays ?? null,
       details?.currency ?? 'USD',
       {},
+      JSON.stringify(Array.isArray(details?.mustSeeAttractions) ? details?.mustSeeAttractions : []),
     ]
   );
   await ensureTripPackingListWithRunner(p, id);
@@ -6147,6 +6159,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   description?: string | null;
   destination?: string | null;
   locationIds?: string[];
+  mustSeeAttractions?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -6206,14 +6219,15 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING id,
                  group_id as "groupId",
                  name,
                  description,
                  destination,
                  COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+                 COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
                  start_date as "startDate",
                  end_date as "endDate",
                  start_month as "startMonth",
@@ -6234,6 +6248,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.startYear ?? null,
         payload.durationDays ?? null,
         payload.currency ?? 'USD',
+        JSON.stringify(Array.isArray(payload.mustSeeAttractions) ? payload.mustSeeAttractions : []),
       ]
     );
 
@@ -8162,6 +8177,7 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
             description,
             destination,
             COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+            COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
             start_date as "startDate",
             end_date as "endDate",
             start_month as "startMonth",
