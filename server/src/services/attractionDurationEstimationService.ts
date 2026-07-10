@@ -1,5 +1,7 @@
+import axios from 'axios';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { getAttractionDurationMetadata, upsertAttractionDurationMetadata } from '../db';
+import { logError } from '../logger';
 import type { ActivityType, AttractionDurationMetadata } from '../types';
 
 export const ACTIVITY_TYPE_DURATION_MINUTES: Record<ActivityType, number> = {
@@ -58,6 +60,48 @@ const isStale = (metadata: AttractionDurationMetadata | null, refreshDays: numbe
   return Date.now() - ts > thresholdMs;
 };
 
+const WIKIPEDIA_SUMMARY_TIMEOUT_MS = 8000;
+const MAX_DESCRIPTION_SENTENCES = 2;
+
+const trimToSentences = (text: string, maxSentences: number): string => {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [text];
+  return sentences
+    .slice(0, maxSentences)
+    .map((sentence) => sentence.trim())
+    .join(' ')
+    .trim();
+};
+
+// Fetches a clean, real plain-text summary for an attraction from Wikipedia's
+// REST summary endpoint (distinct from the search-snippet/tagline text
+// already used for catalog discovery, which is too fragmentary to show
+// directly to users as "what is this place"). Best-effort: returns null on
+// any failure, disambiguation page, or missing article rather than throwing,
+// since a missing description should fall back to no blurb rather than break
+// generation.
+export const fetchWikipediaSummary = async (name: string): Promise<string | null> => {
+  const trimmedName = name.trim();
+  if (!trimmedName) return null;
+  try {
+    const response = await axios.get(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(trimmedName)}`,
+      {
+        timeout: WIKIPEDIA_SUMMARY_TIMEOUT_MS,
+        headers: { 'User-Agent': 'WanderBunnies-Itinerary-Generator/1.0 (contact: support@wanderbunnies.app)' },
+        validateStatus: (status) => status === 200 || status === 404,
+      }
+    );
+    if (response.status !== 200) return null;
+    const extract = typeof response.data?.extract === 'string' ? response.data.extract.trim() : '';
+    if (!extract) return null;
+    if (/may refer to|disambiguation/i.test(extract)) return null;
+    return trimToSentences(extract, MAX_DESCRIPTION_SENTENCES);
+  } catch (err) {
+    logError(`[attractions] wikipedia summary lookup failed for "${trimmedName}"`, err);
+    return null;
+  }
+};
+
 export const getOrCreateAttractionDurationMetadata = async (params: {
   userId: string;
   destinationKey: string;
@@ -71,6 +115,7 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
 
   const estimatedDurationMinutes = estimateAttractionDurationMinutes(params.name, params.activityType);
   const requiresPreOrderTickets = inferRequiresPreOrderTickets(params.name, params.activityType);
+  const description = await fetchWikipediaSummary(params.name);
   const entry: AttractionDurationMetadata = {
     id: '',
     destinationKey: params.destinationKey,
@@ -81,6 +126,8 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
     durationSource: 'heuristic',
     requiresPreOrderTickets,
     preOrderNotes: null,
+    description,
+    descriptionSource: description ? 'wikipedia' : null,
     updatedAt: new Date().toISOString(),
   };
   return upsertAttractionDurationMetadata(entry);

@@ -10,7 +10,7 @@ import {
 } from '../apis/openaiCallers';
 import { getEnvFlag } from '../env';
 import { logError, logInfo } from '../logger';
-import type { ActivityType, AttractionCatalogEntry, AttractionDurationMetadata } from '../types';
+import type { ActivityType, AttractionCatalogEntry, AttractionDurationMetadata, ItineraryDetailKind } from '../types';
 import { getApiCacheSetting } from '../config/apiLimits';
 import {
   captureItineraryInteraction,
@@ -22,7 +22,7 @@ import {
 } from './attractionsCatalogService';
 import { scoreActivityTypeByPreferences, type InterestWeights } from './activityTypeInterestWeights';
 import { getAttractionDurationMetadataBatch, formatMinutesAsDuration } from './attractionDurationEstimationService';
-import { getTransferEstimator, type TransferEstimator } from './transferEstimationService';
+import { getTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -198,6 +198,8 @@ export type ItineraryGeneratedDetail = {
   time: string | null;
   activity: string;
   cost: number | null;
+  kind?: ItineraryDetailKind;
+  noteBody?: string | null;
 };
 
 export type ItineraryPromptProfile = {
@@ -1249,6 +1251,71 @@ const enforceAttractionDestinationConsistency = (
   return itinerary;
 };
 
+// Returns the requested destination an attraction's real-world description
+// clearly belongs to, when it's a DIFFERENT one than the day it's currently
+// scheduled under (e.g. a Wikipedia summary for "Central Park" naming "New
+// York City" while scheduled on a Boston day). Only fires on an unambiguous
+// single match that doesn't also mention the current day's destination, to
+// avoid false positives on attractions that legitimately reference multiple
+// cities.
+const detectMismatchedDestinationFromDescription = (
+  description: string,
+  requestedDestinations: string[],
+  currentDestKey: string,
+  currentDestDisplayName: string
+): string | null => {
+  const lower = description.toLowerCase();
+  const mentionsCurrent = currentDestDisplayName ? lower.includes(currentDestDisplayName.trim().toLowerCase()) : false;
+  if (mentionsCurrent) return null;
+  const matches = requestedDestinations
+    .map((dest) => ({ dest, key: normalizeDestinationKey(dest) }))
+    .filter(({ key }) => key && key !== currentDestKey)
+    .filter(({ dest }) => dest.trim() && lower.includes(dest.trim().toLowerCase()));
+  if (matches.length !== 1) return null;
+  return matches[0].key;
+};
+
+// Catches the attractions the catalog-based pass above can't: text with no
+// matching AttractionCatalogEntry at all (common for iconic landmarks not
+// yet in the discovery catalog, or manually-typed must-see entries). Runs
+// after attachAttractionMetadata so every item's cached Wikipedia
+// description (if any) is already available to check against.
+const enforceDescriptionBasedDestinationConsistency = (
+  itinerary: PromptItinerary,
+  requestedDestinations: string[],
+  durationMetadataByName: Map<string, AttractionDurationMetadata>
+): void => {
+  const dayDestinationKey = (day: PromptDay) => normalizeDestinationKey(day.b);
+
+  for (const day of itinerary.dy) {
+    const dayKey = dayDestinationKey(day);
+    const keptItems: PromptDay['it'] = [];
+    for (const item of day.it) {
+      const text = normalizeText(item[2]);
+      const description = durationMetadataByName.get(text.toLowerCase())?.description;
+      const mismatchedKey = description
+        ? detectMismatchedDestinationFromDescription(description, requestedDestinations, dayKey, day.b)
+        : null;
+      if (!mismatchedKey) {
+        keptItems.push(item);
+        continue;
+      }
+      const targetDay = itinerary.dy.find((candidate) => dayDestinationKey(candidate) === mismatchedKey);
+      if (targetDay && targetDay.it.length < MAX_ITEMS_PER_DAY) {
+        targetDay.it.push(item);
+        logInfo(
+          `[itinerary] reassigned attraction "${text}" from "${day.b}" to "${targetDay.b}" (description names a different destination, no catalog match)`
+        );
+      } else {
+        logError(
+          `[itinerary] dropped attraction "${text}" from "${day.b}" — description names destinationKey="${mismatchedKey}" but no available day found`
+        );
+      }
+    }
+    day.it = keptItems;
+  }
+};
+
 const enforceMustSeeAttractions = (
   itinerary: PromptItinerary,
   mustSeeAttractions: NormalizedMustSeeAttraction[],
@@ -1341,22 +1408,30 @@ const minutesToTimeString = (minutes: number): string => {
 
 // Sequences same-day items sharing a time-of-day code (morning/day/evening)
 // so back-to-back attractions don't collide on the same clock time — each
-// subsequent item starts after the previous one's estimated duration + a
-// short buffer, rather than every "D" (daytime) item defaulting to 13:00.
+// subsequent item starts after the previous one's estimated duration plus
+// the real estimated travel time to get there (when known), rather than
+// every "D" (daytime) item defaulting to 13:00 or a flat generic buffer.
 const computeDayItemSchedule = (
   day: PromptDay,
-  durationMetadataByName?: Map<string, AttractionDurationMetadata>
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>,
+  transferNotesForDay?: TransferNote[]
 ): Array<{ startTime: string; durationMinutes: number }> => {
+  const transferMinutesByFromName = new Map<string, number>();
+  for (const note of transferNotesForDay ?? []) {
+    transferMinutesByFromName.set(note.fromName.toLowerCase(), note.minutes);
+  }
   const clockByTimeCode: Record<PromptDayTimeCode, number> = {
     M: timeStringToMinutes('09:00'),
     D: timeStringToMinutes('13:00'),
     E: timeStringToMinutes('19:00'),
   };
   return day.it.map(([timeCode, , text]) => {
-    const durationMetadata = durationMetadataByName?.get(normalizeText(text).toLowerCase());
+    const normalizedText = normalizeText(text).toLowerCase();
+    const durationMetadata = durationMetadataByName?.get(normalizedText);
     const durationMinutes = durationMetadata?.estimatedDurationMinutes ?? DEFAULT_ACTIVITY_DURATION_MINUTES;
     const startMinutes = clockByTimeCode[timeCode] ?? clockByTimeCode.D;
-    clockByTimeCode[timeCode] = startMinutes + durationMinutes + ITEM_GAP_MINUTES;
+    const gapMinutes = transferMinutesByFromName.get(normalizedText) ?? ITEM_GAP_MINUTES;
+    clockByTimeCode[timeCode] = startMinutes + durationMinutes + gapMinutes;
     return { startTime: minutesToTimeString(startMinutes), durationMinutes };
   });
 };
@@ -1432,7 +1507,21 @@ const buildGeneratedActivityDescription = (
   return `${activityName} is a ${activityType.toLowerCase()} based around ${day.b || 'this stop'}. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience.${context}`.trim();
 };
 
-type TransferNote = { activity: string; noteBody: string };
+type TransferNote = {
+  fromName: string;
+  toName: string;
+  mode: LocalTransferMode;
+  minutes: number;
+  distanceKm: number;
+};
+
+// Collapses the estimator's four-way mode into the three travel categories
+// travelers actually plan around (taxi and rideshare are both "a car").
+const describeTransferMode = (mode: LocalTransferMode): string => {
+  if (mode === 'walk') return 'Walk';
+  if (mode === 'transit') return 'Public transport';
+  return 'Car';
+};
 
 // Populates the attraction duration/pre-order-ticket cache for every attraction
 // in the itinerary, and computes mobility-aware transfer time/mode estimates
@@ -1505,8 +1594,11 @@ const attachAttractionMetadata = async (
         if (!estimate) continue;
         const notes = transferNotesByDay.get(day.d) ?? [];
         notes.push({
-          activity: `Transfer: ${from.name} → ${to.name}`,
-          noteBody: `${estimate.mode}, ~${estimate.minutes} min (${estimate.distanceKm.toFixed(1)} km)`,
+          fromName: from.name,
+          toName: to.name,
+          mode: estimate.mode,
+          minutes: estimate.minutes,
+          distanceKm: estimate.distanceKm,
         });
         transferNotesByDay.set(day.d, notes);
       } catch (err) {
@@ -1521,7 +1613,8 @@ const attachAttractionMetadata = async (
 const mapItems = (
   itinerary: PromptItinerary,
   preferenceWeights: PromptWeights,
-  durationMetadataByName?: Map<string, AttractionDurationMetadata>
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>,
+  transferNotesByDay?: Map<number, TransferNote[]>
 ): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
     status: 'Needed',
@@ -1550,17 +1643,18 @@ const mapItems = (
   }));
 
   const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) => {
-    const schedule = computeDayItemSchedule(day, durationMetadataByName);
+    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d));
     return day.it.map(([, activityCode, text], index) => {
       const mapped = ACTIVITY_CODE_TO_LONG[activityCode];
       const closest = pickActivityTypeForPreferences(text, mapped, preferenceWeights);
       const durationMetadata = durationMetadataByName?.get(normalizeText(text).toLowerCase());
       const { startTime, durationMinutes } = schedule[index];
       const duration = formatMinutesAsDuration(durationMinutes);
-      const baseNotes = buildGeneratedActivityDescription(day, text, closest);
+      const description = durationMetadata?.description || buildGeneratedActivityDescription(day, text, closest);
+      const notesWithDuration = `${description} Plan for about ${duration} here.`;
       const notes = durationMetadata?.requiresPreOrderTickets
-        ? `${baseNotes} Tickets may need to be pre-ordered.`
-        : baseNotes;
+        ? `${notesWithDuration} Tickets may need to be pre-ordered.`
+        : notesWithDuration;
       return {
         status: 'Proposed',
         activityType: closest,
@@ -1608,23 +1702,36 @@ const buildDetails = (
   durationMetadataByName?: Map<string, AttractionDurationMetadata>
 ): ItineraryGeneratedDetail[] =>
   itinerary.dy.flatMap((day) => {
-    const schedule = computeDayItemSchedule(day, durationMetadataByName);
-    return [
-      ...day.it.map(([, _activityCode, text], index) => ({
+    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d));
+    const notesByFromName = new Map<string, TransferNote>();
+    for (const note of transferNotesByDay?.get(day.d) ?? []) {
+      notesByFromName.set(note.fromName.toLowerCase(), note);
+    }
+
+    const details: ItineraryGeneratedDetail[] = [];
+    day.it.forEach(([, _activityCode, text], index) => {
+      details.push({
         day: day.d,
         time: schedule[index].startTime,
         activity: text,
         cost: null,
-      })),
-      ...(transferNotesByDay?.get(day.d) ?? []).map((note) => ({
-        day: day.d,
-        time: null,
-        activity: note.activity,
-        cost: null,
-        kind: 'note' as const,
-        noteBody: note.noteBody,
-      })),
-    ];
+      });
+      // Insert the travel segment to the NEXT activity right after this one,
+      // between the two activities it connects, rather than lumped at the
+      // end of the day.
+      const note = notesByFromName.get(normalizeText(text).toLowerCase());
+      if (note) {
+        details.push({
+          day: day.d,
+          time: null,
+          activity: `${describeTransferMode(note.mode)} to ${note.toName} (~${note.minutes} min, ${note.distanceKm.toFixed(1)} km)`,
+          cost: null,
+          kind: 'note',
+          noteBody: `${describeTransferMode(note.mode)}, ~${note.minutes} min (${note.distanceKm.toFixed(1)} km)`,
+        });
+      }
+    });
+    return details;
   });
 
 const renderMarkdownFallback = (itinerary: PromptItinerary, profile: ItineraryPromptProfile): string => {
@@ -1995,6 +2102,7 @@ const runGenerateItineraryViaPromptPlan = async (
     shortlistByDestination,
     input.userId
   );
+  enforceDescriptionBasedDestinationConsistency(itineraryWithMustSee, promptRequest.d, durationMetadataByName);
 
   const render = await runRenderStage({
     apiKey: input.apiKey,
@@ -2024,7 +2132,7 @@ const runGenerateItineraryViaPromptPlan = async (
           cost: null,
         },
       ];
-  const items = mapItems(itineraryWithMustSee, profile.weights, durationMetadataByName);
+  const items = mapItems(itineraryWithMustSee, profile.weights, durationMetadataByName, transferNotesByDay);
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
   );

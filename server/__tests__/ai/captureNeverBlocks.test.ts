@@ -21,12 +21,16 @@ jest.mock('../../src/apis/openaiCallers', () => {
     }),
   };
 });
-jest.mock('../../src/services/attractionsCatalogService', () => ({
-  getAttractionPromptBlockForDestinations: jest.fn(async () => ({
-    shortlistByDestination: {},
-    promptBlock: 'none',
-  })),
-}));
+jest.mock('../../src/services/attractionsCatalogService', () => {
+  const actual = jest.requireActual('../../src/services/attractionsCatalogService');
+  return {
+    ...actual,
+    getAttractionPromptBlockForDestinations: jest.fn(async () => ({
+      shortlistByDestination: {},
+      promptBlock: 'none',
+    })),
+  };
+});
 jest.mock('../../src/ai/capture/captureService', () => ({
   captureAiInteraction: jest.fn(),
 }));

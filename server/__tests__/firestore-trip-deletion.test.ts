@@ -33,6 +33,7 @@ const canConnect = async (host: string, port: number, timeoutMs = 1500): Promise
 describe('Firestore trip deletion cascade (emulator)', () => {
   let emulatorReady = false;
   let db: Firestore;
+  let firebase: typeof import('../src/db.firebase');
 
   beforeAll(async () => {
     process.env.DB_PROVIDER = 'firebase';
@@ -48,16 +49,15 @@ describe('Firestore trip deletion cascade (emulator)', () => {
     }
 
     jest.resetModules();
-    const { resetDbAdapter } = await import('../src/db.providers');
+    const { resetDbAdapter } = require('../src/db.providers') as typeof import('../src/db.providers');
     resetDbAdapter();
-    const firebase = await import('../src/db.firebase');
+    firebase = require('../src/db.firebase') as typeof import('../src/db.firebase');
     db = firebase.getDb();
     await db.listCollections();
   });
 
   it('deletes every trip-scoped artifact when the last traveler leaves', async () => {
     if (!emulatorReady) return;
-    const firebase = await import('../src/db.firebase');
     const ownerId = randomUUID();
 
     const { trip, groupId } = await firebase.createTripWithGroupAndMembers({

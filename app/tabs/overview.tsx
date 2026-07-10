@@ -2280,7 +2280,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           </TouchableOpacity>
                           <Text
                             style={styles.helperText}
-                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
+                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}${tour.duration ? ` · ${tour.duration}` : ''}`}</Text>
                           {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
                           {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
                         </View>

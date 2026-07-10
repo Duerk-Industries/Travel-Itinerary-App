@@ -7012,6 +7012,11 @@ const toAttractionDurationMetadata = (row: any): AttractionDurationMetadata | nu
     durationSource: payload.durationSource === 'override' ? 'override' : 'heuristic',
     requiresPreOrderTickets: Boolean(payload.requiresPreOrderTickets),
     preOrderNotes: typeof payload.preOrderNotes === 'string' ? payload.preOrderNotes : null,
+    description: typeof payload.description === 'string' ? payload.description : null,
+    descriptionSource:
+      payload.descriptionSource === 'wikipedia' || payload.descriptionSource === 'catalog_snippet'
+        ? payload.descriptionSource
+        : null,
     updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
   };
 };
@@ -7289,6 +7294,8 @@ export const upsertAttractionDurationMetadata = async (
     durationSource: entry.durationSource ?? 'heuristic',
     requiresPreOrderTickets: Boolean(entry.requiresPreOrderTickets),
     preOrderNotes: entry.preOrderNotes ?? null,
+    description: entry.description ?? null,
+    descriptionSource: entry.descriptionSource ?? null,
     updatedAt: entry.updatedAt,
   };
   const searchName = `${entry.name} ${entry.destinationDisplayName} attraction duration`.toLowerCase();

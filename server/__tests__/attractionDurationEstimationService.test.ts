@@ -1,13 +1,16 @@
 /// <reference types="jest" />
 /// <reference types="node" />
+import axios from 'axios';
 import {
   estimateAttractionDurationMinutes,
   inferRequiresPreOrderTickets,
   formatMinutesAsDuration,
+  fetchWikipediaSummary,
   getOrCreateAttractionDurationMetadata,
   getAttractionDurationMetadataBatch,
 } from '../src/services/attractionDurationEstimationService';
 
+jest.mock('axios');
 jest.mock('../src/db', () => ({
   getAttractionDurationMetadata: jest.fn(),
   upsertAttractionDurationMetadata: jest.fn(),
@@ -17,6 +20,7 @@ const mockedDb = jest.requireMock('../src/db') as {
   getAttractionDurationMetadata: jest.Mock;
   upsertAttractionDurationMetadata: jest.Mock;
 };
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('attraction duration heuristics', () => {
   it('estimates duration by activity type', () => {
@@ -43,15 +47,60 @@ describe('attraction duration heuristics', () => {
   });
 });
 
+describe('fetchWikipediaSummary', () => {
+  beforeEach(() => {
+    mockedAxios.get.mockReset();
+  });
+
+  it('returns a trimmed plain-text summary on success', async () => {
+    mockedAxios.get.mockResolvedValue({
+      status: 200,
+      data: {
+        extract:
+          'Central Park is an urban park in Manhattan, New York City. It is the fifth-largest park in the city. It was designed in 1858 by landscape architects.',
+      },
+    });
+
+    const summary = await fetchWikipediaSummary('Central Park');
+    expect(summary).toBe(
+      'Central Park is an urban park in Manhattan, New York City. It is the fifth-largest park in the city.'
+    );
+  });
+
+  it('returns null for disambiguation pages', async () => {
+    mockedAxios.get.mockResolvedValue({
+      status: 200,
+      data: { extract: 'Central Park may refer to several places.' },
+    });
+    expect(await fetchWikipediaSummary('Central Park')).toBeNull();
+  });
+
+  it('returns null when the article is not found', async () => {
+    mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
+    expect(await fetchWikipediaSummary('Some Obscure Place')).toBeNull();
+  });
+
+  it('returns null and does not throw on network failure', async () => {
+    mockedAxios.get.mockRejectedValue(new Error('network error'));
+    expect(await fetchWikipediaSummary('Central Park')).toBeNull();
+  });
+});
+
 describe('attraction duration metadata caching', () => {
   beforeEach(() => {
     mockedDb.getAttractionDurationMetadata.mockReset();
     mockedDb.upsertAttractionDurationMetadata.mockReset();
+    mockedAxios.get.mockReset();
+    mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
   });
 
   it('computes and persists metadata on cache miss', async () => {
     mockedDb.getAttractionDurationMetadata.mockResolvedValue(null);
     mockedDb.upsertAttractionDurationMetadata.mockImplementation(async (entry) => ({ ...entry, id: 'attr-dur:test' }));
+    mockedAxios.get.mockResolvedValue({
+      status: 200,
+      data: { extract: 'The American Museum of Natural History is a natural history museum in Manhattan, New York City.' },
+    });
 
     const result = await getOrCreateAttractionDurationMetadata({
       userId: 'user-1',
@@ -65,6 +114,25 @@ describe('attraction duration metadata caching', () => {
     expect(result.estimatedDurationMinutes).toBe(150);
     expect(result.requiresPreOrderTickets).toBe(true);
     expect(result.durationSource).toBe('heuristic');
+    expect(result.description).toMatch(/natural history museum/i);
+    expect(result.descriptionSource).toBe('wikipedia');
+  });
+
+  it('leaves description null when no Wikipedia summary is available', async () => {
+    mockedDb.getAttractionDurationMetadata.mockResolvedValue(null);
+    mockedDb.upsertAttractionDurationMetadata.mockImplementation(async (entry) => ({ ...entry, id: 'attr-dur:test' }));
+    mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
+
+    const result = await getOrCreateAttractionDurationMetadata({
+      userId: 'user-1',
+      destinationKey: 'new york',
+      destinationDisplayName: 'New York',
+      name: 'Some Made Up Place',
+      activityType: 'Sights & Landmarks',
+    });
+
+    expect(result.description).toBeNull();
+    expect(result.descriptionSource).toBeNull();
   });
 
   it('returns the cached entry without recomputing when fresh', async () => {

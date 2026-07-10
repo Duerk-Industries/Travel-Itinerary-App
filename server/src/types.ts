@@ -473,6 +473,8 @@ export interface AttractionDurationMetadata {
   durationSource: 'heuristic' | 'override';
   requiresPreOrderTickets: boolean;
   preOrderNotes?: string | null;
+  description?: string | null;
+  descriptionSource?: 'wikipedia' | 'catalog_snippet' | null;
   updatedAt: string;
 }
 
