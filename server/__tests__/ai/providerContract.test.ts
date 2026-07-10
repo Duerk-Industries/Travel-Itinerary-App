@@ -229,6 +229,28 @@ const runProviderContract = (name: string, getProvider: () => AiChatProvider) =>
         status: 429,
       });
     });
+
+    it('uses GPT-5 compatible OpenAI chat parameters for reasoning models', async () => {
+      if (name !== 'openaiProvider') return;
+      process.env.OPENAI_API_KEY = 'test-openai-key';
+      mockedPostOpenAiChatCompletion.mockResolvedValueOnce({
+        choices: [{ message: { content: 'ok' } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      });
+
+      await getProvider().chatCompletion({ ...request, model: 'gpt-5.4-mini' }, { ...context, model: 'gpt-5.4-mini' });
+
+      expect(mockedPostOpenAiChatCompletion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            model: 'gpt-5.4-mini',
+            max_completion_tokens: request.max_tokens,
+          }),
+        })
+      );
+      expect(mockedPostOpenAiChatCompletion.mock.calls[0][0].payload).not.toHaveProperty('max_tokens');
+      expect(mockedPostOpenAiChatCompletion.mock.calls[0][0].payload).not.toHaveProperty('temperature');
+    });
   });
 };
 

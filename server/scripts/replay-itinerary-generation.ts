@@ -52,6 +52,16 @@ const loadEnv = () => {
   }
 };
 
+export const resolveReplayPath = (value: string): string => {
+  if (path.isAbsolute(value)) return path.normalize(value);
+  const normalized = value.replace(/\\/g, '/');
+  const rootDir = path.resolve(__dirname, '../..');
+  if (normalized === 'server' || normalized.startsWith('server/')) {
+    return path.resolve(rootDir, normalized);
+  }
+  return path.resolve(value);
+};
+
 const parseProviderModel = (value: string): ReplayRun => {
   const [provider, ...modelParts] = value.split(':');
   return {
@@ -104,7 +114,7 @@ const parseArgs = (argv: string[]): CliOptions => {
 };
 
 const readJson = (filePath: string): ReplayFile | Record<string, unknown> => {
-  const absolute = path.resolve(filePath);
+  const absolute = resolveReplayPath(filePath);
   if (!fs.existsSync(absolute)) {
     const serverRelative = path.resolve(__dirname, '..', filePath);
     if (fs.existsSync(serverRelative)) {
@@ -301,7 +311,9 @@ const main = async () => {
   validateRequest(request);
   await warnOnUnmatchedDestinationsAndAttractions(request);
   const runs = normalizeRuns(options.runs, wrapper.runs, request.aiProvider);
-  const outputDir = path.resolve(options.outputDir ?? wrapper.outputDir ?? path.join(__dirname, '../logs/ai-replay', timestamp()));
+  const outputDir = options.outputDir || wrapper.outputDir
+    ? resolveReplayPath(String(options.outputDir ?? wrapper.outputDir))
+    : path.resolve(__dirname, '../logs/ai-replay', timestamp());
   fs.mkdirSync(outputDir, { recursive: true });
 
   // Wizard-shaped inputs get their original (pre-conversion) JSON captured
@@ -345,7 +357,15 @@ const main = async () => {
       process.stdout.write(`[itinerary-replay] ok label=${label} output=${outputPath} markdown=${markdownPath}\n`);
     } catch (err) {
       const outputPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.error.json`);
-      const error = err instanceof Error ? { message: err.message, stack: err.stack } : { message: String(err) };
+      const error = err instanceof Error
+        ? {
+            message: err.message,
+            stack: err.stack,
+            originalStack: (err as any).originalStack,
+            status: (err as any).status,
+            responseData: (err as any).responseData,
+          }
+        : { message: String(err) };
       fs.writeFileSync(outputPath, JSON.stringify({ run, captureId, startedAt, completedAt: new Date().toISOString(), error }, null, 2));
       summary.push({ run, captureId, ok: false, outputPath, error: error.message });
       process.stderr.write(`[itinerary-replay] failed label=${label} output=${outputPath} error=${error.message}\n`);
@@ -353,7 +373,7 @@ const main = async () => {
   }
 
   const summaryPath = path.join(outputDir, 'summary.json');
-  fs.writeFileSync(summaryPath, JSON.stringify({ requestPath: path.resolve(options.requestPath), outputDir, runs: summary }, null, 2));
+  fs.writeFileSync(summaryPath, JSON.stringify({ requestPath: resolveReplayPath(options.requestPath), outputDir, runs: summary }, null, 2));
   process.stdout.write(`[itinerary-replay] summary=${summaryPath}\n`);
   if (summary.some((run) => run.ok === false)) process.exitCode = 1;
 };

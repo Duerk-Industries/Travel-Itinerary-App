@@ -5,6 +5,7 @@ import {
   wizardCliInputToServiceRequest,
   compactPromptRequestToServiceRequest,
   apiRouteBodyToServiceRequest,
+  resolveReplayPath,
   validateRequest,
   warnOnUnmatchedDestinationsAndAttractions,
 } from '../scripts/replay-itinerary-generation';
@@ -76,6 +77,20 @@ describe('compactPromptRequestToServiceRequest / apiRouteBodyToServiceRequest', 
     expect(compact.destinations).toEqual(['Lima']);
     const apiBody = apiRouteBodyToServiceRequest({ country: 'Peru', days: 4, budgetMin: 0, budgetMax: 1000 });
     expect(apiBody.destinations).toEqual(['Peru']);
+  });
+});
+
+describe('resolveReplayPath', () => {
+  it('resolves server-prefixed paths from the repository root even when cwd is server', () => {
+    const originalCwd = process.cwd();
+    process.chdir(__dirname);
+    try {
+      const resolved = resolveReplayPath('server/logs/ai-replay/example.json').replace(/\\/g, '/');
+      expect(resolved).toMatch(/Travel-Itinerary-App\/server\/logs\/ai-replay\/example\.json$/);
+      expect(resolved).not.toContain('/server/server/');
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 });
 

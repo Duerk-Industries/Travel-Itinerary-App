@@ -14,6 +14,7 @@ export type AiChatRequest = {
   messages: AiChatMessage[];
   response_format?: AiChatJsonMode;
   max_tokens?: number;
+  max_completion_tokens?: number;
   temperature?: number;
 };
 
