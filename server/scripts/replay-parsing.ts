@@ -41,7 +41,7 @@ const usage = `Usage:
 Options:
   --intake <id>            Replay an existing import job payload by intake/import job id.
   --request, -r <file>     JSON file containing { "doc": NormalizedDocument, "productionItems": [...] }.
-  --out, -o <dir>          Directory for replay result JSON files. Defaults to server/data/ai-replay/parsing/<timestamp>.
+  --out, -o <dir>          Directory for replay result JSON files. Defaults to server/logs/ai-replay/parsing/<timestamp>.
   --models <list>          Comma-separated provider:model entries. Overrides runs in the file.
   --provider <provider>    Single provider override, used with --model.
   --model <model>          Single model override, used with --provider.
@@ -262,7 +262,7 @@ const main = async () => {
   const file = options.requestPath ? readJson(options.requestPath) : null;
   const request = file?.request ?? file ?? {};
   const runs = normalizeRuns(options.runs, file?.runs);
-  const outputDir = path.resolve(options.outputDir ?? file?.outputDir ?? path.join(__dirname, '../data/ai-replay/parsing', timestamp()));
+  const outputDir = path.resolve(options.outputDir ?? file?.outputDir ?? path.join(__dirname, '../logs/ai-replay/parsing', timestamp()));
   fs.mkdirSync(outputDir, { recursive: true });
 
   const { initDb } = await import('../src/db');

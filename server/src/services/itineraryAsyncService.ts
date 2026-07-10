@@ -1,8 +1,11 @@
 import { randomUUID } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import {
   addItineraryDetail,
   createItineraryRecord,
   ensureUserInTrip,
+  getTripById,
   getWebUserProfile,
   insertActivity,
   insertCarRental,
@@ -14,14 +17,19 @@ import {
   upsertExpenseForSource,
 } from '../db';
 import { logError, logInfo } from '../logger';
+import { getEnvFlag, isLocalEnv } from '../env';
 import { incrementMetric, recordTiming } from '../metrics';
 import { failGenerationUsage, finalizeGenerationUsage } from './entitlementService';
 import {
   generateItineraryViaPromptPlan,
   type ItineraryGeneratedItems,
   type ItineraryGeneratedTransfer,
+  type ItineraryPromptPlanResult,
   type MustSeeAttractionInput,
 } from './itineraryPromptPlanService';
+import { computeUnmatchedDestinationAndAttractionWarnings } from './attractionMatchWarnings';
+import { renderSimplifiedItineraryMarkdown } from './itineraryMarkdownRenderer';
+import { tripNameToFileSlug } from '../utils/tripNameSlug';
 import type { ActivityType } from '../types';
 
 type AsyncStatus = 'queued' | 'running' | 'completed' | 'failed';
@@ -644,6 +652,51 @@ const persistResult = async (params: {
   return { detailsCount, transfersCount, lodgingsCount, activitiesCount, carRentalsCount };
 };
 
+// When ENABLE_RAW_AI_CAPTURE is on in a local/dev environment, writes the
+// same three artifacts the CLI replay script produces (server/scripts/
+// replay-itinerary-generation.ts) — an input-capture JSON named after the
+// trip, the raw result JSON, and a simplified day-by-day markdown — so a
+// trip generated from the running web app can be inspected/replayed the
+// same way as a CLI run, without a manual gunzip-and-feed-to-the-CLI step.
+// Best-effort only: any failure here must never affect the real generation
+// or persistence flow.
+const writeLocalGenerationArtifacts = async (
+  jobId: string,
+  input: QueueInput,
+  generationInput: Record<string, unknown>,
+  result: ItineraryPromptPlanResult
+): Promise<void> => {
+  const trip = await getTripById(input.tripId).catch(() => null);
+  const tripName = trip?.name || input.destinationSummary || 'trip';
+
+  const inputSnapshot = {
+    tripName,
+    destinations: generationInput.destinations,
+    mustSeeAttractions: generationInput.mustSeeAttractions,
+    days: generationInput.days,
+    budgetMin: generationInput.budgetMin,
+    budgetMax: generationInput.budgetMax,
+    departureAirport: generationInput.departureAirport,
+    tripStyle: generationInput.tripStyle,
+    promptTraits: generationInput.promptTraits,
+    tripStartDate: generationInput.tripStartDate,
+    tripEndDate: generationInput.tripEndDate,
+  };
+
+  const warnings = await computeUnmatchedDestinationAndAttractionWarnings(inputSnapshot);
+  for (const warning of warnings) {
+    logError(`[itinerary] ${warning}`);
+  }
+
+  const outputDir = path.resolve(__dirname, '../../logs/ai-replay/live', jobId);
+  fs.mkdirSync(outputDir, { recursive: true });
+  const slug = tripNameToFileSlug(tripName);
+  fs.writeFileSync(path.join(outputDir, `${slug}-input.json`), JSON.stringify(inputSnapshot, null, 2));
+  fs.writeFileSync(path.join(outputDir, 'output.json'), JSON.stringify(result, null, 2));
+  fs.writeFileSync(path.join(outputDir, 'output.md'), renderSimplifiedItineraryMarkdown(result, tripName));
+  logInfo(`[itinerary] wrote local generation artifacts to ${outputDir}`);
+};
+
 const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
   const job = jobs.get(jobId);
   if (!job) return;
@@ -659,7 +712,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       fallbackAirport = safeString((profile as any)?.preferredAirport);
     }
 
-    const result = await generateItineraryViaPromptPlan({
+    const generationInput = {
       apiKey: input.apiKey,
       userId: input.userId,
       destinations: input.locations.length ? input.locations : [input.destinationSummary],
@@ -694,7 +747,14 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripIdSeed: input.tripId,
       captureId: jobId,
       usageWindowKey: input.usageWindowKey,
-    });
+    };
+    const result = await generateItineraryViaPromptPlan(generationInput);
+
+    if (getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false }) && isLocalEnv()) {
+      await writeLocalGenerationArtifacts(jobId, input, generationInput, result).catch((err) =>
+        logError('[itinerary] failed to write local generation artifacts', err)
+      );
+    }
 
     const itineraryId = await ensureItineraryId({
       userId: input.userId,
@@ -814,4 +874,5 @@ export const __testing = {
   pruneStaleJobs,
   JOB_RETENTION_LIMIT,
   JOB_RETENTION_TTL_MS,
+  writeLocalGenerationArtifacts,
 };

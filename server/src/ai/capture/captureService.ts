@@ -13,7 +13,7 @@ import type { EvaluationResult } from '../evaluation/qualityScore';
 import { withAiSpan } from '../tracing';
 
 const gzip = promisify(zlib.gzip);
-const LOCAL_CAPTURE_ROOT = path.resolve(__dirname, '../../../data/ai-capture');
+const LOCAL_CAPTURE_ROOT = path.resolve(__dirname, '../../../logs/ai-capture');
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

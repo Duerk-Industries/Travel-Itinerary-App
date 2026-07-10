@@ -10,7 +10,7 @@ import { listLocalAiCaptures } from '../../src/ai/analytics/captureBrowser';
 const gzip = promisify(zlib.gzip);
 
 // Matches LOCAL_CAPTURE_ROOT in captureBrowser.ts (path is not injectable).
-const CAPTURE_ROOT = path.resolve(__dirname, '../../data/ai-capture');
+const CAPTURE_ROOT = path.resolve(__dirname, '../../logs/ai-capture');
 const TEST_DIR = path.join(CAPTURE_ROOT, 'test-capture-browser');
 
 const writeCapture = async (fileName: string, record: Record<string, unknown>) => {

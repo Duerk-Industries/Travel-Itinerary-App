@@ -5,7 +5,7 @@ import { promisify } from 'util';
 import type { CaptureRecord } from '../types/captureRecord';
 
 const gunzip = promisify(zlib.gunzip);
-const LOCAL_CAPTURE_ROOT = path.resolve(__dirname, '../../../data/ai-capture');
+const LOCAL_CAPTURE_ROOT = path.resolve(__dirname, '../../../logs/ai-capture');
 
 export type CaptureBrowserQuery = {
   featureKey?: string;

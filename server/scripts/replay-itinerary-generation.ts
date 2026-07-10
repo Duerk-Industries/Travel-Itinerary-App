@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { tripNameToFileSlug } from '../src/utils/tripNameSlug';
+import { renderSimplifiedItineraryMarkdown } from '../src/services/itineraryMarkdownRenderer';
+import { computeUnmatchedDestinationAndAttractionWarnings } from '../src/services/attractionMatchWarnings';
 
 type ReplayRun = {
   provider?: string;
@@ -28,7 +31,10 @@ const usage = `Usage:
 
 Options:
   --request, -r <file>     JSON file containing either the service request or { "request": ..., "runs": [...] }.
-  --out, -o <dir>          Directory for replay result JSON files. Defaults to server/data/ai-replay/<timestamp>.
+                           Supported shapes: service request, API route body, compact promptRequest,
+                           raw itinerary_generation capture, or a wizard-shaped input (see
+                           server/scripts/wizardCliInputTypes.ts for the format + a worked example).
+  --out, -o <dir>          Directory for replay result JSON files. Defaults to server/logs/ai-replay/<timestamp>.
   --models <list>          Comma-separated provider:model entries. Overrides runs in the file.
   --provider <provider>    Single provider override, used with --model.
   --model <model>          Single model override, used with --provider.
@@ -146,7 +152,7 @@ const extractPromptRequestFromCapture = (value: Record<string, unknown>): Record
   return extractJsonBetween(userPrompt, 'INPUT (JSON):', /\n\s*\n(?:RULES:|OUTPUT|$)/);
 };
 
-const compactPromptRequestToServiceRequest = (promptRequest: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> => ({
+export const compactPromptRequestToServiceRequest = (promptRequest: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> => ({
   destinations: Array.isArray(promptRequest.d) ? promptRequest.d : [],
   days: Number(promptRequest.dur ?? (source.payload as any)?.days ?? 1),
   budgetMin: Number(promptRequest.budgetMin ?? 0),
@@ -165,7 +171,7 @@ const compactPromptRequestToServiceRequest = (promptRequest: Record<string, unkn
   tripIdSeed: typeof source.jobId === 'string' ? source.jobId : typeof source.captureId === 'string' ? source.captureId : undefined,
 });
 
-const apiRouteBodyToServiceRequest = (request: Record<string, unknown>): Record<string, unknown> => {
+export const apiRouteBodyToServiceRequest = (request: Record<string, unknown>): Record<string, unknown> => {
   const locations = Array.isArray(request.locations)
     ? request.locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
@@ -187,9 +193,39 @@ const apiRouteBodyToServiceRequest = (request: Record<string, unknown>): Record<
   };
 };
 
-const resolveReplayRequest = (file: ReplayFile | Record<string, unknown>): Record<string, unknown> => {
+// Wizard-shaped input (see wizardCliInputTypes.ts) — a human-friendly file
+// format mirroring the create-trip wizard's AI-generation fields, distinct
+// from the wire/internal shapes the other converters handle.
+export const wizardCliInputToServiceRequest = (input: Record<string, unknown>): Record<string, unknown> => ({
+  destinations: Array.isArray(input.destinations)
+    ? input.destinations.map((value) => String(value ?? '').trim()).filter(Boolean)
+    : [],
+  days: input.days,
+  budgetMin: input.budgetMin,
+  budgetMax: input.budgetMax,
+  mustSeeAttractions: Array.isArray(input.mustSeeAttractions) ? input.mustSeeAttractions : [],
+  departureAirport: input.departureAirport,
+  tripStyle: input.tripStyle,
+  promptTraits: {
+    tt: (input.promptTraits as any)?.tt && typeof (input.promptTraits as any).tt === 'object' ? (input.promptTraits as any).tt : undefined,
+    ut: (input.promptTraits as any)?.ut && typeof (input.promptTraits as any).ut === 'object' ? (input.promptTraits as any).ut : undefined,
+  },
+  groupTraits: [],
+  tripStartDate: typeof input.tripStartDate === 'string' ? input.tripStartDate : null,
+  tripEndDate: typeof input.tripEndDate === 'string' ? input.tripEndDate : null,
+  tripIdSeed: typeof input.tripName === 'string' ? input.tripName : undefined,
+});
+
+export const resolveReplayRequest = (file: ReplayFile | Record<string, unknown>): Record<string, unknown> => {
   const wrapper = file as ReplayFile;
   const candidate = (wrapper.request && typeof wrapper.request === 'object' ? wrapper.request : file) as Record<string, unknown>;
+  // Must be checked before the plain-service-request passthrough below,
+  // since a wizard-shaped input also has a top-level `destinations` array —
+  // without this check first it would fall through unconverted and silently
+  // lose its `tripName`-driven file naming.
+  if (typeof candidate.tripName === 'string' && Array.isArray(candidate.destinations)) {
+    return wizardCliInputToServiceRequest(candidate);
+  }
   if (Array.isArray(candidate.destinations)) return candidate;
   if ((candidate.result as any)?.promptRequest) {
     return compactPromptRequestToServiceRequest((candidate.result as any).promptRequest, candidate);
@@ -210,11 +246,11 @@ const resolveReplayRequest = (file: ReplayFile | Record<string, unknown>): Recor
   return candidate;
 };
 
-const validateRequest = (request: Record<string, unknown>) => {
+export const validateRequest = (request: Record<string, unknown>) => {
   const destinations = request.destinations;
   if (!Array.isArray(destinations) || destinations.length === 0) {
     throw new Error(
-      'request.destinations must be a non-empty string array. Supported inputs are: service request, API route body, compact promptRequest, or raw itinerary_generation capture with raw stage prompts.'
+      'request.destinations must be a non-empty string array. Supported inputs are: service request, API route body, compact promptRequest, wizard-shaped input, or raw itinerary_generation capture with raw stage prompts.'
     );
   }
   const days = Number(request.days);
@@ -225,6 +261,18 @@ const validateRequest = (request: Record<string, unknown>) => {
   const budgetMax = Number(request.budgetMax);
   if (!Number.isFinite(budgetMin) || !Number.isFinite(budgetMax) || budgetMin < 0 || budgetMax < budgetMin) {
     throw new Error('request.budgetMin and request.budgetMax must be a valid range');
+  }
+};
+
+// Warns (without failing or substituting) when a destination or must-see
+// attraction in the request doesn't confidently match the same CSV-backed
+// dataset the app's own autocomplete uses. Applies to all resolved request
+// shapes, not just the wizard-shaped input. Delegates the actual matching
+// to a shared service also used by the live generation path.
+export const warnOnUnmatchedDestinationsAndAttractions = async (request: Record<string, unknown>): Promise<void> => {
+  const warnings = await computeUnmatchedDestinationAndAttractionWarnings(request);
+  for (const warning of warnings) {
+    process.stderr.write(`[itinerary-replay] warning: ${warning}\n`);
   }
 };
 
@@ -248,11 +296,21 @@ const main = async () => {
     : 'itinerary-replay-secret';
   if (options.captureRaw || wrapper.captureRaw) process.env.ENABLE_RAW_AI_CAPTURE = '1';
 
+  const requestCandidate = (wrapper.request && typeof wrapper.request === 'object' ? wrapper.request : file) as Record<string, unknown>;
   const request = resolveReplayRequest(file);
   validateRequest(request);
+  await warnOnUnmatchedDestinationsAndAttractions(request);
   const runs = normalizeRuns(options.runs, wrapper.runs, request.aiProvider);
-  const outputDir = path.resolve(options.outputDir ?? wrapper.outputDir ?? path.join(__dirname, '../data/ai-replay', timestamp()));
+  const outputDir = path.resolve(options.outputDir ?? wrapper.outputDir ?? path.join(__dirname, '../logs/ai-replay', timestamp()));
   fs.mkdirSync(outputDir, { recursive: true });
+
+  // Wizard-shaped inputs get their original (pre-conversion) JSON captured
+  // verbatim once per invocation, named after the trip.
+  if (typeof requestCandidate.tripName === 'string') {
+    const inputCapturePath = path.join(outputDir, `${tripNameToFileSlug(requestCandidate.tripName)}-input.json`);
+    fs.writeFileSync(inputCapturePath, JSON.stringify(requestCandidate, null, 2));
+    process.stdout.write(`[itinerary-replay] input-capture=${inputCapturePath}\n`);
+  }
 
   const { initDb } = await import('../src/db');
   const { generateItineraryViaPromptPlan } = await import('../src/services/itineraryPromptPlanService');
@@ -278,8 +336,13 @@ const main = async () => {
       });
       const outputPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.json`);
       fs.writeFileSync(outputPath, JSON.stringify({ run, captureId, startedAt, completedAt: new Date().toISOString(), result }, null, 2));
-      summary.push({ run, captureId, ok: true, outputPath, totalTokens: result.tokenUsage.totalTokens });
-      process.stdout.write(`[itinerary-replay] ok label=${label} output=${outputPath}\n`);
+
+      const tripName = typeof requestCandidate.tripName === 'string' ? requestCandidate.tripName : label;
+      const markdownPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.md`);
+      fs.writeFileSync(markdownPath, renderSimplifiedItineraryMarkdown(result, tripName));
+
+      summary.push({ run, captureId, ok: true, outputPath, markdownPath, totalTokens: result.tokenUsage.totalTokens });
+      process.stdout.write(`[itinerary-replay] ok label=${label} output=${outputPath} markdown=${markdownPath}\n`);
     } catch (err) {
       const outputPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.error.json`);
       const error = err instanceof Error ? { message: err.message, stack: err.stack } : { message: String(err) };
@@ -295,7 +358,11 @@ const main = async () => {
   if (summary.some((run) => run.ok === false)) process.exitCode = 1;
 };
 
-main().catch((err) => {
-  process.stderr.write(`${err instanceof Error ? err.stack ?? err.message : String(err)}\n`);
-  process.exit(1);
-});
+// Only run when executed directly (`node`/`tsx` on this file), not when
+// imported by tests for its exported pure functions.
+if (require.main === module) {
+  main().catch((err) => {
+    process.stderr.write(`${err instanceof Error ? err.stack ?? err.message : String(err)}\n`);
+    process.exit(1);
+  });
+}

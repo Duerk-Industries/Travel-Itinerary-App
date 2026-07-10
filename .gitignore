@@ -12,7 +12,6 @@ server/.env
 server/.local_env
 server/.secrets
 server/logs
-server/data/ai-capture
 server/public/_expo
 server/node_modules
 server/Mailgun Example.js

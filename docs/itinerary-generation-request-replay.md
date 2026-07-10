@@ -13,7 +13,7 @@ ENABLE_RAW_AI_CAPTURE=1
 Local/dev captures are written under:
 
 ```text
-server/data/ai-capture/itinerary_generation/<YYYY-MM-DD>/<captureId>.json.gz
+server/logs/ai-capture/itinerary_generation/<YYYY-MM-DD>/<captureId>.json.gz
 ```
 
 Without `ENABLE_RAW_AI_CAPTURE=1`, capture records still exist, but raw prompt/response text is stripped. In production, sanitized capture records are written to Google Cloud Storage. Set `AI_CAPTURE_BUCKET` to override the bucket; otherwise the app uses `LOCATION_BUCKET` with the `ai-capture/` object prefix.
@@ -33,12 +33,12 @@ The replay command reads one JSON request and runs it against one or more provid
 
 ```bash
 npm --prefix server run replay:itinerary -- \
-  --request ./server/data/ai-replay/example-request.json \
+  --request ./server/logs/ai-replay/example-request.json \
   --models openai:gpt-4o-mini,anthropic:claude-sonnet-4-5 \
   --raw-capture
 ```
 
-Outputs are written to `server/data/ai-replay/<timestamp>/` by default:
+Outputs are written to `server/logs/ai-replay/<timestamp>/` by default:
 
 ```text
 01-openai-gpt-4o-mini.json
@@ -54,7 +54,7 @@ Use a wrapped file when comparing multiple models:
 
 ```json
 {
-  "outputDir": "server/data/ai-replay/california-comparison",
+  "outputDir": "server/logs/ai-replay/california-comparison",
   "captureRaw": true,
   "runs": [
     { "provider": "openai", "model": "gpt-4o-mini", "label": "openai-mini" },
@@ -240,18 +240,18 @@ Replay a standalone normalized document JSON file:
 
 ```bash
 npm --prefix server run replay:parsing -- \
-  --request ./server/data/ai-replay/parsing/example-parse-request.json \
+  --request ./server/logs/ai-replay/parsing/example-parse-request.json \
   --models openai:gpt-4o-mini,gemini:gemini-2.5-flash \
   --persist-capture
 ```
 
-Outputs are written to `server/data/ai-replay/parsing/<timestamp>/` by default. Each output includes the selected provider/model, parsed LLM result, optional comparison report, and any error details.
+Outputs are written to `server/logs/ai-replay/parsing/<timestamp>/` by default. Each output includes the selected provider/model, parsed LLM result, optional comparison report, and any error details.
 
 ### Parsing Replay JSON Format
 
 ```json
 {
-  "outputDir": "server/data/ai-replay/parsing/hotel-comparison",
+  "outputDir": "server/logs/ai-replay/parsing/hotel-comparison",
   "runs": [
     { "provider": "openai", "model": "gpt-4o-mini", "label": "openai-mini" },
     { "provider": "anthropic", "model": "claude-sonnet-4-5", "label": "claude-sonnet" }
