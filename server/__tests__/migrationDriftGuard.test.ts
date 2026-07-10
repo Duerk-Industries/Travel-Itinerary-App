@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -27,6 +29,11 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 // Snapshot of every `CREATE TABLE IF NOT EXISTS <name>` that currently lives
 // inline in `db.postgres.ts`. Keep alphabetical for diff readability.
 const EXPECTED_INLINE_TABLES: ReadonlySet<string> = new Set([
+  'ai_ab_test_metrics',
+  'ai_experiment_assignments',
+  'ai_experiments',
+  'ai_provider_certifications',
+  'ai_recommendations',
   'airports',
   'api_cost_counters',
   'api_usage_counters',
@@ -127,5 +134,34 @@ describe('Postgres schema drift guard', () => {
       // silently being empty or a stray comment-only file slipping in.
       expect(sql.toUpperCase()).toMatch(/\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE)\b/);
     }
+  });
+
+  it('forward-only migrations never contain a DROP statement (rollbacks belong in a companion .rollback.sql)', () => {
+    // server/migrations/runner.ts executes a migration file's raw contents
+    // verbatim inside one BEGIN/COMMIT — it does not parse or strip "-- Up"
+    // / "-- Down" comment markers. Two migrations (20260216_add_trip_activity
+    // and 20260217_add_trip_comments) used to embed both an "Up" CREATE
+    // section AND a "Down" DROP section in the same file; on any environment
+    // where the migration hadn't already run and been recorded in
+    // schema_migrations (e.g. a fresh pg-mem instance created per test run,
+    // or a brand-new production database), the runner executed the DROP
+    // immediately after the CREATE, silently deleting the table/index it had
+    // just created. The current convention is a pure "Up" `<name>.sql` plus
+    // a separate `<name>.rollback.sql` (which the runner explicitly skips).
+    if (!fs.existsSync(MIGRATIONS_DIR)) {
+      return;
+    }
+    const files = fs
+      .readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith('.sql') && !f.toLowerCase().endsWith('.rollback.sql'))
+      .sort();
+    const offenders: string[] = [];
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
+      if (/\bDROP\s+(TABLE|INDEX|COLUMN|CONSTRAINT)\b/i.test(sql)) {
+        offenders.push(file);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

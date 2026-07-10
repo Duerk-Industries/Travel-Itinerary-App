@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 jest.mock('../src/apis/usageLimiter', () => ({
   reserveApiUsageOrThrow: jest.fn().mockResolvedValue(undefined),
 }));

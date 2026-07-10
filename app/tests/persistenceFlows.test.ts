@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { createFlightForTrip, removeFlightApi, type FlightCreateDraft } from '../tabs/transfers';
 import { createLodgingForTrip, removeLodgingApi, saveLodgingApi, type LodgingDraft, type Lodging } from '../tabs/lodging';
 import { createActivityForTrip, removeActivityApi, type TourDraft } from '../tabs/activities';

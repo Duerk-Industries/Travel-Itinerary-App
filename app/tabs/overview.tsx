@@ -2287,7 +2287,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           </TouchableOpacity>
                           <Text
                             style={styles.helperText}
-                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
+                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}${tour.duration ? ` · ${tour.duration}` : ''}`}</Text>
                           {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
                           {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
                         </View>
@@ -2433,6 +2433,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             accessibilityLabel="Delete item"
                             onPress={() => deleteDetail(d.id)}
                             style={styles.detailDeleteButton}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
                             <Text style={styles.detailDeleteButtonText}>×</Text>
                           </TouchableOpacity>
@@ -2920,7 +2921,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 member.status === 'pending' && styles.attendeeChipPending,
               ]}
             >
-              <Text style={styles.attendeeText}>{attendeeLabel(member)}</Text>
+              <Text style={styles.attendeeText} numberOfLines={1} ellipsizeMode="tail">{attendeeLabel(member)}</Text>
               {isEditing ? (
                 <TouchableOpacity
                   style={styles.attendeeRemoveButton}

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './transfers';
 import {
@@ -64,15 +65,8 @@ import { MustSeeAttractionSelector, type AttractionOption } from '../components/
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
+import { createIdempotencyKey } from '../utils/idempotencyKey';
   
-const createIdempotencyKey = (prefix: string): string => {
-  const cryptoApi = globalThis.crypto as { randomUUID?: () => string } | undefined;
-  if (typeof cryptoApi?.randomUUID === 'function') {
-    return `${prefix}-${cryptoApi.randomUUID()}`;
-  }
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-};
-
 type Suggestion = {
   id: string;
   firstName?: string;
@@ -1207,18 +1201,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           participants: participantPayload,
         }),
       });
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
       setWizardError('Session expired. Please log in again.');
       onUnauthorized?.();
       return;
     }
     const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setWizardError(data.error || 'Unable to create trip');
-        return;
-      }
+    if (!res.ok) {
+      setWizardError(data.error || 'Unable to create trip');
+      return;
+    }
 
-      const tripId = data.trip?.id as string | undefined;
+    const tripId = data.trip?.id as string | undefined;
       if (!tripId) {
         setWizardError('Trip created but no id was returned.');
         return;
@@ -1294,7 +1288,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   body: JSON.stringify({
                     country: destination,
                     locations: locationNames,
-                    mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
+                    mustSeeAttractions: selectedMustSeeAttractions
+                      .filter((item) => item.name)
+                      .map((item) =>
+                        item.destinationName ? { name: item.name, destinationName: item.destinationName } : item.name
+                      ),
                     days,
                     budgetMin: budgetRange.min,
                     budgetMax: budgetRange.max,
@@ -1997,7 +1995,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 <Text style={styles.buttonText}>+</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <HorizontalTableScroll
+              style={styles.tableScroll}
+              contentContainerStyle={styles.tableScrollContent}
+            >
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
                   <View style={[styles.cell, styles.lodgingNameCol]}>
@@ -2097,7 +2098,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </View>
                 ))}
               </View>
-            </ScrollView>
+            </HorizontalTableScroll>
             {editingWizardLodging ? (
               <LodgingDialog
                 visible={!!editingWizardLodging}
@@ -2162,7 +2163,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Rental Cars</Text>
             <Text style={styles.helperText}>Optional. Add rental cars using the full car rentals interface.</Text>
-            <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <HorizontalTableScroll
+              style={styles.tableScroll}
+              contentContainerStyle={styles.tableScrollContent}
+            >
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
                 {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
@@ -2437,7 +2441,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </View>
                 </View>
               </View>
-            </ScrollView>
+            </HorizontalTableScroll>
           </>
         );
       case 8:

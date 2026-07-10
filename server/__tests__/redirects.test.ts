@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import {
   appendAuthCodeToRedirect,
   consumeRedirectTokenExchangeCode,
@@ -50,15 +52,20 @@ describe('resolveAndValidateRedirectUri', () => {
     expect(result.redirectUri).toBe('travel-itinerary://login');
   });
 
-  it('accepts the production app login redirect without extra deployment configuration', () => {
-    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org';
+  // Regression: the native app's deep-link scheme is `travelitineraryplanner` (app/app.config.ts).
+  // Production once rejected native Google sign-in with HTTP 400 because ops forgot to add the
+  // scheme to AUTH_REDIRECT_URI_ALLOWLIST (works on web, fails in the app) — so it's now always
+  // allowed via DEFAULT_NATIVE_AUTH_REDIRECT_URIS, independent of env config. That's safe because
+  // the scheme isn't attacker-controlled: only the installed app can register it with the OS.
+  it('accepts the production native app scheme even without explicit deployment configuration', () => {
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org;http://localhost:8081';
     const result = resolveAndValidateRedirectUri('travelitineraryplanner://login', 'https://duerk.org');
     expect(result.error).toBeUndefined();
     expect(result.redirectUri).toBe('travelitineraryplanner://login');
   });
 
-  it('does not allow a different native route that merely shares the login prefix', () => {
-    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'travelitineraryplanner://login';
+  it('does not let a different native route piggyback on the default scheme via a shared prefix', () => {
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org;http://localhost:8081';
     const result = resolveAndValidateRedirectUri('travelitineraryplanner://login-evil', 'https://duerk.org');
     expect(result.redirectUri).toBeUndefined();
     expect(result.error).toBe('redirect_uri is not allowed.');

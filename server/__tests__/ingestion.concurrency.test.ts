@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import path from 'path';
 
 const setMemoryEnv = () => {
@@ -13,6 +15,10 @@ describe('ingestion concurrency and idempotency', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
+    jest.doMock('../src/ai/services/shadowParseService', () => ({
+      maybeRunShadowParse: jest.fn(async () => undefined),
+      __shadowParseShouldSampleForTests: jest.fn(() => false),
+    }));
     const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
     const helpers = require('./helpers') as typeof import('./helpers');

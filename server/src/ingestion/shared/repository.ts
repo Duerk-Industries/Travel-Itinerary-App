@@ -1,6 +1,8 @@
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import type { Pool } from 'pg';
 import { getCurrentDbProvider, poolClient, getTripById, upsertExpenseForSource } from '../../db';
 import { getEnvValue } from '../../env';
@@ -192,6 +194,15 @@ const SYSTEM_SENDER_INITIALS = 'WB';
 const schemaReady = new Set<string>();
 let firebaseApp: App | null = null;
 
+const clearMissingGoogleApplicationCredentials = (): void => {
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credentialsPath) return;
+  const resolvedPath = path.resolve(credentialsPath);
+  if (fs.existsSync(resolvedPath)) return;
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS_FILE;
+};
+
 const nowIso = () => new Date().toISOString();
 
 const omitUndefinedFields = <T extends Record<string, unknown>>(value: T): T =>
@@ -374,6 +385,7 @@ const getFirebaseDb = (): Firestore => {
           projectId,
         });
       } else {
+        clearMissingGoogleApplicationCredentials();
         firebaseApp = initializeApp({ projectId: projectId || 'travel-itinerary-app' });
       }
     }

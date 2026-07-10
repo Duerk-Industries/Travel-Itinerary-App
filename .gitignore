@@ -28,6 +28,7 @@ build
 *.log*
 logs
 *example*
+!scripts/deploy.config.example
 .gradle
 server/.gradle
 firestore-debug.log

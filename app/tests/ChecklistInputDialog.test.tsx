@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
@@ -52,5 +54,17 @@ describe('ChecklistInputDialog', () => {
     fireEvent.changeText(getByTestId('checklist-dialog-item-1'), 'B');
     fireEvent.press(getByTestId('checklist-dialog-remove-1'));
     expect(queryByTestId('checklist-dialog-item-1')).toBeNull();
+  });
+
+  it('extends the tappable area of the 28x28 remove button with hitSlop', () => {
+    const { getByTestId } = render(
+      <ChecklistInputDialog visible onSubmit={() => {}} onCancel={() => {}} />
+    );
+    expect(getByTestId('checklist-dialog-remove-0').props.hitSlop).toEqual({
+      top: 8,
+      bottom: 8,
+      left: 8,
+      right: 8,
+    });
   });
 });

@@ -22,6 +22,8 @@ import {
 import { deleteTempBytes } from './shared/tempStorage';
 import { getJobQueue } from './worker/jobQueue';
 import { logError, logInfo } from '../logger';
+import { captureParsingInteraction } from '../ai/capture/parsingCapture';
+import { maybeRunShadowParse } from '../ai/services/shadowParseService';
 
 type PipelineOverrides = {
   extractFn?: typeof extractCandidates | ((
@@ -209,6 +211,18 @@ const processExistingImportJob = async (
       ? ensureFutureDatedExtraction(new Date().toISOString().slice(0, 10))(extraction)
       : extraction;
     const finalExtraction = overrides?.postExtractFn ? await overrides.postExtractFn(futureFilteredExtraction) : futureFilteredExtraction;
+
+    captureParsingInteraction({
+      intakeId: job.id,
+      doc: normalized,
+      result: finalExtraction,
+      outcome: 'success',
+    });
+    void maybeRunShadowParse({
+      intakeId: job.id,
+      doc: normalized,
+      productionResult: finalExtraction,
+    });
 
     if (Number(finalExtraction.usageMetrics.estimatedCostUsd ?? 0) > INGESTION_JOB_TOKEN_BUDGET_USD) {
       throw new Error('Token budget exceeded for import job');

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Tests for the in-process failed-retry scheduler (L2). Mirrors the HTTP
  * endpoint tests in ingestion.retry-worker-failed.test.ts but exercises the

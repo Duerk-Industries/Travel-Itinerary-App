@@ -1,0 +1,16 @@
+{
+  "requestPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\server\\data\\ai-replay\\Boston_and_NewYork.json",
+  "outputDir": "C:\\Git\\Tristan\\Travel-Itinerary-App\\server\\data\\ai-replay\\2026-07-09T03-44-31-156Z",
+  "runs": [
+    {
+      "run": {
+        "provider": "openai",
+        "model": "gpt-4o-mini"
+      },
+      "captureId": "364a84b4-213f-452b-9db6-6e0efcf48bc9-openai-gpt-4o-mini-1783568672867",
+      "ok": true,
+      "outputPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\server\\data\\ai-replay\\2026-07-09T03-44-31-156Z\\01-openai-gpt-4o-mini.json",
+      "totalTokens": 8127
+    }
+  ]
+}

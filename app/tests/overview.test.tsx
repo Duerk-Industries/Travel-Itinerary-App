@@ -1,6 +1,7 @@
 /**
  * @jest-environment node
  */
+/// <reference types="node" />
 
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import {

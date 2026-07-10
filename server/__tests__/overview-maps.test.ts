@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, expect, test } from '@jest/globals';
 import { buildMapUrl } from '../../app/utils/mapLinks';
 import { formatLodgingDetails } from '../../app/utils/overviewBuilder';

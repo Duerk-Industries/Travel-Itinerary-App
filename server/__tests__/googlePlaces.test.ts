@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { clearGooglePlacesCachesForTests, findPlacePhoto, getPlaceDetails } from '../src/googlePlaces';
 import * as db from '../src/db';
 

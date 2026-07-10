@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { calculateCostRow, generateCostModelRows, parseCostModelConfig, rowsToCsv } from '../src/costModel';
 
 const config = parseCostModelConfig({

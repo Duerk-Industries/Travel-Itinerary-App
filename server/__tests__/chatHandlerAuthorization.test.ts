@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Authorization regression tests for the Socket.IO chat handler.
  *

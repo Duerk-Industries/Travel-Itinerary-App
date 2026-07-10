@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { computePayerTotals as computeLedgerPayerTotals } from '../utils/costs';
 import { computePayerTotals as computeReportPayerTotals } from '../tabs/costReport';
 import { computeTripDays } from '../utils/createTripWizard';

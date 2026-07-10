@@ -1,14 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { getAppTheme, type AppTheme } from '../theme/theme';
 import { usePersistedState } from '../hooks/usePersistedState';
 import PackingListTable from '../components/PackingListTable';
+import { AiOperationsSection } from '../components/admin/aiOps/AiOperationsSection';
+import type { AiOpsSection } from '../components/admin/aiOps/types';
+export type { AiOpsSection } from '../components/admin/aiOps/types';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -27,6 +31,60 @@ type QueueDepthSnapshot = {
 };
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
+
+type AiProviderOption = { id: string; configured: boolean; registered: boolean; certified?: boolean; supportedModels: string[] };
+type AiProviderFeatureConfig = {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
+};
+type AiRuntimeSetting = { key: string; value: string; updatedBy?: string | null; updatedAt?: string | null; source?: string };
+type AiCaptureItem = {
+  captureId: string;
+  featureKey: string;
+  capturedAt: string;
+  correlationId?: string;
+  jobId?: string;
+  anonymousUserId?: string;
+  provider?: string;
+  model?: string;
+  callerId?: string;
+  outcome: string;
+  latencyMs?: number;
+  payloadSummary?: Record<string, unknown>;
+};
+type AiAnalyticsMetric = {
+  table: string;
+  periodStart: string;
+  periodType: string;
+  dimensions: Record<string, string>;
+  metricKey: string;
+  metricValue: number;
+};
+type AiExperiment = {
+  experimentId: string;
+  name: string;
+  featureKey: string;
+  experimentKind: string;
+  status: string;
+  variants: Array<{ variantId: string; trafficPercent: number; provider?: string; model?: string }>;
+  createdAt: string;
+  updatedAt: string;
+};
+type AiRecommendation = {
+  recommendationId: string;
+  recommendationType: string;
+  featureKey: string;
+  rationale: string;
+  confidence: string;
+  status: string;
+  qualityDeltaEstimate: number;
+  costDeltaEstimateUsdMonthly: number;
+  createdAt: string;
+};
 
 type TierLimit = { limitKey: string; limitValue: number };
 type TierEntitlement = { featureId: string; featureKey: string | null; isAllowed: boolean };
@@ -103,6 +161,20 @@ type AuditEntry = {
   createdAt: string;
 };
 
+type BillingPlanConfig = {
+  planKey: 'premium_monthly' | 'premium_annual';
+  activeStripePriceId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  trialDays: number;
+  pastDueGraceDays: number;
+  automaticTaxEnabled: boolean;
+  promotionCodesEnabled: boolean;
+  isCheckoutEnabled: boolean;
+  livemode: boolean | null;
+};
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -111,7 +183,9 @@ type AdminTabProps = {
   backendUrl: string;
   headers: Record<string, string>;
   initialSection?: AdminSection;
+  initialAiOpsSection?: AiOpsSection;
   onSectionChange?: (section: AdminSection) => void;
+  onAiOpsSectionChange?: (section: AiOpsSection) => void;
 };
 
 type IngestionMetrics = {
@@ -194,10 +268,12 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Users', section: 'users' as AdminSection, desc: 'Search users, change tiers and roles' },
         { label: 'Tiers', section: 'tiers' as AdminSection, desc: 'View and edit tier limits and entitlements' },
         { label: 'Feature Flags', section: 'features' as AdminSection, desc: 'Enable or disable feature flags' },
+        { label: 'AI Operations', section: 'ai-ops' as AdminSection, desc: 'Select providers and models per AI feature' },
         { label: 'Packing Defaults', section: 'packing-defaults' as AdminSection, desc: 'Edit the universal user packing list' },
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
         { label: 'API Limits', section: 'api-limits' as AdminSection, desc: 'View API rate limits and current usage' },
+        { label: 'Billing', section: 'billing' as AdminSection, desc: 'Manage Premium pricing, trial, grace period, tax, and checkout' },
         { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
         { label: 'Metrics', section: 'metrics' as AdminSection, desc: 'In-process counters and cache hit rates' },
       ] as { label: string; section: AdminSection; desc: string }[]
@@ -1085,7 +1161,7 @@ const TiersSection: React.FC<{
             },
           ]}
         >
-          <ScrollView horizontal showsHorizontalScrollIndicator>
+          <HorizontalTableScroll>
             <View>
               <View
                 style={[
@@ -1248,7 +1324,7 @@ const TiersSection: React.FC<{
                 ))}
               </ScrollView>
             </View>
-          </ScrollView>
+          </HorizontalTableScroll>
         </View>
       ) : null}
 
@@ -2015,6 +2091,9 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
 }) => {
   const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
   const [providerForms, setProviderForms] = useState<Record<string, ApiLimitProviderForm>>({});
+  const [caching, setCaching] = useState<Record<string, Record<string, number>>>({});
+  const [cachingForms, setCachingForms] = useState<Record<string, { values: Record<string, string>; reason: string }>>({});
+  const [savingCachingGroup, setSavingCachingGroup] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -2050,6 +2129,19 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
                 ])
               ),
               callers: Object.fromEntries(provider.callers.map((caller) => [caller.caller, String(caller.limit)])),
+            },
+          ])
+        )
+      );
+      const nextCaching = ((data as any).caching ?? {}) as Record<string, Record<string, number>>;
+      setCaching(nextCaching);
+      setCachingForms(
+        Object.fromEntries(
+          Object.entries(nextCaching).map(([group, values]) => [
+            group,
+            {
+              values: Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value)])),
+              reason: '',
             },
           ])
         )
@@ -2108,6 +2200,63 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
         },
       },
     }));
+  };
+
+  const updateCachingValue = (group: string, key: string, value: string) => {
+    setCachingForms((current) => ({
+      ...current,
+      [group]: {
+        reason: current[group]?.reason ?? '',
+        values: {
+          ...(current[group]?.values ?? {}),
+          [key]: value,
+        },
+      },
+    }));
+  };
+
+  const updateCachingReason = (group: string, reason: string) => {
+    setCachingForms((current) => ({
+      ...current,
+      [group]: {
+        values: current[group]?.values ?? {},
+        reason,
+      },
+    }));
+  };
+
+  const saveCachingGroup = async (group: string) => {
+    const form = cachingForms[group];
+    if (!form) return;
+    if (form.reason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+    const parsedValues = Object.fromEntries(
+      Object.entries(caching[group] ?? {}).map(([key]) => [key, Number(form.values[key] ?? '')])
+    );
+    const invalidValue = Object.entries(parsedValues).find(([, value]) => !Number.isFinite(value) || value <= 0);
+    if (invalidValue) {
+      setError(`${invalidValue[0]} must be a positive number.`);
+      return;
+    }
+
+    setSavingCachingGroup(group);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, `/api-limits/caching/${group}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: parsedValues, reason: form.reason.trim() }),
+      });
+      setMessage(`${group} caching settings updated.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingCachingGroup(null);
+    }
   };
 
   const saveProvider = async (provider: ApiLimitProvider) => {
@@ -2345,6 +2494,44 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
           </TouchableOpacity>
         </View>
       ))}
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Caching</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+        Cache retention/refresh settings, in days unless otherwise noted.
+      </Text>
+      {Object.entries(caching).map(([group, values]) => (
+        <View key={group} style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{group}</Text>
+          {Object.keys(values).map((key) => (
+            <View key={key} style={localStyles.apiLimitCallerRow}>
+              <View style={localStyles.flex}>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{key}</Text>
+              </View>
+              <TextInput
+                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                placeholder={key}
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                value={cachingForms[group]?.values[key] ?? ''}
+                onChangeText={(value: string) => updateCachingValue(group, key, value)}
+              />
+            </View>
+          ))}
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Reason for change (required)"
+            placeholderTextColor={theme.colors.textMuted}
+            value={cachingForms[group]?.reason ?? ''}
+            onChangeText={(value: string) => updateCachingReason(group, value)}
+          />
+          <TouchableOpacity
+            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingCachingGroup === group && localStyles.buttonDisabled]}
+            disabled={savingCachingGroup === group}
+            onPress={() => saveCachingGroup(group)}
+          >
+            <Text style={localStyles.smallButtonText}>Save {group}</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
       <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
         <Text style={localStyles.smallButtonText}>Refresh</Text>
       </TouchableOpacity>
@@ -2352,11 +2539,163 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
   );
 };
 
+const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [plans, setPlans] = useState<BillingPlanConfig[]>([]);
+  const [forms, setForms] = useState<Record<string, Record<string, string | boolean>>>({});
+  const [billingEnabled, setBillingEnabled] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const data = await apiFetch(backendUrl, headers, '/billing/config');
+      const nextPlans = (data.plans ?? []) as BillingPlanConfig[];
+      setPlans(nextPlans);
+      setBillingEnabled(Boolean(data.billingEnabled));
+      setForms(Object.fromEntries(nextPlans.map((plan) => [plan.planKey, {
+        unitAmountCents: String(plan.unitAmountCents),
+        trialDays: String(plan.trialDays),
+        pastDueGraceDays: String(plan.pastDueGraceDays),
+        automaticTaxEnabled: plan.automaticTaxEnabled,
+        promotionCodesEnabled: plan.promotionCodesEnabled,
+        isCheckoutEnabled: plan.isCheckoutEnabled,
+      }])));
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const update = (planKey: string, field: string, value: string | boolean) => {
+    setForms((current) => ({
+      ...current,
+      [planKey]: { ...current[planKey], [field]: value },
+    }));
+  };
+
+  const saveConfig = async (plan: BillingPlanConfig) => {
+    const form = forms[plan.planKey];
+    if (!form) return;
+    setSaving(plan.planKey);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, `/billing/config/${plan.planKey}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trialDays: Number(form.trialDays),
+          pastDueGraceDays: Number(form.pastDueGraceDays),
+          automaticTaxEnabled: form.automaticTaxEnabled,
+          promotionCodesEnabled: form.promotionCodesEnabled,
+          isCheckoutEnabled: form.isCheckoutEnabled,
+        }),
+      });
+      if (!plan.activeStripePriceId || Number(form.unitAmountCents) !== plan.unitAmountCents) {
+        await apiFetch(backendUrl, headers, `/billing/plans/${plan.planKey}/price`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unitAmountCents: Number(form.unitAmountCents), currency: plan.currency }),
+        });
+      }
+      setMessage(`${plan.interval === 'month' ? 'Monthly' : 'Annual'} plan updated.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <View style={localStyles.section} testID="admin-billing-section">
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Billing</Text>
+      <Text style={[localStyles.cardSub, { color: billingEnabled ? theme.colors.success : theme.colors.error, marginBottom: 12 }]}>
+        Stripe billing is {billingEnabled ? 'enabled' : 'disabled'} on this server.
+      </Text>
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {plans.map((plan) => {
+        const form = forms[plan.planKey];
+        if (!form) return null;
+        return (
+          <View key={plan.planKey} style={[localStyles.card, getCardStyle(theme)]}>
+            <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+              Premium {plan.interval === 'month' ? 'Monthly' : 'Annual'}
+            </Text>
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+              Active Price: {plan.activeStripePriceId ?? 'Not published'} ({plan.livemode ? 'live' : 'test'})
+            </Text>
+            {([
+              ['unitAmountCents', 'Price in cents'],
+              ['trialDays', 'Trial days'],
+              ['pastDueGraceDays', 'Past-due grace days'],
+            ] as const).map(([field, label]) => (
+              <View key={field}>
+                <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>{label}</Text>
+                <TextInput
+                  style={[localStyles.smallInput, getInputStyle(theme)]}
+                  keyboardType="numeric"
+                  value={String(form[field])}
+                  onChangeText={(value) => update(plan.planKey, field, value)}
+                  testID={`admin-billing-${plan.planKey}-${field}`}
+                />
+              </View>
+            ))}
+            {([
+              ['automaticTaxEnabled', 'Stripe Tax'],
+              ['promotionCodesEnabled', 'Promotion codes'],
+              ['isCheckoutEnabled', 'New checkout'],
+            ] as const).map(([field, label]) => {
+              const active = Boolean(form[field]);
+              return (
+                <View key={field} style={[localStyles.row, { marginTop: 10 }]}>
+                  <Text style={[localStyles.flex, { color: theme.colors.text }]}>{label}</Text>
+                  <TouchableOpacity
+                    style={[localStyles.smallButton, { backgroundColor: active ? theme.colors.success : theme.colors.alert }]}
+                    onPress={() => update(plan.planKey, field, !active)}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: active }}
+                  >
+                    <Text style={localStyles.smallButtonText}>{active ? 'On' : 'Off'}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            <TouchableOpacity
+              style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving === plan.planKey && localStyles.buttonDisabled]}
+              disabled={saving === plan.planKey}
+              onPress={() => saveConfig(plan)}
+              testID={`admin-billing-save-${plan.planKey}`}
+            >
+              <Text style={localStyles.smallButtonText}>{saving === plan.planKey ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Main AdminTab
 // ---------------------------------------------------------------------------
 
-const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection = 'overview', onSectionChange }) => {
+const AdminTab: React.FC<AdminTabProps> = ({
+  backendUrl,
+  headers,
+  initialSection = 'overview',
+  initialAiOpsSection = 'overview',
+  onSectionChange,
+  onAiOpsSectionChange,
+}) => {
   const colorScheme = useColorScheme();
   const theme = getAppTheme('auto', colorScheme);
   const [section, setSection] = useState<AdminSection>(initialSection);
@@ -2383,6 +2722,16 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <OverviewSection onNav={goTo} theme={theme} />;
       case 'features':
         return <FeaturesSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'ai-ops':
+        return (
+          <AiOperationsSection
+            backendUrl={backendUrl}
+            headers={headers}
+            initialAiOpsSection={initialAiOpsSection}
+            onAiOpsSectionChange={onAiOpsSectionChange}
+            theme={theme}
+          />
+        );
       case 'packing-defaults':
         return <PackingListTable backendUrl={backendUrl} headers={headers} variant="admin" title="Universal packing defaults" />;
       case 'users':
@@ -2410,6 +2759,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'metrics':
         return <MetricsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'billing':
+        return <BillingSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -2421,12 +2772,14 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     'user-detail': selectedUser?.email ?? 'User Detail',
     tiers: 'Tiers',
     features: 'Feature Flags',
+    'ai-ops': 'AI Operations',
     'packing-defaults': 'Packing Defaults',
     'user-data': 'User Data',
     'audit-log': 'Audit Log',
     ingestion: 'Ingestion Ops',
     'api-limits': 'API Limits',
     metrics: 'Metrics',
+    billing: 'Billing',
   };
 
   return (
@@ -2516,6 +2869,10 @@ const localStyles = StyleSheet.create({
   // Layout
   row: { flexDirection: 'row', alignItems: 'center' },
   flex: { flex: 1 },
+  inlineField: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  inlineFieldLabel: { minWidth: 220, flex: 1 },
+  compactRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ddd' },
+  tableCellPrimary: { fontSize: 13, fontWeight: '700' },
   // Badges
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 8 },
   badgeOn: { backgroundColor: '#27ae60' },

@@ -10,12 +10,19 @@ import {
 } from '../apis/openaiCallers';
 import { getEnvFlag } from '../env';
 import { logError, logInfo } from '../logger';
-import type { ActivityType, AttractionCatalogEntry } from '../types';
+import type { ActivityType, AttractionCatalogEntry, AttractionDurationMetadata, ItineraryDetailKind } from '../types';
 import { getApiCacheSetting } from '../config/apiLimits';
 import {
+  captureItineraryInteraction,
+  type ItineraryStageCapture,
+} from '../ai/capture/itineraryCapture';
+import {
   getAttractionPromptBlockForDestinations,
+  normalizeDestinationKey,
 } from './attractionsCatalogService';
 import { scoreActivityTypeByPreferences, type InterestWeights } from './activityTypeInterestWeights';
+import { getAttractionDurationMetadataBatch, formatMinutesAsDuration } from './attractionDurationEstimationService';
+import { getTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -191,6 +198,8 @@ export type ItineraryGeneratedDetail = {
   time: string | null;
   activity: string;
   cost: number | null;
+  kind?: ItineraryDetailKind;
+  noteBody?: string | null;
 };
 
 export type ItineraryPromptProfile = {
@@ -214,15 +223,21 @@ export type ItineraryPromptPlanResult = {
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
 };
 
-type ServiceInput = {
-  apiKey: string;
+export type MustSeeAttractionInput = string | { name: string; destinationName?: string | null };
+
+export type ItineraryPromptPlanServiceInput = {
+  apiKey?: string;
   userId?: string;
   usageWindowKey?: string;
+  aiProvider?: {
+    provider?: string;
+    model?: string;
+  };
   destinations: string[];
   days: number;
   budgetMin: number;
   budgetMax: number;
-  mustSeeAttractions?: string[];
+  mustSeeAttractions?: MustSeeAttractionInput[];
   departureAirport?: string;
   tripStyle?: string;
   promptTraits?: {
@@ -248,6 +263,7 @@ type ServiceInput = {
   tripStartMonth?: number | null;
   tripStartYear?: number | null;
   tripIdSeed?: string;
+  captureId?: string;
 };
 
 type PromptTemplate = {
@@ -696,7 +712,7 @@ const normalizeWeights = (weights: PromptWeights): PromptWeights => {
   return scaled;
 };
 
-const normalizePromptTraitInput = (input?: ServiceInput['promptTraits']) => {
+const normalizePromptTraitInput = (input?: ItineraryPromptPlanServiceInput['promptTraits']) => {
   const tt = input?.tt ?? {};
   const ut = input?.ut ?? {};
   return {
@@ -729,31 +745,37 @@ const normalizeDestinations = (destinations: string[]): string[] => {
   return pruneDestinationHierarchy(cleaned);
 };
 
-const normalizeMustSeeAttractions = (items: string[] | undefined): string[] => {
+type NormalizedMustSeeAttraction = { name: string; destinationName?: string };
+
+const normalizeMustSeeAttractions = (
+  items: MustSeeAttractionInput[] | undefined
+): NormalizedMustSeeAttraction[] => {
   const seen = new Set<string>();
-  const out: string[] = [];
+  const out: NormalizedMustSeeAttraction[] = [];
   for (const raw of items ?? []) {
-    const value = normalizeText(raw);
+    const isObject = typeof raw === 'object' && raw !== null;
+    const value = normalizeText(isObject ? raw.name : raw);
     if (!value) continue;
     const key = value.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(value);
+    const destinationName = isObject ? normalizeText(raw.destinationName ?? '') : '';
+    out.push(destinationName ? { name: value, destinationName } : { name: value });
     if (out.length >= 20) break;
   }
   return out;
 };
 
-const buildMustSeePromptBlock = (mustSeeAttractions: string[]): string => {
+const buildMustSeePromptBlock = (mustSeeAttractions: NormalizedMustSeeAttraction[]): string => {
   if (!mustSeeAttractions.length) return '';
   const lines = ['Must-see attractions selected by travelers (prioritize these):'];
-  mustSeeAttractions.forEach((name, idx) => {
-    lines.push(`${idx + 1}. ${name}`);
+  mustSeeAttractions.forEach((item, idx) => {
+    lines.push(`${idx + 1}. ${item.name}`);
   });
   return lines.join('\n');
 };
 
-const buildPromptRequest = (input: ServiceInput): PromptReq => {
+const buildPromptRequest = (input: ItineraryPromptPlanServiceInput): PromptReq => {
   const destinations = normalizeDestinations(input.destinations);
   const mustSeeAttractions = normalizeMustSeeAttractions(input.mustSeeAttractions);
   const seed = String(input.tripIdSeed ?? destinations.join('|'));
@@ -773,7 +795,7 @@ const buildPromptRequest = (input: ServiceInput): PromptReq => {
     budgetMin: Math.max(0, Math.round(input.budgetMin)),
     budgetMax: Math.max(Math.round(input.budgetMin), Math.round(input.budgetMax)),
     tripStyle: String(input.tripStyle ?? '').trim() || undefined,
-    ms: mustSeeAttractions,
+    ms: mustSeeAttractions.map((item) => item.name),
   };
 
   if (isIsoDate(input.tripStartDate) && isIsoDate(input.tripEndDate)) {
@@ -1178,13 +1200,128 @@ const enforceShortlistGrounding = (
   return itinerary;
 };
 
+const MAX_ITEMS_PER_DAY = 5;
+
+// Verifies each generated attraction is scheduled under the day whose
+// destination actually matches the attraction's catalog destinationKey
+// (e.g. fixes AMNH — a New York attraction — being scheduled on a Boston day
+// in a Boston+NYC trip). Reassigns to a matching day if one exists in the
+// itinerary; drops the item (with logging) if no matching day exists.
+const enforceAttractionDestinationConsistency = (
+  itinerary: PromptItinerary,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+): PromptItinerary => {
+  const allEntries = Object.values(shortlistByDestination ?? {}).flat();
+  if (!allEntries.length) return itinerary;
+
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+  if (!entryByName.size) return itinerary;
+
+  const dayDestinationKey = (day: PromptDay) => normalizeDestinationKey(day.b);
+
+  for (const day of itinerary.dy) {
+    const dayKey = dayDestinationKey(day);
+    const keptItems: PromptDay['it'] = [];
+    for (const item of day.it) {
+      const text = normalizeText(item[2]);
+      const entry = entryByName.get(text.toLowerCase());
+      if (!entry || !entry.destinationKey || entry.destinationKey === dayKey) {
+        keptItems.push(item);
+        continue;
+      }
+      const targetDay = itinerary.dy.find((candidate) => dayDestinationKey(candidate) === entry.destinationKey);
+      if (targetDay && targetDay.it.length < MAX_ITEMS_PER_DAY) {
+        targetDay.it.push(item);
+        logInfo(
+          `[itinerary] reassigned attraction "${text}" from "${day.b}" to "${targetDay.b}" (destinationKey mismatch: ${dayKey} vs ${entry.destinationKey})`
+        );
+      } else {
+        logError(
+          `[itinerary] dropped attraction "${text}" from "${day.b}" — no available day found for destinationKey="${entry.destinationKey}"`
+        );
+      }
+    }
+    day.it = keptItems;
+  }
+
+  return itinerary;
+};
+
+// Returns the requested destination an attraction's real-world description
+// clearly belongs to, when it's a DIFFERENT one than the day it's currently
+// scheduled under (e.g. a Wikipedia summary for "Central Park" naming "New
+// York City" while scheduled on a Boston day). Only fires on an unambiguous
+// single match that doesn't also mention the current day's destination, to
+// avoid false positives on attractions that legitimately reference multiple
+// cities.
+const detectMismatchedDestinationFromDescription = (
+  description: string,
+  requestedDestinations: string[],
+  currentDestKey: string,
+  currentDestDisplayName: string
+): string | null => {
+  const lower = description.toLowerCase();
+  const mentionsCurrent = currentDestDisplayName ? lower.includes(currentDestDisplayName.trim().toLowerCase()) : false;
+  if (mentionsCurrent) return null;
+  const matches = requestedDestinations
+    .map((dest) => ({ dest, key: normalizeDestinationKey(dest) }))
+    .filter(({ key }) => key && key !== currentDestKey)
+    .filter(({ dest }) => dest.trim() && lower.includes(dest.trim().toLowerCase()));
+  if (matches.length !== 1) return null;
+  return matches[0].key;
+};
+
+// Catches the attractions the catalog-based pass above can't: text with no
+// matching AttractionCatalogEntry at all (common for iconic landmarks not
+// yet in the discovery catalog, or manually-typed must-see entries). Runs
+// after attachAttractionMetadata so every item's cached Wikipedia
+// description (if any) is already available to check against.
+const enforceDescriptionBasedDestinationConsistency = (
+  itinerary: PromptItinerary,
+  requestedDestinations: string[],
+  durationMetadataByName: Map<string, AttractionDurationMetadata>
+): void => {
+  const dayDestinationKey = (day: PromptDay) => normalizeDestinationKey(day.b);
+
+  for (const day of itinerary.dy) {
+    const dayKey = dayDestinationKey(day);
+    const keptItems: PromptDay['it'] = [];
+    for (const item of day.it) {
+      const text = normalizeText(item[2]);
+      const description = durationMetadataByName.get(text.toLowerCase())?.description;
+      const mismatchedKey = description
+        ? detectMismatchedDestinationFromDescription(description, requestedDestinations, dayKey, day.b)
+        : null;
+      if (!mismatchedKey) {
+        keptItems.push(item);
+        continue;
+      }
+      const targetDay = itinerary.dy.find((candidate) => dayDestinationKey(candidate) === mismatchedKey);
+      if (targetDay && targetDay.it.length < MAX_ITEMS_PER_DAY) {
+        targetDay.it.push(item);
+        logInfo(
+          `[itinerary] reassigned attraction "${text}" from "${day.b}" to "${targetDay.b}" (description names a different destination, no catalog match)`
+        );
+      } else {
+        logError(
+          `[itinerary] dropped attraction "${text}" from "${day.b}" — description names destinationKey="${mismatchedKey}" but no available day found`
+        );
+      }
+    }
+    day.it = keptItems;
+  }
+};
+
 const enforceMustSeeAttractions = (
   itinerary: PromptItinerary,
-  mustSeeAttractions: string[]
+  mustSeeAttractions: NormalizedMustSeeAttraction[],
+  requestedDestinations: string[]
 ): PromptItinerary => {
-  const required = normalizeMustSeeAttractions(mustSeeAttractions);
-  if (!required.length) return itinerary;
-  const normalizedRequired = required.map((item) => normalizeText(item));
+  if (!mustSeeAttractions.length) return itinerary;
   const present = new Set<string>();
   itinerary.dy.forEach((day) => {
     day.it.forEach((item) => {
@@ -1197,15 +1334,28 @@ const enforceMustSeeAttractions = (
     const noteText = Array.isArray(day.ln) ? day.ln.join(' ') : '';
     return !/travel day:\s*no activities scheduled/i.test(noteText);
   });
-  const targetDays = candidateDays.length ? candidateDays : itinerary.dy;
-  if (!targetDays.length) return itinerary;
+  const allTargetDays = candidateDays.length ? candidateDays : itinerary.dy;
+  if (!allTargetDays.length) return itinerary;
 
-  let targetCursor = 0;
-  for (const mustSee of normalizedRequired) {
-    const key = mustSee.toLowerCase();
+  // Prefer days whose base destination matches the attraction's tagged
+  // destination (from the must-see picker, e.g. a Boston attraction should
+  // only be inserted on a Boston day); fall back to any target day when no
+  // destination hint is provided or no day matches it.
+  const findDaysForDestination = (destinationName?: string): PromptDay[] => {
+    if (!destinationName) return [];
+    const canonical = canonicalizeToRequestedLocality(destinationName, requestedDestinations);
+    const key = normalizeLocalityKey(canonical);
+    if (!key) return [];
+    return allTargetDays.filter((day) => normalizeLocalityKey(day.b) === key);
+  };
+
+  for (const mustSee of mustSeeAttractions) {
+    const key = mustSee.name.toLowerCase();
     if (!key || present.has(key)) continue;
-    const day = targetDays[targetCursor % targetDays.length];
-    targetCursor += 1;
+    const destinationDays = findDaysForDestination(mustSee.destinationName);
+    const pool = destinationDays.length ? destinationDays : allTargetDays;
+    const day = pool.reduce((min, candidate) => (candidate.it.length < min.it.length ? candidate : min), pool[0]);
+
     const genericIndex = day.it.findIndex((item) => {
       const text = normalizeText(item[2]);
       return (
@@ -1215,17 +1365,17 @@ const enforceMustSeeAttractions = (
     });
     if (genericIndex >= 0) {
       const current = day.it[genericIndex];
-      day.it[genericIndex] = [current[0], current[1], mustSee];
+      day.it[genericIndex] = [current[0], current[1], mustSee.name];
       present.add(key);
       continue;
     }
-    if (day.it.length < 5) {
-      day.it.push(['D', 'A', mustSee]);
+    if (day.it.length < MAX_ITEMS_PER_DAY) {
+      day.it.push(['D', 'A', mustSee.name]);
       present.add(key);
       continue;
     }
     const current = day.it[0];
-    day.it[0] = [current[0], current[1], mustSee];
+    day.it[0] = [current[0], current[1], mustSee.name];
     present.add(key);
   }
 
@@ -1241,10 +1391,49 @@ const mapProfile = (norm: PromptNorm): ItineraryPromptProfile => ({
   weights: norm.w,
 });
 
-const mapTimeCodeToTime = (code: PromptDayTimeCode): string => {
-  if (code === 'M') return '09:00';
-  if (code === 'E') return '19:00';
-  return '13:00';
+const DEFAULT_ACTIVITY_DURATION_MINUTES = 120;
+const ITEM_GAP_MINUTES = 15;
+
+const timeStringToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map((part) => Number(part) || 0);
+  return hours * 60 + minutes;
+};
+
+const minutesToTimeString = (minutes: number): string => {
+  const wrapped = ((minutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(wrapped / 60);
+  const mins = wrapped % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+};
+
+// Sequences same-day items sharing a time-of-day code (morning/day/evening)
+// so back-to-back attractions don't collide on the same clock time — each
+// subsequent item starts after the previous one's estimated duration plus
+// the real estimated travel time to get there (when known), rather than
+// every "D" (daytime) item defaulting to 13:00 or a flat generic buffer.
+const computeDayItemSchedule = (
+  day: PromptDay,
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>,
+  transferNotesForDay?: TransferNote[]
+): Array<{ startTime: string; durationMinutes: number }> => {
+  const transferMinutesByFromName = new Map<string, number>();
+  for (const note of transferNotesForDay ?? []) {
+    transferMinutesByFromName.set(note.fromName.toLowerCase(), note.minutes);
+  }
+  const clockByTimeCode: Record<PromptDayTimeCode, number> = {
+    M: timeStringToMinutes('09:00'),
+    D: timeStringToMinutes('13:00'),
+    E: timeStringToMinutes('19:00'),
+  };
+  return day.it.map(([timeCode, , text]) => {
+    const normalizedText = normalizeText(text).toLowerCase();
+    const durationMetadata = durationMetadataByName?.get(normalizedText);
+    const durationMinutes = durationMetadata?.estimatedDurationMinutes ?? DEFAULT_ACTIVITY_DURATION_MINUTES;
+    const startMinutes = clockByTimeCode[timeCode] ?? clockByTimeCode.D;
+    const gapMinutes = transferMinutesByFromName.get(normalizedText) ?? ITEM_GAP_MINUTES;
+    clockByTimeCode[timeCode] = startMinutes + durationMinutes + gapMinutes;
+    return { startTime: minutesToTimeString(startMinutes), durationMinutes };
+  });
 };
 
 const transferDurationHours = (td: unknown): number | null => {
@@ -1318,7 +1507,115 @@ const buildGeneratedActivityDescription = (
   return `${activityName} is a ${activityType.toLowerCase()} based around ${day.b || 'this stop'}. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience.${context}`.trim();
 };
 
-const mapItems = (itinerary: PromptItinerary, preferenceWeights: PromptWeights): ItineraryGeneratedItems => {
+type TransferNote = {
+  fromName: string;
+  toName: string;
+  mode: LocalTransferMode;
+  minutes: number;
+  distanceKm: number;
+};
+
+// Collapses the estimator's four-way mode into the three travel categories
+// travelers actually plan around (taxi and rideshare are both "a car").
+const describeTransferMode = (mode: LocalTransferMode): string => {
+  if (mode === 'walk') return 'Walk';
+  if (mode === 'transit') return 'Public transport';
+  return 'Car';
+};
+
+// Populates the attraction duration/pre-order-ticket cache for every attraction
+// in the itinerary, and computes mobility-aware transfer time/mode estimates
+// between consecutive same-day attractions with known coordinates.
+const attachAttractionMetadata = async (
+  itinerary: PromptItinerary,
+  norm: PromptNorm,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  userId: string | undefined
+): Promise<{
+  durationMetadataByName: Map<string, AttractionDurationMetadata>;
+  transferNotesByDay: Map<number, TransferNote[]>;
+}> => {
+  const durationMetadataByName = new Map<string, AttractionDurationMetadata>();
+  const transferNotesByDay = new Map<number, TransferNote[]>();
+  if (!userId) return { durationMetadataByName, transferNotesByDay };
+
+  const allEntries = Object.values(shortlistByDestination ?? {}).flat();
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+
+  let estimator: TransferEstimator | null = null;
+  try {
+    estimator = await getTransferEstimator();
+  } catch (err) {
+    logError('[itinerary] transfer estimator init failed; skipping transfer time estimation', err);
+  }
+
+  for (const day of itinerary.dy) {
+    if (!day.it.length) continue;
+    const destinationKey = normalizeDestinationKey(day.b);
+    const destinationDisplayName = day.b;
+    const dayEntries = day.it.map(([, activityCode, text]) => {
+      const cleanText = normalizeText(text);
+      const entry = entryByName.get(cleanText.toLowerCase());
+      return {
+        name: cleanText,
+        activityType: entry?.activityType ?? ACTIVITY_CODE_TO_LONG[activityCode],
+        lat: entry?.lat ?? null,
+        lon: entry?.lon ?? null,
+      };
+    });
+
+    try {
+      const batch = await getAttractionDurationMetadataBatch({
+        userId,
+        destinationKey,
+        destinationDisplayName,
+        entries: dayEntries.map(({ name, activityType }) => ({ name, activityType })),
+      });
+      for (const [key, metadata] of batch) durationMetadataByName.set(key, metadata);
+    } catch (err) {
+      logError(`[itinerary] duration metadata lookup failed for destination="${destinationDisplayName}"`, err);
+    }
+
+    if (!estimator) continue;
+    for (let i = 0; i < dayEntries.length - 1; i++) {
+      const from = dayEntries[i];
+      const to = dayEntries[i + 1];
+      if (from.lat == null || from.lon == null || to.lat == null || to.lon == null) continue;
+      try {
+        const estimate = await estimator.estimate({
+          from: { lat: from.lat, lon: from.lon },
+          to: { lat: to.lat, lon: to.lon },
+          mobility: norm.mob,
+        });
+        if (!estimate) continue;
+        const notes = transferNotesByDay.get(day.d) ?? [];
+        notes.push({
+          fromName: from.name,
+          toName: to.name,
+          mode: estimate.mode,
+          minutes: estimate.minutes,
+          distanceKm: estimate.distanceKm,
+        });
+        transferNotesByDay.set(day.d, notes);
+      } catch (err) {
+        logError(`[itinerary] transfer estimate failed for "${from.name}" -> "${to.name}"`, err);
+      }
+    }
+  }
+
+  return { durationMetadataByName, transferNotesByDay };
+};
+
+const mapItems = (
+  itinerary: PromptItinerary,
+  preferenceWeights: PromptWeights,
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>,
+  transferNotesByDay?: Map<number, TransferNote[]>
+): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
     status: 'Needed',
     transferType: transfer.m,
@@ -1345,26 +1642,35 @@ const mapItems = (itinerary: PromptItinerary, preferenceWeights: PromptWeights):
     address: base.l,
   }));
 
-  const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) =>
-    day.it.map(([timeCode, activityCode, text]) => {
+  const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) => {
+    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d));
+    return day.it.map(([, activityCode, text], index) => {
       const mapped = ACTIVITY_CODE_TO_LONG[activityCode];
       const closest = pickActivityTypeForPreferences(text, mapped, preferenceWeights);
+      const durationMetadata = durationMetadataByName?.get(normalizeText(text).toLowerCase());
+      const { startTime, durationMinutes } = schedule[index];
+      const duration = formatMinutesAsDuration(durationMinutes);
+      const description = durationMetadata?.description || buildGeneratedActivityDescription(day, text, closest);
+      const notesWithDuration = `${description} Plan for about ${duration} here.`;
+      const notes = durationMetadata?.requiresPreOrderTickets
+        ? `${notesWithDuration} Tickets may need to be pre-ordered.`
+        : notesWithDuration;
       return {
         status: 'Proposed',
         activityType: closest,
         date: day.dt,
         name: text,
         startLocation: day.b || itinerary.eh,
-        startTime: mapTimeCodeToTime(timeCode),
-        duration: '2h',
+        startTime,
+        duration,
         cost: '',
         freeCancelBy: '',
         bookedOn: '',
         reference: '',
-        notes: buildGeneratedActivityDescription(day, text, closest),
+        notes,
       };
-    })
-  );
+    });
+  });
 
   const carRentals: ItineraryGeneratedCarRental[] = itinerary.rc
     ? [
@@ -1390,15 +1696,43 @@ const mapItems = (itinerary: PromptItinerary, preferenceWeights: PromptWeights):
   return { transfers, lodgings, activities, carRentals };
 };
 
-const buildDetails = (itinerary: PromptItinerary): ItineraryGeneratedDetail[] =>
-  itinerary.dy.flatMap((day) =>
-    day.it.map(([timeCode, _activityCode, text]) => ({
-      day: day.d,
-      time: mapTimeCodeToTime(timeCode),
-      activity: text,
-      cost: null,
-    }))
-  );
+const buildDetails = (
+  itinerary: PromptItinerary,
+  transferNotesByDay?: Map<number, TransferNote[]>,
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>
+): ItineraryGeneratedDetail[] =>
+  itinerary.dy.flatMap((day) => {
+    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d));
+    const notesByFromName = new Map<string, TransferNote>();
+    for (const note of transferNotesByDay?.get(day.d) ?? []) {
+      notesByFromName.set(note.fromName.toLowerCase(), note);
+    }
+
+    const details: ItineraryGeneratedDetail[] = [];
+    day.it.forEach(([, _activityCode, text], index) => {
+      details.push({
+        day: day.d,
+        time: schedule[index].startTime,
+        activity: text,
+        cost: null,
+      });
+      // Insert the travel segment to the NEXT activity right after this one,
+      // between the two activities it connects, rather than lumped at the
+      // end of the day.
+      const note = notesByFromName.get(normalizeText(text).toLowerCase());
+      if (note) {
+        details.push({
+          day: day.d,
+          time: null,
+          activity: `${describeTransferMode(note.mode)} to ${note.toName} (~${note.minutes} min, ${note.distanceKm.toFixed(1)} km)`,
+          cost: null,
+          kind: 'note',
+          noteBody: `${describeTransferMode(note.mode)}, ~${note.minutes} min (${note.distanceKm.toFixed(1)} km)`,
+        });
+      }
+    });
+    return details;
+  });
 
 const renderMarkdownFallback = (itinerary: PromptItinerary, profile: ItineraryPromptProfile): string => {
   const lines: string[] = [];
@@ -1431,8 +1765,23 @@ const hasVisibleText = (value: unknown): boolean => {
   return /[A-Za-z0-9]/.test(text);
 };
 
+// Raw prompt/response text is only attached to a stage capture when
+// ENABLE_RAW_AI_CAPTURE is set. Kept out of the default path so we don't hold
+// full prompt/response strings in memory for every generation. Even when
+// populated, the capture allowlist strips these unless the record is stored
+// locally with raw capture enabled (see allowlistSerializer / captureService).
+export const buildRawStageCapture = (
+  systemPrompt: string,
+  userPrompt: string,
+  responseText: string | null | undefined
+): Pick<ItineraryStageCapture, 'systemPrompt' | 'userPrompt' | 'responseText'> | Record<string, never> => {
+  if (!getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false })) return {};
+  return { systemPrompt, userPrompt, responseText: String(responseText ?? '') };
+};
+
 const runJsonStage = async <T>(params: {
-  apiKey: string;
+  apiKey?: string;
+  aiProvider?: ItineraryPromptPlanServiceInput['aiProvider'];
   caller:
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P0_NORM
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE
@@ -1443,6 +1792,7 @@ const runJsonStage = async <T>(params: {
   maxTokens: number;
   fallbackValue: T;
   acc?: { promptTokens: number; completionTokens: number };
+  captureStages?: ItineraryStageCapture[];
   usageContext?: {
     userId: string;
     windowKey?: string | null;
@@ -1451,9 +1801,13 @@ const runJsonStage = async <T>(params: {
 }): Promise<T> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
+  const startedMs = Date.now();
+  const startedAt = new Date(startedMs).toISOString();
   logInfo(`[itinerary] stage start caller=${params.caller} maxTokens=${params.maxTokens}`);
   const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
+    providerOverride: params.aiProvider?.provider,
+    modelOverride: params.aiProvider?.model,
     caller: params.caller,
     systemPrompt: sys,
     userPrompt: usr,
@@ -1464,28 +1818,51 @@ const runJsonStage = async <T>(params: {
     params.acc.promptTokens += result.promptTokens;
     params.acc.completionTokens += result.completionTokens;
   }
+  const completedAt = new Date().toISOString();
+  const stageCapture: ItineraryStageCapture = {
+    stage: params.template.id,
+    callerId: params.caller,
+    startedAt,
+    completedAt,
+    latencyMs: Date.now() - startedMs,
+    outcome: 'success',
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    responseChars: String(result.text ?? '').length,
+    ...buildRawStageCapture(sys, usr, result.text),
+  };
   if (!result.text) {
     logError(`[itinerary] ${params.caller} returned empty response; using fallback`);
+    params.captureStages?.push({ ...stageCapture, outcome: 'failure', parseError: 'empty_response' });
     return params.fallbackValue;
   }
   logInfo(`[itinerary] stage response caller=${params.caller} chars=${result.text.length}`);
   try {
-    return parseModelJson<T>(result.text);
+    const parsed = parseModelJson<T>(result.text);
+    params.captureStages?.push(stageCapture);
+    return parsed;
   } catch (err) {
     const snippet = String(result.text).slice(0, 600).replace(/\s+/g, ' ');
     logError(`[itinerary] ${params.caller} JSON parse failed; using fallback`, {
       error: err instanceof Error ? err.message : String(err),
       snippet,
     });
+    params.captureStages?.push({
+      ...stageCapture,
+      outcome: 'failure',
+      parseError: err instanceof Error ? err.message : String(err),
+    });
     return params.fallbackValue;
   }
 };
 
 const runRenderStage = async (params: {
-  apiKey: string;
+  apiKey?: string;
+  aiProvider?: ItineraryPromptPlanServiceInput['aiProvider'];
   template: PromptTemplate;
   replacements: Record<string, string>;
   acc?: { promptTokens: number; completionTokens: number };
+  captureStages?: ItineraryStageCapture[];
   usageContext?: {
     userId: string;
     windowKey?: string | null;
@@ -1494,9 +1871,13 @@ const runRenderStage = async (params: {
 }): Promise<string | null> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
+  const startedMs = Date.now();
+  const startedAt = new Date(startedMs).toISOString();
   logInfo('[itinerary] stage start caller=ITINERARY_PLAN_P4_RENDER maxTokens=900');
   const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
+    providerOverride: params.aiProvider?.provider,
+    modelOverride: params.aiProvider?.model,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
     systemPrompt: sys,
     userPrompt: usr,
@@ -1507,19 +1888,66 @@ const runRenderStage = async (params: {
     params.acc.promptTokens += result.promptTokens;
     params.acc.completionTokens += result.completionTokens;
   }
+  params.captureStages?.push({
+    stage: params.template.id,
+    callerId: OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    latencyMs: Date.now() - startedMs,
+    outcome: result.text ? 'success' : 'failure',
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    responseChars: String(result.text ?? '').length,
+    ...(result.text ? {} : { parseError: 'empty_response' }),
+    ...buildRawStageCapture(sys, usr, result.text),
+  });
   return result.text;
 };
 
-export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promise<ItineraryPromptPlanResult> => {
+export const generateItineraryViaPromptPlan = async (input: ItineraryPromptPlanServiceInput): Promise<ItineraryPromptPlanResult> => {
+  const tokenAcc = { promptTokens: 0, completionTokens: 0 };
+  const captureStages: ItineraryStageCapture[] = [];
+  try {
+    return await runGenerateItineraryViaPromptPlan(input, tokenAcc, captureStages);
+  } catch (err) {
+    // Stages accumulated before the throw (e.g. a network error mid-pipeline)
+    // must still be captured — otherwise a failed generation leaves nothing
+    // to debug from, even though several stages may have succeeded first.
+    captureItineraryInteraction({
+      captureId: input.captureId ?? input.tripIdSeed,
+      jobId: input.captureId ?? input.tripIdSeed,
+      userId: input.userId,
+      provider: input.aiProvider?.provider,
+      model: input.aiProvider?.model,
+      outcome: 'failure',
+      stages: captureStages,
+      tokenUsage: {
+        promptTokens: tokenAcc.promptTokens,
+        completionTokens: tokenAcc.completionTokens,
+        totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+      },
+      payload: {
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
+    throw err;
+  }
+};
+
+const runGenerateItineraryViaPromptPlan = async (
+  input: ItineraryPromptPlanServiceInput,
+  tokenAcc: { promptTokens: number; completionTokens: number },
+  captureStages: ItineraryStageCapture[]
+): Promise<ItineraryPromptPlanResult> => {
   const bundle = getPromptBundle();
   const promptRequest = buildPromptRequest(input);
-  const mustSeePromptBlock = buildMustSeePromptBlock(promptRequest.ms ?? []);
+  const normalizedMustSee = normalizeMustSeeAttractions(input.mustSeeAttractions);
+  const mustSeePromptBlock = buildMustSeePromptBlock(normalizedMustSee);
   const allowAttractionDiscovery = getEnvFlag('ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED', { defaultValue: false });
   logInfo(
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
   );
 
-  const tokenAcc = { promptTokens: 0, completionTokens: 0 };
   const usageContext = input.userId
     ? {
         userId: input.userId,
@@ -1533,6 +1961,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
 
   const normRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P0_NORM,
     template: bundle.p0,
     replacements: {
@@ -1542,6 +1971,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 700,
     fallbackValue: {},
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const normalized = sanitizeNorm(normRaw, promptRequest);
@@ -1585,6 +2015,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
 
   const routeRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
     template: bundle.p1,
     replacements: {
@@ -1596,6 +2027,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 1200,
     fallbackValue: {},
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const route = sanitizeRoute(routeRaw, normalized, promptRequest);
@@ -1605,6 +2037,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
 
   const dayRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
     template: bundle.p2,
     replacements: {
@@ -1616,6 +2049,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
     fallbackValue: {},
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const dayItinerary = sanitizeItinerary(dayRaw, route, normalized, promptRequest);
@@ -1625,6 +2059,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
 
   const validatedRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE,
     template: bundle.p3,
     replacements: {
@@ -1634,13 +2069,15 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 1400,
     fallbackValue: dayItinerary,
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
-  const itinerary = enforceShortlistGrounding(
+  const groundedItinerary = enforceShortlistGrounding(
     sanitizeItinerary(validatedRaw, route, normalized, promptRequest),
     promptRequest,
     shortlistByDestination
   );
+  const itinerary = enforceAttractionDestinationConsistency(groundedItinerary, shortlistByDestination);
   const blockedActivityDates = getActivityBlockedDates(itinerary, normalized);
   const filteredItinerary: PromptItinerary = {
     ...itinerary,
@@ -1658,15 +2095,24 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length} activityBlockedDays=${blockedActivityDates.size}`
   );
   const profile = mapProfile(normalized);
-  const itineraryWithMustSee = enforceMustSeeAttractions(filteredItinerary, promptRequest.ms ?? []);
+  const itineraryWithMustSee = enforceMustSeeAttractions(filteredItinerary, normalizedMustSee, promptRequest.d);
+  const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
+    itineraryWithMustSee,
+    normalized,
+    shortlistByDestination,
+    input.userId
+  );
+  enforceDescriptionBasedDestinationConsistency(itineraryWithMustSee, promptRequest.d, durationMetadataByName);
 
   const render = await runRenderStage({
     apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
     template: bundle.p4,
     replacements: {
       FINAL_JSON: JSON.stringify(itineraryWithMustSee),
     },
     acc: tokenAcc,
+    captureStages,
     usageContext,
   });
   const renderedMarkdown = String(render ?? '')
@@ -1675,7 +2121,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
   logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
   const fallbackMarkdown = renderMarkdownFallback(itineraryWithMustSee, profile);
   const planMarkdown = hasVisibleText(renderedMarkdown) ? renderedMarkdown : fallbackMarkdown;
-  const details = buildDetails(itineraryWithMustSee);
+  const details = buildDetails(itineraryWithMustSee, transferNotesByDay, durationMetadataByName);
   const safeDetails = details.length
     ? details
     : [
@@ -1686,10 +2132,34 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
           cost: null,
         },
       ];
-  const items = mapItems(itineraryWithMustSee, profile.weights);
+  const items = mapItems(itineraryWithMustSee, profile.weights, durationMetadataByName, transferNotesByDay);
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
   );
+  captureItineraryInteraction({
+    captureId: input.captureId ?? input.tripIdSeed,
+    jobId: input.captureId ?? input.tripIdSeed,
+    userId: input.userId,
+    provider: input.aiProvider?.provider,
+    model: input.aiProvider?.model,
+    outcome: 'success',
+    stages: captureStages,
+    tokenUsage: {
+      promptTokens: tokenAcc.promptTokens,
+      completionTokens: tokenAcc.completionTokens,
+      totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+    },
+    payload: {
+      destinationCount: promptRequest.d.length,
+      days: promptRequest.dur ?? input.days,
+      detailCount: safeDetails.length,
+      transfersCount: items.transfers.length,
+      lodgingsCount: items.lodgings.length,
+      activitiesCount: items.activities.length,
+      carRentalsCount: items.carRentals.length,
+      usedRenderFallback: planMarkdown === fallbackMarkdown,
+    },
+  });
 
   return {
     promptRequest,

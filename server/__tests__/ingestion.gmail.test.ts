@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 const setMemoryEnv = () => {
   process.env.DB_PROVIDER = 'memory';
   process.env.USE_IN_MEMORY_DB = '1';
@@ -21,6 +23,10 @@ describe('ingestion Gmail routes', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
+    jest.doMock('../src/ai/services/shadowParseService', () => ({
+      maybeRunShadowParse: jest.fn(async () => undefined),
+      __shadowParseShouldSampleForTests: jest.fn(() => false),
+    }));
     const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
     const helpers = require('./helpers') as typeof import('./helpers');

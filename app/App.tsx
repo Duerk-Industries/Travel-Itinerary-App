@@ -13,10 +13,20 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-context';
-import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
+import {
+  adminScreenBySection,
+  adminSectionByScreen,
+  aiOpsScreenBySection,
+  linking,
+  navigationRef,
+  type AdminSectionRoute,
+  type AiOpsSectionRoute,
+  type RootStackParamList,
+} from './navigationConfig';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
@@ -52,7 +62,7 @@ import {
   loadStoredAppearancePreference,
   persistAppearancePreference,
 } from './utils/appearancePreference';
-import { getAppTheme, type AppTheme } from './theme/theme';
+import { getAppTheme, hitSlop, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -68,6 +78,9 @@ import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
+import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
+import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
+import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
@@ -108,7 +121,9 @@ const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
 import ChatOverlay from './components/ChatOverlay';
+import HorizontalTableScroll from './components/HorizontalTableScroll';
 import { connectSocket, disconnectSocket } from './utils/socket';
+import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
@@ -180,59 +195,7 @@ type Page =
   | 'following'
   | 'admin';
 
-type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
-
-type RootStackParamList = {
-  Main: undefined;
-  AdminOverview: undefined;
-  AdminUsers: undefined;
-  AdminTiers: undefined;
-  AdminFeatures: undefined;
-  AdminUserData: undefined;
-  AdminAuditLog: undefined;
-};
-
 const RootStack = createNativeStackNavigator<RootStackParamList>();
-const navigationRef = createNavigationContainerRef<RootStackParamList>();
-
-const adminScreenBySection: Partial<Record<AdminSectionRoute, keyof RootStackParamList>> = {
-  overview: 'AdminOverview',
-  users: 'AdminUsers',
-  tiers: 'AdminTiers',
-  features: 'AdminFeatures',
-  'user-data': 'AdminUserData',
-  'audit-log': 'AdminAuditLog',
-  // 'ingestion' and 'api-limits' are handled internally by AdminTab, no separate screen needed
-};
-
-const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute> = {
-  AdminOverview: 'overview',
-  AdminUsers: 'users',
-  AdminTiers: 'tiers',
-  AdminFeatures: 'features',
-  AdminUserData: 'user-data',
-  AdminAuditLog: 'audit-log',
-};
-
-// IMPORTANT: this scheme MUST match `expo.scheme` in app.json, otherwise
-// React Navigation builds deep-link URLs that don't open the installed app.
-const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [
-    'travelitineraryplanner://',
-    ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
-  ],
-  config: {
-    screens: {
-      Main: '',
-      AdminOverview: 'admin',
-      AdminUsers: 'admin/users',
-      AdminTiers: 'admin/tiers',
-      AdminFeatures: 'admin/features',
-      AdminUserData: 'admin/user-data',
-      AdminAuditLog: 'admin/audit-log',
-    },
-  },
-};
 
 const resolveBackendUrl = (): string =>
   resolveConfiguredBackendUrl({
@@ -555,6 +518,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
+  const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
+  const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
   const {
     deferFirstLoginRedirect,
     showResendConfirmation,
@@ -597,6 +562,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
+  const [tripToDelete, setTripToDelete] = useState<{ id: string; name: string; isLastTraveler: boolean } | null>(null);
+  const [tripDeleteCheckingId, setTripDeleteCheckingId] = useState<string | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -1419,6 +1386,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setActiveTripId(restoredTripId);
     const firstLogin = Boolean(firstLoginOverride);
     setIsFirstLogin(firstLogin);
+    setPremiumTrialWelcomeVisible(firstLogin && arePremiumTrialsEnabled());
     const mustSetPassword = Boolean(options?.requirePasswordSetup);
     setRequirePasswordSetup(mustSetPassword);
     if (mustSetPassword) {
@@ -1436,6 +1404,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     },
     [activeTripId]
   );
+
+  const dismissPremiumTrialWelcome = useCallback(() => {
+    setPremiumTrialWelcomeVisible(false);
+  }, []);
+
+  const openPremiumPlansFromWelcome = useCallback(() => {
+    setPremiumTrialWelcomeVisible(false);
+    setPremiumPlanComparisonVisible(true);
+  }, []);
+
+  const dismissPremiumPlanComparison = useCallback(() => {
+    setPremiumPlanComparisonVisible(false);
+    setPremiumTrialWelcomeVisible(false);
+    setDeferFirstLoginRedirect(false);
+    setActivePage('account');
+    if (userToken) {
+      void saveSessionAsync(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
+    }
+  }, [activeTripId, pageHistory, setDeferFirstLoginRedirect, userEmail, userName, userRole, userToken]);
 
   const exchangeAuthCode = useCallback(
     async (authCode: string) => {
@@ -2393,7 +2380,47 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       Alert.alert(data.error || 'Unable to delete trip');
       return;
     }
+    // Drop any in-flight async itinerary tracker for this trip so its poller
+    // doesn't keep hitting a trip the user no longer belongs to.
+    setAsyncItineraryByTrip((prev) => {
+      if (!(tripId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+    // If the deleted trip was the one currently open, every effect keyed on
+    // activeTripId (flights/lodgings/expenses/etc.) would otherwise keep
+    // fetching against a trip the user no longer has access to and surface a
+    // spurious "not authorized" permission-denied modal. Exit the trip first
+    // and land on the trip list ("account") page instead.
+    if (activeTripId === tripId) {
+      setActiveTripId(null);
+      setActivePage('account');
+    }
     fetchTrips();
+  };
+
+  // Determines whether the current user is the last active traveler on the
+  // trip's group before opening the confirmation dialog, since deleting as
+  // the last traveler permanently removes the trip and every artifact in it
+  // for everyone (see server deleteTrip), not just the current user.
+  const confirmDeleteTrip = async (trip: { id: string; name: string }) => {
+    if (!userToken) return;
+    setTripDeleteCheckingId(trip.id);
+    let isLastTraveler = false;
+    try {
+      const res = await fetch(`${backendUrl}/api/account/trips/${trip.id}/members`, { headers });
+      if (res.ok) {
+        const members = await res.json();
+        const realMembers = Array.isArray(members) ? members.filter((m: any) => m?.userId) : [];
+        isLastTraveler = realMembers.length <= 1;
+      }
+    } catch {
+      // Best-effort check; fall back to the generic "leave trip" copy below.
+    } finally {
+      setTripDeleteCheckingId(null);
+    }
+    setTripToDelete({ id: trip.id, name: trip.name, isLastTraveler });
   };
 
   // PATCH /api/trips/:id/group is naturally idempotent (replaces the trip's
@@ -2583,7 +2610,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         method: 'DELETE',
         headers,
       });
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401) {
         logout();
         return;
       }
@@ -2629,6 +2656,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               style={styles.homeButton}
               onPress={() => requestPageChange('home')}
               accessibilityLabel="Home"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.homeButtonText}>⌂</Text>
             </TouchableOpacity>
@@ -2639,6 +2667,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onPress={goBack}
               disabled={pageHistory.length === 0}
               accessibilityLabel="Back"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.backButtonText}>{'<'}</Text>
             </TouchableOpacity>
@@ -2649,12 +2678,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onPress={goForward}
               disabled={pageForwardHistory.length === 0}
               accessibilityLabel="Forward"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
           <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
-          <Text style={[styles.title, isPhoneLayout && styles.titleNarrow]} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.title, isPhoneLayout && styles.titleNarrow]}
+            numberOfLines={isPhoneLayout ? 2 : 1}
+            ellipsizeMode="tail"
+          >
             WanderBunnies
           </Text>
         </View>
@@ -2863,7 +2897,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
-              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+              <HorizontalTableScroll
+                style={styles.tableScroll}
+                contentContainerStyle={styles.tableScrollContent}
+              >
                 <View style={styles.table}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -2913,7 +2950,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     </View>
                   </View>
                 </View>
-              </ScrollView>
+              </HorizontalTableScroll>
             </View>
           ) : null}
 
@@ -3111,7 +3148,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <Text style={styles.helperText}>Pending invites:</Text>
                     {inviteEmails.map((email) => (
                       <View key={email} style={[styles.memberPill, { paddingHorizontal: 8, paddingVertical: 2 }]}>
-                        <Text style={styles.cellText}>{email}</Text>
+                        <Text style={[styles.cellText, { flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="middle">{email}</Text>
                       </View>
                     ))}
                   </View>
@@ -3199,8 +3236,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     >
                       <Text style={styles.buttonText}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
-                      <Text style={styles.dangerButtonText}>Delete</Text>
+                    <TouchableOpacity
+                      style={[styles.button, styles.dangerButton]}
+                      onPress={() => confirmDeleteTrip(trip)}
+                      disabled={tripDeleteCheckingId === trip.id}
+                    >
+                      <Text style={styles.dangerButtonText}>
+                        {tripDeleteCheckingId === trip.id ? 'Checking…' : 'Delete'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -3363,6 +3406,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      <PremiumTrialWelcomeDialog
+        visible={Boolean(userToken && premiumTrialWelcomeVisible && arePremiumTrialsEnabled())}
+        styles={styles}
+        onViewPlans={openPremiumPlansFromWelcome}
+        onDismiss={dismissPremiumTrialWelcome}
+      />
+      <PremiumPlanComparisonDialog
+        visible={Boolean(userToken && premiumPlanComparisonVisible && arePremiumTrialsEnabled())}
+        backendUrl={backendUrl}
+        token={userToken}
+        styles={styles}
+        onMaybeLater={dismissPremiumPlanComparison}
+      />
       {userToken ? (
         <PendingInvitesModal
           visible={pendingInviteModalOpen}
@@ -3426,6 +3482,26 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           styles={styles}
         />
       ) : null}
+      {tripToDelete ? (
+        <ConfirmDialog
+          visible={true}
+          title={tripToDelete.isLastTraveler ? 'Delete Trip Permanently' : 'Leave Trip'}
+          message={
+            tripToDelete.isLastTraveler
+              ? `You're the last traveler on "${tripToDelete.name}". Deleting it will permanently remove the trip and everything in it — flights, lodging, activities, itineraries, expenses, and messages — for everyone. This cannot be undone.`
+              : `Are you sure you want to leave "${tripToDelete.name}"? You'll be removed from this trip, but it will remain for the other travelers.`
+          }
+          confirmLabel={tripToDelete.isLastTraveler ? 'Delete Trip' : 'Leave Trip'}
+          onConfirm={() => {
+            const tripId = tripToDelete.id;
+            setTripToDelete(null);
+            deleteTrip(tripId);
+          }}
+          onCancel={() => setTripToDelete(null)}
+          styles={styles}
+          testID="trip-delete-confirm-dialog"
+        />
+      ) : null}
       {showLodgingDetails && selectedLodging ? (
         <LodgingDetailsDialog
           visible={showLodgingDetails}
@@ -3472,6 +3548,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         onSectionChange={(nextSection) => {
           if (nextSection === 'user-detail') return;
           openAdminSection(nextSection as AdminSectionRoute);
+        }}
+      />
+    </Suspense>
+  );
+
+  const renderAdminAiOpsScreen = (aiOpsSection: AiOpsSectionRoute) => (
+    <Suspense fallback={<LazyTabFallback label="Loading admin…" testID="lazy-admin-fallback" />}>
+      <AdminTab
+        backendUrl={backendUrl}
+        headers={headers}
+        initialSection="ai-ops"
+        initialAiOpsSection={aiOpsSection}
+        onSectionChange={(nextSection) => {
+          if (nextSection === 'user-detail') return;
+          openAdminSection(nextSection as AdminSectionRoute);
+        }}
+        onAiOpsSectionChange={(nextSection) => {
+          const screen = aiOpsScreenBySection[nextSection as AiOpsSectionRoute];
+          if (screen && navigationRef.isReady()) {
+            navigationRef.navigate(screen as any);
+          }
         }}
       />
     </Suspense>
@@ -3524,6 +3621,42 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             options={{ title: 'Admin Audit Log' }}
           >
             {() => renderAdminScreen('audit-log')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminBilling"
+            options={{ title: 'Admin Billing' }}
+          >
+            {() => renderAdminScreen('billing')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsOverview" options={{ title: 'AI Operations' }}>
+            {() => renderAdminAiOpsScreen('overview')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsProviders" options={{ title: 'AI Providers' }}>
+            {() => renderAdminAiOpsScreen('providers')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsExperiments" options={{ title: 'AI Experiments' }}>
+            {() => renderAdminAiOpsScreen('experiments')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsRecommendations" options={{ title: 'AI Recommendations' }}>
+            {() => renderAdminAiOpsScreen('recommendations')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsCaptures" options={{ title: 'AI Captures' }}>
+            {() => renderAdminAiOpsScreen('captures')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsParserQuality" options={{ title: 'Parser Quality' }}>
+            {() => renderAdminAiOpsScreen('parser-quality')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsShadowReplay" options={{ title: 'Shadow Replay' }}>
+            {() => renderAdminAiOpsScreen('shadow-replay')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsExecutive" options={{ title: 'Executive Dashboard' }}>
+            {() => renderAdminAiOpsScreen('executive')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsRuntimeSettings" options={{ title: 'AI Runtime Settings' }}>
+            {() => renderAdminAiOpsScreen('runtime-settings')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsAiAuditLog" options={{ title: 'AI Audit Log' }}>
+            {() => renderAdminAiOpsScreen('ai-audit-log')}
           </RootStack.Screen>
         </RootStack.Group>
       </RootStack.Navigator>
@@ -3598,6 +3731,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -3758,7 +3892,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     position: 'relative',
     borderRadius: 20,
     overflow: 'hidden',
-    height: 180,
+    minHeight: 180,
     backgroundColor: theme.colors.surfaceMuted,
   },
   homeHeroCardPressed: {
@@ -3790,15 +3924,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     right: 20,
     bottom: 20,
     paddingRight: 150,
+    maxWidth: '100%',
   },
   homeHeroSubtitle: {
     color: '#e5e7eb',
     fontSize: 16,
+    lineHeight: 20,
   },
   homeHeroTitle: {
     color: '#fff',
     fontSize: 32,
     fontWeight: '700',
+    lineHeight: 38,
   },
   homeHeroChangeTripBadge: {
     position: 'absolute',
@@ -3808,6 +3945,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    maxWidth: '90%',
   },
   homeHeroChangeTripText: {
     color: '#FFFFFF',
@@ -3873,12 +4011,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     marginBottom: 12,
+    gap: 8,
   },
   homeModalTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: theme.colors.text,
+    flexShrink: 1,
   },
   homeModalClose: {
     width: 32,
@@ -3902,6 +4043,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   homeModalRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -3915,6 +4057,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   },
   homeModalRowText: {
     flex: 1,
+    minWidth: 0,
   },
   homeModalRowTitle: {
     fontSize: 16,
@@ -3934,10 +4077,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     fontSize: theme.typography.h2,
     fontWeight: theme.typography.weightBold,
     color: theme.colors.text,
+    flex: 1,
     flexShrink: 1,
+    minWidth: 0,
   },
   titleNarrow: {
     fontSize: 18,
+    lineHeight: 22,
   },
   auth: {
     width: '100%',
@@ -4017,6 +4163,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     color: '#0B1726',
     fontWeight: theme.typography.weightBold,
   },
+  secondaryButton: {
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightBold,
+  },
   topBarActionButton: {
     minHeight: 38,
     justifyContent: 'center',
@@ -4032,14 +4187,16 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    maxWidth: '100%',
   },
   userNameButtonText: {
     color: theme.colors.text,
     fontWeight: theme.typography.weightSemibold,
+    flexShrink: 1,
   },
   smallButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   dangerButton: {
     backgroundColor: theme.colors.error,
@@ -4153,7 +4310,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     borderBottomWidth: 0,
   },
   table: {
-    width: '100%',
+    ...horizontalTableLayout.table,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 6,
@@ -4264,6 +4421,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     paddingVertical: 4,
     paddingHorizontal: 10,
     gap: 6,
+    maxWidth: '100%',
   },
   attendeeChipRemoving: {
     backgroundColor: theme.mode === 'dark' ? '#5A2630' : '#F8D7DA',
@@ -4274,6 +4432,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   attendeeText: {
     fontWeight: theme.typography.weightSemibold,
     color: theme.colors.text,
+    flexShrink: 1,
   },
   attendeeRemoveButton: {
     marginLeft: 4,
@@ -4528,6 +4687,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     alignItems: 'center',
     gap: 8,
     paddingVertical: 4,
+    maxWidth: '100%',
   },
   pendingBlock: {
     gap: 4,
@@ -4885,10 +5045,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     position: 'relative',
   },
   tableScroll: {
-    overflow: 'visible',
+    ...horizontalTableLayout.scroll,
   },
   tableScrollContent: {
-    overflow: 'visible',
+    ...horizontalTableLayout.content,
   },  rangeContainer: {
     gap: 6,
     marginBottom: 8,
@@ -5058,6 +5218,94 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     ...(Platform.OS === 'web' ? { boxShadow: '0 4px 10px rgba(0,0,0,0.25)' } : null),
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  premiumTrialFeatureList: {
+    marginTop: 4,
+    marginBottom: 12,
+    gap: 2,
+  },
+  planComparisonModal: {
+    maxWidth: 560,
+  },
+  planComparisonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  planComparisonTier: {
+    flex: 1,
+    minWidth: 210,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  planComparisonTierPremium: {
+    borderColor: theme.colors.premium,
+    backgroundColor: theme.colors.surface,
+  },
+  planComparisonTierTitle: {
+    color: theme.colors.text,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemibold,
+    marginBottom: 6,
+  },
+  planComparisonFeatureList: {
+    gap: 4,
+  },
+  planComparisonFeature: {
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.small,
+    lineHeight: 20,
+  },
+  planComparisonOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 10,
+  },
+  planComparisonOption: {
+    flex: 1,
+    minWidth: 210,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: theme.colors.premium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 84,
+  },
+  planComparisonOptionTitle: {
+    color: '#fff',
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightSemibold,
+    marginBottom: 3,
+  },
+  planComparisonOptionPrice: {
+    color: '#fff',
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
+    textAlign: 'center',
+  },
+  planComparisonOptionTrial: {
+    color: '#fff',
+    fontSize: theme.typography.caption,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  planComparisonMaybeLater: {
+    alignSelf: 'center',
+    minWidth: 180,
+    marginTop: 4,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: theme.typography.small,
+    marginTop: 6,
+    marginBottom: 6,
   },
   payerChips: {
     flexDirection: 'row',

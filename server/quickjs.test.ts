@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { newQuickJSWASMModule, newQuickJSAsyncWASMModule, DEBUG_SYNC, TestQuickJSWASMModule, Scope } from "quickjs-emscripten";
 
 describe("QuickJS Memory Optimization", () => {

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { resolveBackendUrl } from '../utils/backendUrl';
 
 describe('resolveBackendUrl', () => {

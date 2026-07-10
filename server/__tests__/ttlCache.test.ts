@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 describe('TtlCache', () => {
   let logSpy: jest.SpyInstance;
 

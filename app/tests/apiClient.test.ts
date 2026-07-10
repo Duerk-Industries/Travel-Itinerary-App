@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import { ApiClientError, requestJson } from '../utils/apiClient';
 

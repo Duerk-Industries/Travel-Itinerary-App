@@ -5,6 +5,8 @@ providers:
     overall: 1000
     callers:
       PARSE_FLIGHT_TEXT: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
 
   OPENAI:
     window: hour
@@ -19,6 +21,56 @@ providers:
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
+      INGESTION_LLM_EXTRACT: 100
+      LLM_SHADOW_PARSE: 100
+
+  ANTHROPIC:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      ITINERARY_GENERATE_PLAN: 50
+      ITINERARY_PLAN_P0_NORM: 200
+      ITINERARY_PLAN_P1_ROUTE: 200
+      ITINERARY_PLAN_P2_DAYS: 200
+      ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P4_RENDER: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
+      INGESTION_LLM_EXTRACT: 100
+      LLM_SHADOW_PARSE: 100
+
+  GEMINI:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      ITINERARY_GENERATE_PLAN: 50
+      ITINERARY_PLAN_P0_NORM: 200
+      ITINERARY_PLAN_P1_ROUTE: 200
+      ITINERARY_PLAN_P2_DAYS: 200
+      ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P4_RENDER: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
+      INGESTION_LLM_EXTRACT: 100
+      LLM_SHADOW_PARSE: 100
+
+  ZAI:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      ITINERARY_GENERATE_PLAN: 50
+      ITINERARY_PLAN_P0_NORM: 200
+      ITINERARY_PLAN_P1_ROUTE: 200
+      ITINERARY_PLAN_P2_DAYS: 200
+      ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P4_RENDER: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
+      INGESTION_LLM_EXTRACT: 100
+      LLM_SHADOW_PARSE: 100
 
   UNSPLASH:
     window: hour
@@ -68,6 +120,35 @@ budgeting:
       GPT_4O_MINI:
         inputCostPer1MTokensUsd: 0.15
         outputCostPer1MTokensUsd: 0.60
+  ANTHROPIC:
+    alertThresholdPercent: 80
+    models:
+      # Key must match normalizeApiLimitKeyPart(ANTHROPIC_DEFAULT_MODEL) in
+      # anthropicProvider.ts ('claude-sonnet-4-5' -> 'CLAUDE_SONNET_4_5'), or
+      # estimateAiCostMicros silently returns null and no cost is recorded.
+      CLAUDE_SONNET_4_5:
+        inputCostPer1MTokensUsd: 3.00
+        outputCostPer1MTokensUsd: 15.00
+  GEMINI:
+    alertThresholdPercent: 80
+    models:
+      # Must match normalizeApiLimitKeyPart(GEMINI_DEFAULT_MODEL) in
+      # geminiProvider.ts ('gemini-2.5-flash' -> 'GEMINI_2_5_FLASH').
+      GEMINI_2_5_FLASH:
+        inputCostPer1MTokensUsd: 0.30
+        outputCostPer1MTokensUsd: 2.50
+  ZAI:
+    alertThresholdPercent: 80
+    models:
+      # Must match normalizeApiLimitKeyPart(ZAI_DEFAULT_MODEL) in
+      # zaiProvider.ts ('glm-4.7' -> 'GLM_4_7').
+      GLM_4_7:
+        inputCostPer1MTokensUsd: 0.10
+        outputCostPer1MTokensUsd: 0.10
+  SHADOW_PARSE:
+    monthlyBudgetUsd: 20
+    alertThresholdPercent: 80
+    models: {}
 
 caching:
   attractions:
@@ -77,6 +158,7 @@ caching:
     minDistinctSourcesPerAttraction: 2
     minAttractionsAfterConfidenceFilter: 6
     promptBlobRefreshDays: 30
+    durationMetadataRefreshDays: 60
   locations:
     csvCacheTtlMinutes: 60
     refreshCooldownSeconds: 15

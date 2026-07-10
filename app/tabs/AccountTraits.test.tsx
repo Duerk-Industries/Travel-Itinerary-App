@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import AccountTraits from './AccountTraits';

@@ -1,3 +1,8 @@
+/**
+ * @jest-environment node
+ */
+/// <reference types="jest" />
+/// <reference types="node" />
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   clearSession,

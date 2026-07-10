@@ -5,18 +5,40 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   deploy-api:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }} # SA with run.admin + iam.serviceAccountUser (+ secret accessor if needed)
-      - uses: google-github-actions/setup-gcloud@v2
-      - run: gcloud config set project "${{ secrets.GCLOUD_PROJECT_ID }}"
-      - run: |
+      - name: Checkout repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags --prune --depth=1 origin "+${GITHUB_REF}:refs/remotes/origin/event-ref"
+          git checkout --force refs/remotes/origin/event-ref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Authenticate gcloud
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/gcp-service-account.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/gcp-service-account.json"
+          gcloud config set project "$GCLOUD_PROJECT_ID"
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}
+
+      - name: Deploy API
+        shell: bash
+        run: |
+          set -euo pipefail
           cd server
           gcloud run deploy travel-itinerary-app \
             --source . \
@@ -24,4 +46,6 @@ jobs:
             --allow-unauthenticated \
             --runtime nodejs20 \
             --service-account "travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com" \
-            --project "${{ secrets.GCLOUD_PROJECT_ID }}"
+            --project "$GCLOUD_PROJECT_ID"
+        env:
+          GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}

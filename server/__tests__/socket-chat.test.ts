@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Unit + integration tests for the Socket.IO chat and presence infrastructure.
  *

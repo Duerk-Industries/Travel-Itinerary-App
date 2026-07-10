@@ -22,6 +22,7 @@ Email matching is case-insensitive and normalized before comparison.
 | Features | `/admin/features` | Toggle feature flags with reason |
 | User Data | `/admin/user-data` | Aggregate user counts, trip counts, AI usage, token usage, and API-call summaries |
 | Audit Log | `/admin/audit-log` | Review who changed what and when |
+| Billing | `/admin/billing` | Manage Premium pricing, trial, grace period, tax, promotion codes, and checkout |
 | Ingestion Ops | `/admin/ingestion` | Review ingestion volume, stage outcomes, duplicate rate, retries, and estimated LLM cost |
 
 ## Admin bypass rules

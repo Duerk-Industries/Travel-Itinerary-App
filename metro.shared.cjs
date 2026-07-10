@@ -17,7 +17,9 @@ const { getDefaultConfig } = require('expo/metro-config');
 /**
  * Loads @sentry/react-native's Metro wrapper if the package is installed.
  * Kept lazy so a missing install (e.g. a fresh checkout before `npm
- * install`) doesn't break Metro startup.
+ * install`) doesn't break Metro startup — Sentry's wrapper only adds Debug
+ * ID injection and stack-frame collapsing, both of which are no-ops at
+ * runtime when SENTRY_AUTH_TOKEN / EXPO_PUBLIC_SENTRY_DSN aren't set.
  */
 const loadSentryWithMetroConfig = () => {
   try {
@@ -62,6 +64,7 @@ const ENGINE_IO_NODE_STUBS = {
  * @param {string} opts.secondaryNodeModules Fallback node_modules directory.
  * @param {string[]} opts.watchFolders      Extra folders to watch (e.g. workspace siblings).
  * @param {RegExp[]} [opts.blockedPaths]    Absolute-path regexes Metro should ignore.
+ * @param {Function|null} [opts.sentryWithMetroConfig] Test/override seam for the optional Sentry wrapper.
  * @returns {import('metro-config').ConfigT}
  */
 const createSharedMetroConfig = ({
@@ -70,6 +73,7 @@ const createSharedMetroConfig = ({
   secondaryNodeModules,
   watchFolders = [],
   blockedPaths = [],
+  sentryWithMetroConfig,
 }) => {
   const config = getDefaultConfig(projectRoot);
   const { resolver } = config;
@@ -105,9 +109,17 @@ const createSharedMetroConfig = ({
   );
 
   // Wrap with Sentry last so it observes the fully-built resolver/transformer
-  // shape. EAS native builds skip this by default because the Sentry Metro
-  // serializer currently crashes before bundle embedding completes.
-  const withSentryConfig = loadSentryWithMetroConfig();
+  // shape. The wrapper:
+  //  - injects a Debug ID into each bundle + source map (so uploaded source
+  //    maps match the running JS even when the release is unset),
+  //  - collapses Sentry's own frames from LogBox stack traces.
+  // Source-map UPLOAD happens later, during EAS build / `expo export` —
+  // gated by SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT being present in
+  // the build environment. None of that runs in dev unless you set it up.
+  const withSentryConfig =
+    sentryWithMetroConfig === undefined
+      ? loadSentryWithMetroConfig()
+      : sentryWithMetroConfig;
   if (withSentryConfig && shouldUseSentryMetro()) {
     return withSentryConfig(config, {
       // We don't ship session replay; opt out to keep the web bundle smaller.
@@ -123,4 +135,5 @@ const createSharedMetroConfig = ({
 module.exports = {
   createSharedMetroConfig,
   ENGINE_IO_NODE_STUBS,
+  shouldUseSentryMetro,
 };

@@ -1,10 +1,40 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import PackingListTable from '../components/PackingListTable';
+
+jest.mock('react-native', () => ({
+  Platform: { OS: 'web' },
+  ActivityIndicator: 'ActivityIndicator',
+  Pressable: 'Pressable',
+  ScrollView: 'ScrollView',
+  Text: 'Text',
+  TextInput: 'TextInput',
+  TouchableOpacity: 'TouchableOpacity',
+  TouchableWithoutFeedback: 'TouchableWithoutFeedback',
+  TouchableHighlight: 'TouchableHighlight',
+  View: 'View',
+  Image: 'Image',
+  ImageBackground: 'ImageBackground',
+  FlatList: 'FlatList',
+  SectionList: 'SectionList',
+  Switch: 'Switch',
+  Modal: 'Modal',
+  SafeAreaView: 'SafeAreaView',
+  StyleSheet: {
+    create: <T extends Record<string, unknown>>(styles: T) => styles,
+    flatten: (style: unknown) => style,
+  },
+  useColorScheme: () => 'light',
+  useWindowDimensions: () => ({ width: 800, height: 600 }),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PackingListTable = require('../components/PackingListTable').default as React.FC<any>;
 
 describe('PackingListTable', () => {
   afterEach(() => {

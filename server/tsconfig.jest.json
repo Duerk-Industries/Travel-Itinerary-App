@@ -5,7 +5,8 @@
     "jsx": "react-jsx",
     "allowJs": true,
     "module": "Node20",
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": ["jest", "node"]
   },
   "include": ["src/**/*", "__tests__/**/*", "scripts/**/*", "../app/**/*", "../scripts/**/*"]
 }

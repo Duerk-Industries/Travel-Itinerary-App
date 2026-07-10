@@ -2,6 +2,7 @@
 // @ts-nocheck
 import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
 import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
@@ -211,17 +212,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         ) : null}
       </View>
 
-      <ScrollView
-        style={{ flex: 1, minHeight: 0 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 }}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        nestedScrollEnabled
-        contentInsetAdjustmentBehavior="automatic"
-      >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
+      <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ flexGrow: 1 }}>
+        <HorizontalTableScroll
           style={styles.tableScroll}
           contentContainerStyle={styles.tableScrollContent}
           testID="lodging-table-horizontal-scroll"
@@ -328,7 +320,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             </View>
           ))}
         </View>
-        </ScrollView>
+        </HorizontalTableScroll>
       </ScrollView>
 
       {showDetails && selectedLodging && (

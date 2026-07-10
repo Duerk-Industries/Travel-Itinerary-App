@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React, { useCallback, useState } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
@@ -206,5 +208,25 @@ describe('useTripsData', () => {
       ]);
       expect(result.current.activeTripId).toBe('trip-2');
     });
+  });
+
+  it('surfaces a 403 trip creation error without logging the user out', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementationOnce(() =>
+      createJsonResponse({ error: 'Non-admin users cannot create trips that end in the past.' }, false, 403)
+    );
+
+    const { result } = renderHook(() => useTripsDataHarness());
+
+    let response: Awaited<ReturnType<typeof result.current.createTrip>> | null = null;
+    await act(async () => {
+      response = await result.current.createTrip({ groupId: 'group-9', name: 'Rome' });
+    });
+
+    expect(response).toEqual({
+      ok: false,
+      error: 'Non-admin users cannot create trips that end in the past.',
+    });
+    expect(result.current.unauthorizedCount).toBe(0);
   });
 });

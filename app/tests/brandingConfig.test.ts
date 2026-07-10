@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import config from '../app.config';
 

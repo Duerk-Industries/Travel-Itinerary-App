@@ -3,9 +3,11 @@ import { getBackendUrl, getEnvValue } from './env';
 import { logError, logInfo } from './logger';
 import {
   sendShareEmailViaSmtpApi,
+  sendBillingTrialReminderEmailViaSmtpApi,
   sendTripInviteEmailViaSmtpApi,
   sendVerificationEmailViaSmtpApi,
 } from './apis/smtpCallers';
+import { isCanaryRecipientEmail } from './middleware/canarySafeMode';
 
 const isMailEnabled = (): boolean => {
   const raw = String(process.env.MAIL_ENABLED ?? '').trim().toLowerCase();
@@ -42,6 +44,7 @@ export const isEmailConfigured = (): boolean => {
 };
 
 export const sendShareEmail = async (to: string, subject: string, body: string): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendShareEmail')) return;
   const { transporter, from } = buildTransporter();
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -112,6 +115,7 @@ const sendWithRetry = async (
 };
 
 export const sendVerificationEmail = async (to: string, token: string): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendVerificationEmail')) return;
   const { transporter, from } = buildTransporter();
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -147,6 +151,7 @@ export const sendVerificationEmailBestEffort = async (
     return sendWithRetry(() => sendVerificationEmail(to, token), to);
   }
   const sender = async () => {
+    if (await isCanaryRecipientEmail(to, 'sendVerificationEmailBestEffort')) return;
     const { transporter, from } = buildTransporter();
     if (!transporter) {
       throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -171,6 +176,7 @@ export const sendVerificationEmailBestEffort = async (
 
 
 export const sendTripInviteEmail = async (to: string, tripName: string, inviterEmail?: string | null): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendTripInviteEmail')) return;
   const { transporter, from } = buildTransporter();
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
@@ -202,4 +208,42 @@ export const sendTripInviteEmailBestEffort = async (
   inviterEmail?: string | null
 ): Promise<{ sent: boolean; attempts: number }> => {
   return sendWithRetry(() => sendTripInviteEmail(to, tripName, inviterEmail), to);
+};
+
+export const sendBillingTrialEndingEmail = async (
+  to: string,
+  trialEnd: Date,
+): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendBillingTrialEndingEmail')) return;
+  const { transporter, from } = buildTransporter();
+  if (!transporter) {
+    throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
+  }
+  const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
+  const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
+  const trialEndLabel = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const subject = 'Your WanderBunnies Premium trial ends soon';
+  const body = [
+    'Hi,',
+    '',
+    `Your WanderBunnies Premium trial ends on ${trialEndLabel}.`,
+    'After the trial ends, your saved payment method will be charged unless you cancel before then.',
+    '',
+    'You can review or cancel your subscription from Account > Premium in WanderBunnies.',
+    '',
+    webUrl,
+  ].join('\n');
+  await sendBillingTrialReminderEmailViaSmtpApi(transporter, {
+    from,
+    to,
+    subject,
+    text: body,
+  });
+};
+
+export const sendBillingTrialEndingEmailBestEffort = async (
+  to: string,
+  trialEnd: Date,
+): Promise<{ sent: boolean; attempts: number }> => {
+  return sendWithRetry(() => sendBillingTrialEndingEmail(to, trialEnd), to);
 };

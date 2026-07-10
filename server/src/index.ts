@@ -18,7 +18,11 @@ import { startGmailPollingScheduler } from './services/gmailPollingService';
 import { startRetentionScheduler } from './services/retentionService';
 import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
+import { startBillingReconciliationScheduler } from './billing/subscriptionReconciliationService';
 import { installShutdownHandlers } from './shutdown';
+import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './config/stripeBilling';
+import { getBillingPlanConfig } from './db';
+import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -65,6 +69,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   if (envLoadedFrom) {
     logInfo(`[startup] env loaded from: ${envLoadedFrom}`);
   }
+  assertStripeBillingConfig();
   const portToUse = portOverride ?? defaultPort;
   const server = await new Promise<Server>((resolve, reject) => {
     const listeningServer = app.listen(portToUse, '0.0.0.0', () => {
@@ -81,6 +86,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await initDb();
     await seedEntitlementDefaults();
     await applyStartupFeatureFlagOverrides();
+    await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();
   } catch (err) {
     logError('[startup] initialization failed after binding port', err);
@@ -117,6 +123,10 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   startRetentionScheduler();
   startIngestionMetricsScheduler();
   startFailedRetryScheduler();
+  startBillingReconciliationScheduler();
+  if (process.env.NODE_ENV !== 'test') {
+    startScheduledAggregation();
+  }
 
   if (process.env.NODE_ENV !== 'test') {
     installShutdownHandlers(server);

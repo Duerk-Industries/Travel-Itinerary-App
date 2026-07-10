@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { reconcileDestinationsWithAttractions } from '../src/services/destinationCsvReconciliation';
 
 describe('reconcileDestinationsWithAttractions', () => {

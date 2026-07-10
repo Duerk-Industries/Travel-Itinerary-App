@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Verifies the Metro resolver alias map declared in metro.shared.cjs (used
  * by both metro.config.cjs and app/metro.config.js). The alias replaces

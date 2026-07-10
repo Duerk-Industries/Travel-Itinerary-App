@@ -1,6 +1,9 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'fs';
 import path from 'path';
 import childProcess from 'child_process';
+import { evaluateFields } from '../src/ai/evaluation/fieldEvaluator';
 
 const setMemoryEnv = () => {
   process.env.DB_PROVIDER = 'memory';
@@ -228,5 +231,26 @@ describe('Non-LLM ingestion fixture extraction', () => {
     if (expected.rooms != null) {
       expect(Number(fields.rooms ?? 0)).toBe(Number(expected.rooms));
     }
+
+    // Phase 6.6: run the same field-quality evaluator the parsing-capture
+    // pipeline runs in production against this real, hand-verified fixture.
+    // A present field failing its declared format here means either the
+    // extractor produced a malformed value or travel-field-spec.json's
+    // pattern for that field is wrong — both are real regressions this
+    // fixture corpus is well-positioned to catch. (This is how the ISO_DATE,
+    // TIME_12H, and OTA-booking-reference rules in the spec got corrected —
+    // they were wrong until real fixtures caught them here.)
+    //
+    // One documented, known exception: this specific fixture's source PDF
+    // prints "DELTA 3985" (full carrier name) rather than "DL 3985" (IATA
+    // code), so the extractor's flightNumber is genuinely "DELTA3985" — a
+    // real fix needs a carrier-name-to-IATA-code lookup table, which is out
+    // of scope here. Tracked explicitly rather than silently excluded.
+    const KNOWN_FORMAT_EXCEPTIONS = new Set(['Delta - Marleen Doerk - CLE to BOS Round Trip - Jul 26 2023.pdf/flightNumber']);
+    const evaluation = evaluateFields(String(item.itemType), fields);
+    const unexpectedFormatFailures = evaluation.fields.filter(
+      (field) => field.present && field.formatValid === false && !KNOWN_FORMAT_EXCEPTIONS.has(`${pdf}/${field.fieldName}`)
+    );
+    expect(unexpectedFormatFailures).toEqual([]);
   });
 });

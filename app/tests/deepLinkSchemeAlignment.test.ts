@@ -11,10 +11,12 @@
  * linking config matches `scheme` from app/app.config.ts (the single source of
  * truth for the Expo config).
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 
-const appTsxPath = path.join(path.resolve(__dirname, '..'), 'App.tsx');
+const navigationConfigPath = path.join(path.resolve(__dirname, '..'), 'navigationConfig.ts');
 
 const loadConfig = () => {
   jest.isolateModules(() => {});
@@ -32,16 +34,16 @@ describe('Deep-link scheme alignment', () => {
     expect(scheme!.length).toBeGreaterThan(0);
   });
 
-  it('App.tsx linking prefixes reference the same scheme', () => {
-    const source = fs.readFileSync(appTsxPath, 'utf8');
+  it('navigationConfig.ts linking prefixes reference the same scheme', () => {
+    const source = fs.readFileSync(navigationConfigPath, 'utf8');
     // Extract the prefixes array literal from the `linking` constant.
     // We look for string literals ending in `://`, anchored to the scheme.
     const expected = `${scheme}://`;
     expect(source).toContain(expected);
   });
 
-  it('App.tsx does not reference any stale alternate schemes', () => {
-    const source = fs.readFileSync(appTsxPath, 'utf8');
+  it('navigationConfig.ts does not reference any stale alternate schemes', () => {
+    const source = fs.readFileSync(navigationConfigPath, 'utf8');
     // Known stale alias that previously caused a silent deep-link failure.
     expect(source).not.toContain('wanderbunnies://');
   });

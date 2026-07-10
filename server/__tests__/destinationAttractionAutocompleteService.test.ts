@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -62,6 +64,49 @@ describe('destination attraction autocomplete filtering', () => {
     const names = results.map((item) => item.name);
     expect(names).toContain('Louvre Museum');
     expect(names).toContain('Matisse Museum');
+  });
+
+  it('matches attractions for a multi-word destination whose catalog key is a hyphenated slug', async () => {
+    // Regression: attractions are indexed by the CSV `destination_key` (a hyphenated
+    // slug like "new-york-city"), while the filter key comes from the destination name
+    // ("New York City"). These must normalize to the same value. Previously hyphens
+    // were preserved, so only single-word cities (e.g. "boston") matched and every
+    // multi-word destination returned zero attractions.
+    const destinationsPath = path.join(tmpDir, 'destinations.csv');
+    const attractionsPath = path.join(tmpDir, 'attractions_catalog.csv');
+    fs.writeFileSync(
+      destinationsPath,
+      [
+        'Destination English Name,Country,State/Provence,Nearest City,Destination Official Name,Attractions Updated',
+        'New York City,United States,New York,New York City,New York City,2026-03-01',
+        'Boston,United States,Massachusetts,Boston,Boston,2026-03-01',
+      ].join('\n'),
+      'utf8'
+    );
+    fs.writeFileSync(
+      attractionsPath,
+      [
+        'id,destination_key,destination_display_name,country,state_province,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+        'attr:new-york-city:statue-of-liberty,new-york-city,New York City,United States,New York,Statue of Liberty,1,Sights & Landmarks,culture,https://example/sol,wiki,Icon,3,paid,2026-03-01T00:00:00.000Z,72,Q9202,40.6892,-74.0445',
+        'attr:new-york-city:central-park,new-york-city,New York City,United States,New York,Central Park,7,Outdoor Activity,outdoors,https://example/cp,wiki,Park,3,free,2026-03-01T00:00:00.000Z,50,Q160409,40.7829,-73.9654',
+        'attr:boston:fenway-park,boston,Boston,United States,Massachusetts,Fenway Park,6,Outdoor Activity,outdoors,https://example/fp,wiki,Ballpark,3,free,2026-03-01T00:00:00.000Z,29,Q49136,42.3467,-71.0972',
+      ].join('\n'),
+      'utf8'
+    );
+    process.env.DESTINATIONS_CSV_LOCAL_PATH = destinationsPath;
+    process.env.ATTRACTIONS_CSV_LOCAL_PATH = attractionsPath;
+
+    const results = await searchAttractionOptionsForSelectedLocations({
+      query: 'new york',
+      selectedLocationNames: ['New York City'],
+      selectedLocationIds: [],
+      limit: 10,
+    });
+    const names = results.map((item) => item.name);
+    expect(names).toContain('Statue of Liberty');
+    expect(names).toContain('Central Park');
+    // The Boston attraction belongs to a different destination and must not leak in.
+    expect(names).not.toContain('Fenway Park');
   });
 
   it('limits attractions to destinations under an explicitly selected state/province', async () => {

@@ -5,6 +5,8 @@
  * the hook takes the AsyncStorage hydration path. Pairs with the existing
  * web-mode tests in usePersistedState.test.tsx.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 

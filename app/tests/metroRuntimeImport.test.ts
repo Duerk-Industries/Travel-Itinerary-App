@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * @expo/metro-runtime is a declared dependency that must actually be imported
  * by the entry chain so SDK 50+ web bundling enables HMR / async route support.

@@ -146,6 +146,12 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
       id: `manual-attraction-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       sourceType: 'attraction',
       name: trimmed,
+      // Only auto-tag when unambiguous (a single selected destination) — with
+      // multiple destinations we can't guess which one a free-typed
+      // attraction belongs to, and an untagged manual entry falls back to the
+      // server's destination-verification pass instead of round-robin
+      // placement.
+      ...(selectedLocationNames.length === 1 ? { destinationName: selectedLocationNames[0] } : {}),
     };
     handleAddSuggestion(manual);
   };

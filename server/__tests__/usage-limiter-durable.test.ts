@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { closePool, initDb, resetDbAdapter } from '../src/db';
 import {
   ApiLimitExceededError,

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
+import HorizontalTableScroll from './HorizontalTableScroll';
 import { getAppTheme } from '../theme/theme';
 
 export type PackingItem = {
@@ -271,7 +272,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
             </>
           ) : (
             <>
-              {allowPrint && isTrip ? (
+              {allowPrint && isTrip && Platform.OS === 'web' ? (
                 <Pressable
                   style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]}
                   onPress={printList}
@@ -298,7 +299,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           <Text style={[localStyles.addButtonText, { color: theme.colors.link }]}>+ Add item</Text>
         </Pressable>
       ) : null}
-      <ScrollView horizontal showsHorizontalScrollIndicator>
+      <HorizontalTableScroll>
         <View>
           <View style={[localStyles.row, localStyles.headerRow, { borderColor: theme.colors.border }]}>
             <Text style={[localStyles.itemHeader, { color: theme.colors.textMuted }]}>Item</Text>
@@ -377,7 +378,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
             </View>
           ))}
         </View>
-      </ScrollView>
+      </HorizontalTableScroll>
     </View>
   );
 };

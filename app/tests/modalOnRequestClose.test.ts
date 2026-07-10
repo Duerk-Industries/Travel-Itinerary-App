@@ -7,6 +7,8 @@
  * almost never what we want. Catching this at the source-text level is
  * cheap and avoids having to mount every screen.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 

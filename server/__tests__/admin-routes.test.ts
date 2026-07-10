@@ -1,6 +1,8 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier } from '../src/db';
+import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier, upsertAiAbTestMetric } from '../src/db';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 import fs from 'fs';
 import os from 'os';
@@ -915,6 +917,162 @@ describe('Admin routes', () => {
 
       expect(typeof res.body.startedAtIso).toBe('string');
       expect(typeof res.body.snapshotAtIso).toBe('string');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // AI experiments
+  // ---------------------------------------------------------------------------
+
+  describe('AI experiment routes', () => {
+    it('creates a shadow experiment with audit and refuses promotion until metrics clear thresholds', async () => {
+      const createReason = `Create experiment route coverage ${Date.now()}`;
+      const createRes = await request(app)
+        .post('/api/admin/experiments')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          featureKey: 'ingestion_llm_extract',
+          experimentKind: 'shadow_compare',
+          name: 'Route coverage shadow experiment',
+          variants: [
+            { variantId: 'control', trafficPercent: 80 },
+            { variantId: 'llm_shadow', trafficPercent: 20 },
+          ],
+          controlVariantId: 'control',
+          minSampleSize: 2,
+          maxDurationDays: 30,
+          reason: createReason,
+          actorRole: 'engineering_admin',
+        })
+        .expect(201);
+
+      const experimentId = createRes.body.experiment.experimentId;
+      const createAudit = await listAuditLog({ action: 'AI_EXPERIMENT_CREATED' as any });
+      expect(createAudit.entries.some((entry) => entry.actorUserId === adminUserId && entry.reason === createReason)).toBe(true);
+
+      await request(app)
+        .patch(`/api/admin/experiments/${experimentId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          status: 'completed',
+          winningVariantId: 'llm_shadow',
+          reason: 'Attempt promotion before metrics',
+        })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).toMatch(/requires metrics/i);
+        });
+
+      await upsertAiAbTestMetric({
+        experimentId,
+        variantId: 'control',
+        day: '2026-07-04',
+        requestCount: 2,
+        successRate: 1,
+        avgQualityScore: 80,
+        avgCostUsd: 0,
+        avgLatencyMs: 0,
+        groundTruthAgreement: 0.8,
+        groundTruthSignal: 'admin_review',
+      });
+      await upsertAiAbTestMetric({
+        experimentId,
+        variantId: 'llm_shadow',
+        day: '2026-07-04',
+        requestCount: 2,
+        successRate: 1,
+        avgQualityScore: 82,
+        avgCostUsd: 0.01,
+        avgLatencyMs: 1000,
+        groundTruthAgreement: 0.82,
+        groundTruthSignal: 'admin_review',
+      });
+
+      const promoteReason = `Promote experiment route coverage ${Date.now()}`;
+      await request(app)
+        .patch(`/api/admin/experiments/${experimentId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          status: 'completed',
+          winningVariantId: 'llm_shadow',
+          reason: promoteReason,
+          actorRole: 'product_owner',
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.experiment.winningVariantId).toBe('llm_shadow');
+        });
+
+      const promoteAudit = await listAuditLog({ action: 'AI_EXPERIMENT_PROMOTED' as any });
+      const entry = promoteAudit.entries.find((item) => item.actorUserId === adminUserId && item.reason === promoteReason);
+      expect(entry).toBeTruthy();
+      expect((entry!.afterState as any).actorRole).toBe('product_owner');
+      expect((entry!.afterState as any).promotionThresholds).toEqual(expect.objectContaining({ qualityDeltaMin: expect.any(Number) }));
+    });
+  });
+
+  describe('AI provider certification routes', () => {
+    it('requires contract metadata and writes an audit entry when certifying a provider', async () => {
+      await request(app)
+        .post('/api/admin/providers/openai/certify')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'Missing contract suite version' })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.error).toMatch(/contractSuiteVersion/i);
+        });
+
+      const reason = `Certify OpenAI provider ${Date.now()}`;
+      await request(app)
+        .post('/api/admin/providers/openai/certify')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          contractSuiteVersion: 'contract-suite-route-test',
+          reason,
+        })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.certification).toEqual(expect.objectContaining({
+            providerId: 'openai',
+            contractSuiteVersion: 'contract-suite-route-test',
+          }));
+        });
+
+      const audit = await listAuditLog({ action: 'AI_PROVIDER_CERTIFIED' as any });
+      const entry = audit.entries.find((item) => item.actorUserId === adminUserId && item.reason === reason);
+      expect(entry).toBeTruthy();
+      expect((entry!.afterState as any).certification.providerId).toBe('openai');
+    });
+  });
+
+  describe('PATCH /api/admin/api-limits/caching/:group', () => {
+    it('rejects fractional caching settings instead of silently flooring them', async () => {
+      const originalConfigPath = process.env.API_LIMITS_CONFIG_PATH;
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-api-caching-'));
+      const tempConfigPath = path.join(tempDir, 'api-limits.yaml');
+      fs.copyFileSync(path.join(__dirname, '..', 'config', 'api-limits.yaml'), tempConfigPath);
+      process.env.API_LIMITS_CONFIG_PATH = tempConfigPath;
+
+      try {
+        await request(app)
+          .patch('/api/admin/api-limits/caching/attractions')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            values: { refreshDays: 1.5 },
+            reason: 'Reject fractional cache settings',
+          })
+          .expect(400);
+
+        const updatedYaml = fs.readFileSync(tempConfigPath, 'utf8');
+        expect(updatedYaml).not.toContain('refreshDays: 1');
+      } finally {
+        if (originalConfigPath) {
+          process.env.API_LIMITS_CONFIG_PATH = originalConfigPath;
+        } else {
+          delete process.env.API_LIMITS_CONFIG_PATH;
+        }
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 

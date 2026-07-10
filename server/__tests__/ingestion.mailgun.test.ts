@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import crypto from 'crypto';
 import path from 'path';
 

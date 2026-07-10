@@ -32,6 +32,7 @@ export interface User {
   emailVerified?: boolean;
   emailVerifiedAt?: string | null;
   role: UserRole;
+  is_internal_canary?: boolean;
 }
 
 export interface Tier {
@@ -89,6 +90,127 @@ export interface FeatureFlag {
   createdAt: string;
 }
 
+export interface AiProviderConfig {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy?: string | null;
+  updatedAt: string;
+}
+
+export interface AdminSetting {
+  key: string;
+  value: string;
+  updatedBy?: string | null;
+  updatedAt: string;
+}
+
+export type AiAnalyticsMetricTable =
+  | 'ai_daily_metrics'
+  | 'ai_provider_metrics'
+  | 'ai_prompt_metrics'
+  | 'ai_parser_metrics'
+  | 'ai_field_metrics'
+  | 'ai_cost_metrics';
+
+export type AiAnalyticsPeriodType = 'day' | 'week' | 'month' | 'quarter';
+
+export interface AiAnalyticsMetric {
+  table: AiAnalyticsMetricTable;
+  periodStart: string;
+  periodType: AiAnalyticsPeriodType;
+  dimensions: Record<string, string>;
+  metricKey: string;
+  metricValue: number;
+  updatedAt: string;
+}
+
+export type AiExperimentKind = 'shadow_compare' | 'traffic_split';
+export type AiExperimentStatus = 'draft' | 'running' | 'paused' | 'completed';
+
+export interface AiExperimentVariant {
+  variantId: string;
+  provider?: string;
+  model?: string;
+  promptVersion?: string;
+  parserVersion?: string;
+  trafficPercent: number;
+}
+
+export interface AiExperiment {
+  experimentId: string;
+  featureKey: string;
+  experimentKind: AiExperimentKind;
+  name: string;
+  status: AiExperimentStatus;
+  variants: AiExperimentVariant[];
+  controlVariantId?: string | null;
+  minSampleSize: number;
+  maxDurationDays: number;
+  startedAt?: string | null;
+  endsAt?: string | null;
+  winningVariantId?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiExperimentAssignment {
+  assignmentKey: string;
+  experimentId: string;
+  variantId: string;
+  originalVariantId?: string | null;
+  assignedAt: string;
+  reassignedAt?: string | null;
+}
+
+export interface AiAbTestMetric {
+  experimentId: string;
+  variantId: string;
+  day: string;
+  requestCount: number;
+  successRate: number;
+  avgQualityScore: number;
+  avgCostUsd: number;
+  avgLatencyMs: number;
+  groundTruthAgreement?: number | null;
+  groundTruthSignal?: string | null;
+  updatedAt: string;
+}
+
+export interface AiProviderCertification {
+  providerId: string;
+  certifiedAt: string;
+  certifiedBy?: string | null;
+  contractSuiteVersion: string;
+  notes?: string | null;
+}
+
+export type AiRecommendationStatus = 'proposed' | 'applied' | 'dismissed' | 'expired';
+
+export interface AiRecommendation {
+  recommendationId: string;
+  recommendationType: string;
+  featureKey: string;
+  subjectCurrent: Record<string, unknown>;
+  subjectProposed: Record<string, unknown>;
+  rationale: string;
+  qualityDeltaEstimate: number;
+  costDeltaEstimateUsdMonthly: number;
+  confidence: 'low' | 'medium' | 'high' | string;
+  supportingEvidenceRef?: string | null;
+  supportingEvidenceQuery?: Record<string, unknown> | null;
+  engineVersion: string;
+  status: AiRecommendationStatus;
+  createdAt: string;
+  respondedBy?: string | null;
+  respondedAt?: string | null;
+  outcomeMeasuredAt?: string | null;
+  outcomeQualityDelta?: number | null;
+  outcomeCostDeltaUsdMonthly?: number | null;
+}
+
 export interface UsageCounter {
   id: string;
   userId: string;
@@ -120,9 +242,26 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
+  | 'AI_PROVIDER_CONFIG_UPDATED'
+  | 'AI_PROVIDER_CERTIFIED'
+  | 'AI_PROVIDER_CERTIFICATION_REVOKED'
+  | 'AI_EXPERIMENT_CREATED'
+  | 'AI_EXPERIMENT_STATUS_CHANGED'
+  | 'AI_EXPERIMENT_PROMOTED'
+  | 'AI_RECOMMENDATION_APPLIED'
+  | 'AI_RECOMMENDATION_DISMISSED'
+  | 'ADMIN_SETTING_UPDATED'
   | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'
-  | 'RETENTION_TICK_RUN';
+  | 'API_CACHING_CONFIG_UPDATED'
+  | 'BILLING_CONFIG_UPDATED'
+  | 'BILLING_PRICE_PUBLISHED'
+  | 'BILLING_RECONCILIATION_RUN'
+  | 'RETENTION_TICK_RUN'
+  | 'DEPLOY_CUTOVER'
+  | 'DEPLOY_DIRECT_PROD'
+  | 'DEPLOY_ROLLBACK'
+  | 'DEPLOY_TEARDOWN';
 
 export interface AuditLogEntry {
   id: string;
@@ -322,6 +461,21 @@ export interface AttractionShortlistBlob {
   promptBlock: string;
   compact: string;
   itemCount: number;
+  updatedAt: string;
+}
+
+export interface AttractionDurationMetadata {
+  id: string;
+  destinationKey: string;
+  destinationDisplayName: string;
+  name: string;
+  activityType: ActivityType;
+  estimatedDurationMinutes: number;
+  durationSource: 'heuristic' | 'override';
+  requiresPreOrderTickets: boolean;
+  preOrderNotes?: string | null;
+  description?: string | null;
+  descriptionSource?: 'wikipedia' | 'catalog_snippet' | null;
   updatedAt: string;
 }
 
@@ -552,6 +706,8 @@ export interface ItineraryGeneratedDetail {
   time: string | null;
   activity: string;
   cost: number | null;
+  kind?: ItineraryDetailKind;
+  noteBody?: string | null;
 }
 
 export interface PlaceDetailsCache {
@@ -694,4 +850,138 @@ export interface TripMessageRead {
   messageId: string;
   userId: string;
   readAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Stripe Billing
+// ---------------------------------------------------------------------------
+
+export type BillingSubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'unpaid'
+  | 'paused'
+  | 'canceled';
+
+export type BillingPlanKey = 'premium_monthly' | 'premium_annual';
+
+export type BillingSubscriptionScope = 'individual' | 'family';
+
+export type WebhookProcessingStatus = 'pending' | 'processed' | 'ignored' | 'failed';
+
+export interface BillingCustomer {
+  id: string;
+  userId: string;
+  stripeCustomerId: string;
+  emailSnapshot: string | null;
+  livemode: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingTrialUsage {
+  id: string;
+  emailNormalized: string;
+  userId: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  trialUsedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BillingNotificationType = 'premium_trial_will_end';
+
+export interface BillingNotification {
+  id: string;
+  userId: string;
+  type: BillingNotificationType;
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId: string | null;
+  stripeEventId: string | null;
+  emailSentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingSubscription {
+  id: string;
+  stripeSubscriptionId: string;
+  userId: string;
+  subscriptionScope: BillingSubscriptionScope;
+  scopeOwnerId: string;
+  stripeCustomerId: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  status: BillingSubscriptionStatus;
+  livemode: boolean;
+  cancelAtPeriodEnd: boolean;
+  cancelAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  trialEnd: string | null;
+  endedAt: string | null;
+  latestInvoiceId: string | null;
+  pastDueSince: string | null;
+  accessRevokedAt: string | null;
+  accessRevocationReason: string | null;
+  disputeId: string | null;
+  refundedAt: string | null;
+  lastStripeEventCreated: number | null;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StripeWebhookEvent {
+  id: string;
+  stripeEventId: string;
+  eventType: string;
+  stripeObjectId: string | null;
+  livemode: boolean;
+  eventCreated: number | null;
+  processingStatus: WebhookProcessingStatus;
+  attemptCount: number;
+  lastError: string | null;
+  receivedAt: string;
+  processedAt: string | null;
+}
+
+export interface BillingPlanConfig {
+  id: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  activeStripePriceId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  trialDays: number;
+  pastDueGraceDays: number;
+  automaticTaxEnabled: boolean;
+  promotionCodesEnabled: boolean;
+  isCheckoutEnabled: boolean;
+  livemode: boolean | null;
+  version: number;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+export interface BillingPriceHistory {
+  id: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  livemode: boolean;
+  activeForNewCheckout: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  retiredAt: string | null;
 }

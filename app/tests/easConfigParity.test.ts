@@ -5,6 +5,8 @@
  * pipelines run `cd app && eas …`. This test locks in the build-profile
  * invariants that matter for store submissions.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 

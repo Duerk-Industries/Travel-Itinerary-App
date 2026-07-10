@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Regression test for the iOS crash where socket.io-client's eager top-level
  * imports pulled in Node-only modules (`xmlhttprequest-ssl`, `ws`,

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { z } from 'zod';
 import { DtoValidationError, parseDto, readDto } from '../src/utils/dtoParse';
 

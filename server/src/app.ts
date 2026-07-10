@@ -19,13 +19,18 @@ import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
-import paymentRoutes from './routes/paymentRoutes';
+import paymentRoutes from './routes/ledgerPaymentRoutes';
 import adminRoutes from './routes/adminRoutes';
+import adminBillingRoutes from './routes/adminBillingRoutes';
 import ingestionRoutes from './routes/ingestionRoutes';
 import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
 import ingestionWebhookRoutes from './routes/ingestionWebhookRoutes';
+import stripeWebhookRoutes from './routes/stripeWebhookRoutes';
+import billingRoutes from './routes/billingRoutes';
 import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
+import internalBillingRoutes from './routes/internalBillingRoutes';
+import internalDeployRoutes from './routes/internalDeployRoutes';
 import prometheusRoutes from './routes/prometheusRoutes';
 
 import { loadEnv } from './env_loader';
@@ -81,6 +86,10 @@ app.set('trust proxy', 1);
 // Mailgun may send larger multipart or urlencoded webhook payloads than the
 // app-wide default body parser limits, so mount webhook routes before them.
 app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
+
+// Stripe webhook must receive the raw body for signature verification.
+// Mount before express.json() so body-parser does not consume the raw bytes.
+app.use('/api/billing/webhooks', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
 
 const isRunningLocally = isLocalEnv();
 const webUrl = getBackendUrl('https://duerk.org') || 'https://duerk.org';
@@ -212,12 +221,17 @@ import {
 } from './redirects';
 import { logError } from './logger';
 import { assertNoPubliclyExposedServerSecrets } from './secrets';
+import { canarySafeMode } from './middleware/canarySafeMode';
 
 assertSafeAuthSecretConfig();
 assertNoPubliclyExposedServerSecrets();
 
 initPassport();
 app.use(passport.initialize());
+// Default res.locals.canarySafeMode = false here; `authenticate()` (auth.ts)
+// re-derives the real value from the DB once req.user is resolved, since
+// canary status isn't embedded in the JWT payload.
+app.use(canarySafeMode);
 const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
 
 const redirectToLoginWithError = (req: express.Request, res: express.Response, webUrl: string, code: string) => {
@@ -354,10 +368,14 @@ app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);
+app.use('/api/internal/billing', internalBillingRoutes);
+app.use('/api/internal/deploy', internalDeployRoutes);
 app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
+app.use('/api/admin/billing', authenticate, requireAdmin, adminBillingRoutes);
 app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
 // Prometheus scrape endpoint. Unauthenticated, text-only, per-instance.
 // Mounted at the root (`/metrics`) since that's the conventional path most

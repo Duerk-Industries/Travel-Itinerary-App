@@ -2,6 +2,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  maxWorkers: 2,
 
   // All test files are in the 'tests' directory, relative to this config file.
   roots: ['<rootDir>/tests'],

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { findOrCreateUser, findOrCreateGoogleUser, getUserRole, ensureCurrentUserTier } from './db';
+import { findOrCreateUser, findOrCreateGoogleUser, getUserRole, ensureCurrentUserTier, isInternalCanaryAccount } from './db';
 import { isPasswordSetupRequired } from './db';
 import { User, UserRole } from './types';
 import passport from 'passport';
@@ -119,6 +119,10 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
     (req as Request & { user?: TokenPayload }).user = decoded;
     setRequestContextUserId(decoded.userId);
+    // Canary status isn't embedded in the JWT (it can be toggled without a
+    // token refresh), so it's resolved fresh from the DB on every
+    // authenticated request rather than trusted from decoded token claims.
+    res.locals.canarySafeMode = await isInternalCanaryAccount(decoded.userId);
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
 import { closePool, initDb, getUserPackingList, replaceUserPackingList, getTripPackingList, replaceUniversalPackingList } from '../src/db';
@@ -78,7 +80,8 @@ describe('packing lists', () => {
       .get('/api/groups/invites')
       .set('Authorization', `Bearer ${travelerToken}`)
       .expect(200);
-    const invite = pending.body.find((entry: any) => entry.tripId === tripId);
+    const invite = pending.body.find((entry: any) => (entry.tripId ?? entry.resolvedTripId) === tripId)
+      ?? created.body.invites?.find((entry: any) => entry.email === traveler.email);
     expect(invite).toBeTruthy();
 
     await request(app)

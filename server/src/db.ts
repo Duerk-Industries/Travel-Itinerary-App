@@ -16,6 +16,7 @@ import type {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  AttractionDurationMetadata,
   TripActivity,
   TripComment,
   CarRental,
@@ -35,6 +36,10 @@ export const ensureDefaultGroupForUser = async (...args: Parameters<ReturnType<t
   adapter().ensureDefaultGroupForUser(...args);
 export const findUserByEmail = async (email: string): Promise<User | null> => adapter().findUserByEmail(email);
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => adapter().findUserByIdentifier(identifier);
+export const isInternalCanaryAccount = async (...args: Parameters<ReturnType<typeof adapter>['isInternalCanaryAccount']>) =>
+  adapter().isInternalCanaryAccount(...args);
+export const ensureCanaryAccountBootstrap = async (...args: Parameters<ReturnType<typeof adapter>['ensureCanaryAccountBootstrap']>) =>
+  adapter().ensureCanaryAccountBootstrap(...args);
 export const getUserById = async (...args: Parameters<ReturnType<typeof adapter>['getUserById']>) =>
   adapter().getUserById(...args);
 export const createWebUser = async (...args: Parameters<ReturnType<typeof adapter>['createWebUser']>) =>
@@ -268,6 +273,15 @@ export const getAttractionShortlistBlob = async (
 export const upsertAttractionShortlistBlob = async (
   ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionShortlistBlob']>
 ) => adapter().upsertAttractionShortlistBlob(...args);
+export const getAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getAttractionDurationMetadata']>
+): Promise<AttractionDurationMetadata | null> => adapter().getAttractionDurationMetadata(...args);
+export const listAttractionDurationMetadataByDestination = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listAttractionDurationMetadataByDestination']>
+): Promise<AttractionDurationMetadata[]> => adapter().listAttractionDurationMetadataByDestination(...args);
+export const upsertAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionDurationMetadata']>
+) => adapter().upsertAttractionDurationMetadata(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>
@@ -403,6 +417,56 @@ export const listFeatureFlags = async (...args: Parameters<ReturnType<typeof ada
   adapter().listFeatureFlags(...args);
 export const setFeatureFlag = async (...args: Parameters<ReturnType<typeof adapter>['setFeatureFlag']>) =>
   adapter().setFeatureFlag(...args);
+export const getAiProviderConfig = async (...args: Parameters<ReturnType<typeof adapter>['getAiProviderConfig']>) =>
+  adapter().getAiProviderConfig(...args);
+export const listAiProviderConfigs = async (...args: Parameters<ReturnType<typeof adapter>['listAiProviderConfigs']>) =>
+  adapter().listAiProviderConfigs(...args);
+export const setAiProviderConfig = async (...args: Parameters<ReturnType<typeof adapter>['setAiProviderConfig']>) =>
+  adapter().setAiProviderConfig(...args);
+export const getAdminSetting = async (...args: Parameters<ReturnType<typeof adapter>['getAdminSetting']>) =>
+  adapter().getAdminSetting(...args);
+export const setAdminSetting = async (...args: Parameters<ReturnType<typeof adapter>['setAdminSetting']>) =>
+  adapter().setAdminSetting(...args);
+export const upsertAiAnalyticsMetric = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiAnalyticsMetric']>) =>
+  adapter().upsertAiAnalyticsMetric(...args);
+export const listAiAnalyticsMetrics = async (...args: Parameters<ReturnType<typeof adapter>['listAiAnalyticsMetrics']>) =>
+  adapter().listAiAnalyticsMetrics(...args);
+export const createAiExperiment = async (...args: Parameters<ReturnType<typeof adapter>['createAiExperiment']>) =>
+  adapter().createAiExperiment(...args);
+export const listAiExperiments = async (...args: Parameters<ReturnType<typeof adapter>['listAiExperiments']>) =>
+  adapter().listAiExperiments(...args);
+export const getAiExperiment = async (...args: Parameters<ReturnType<typeof adapter>['getAiExperiment']>) =>
+  adapter().getAiExperiment(...args);
+export const updateAiExperimentStatus = async (...args: Parameters<ReturnType<typeof adapter>['updateAiExperimentStatus']>) =>
+  adapter().updateAiExperimentStatus(...args);
+export const getOrCreateAiExperimentAssignment = async (...args: Parameters<ReturnType<typeof adapter>['getOrCreateAiExperimentAssignment']>) =>
+  adapter().getOrCreateAiExperimentAssignment(...args);
+export const reassignAiExperimentVariantToControl = async (...args: Parameters<ReturnType<typeof adapter>['reassignAiExperimentVariantToControl']>) =>
+  adapter().reassignAiExperimentVariantToControl(...args);
+export const listAiExperimentAssignments = async (...args: Parameters<ReturnType<typeof adapter>['listAiExperimentAssignments']>) =>
+  adapter().listAiExperimentAssignments(...args);
+export const deleteCompletedAiExperimentAssignmentsOlderThan = async (...args: Parameters<ReturnType<typeof adapter>['deleteCompletedAiExperimentAssignmentsOlderThan']>) =>
+  adapter().deleteCompletedAiExperimentAssignmentsOlderThan(...args);
+export const upsertAiAbTestMetric = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiAbTestMetric']>) =>
+  adapter().upsertAiAbTestMetric(...args);
+export const listAiAbTestMetrics = async (...args: Parameters<ReturnType<typeof adapter>['listAiAbTestMetrics']>) =>
+  adapter().listAiAbTestMetrics(...args);
+export const getAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['getAiProviderCertification']>) =>
+  adapter().getAiProviderCertification(...args);
+export const listAiProviderCertifications = async (...args: Parameters<ReturnType<typeof adapter>['listAiProviderCertifications']>) =>
+  adapter().listAiProviderCertifications(...args);
+export const setAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['setAiProviderCertification']>) =>
+  adapter().setAiProviderCertification(...args);
+export const deleteAiProviderCertification = async (...args: Parameters<ReturnType<typeof adapter>['deleteAiProviderCertification']>) =>
+  adapter().deleteAiProviderCertification(...args);
+export const upsertAiRecommendation = async (...args: Parameters<ReturnType<typeof adapter>['upsertAiRecommendation']>) =>
+  adapter().upsertAiRecommendation(...args);
+export const listAiRecommendations = async (...args: Parameters<ReturnType<typeof adapter>['listAiRecommendations']>) =>
+  adapter().listAiRecommendations(...args);
+export const updateAiRecommendationStatus = async (...args: Parameters<ReturnType<typeof adapter>['updateAiRecommendationStatus']>) =>
+  adapter().updateAiRecommendationStatus(...args);
+export const updateAiRecommendationOutcome = async (...args: Parameters<ReturnType<typeof adapter>['updateAiRecommendationOutcome']>) =>
+  adapter().updateAiRecommendationOutcome(...args);
 export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['getUsageCounter']>) =>
   adapter().getUsageCounter(...args);
 export const setUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['setUsageCounter']>) =>
@@ -476,3 +540,71 @@ export const countUnreadMessages = async (...args: Parameters<ReturnType<typeof 
   adapter().countUnreadMessages(...args);
 export const listUserAuthoredItems = async (...args: Parameters<ReturnType<typeof adapter>['listUserAuthoredItems']>) =>
   adapter().listUserAuthoredItems(...args);
+
+// ---- Stripe Billing facade exports ----
+export const getBillingCustomerByUserId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingCustomerByUserId']>) =>
+  adapter().getBillingCustomerByUserId(...args);
+export const getBillingCustomerByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingCustomerByStripeId']>) =>
+  adapter().getBillingCustomerByStripeId(...args);
+export const upsertBillingCustomer = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingCustomer']>) =>
+  adapter().upsertBillingCustomer(...args);
+export const getBillingTrialUsageByEmail = async (...args: Parameters<ReturnType<typeof adapter>['getBillingTrialUsageByEmail']>) =>
+  adapter().getBillingTrialUsageByEmail(...args);
+export const markBillingTrialUsed = async (...args: Parameters<ReturnType<typeof adapter>['markBillingTrialUsed']>) =>
+  adapter().markBillingTrialUsed(...args);
+export const claimBillingNotification = async (...args: Parameters<ReturnType<typeof adapter>['claimBillingNotification']>) =>
+  adapter().claimBillingNotification(...args);
+export const markBillingNotificationEmailSent = async (...args: Parameters<ReturnType<typeof adapter>['markBillingNotificationEmailSent']>) =>
+  adapter().markBillingNotificationEmailSent(...args);
+export const listBillingNotificationsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listBillingNotificationsForUser']>) =>
+  adapter().listBillingNotificationsForUser(...args);
+export const getBillingSubscriptionByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingSubscriptionByStripeId']>) =>
+  adapter().getBillingSubscriptionByStripeId(...args);
+export const listActiveBillingSubscriptionsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listActiveBillingSubscriptionsForUser']>) =>
+  adapter().listActiveBillingSubscriptionsForUser(...args);
+export const claimBillingCheckout = async (...args: Parameters<ReturnType<typeof adapter>['claimBillingCheckout']>) =>
+  adapter().claimBillingCheckout(...args);
+export const completeBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['completeBillingCheckoutClaim']>) =>
+  adapter().completeBillingCheckoutClaim(...args);
+export const releaseBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['releaseBillingCheckoutClaim']>) =>
+  adapter().releaseBillingCheckoutClaim(...args);
+export const clearBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['clearBillingCheckoutClaim']>) =>
+  adapter().clearBillingCheckoutClaim(...args);
+export const upsertBillingSubscription = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingSubscription']>) =>
+  adapter().upsertBillingSubscription(...args);
+export const revokeBillingSubscriptionAccess = async (...args: Parameters<ReturnType<typeof adapter>['revokeBillingSubscriptionAccess']>) =>
+  adapter().revokeBillingSubscriptionAccess(...args);
+export const restoreBillingSubscriptionAccess = async (...args: Parameters<ReturnType<typeof adapter>['restoreBillingSubscriptionAccess']>) =>
+  adapter().restoreBillingSubscriptionAccess(...args);
+export const setPastDueSince = async (...args: Parameters<ReturnType<typeof adapter>['setPastDueSince']>) =>
+  adapter().setPastDueSince(...args);
+export const clearPastDueSince = async (...args: Parameters<ReturnType<typeof adapter>['clearPastDueSince']>) =>
+  adapter().clearPastDueSince(...args);
+export const listStaleSubscriptionsForReconciliation = async (...args: Parameters<ReturnType<typeof adapter>['listStaleSubscriptionsForReconciliation']>) =>
+  adapter().listStaleSubscriptionsForReconciliation(...args);
+export const listPastDueBillingSubscriptions = async (...args: Parameters<ReturnType<typeof adapter>['listPastDueBillingSubscriptions']>) =>
+  adapter().listPastDueBillingSubscriptions(...args);
+export const claimStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['claimStripeWebhookEvent']>) =>
+  adapter().claimStripeWebhookEvent(...args);
+export const markStripeWebhookEventProcessed = async (...args: Parameters<ReturnType<typeof adapter>['markStripeWebhookEventProcessed']>) =>
+  adapter().markStripeWebhookEventProcessed(...args);
+export const markStripeWebhookEventFailed = async (...args: Parameters<ReturnType<typeof adapter>['markStripeWebhookEventFailed']>) =>
+  adapter().markStripeWebhookEventFailed(...args);
+export const getStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['getStripeWebhookEvent']>) =>
+  adapter().getStripeWebhookEvent(...args);
+
+// ---- Billing plan config ----
+export const listBillingPlanConfigs = async (...args: Parameters<ReturnType<typeof adapter>['listBillingPlanConfigs']>) =>
+  adapter().listBillingPlanConfigs(...args);
+export const getBillingPlanConfig = async (...args: Parameters<ReturnType<typeof adapter>['getBillingPlanConfig']>) =>
+  adapter().getBillingPlanConfig(...args);
+export const upsertBillingPlanConfig = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingPlanConfig']>) =>
+  adapter().upsertBillingPlanConfig(...args);
+
+// ---- Billing price history ----
+export const listBillingPriceHistory = async (...args: Parameters<ReturnType<typeof adapter>['listBillingPriceHistory']>) =>
+  adapter().listBillingPriceHistory(...args);
+export const insertBillingPriceHistory = async (...args: Parameters<ReturnType<typeof adapter>['insertBillingPriceHistory']>) =>
+  adapter().insertBillingPriceHistory(...args);
+export const deactivateOldPricesForPlan = async (...args: Parameters<ReturnType<typeof adapter>['deactivateOldPricesForPlan']>) =>
+  adapter().deactivateOldPricesForPlan(...args);

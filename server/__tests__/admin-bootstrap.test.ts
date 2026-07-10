@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { app } from '../src/app';
 import { initDb, closePool, getUserRole, getCurrentUserTier, findUserByEmail, listAuditLog, setUserRole, deleteAuditLog } from '../src/db';
 import { registerAndLoginWebUser, loginWebUser, cleanupTestUsersByEmail } from './helpers';

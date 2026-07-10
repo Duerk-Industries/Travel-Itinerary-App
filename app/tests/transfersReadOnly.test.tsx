@@ -1,6 +1,7 @@
 /**
  * @jest-environment node
  */
+/// <reference types="node" />
 
 import React from 'react';
 import { describe, expect, test, jest } from '@jest/globals';

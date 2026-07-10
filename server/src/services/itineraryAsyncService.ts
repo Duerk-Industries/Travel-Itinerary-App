@@ -1,8 +1,11 @@
 import { randomUUID } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import {
   addItineraryDetail,
   createItineraryRecord,
   ensureUserInTrip,
+  getTripById,
   getWebUserProfile,
   insertActivity,
   insertCarRental,
@@ -14,13 +17,19 @@ import {
   upsertExpenseForSource,
 } from '../db';
 import { logError, logInfo } from '../logger';
+import { getEnvFlag, isLocalEnv } from '../env';
 import { incrementMetric, recordTiming } from '../metrics';
 import { failGenerationUsage, finalizeGenerationUsage } from './entitlementService';
 import {
   generateItineraryViaPromptPlan,
   type ItineraryGeneratedItems,
   type ItineraryGeneratedTransfer,
+  type ItineraryPromptPlanResult,
+  type MustSeeAttractionInput,
 } from './itineraryPromptPlanService';
+import { computeUnmatchedDestinationAndAttractionWarnings } from './attractionMatchWarnings';
+import { renderSimplifiedItineraryMarkdown } from './itineraryMarkdownRenderer';
+import { tripNameToFileSlug } from '../utils/tripNameSlug';
 import type { ActivityType } from '../types';
 
 type AsyncStatus = 'queued' | 'running' | 'completed' | 'failed';
@@ -46,13 +55,13 @@ export type AsyncItineraryJob = {
 };
 
 type QueueInput = {
-  apiKey: string;
+  apiKey?: string;
   userId: string;
   tripId: string;
   itineraryId?: string;
   destinationSummary: string;
   locations: string[];
-  mustSeeAttractions?: string[];
+  mustSeeAttractions?: MustSeeAttractionInput[];
   days: number;
   budgetMin: number;
   budgetMax: number;
@@ -70,6 +79,7 @@ type QueueInput = {
 };
 
 const jobs = new Map<string, AsyncItineraryJob>();
+const jobRuns = new Map<string, Promise<void>>();
 
 // Cap the in-memory job store so long-lived server processes don't accumulate
 // completed jobs indefinitely. We keep the most-recently-touched N jobs; this
@@ -369,7 +379,13 @@ const persistResult = async (params: {
   userId: string;
   tripId: string;
   itineraryId: string;
-  details: Array<{ day: number; activity: string; cost: number | null }>;
+  details: Array<{
+    day: number;
+    activity: string;
+    cost: number | null;
+    kind?: 'activity' | 'place' | 'note' | 'checklist';
+    noteBody?: string | null;
+  }>;
   generatedItems: ItineraryGeneratedItems;
   currentUserPreferredAirport?: string | null;
 }): Promise<{
@@ -395,6 +411,8 @@ const persistResult = async (params: {
       time: null,
       activity: safeString(detail.activity),
       cost: detail.cost ?? null,
+      kind: detail.kind ?? 'activity',
+      noteBody: detail.noteBody ?? null,
     });
     detailKeys.add(key);
     detailsCount += 1;
@@ -518,15 +536,16 @@ const persistResult = async (params: {
   let lodgingsCount = 0;
   for (const lodging of lodgings) {
     const checkInDate = safeString(lodging.checkInDate) || today;
+    const checkOutDate = safeString(lodging.checkOutDate) || addDays(checkInDate, 1);
     const totalCost = Number(safeString(lodging.totalCost)) || 0;
-    const nights = Math.max(1, Math.round((new Date(addDays(checkInDate, 1)).getTime() - new Date(checkInDate).getTime()) / 86400000));
+    const nights = Math.max(1, Math.round((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / 86400000));
     const saved = await insertLodging({
       userId: params.userId,
       tripId: params.tripId,
       status: 'Needed',
       name: safeString(lodging.name) || 'Suggested lodging',
       checkInDate,
-      checkOutDate: safeString(lodging.checkOutDate) || addDays(checkInDate, 1),
+      checkOutDate,
       rooms: Number(safeString(lodging.rooms)) || 1,
       refundBy: null,
       totalCost,
@@ -633,6 +652,51 @@ const persistResult = async (params: {
   return { detailsCount, transfersCount, lodgingsCount, activitiesCount, carRentalsCount };
 };
 
+// When ENABLE_RAW_AI_CAPTURE is on in a local/dev environment, writes the
+// same three artifacts the CLI replay script produces (server/scripts/
+// replay-itinerary-generation.ts) — an input-capture JSON named after the
+// trip, the raw result JSON, and a simplified day-by-day markdown — so a
+// trip generated from the running web app can be inspected/replayed the
+// same way as a CLI run, without a manual gunzip-and-feed-to-the-CLI step.
+// Best-effort only: any failure here must never affect the real generation
+// or persistence flow.
+const writeLocalGenerationArtifacts = async (
+  jobId: string,
+  input: QueueInput,
+  generationInput: Record<string, unknown>,
+  result: ItineraryPromptPlanResult
+): Promise<void> => {
+  const trip = await getTripById(input.tripId).catch(() => null);
+  const tripName = trip?.name || input.destinationSummary || 'trip';
+
+  const inputSnapshot = {
+    tripName,
+    destinations: generationInput.destinations,
+    mustSeeAttractions: generationInput.mustSeeAttractions,
+    days: generationInput.days,
+    budgetMin: generationInput.budgetMin,
+    budgetMax: generationInput.budgetMax,
+    departureAirport: generationInput.departureAirport,
+    tripStyle: generationInput.tripStyle,
+    promptTraits: generationInput.promptTraits,
+    tripStartDate: generationInput.tripStartDate,
+    tripEndDate: generationInput.tripEndDate,
+  };
+
+  const warnings = await computeUnmatchedDestinationAndAttractionWarnings(inputSnapshot);
+  for (const warning of warnings) {
+    logError(`[itinerary] ${warning}`);
+  }
+
+  const outputDir = path.resolve(__dirname, '../../logs/ai-replay/live', jobId);
+  fs.mkdirSync(outputDir, { recursive: true });
+  const slug = tripNameToFileSlug(tripName);
+  fs.writeFileSync(path.join(outputDir, `${slug}-input.json`), JSON.stringify(inputSnapshot, null, 2));
+  fs.writeFileSync(path.join(outputDir, 'output.json'), JSON.stringify(result, null, 2));
+  fs.writeFileSync(path.join(outputDir, 'output.md'), renderSimplifiedItineraryMarkdown(result, tripName));
+  logInfo(`[itinerary] wrote local generation artifacts to ${outputDir}`);
+};
+
 const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
   const job = jobs.get(jobId);
   if (!job) return;
@@ -648,12 +712,23 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       fallbackAirport = safeString((profile as any)?.preferredAirport);
     }
 
-    const result = await generateItineraryViaPromptPlan({
+    const generationInput = {
       apiKey: input.apiKey,
       userId: input.userId,
       destinations: input.locations.length ? input.locations : [input.destinationSummary],
       mustSeeAttractions: Array.isArray(input.mustSeeAttractions)
-        ? input.mustSeeAttractions.map((item) => safeString(item)).filter(Boolean)
+        ? (input.mustSeeAttractions
+            .map((item) => {
+              if (item && typeof item === 'object') {
+                const name = safeString((item as any).name);
+                if (!name) return null;
+                const destinationName = safeString((item as any).destinationName ?? '');
+                return destinationName ? { name, destinationName } : { name };
+              }
+              const name = safeString(item);
+              return name || null;
+            })
+            .filter(Boolean) as MustSeeAttractionInput[])
         : [],
       days: input.days,
       budgetMin: input.budgetMin,
@@ -670,8 +745,16 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripStartMonth: input.tripStartMonth,
       tripStartYear: input.tripStartYear,
       tripIdSeed: input.tripId,
+      captureId: jobId,
       usageWindowKey: input.usageWindowKey,
-    });
+    };
+    const result = await generateItineraryViaPromptPlan(generationInput);
+
+    if (getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false }) && isLocalEnv()) {
+      await writeLocalGenerationArtifacts(jobId, input, generationInput, result).catch((err) =>
+        logError('[itinerary] failed to write local generation artifacts', err)
+      );
+    }
 
     const itineraryId = await ensureItineraryId({
       userId: input.userId,
@@ -748,19 +831,48 @@ export const enqueueAsyncItineraryJob = (input: QueueInput): AsyncItineraryJob =
   // a separate timer/interval that would also have to be cleaned up.
   pruneStaleJobs();
   logInfo(`[itinerary][async] queued job=${id} trip=${input.tripId}`);
-  setTimeout(() => {
-    void runJob(id, input);
-  }, 0);
+  const runPromise = new Promise<void>((resolve, reject) => {
+    setTimeout(() => {
+      runJob(id, input).then(resolve, reject);
+    }, 0);
+  });
+  jobRuns.set(id, runPromise);
+  runPromise.finally(() => {
+    if (jobRuns.get(id) === runPromise) {
+      jobRuns.delete(id);
+    }
+  }).catch(() => undefined);
   return job;
 };
 
 export const getAsyncItineraryJob = (jobId: string): AsyncItineraryJob | null => jobs.get(jobId) ?? null;
 
+const waitForJobForTest = async (jobId: string, timeoutMs = 10000): Promise<AsyncItineraryJob | null> => {
+  const runPromise = jobRuns.get(jobId);
+  if (runPromise) {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        runPromise,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error(`Timed out waiting for itinerary job ${jobId}`)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+  return getAsyncItineraryJob(jobId);
+};
+
 // Test-only helper. Lets the regression test exercise the prune logic
 // without having to enqueue thousands of real jobs.
 export const __testing = {
   jobs,
+  jobRuns,
+  waitForJob: waitForJobForTest,
   pruneStaleJobs,
   JOB_RETENTION_LIMIT,
   JOB_RETENTION_TTL_MS,
+  writeLocalGenerationArtifacts,
 };

@@ -74,7 +74,10 @@ const normalizeKey = (value: unknown): string =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
+    // Fold hyphens (and any other separators) to spaces so a hyphenated catalog
+    // slug like "new-york-city" and a typed name like "New York City" reduce to
+    // the same key. Without this, only single-word destinations matched.
+    .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 

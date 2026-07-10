@@ -5,7 +5,7 @@ import { getTripById, getWebUserProfile, listTraitsForGroupTrip } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
-import { generateItineraryViaPromptPlan } from '../services/itineraryPromptPlanService';
+import { generateItineraryViaPromptPlan, type MustSeeAttractionInput } from '../services/itineraryPromptPlanService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
@@ -19,6 +19,30 @@ import {
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { reserveItineraryGenerationRateLimit } from '../services/httpRateLimitService';
+import {
+  getActiveAiProvider,
+  getConfiguredProviderApiKey,
+  getProviderApiKeyEnvVar,
+} from '../services/aiProviderConfigService';
+
+// Accepts either a plain attraction name or `{ name, destinationName }` so the
+// generator can place must-see attractions on the correct destination's day.
+const parseMustSeeAttractions = (raw: unknown): MustSeeAttractionInput[] => {
+  if (!Array.isArray(raw)) return [];
+  const out: MustSeeAttractionInput[] = [];
+  for (const value of raw) {
+    if (value && typeof value === 'object') {
+      const name = String((value as any).name ?? '').trim();
+      if (!name) continue;
+      const destinationName = String((value as any).destinationName ?? '').trim();
+      out.push(destinationName ? { name, destinationName } : { name });
+      continue;
+    }
+    const name = String(value ?? '').trim();
+    if (name) out.push(name);
+  }
+  return out;
+};
 
 // Returns a UTC monthly window key, e.g. "2026-03"
 const getMonthWindowKey = (): string => {
@@ -56,6 +80,30 @@ const toFirestoreSafeValue = <T>(value: T): T => {
     ) as T;
   }
   return value;
+};
+
+const resolveItineraryProviderRuntime = async (): Promise<
+  | { provider: string; model: string; apiKey?: string }
+  | { error: string }
+> => {
+  const active = await getActiveAiProvider('itinerary_generation');
+  const provider = String(active.provider || '').trim().toLowerCase() || 'openai';
+  const model = String(active.model || '').trim() || 'gpt-4o-mini';
+  const apiKeyEnvVar = getProviderApiKeyEnvVar(provider);
+  const apiKey = getConfiguredProviderApiKey(provider);
+
+  if (!apiKey) {
+    return {
+      error: `${provider} is selected for itinerary generation, but ${apiKeyEnvVar} is not configured on the server.`,
+    };
+  }
+  if (provider === 'openai' && /^sk-?x+/i.test(apiKey)) {
+    return {
+      error: 'OpenAI API key appears to be a placeholder. Update OPENAI_API_KEY on the server.',
+    };
+  }
+
+  return { provider, model, apiKey };
 };
 
 // Itineraries API: manage itineraries, details, and sharing helpers.
@@ -142,13 +190,9 @@ router.post('/weather/overview', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const requestStartedAt = Date.now();
-  const apiKey = getEnvValue('OPENAI_API_KEY');
-  if (!apiKey) {
-    res.status(500).json({ error: 'OpenAI API key not configured on server' });
-    return;
-  }
-  if (/^sk-?x+/i.test(apiKey)) {
-    res.status(500).json({ error: 'OpenAI API key appears to be a placeholder. Update OPENAI_API_KEY on the server.' });
+  const providerRuntime = await resolveItineraryProviderRuntime();
+  if ('error' in providerRuntime) {
+    res.status(500).json({ error: providerRuntime.error });
     return;
   }
 
@@ -158,9 +202,7 @@ router.post('/', async (req, res) => {
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
-  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
-    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
-    : [];
+  const selectedMustSeeAttractions = parseMustSeeAttractions(mustSeeAttractions);
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
     : String(country ?? '').trim();
@@ -262,7 +304,7 @@ router.post('/', async (req, res) => {
     }
 
     const result = await generateItineraryViaPromptPlan({
-      apiKey,
+      apiKey: providerRuntime.apiKey,
       userId,
       usageWindowKey: getMonthWindowKey(),
       destinations: selectedLocations.length ? selectedLocations : [destinationSummary],
@@ -327,20 +369,16 @@ router.post('/', async (req, res) => {
     }
     const detail = err.response?.data || err.message || String(err);
     await failGenerationUsage(idempotencyKey, typeof detail === 'string' ? detail : JSON.stringify(detail));
-    logError(`[itinerary] OpenAI API error`, detail);
+    logError('[itinerary] provider API error', detail);
     logInfo(`[itinerary] request failed trip=${tripId} elapsedMs=${Date.now() - requestStartedAt}`);
     res.status(500).json({ error: 'Failed to generate itinerary', detail });
   }
 });
 
 router.post('/async', async (req, res) => {
-  const apiKey = getEnvValue('OPENAI_API_KEY');
-  if (!apiKey) {
-    res.status(500).json({ error: 'OpenAI API key not configured on server' });
-    return;
-  }
-  if (/^sk-?x+/i.test(apiKey)) {
-    res.status(500).json({ error: 'OpenAI API key appears to be a placeholder. Update OPENAI_API_KEY on the server.' });
+  const providerRuntime = await resolveItineraryProviderRuntime();
+  if ('error' in providerRuntime) {
+    res.status(500).json({ error: providerRuntime.error });
     return;
   }
 
@@ -350,9 +388,7 @@ router.post('/async', async (req, res) => {
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
-  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
-    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
-    : [];
+  const selectedMustSeeAttractions = parseMustSeeAttractions(mustSeeAttractions);
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
     : String(country ?? '').trim();
@@ -455,7 +491,7 @@ router.post('/async', async (req, res) => {
   }
   const effectiveDepartureAirport = String(departureAirport ?? '').trim() || preferredAirportFallback;
   const job = enqueueAsyncItineraryJob({
-    apiKey,
+    apiKey: providerRuntime.apiKey,
     userId,
     tripId,
     itineraryId: typeof itineraryId === 'string' ? itineraryId : undefined,

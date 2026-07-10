@@ -2,47 +2,31 @@
  * @jest-environment node
  *
  * Locks in that metro.shared.cjs wraps the built config with
- * @sentry/react-native/metro's withSentryConfig for local Metro use.
+ * @sentry/react-native/metro's withSentryConfig — that's what injects
+ * the Debug ID into every bundle so uploaded source maps can be matched
+ * to a release at runtime even when no explicit release string is set.
  *
- * EAS native builds intentionally skip the wrapper by default because
- * @sentry/react-native 7.2.0's serializer can crash during bundle embedding
- * while extracting the Debug ID from an undefined bundle source.
+ * Without this wrap, EAS Build still produces an uploadable bundle but
+ * symbolication on Sentry's side becomes brittle / silently broken.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 describe('Sentry Metro integration', () => {
-  const originalNoSentryMetro = process.env.EXPO_NO_SENTRY_METRO;
-  const originalEnableSentryMetro = process.env.SENTRY_ENABLE_METRO;
-  const originalEasBuild = process.env.EAS_BUILD;
+  const originalEnv = { ...process.env };
 
   afterEach(() => {
-    if (originalNoSentryMetro === undefined) {
-      delete process.env.EXPO_NO_SENTRY_METRO;
-    } else {
-      process.env.EXPO_NO_SENTRY_METRO = originalNoSentryMetro;
-    }
-    if (originalEnableSentryMetro === undefined) {
-      delete process.env.SENTRY_ENABLE_METRO;
-    } else {
-      process.env.SENTRY_ENABLE_METRO = originalEnableSentryMetro;
-    }
-    if (originalEasBuild === undefined) {
-      delete process.env.EAS_BUILD;
-    } else {
-      process.env.EAS_BUILD = originalEasBuild;
-    }
+    process.env = { ...originalEnv };
   });
 
   it('wraps the shared config when @sentry/react-native/metro is installed', () => {
+    delete process.env.EAS_BUILD;
     delete process.env.EXPO_NO_SENTRY_METRO;
     delete process.env.SENTRY_ENABLE_METRO;
-    delete process.env.EAS_BUILD;
     const calls: unknown[] = [];
     const fakeWrap = jest.fn((cfg: unknown, opts: unknown) => {
       calls.push({ cfg, opts });
       return { ...(cfg as object), __sentryWrapped: true };
     });
-    jest.resetModules();
-    jest.doMock('@sentry/react-native/metro', () => ({ withSentryConfig: fakeWrap }));
-
     const { createSharedMetroConfig } = require('../../metro.shared.cjs');
     const path = require('node:path');
     const projectRoot = path.resolve(__dirname, '..');
@@ -52,6 +36,7 @@ describe('Sentry Metro integration', () => {
       secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
       watchFolders: [],
       blockedPaths: [],
+      sentryWithMetroConfig: fakeWrap,
     });
 
     expect(fakeWrap).toHaveBeenCalledTimes(1);
@@ -63,84 +48,7 @@ describe('Sentry Metro integration', () => {
     });
   });
 
-  it('skips the Sentry Metro wrapper when explicitly disabled', () => {
-    process.env.EXPO_NO_SENTRY_METRO = '1';
-    delete process.env.SENTRY_ENABLE_METRO;
-    delete process.env.EAS_BUILD;
-    const fakeWrap = jest.fn((cfg: unknown) => ({ ...(cfg as object), __sentryWrapped: true }));
-    jest.resetModules();
-    jest.doMock('@sentry/react-native/metro', () => ({ withSentryConfig: fakeWrap }));
-
-    const { createSharedMetroConfig } = require('../../metro.shared.cjs');
-    const path = require('node:path');
-    const projectRoot = path.resolve(__dirname, '..');
-    const result = createSharedMetroConfig({
-      projectRoot,
-      primaryNodeModules: path.join(projectRoot, 'node_modules'),
-      secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
-      watchFolders: [],
-      blockedPaths: [],
-    });
-
-    expect(fakeWrap).not.toHaveBeenCalled();
-    expect((result as { __sentryWrapped?: boolean }).__sentryWrapped).toBeUndefined();
-  });
-
-  it('skips the Sentry Metro wrapper during EAS builds by default', () => {
-    delete process.env.EXPO_NO_SENTRY_METRO;
-    delete process.env.SENTRY_ENABLE_METRO;
-    process.env.EAS_BUILD = 'true';
-    const fakeWrap = jest.fn((cfg: unknown) => ({ ...(cfg as object), __sentryWrapped: true }));
-    jest.resetModules();
-    jest.doMock('@sentry/react-native/metro', () => ({ withSentryConfig: fakeWrap }));
-
-    const { createSharedMetroConfig } = require('../../metro.shared.cjs');
-    const path = require('node:path');
-    const projectRoot = path.resolve(__dirname, '..');
-    const result = createSharedMetroConfig({
-      projectRoot,
-      primaryNodeModules: path.join(projectRoot, 'node_modules'),
-      secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
-      watchFolders: [],
-      blockedPaths: [],
-    });
-
-    expect(fakeWrap).not.toHaveBeenCalled();
-    expect((result as { __sentryWrapped?: boolean }).__sentryWrapped).toBeUndefined();
-  });
-
-  it('allows opting Sentry Metro back in during EAS builds', () => {
-    delete process.env.EXPO_NO_SENTRY_METRO;
-    process.env.SENTRY_ENABLE_METRO = '1';
-    process.env.EAS_BUILD = 'true';
-    const fakeWrap = jest.fn((cfg: unknown) => ({ ...(cfg as object), __sentryWrapped: true }));
-    jest.resetModules();
-    jest.doMock('@sentry/react-native/metro', () => ({ withSentryConfig: fakeWrap }));
-
-    const { createSharedMetroConfig } = require('../../metro.shared.cjs');
-    const path = require('node:path');
-    const projectRoot = path.resolve(__dirname, '..');
-    const result = createSharedMetroConfig({
-      projectRoot,
-      primaryNodeModules: path.join(projectRoot, 'node_modules'),
-      secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
-      watchFolders: [],
-      blockedPaths: [],
-    });
-
-    expect(fakeWrap).toHaveBeenCalledTimes(1);
-    expect((result as { __sentryWrapped?: boolean }).__sentryWrapped).toBe(true);
-  });
-
   it('falls back to the bare config when @sentry/react-native/metro is missing', () => {
-    delete process.env.EXPO_NO_SENTRY_METRO;
-    delete process.env.SENTRY_ENABLE_METRO;
-    delete process.env.EAS_BUILD;
-    jest.resetModules();
-    jest.doMock('@sentry/react-native/metro', () => {
-      throw new Error('not installed');
-    });
-
     const { createSharedMetroConfig } = require('../../metro.shared.cjs');
     const path = require('node:path');
     const projectRoot = path.resolve(__dirname, '..');
@@ -150,11 +58,69 @@ describe('Sentry Metro integration', () => {
       secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
       watchFolders: [],
       blockedPaths: [],
+      sentryWithMetroConfig: null,
     });
 
     // Should still be a valid Metro config — resolver hook installed,
     // watchFolders populated.
     expect(typeof result.resolver.resolveRequest).toBe('function');
     expect(Array.isArray(result.watchFolders)).toBe(true);
+  });
+
+  describe('shouldUseSentryMetro EAS-build gating', () => {
+    const { shouldUseSentryMetro } = require('../../metro.shared.cjs');
+
+    it('is enabled by default (local dev, no EAS_BUILD)', () => {
+      delete process.env.EAS_BUILD;
+      delete process.env.EXPO_NO_SENTRY_METRO;
+      delete process.env.SENTRY_ENABLE_METRO;
+      expect(shouldUseSentryMetro()).toBe(true);
+    });
+
+    it('is disabled during EAS builds to avoid the 7.2.0 Metro serializer crash', () => {
+      delete process.env.EXPO_NO_SENTRY_METRO;
+      delete process.env.SENTRY_ENABLE_METRO;
+      process.env.EAS_BUILD = 'true';
+      expect(shouldUseSentryMetro()).toBe(false);
+
+      process.env.EAS_BUILD = '1';
+      expect(shouldUseSentryMetro()).toBe(false);
+    });
+
+    it('EXPO_NO_SENTRY_METRO=1 forces it off even outside an EAS build', () => {
+      delete process.env.EAS_BUILD;
+      delete process.env.SENTRY_ENABLE_METRO;
+      process.env.EXPO_NO_SENTRY_METRO = '1';
+      expect(shouldUseSentryMetro()).toBe(false);
+    });
+
+    it('SENTRY_ENABLE_METRO=1 forces it on even during an EAS build', () => {
+      process.env.EAS_BUILD = 'true';
+      delete process.env.EXPO_NO_SENTRY_METRO;
+      process.env.SENTRY_ENABLE_METRO = '1';
+      expect(shouldUseSentryMetro()).toBe(true);
+    });
+
+    it('actually skips wrapping the config during a simulated EAS build', () => {
+      process.env.EAS_BUILD = 'true';
+      delete process.env.EXPO_NO_SENTRY_METRO;
+      delete process.env.SENTRY_ENABLE_METRO;
+
+      const fakeWrap = jest.fn((cfg: unknown) => ({ ...(cfg as object), __sentryWrapped: true }));
+      const { createSharedMetroConfig } = require('../../metro.shared.cjs');
+      const path = require('node:path');
+      const projectRoot = path.resolve(__dirname, '..');
+      const result = createSharedMetroConfig({
+        projectRoot,
+        primaryNodeModules: path.join(projectRoot, 'node_modules'),
+        secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
+        watchFolders: [],
+        blockedPaths: [],
+        sentryWithMetroConfig: fakeWrap,
+      });
+
+      expect(fakeWrap).not.toHaveBeenCalled();
+      expect((result as { __sentryWrapped?: boolean }).__sentryWrapped).toBeUndefined();
+    });
   });
 });

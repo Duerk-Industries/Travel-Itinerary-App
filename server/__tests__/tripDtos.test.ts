@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { parseDto, DtoValidationError } from '../src/utils/dtoParse';
 import {
   createShareInvitesDto,

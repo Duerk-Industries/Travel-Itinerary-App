@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { mapMerchantCategory, lookupMerchantCategory, clearMerchantCategoryCacheForTests } from '../src/services/merchantCategoryLookupService';
 import { getFeatureFlag } from '../src/db';
 

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 describe('resolveJobQueueMode', () => {
   const ORIGINAL_ENV = { ...process.env };
 

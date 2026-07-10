@@ -67,6 +67,9 @@ server/eng.traineddata
 /gradle/
 /.github/
 /.maestro/
+.claude
+.agents
+.continue
 
 # --- app/: keep source + assets, drop test/build/cache output ---
 app/.expo

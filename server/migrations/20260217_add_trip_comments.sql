@@ -1,4 +1,3 @@
--- Up
 CREATE TABLE IF NOT EXISTS trip_comments (
   id UUID PRIMARY KEY,
   trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -9,7 +8,3 @@ CREATE TABLE IF NOT EXISTS trip_comments (
 
 CREATE INDEX IF NOT EXISTS idx_trip_comments_trip_created
   ON trip_comments(trip_id, created_at DESC, id DESC);
-
--- Down
-DROP INDEX IF EXISTS idx_trip_comments_trip_created;
-DROP TABLE IF EXISTS trip_comments;

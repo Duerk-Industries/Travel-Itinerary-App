@@ -2,6 +2,8 @@
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldPath, FieldValue } from 'firebase-admin/firestore';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import {
   Flight,
   Lodging,
@@ -22,6 +24,7 @@ import {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  AttractionDurationMetadata,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -38,6 +41,26 @@ import {
   PackingListItem,
   PackingListTraveler,
   TripPackingList,
+  BillingCustomer,
+  BillingNotification,
+  BillingTrialUsage,
+  BillingSubscription,
+  BillingSubscriptionScope,
+  BillingSubscriptionStatus,
+  StripeWebhookEvent,
+  BillingPlanConfig,
+  BillingPlanKey,
+  BillingPriceHistory,
+  AiProviderConfig,
+  AdminSetting,
+  AiAnalyticsMetric,
+  AiAnalyticsMetricTable,
+  AiAnalyticsPeriodType,
+  AiExperiment,
+  AiExperimentAssignment,
+  AiAbTestMetric,
+  AiProviderCertification,
+  AiRecommendation,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -46,6 +69,16 @@ import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 
 let app: App | null = null;
+
+const clearMissingGoogleApplicationCredentials = (): void => {
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credentialsPath) return;
+  const resolvedPath = path.resolve(credentialsPath);
+  if (fs.existsSync(resolvedPath)) return;
+  logInfo(`Ignoring missing GOOGLE_APPLICATION_CREDENTIALS file: ${credentialsPath}`);
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS_FILE;
+};
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
 const isEmailLikeIdentifier = (value: string): boolean => value.includes('@');
@@ -725,6 +758,7 @@ export const getDb = (): Firestore => {
         });
       } else {
         logInfo('Initializing Firebase with default Application Default Credentials (ADC).');
+        clearMissingGoogleApplicationCredentials();
         // Default to ADC on Cloud Run / local gcloud auth
         app = initializeApp({ projectId });
       }
@@ -849,9 +883,62 @@ export const initDb = async (): Promise<void> => {
       logInfo(`[db.firebase] Seeded tier limit: ${tierKey}/${limitKey}`);
     }
   }
+
+  const billingPlanSeeds: Array<Omit<BillingPlanConfig, 'id' | 'updatedAt'>> = [
+    {
+      planKey: 'premium_monthly',
+      stripeProductId: null,
+      activeStripePriceId: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID ?? null,
+      unitAmountCents: 500,
+      currency: 'usd',
+      interval: 'month',
+      trialDays: 14,
+      pastDueGraceDays: 14,
+      automaticTaxEnabled: true,
+      promotionCodesEnabled: false,
+      isCheckoutEnabled: true,
+      livemode: process.env.STRIPE_SECRET_KEY ? !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') : null,
+      version: 1,
+      updatedBy: null,
+    },
+    {
+      planKey: 'premium_annual',
+      stripeProductId: null,
+      activeStripePriceId: process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID ?? null,
+      unitAmountCents: 3500,
+      currency: 'usd',
+      interval: 'year',
+      trialDays: 14,
+      pastDueGraceDays: 14,
+      automaticTaxEnabled: true,
+      promotionCodesEnabled: false,
+      isCheckoutEnabled: true,
+      livemode: process.env.STRIPE_SECRET_KEY ? !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') : null,
+      version: 1,
+      updatedBy: null,
+    },
+  ];
+  for (const plan of billingPlanSeeds) {
+    const ref = db.collection('billing_plan_config').doc(plan.planKey);
+    if (!(await ref.get()).exists) {
+      await ref.set({ id: plan.planKey, ...plan, updatedAt: nowIso() });
+      logInfo(`[db.firebase] Seeded billing plan: ${plan.planKey}`);
+    }
+  }
   await seedUniversalPackingDefaults();
-  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+  if (
+    process.env.FIREBASE_INIT_BACKFILL_PACKING !== '0' &&
+    (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1')
+  ) {
     await backfillUserPackingLists();
+  }
+
+  // Permanent canary fixture (Chapter 16 §6) used by cutover-test-to-prod.sh's
+  // smoke write/cleanup. Only bootstrapped when explicitly configured — most
+  // environments (local/dev/CI) have no canary account and shouldn't get one.
+  const canaryAccountEmail = getEnvValue('CANARY_ACCOUNT_EMAIL');
+  if (canaryAccountEmail) {
+    await ensureCanaryAccountBootstrap(canaryAccountEmail);
   }
 };
 
@@ -1018,7 +1105,10 @@ export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: strin
     updatedAt: nowIso(),
   }));
   await batch.commit();
-  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+  if (
+    process.env.FIREBASE_INIT_BACKFILL_PACKING !== '0' &&
+    (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1')
+  ) {
     await backfillUserPackingLists();
   }
   return getUniversalPackingList();
@@ -1178,7 +1268,7 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   const found = await findUserByEmailDoc(email);
   if (!found) return null;
   const data = found.data as User;
-  return { id: found.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+  return { id: found.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole, is_internal_canary: data.is_internal_canary === true };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
@@ -1188,9 +1278,32 @@ export const findUserByIdentifier = async (identifier: string): Promise<User | n
     if (usersByUsername.empty) return null;
     const doc = usersByUsername.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+    return { id: doc.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole, is_internal_canary: data.is_internal_canary === true };
   }
   return findUserByEmail(normalized);
+};
+
+export const isInternalCanaryAccount = async (userId: string): Promise<boolean> => {
+  const doc = await getDb().collection('users').doc(userId).get();
+  if (!doc.exists) return false;
+  return (doc.data() as User | undefined)?.is_internal_canary === true;
+};
+
+export const ensureCanaryAccountBootstrap = async (email: string): Promise<{ id: string }> => {
+  const existing = await findUserByEmailDoc(email);
+  if (existing) {
+    await getDb().collection('users').doc(existing.id).set({ is_internal_canary: true }, { merge: true });
+    return { id: existing.id };
+  }
+  const doc = getDb().collection('users').doc();
+  await doc.set({
+    email: normalizeEmail(email),
+    provider: 'email',
+    role: 'user',
+    is_internal_canary: true,
+    createdAt: nowIso(),
+  });
+  return { id: doc.id };
 };
 
 export const createWebUser = async (
@@ -1709,6 +1822,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     tripFollowers,
     tripRemovals,
     userEmails,
+    billingSubscriptions,
   ] = await Promise.all([
     db.collection('group_members').where('userId', '==', userId).get(),
     db.collection('group_invites').where('inviteeUserId', '==', userId).get(),
@@ -1717,6 +1831,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('trip_followers').where('followerUserId', '==', userId).get(),
     db.collection('trip_removals').where('userId', '==', userId).get(),
     db.collection('user_emails').where('userId', '==', userId).get(),
+    db.collection('billing_subscriptions').where('userId', '==', userId).get(),
   ]);
   const refs = [
     db.collection('users').doc(userId),
@@ -1728,6 +1843,8 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     ...tripFollowers.docs.map((doc) => doc.ref),
     ...tripRemovals.docs.map((doc) => doc.ref),
     ...userEmails.docs.map((doc) => doc.ref),
+    db.collection('billing_customers').doc(userId),
+    ...billingSubscriptions.docs.map((doc) => doc.ref),
   ];
   await deleteDocRefsInBatches(refs);
 };
@@ -2327,6 +2444,79 @@ export const updateTripCovering = async (
   return coveredBy ?? {};
 };
 
+// Deletes every artifact scoped to a trip once the last active traveler has
+// left it — Firestore has no FK cascade, so (unlike the Postgres adapter,
+// which relies on ON DELETE CASCADE for most of these tables) each
+// collection must be cleared explicitly here.
+const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
+  const db = getDb();
+
+  const deleteQueryBatch = async (query: any): Promise<void> => {
+    const snap = await query.get();
+    if (!snap.size) return;
+    const batch = db.batch();
+    snap.docs.forEach((doc: any) => batch.delete(doc.ref));
+    await batch.commit();
+  };
+
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+
+  // Itineraries + their details/checklist items/reactions.
+  const itinerariesSnap = await db.collection('itineraries').where('tripId', '==', tripId).get();
+  for (const itineraryDoc of itinerariesSnap.docs) {
+    const detailsSnap = await db.collection('itinerary_details').where('itineraryId', '==', itineraryDoc.id).get();
+    const detailIds = detailsSnap.docs.map((d) => d.id);
+    for (const ids of chunk(detailIds)) {
+      await deleteQueryBatch(db.collection('itinerary_checklist_items').where('detailId', 'in', ids));
+    }
+    if (detailsSnap.size) {
+      const batch = db.batch();
+      detailsSnap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+    await itineraryDoc.ref.delete();
+  }
+  await deleteQueryBatch(db.collection('itinerary_detail_reactions').where('tripId', '==', tripId));
+
+  // Chat: messages, their per-message reads, and the per-user watermark.
+  const messagesSnap = await db.collection('trip_messages').where('tripId', '==', tripId).get();
+  const messageIds = messagesSnap.docs.map((d) => d.id);
+  for (const ids of chunk(messageIds)) {
+    await deleteQueryBatch(db.collection('message_reads').where('messageId', 'in', ids));
+  }
+  if (messagesSnap.size) {
+    const batch = db.batch();
+    messagesSnap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
+  await deleteQueryBatch(db.collection('chat_read_watermarks').where('tripId', '==', tripId));
+
+  // Packing list nested subcollections are keyed directly by tripId.
+  await deleteQueryBatch(tripPackingCollection(tripId));
+  await deleteQueryBatch(tripPackingChecksCollection(tripId));
+
+  // Remaining trip-scoped collections and booking records (deleted
+  // unconditionally here regardless of remaining traveler ids, since the
+  // trip itself is going away).
+  await deleteQueryBatch(db.collection('car_rentals').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('item_votes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_activity').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_comments').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_followers').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('follow_codes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_share_invites').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_payments').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_removals').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('expenses').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('flights').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('lodgings').where('trip_id', '==', tripId));
+  await deleteQueryBatch(db.collection('tours').where('tripId', '==', tripId));
+};
+
 export const deleteTrip = async (userId: string, tripId: string): Promise<void> => {
   const db = getDb();
   const trip = await db.collection('trips').doc(tripId).get();
@@ -2356,11 +2546,8 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
     .filter((id) => typeof id === 'string' && id.length && !removedUserIds.has(id)).length;
 
   if (activeUserCount === 0) {
-    const expenses = await db.collection('expenses').where('tripId', '==', tripId).get();
-    const batch = db.batch();
-    expenses.forEach((doc) => batch.delete(doc.ref));
-    batch.delete(trip.ref);
-    await batch.commit();
+    await deleteAllTripArtifacts(tripId);
+    await trip.ref.delete();
     await clearTripAccessForTrip(tripId);
     await incrementAdminUserTripCount(userId, -1);
     return;
@@ -3846,6 +4033,41 @@ const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
   return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
 };
 
+const toDurationMetadataId = (destinationKey: string, name: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-dur:${clean(destinationKey)}:${clean(name)}`.slice(0, 180);
+};
+
+const toAttractionDurationMetadata = (id: string, data: any): AttractionDurationMetadata | null => {
+  const payload = data?.payload && typeof data.payload === 'object' ? data.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const name = String(payload.name ?? '').trim();
+  const estimatedDurationMinutes = Number(payload.estimatedDurationMinutes);
+  if (!destinationKey || !name || !Number.isFinite(estimatedDurationMinutes)) return null;
+  return {
+    id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionDurationMetadata['activityType'],
+    estimatedDurationMinutes,
+    durationSource: payload.durationSource === 'override' ? 'override' : 'heuristic',
+    requiresPreOrderTickets: Boolean(payload.requiresPreOrderTickets),
+    preOrderNotes: typeof payload.preOrderNotes === 'string' ? payload.preOrderNotes : null,
+    description: typeof payload.description === 'string' ? payload.description : null,
+    descriptionSource:
+      payload.descriptionSource === 'wikipedia' || payload.descriptionSource === 'catalog_snippet'
+        ? payload.descriptionSource
+        : null,
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
+};
+
 export const searchLocations = async (
   _userId: string,
   query: string,
@@ -4051,6 +4273,86 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
   const parsed = toAttractionShortlistBlob(saved.id, saved.data() as any);
   if (!parsed) {
     throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
+};
+
+export const getAttractionDurationMetadata = async (
+  _userId: string,
+  destinationKey: string,
+  name: string
+): Promise<AttractionDurationMetadata | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const cleanName = String(name ?? '').trim().toLowerCase();
+  if (!key || !cleanName) return null;
+  const id = toDurationMetadataId(key, cleanName);
+  const db = getDb();
+  const doc = await db.collection('locations').doc(id).get();
+  if (!doc.exists) return null;
+  return toAttractionDurationMetadata(doc.id, doc.data() as any);
+};
+
+export const listAttractionDurationMetadataByDestination = async (
+  _userId: string,
+  destinationKey: string
+): Promise<AttractionDurationMetadata[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const db = getDb();
+  const snapshot = await db
+    .collection('locations')
+    .where('sourceType', '==', 'attraction_duration_metadata')
+    .where('destinationKey', '==', key)
+    .get();
+  return snapshot.docs
+    .map((doc) => toAttractionDurationMetadata(doc.id, doc.data()))
+    .filter(Boolean) as AttractionDurationMetadata[];
+};
+
+export const upsertAttractionDurationMetadata = async (
+  entry: AttractionDurationMetadata
+): Promise<AttractionDurationMetadata> => {
+  const db = getDb();
+  const id = toDurationMetadataId(entry.destinationKey, entry.name);
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    name: entry.name,
+    activityType: entry.activityType,
+    estimatedDurationMinutes: Number(entry.estimatedDurationMinutes) || 0,
+    durationSource: entry.durationSource ?? 'heuristic',
+    requiresPreOrderTickets: Boolean(entry.requiresPreOrderTickets),
+    preOrderNotes: entry.preOrderNotes ?? null,
+    description: entry.description ?? null,
+    descriptionSource: entry.descriptionSource ?? null,
+    updatedAt: entry.updatedAt,
+  };
+  const docRef = db.collection('locations').doc(id);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    tx.set(
+      docRef,
+      {
+        id,
+        sourceType: 'attraction_duration_metadata',
+        category: 'attraction_duration_metadata',
+        name: entry.name,
+        address: null,
+        searchName: `${entry.name} ${entry.destinationDisplayName} attraction duration`.toLowerCase(),
+        // Top-level destinationKey for indexed Firestore compound queries
+        destinationKey: String(entry.destinationKey ?? '').trim().toLowerCase(),
+        payload: mergedPayload,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+  });
+  const saved = await docRef.get();
+  const parsed = toAttractionDurationMetadata(saved.id, saved.data() as any);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction duration metadata after upsert.');
   }
   return parsed;
 };
@@ -5811,6 +6113,457 @@ export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: s
   await db.collection('feature_flags').doc(key).set({ key, enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
 };
 
+const mapAiProviderConfigDoc = (id: string, data: FirebaseFirestore.DocumentData): AiProviderConfig => ({
+  featureKey: id,
+  provider: String(data.provider ?? 'openai'),
+  model: String(data.model ?? 'gpt-4o-mini'),
+  enabled: data.enabled !== false,
+  updatedBy: data.updatedBy ?? null,
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const getAiProviderConfig = async (featureKey: string): Promise<AiProviderConfig | null> => {
+  const doc = await getDb().collection('ai_provider_config').doc(featureKey).get();
+  return doc.exists ? mapAiProviderConfigDoc(doc.id, doc.data()!) : null;
+};
+
+export const listAiProviderConfigs = async (): Promise<AiProviderConfig[]> => {
+  const snap = await getDb().collection('ai_provider_config').get();
+  return snap.docs
+    .map((doc) => mapAiProviderConfigDoc(doc.id, doc.data()))
+    .sort((a, b) => a.featureKey.localeCompare(b.featureKey));
+};
+
+export const setAiProviderConfig = async (config: {
+  featureKey: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+  updatedBy: string | null;
+}): Promise<AiProviderConfig> => {
+  const updatedAt = nowIso();
+  await getDb().collection('ai_provider_config').doc(config.featureKey).set({
+    featureKey: config.featureKey,
+    provider: config.provider,
+    model: config.model,
+    enabled: config.enabled,
+    updatedBy: config.updatedBy,
+    updatedAt,
+  }, { merge: true });
+  return {
+    featureKey: config.featureKey,
+    provider: config.provider,
+    model: config.model,
+    enabled: config.enabled,
+    updatedBy: config.updatedBy,
+    updatedAt,
+  };
+};
+
+const mapAdminSettingDoc = (id: string, data: FirebaseFirestore.DocumentData): AdminSetting => ({
+  key: id,
+  value: String(data.value ?? ''),
+  updatedBy: data.updatedBy ?? null,
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const getAdminSetting = async (key: string): Promise<AdminSetting | null> => {
+  const doc = await getDb().collection('admin_settings').doc(key).get();
+  return doc.exists ? mapAdminSettingDoc(doc.id, doc.data()!) : null;
+};
+
+export const setAdminSetting = async (setting: {
+  key: string;
+  value: string;
+  updatedBy: string | null;
+}): Promise<AdminSetting> => {
+  const updatedAt = nowIso();
+  await getDb().collection('admin_settings').doc(setting.key).set({
+    key: setting.key,
+    value: setting.value,
+    updatedBy: setting.updatedBy,
+    updatedAt,
+  }, { merge: true });
+  return { ...setting, updatedAt };
+};
+
+const AI_ANALYTICS_TABLES: AiAnalyticsMetricTable[] = [
+  'ai_daily_metrics',
+  'ai_provider_metrics',
+  'ai_prompt_metrics',
+  'ai_parser_metrics',
+  'ai_field_metrics',
+  'ai_cost_metrics',
+];
+
+const metricDocId = (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): string => {
+  const dims = Object.entries(metric.dimensions)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${value}`)
+    .join('|');
+  return [metric.periodStart, metric.periodType, dims, metric.metricKey].join('|').replace(/[\/#?]/g, '_');
+};
+
+const mapAiAnalyticsDoc = (
+  table: AiAnalyticsMetricTable,
+  data: FirebaseFirestore.DocumentData,
+): AiAnalyticsMetric => ({
+  table,
+  periodStart: String(data.periodStart ?? ''),
+  periodType: (data.periodType ?? 'day') as AiAnalyticsPeriodType,
+  dimensions: data.dimensions && typeof data.dimensions === 'object' ? data.dimensions as Record<string, string> : {},
+  metricKey: String(data.metricKey ?? ''),
+  metricValue: Number(data.metricValue ?? 0),
+  updatedAt: String(data.updatedAt ?? nowIso()),
+});
+
+export const upsertAiAnalyticsMetric = async (metric: Omit<AiAnalyticsMetric, 'updatedAt'>): Promise<AiAnalyticsMetric> => {
+  const updatedAt = nowIso();
+  const row = { ...metric, updatedAt };
+  await getDb().collection(metric.table).doc(metricDocId(metric)).set(row, { merge: true });
+  return row;
+};
+
+export const listAiAnalyticsMetrics = async (options: {
+  table?: AiAnalyticsMetricTable;
+  periodType?: AiAnalyticsPeriodType;
+  periodStart?: string;
+  limit?: number;
+} = {}): Promise<AiAnalyticsMetric[]> => {
+  const tables = options.table ? [options.table] : AI_ANALYTICS_TABLES;
+  const limit = Math.max(1, Math.min(Number(options.limit ?? 250), 1000));
+  const out: AiAnalyticsMetric[] = [];
+  for (const table of tables) {
+    let query: FirebaseFirestore.Query = getDb().collection(table);
+    if (options.periodType) query = query.where('periodType', '==', options.periodType);
+    if (options.periodStart) query = query.where('periodStart', '==', options.periodStart);
+    const snap = await query.limit(limit).get();
+    out.push(...snap.docs.map((doc) => mapAiAnalyticsDoc(table, doc.data())));
+  }
+  return out.sort((a, b) => b.periodStart.localeCompare(a.periodStart)).slice(0, limit);
+};
+
+const mapAiExperimentDoc = (id: string, data: FirebaseFirestore.DocumentData): AiExperiment => ({
+  experimentId: id,
+  featureKey: String(data.featureKey ?? ''),
+  experimentKind: data.experimentKind ?? 'shadow_compare',
+  name: String(data.name ?? ''),
+  status: data.status ?? 'draft',
+  variants: Array.isArray(data.variants) ? data.variants : [],
+  controlVariantId: data.controlVariantId ?? null,
+  minSampleSize: Number(data.minSampleSize ?? 200),
+  maxDurationDays: Number(data.maxDurationDays ?? 30),
+  startedAt: data.startedAt ?? null,
+  endsAt: data.endsAt ?? null,
+  winningVariantId: data.winningVariantId ?? null,
+  createdBy: data.createdBy ?? null,
+  createdAt: String(data.createdAt ?? nowIso()),
+  updatedAt: String(data.updatedAt ?? nowIso()),
+});
+
+export const createAiExperiment = async (experiment: {
+  featureKey: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  name: string;
+  variants: AiExperiment['variants'];
+  controlVariantId?: string | null;
+  minSampleSize?: number;
+  maxDurationDays?: number;
+  createdBy?: string | null;
+}): Promise<AiExperiment> => {
+  const ref = getDb().collection('ai_experiments').doc(randomUUID());
+  const now = nowIso();
+  const row = {
+    featureKey: experiment.featureKey,
+    experimentKind: experiment.experimentKind ?? 'shadow_compare',
+    name: experiment.name,
+    status: 'draft',
+    variants: experiment.variants,
+    controlVariantId: experiment.controlVariantId ?? null,
+    minSampleSize: experiment.minSampleSize ?? 200,
+    maxDurationDays: experiment.maxDurationDays ?? 30,
+    startedAt: null,
+    endsAt: null,
+    winningVariantId: null,
+    createdBy: experiment.createdBy ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await ref.set(row);
+  return mapAiExperimentDoc(ref.id, row);
+};
+
+export const listAiExperiments = async (options: {
+  featureKey?: string;
+  experimentKind?: AiExperiment['experimentKind'];
+  status?: AiExperiment['status'];
+  limit?: number;
+} = {}): Promise<AiExperiment[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_experiments');
+  if (options.featureKey) query = query.where('featureKey', '==', options.featureKey);
+  if (options.experimentKind) query = query.where('experimentKind', '==', options.experimentKind);
+  if (options.status) query = query.where('status', '==', options.status);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 100), 500))).get();
+  return snap.docs.map((doc) => mapAiExperimentDoc(doc.id, doc.data()))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const getAiExperiment = async (experimentId: string): Promise<AiExperiment | null> => {
+  const doc = await getDb().collection('ai_experiments').doc(experimentId).get();
+  return doc.exists ? mapAiExperimentDoc(doc.id, doc.data()!) : null;
+};
+
+export const updateAiExperimentStatus = async (params: {
+  experimentId: string;
+  status: AiExperiment['status'];
+  winningVariantId?: string | null;
+}): Promise<AiExperiment> => {
+  const ref = getDb().collection('ai_experiments').doc(params.experimentId);
+  const current = await ref.get();
+  if (!current.exists) throw new Error(`AI experiment not found: ${params.experimentId}`);
+  const data = current.data()!;
+  const patch: Record<string, unknown> = { status: params.status, updatedAt: nowIso() };
+  if (params.status === 'running' && !data.startedAt) patch.startedAt = nowIso();
+  if (params.status === 'completed' && !data.endsAt) patch.endsAt = nowIso();
+  if (params.winningVariantId) patch.winningVariantId = params.winningVariantId;
+  await ref.set(patch, { merge: true });
+  const updated = await ref.get();
+  return mapAiExperimentDoc(updated.id, updated.data()!);
+};
+
+const assignmentDocId = (assignmentKey: string, experimentId: string): string =>
+  `${experimentId}_${assignmentKey}`.replace(/[\/#?]/g, '_');
+
+const mapAiAssignmentDoc = (data: FirebaseFirestore.DocumentData): AiExperimentAssignment => ({
+  assignmentKey: String(data.assignmentKey),
+  experimentId: String(data.experimentId),
+  variantId: String(data.variantId),
+  originalVariantId: data.originalVariantId ?? null,
+  assignedAt: String(data.assignedAt ?? nowIso()),
+  reassignedAt: data.reassignedAt ?? null,
+});
+
+export const getOrCreateAiExperimentAssignment = async (assignment: {
+  assignmentKey: string;
+  experimentId: string;
+  variantId: string;
+}): Promise<AiExperimentAssignment> => {
+  const ref = getDb().collection('ai_experiment_assignments').doc(assignmentDocId(assignment.assignmentKey, assignment.experimentId));
+  return getDb().runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (existing.exists) return mapAiAssignmentDoc(existing.data()!);
+    const row = { ...assignment, assignedAt: nowIso(), originalVariantId: null, reassignedAt: null };
+    tx.set(ref, row);
+    return mapAiAssignmentDoc(row);
+  });
+};
+
+export const reassignAiExperimentVariantToControl = async (params: {
+  experimentId: string;
+  variantId: string;
+  controlVariantId: string;
+}): Promise<number> => {
+  const snap = await getDb().collection('ai_experiment_assignments')
+    .where('experimentId', '==', params.experimentId)
+    .where('variantId', '==', params.variantId)
+    .get();
+  const batch = getDb().batch();
+  snap.docs.forEach((doc) => batch.set(doc.ref, {
+    variantId: params.controlVariantId,
+    originalVariantId: doc.data().originalVariantId ?? params.variantId,
+    reassignedAt: nowIso(),
+  }, { merge: true }));
+  await batch.commit();
+  return snap.size;
+};
+
+export const listAiExperimentAssignments = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiExperimentAssignment[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_experiment_assignments');
+  if (options.experimentId) query = query.where('experimentId', '==', options.experimentId);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 500), 2000))).get();
+  return snap.docs.map((doc) => mapAiAssignmentDoc(doc.data()))
+    .sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
+};
+
+export const deleteCompletedAiExperimentAssignmentsOlderThan = async (cutoffIso: string): Promise<number> => {
+  const experiments = await getDb().collection('ai_experiments')
+    .where('status', '==', 'completed')
+    .get();
+  const eligibleIds = new Set(
+    experiments.docs
+      .map((doc) => ({ id: doc.id, endsAt: String(doc.data().endsAt ?? '') }))
+      .filter((row) => row.endsAt && row.endsAt < cutoffIso)
+      .map((row) => row.id),
+  );
+  if (!eligibleIds.size) return 0;
+  const assignments = await getDb().collection('ai_experiment_assignments').get();
+  const batch = getDb().batch();
+  let deleted = 0;
+  assignments.docs.forEach((doc) => {
+    if (!eligibleIds.has(String(doc.data().experimentId))) return;
+    batch.delete(doc.ref);
+    deleted += 1;
+  });
+  if (deleted > 0) await batch.commit();
+  return deleted;
+};
+
+const abMetricDocId = (metric: Pick<AiAbTestMetric, 'experimentId' | 'variantId' | 'day'>): string =>
+  `${metric.experimentId}_${metric.variantId}_${metric.day}`.replace(/[\/#?]/g, '_');
+
+const mapAiAbMetricDoc = (data: FirebaseFirestore.DocumentData): AiAbTestMetric => ({
+  experimentId: String(data.experimentId),
+  variantId: String(data.variantId),
+  day: String(data.day),
+  requestCount: Number(data.requestCount ?? 0),
+  successRate: Number(data.successRate ?? 0),
+  avgQualityScore: Number(data.avgQualityScore ?? 0),
+  avgCostUsd: Number(data.avgCostUsd ?? 0),
+  avgLatencyMs: Number(data.avgLatencyMs ?? 0),
+  groundTruthAgreement: data.groundTruthAgreement ?? null,
+  groundTruthSignal: data.groundTruthSignal ?? null,
+  updatedAt: String(data.updatedAt ?? nowIso()),
+});
+
+export const upsertAiAbTestMetric = async (metric: Omit<AiAbTestMetric, 'updatedAt'>): Promise<AiAbTestMetric> => {
+  const row = { ...metric, updatedAt: nowIso() };
+  await getDb().collection('ai_ab_test_metrics').doc(abMetricDocId(metric)).set(row, { merge: true });
+  return row;
+};
+
+export const listAiAbTestMetrics = async (options: { experimentId?: string; limit?: number } = {}): Promise<AiAbTestMetric[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_ab_test_metrics');
+  if (options.experimentId) query = query.where('experimentId', '==', options.experimentId);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 250), 1000))).get();
+  return snap.docs.map((doc) => mapAiAbMetricDoc(doc.data())).sort((a, b) => b.day.localeCompare(a.day));
+};
+
+const mapAiProviderCertificationDoc = (id: string, data: FirebaseFirestore.DocumentData): AiProviderCertification => ({
+  providerId: id,
+  certifiedAt: String(data.certifiedAt ?? nowIso()),
+  certifiedBy: data.certifiedBy ?? null,
+  contractSuiteVersion: String(data.contractSuiteVersion ?? ''),
+  notes: data.notes ?? null,
+});
+
+export const getAiProviderCertification = async (providerId: string): Promise<AiProviderCertification | null> => {
+  const doc = await getDb().collection('ai_provider_certifications').doc(providerId).get();
+  return doc.exists ? mapAiProviderCertificationDoc(doc.id, doc.data()!) : null;
+};
+
+export const listAiProviderCertifications = async (): Promise<AiProviderCertification[]> => {
+  const snap = await getDb().collection('ai_provider_certifications').get();
+  return snap.docs.map((doc) => mapAiProviderCertificationDoc(doc.id, doc.data())).sort((a, b) => a.providerId.localeCompare(b.providerId));
+};
+
+export const setAiProviderCertification = async (cert: {
+  providerId: string;
+  certifiedBy: string | null;
+  contractSuiteVersion: string;
+  notes?: string | null;
+}): Promise<AiProviderCertification> => {
+  const row = {
+    providerId: cert.providerId,
+    certifiedAt: nowIso(),
+    certifiedBy: cert.certifiedBy,
+    contractSuiteVersion: cert.contractSuiteVersion,
+    notes: cert.notes ?? null,
+  };
+  await getDb().collection('ai_provider_certifications').doc(cert.providerId).set(row, { merge: true });
+  return row;
+};
+
+export const deleteAiProviderCertification = async (providerId: string): Promise<void> => {
+  await getDb().collection('ai_provider_certifications').doc(providerId).delete();
+};
+
+const mapAiRecommendationDoc = (id: string, data: FirebaseFirestore.DocumentData): AiRecommendation => ({
+  recommendationId: id,
+  recommendationType: String(data.recommendationType ?? ''),
+  featureKey: String(data.featureKey ?? ''),
+  subjectCurrent: data.subjectCurrent ?? {},
+  subjectProposed: data.subjectProposed ?? {},
+  rationale: String(data.rationale ?? ''),
+  qualityDeltaEstimate: Number(data.qualityDeltaEstimate ?? 0),
+  costDeltaEstimateUsdMonthly: Number(data.costDeltaEstimateUsdMonthly ?? 0),
+  confidence: String(data.confidence ?? 'low'),
+  supportingEvidenceRef: data.supportingEvidenceRef ?? null,
+  supportingEvidenceQuery: data.supportingEvidenceQuery ?? null,
+  engineVersion: String(data.engineVersion ?? ''),
+  status: data.status ?? 'proposed',
+  createdAt: String(data.createdAt ?? nowIso()),
+  respondedBy: data.respondedBy ?? null,
+  respondedAt: data.respondedAt ?? null,
+  outcomeMeasuredAt: data.outcomeMeasuredAt ?? null,
+  outcomeQualityDelta: data.outcomeQualityDelta ?? null,
+  outcomeCostDeltaUsdMonthly: data.outcomeCostDeltaUsdMonthly ?? null,
+});
+
+export const upsertAiRecommendation = async (rec: Partial<AiRecommendation> & {
+  recommendationType: string;
+  featureKey: string;
+  subjectCurrent: Record<string, unknown>;
+  subjectProposed: Record<string, unknown>;
+  rationale: string;
+  engineVersion: string;
+}): Promise<AiRecommendation> => {
+  const id = rec.recommendationId ?? randomUUID();
+  const current = await getDb().collection('ai_recommendations').doc(id).get();
+  const row = {
+    recommendationType: rec.recommendationType,
+    featureKey: rec.featureKey,
+    subjectCurrent: rec.subjectCurrent,
+    subjectProposed: rec.subjectProposed,
+    rationale: rec.rationale,
+    qualityDeltaEstimate: rec.qualityDeltaEstimate ?? 0,
+    costDeltaEstimateUsdMonthly: rec.costDeltaEstimateUsdMonthly ?? 0,
+    confidence: rec.confidence ?? 'low',
+    supportingEvidenceRef: rec.supportingEvidenceRef ?? null,
+    supportingEvidenceQuery: rec.supportingEvidenceQuery ?? null,
+    engineVersion: rec.engineVersion,
+    status: rec.status ?? 'proposed',
+    createdAt: current.exists ? current.data()!.createdAt ?? nowIso() : nowIso(),
+  };
+  await getDb().collection('ai_recommendations').doc(id).set(row, { merge: true });
+  return mapAiRecommendationDoc(id, row);
+};
+
+export const listAiRecommendations = async (options: { status?: AiRecommendation['status']; limit?: number } = {}): Promise<AiRecommendation[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('ai_recommendations');
+  if (options.status) query = query.where('status', '==', options.status);
+  const snap = await query.limit(Math.max(1, Math.min(Number(options.limit ?? 100), 500))).get();
+  return snap.docs.map((doc) => mapAiRecommendationDoc(doc.id, doc.data())).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const updateAiRecommendationStatus = async (params: {
+  recommendationId: string;
+  status: AiRecommendation['status'];
+  respondedBy: string | null;
+}): Promise<AiRecommendation> => {
+  const ref = getDb().collection('ai_recommendations').doc(params.recommendationId);
+  await ref.set({ status: params.status, respondedBy: params.respondedBy, respondedAt: nowIso() }, { merge: true });
+  const updated = await ref.get();
+  if (!updated.exists) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationDoc(updated.id, updated.data()!);
+};
+
+export const updateAiRecommendationOutcome = async (params: {
+  recommendationId: string;
+  outcomeQualityDelta: number | null;
+  outcomeCostDeltaUsdMonthly: number | null;
+  measuredAt?: string;
+}): Promise<AiRecommendation> => {
+  const ref = getDb().collection('ai_recommendations').doc(params.recommendationId);
+  await ref.set({
+    outcomeMeasuredAt: params.measuredAt ?? nowIso(),
+    outcomeQualityDelta: params.outcomeQualityDelta,
+    outcomeCostDeltaUsdMonthly: params.outcomeCostDeltaUsdMonthly,
+  }, { merge: true });
+  const updated = await ref.get();
+  if (!updated.exists) throw new Error(`AI recommendation not found: ${params.recommendationId}`);
+  return mapAiRecommendationDoc(updated.id, updated.data()!);
+};
+
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {
   const db = getDb();
   const docId = `${userId}_${metricKey}_${windowKey}`;
@@ -6737,4 +7490,487 @@ export const listUserAuthoredItems = async (
   ]);
   return { flights, lodgings, tours, carRentals, expenses, tripMessages };
 };
+
+// ---------------------------------------------------------------------------
+// Stripe Billing
+// ---------------------------------------------------------------------------
+
+const toIsoOrNull = (value: Date | string | null | undefined): string | null =>
+  value == null ? null : (value instanceof Date ? value : new Date(value)).toISOString();
+
+export const getBillingCustomerByUserId = async (userId: string): Promise<BillingCustomer | null> => {
+  const doc = await getDb().collection('billing_customers').doc(userId).get();
+  return doc.exists ? (doc.data() as BillingCustomer) : null;
+};
+
+export const getBillingCustomerByStripeId = async (stripeCustomerId: string): Promise<BillingCustomer | null> => {
+  const snap = await getDb().collection('billing_customers').where('stripeCustomerId', '==', stripeCustomerId).limit(1).get();
+  return snap.empty ? null : (snap.docs[0].data() as BillingCustomer);
+};
+
+export const upsertBillingCustomer = async (data: {
+  userId: string;
+  stripeCustomerId: string;
+  emailSnapshot?: string | null;
+  livemode: boolean;
+}): Promise<BillingCustomer> => {
+  const ref = getDb().collection('billing_customers').doc(data.userId);
+  return getDb().runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    const previous = existing.exists ? existing.data() as BillingCustomer : null;
+    const timestamp = nowIso();
+    const customer: BillingCustomer = {
+      id: previous?.id ?? randomUUID(),
+      userId: data.userId,
+      stripeCustomerId: previous?.stripeCustomerId ?? data.stripeCustomerId,
+      emailSnapshot: data.emailSnapshot ?? previous?.emailSnapshot ?? null,
+      livemode: data.livemode,
+      createdAt: previous?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, customer);
+    return customer;
+  });
+};
+
+export const getBillingTrialUsageByEmail = async (
+  emailNormalized: string,
+): Promise<BillingTrialUsage | null> => {
+  const doc = await getDb().collection('billing_trial_usage').doc(emailNormalized).get();
+  return doc.exists ? (doc.data() as BillingTrialUsage) : null;
+};
+
+export const markBillingTrialUsed = async (data: {
+  emailNormalized: string;
+  userId?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  trialUsedAt?: Date | null;
+}): Promise<BillingTrialUsage> => {
+  const ref = getDb().collection('billing_trial_usage').doc(data.emailNormalized);
+  return getDb().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const previous = snapshot.exists ? snapshot.data() as BillingTrialUsage : null;
+    const timestamp = nowIso();
+    const trialUsedAt = data.trialUsedAt ? data.trialUsedAt.toISOString() : timestamp;
+    const usage: BillingTrialUsage = {
+      id: previous?.id ?? randomUUID(),
+      emailNormalized: data.emailNormalized,
+      userId: previous?.userId ?? data.userId ?? null,
+      stripeCustomerId: previous?.stripeCustomerId ?? data.stripeCustomerId ?? null,
+      stripeSubscriptionId: previous?.stripeSubscriptionId ?? data.stripeSubscriptionId ?? null,
+      trialUsedAt: previous?.trialUsedAt ?? trialUsedAt,
+      createdAt: previous?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, usage);
+    return usage;
+  });
+};
+
+export const claimBillingNotification = async (data: {
+  userId: string;
+  type: BillingNotification['type'];
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId?: string | null;
+  stripeEventId?: string | null;
+}): Promise<{ notification: BillingNotification; created: boolean }> => {
+  const ref = getDb().collection('billing_notifications').doc(data.notificationKey);
+  return getDb().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const previous = snapshot.exists ? snapshot.data() as BillingNotification : null;
+    if (previous) return { notification: previous, created: false };
+    const timestamp = nowIso();
+    const notification: BillingNotification = {
+      id: randomUUID(),
+      userId: data.userId,
+      type: data.type,
+      notificationKey: data.notificationKey,
+      title: data.title,
+      message: data.message,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      stripeEventId: data.stripeEventId ?? null,
+      emailSentAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, notification);
+    return { notification, created: true };
+  });
+};
+
+export const markBillingNotificationEmailSent = async (
+  notificationId: string,
+  sentAt: Date = new Date(),
+): Promise<void> => {
+  const snap = await getDb()
+    .collection('billing_notifications')
+    .where('id', '==', notificationId)
+    .limit(1)
+    .get();
+  if (snap.empty) return;
+  await snap.docs[0].ref.set({ emailSentAt: sentAt.toISOString(), updatedAt: nowIso() }, { merge: true });
+};
+
+export const listBillingNotificationsForUser = async (
+  userId: string,
+  limit = 10,
+): Promise<BillingNotification[]> => {
+  const snap = await getDb()
+    .collection('billing_notifications')
+    .where('userId', '==', userId)
+    .get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingNotification)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+};
+
+export const getBillingSubscriptionByStripeId = async (
+  stripeSubscriptionId: string,
+): Promise<BillingSubscription | null> => {
+  const doc = await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId).get();
+  return doc.exists ? (doc.data() as BillingSubscription) : null;
+};
+
+export const listActiveBillingSubscriptionsForUser = async (userId: string): Promise<BillingSubscription[]> => {
+  const snap = await getDb().collection('billing_subscriptions').where('userId', '==', userId).get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingSubscription)
+    .filter((sub) =>
+      (sub.status !== 'canceled' && sub.status !== 'incomplete_expired') || Boolean(sub.pastDueSince),
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const claimBillingCheckout = async (data: {
+  userId: string;
+  claimToken: string;
+  planKey: BillingPlanKey;
+  expiresAt: Date;
+}): Promise<{ claimed: boolean; checkoutUrl: string | null }> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(data.userId);
+  return getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const existing = snapshot.exists ? snapshot.data() as any : null;
+    const existingExpiry = existing?.expiresAt ? new Date(existing.expiresAt).getTime() : 0;
+    if (existing && existingExpiry > Date.now()) {
+      return { claimed: false, checkoutUrl: existing.checkoutUrl ?? null };
+    }
+    const now = new Date().toISOString();
+    transaction.set(ref, {
+      userId: data.userId,
+      claimToken: data.claimToken,
+      planKey: data.planKey,
+      stripeCheckoutSessionId: null,
+      checkoutUrl: null,
+      expiresAt: data.expiresAt.toISOString(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    });
+    return { claimed: true, checkoutUrl: null };
+  });
+};
+
+export const completeBillingCheckoutClaim = async (data: {
+  userId: string;
+  claimToken: string;
+  stripeCheckoutSessionId: string;
+  checkoutUrl: string;
+  expiresAt: Date;
+}): Promise<void> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(data.userId);
+  await getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists || (snapshot.data() as any).claimToken !== data.claimToken) return;
+    transaction.update(ref, {
+      stripeCheckoutSessionId: data.stripeCheckoutSessionId,
+      checkoutUrl: data.checkoutUrl,
+      expiresAt: data.expiresAt.toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  });
+};
+
+export const releaseBillingCheckoutClaim = async (userId: string, claimToken: string): Promise<void> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(userId);
+  await getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists && (snapshot.data() as any).claimToken === claimToken) {
+      transaction.delete(ref);
+    }
+  });
+};
+
+export const clearBillingCheckoutClaim = async (userId: string): Promise<void> => {
+  await getDb().collection('billing_checkout_claims').doc(userId).delete();
+};
+
+export const upsertBillingSubscription = async (data: {
+  stripeSubscriptionId: string;
+  userId: string;
+  subscriptionScope?: BillingSubscriptionScope;
+  scopeOwnerId: string;
+  stripeCustomerId: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  status: BillingSubscriptionStatus;
+  livemode: boolean;
+  cancelAtPeriodEnd: boolean;
+  cancelAt?: Date | null;
+  currentPeriodStart?: Date | null;
+  currentPeriodEnd?: Date | null;
+  trialEnd?: Date | null;
+  endedAt?: Date | null;
+  latestInvoiceId?: string | null;
+  pastDueSince?: Date | null;
+  accessRevokedAt?: Date | null;
+  accessRevocationReason?: string | null;
+  disputeId?: string | null;
+  refundedAt?: Date | null;
+  lastStripeEventCreated?: number | null;
+}): Promise<BillingSubscription> => {
+  const ref = getDb().collection('billing_subscriptions').doc(data.stripeSubscriptionId);
+  return getDb().runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    const previous = existing.exists ? existing.data() as BillingSubscription : null;
+    const timestamp = nowIso();
+    const subscription: BillingSubscription = {
+      id: previous?.id ?? randomUUID(),
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      userId: data.userId,
+      subscriptionScope: data.subscriptionScope ?? previous?.subscriptionScope ?? 'individual',
+      scopeOwnerId: data.scopeOwnerId,
+      stripeCustomerId: data.stripeCustomerId,
+      stripePriceId: data.stripePriceId,
+      planKey: data.planKey,
+      status: data.status,
+      livemode: data.livemode,
+      cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+      cancelAt: toIsoOrNull(data.cancelAt),
+      currentPeriodStart: toIsoOrNull(data.currentPeriodStart),
+      currentPeriodEnd: toIsoOrNull(data.currentPeriodEnd),
+      trialEnd: toIsoOrNull(data.trialEnd),
+      endedAt: toIsoOrNull(data.endedAt),
+      latestInvoiceId: data.latestInvoiceId ?? null,
+      pastDueSince: data.pastDueSince === undefined ? previous?.pastDueSince ?? null : toIsoOrNull(data.pastDueSince),
+      accessRevokedAt: data.accessRevokedAt === undefined ? previous?.accessRevokedAt ?? null : toIsoOrNull(data.accessRevokedAt),
+      accessRevocationReason: data.accessRevocationReason === undefined
+        ? previous?.accessRevocationReason ?? null
+        : data.accessRevocationReason,
+      disputeId: data.disputeId === undefined ? previous?.disputeId ?? null : data.disputeId,
+      refundedAt: data.refundedAt === undefined ? previous?.refundedAt ?? null : toIsoOrNull(data.refundedAt),
+      lastStripeEventCreated: data.lastStripeEventCreated ?? previous?.lastStripeEventCreated ?? null,
+      lastSyncedAt: timestamp,
+      createdAt: previous?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, subscription);
+    return subscription;
+  });
+};
+
+export const revokeBillingSubscriptionAccess = async (
+  stripeSubscriptionId: string,
+  reason: string,
+  details?: { disputeId?: string | null; refundedAt?: Date | null },
+): Promise<void> => {
+  await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId).set({
+    accessRevokedAt: nowIso(),
+    accessRevocationReason: reason,
+    ...(details?.disputeId !== undefined ? { disputeId: details.disputeId } : {}),
+    ...(details?.refundedAt !== undefined ? { refundedAt: toIsoOrNull(details.refundedAt) } : {}),
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const restoreBillingSubscriptionAccess = async (stripeSubscriptionId: string): Promise<void> => {
+  await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId).set({
+    accessRevokedAt: null,
+    accessRevocationReason: null,
+    disputeId: null,
+    refundedAt: null,
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const setPastDueSince = async (stripeSubscriptionId: string, since: Date): Promise<void> => {
+  const ref = getDb().collection('billing_subscriptions').doc(stripeSubscriptionId);
+  await getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (doc.exists && !(doc.data() as BillingSubscription).pastDueSince) {
+      tx.update(ref, { pastDueSince: since.toISOString(), updatedAt: nowIso() });
+    }
+  });
+};
+
+export const clearPastDueSince = async (stripeSubscriptionId: string): Promise<void> => {
+  await getDb().collection('billing_subscriptions').doc(stripeSubscriptionId)
+    .set({ pastDueSince: null, updatedAt: nowIso() }, { merge: true });
+};
+
+export const listStaleSubscriptionsForReconciliation = async (
+  olderThanMinutes: number,
+  limit: number,
+): Promise<BillingSubscription[]> => {
+  const cutoff = Date.now() - olderThanMinutes * 60_000;
+  const snap = await getDb().collection('billing_subscriptions').get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingSubscription)
+    .filter((sub) =>
+      sub.status !== 'canceled' &&
+      sub.status !== 'incomplete_expired' &&
+      (!sub.lastSyncedAt || new Date(sub.lastSyncedAt).getTime() < cutoff))
+    .sort((a, b) => (a.lastSyncedAt ?? '').localeCompare(b.lastSyncedAt ?? ''))
+    .slice(0, limit);
+};
+
+export const listPastDueBillingSubscriptions = async (): Promise<BillingSubscription[]> => {
+  const snapshot = await getDb().collection('billing_subscriptions').get();
+  return snapshot.docs
+    .map((doc) => doc.data() as BillingSubscription)
+    .filter((subscription) => Boolean(subscription.pastDueSince))
+    .sort((a, b) => (a.pastDueSince ?? '').localeCompare(b.pastDueSince ?? ''));
+};
+
+export const claimStripeWebhookEvent = async (data: {
+  stripeEventId: string;
+  eventType: string;
+  stripeObjectId?: string | null;
+  livemode: boolean;
+  eventCreated?: number | null;
+}): Promise<boolean> => {
+  const ref = getDb().collection('stripe_webhook_events').doc(data.stripeEventId);
+  return getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const previous = doc.exists ? doc.data() as StripeWebhookEvent : null;
+    const pendingLeaseExpired =
+      previous?.processingStatus === 'pending' &&
+      Date.now() - new Date(previous.receivedAt).getTime() >= 5 * 60_000;
+    if (previous && previous.processingStatus !== 'failed' && !pendingLeaseExpired) return false;
+    const event: StripeWebhookEvent = {
+      id: previous?.id ?? randomUUID(),
+      stripeEventId: data.stripeEventId,
+      eventType: data.eventType,
+      stripeObjectId: data.stripeObjectId ?? null,
+      livemode: data.livemode,
+      eventCreated: data.eventCreated ?? null,
+      processingStatus: 'pending',
+      attemptCount: previous?.attemptCount ?? 0,
+      lastError: null,
+      receivedAt: previous?.receivedAt ?? nowIso(),
+      processedAt: null,
+    };
+    tx.set(ref, event);
+    return true;
+  });
+};
+
+export const markStripeWebhookEventProcessed = async (stripeEventId: string): Promise<void> => {
+  await getDb().collection('stripe_webhook_events').doc(stripeEventId)
+    .set({ processingStatus: 'processed', processedAt: nowIso(), lastError: null }, { merge: true });
+};
+
+export const markStripeWebhookEventFailed = async (stripeEventId: string, error: string): Promise<void> => {
+  await getDb().collection('stripe_webhook_events').doc(stripeEventId).set({
+    processingStatus: 'failed',
+    lastError: error,
+    attemptCount: FieldValue.increment(1),
+  }, { merge: true });
+};
+
+export const getStripeWebhookEvent = async (stripeEventId: string): Promise<StripeWebhookEvent | null> => {
+  const doc = await getDb().collection('stripe_webhook_events').doc(stripeEventId).get();
+  return doc.exists ? (doc.data() as StripeWebhookEvent) : null;
+};
+
+export const listBillingPlanConfigs = async (): Promise<BillingPlanConfig[]> => {
+  const snap = await getDb().collection('billing_plan_config').get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingPlanConfig)
+    .sort((a, b) => a.planKey.localeCompare(b.planKey));
+};
+
+export const getBillingPlanConfig = async (planKey: BillingPlanKey): Promise<BillingPlanConfig | null> => {
+  const doc = await getDb().collection('billing_plan_config').doc(planKey).get();
+  return doc.exists ? (doc.data() as BillingPlanConfig) : null;
+};
+
+export const upsertBillingPlanConfig = async (
+  data: Partial<Omit<BillingPlanConfig, 'id' | 'planKey'>> & { planKey: BillingPlanKey; updatedBy?: string | null },
+): Promise<BillingPlanConfig> => {
+  const ref = getDb().collection('billing_plan_config').doc(data.planKey);
+  const has = (key: keyof typeof data): boolean => Object.prototype.hasOwnProperty.call(data, key);
+  return getDb().runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const previous = doc.exists ? doc.data() as BillingPlanConfig : null;
+    const config: BillingPlanConfig = {
+      id: previous?.id ?? data.planKey,
+      planKey: data.planKey,
+      stripeProductId: has('stripeProductId') ? data.stripeProductId ?? null : previous?.stripeProductId ?? null,
+      activeStripePriceId: has('activeStripePriceId') ? data.activeStripePriceId ?? null : previous?.activeStripePriceId ?? null,
+      unitAmountCents: data.unitAmountCents ?? previous?.unitAmountCents ?? 0,
+      currency: data.currency ?? previous?.currency ?? 'usd',
+      interval: data.interval ?? previous?.interval ?? 'month',
+      trialDays: data.trialDays ?? previous?.trialDays ?? 14,
+      pastDueGraceDays: data.pastDueGraceDays ?? previous?.pastDueGraceDays ?? 14,
+      automaticTaxEnabled: data.automaticTaxEnabled ?? previous?.automaticTaxEnabled ?? true,
+      promotionCodesEnabled: data.promotionCodesEnabled ?? previous?.promotionCodesEnabled ?? false,
+      isCheckoutEnabled: data.isCheckoutEnabled ?? previous?.isCheckoutEnabled ?? true,
+      livemode: has('livemode') ? data.livemode ?? null : previous?.livemode ?? null,
+      version: previous ? previous.version + 1 : 1,
+      updatedBy: data.updatedBy ?? null,
+      updatedAt: nowIso(),
+    };
+    tx.set(ref, config);
+    return config;
+  });
+};
+
+export const listBillingPriceHistory = async (planKey?: BillingPlanKey): Promise<BillingPriceHistory[]> => {
+  const snap = await getDb().collection('billing_price_history').get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingPriceHistory)
+    .filter((price) => !planKey || price.planKey === planKey)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const insertBillingPriceHistory = async (data: {
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  livemode: boolean;
+  activeForNewCheckout: boolean;
+  createdBy: string | null;
+}): Promise<BillingPriceHistory> => {
+  const price: BillingPriceHistory = {
+    id: randomUUID(),
+    ...data,
+    createdAt: nowIso(),
+    retiredAt: null,
+  };
+  await getDb().collection('billing_price_history').doc(data.stripePriceId).set(price);
+  return price;
+};
+
+export const deactivateOldPricesForPlan = async (
+  planKey: BillingPlanKey,
+  keepActivePriceId: string,
+): Promise<void> => {
+  const snap = await getDb().collection('billing_price_history').where('planKey', '==', planKey).get();
+  const batch = getDb().batch();
+  for (const doc of snap.docs) {
+    const price = doc.data() as BillingPriceHistory;
+    if (price.stripePriceId !== keepActivePriceId && price.activeForNewCheckout) {
+      batch.update(doc.ref, { activeForNewCheckout: false, retiredAt: nowIso() });
+    }
+  }
+  await batch.commit();
+};
+
 import { searchBundledAirportDataset } from './services/airportCatalog';

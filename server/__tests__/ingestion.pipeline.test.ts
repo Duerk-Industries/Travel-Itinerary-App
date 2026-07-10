@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import type { ExtractionResult } from '../src/ingestion/contracts';
 
 let USER_ID = '';
@@ -451,4 +453,5 @@ describe('ingestion pipeline internals', () => {
       expect.any(Number)
     );
   });
+
 });

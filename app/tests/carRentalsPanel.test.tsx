@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
@@ -132,7 +134,11 @@ describe('CarRentalsPanel', () => {
     const { getByText, getByTestId } = render(
       <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
     );
-    expect(getByTestId('car-rentals-table-scroll')).toBeTruthy();
+    const tableScroll = getByTestId('car-rentals-table-scroll');
+    expect(tableScroll.props.horizontal).toBe(true);
+    expect(tableScroll.props.nestedScrollEnabled).toBe(true);
+    expect(tableScroll.props.showsHorizontalScrollIndicator).toBe(true);
+    expect(tableScroll.props.directionalLockEnabled).toBe(true);
     expect(getByText('LAX → SFO')).toBeTruthy();
     expect(getByText('Hertz • Prius • REF-123')).toBeTruthy();
     expect(getByTestId('car-rental-edit-car-1')).toBeTruthy();

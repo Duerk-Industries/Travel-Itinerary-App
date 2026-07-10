@@ -63,6 +63,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   hiddenPages,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
+  const isPhoneLayout = viewportWidth < 680;
   const isCompactLayout = viewportWidth < 520;
   const heroHeight = Math.max(200, Math.min(320, viewportWidth * 0.42));
   const [heroImage, setHeroImage] = useState<string | null>(null);
@@ -191,8 +192,20 @@ const HomeTab: React.FC<HomeTabProps> = ({
         contentInsetAdjustmentBehavior="automatic"
       >
         <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
-          <Text style={styles.homeTitle}>Your trip</Text>
-          <View style={[styles.row, { alignItems: 'center', gap: 8 }]}>
+          <Text style={[styles.homeTitle, { flexShrink: 1, minWidth: 0 }]}>Your trip</Text>
+          <View
+            style={[
+              styles.row,
+              {
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 8,
+                flex: 1,
+                minWidth: 0,
+                marginBottom: 0,
+              },
+            ]}
+          >
             {!hiddenPages?.has('create-trip') ? (
               <Pressable
                 testID="home-create-trip-button"

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { clamavHttpAdapter, stubAdapter, getVirusScanner } from '../src/ingestion/virusScanProviders';
 
 const ORIG_FETCH = global.fetch;

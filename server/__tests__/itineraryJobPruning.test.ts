@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Regression test for the in-memory itinerary job store. Before the fix, the
  * `jobs` Map only ever grew — completed/failed jobs were never evicted, so a

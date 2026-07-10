@@ -1,6 +1,20 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool, findUserByEmail, listGroupsForUser } from '../src/db';
+import {
+  initDb,
+  closePool,
+  findUserByEmail,
+  listGroupsForUser,
+  getBillingCustomerByUserId,
+  getBillingSubscriptionByStripeId,
+  getBillingTrialUsageByEmail,
+  markBillingTrialUsed,
+  upsertBillingCustomer,
+  upsertBillingSubscription,
+} from '../src/db';
+import { setStripeClientForTesting } from '../src/billing/stripeClient';
 import {
   cleanupTestUsersByEmail,
   registerAndLoginWebUser,
@@ -22,6 +36,8 @@ describe('DELETE /api/account', () => {
   });
 
   afterEach(async () => {
+    setStripeClientForTesting(null);
+    process.env.STRIPE_BILLING_ENABLED = 'false';
     await cleanupTestUsersByEmail([EMAIL]);
   });
 
@@ -96,5 +112,107 @@ describe('DELETE /api/account', () => {
       .get('/api/account')
       .set('Authorization', `Bearer ${token}`)
       .expect(401);
+  });
+
+  it('cancels Stripe subscriptions and removes billing records before deleting the user', async () => {
+    process.env.STRIPE_BILLING_ENABLED = 'true';
+    const cancel = jest.fn().mockResolvedValue({ status: 'canceled' });
+    setStripeClientForTesting({ subscriptions: { cancel } } as any);
+    const { token, userId } = await registerAndLoginWebUser({
+      firstName: 'Delete',
+      lastName: 'Billing',
+      email: EMAIL,
+      password: PASSWORD,
+    });
+    const subscriptionId = `sub_delete_${Date.now()}`;
+    await upsertBillingCustomer({
+      userId,
+      stripeCustomerId: `cus_delete_${Date.now()}`,
+      emailSnapshot: EMAIL,
+      livemode: false,
+    });
+    await upsertBillingSubscription({
+      stripeSubscriptionId: subscriptionId,
+      userId,
+      scopeOwnerId: userId,
+      stripeCustomerId: `cus_delete_${Date.now()}`,
+      stripePriceId: 'price_test_monthly',
+      planKey: 'premium_monthly',
+      status: 'active',
+      livemode: false,
+      cancelAtPeriodEnd: false,
+    });
+
+    await request(app)
+      .delete('/api/account')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    expect(cancel).toHaveBeenCalledWith(subscriptionId);
+    expect(await getBillingCustomerByUserId(userId)).toBeNull();
+    expect(await getBillingSubscriptionByStripeId(subscriptionId)).toBeNull();
+  });
+
+  it('preserves premium trial usage when an account is deleted', async () => {
+    const trialEmail = `account-delete-trial-${Date.now()}@example.com`;
+    const { token, userId } = await registerAndLoginWebUser({
+      firstName: 'Delete',
+      lastName: 'Trial',
+      email: trialEmail,
+      password: PASSWORD,
+    });
+
+    await markBillingTrialUsed({
+      emailNormalized: trialEmail.toLowerCase(),
+      userId,
+      stripeCustomerId: `cus_delete_trial_${Date.now()}`,
+      stripeSubscriptionId: `sub_delete_trial_${Date.now()}`,
+      trialUsedAt: new Date(Date.now() - 86_400_000),
+    });
+
+    await request(app)
+      .delete('/api/account')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    expect(await findUserByEmail(trialEmail)).toBeFalsy();
+    const usage = await getBillingTrialUsageByEmail(trialEmail.toLowerCase());
+    expect(usage).toMatchObject({
+      emailNormalized: trialEmail.toLowerCase(),
+    });
+    expect(usage?.trialUsedAt).toBeTruthy();
+  });
+
+  it('does not delete the account when Stripe cancellation fails', async () => {
+    process.env.STRIPE_BILLING_ENABLED = 'true';
+    setStripeClientForTesting({
+      subscriptions: { cancel: jest.fn().mockRejectedValue(new Error('Stripe unavailable')) },
+    } as any);
+    const { token, userId } = await registerAndLoginWebUser({
+      firstName: 'Delete',
+      lastName: 'Blocked',
+      email: EMAIL,
+      password: PASSWORD,
+    });
+    const subscriptionId = `sub_delete_fail_${Date.now()}`;
+    await upsertBillingSubscription({
+      stripeSubscriptionId: subscriptionId,
+      userId,
+      scopeOwnerId: userId,
+      stripeCustomerId: `cus_delete_fail_${Date.now()}`,
+      stripePriceId: 'price_test_monthly',
+      planKey: 'premium_monthly',
+      status: 'active',
+      livemode: false,
+      cancelAtPeriodEnd: false,
+    });
+
+    const res = await request(app)
+      .delete('/api/account')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    expect(res.body.error).toBe(`Unable to cancel Stripe subscriptions: ${subscriptionId}`);
+    expect((await findUserByEmail(EMAIL))?.id).toBe(userId);
   });
 });

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, expect, test, jest, beforeEach } from '@jest/globals';
 import { getEnvValue } from '../src/env';
 
@@ -7,6 +8,9 @@ jest.mock('nodemailer', () => ({
     createTransport: jest.fn(() => ({
         sendMail: mockSendMail,
     })),
+}));
+jest.mock('../src/apis/smtpApi', () => ({
+  sendSmtpMail: jest.fn(async ({ transporter, message }: any) => transporter.sendMail(message)),
 }));
 
 const nodemailer = require('nodemailer');

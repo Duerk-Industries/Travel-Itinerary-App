@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { determineSemanticHelperType, extractSemanticFieldsForType } from '../src/ingestion/extraction/semanticFieldHelpers';
 
 describe('semantic field helpers', () => {

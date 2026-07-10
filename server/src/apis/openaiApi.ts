@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordUsage } from '../services/entitlementService';
-import { estimateOpenAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
+import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
 
 type OpenAiMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -11,8 +11,12 @@ type OpenAiMessage = {
 export type OpenAiChatCompletionRequest = {
   model: string;
   messages: OpenAiMessage[];
+  response_format?: {
+    type: 'json_object';
+  };
   temperature?: number;
   max_tokens?: number;
+  max_completion_tokens?: number;
 };
 
 export type OpenAiChatCompletionResponse = {
@@ -41,25 +45,56 @@ const getMonthWindowKey = (): string => {
   return `${y}-${m}`;
 };
 
+const normalizeAxiosError = (error: unknown): Error => {
+  if (!axios.isAxiosError(error)) return error instanceof Error ? error : new Error(String(error));
+  const status = error.response?.status;
+  const responseData = error.response?.data;
+  const providerMessage =
+    typeof responseData === 'object' && responseData !== null
+      ? String((responseData as any).error?.message ?? (responseData as any).message ?? '')
+      : typeof responseData === 'string'
+        ? responseData
+        : '';
+  const message = [
+    status ? `OpenAI request failed with status ${status}` : error.message,
+    providerMessage,
+  ].filter(Boolean).join(': ');
+  const enriched = new Error(message);
+  enriched.name = error.name;
+  (enriched as any).status = status;
+  (enriched as any).responseData = responseData;
+  (enriched as any).originalStack = error.stack;
+  return enriched;
+};
+
 export const postOpenAiChatCompletion = async (params: {
   caller: string;
   apiKey: string;
   payload: OpenAiChatCompletionRequest;
   usageContext?: OpenAiUsageContext;
+  skipApiUsageReservation?: boolean;
 }): Promise<OpenAiChatCompletionResponse> => {
-  await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
-  const response = await axios.post<OpenAiChatCompletionResponse>(
-    'https://api.openai.com/v1/chat/completions',
-    params.payload,
-    {
-      headers: {
-        Authorization: `Bearer ${params.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+  if (!params.skipApiUsageReservation) {
+    await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
+  }
+  let response;
+  try {
+    response = await axios.post<OpenAiChatCompletionResponse>(
+      'https://api.openai.com/v1/chat/completions',
+      params.payload,
+      {
+        headers: {
+          Authorization: `Bearer ${params.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+  } catch (error) {
+    throw normalizeAxiosError(error);
+  }
   const usage = response.data?.usage;
-  const estimatedCostMicrosUsd = estimateOpenAiCostMicros({
+  const estimatedCostMicrosUsd = estimateAiCostMicros({
+    provider: 'OPENAI',
     model: params.payload.model,
     promptTokens: usage?.prompt_tokens ?? 0,
     completionTokens: usage?.completion_tokens ?? 0,

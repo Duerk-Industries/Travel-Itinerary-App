@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import axios from 'axios';
 import { getDestinationIdentityKey } from '../src/services/destinationCsvReconciliation';
 import { applyMillionPlusCoverage, fetchMillionPlusCitySeeds } from '../src/services/destinationLargeCityCoverage';
