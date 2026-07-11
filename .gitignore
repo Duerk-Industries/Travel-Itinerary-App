@@ -17,6 +17,7 @@ server/node_modules
 server/Mailgun Example.js
 server/.env.example
 server/__tests__/test-credentials.json
+test_inputs/raw
 app/.expo
 app/android/.idea
 app/android/local.properties

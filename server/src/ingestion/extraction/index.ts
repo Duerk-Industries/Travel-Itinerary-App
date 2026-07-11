@@ -378,6 +378,7 @@ interface ChaseFlightLeg {
   date: Date | null;
   departureDate: string | null;
   rawDate: string | null;
+  confirmationNumber: string | null;
   departureTime: string | null;
   arrivalTime: string | null;
   departureCode: string | null;
@@ -388,6 +389,7 @@ interface ChaseFlightLeg {
   duration: string | null;
   stops: string | null;
   fareClass: string | null;
+  legCost: number | null;
 }
 
 interface GenericTransportLeg {
@@ -422,6 +424,15 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
     let dm;
     while ((dm = departRegex.exec(text)) !== null) {
         sectionPositions.push({ index: dm.index, header: dm[0] });
+    }
+  }
+
+  // Chase email confirmations can use prose section headers instead of numbered legs.
+  if (!sectionPositions.length) {
+    const chaseEmailSectionRegex = /\b(?:Departure|Return)\s+flight\b/gi;
+    let cm;
+    while ((cm = chaseEmailSectionRegex.exec(text)) !== null) {
+      sectionPositions.push({ index: cm.index, header: cm[0] });
     }
   }
 
@@ -460,8 +471,10 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
     const legDate = sectionDate?.date
       ?? (departureCode && arrivalCode ? routeDateMap.get(departureCode + arrivalCode) ?? null : null);
 
-    // Airline: "Jetblue Airways", "Lao Airlines", "Cathay Pacific Airways", etc.
-    const airlineMatch = section.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Airlines?|Airways?))\b/i);
+    // Airline: "Jetblue Airways", "Delta Air Lines", "Cathay Pacific Airways", etc.
+    const airlineMatch =
+      section.match(/\b([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)*[ \t]+(?:Air[ \t]+Lines|Airlines?|Airways?))\b(?=[\r\n ]+[A-Z0-9]{2}\s+\d{2,4})/i)
+      ?? section.match(/\b([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)*[ \t]+(?:Air[ \t]+Lines|Airlines?|Airways?))\b/i);
     const airline = airlineMatch?.[1]?.trim().replace(/^Stop\s+/i, '') ?? null;
 
     // Flight numbers: "B6 187 Airbus ..." or "CX 740 Airbus ..."
@@ -477,6 +490,8 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
       if (fnSimple) flightNumbers.push(`${fnSimple[1]}${fnSimple[2]}`);
     }
 
+    if (!departureCode || !arrivalCode || !flightNumbers.length) continue;
+
     // Duration & stops
     const duration = section.match(/(\d+h\s*\d+m)/i)?.[1] ?? null;
     const stops = section.match(/\b(Non-Stop|\d+\s+Stops?)\b/i)?.[1] ?? null;
@@ -484,11 +499,14 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
     // Fare class
     const fareMatch = section.match(/\bFare\s*:\s*(.+)/i);
     const fareClass = fareMatch?.[1]?.trim() ?? null;
+    const legCost = Number(section.match(/\$([0-9,.]+)/)?.[1]?.replace(/,/g, '') ?? 'NaN');
+    const legConfirmation = section.match(/\bAirline confirmation\s*:\s*([A-Z0-9]{4,10})\b/i)?.[1]?.toUpperCase() ?? null;
 
     legs.push({
       date: legDate,
       departureDate: legDate ? legDate.toISOString().slice(0, 10) : null,
       rawDate: sectionDate?.raw ?? null,
+      confirmationNumber: legConfirmation,
       departureTime,
       arrivalTime,
       departureCode,
@@ -499,6 +517,7 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
       duration,
       stops,
       fareClass,
+      legCost: Number.isFinite(legCost) ? legCost : null,
     });
   }
 
@@ -545,9 +564,10 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
         itemType: 'flight',
         doc,
         providerVendor: leg.airline,
-        confirmationNumber: confirmation,
+        confirmationNumber: leg.confirmationNumber ?? confirmation,
         extractedFields: {
-          providerVendor: leg.airline,
+          providerVendor: 'Chase Travel',
+          airline: leg.airline,
           departureAirportCode: leg.departureCode,
           arrivalAirportCode: leg.arrivalCode,
           departureLocation: leg.departureCode,
@@ -555,14 +575,14 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
           departureDate: leg.departureDate,
           departureTime: leg.departureTime,
           arrivalTime: leg.arrivalTime,
-          confirmationNumber: confirmation,
+          confirmationNumber: leg.confirmationNumber ?? confirmation,
           flightNumber: leg.flightNumber,
           flightNumbers: leg.flightNumbers.length > 1 ? leg.flightNumbers : undefined,
           duration: leg.duration,
           stops: leg.stops,
           fareClass: leg.fareClass,
-          cost: index === 0 ? totalCost : 0,
-          totalCost,
+          cost: leg.legCost ?? (index === 0 ? totalCost : 0),
+          totalCost: leg.legCost ?? totalCost,
           currency,
           paid: totalCost > 0,
           travelers,
