@@ -24,6 +24,11 @@ import { scoreActivityTypeByPreferences, type InterestWeights } from './activity
 import { getAttractionDurationMetadataBatch, formatMinutesAsDuration } from './attractionDurationEstimationService';
 import { getTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
 import { getItineraryPromptTemplates, type ItineraryPromptTemplate } from './itineraryInstructionService';
+import {
+  buildItineraryPreferenceContract,
+  type NormalizedPreferenceContract,
+} from './itineraryPreferenceContract';
+import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -222,6 +227,8 @@ export type ItineraryPromptPlanResult = {
   generatedItems: ItineraryGeneratedItems;
   profile: ItineraryPromptProfile;
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  preferenceContract: NormalizedPreferenceContract;
+  evaluation: ItineraryBaselineMetrics;
 };
 
 export type MustSeeAttractionInput = string | { name: string; destinationName?: string | null };
@@ -797,6 +804,21 @@ const buildPromptRequest = (input: ItineraryPromptPlanServiceInput): PromptReq =
   }
 
   return req;
+};
+
+const buildPreferenceContract = (input: ItineraryPromptPlanServiceInput): NormalizedPreferenceContract => {
+  const normalized = normalizePromptTraitInput(input.promptTraits);
+  return buildItineraryPreferenceContract({
+    trip: normalized.tt,
+    account: {
+      po: normalized.ut.po,
+      mob: normalized.ut.mob,
+      interests: normalized.ut.i,
+      earlyBird: normalized.ut.eb,
+      nightOwl: normalized.ut.no,
+    },
+    travelers: input.groupTraits.map((member) => ({ traits: Array.isArray(member.traits) ? member.traits : [] })),
+  });
 };
 
 const sanitizeNorm = (raw: unknown, req: PromptReq): PromptNorm => {
@@ -1931,6 +1953,7 @@ const runGenerateItineraryViaPromptPlan = async (
 ): Promise<ItineraryPromptPlanResult> => {
   const bundle = await getPromptBundle();
   const promptRequest = buildPromptRequest(input);
+  const preferenceContract = buildPreferenceContract(input);
   const normalizedMustSee = normalizeMustSeeAttractions(input.mustSeeAttractions);
   const mustSeePromptBlock = buildMustSeePromptBlock(normalizedMustSee);
   const allowAttractionDiscovery = getEnvFlag('ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED', { defaultValue: false });
@@ -1964,7 +1987,24 @@ const runGenerateItineraryViaPromptPlan = async (
     captureStages,
     usageContext,
   });
-  const normalized = sanitizeNorm(normRaw, promptRequest);
+  const modelNormalized = sanitizeNorm(normRaw, promptRequest);
+  const hasExplicitWeights = Boolean(input.promptTraits?.tt?.w);
+  const hasExplicitInterests = Boolean(input.promptTraits?.ut?.i?.length || preferenceContract.travelerInterests.length);
+  const normalized: PromptNorm = getEnvFlag('ITINERARY_PREFERENCE_CONTRACT_ENABLED', { defaultValue: true })
+    ? {
+        ...modelNormalized,
+        p: input.promptTraits?.ut?.po || input.promptTraits?.tt?.p ? preferenceContract.pace.value : modelNormalized.p,
+        c: input.promptTraits?.tt?.c ? preferenceContract.comfort.value : modelNormalized.c,
+        mob:
+          input.promptTraits?.ut?.mob || input.promptTraits?.tt?.mob || preferenceContract.mobility.source === 'traveler'
+            ? preferenceContract.mobility.value
+            : modelNormalized.mob,
+        car: input.promptTraits?.tt?.car ? preferenceContract.car.value : modelNormalized.car,
+        is: input.promptTraits?.tt?.is ? preferenceContract.interactionStyle.value : modelNormalized.is,
+        w: hasExplicitWeights || hasExplicitInterests ? preferenceContract.weights : modelNormalized.w,
+        a: Array.from(new Set([...modelNormalized.a, ...preferenceContract.conflicts, ...preferenceContract.assumptions])),
+      }
+    : modelNormalized;
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P0_NORM} sd=${normalized.sd} ed=${normalized.ed} pace=${normalized.p} comfort=${normalized.c}`
   );
@@ -2123,6 +2163,19 @@ const runGenerateItineraryViaPromptPlan = async (
         },
       ];
   const items = mapItems(itineraryWithMustSee, profile.weights, durationMetadataByName, transferNotesByDay);
+  const evaluation = evaluateItineraryBaseline({
+    activities: items.activities,
+    transfers: items.transfers,
+    mustSees: normalizedMustSee.map((item) => item.name),
+    weights: normalized.w,
+    comfort: normalized.c,
+    tokenUsage: {
+      promptTokens: tokenAcc.promptTokens,
+      completionTokens: tokenAcc.completionTokens,
+      totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+    },
+    stageLatenciesMs: captureStages.map((stage) => stage.latencyMs),
+  });
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
   );
@@ -2148,6 +2201,7 @@ const runGenerateItineraryViaPromptPlan = async (
       activitiesCount: items.activities.length,
       carRentalsCount: items.carRentals.length,
       usedRenderFallback: planMarkdown === fallbackMarkdown,
+      evaluation,
     },
   });
 
@@ -2165,5 +2219,7 @@ const runGenerateItineraryViaPromptPlan = async (
       completionTokens: tokenAcc.completionTokens,
       totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
     },
+    preferenceContract,
+    evaluation,
   };
 };

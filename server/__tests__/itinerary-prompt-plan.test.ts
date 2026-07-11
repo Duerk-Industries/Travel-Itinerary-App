@@ -229,7 +229,10 @@ describe('itinerary prompt plan service', () => {
     expect(result.planMarkdown).toContain('Rendered itinerary');
     expect(result.profile.pace).toBe('Relaxed');
     expect(result.profile.comfort).toBe('Luxury');
-    expect(result.profile.mobility).toBe('High');
+    // Explicit account mobility is a hard constraint and must win over both
+    // the trip's High setting and the model's attempted High output.
+    expect(result.profile.mobility).toBe('Medium');
+    expect(result.preferenceContract.mobility).toMatchObject({ value: 'M', source: 'account' });
     expect(result.profile.carPreference).toBe('FullTripRental');
     expect(result.profile.interactionStyle).toBe('Guided');
     expect(result.generatedItems.transfers[0].status).toBe('Needed');

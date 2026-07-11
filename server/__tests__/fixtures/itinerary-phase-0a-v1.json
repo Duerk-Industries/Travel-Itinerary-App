@@ -1,0 +1,18 @@
+{
+  "version": "itinerary-phase-0a-fixtures-v1",
+  "scenarios": [
+    { "id": "single-city-round-trip", "destinations": ["Mexico City"], "days": 4, "tags": ["round-trip"] },
+    { "id": "multi-city-open-jaw", "destinations": ["Rome", "Florence", "Venice"], "days": 10, "tags": ["open-jaw", "multi-city"] },
+    { "id": "international-date-line", "destinations": ["Tokyo"], "days": 7, "tags": ["international", "date-line"] },
+    { "id": "late-arrival", "destinations": ["Lisbon"], "days": 5, "tags": ["arrival-late"] },
+    { "id": "early-departure", "destinations": ["Paris"], "days": 5, "tags": ["departure-early"] },
+    { "id": "booked-transfer", "destinations": ["Zurich", "Milan"], "days": 6, "tags": ["booked-transfer"] },
+    { "id": "low-mobility", "destinations": ["London"], "days": 5, "tags": ["low-mobility"] },
+    { "id": "family", "destinations": ["Orlando"], "days": 6, "tags": ["family", "children"] },
+    { "id": "large-group-conflict", "destinations": ["Barcelona"], "days": 5, "tags": ["large-group", "conflicting-preferences"] },
+    { "id": "strict-budget-must-see", "destinations": ["New York City"], "days": 4, "tags": ["budget", "must-see"] },
+    { "id": "closure-and-missing-coordinate", "destinations": ["Athens"], "days": 4, "tags": ["closure", "missing-coordinate"] },
+    { "id": "repeat-visitor", "destinations": ["Amsterdam"], "days": 4, "tags": ["repeat-visitor"] }
+  ]
+}
+
