@@ -61,6 +61,12 @@ import {
 import { isProviderCertified } from '../ai/experiments/certification';
 import { getAiExecutiveSummary } from '../ai/analytics/executiveSummary';
 import { clearExperimentConfigCache } from '../ai/experiments/experimentConfigService';
+import {
+  ITINERARY_INSTRUCTION_PHASES,
+  listItineraryInstructionDocuments,
+  updateItineraryInstructionDocuments,
+  type ItineraryInstructionPhase,
+} from '../services/itineraryInstructionService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -205,6 +211,54 @@ router.patch('/ai-config/:featureKey', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update AI provider config', err);
     res.status(500).json({ error: 'Failed to update AI provider config' });
+  }
+});
+
+router.get('/itinerary-instructions', async (_req, res) => {
+  try {
+    const phases = await listItineraryInstructionDocuments();
+    res.json({ phases });
+  } catch (err) {
+    logError('[admin] failed to list itinerary instructions', err);
+    res.status(500).json({ error: 'Failed to list itinerary instructions' });
+  }
+});
+
+router.patch('/itinerary-instructions', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  const phases = req.body?.phases;
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (!phases || typeof phases !== 'object' || Array.isArray(phases)) {
+    res.status(400).json({ error: 'phases object is required' });
+    return;
+  }
+  const phaseUpdates: Partial<Record<ItineraryInstructionPhase, string>> = {};
+  for (const phase of ITINERARY_INSTRUCTION_PHASES) {
+    const value = phases[phase];
+    if (typeof value === 'string' && value.trim()) phaseUpdates[phase] = value;
+  }
+  if (!Object.keys(phaseUpdates).length) {
+    res.status(400).json({ error: 'At least one non-empty phase markdown document is required' });
+    return;
+  }
+  try {
+    const updated = await updateItineraryInstructionDocuments({
+      phases: phaseUpdates,
+      actorId: getActorId(req),
+      reason: reasonStr,
+    });
+    res.json({ phases: updated });
+  } catch (err: any) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/Instruction markdown|phase markdown/i.test(message)) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    logError('[admin] failed to update itinerary instructions', err);
+    res.status(500).json({ error: 'Failed to update itinerary instructions' });
   }
 });
 

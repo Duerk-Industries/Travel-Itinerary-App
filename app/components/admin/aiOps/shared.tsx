@@ -13,6 +13,7 @@ export const aiOpsSections: Array<{ key: AiOpsSection; label: string }> = [
   { key: 'shadow-replay', label: 'Shadow Replay' },
   { key: 'executive', label: 'Executive' },
   { key: 'runtime-settings', label: 'Runtime Settings' },
+  { key: 'itinerary-instructions', label: 'Itinerary Instructions' },
   { key: 'ai-audit-log', label: 'AI Audit Log' },
 ];
 
@@ -31,6 +32,7 @@ export const aiOpsStyles = StyleSheet.create({
   rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   compactRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ddd' },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginVertical: 6 },
+  textarea: { minHeight: 220, textAlignVertical: 'top' },
   button: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, alignSelf: 'flex-start', marginTop: 8 },
   buttonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   disabled: { opacity: 0.5 },

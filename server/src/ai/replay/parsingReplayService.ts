@@ -34,6 +34,8 @@ export type ParsingReplayResult = {
   dryRun: boolean;
   productionItemCount: number;
   llmItemCount: number;
+  productionResult: ExtractionResult;
+  llmResult: ExtractionResult;
   comparison: ComparisonReport;
   persistedCaptureId: string | null;
 };
@@ -159,6 +161,8 @@ export const replayParsingIntake = async (params: {
     dryRun,
     productionItemCount: productionResult.parsedItems.length,
     llmItemCount: llmResult.parsedItems.length,
+    productionResult,
+    llmResult,
     comparison,
     persistedCaptureId,
   };

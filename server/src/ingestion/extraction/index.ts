@@ -369,8 +369,14 @@ const hasStrongActivitySignals = (text: string, fields: Record<string, unknown>)
     && /\b(confirmation|reservation|ticket|event|tour|activity)\b/i.test(text)
   );
 
+const formatFlightNumberWithSpace = (flightNumber: string): string => {
+  const match = flightNumber.match(/^([A-Z0-9]{2})(\d{2,4})$/i);
+  return match ? `${match[1].toUpperCase()} ${match[2]}` : flightNumber;
+};
+
 interface ChaseFlightLeg {
   date: Date | null;
+  departureDate: string | null;
   rawDate: string | null;
   departureTime: string | null;
   arrivalTime: string | null;
@@ -481,13 +487,14 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
 
     legs.push({
       date: legDate,
+      departureDate: legDate ? legDate.toISOString().slice(0, 10) : null,
       rawDate: sectionDate?.raw ?? null,
       departureTime,
       arrivalTime,
       departureCode,
       arrivalCode,
       airline,
-      flightNumber: flightNumbers[0] ?? null,
+      flightNumber: flightNumbers[0] ? formatFlightNumberWithSpace(flightNumbers[0]) : null,
       flightNumbers,
       duration,
       stops,
@@ -545,8 +552,10 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
           arrivalAirportCode: leg.arrivalCode,
           departureLocation: leg.departureCode,
           arrivalLocation: leg.arrivalCode,
+          departureDate: leg.departureDate,
           departureTime: leg.departureTime,
           arrivalTime: leg.arrivalTime,
+          confirmationNumber: confirmation,
           flightNumber: leg.flightNumber,
           flightNumbers: leg.flightNumbers.length > 1 ? leg.flightNumbers : undefined,
           duration: leg.duration,
@@ -555,6 +564,8 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
           cost: index === 0 ? totalCost : 0,
           totalCost,
           currency,
+          paid: totalCost > 0,
+          travelers,
           travelerCount,
           startDateTimeUtc,
           endDateTimeUtc,

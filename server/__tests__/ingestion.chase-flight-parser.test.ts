@@ -84,7 +84,14 @@ describe('Chase Travel flight regex extraction', () => {
       expect(result.parsedItems.map((item) => item.confirmationNumber)).toEqual(['SJCKCS', 'SJCKCS']);
       expect(result.parsedItems.map((item) => item.extractedFields.departureAirportCode)).toEqual(['BOS', 'SFO']);
       expect(result.parsedItems.map((item) => item.extractedFields.arrivalAirportCode)).toEqual(['LAX', 'BOS']);
-      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6187', 'B6734']);
+      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6 187', 'B6 734']);
+      expect(result.parsedItems.map((item) => item.extractedFields.departureDate)).toEqual(['2024-06-08', '2024-06-20']);
+      expect(result.parsedItems.map((item) => item.extractedFields.confirmationNumber)).toEqual(['SJCKCS', 'SJCKCS']);
+      expect(result.parsedItems.map((item) => item.extractedFields.paid)).toEqual([true, true]);
+      expect(result.parsedItems.map((item) => item.extractedFields.travelers)).toEqual([
+        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+      ]);
       expect(result.parsedItems.map((item) => item.extractedFields.cost)).toEqual([1257.6, 0]);
       expect(result.parsedItems.map((item) => item.extractedFields.currency)).toEqual(['USD', 'USD']);
     } finally {
@@ -151,7 +158,7 @@ describe('Chase Travel flight regex extraction', () => {
       });
 
       expect(result.parsedItems).toHaveLength(2);
-      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6187', 'B6734']);
+      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6 187', 'B6 734']);
       expect(result.parsedItems.map((item) => item.travelerNames)).toEqual([
         ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
         ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
@@ -170,7 +177,7 @@ describe('Chase Travel flight regex extraction', () => {
       'Traveler 1: BRYAN Edward Duerk Traveler 2: Vicky Duerk Traveler 3: Tristan Duerk',
     ].join(' ');
 
-    expect(_parseChaseFlightLegs(flattenedText).map((leg) => leg.flightNumber)).toEqual(['B6187', 'B6734']);
+    expect(_parseChaseFlightLegs(flattenedText).map((leg) => leg.flightNumber)).toEqual(['B6 187', 'B6 734']);
   });
 
   it('extracts two flight legs from the HAN-LPQ-CNX Chase Travel PDF', async () => {

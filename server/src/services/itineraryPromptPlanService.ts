@@ -23,6 +23,7 @@ import {
 import { scoreActivityTypeByPreferences, type InterestWeights } from './activityTypeInterestWeights';
 import { getAttractionDurationMetadataBatch, formatMinutesAsDuration } from './attractionDurationEstimationService';
 import { getTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
+import { getItineraryPromptTemplates, type ItineraryPromptTemplate } from './itineraryInstructionService';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -266,11 +267,7 @@ export type ItineraryPromptPlanServiceInput = {
   captureId?: string;
 };
 
-type PromptTemplate = {
-  id: string;
-  sys: string;
-  usr: string;
-};
+type PromptTemplate = ItineraryPromptTemplate;
 
 type PromptBundle = {
   p0: PromptTemplate;
@@ -337,31 +334,24 @@ const DEFAULT_WEIGHTS: PromptWeights = {
 };
 
 const PROMPTS_ROOT = path.resolve(__dirname, '../../prompts');
-let cachedBundle: PromptBundle | null = null;
 
 const readText = (relativePath: string): string => {
   const filePath = path.join(PROMPTS_ROOT, relativePath);
   return fs.readFileSync(filePath, 'utf8');
 };
 
-const readPromptTemplate = (relativePath: string): PromptTemplate => {
-  const raw = readText(relativePath);
-  return JSON.parse(raw) as PromptTemplate;
-};
-
-const getPromptBundle = (): PromptBundle => {
-  if (cachedBundle) return cachedBundle;
-  cachedBundle = {
-    p0: readPromptTemplate(path.join('prompts', 'p0_norm.json')),
-    p1: readPromptTemplate(path.join('prompts', 'p1_route.json')),
-    p2: readPromptTemplate(path.join('prompts', 'p2_days.json')),
-    p3: readPromptTemplate(path.join('prompts', 'p3_validate.json')),
-    p4: readPromptTemplate(path.join('prompts', 'p4_render_md.json')),
+const getPromptBundle = async (): Promise<PromptBundle> => {
+  const templates = await getItineraryPromptTemplates();
+  return {
+    p0: templates.p0,
+    p1: templates.p1,
+    p2: templates.p2,
+    p3: templates.p3,
+    p4: templates.p4,
     normSchema: readText(path.join('schemas', 'norm_schema_min.json')),
     step1Schema: readText(path.join('schemas', 'step1_schema_min.json')),
     step2Schema: readText(path.join('schemas', 'step2_schema_min.json')),
   };
-  return cachedBundle;
 };
 
 const replaceAll = (template: string, key: string, value: string): string =>
@@ -1939,7 +1929,7 @@ const runGenerateItineraryViaPromptPlan = async (
   tokenAcc: { promptTokens: number; completionTokens: number },
   captureStages: ItineraryStageCapture[]
 ): Promise<ItineraryPromptPlanResult> => {
-  const bundle = getPromptBundle();
+  const bundle = await getPromptBundle();
   const promptRequest = buildPromptRequest(input);
   const normalizedMustSee = normalizeMustSeeAttractions(input.mustSeeAttractions);
   const mustSeePromptBlock = buildMustSeePromptBlock(normalizedMustSee);

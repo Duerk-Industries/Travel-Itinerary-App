@@ -99,6 +99,8 @@ export interface ExtractionMetadata {
   logicVersion: string;
   extractedAt: string;
   strategyName: string;
+  status?: 'ok' | 'skipped';
+  skipReason?: string;
 }
 
 export interface ParsedItemCandidate {

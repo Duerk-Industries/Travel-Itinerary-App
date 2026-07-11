@@ -3655,6 +3655,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           <RootStack.Screen name="AdminAiOpsRuntimeSettings" options={{ title: 'AI Runtime Settings' }}>
             {() => renderAdminAiOpsScreen('runtime-settings')}
           </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsItineraryInstructions" options={{ title: 'Itinerary Instructions' }}>
+            {() => renderAdminAiOpsScreen('itinerary-instructions')}
+          </RootStack.Screen>
           <RootStack.Screen name="AdminAiOpsAiAuditLog" options={{ title: 'AI Audit Log' }}>
             {() => renderAdminAiOpsScreen('ai-audit-log')}
           </RootStack.Screen>

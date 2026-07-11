@@ -234,6 +234,15 @@ npm --prefix server run replay:parsing -- \
   --models openai:gpt-4o-mini,anthropic:claude-sonnet-4-5
 ```
 
+Multiple LLMs can also be passed as repeated `--llm` flags:
+
+```bash
+npm --prefix server run replay:parsing -- \
+  --intake <intakeId> \
+  --llm openai:gpt-4o-mini \
+  --llm anthropic:claude-sonnet-4-5
+```
+
 This path uses the existing parsing replay service. It requires the original import payload and source bytes to still be available through the configured DB/storage backend. Use `--dry-run` to avoid persisting replay captures.
 
 Replay a standalone normalized document JSON file:
@@ -245,7 +254,59 @@ npm --prefix server run replay:parsing -- \
   --persist-capture
 ```
 
-Outputs are written to `server/logs/ai-replay/parsing/<timestamp>/` by default. Each output includes the selected provider/model, parsed LLM result, optional comparison report, and any error details.
+Outputs are written to `server/logs/ai-replay/parsing/<timestamp>/` by default. Each output includes the selected provider/model, parsed LLM result, optional comparison report, and any error details. The command also writes `comparison.csv`, with one row per item field found by any parser and one value column per parser/model. It also writes `validation.json`, a codegen-oriented gap report containing fields where at least two successful AI model runs agree on the extracted value and the non-LLM parser is missing or different. LLM runs that are marked `skipped` in `summary.json` are omitted from both comparison artifacts.
+
+Replay a local source file such as a PDF through both parser paths:
+
+```bash
+npm --prefix server run replay:parsing -- \
+  --file "./test_inputs/transfers/Boston to Los Angeles.pdf" \
+  --both-paths \
+  --models openai:gpt-4o-mini,openai:gpt-5.4-mini \
+  --out ./server/logs/ai-replay/parsing/boston-to-los-angeles
+```
+
+This mode first normalizes the source file, then writes:
+
+- `00-normalized-document.json` - normalized text and metadata used by both paths
+- `01-non-llm.json` - source-specific parser result, falling back to regex when needed
+- `02-<model>.json`, `03-<model>.json`, etc. - LLM parser results compared against the non-LLM result
+- `comparison.csv` - field-superset comparison across non-LLM and every requested LLM parser
+- `validation.json` - fields to add or adjust in the non-LLM parser, based on agreement from at least two AI models
+
+Replay every supported local source file in a directory:
+
+```bash
+npm --prefix server run replay:parsing -- \
+  --dir ./test_inputs/transfers \
+  --llm openai:gpt-4o-mini \
+  --llm anthropic:claude-sonnet-4-5 \
+  --out ./server/logs/ai-replay/parsing/transfers-batch
+```
+
+Directory mode scans only files directly inside the input directory with supported source extensions: `.pdf`, `.png`, `.jpg`, and `.jpeg`. It creates one output subdirectory per input file, each with its own `comparison.csv`, `validation.json`, per-run JSON files, and `summary.json`. The root output directory also gets a batch `summary.json` with the per-file output paths.
+
+`validation.json` is intended as input for an LLM code generator. Its `gaps` list includes only AI-consensus fields that the deterministic parser did not capture:
+
+```json
+{
+  "purpose": "non_llm_parser_update_validation",
+  "sourceFile": "C:\\Git\\...\\Boston to Los Angeles.pdf",
+  "nonLlmParser": "non-llm",
+  "aiModels": ["openai-gpt-4o-mini", "anthropic-claude-sonnet-4-5"],
+  "gaps": [
+    {
+      "itemIndex": 1,
+      "itemType": "flight",
+      "fieldName": "departureDate",
+      "consensusValue": "2024-06-08",
+      "nonLlmStatus": "missing",
+      "agreementCount": 2,
+      "agreeingModels": ["openai-gpt-4o-mini", "anthropic-claude-sonnet-4-5"]
+    }
+  ]
+}
+```
 
 ### Parsing Replay JSON Format
 
