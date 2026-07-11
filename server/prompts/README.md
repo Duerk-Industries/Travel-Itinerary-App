@@ -7,9 +7,10 @@ These prompt files support itinerary and content-generation flows on the server.
 ## Prompt Files
 
 - [Plan](plan.md)
-- [Narrative Expansion Prompt](narrative_expansion_prompt.md)
-- [Structural Optimizer Prompt](structural_optimizer_prompt.md)
-- [Validator and Formatter Prompt](validator_and_formatter_prompt.md)
+- [Itinerary Generator Improvement Plan](itinerary-improvement-plan.md) — relevance, clustering, travel-time, caching, and personalization improvements with a phased implementation plan
+- [Narrative Expansion Prompt](narrative_expansion_prompt.md) *(superseded by p0–p4 pipeline; not referenced by code)*
+- [Structural Optimizer Prompt](structural_optimizer_prompt.md) *(superseded by p0–p4 pipeline; not referenced by code)*
+- [Validator and Formatter Prompt](validator_and_formatter_prompt.md) *(superseded by p0–p4 pipeline; not referenced by code)*
 
 ## Related Docs
 
