@@ -41,6 +41,7 @@ const SOURCE_SIGNATURES: SourceSignature[] = [
   { sourceKey: 'austrian_airlines', patterns: [/austrian airlines|operated by:\s*austrian|austrian air/i] },
   { sourceKey: 'american_airlines', patterns: [/aa\.com/i, /american airlines/i] },
   { sourceKey: 'southwest', patterns: [/southwest\.com/i, /southwest airlines/i] },
+  { sourceKey: 'reserve_with_google', patterns: [/reserve with google/i, /reserve-noreply@google\.com/i] },
 ];
 
 /**
@@ -134,6 +135,7 @@ export const detectItemType = (text: string): string => {
   }
   if (hasRailSignal) return 'rail';
   if (/\brestaurant\b/.test(lower)) return 'restaurant_reservation';
+  if (/\breserve with google\b/.test(lower)) return 'restaurant_reservation';
   if (hasEventTicketSignal) return 'event_ticket';
   if (hasActivitySignal) return 'tour_activity';
   if (/\bticket\b/.test(lower) && /\b(hot spring|museum|tour|activity|reservation)\b/.test(lower)) return 'tour_activity';

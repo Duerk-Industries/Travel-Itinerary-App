@@ -33,8 +33,11 @@ const extractBookingGuestName = (text: string): string | null => {
     true,
     180
   );
-  if (!candidate || /^below\b/i.test(candidate) || /[<>@]/.test(candidate)) return null;
-  return toTitleCaseWords(candidate);
+  if (!candidate || !/^[A-Z]/.test(candidate) || /[<>@]/.test(candidate)) return null;
+  // Guest name is expected to be a short name; strip anything from the first digit onward
+  // (room type/price text bleeding in when no stop label appeared before the next field).
+  const trimmed = normalizeSpace(candidate.replace(/\s*\d[\s\S]*$/, ''));
+  return trimmed || null;
 };
 
 const coerceFieldValue = (fieldName: string, rawValue: string): unknown => {
@@ -72,7 +75,7 @@ const BUILT_IN_SOURCE_PARSERS: Record<string, Record<string, Record<string, stri
         String.raw`\bYour booking summary[\s\S]{0,120}?\b([A-Z][A-Za-z0-9 '&.-]{2,120}?)\s+Confirmed\b`,
       ],
       confirmationNumber: [
-        String.raw`\bConfirmation(?:\s+number)?[:#\s-]+([A-Z0-9]{4,25})\b`,
+        String.raw`\bConfirmation(?:\s+number)?[:#\s]+((?=[A-Z0-9]*\d)[A-Z0-9]{4,25})\b`,
       ],
       guestName: [
         String.raw`\bGuest name\s*:?\s*(?!below\b)(((?:[A-Za-z][A-Za-z' -]{0,40}\s+){0,3}[A-Za-z][A-Za-z' -]{1,40}))(?=\s+(?:Check-in|Check-out|Max capacity|Breakfast|Prepayment|Payment|Room\b|Location|Address|Phone|Contact|Reservation details|Booking details)\b|$)`,
@@ -211,6 +214,14 @@ const toDateOnlyLoose = (value: string | null | undefined): string | null => {
   return null;
 };
 
+const toDateOnlyWithFallbackYear = (value: string | null | undefined, text: string): string | null => {
+  const direct = toDateOnlyLoose(value);
+  if (direct) return direct;
+  if (!value) return null;
+  const year = text.match(/\b(20\d{2})\b/)?.[1];
+  return year ? toDateOnlyLoose(`${value}, ${year}`) : null;
+};
+
 const addDays = (dateOnly: string | null, days: number): string | null => {
   if (!dateOnly) return null;
   const base = new Date(`${dateOnly}T12:00:00Z`);
@@ -271,28 +282,54 @@ const cleanActivityName = (value: string | null | undefined): string | null => {
   let name = normalizeSpace(value);
   if (!name) return null;
   name = name.replace(/\s+\d{1,2}:\d{2}(?:\s*(?:am|pm|AM|PM))?$/i, '');
-  const half = Math.floor(name.length / 2);
-  if (name.length > 20 && name.length % 2 === 0 && name.slice(0, half).trim() === name.slice(half).trim()) {
-    name = name.slice(0, half).trim();
+  const duplicateMatch = name.match(/^(.{10,}?)\s+\1$/);
+  if (duplicateMatch) {
+    name = duplicateMatch[1];
+  } else {
+    const half = Math.floor(name.length / 2);
+    if (name.length > 20 && name.length % 2 === 0 && name.slice(0, half).trim() === name.slice(half).trim()) {
+      name = name.slice(0, half).trim();
+    }
   }
   return name;
 };
 
 const extractCommonGuestName = (text: string): string | null => {
-  const match =
-    text.match(/\b(?:Guest name|Primary guest|Passenger|Lead traveler|Traveler|Booked by|Customer)[:\s]+([A-Z][A-Za-z' -]+(?:\s+[A-Z][A-Za-z' -]+){1,4})/i)
-    ?? text.match(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Qiang\s+Lai)\b/i);
+  const labeled = extractLabeledFieldValue(
+    text,
+    ['Guest name', 'Primary guest', 'Passenger', 'Lead traveler', 'Traveler', 'Booked by'],
+    ['Check-in', 'Check-out', 'Important', 'Max capacity', 'Rules', 'Payment', 'Room', 'Location', 'Address', 'Phone', 'Contact', 'Cancellation'],
+    false,
+    80
+  );
+  // extractLabeledFieldValue is case-insensitive on the label but not the value, so verify
+  // the captured text actually looks like a name (starts with a capital letter) rather than
+  // trailing lowercase prose that happened to follow a label-like phrase (e.g. "guest name below").
+  if (labeled && /^[A-Z]/.test(labeled) && !/[0-9<>@]/.test(labeled)) return labeled;
+  const match = text.match(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Qiang\s+Lai)\b/i);
   return normalizeSpace(match?.[1]) || null;
 };
 
+const nameWordsSubsumedBy = (shortName: string, longName: string): boolean => {
+  const longWords = new Set(longName.toLowerCase().split(/\s+/));
+  return shortName.toLowerCase().split(/\s+/).every((word) => longWords.has(word));
+};
+
 const extractCommonTravelerNames = (text: string): string[] => {
-  const names = new Set<string>();
+  const names = new Map<string, string>();
   for (const match of text.matchAll(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Tristan\s+Duerk|Jasmine\s+Duerk|Qiang\s+Lai)\b/gi)) {
-    names.add(toTitleCaseWords(normalizeSpace(match[1])));
+    const value = normalizeSpace(match[1]);
+    const key = value.toLowerCase();
+    if (!names.has(key)) names.set(key, value);
   }
   const guestName = extractCommonGuestName(text);
-  if (guestName) names.add(toTitleCaseWords(guestName));
-  return Array.from(names).slice(0, 8);
+  if (guestName) {
+    for (const [key, value] of Array.from(names.entries())) {
+      if (value !== guestName && nameWordsSubsumedBy(value, guestName)) names.delete(key);
+    }
+    names.set(guestName.toLowerCase(), guestName);
+  }
+  return Array.from(names.values()).slice(0, 8);
 };
 
 const stripPhoneFromAddress = (value: unknown): unknown =>
@@ -384,6 +421,13 @@ const extractViatorLocation = (text: string): string | null => {
   );
   if (topLineLocation && !/see ticket for location details/i.test(topLineLocation)) {
     return topLineLocation;
+  }
+
+  const operatorAddressLine = normalizeSpace(
+    text.match(/Tour Operator\s+[\s\S]{0,160}?\n([^\n]{8,140})\n\s*\+\d/i)?.[1]
+  );
+  if (operatorAddressLine) {
+    return operatorAddressLine;
   }
 
   const operatorBlock = normalizeSpace(
@@ -731,7 +775,7 @@ const extractBuiltInSourceResult = async (
       const departureDate =
         toDateOnlyLoose(deltaTripDetails?.[1] ?? null)
         ?? toDateOnlyLoose(deltaReceipt?.[1] ? `${deltaReceipt[1]}${text.match(/(\d{2}JUL\d{2})/i)?.[1]?.slice(-2) ?? ''}` : null)
-        ?? toDateOnlyLoose(deltaUpcoming?.[1] ?? null);
+        ?? toDateOnlyWithFallbackYear(deltaUpcoming?.[1] ?? null, text);
       const arrivalDate = toDateOnlyLoose(deltaTripDetails?.[6] ?? null) ?? departureDate;
       const departureAirportCode =
         normalizeSpace(deltaTripDetails?.[2])
@@ -904,14 +948,16 @@ const extractBuiltInSourceResult = async (
           confidenceScore: 0.92,
           startDateTimeUtcOverride: checkInDate,
           endDateTimeUtcOverride: checkOutDate,
-          travelerNamesOverride: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? [toTitleCaseWords(normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? ''))] : undefined,
+          travelerNamesOverride: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? [normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? '')] : undefined,
           extractedFields: {
             name,
+            providerVendor: 'Chase Travel',
             confirmationNumber,
-            guestName: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? toTitleCaseWords(normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? '')) : null,
+            guestName: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) || null,
             address: normalizeSpace(
-              text.match(/Check-out:\s*[^\n]*?(?:am|pm)\s+([\s\S]{1,140}?)(?=\s+Free cancellation|\s+Stay resort fee:|\s+Primary guest:)/i)?.[1]
+              (text.match(/Check-out:\s*[^\n]*?(?:am|pm)\s+([\s\S]{1,140}?)(?=\s+Free cancellation|\s+Stay resort fee:|\s+Primary guest:)/i)?.[1]
               ?? text.match(/Free WiFi\s+([\s\S]{1,120}?)\s+Primary guest:/i)?.[1]
+              )?.replace(/^Free WiFi\s*/i, '')
             ) || null,
             checkInDate,
             checkOutDate,
@@ -1130,7 +1176,7 @@ const extractBuiltInSourceResult = async (
       ?? null;
     const { amount, currency } = parseCurrencyAmount(text);
     const date = toDateOnly(text.match(/Wednesday,\s+([A-Za-z]+\s+\d{1,2}\s+\d{4})/i)?.[1] ?? null);
-    const time = normalizeSpace(text.match(/@\s*(\d{1,2}:\d{2}\s*(?:am|pm))/i)?.[1]) || null;
+    const time = normalizeOutputTime(text.match(/@\s*(\d{1,2}:\d{2}\s*(?:am|pm))/i)?.[1] ?? null);
     const name =
       normalizeSpace(text.match(/Booking\s*#\s*[A-Z0-9]+\s+([\s\S]{5,120}?)\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),/i)?.[1])
       || null;
@@ -1159,6 +1205,46 @@ const extractBuiltInSourceResult = async (
           bookedOn: 'FareHarbor',
           reference: confirmationNumber,
           contactPhone: '+1 928-645-5594',
+        },
+      });
+    }
+  }
+
+  if (sourceKey === 'reserve_with_google' && effectiveItemType === 'restaurant_reservation') {
+    const name =
+      normalizeSpace(text.match(/reservation at\s+([A-Z][A-Za-z0-9 '&.-]+?)\s+is confirmed/i)?.[1])
+      || null;
+    const confirmationNumber = text.match(/\bID\s+([A-Z0-9-]{10,})\b/)?.[1] ?? null;
+    const guestName = normalizeSpace(text.match(/^([A-Z][A-Za-z' -]+)\s*</m)?.[1]) || null;
+    const partySize = Number(text.match(/Reservation for\s+(\d+)/i)?.[1] ?? '0') || null;
+    const activityDate = toDateOnly(text.match(/,\s*([A-Za-z]{3}\s+\d{1,2},\s+20\d{2})\s+at\s+\d{1,2}:\d{2}/i)?.[1] ?? null);
+    const activityTime = normalizeOutputTime(text.match(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*[·•]\s*(\d{1,2}:\d{2}\s*[AP]M)/i)?.[1] ?? null);
+    const address = normalizeSpace(
+      text.match(/CALLCALENDARMODIFYCANCEL\s*\n?([\s\S]{8,160}?)\n\s*Get directions/i)?.[1]
+      ?? text.match(/\d{1,2}:\d{2}\s*[AP]M\s*\([A-Z]{2,5}\)[\s\S]{0,40}?\n([\s\S]{8,160}?)\n\s*Get directions/i)?.[1]
+    ) || null;
+    if (name && confirmationNumber) {
+      return directCandidateResult(doc, config, {
+        itemType: effectiveItemType,
+        providerVendor: name,
+        confirmationNumber,
+        travelerNamesOverride: guestName ? [guestName] : undefined,
+        confidenceScore: 0.9,
+        extractedFields: {
+          providerVendor: name,
+          confirmationNumber,
+          name,
+          guestName,
+          travelers: guestName ? [guestName] : undefined,
+          partySize,
+          activityDate,
+          activityTime,
+          date: activityDate,
+          startTime: activityTime,
+          address,
+          status: 'Booked',
+          bookedOn: 'Reserve with Google',
+          reference: confirmationNumber,
         },
       });
     }

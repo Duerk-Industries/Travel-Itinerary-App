@@ -78,8 +78,8 @@ describe('Chase Travel flight regex extraction', () => {
       expect(result.parsedItems).toHaveLength(2);
       expect(result.parsedItems.every((item) => item.itemType === 'flight')).toBe(true);
       expect(result.parsedItems.map((item) => item.travelerNames)).toEqual([
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
       ]);
       expect(result.parsedItems.map((item) => item.confirmationNumber)).toEqual(['SJCKCS', 'SJCKCS']);
       expect(result.parsedItems.map((item) => item.extractedFields.departureAirportCode)).toEqual(['BOS', 'SFO']);
@@ -89,8 +89,8 @@ describe('Chase Travel flight regex extraction', () => {
       expect(result.parsedItems.map((item) => item.extractedFields.confirmationNumber)).toEqual(['SJCKCS', 'SJCKCS']);
       expect(result.parsedItems.map((item) => item.extractedFields.paid)).toEqual([true, true]);
       expect(result.parsedItems.map((item) => item.extractedFields.travelers)).toEqual([
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
       ]);
       expect(result.parsedItems.map((item) => item.extractedFields.cost)).toEqual([1257.6, 0]);
       expect(result.parsedItems.map((item) => item.extractedFields.currency)).toEqual(['USD', 'USD']);
@@ -160,8 +160,8 @@ describe('Chase Travel flight regex extraction', () => {
       expect(result.parsedItems).toHaveLength(2);
       expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6 187', 'B6 734']);
       expect(result.parsedItems.map((item) => item.travelerNames)).toEqual([
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
       ]);
     } finally {
       await deleteTempBytes(tempRef);

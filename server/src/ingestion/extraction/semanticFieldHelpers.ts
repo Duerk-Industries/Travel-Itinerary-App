@@ -49,8 +49,8 @@ const extractGuestName = (text: string): string | null => {
     true,
     180
   );
-  if (labeled && !/^below\b/i.test(labeled) && !/[<>@]/.test(labeled)) {
-    return toTitleCaseWords(labeled);
+  if (labeled && /^[A-Z]/.test(labeled) && !/[<>@]/.test(labeled)) {
+    return labeled.replace(/\s*\d[\s\S]*$/, '').trim() || null;
   }
   const fallback = text.match(/Thanks,\s*([A-Z][A-Za-z' -]{1,80})\s*!?\s+Your booking/i)?.[1];
   return fallback ? toTitleCaseWords(fallback) : null;

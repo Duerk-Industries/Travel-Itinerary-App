@@ -73,7 +73,7 @@ const cleanHotelField = (value: string | null | undefined): string | null => {
 };
 
 const extractConfirmation = (text: string): string | null => {
-  const match = text.match(/\b(?:confirmation|booking|reservation|record locator|pnr)\s*(?:number|code|ref(?:erence)?)?[:#\s-]+([A-Z0-9]{5,10})\b/i);
+  const match = text.match(/\b(?:confirmation|booking|reservation|record locator|pnr|order)\s*(?:number|code|ref(?:erence)?)?[:#\s-]*\(?([A-Z0-9]{5,10})\)?\b/i);
   return match ? match[1].toUpperCase() : null;
 };
 
@@ -98,12 +98,7 @@ const extractTripTotalCost = (text: string): { amount: number; currency: string 
 };
 
 const normalizeTravelerName = (value: string): string =>
-  value
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+  value.replace(/\s+/g, ' ').trim();
 
 const extractTravelerNames = (text: string): string[] => {
   const structured: string[] = [];
@@ -303,11 +298,11 @@ const extractHotelGuestName = (text: string): string | null => {
     true,
     180
   );
-  if (labeled && !/^below\b/i.test(labeled) && !/[<>@]/.test(labeled)) {
-    return toTitleCaseWords(labeled);
+  if (labeled && /^[A-Z]/.test(labeled) && !/[<>@]/.test(labeled)) {
+    return labeled.replace(/\s*\d[\s\S]*$/, '').trim() || null;
   }
   const fallback = text.match(/Thanks,\s*([A-Z][A-Za-z' -]{1,80})\s*!?\s+Your booking/i)?.[1];
-  return fallback ? toTitleCaseWords(fallback) : null;
+  return fallback ? normalizeTravelerName(fallback) : null;
 };
 
 const extractHotelPhone = (text: string): string | null =>
@@ -585,6 +580,7 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
           totalCost: leg.legCost ?? totalCost,
           currency,
           paid: totalCost > 0,
+          guestName: travelers[0] ?? null,
           travelers,
           travelerCount,
           startDateTimeUtc,
@@ -850,19 +846,26 @@ export class RegexExtractor implements ExtractionStrategy {
           transportItemType,
           text
         );
+        const greetingGuestName = normalizeTravelerName(text.match(/\bHello,\s*([A-Z][A-Za-z' -]+)\b/)?.[1] ?? '') || null;
+        const flightGuestName = String(semanticFlightFields.guestName ?? '').trim() || greetingGuestName;
         items.push(
           await createCandidate({
             itemType: transportItemType,
             doc,
             providerVendor: String(
               semanticFlightFields.providerVendor
-              ?? text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Rail|Ferry|Bus))\b/)?.[1]
+              ?? text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Air Lines|Rail|Ferry|Bus))\b/)?.[1]
               ?? ''
             ) || null,
             confirmationNumber: extractConfirmation(text),
+            travelerNamesOverride: flightGuestName ? [flightGuestName] : undefined,
             extractedFields: {
               ...semanticFlightFields,
-              providerVendor: semanticFlightFields.providerVendor ?? text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Rail|Ferry|Bus))\b/)?.[1] ?? null,
+              providerVendor: semanticFlightFields.providerVendor ?? text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Air Lines|Rail|Ferry|Bus))\b/)?.[1] ?? null,
+              airline: semanticFlightFields.airline ?? semanticFlightFields.providerVendor ?? text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Air Lines|Rail|Ferry|Bus))\b/)?.[1] ?? null,
+              confirmationNumber: semanticFlightFields.confirmationNumber ?? extractConfirmation(text),
+              guestName: flightGuestName,
+              travelers: flightGuestName ? [flightGuestName] : undefined,
               departureLocation: semanticFlightFields.departureLocation ?? text.match(/\bfrom\s+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
               arrivalLocation: semanticFlightFields.arrivalLocation ?? text.match(/\bto\s+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
               flightNumber: semanticFlightFields.flightNumber ?? text.match(/\b([A-Z]{2}\s?\d{2,4})\b/)?.[1]?.replace(/\s+/g, '') ?? null,
