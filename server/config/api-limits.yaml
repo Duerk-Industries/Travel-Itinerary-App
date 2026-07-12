@@ -138,6 +138,20 @@ providers:
     callers:
       ATTRACTION_TRANSFER_MATRIX: 200
 
+  COUNTRY_NOW:
+    window: hour
+    windowHours: 24
+    overall: 300
+    callers:
+      DESTINATION_LARGE_CITY_COVERAGE: 300
+
+  GEONAMES:
+    window: hour
+    windowHours: 24
+    overall: 300
+    callers:
+      DESTINATION_LARGE_CITY_COVERAGE: 300
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80

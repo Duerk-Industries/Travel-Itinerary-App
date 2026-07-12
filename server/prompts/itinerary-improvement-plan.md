@@ -452,12 +452,15 @@ metrics/fixtures being in place to judge "did this actually help."
 - **Test:** Render a `p2_days` template that predates this phase (no `{{ATTRACTION_PODS}}` token
   present, simulating a stale admin override) and assert `applyTemplate` doesn't emit a literal
   unresolved `{{ATTRACTION_PODS}}` string into the prompt sent to the model.
-- **UI follow-through.** New fields (persona-fit clause, logistics notes, pod rationale) only create
-  value if they reach the user. Confirm whether `app/tabs/itineraries.tsx` / the activity detail view
+- **UI follow-through — still open.** New fields (persona-fit clause, logistics notes, pod rationale)
+  only create value if they reach the user. There is no `app/tabs/itineraries.tsx` — the actual
+  rendering path for `ItineraryGeneratedActivity`/`generatedItems` is `app/tabs/overview.tsx`
+  (confirmed via grep; the plan's earlier file reference was wrong). Confirm whether `overview.tsx`
   already renders `ItineraryGeneratedActivity.notes` in full (likely yes, per the existing
   duration/description append pattern) or needs a UI change to surface the new content distinctly (e.g.
   a separate "Why this fits you" line vs. the description). Per this repo's CLAUDE.md guidance, verify
-  the rendered result in the running app (`expo start --web`), not just via unit tests.
+  the rendered result in the running app (`expo start --web`), not just via unit tests — **this manual
+  browser verification has not been done as part of Phases 1–5 and remains outstanding.**
 
 ### Phase 4 — Global Optimization (Caching)
 - Implement `TripSignatureCache`: Key = hash of `(destinations, duration, pace, budget, groupMobility)`.

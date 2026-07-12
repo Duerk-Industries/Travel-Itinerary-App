@@ -1,5 +1,6 @@
 import axios from 'axios';
 import pLimit from 'p-limit';
+import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimiter';
 
 export interface LargeCitySeed {
   name: string;
@@ -182,6 +183,7 @@ async function postCountryNow<T>(url: string, body: unknown): Promise<T> {
 
   for (let attempt = 1; attempt <= MAX_PROVIDER_RETRIES; attempt += 1) {
     try {
+      await reserveApiUsageOrThrow({ provider: 'COUNTRY_NOW', caller: 'DESTINATION_LARGE_CITY_COVERAGE' });
       const response = await withProviderThrottle(
         countryNowLimiter,
         'CountryNow',
@@ -191,6 +193,10 @@ async function postCountryNow<T>(url: string, body: unknown): Promise<T> {
       return response.data;
     } catch (error: any) {
       lastError = error;
+      // A blocked reservation means our own rate/budget cap was hit, not a transient upstream
+      // failure — retrying would just re-throw the same error and burn the retry budget for no
+      // benefit, so fail fast instead of treating it as a retryable network condition.
+      if (error instanceof ApiLimitExceededError) break;
       const status = Number(error?.response?.status ?? 0);
       const retryAfterMs = parseRetryAfterMs(error?.response?.headers?.['retry-after']);
       const retryable = status === 0 || status === 403 || status === 429 || status >= 500;
@@ -207,6 +213,7 @@ async function getGeoNames<T>(params: Record<string, string | number>): Promise<
 
   for (let attempt = 1; attempt <= MAX_PROVIDER_RETRIES; attempt += 1) {
     try {
+      await reserveApiUsageOrThrow({ provider: 'GEONAMES', caller: 'DESTINATION_LARGE_CITY_COVERAGE' });
       const response = await withProviderThrottle(
         geonamesLimiter,
         'GeoNames',
@@ -220,6 +227,7 @@ async function getGeoNames<T>(params: Record<string, string | number>): Promise<
       return response.data;
     } catch (error: any) {
       lastError = error;
+      if (error instanceof ApiLimitExceededError) break;
       const status = Number(error?.response?.status ?? 0);
       const retryAfterMs = parseRetryAfterMs(error?.response?.headers?.['retry-after']);
       const retryable = status === 0 || status === 403 || status === 429 || status >= 500;
@@ -296,6 +304,10 @@ export async function fetchCountryNowCitySeeds(countryName: string, targetCount:
         populationRecords = Array.isArray(data?.data) ? data.data : [];
         if (populationRecords.length > 0) break;
       } catch (_error) {
+        // A blocked reservation means our own rate/budget cap was hit, not a transient upstream
+        // failure — stop this outer retry loop too instead of sleeping through 3 more attempts
+        // that will just hit the same cap again.
+        if (_error instanceof ApiLimitExceededError) break;
         await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
       }
     }
