@@ -245,20 +245,52 @@ rather than adding migrations).
   points `API_LIMITS_CONFIG_PATH` at a throwaway temp file so it never writes to the real repo
   `api-limits.yaml`.
 
-### Phase 4 — Admin UI
-- Implement `CostEstimateSection` and wire it into `AdminTab.tsx` per §5.
-- **Tests:** no existing `AdminTab`/`ApiLimitsSection` component test file was found to extend — add a
-  basic load/edit/save round-trip test for the new section (mock `apiFetch`), rather than assuming test
-  coverage exists elsewhere for this file.
-- **Manual verification required** (per this repo's CLAUDE.md convention — UI changes must be exercised
-  in the running app, not just unit-tested): run `npm run web`, sign in as one of the bootstrap admin
-  accounts, open the new Cost Estimate tab, edit each of the three forms, save, and confirm the values
-  persist across a reload and the audit log records the change.
+### Phase 4 — Admin UI — **implemented, manual browser verification still outstanding**
+- Implemented `CostEstimateSection` in `AdminTab.tsx`, modeled directly on `ApiLimitsSection`'s
+  structure (same `load()`/`apiFetch()`/per-field form-state/required-reason-before-save pattern, same
+  `localStyles` primitives — no new styles needed). Wired into the `AdminSection` union, the
+  `OverviewSection` nav card array, the `renderSection()` switch, `sectionLabel`, and the
+  own-scroll-vs-outer-scroll check (`section === 'api-limits' || section === 'cost-estimate'`), since
+  this section — like API Limits — is dense enough to need its own `ScrollView`.
+- Renders: a projected-cost summary card (LLM / per-request / hosting / total / premium price net of
+  Stripe fees / break-even premium-user count), an editable assumptions form (including one row per
+  known provider for call-volume), editable hosting line items with add/remove, an editable per-request
+  pricing table (one row per provider from `requestPricing`'s keys), and an actual-spend-by-month list
+  with the "tracking started" note from §5/Phase 5.
+- **Tests:** confirmed (per this session's audit) that `app/tabs/*.test.tsx` files like
+  `FamilyRelationships.test.tsx` are **not actually collected** by `app/jest.config.js` (`testMatch` is
+  scoped to `app/tests/**/*.test.tsx` only) — added `app/tests/AdminTab.CostEstimate.test.tsx` in the
+  directory that's actually wired up, not the misleading co-located convention some older files suggest.
+  2 tests: full load renders the computed breakdown correctly (`getByDisplayValue`, not `getByText`, for
+  values inside editable `TextInput`s — a real mistake caught and fixed while writing this), and the
+  reason-required guard blocks the PATCH call until a reason is entered, then fires it correctly.
+- **Manual verification — not done, flagged rather than falsely claimed.** This repo's CLAUDE.md requires
+  exercising UI changes in the running app before calling a frontend task complete. That wasn't done here:
+  it requires a live Postgres connection and a real admin login (OAuth or a seeded bootstrap admin
+  account), neither of which is available in this sandboxed session. What **was** verified: `tsc --noEmit`
+  clean on `app/`, the full `app` test suite passes (789 total, only one pre-existing unrelated failure in
+  `aiOpsDeepLinking.test.ts`, confirmed via `git stash` to predate this work), and the new RTL test
+  exercises real rendering + the real save/PATCH call shape against a mocked backend. Before shipping,
+  someone with a working local Postgres + admin login should run `npm run web`, open the Cost Estimator
+  tab, and check all three save flows end-to-end per the original bullet below.
+- Original verification checklist (still to be run manually): sign in as a bootstrap admin, open the Cost
+  Estimator tab, edit each of the three forms, save, and confirm values persist across a reload and the
+  audit log records the change.
 
-### Phase 5 — Historical-data caveat (documentation, not code)
-- Actual per-request cost history only starts accumulating once Phase 1 ships — months before that will
-  show $0 for the newly-tracked providers even though real usage occurred. Surface this explicitly in
-  the UI (§5's "tracking started" note) so it isn't misread as "this API was free until now."
+### Phase 5 — Historical-data caveat — **implemented**
+- This was scoped as "documentation, not code," but the caveat text was already built as real UI in
+  Phase 4 (`COST_ESTIMATOR_TRACKING_STARTED_LABEL`, rendered above the actual-spend-by-month list) rather
+  than deferred, since it made more sense to write it in place while building that table than to
+  document it separately and risk it never landing. This session sharpened the wording: it now names
+  which providers are affected (the per-request ones — SerpAPI, Wikimedia, Google Routes, etc.) and
+  explicitly says LLM/token-priced tracking is unaffected and has been running longer, so a reader
+  can't misread a $0 pre-Phase-1 month as "every provider was free," only the newly-tracked ones.
+- No further action needed — this closes out the plan. All 5 phases are implemented, tested (server:
+  full suite passing except 2 pre-existing unrelated failures confirmed via `git stash`; app: full suite
+  passing except 1 pre-existing unrelated failure, also confirmed via `git stash`), and typecheck-clean
+  on both packages. The one item still genuinely outstanding is Phase 4's manual browser verification
+  (needs a live Postgres connection and a real admin login — not available in this sandboxed session),
+  called out explicitly there rather than silently skipped.
 
 ### Cross-cutting acceptance criteria
 - No new SQL migration files — confirm every new field lands in the existing `admin_settings`/
