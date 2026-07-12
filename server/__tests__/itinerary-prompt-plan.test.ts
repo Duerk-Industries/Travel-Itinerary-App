@@ -2018,6 +2018,12 @@ describe('itinerary prompt plan service', () => {
   });
 
   it('reuses shared route/day caches across users and injects different must-sees after the hit', async () => {
+    const cachedAttraction = { id: 'cache-museum', destinationKey: 'cacheville', destinationDisplayName: 'Cacheville', name: 'Cache Museum', rank: 1, activityType: 'Ticketed Attraction' as const, interestTags: ['culture'] as any, lat: 40, lon: -70, updatedAt: '2026-01-01T00:00:00Z' };
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: { Cacheville: [cachedAttraction] },
+      promptBlock: 'Destination: Cacheville\n1. Cache Museum | tier=paid | type=Ticketed Attraction | tags=culture',
+      attractionPodsByDestination: { Cacheville: [{ id: 'pod-1', destination: 'Cacheville', kind: 'geographic', items: [cachedAttraction], centroid: { lat: 40, lon: -70 }, radiusKm: 0, distanceGuaranteed: true }] },
+    });
     const jsonStage = (content: unknown) => ({ data: { choices: [{ message: { content: JSON.stringify(content) } }] } });
     const renderStage = (content: string) => ({ data: { choices: [{ message: { content } }] } });
     const norm = { $: 'norm1', sd: '2026-11-01', ed: '2026-11-02', p: 'B', c: 'M', mob: 'M', car: 'P', w: { outdoors: 10, adventure: 5, culture: 40, food: 10, nightlife: 5, relax: 10, photography: 5, authentic_local: 10, iconic_landmarks: 5 }, a: [], is: 'mixed' };
@@ -2042,6 +2048,9 @@ describe('itinerary prompt plan service', () => {
     expect(firstP1Prompts).not.toContain('cache-user-a');
     const p1AfterFirst = mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE).length;
     const p2AfterFirst = mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS).length;
+    const firstP2Call = mockedPromptStage.mock.calls.find((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS)?.[0];
+    expect(firstP2Call?.userPrompt).toContain('pod-1');
+    expect(firstP2Call?.userPrompt).toContain('Departure day: protect at least 180 minutes');
     const second = await generateItineraryViaPromptPlan({ ...common, userId: 'cache-user-b', tripIdSeed: 'cache-trip-b', mustSeeAttractions: [{ name: 'Museum B', destinationName: 'Cacheville' }] });
     expect(first.cacheUsage).toEqual({ routeHit: false, dayHit: false });
     expect(second.cacheUsage).toEqual({ routeHit: true, dayHit: true });

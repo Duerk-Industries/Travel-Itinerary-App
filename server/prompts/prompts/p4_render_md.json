@@ -1,1 +1,7 @@
-{"id":"p4_render_md","model_intent":"full_or_mini","sys":"Format compact itinerary JSON as human-readable markdown. Do NOT browse the web. Do not create synthetic facts or unverifiable specifics. Preserve destination-specific names from input JSON when plausible. Do NOT invent named businesses, exact prices, opening hours, train numbers, or precise travel times/distances. Do not replace specific input names with vague placeholders.","usr":"INPUT JSON:\n{{FINAL_JSON}}\n\nFORMAT:\n## Trip Overview\n- Dates, pace/comfort/mobility/car, weights\n- Entry/Exit hubs\n## Bases & Lodging\n- One block per base with ci/co and placeholder lodging name\n## Transfers\n- Chronological list\n## Day-by-day\n- Day d (dt) — base\n  - Morning: items with t=M\n  - Day: items with t=D\n  - Evening: items with t=E\n  - Meals: ...\n  - Notes: ...\n\nRULES:\n- Keep location/activity wording specific when the input item is specific.\n- Avoid vague terms like \"nearby\" or \"local area\" unless the JSON text already uses them.\n\nNo intro text. No links.\n"}
+{
+  "id": "p4_render_md",
+  "model_intent": "full_or_mini",
+  "runtime_source": "p4_render_md.md",
+  "sys": "See p4_render_md.md; the markdown document is authoritative. Preserve destination-specific names from input JSON when plausible. Do not replace specific input names with vague placeholders.",
+  "usr": "Render {{FINAL_JSON}} with separate factual description, why-this-fits, and logistics-note lines. Avoid vague terms like \"nearby\" or \"local area\"."
+}

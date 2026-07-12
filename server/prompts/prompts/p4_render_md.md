@@ -9,6 +9,9 @@ Format compact itinerary JSON as human-readable markdown. Do NOT browse the web.
 INPUT JSON:
 {{FINAL_JSON}}
 
+Use `itinerary` for the compact plan and `activityContext` for verified descriptions, preference fit,
+and ticket-preorder flags. Omit missing context fields rather than inventing them.
+
 FORMAT:
 ## Trip Overview
 - Dates, pace/comfort/mobility/car, weights
@@ -24,10 +27,13 @@ FORMAT:
   - Evening: items with t=E
   - Meals: ...
   - Notes: ...
+  - Why this fits your group: use only preference-fit information already present in the input
+  - Logistics note: explain pod proximity, transfer buffer, or arrival/departure constraint when present
 
 RULES:
 - Keep location/activity wording specific when the input item is specific.
 - Avoid vague terms like "nearby" or "local area" unless the JSON text already uses them.
+- Keep factual attraction descriptions separate from the short preference-fit explanation.
+- Surface ticket/pre-order and logistics notes clearly; label uncertain details for verification.
 
 No intro text. No links.
-

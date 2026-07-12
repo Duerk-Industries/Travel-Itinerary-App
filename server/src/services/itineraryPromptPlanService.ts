@@ -31,6 +31,9 @@ import {
 import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
 import type { AttractionPod } from './geoPodClusteringService';
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
+import { renderAttractionPods } from './podBasedShortlisterService';
+import { buildArrivalDepartureFacts, renderLogisticsFactBlock } from './arrivalDepartureRulesService';
+import { ITINERARY_STRUCTURE_VALIDATOR_VERSION, validateAndRepairItineraryStructure } from './itineraryStructureValidator';
 import {
   buildCatalogFingerprint,
   buildDayFragments,
@@ -378,12 +381,12 @@ const replaceAll = (template: string, key: string, value: string): string =>
     .replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value)
     .replace(new RegExp(`\\{${key}\\}`, 'g'), value);
 
-const applyTemplate = (template: string, replacements: Record<string, string>): string => {
+export const applyTemplate = (template: string, replacements: Record<string, string>): string => {
   let output = template;
   for (const [key, value] of Object.entries(replacements)) {
     output = replaceAll(output, key, value);
   }
-  return output;
+  return output.replace(/\{\{(?:ATTRACTION_PODS|LOGISTICS_FACTS)\}\}/g, 'none');
 };
 
 const parseModelJson = <T>(raw: string): T => {
@@ -1630,7 +1633,8 @@ const mapItems = (
   itinerary: PromptItinerary,
   preferenceWeights: PromptWeights,
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
-  transferNotesByDay?: Map<number, TransferNote[]>
+  transferNotesByDay?: Map<number, TransferNote[]>,
+  whyFitsByName?: Map<string, string>
 ): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
     status: 'Needed',
@@ -1668,9 +1672,11 @@ const mapItems = (
       const duration = formatMinutesAsDuration(durationMinutes);
       const description = durationMetadata?.description || buildGeneratedActivityDescription(day, text, closest);
       const notesWithDuration = `${description} Plan for about ${duration} here.`;
-      const notes = durationMetadata?.requiresPreOrderTickets
+      const bookingNotes = durationMetadata?.requiresPreOrderTickets
         ? `${notesWithDuration} Tickets may need to be pre-ordered.`
         : notesWithDuration;
+      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
+      const notes = fit ? `${bookingNotes} Why this fits your group: ${fit}` : bookingNotes;
       return {
         status: 'Proposed',
         activityType: closest,
@@ -2052,6 +2058,9 @@ const runGenerateItineraryViaPromptPlan = async (
     .map((block) => normalizeText(block))
     .filter((block) => block && block !== 'none');
   const attractionContextBlock = mergedAttractionBlocks.length ? mergedAttractionBlocks.join('\n') : 'none';
+  const attractionPodsBlock = Object.entries(attractionPodsByDestination)
+    .map(([destination, pods]) => `Destination: ${destination}\n${renderAttractionPods(pods)}`)
+    .join('\n') || 'none';
 
   const signatureInput = {
     destinations: promptRequest.d, duration: promptRequest.dur ?? input.days, pace: normalized.p,
@@ -2096,7 +2105,22 @@ const runGenerateItineraryViaPromptPlan = async (
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE} bases=${route.b.length} transfers=${route.x.length} hasRentalCar=${route.rc ? 'yes' : 'no'}`
   );
 
-  const dayDependency = buildPromptFingerprint({ p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route) });
+  const startTransfer = route.x.find((transfer) => transfer.dt === normalized.sd);
+  const endTransfer = [...route.x].reverse().find((transfer) => transfer.dt === normalized.ed);
+  const logisticsFacts = buildArrivalDepartureFacts({
+    arrival: promptRequest.s || startTransfer
+      ? { date: normalized.sd, localTime: null, durationHours: startTransfer?.td ?? null, isLongHaul: (startTransfer?.td ?? 0) >= 7 }
+      : null,
+    departure: promptRequest.s || promptRequest.e || endTransfer
+      ? { date: normalized.ed, localTime: null, durationHours: endTransfer?.td ?? null, isLongHaul: (endTransfer?.td ?? 0) >= 7 }
+      : null,
+    departureBufferMinutes: 180,
+  });
+  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}`;
+  const dayDependency = buildPromptFingerprint({
+    p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
+    attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
+  });
   let cachedDay: PromptItinerary | null = null;
   if (allowPlanCache) try { cachedDay = await readItineraryPlanCache<PromptItinerary>({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency }); }
   catch (err) { logError('[itinerary] day cache read failed; treating as miss', err); }
@@ -2115,6 +2139,8 @@ const runGenerateItineraryViaPromptPlan = async (
       STEP1_JSON: JSON.stringify(route),
       STEP2_SCHEMA_MIN: bundle.step2Schema,
       ATTRACTION_SHORTLIST: attractionContextBlock,
+      ATTRACTION_PODS: attractionPodsBlock,
+      LOGISTICS_FACTS: logisticsFactsBlock,
     },
     maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
     fallbackValue: {},
@@ -2123,6 +2149,7 @@ const runGenerateItineraryViaPromptPlan = async (
     usageContext,
   });
   const dayItinerary = sanitizeItinerary(dayRaw, route, normalized, promptRequest);
+  const mechanicallyValidated = validateAndRepairItineraryStructure({ itinerary: dayItinerary, logisticsFacts });
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS} days=${dayItinerary.dy.length} transfers=${dayItinerary.x.length}`
   );
@@ -2133,11 +2160,11 @@ const runGenerateItineraryViaPromptPlan = async (
     caller: OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE,
     template: bundle.p3,
     replacements: {
-      STEP2_JSON: JSON.stringify(dayItinerary),
+      STEP2_JSON: JSON.stringify(mechanicallyValidated.itinerary),
       STEP2_SCHEMA_MIN: bundle.step2Schema,
     },
     maxTokens: 1400,
-    fallbackValue: dayItinerary,
+    fallbackValue: mechanicallyValidated.itinerary,
     acc: tokenAcc,
     captureStages,
     usageContext,
@@ -2161,6 +2188,7 @@ const runGenerateItineraryViaPromptPlan = async (
         : day
     ),
   };
+  filteredItinerary = validateAndRepairItineraryStructure({ itinerary: filteredItinerary, logisticsFacts }).itinerary;
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length} activityBlockedDays=${blockedActivityDates.size}`
   );
@@ -2168,6 +2196,7 @@ const runGenerateItineraryViaPromptPlan = async (
     await writeItineraryPlanCache({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency, payload: filteredItinerary, fragments: buildDayFragments(filteredItinerary.dy, 3), ttlDays: Number(getApiCacheSetting('itineraryPlan', 'dayCacheTtlDays')) || 30 });
   } catch (err) { logError('[itinerary] day cache write failed; continuing', err); }
   }
+  filteredItinerary = validateAndRepairItineraryStructure({ itinerary: filteredItinerary, logisticsFacts }).itinerary;
   const profile = mapProfile(normalized);
   const fragmentInjected = injectMustSeesIntoCachedFragments({
     itinerary: filteredItinerary,
@@ -2184,12 +2213,25 @@ const runGenerateItineraryViaPromptPlan = async (
   );
   enforceDescriptionBasedDestinationConsistency(itineraryWithMustSee, promptRequest.d, durationMetadataByName);
 
+  const whyFitsByName = new Map<string, string>();
+  for (const entries of Object.values(shortlistByDestination)) {
+    for (const entry of entries) {
+      const relevantTags = entry.interestTags.filter((tag) => Number((normalized.w as any)[String(tag).replace(/\s+/g, '_')]) >= 10);
+      if (relevantTags.length) whyFitsByName.set(entry.name.toLowerCase(), `it supports your ${relevantTags.slice(0, 2).join(' and ')} interests.`);
+    }
+  }
+  const activityContext = Array.from(durationMetadataByName.entries()).map(([name, metadata]) => ({
+    name, description: metadata.description ?? undefined,
+    whyThisFits: whyFitsByName.get(name),
+    requiresPreOrderTickets: metadata.requiresPreOrderTickets,
+  }));
+
   const render = await runRenderStage({
     apiKey: input.apiKey,
     aiProvider: input.aiProvider,
     template: bundle.p4,
     replacements: {
-      FINAL_JSON: JSON.stringify(itineraryWithMustSee),
+      FINAL_JSON: JSON.stringify({ itinerary: itineraryWithMustSee, activityContext }),
     },
     acc: tokenAcc,
     captureStages,
@@ -2212,7 +2254,7 @@ const runGenerateItineraryViaPromptPlan = async (
           cost: null,
         },
       ];
-  const items = mapItems(itineraryWithMustSee, profile.weights, durationMetadataByName, transferNotesByDay);
+  const items = mapItems(itineraryWithMustSee, profile.weights, durationMetadataByName, transferNotesByDay, whyFitsByName);
   const evaluation = evaluateItineraryBaseline({
     activities: items.activities,
     transfers: items.transfers,

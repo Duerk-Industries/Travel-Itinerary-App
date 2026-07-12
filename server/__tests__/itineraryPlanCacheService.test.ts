@@ -1,5 +1,5 @@
 import {
-  buildCacheKey, buildCatalogFingerprint, buildDayFragments, buildTripSignature,
+  buildCacheKey, buildCatalogFingerprint, buildDayFragments, buildPromptFingerprint, buildTripSignature,
   readItineraryPlanCache, writeItineraryPlanCache,
 } from '../src/services/itineraryPlanCacheService';
 
@@ -28,6 +28,14 @@ describe('Phase 4 itinerary plan cache', () => {
     const moved = buildCatalogFingerprint({ Paris: [{ ...row, lat: 49.1 }] });
     expect(moved).not.toBe(first);
     expect(buildCacheKey('day', 'sig', first)).not.toBe(buildCacheKey('day', 'sig', moved));
+  });
+
+  test('Phase 3 pod, logistics, and validator changes invalidate day dependencies', () => {
+    const baseDependency = { p2: 'prompt', p3: 'validator', attractionPodsBlock: 'pod A', logisticsFactsBlock: 'arrival max 1', structureValidator: 'v1' };
+    const original = buildPromptFingerprint(baseDependency);
+    expect(buildPromptFingerprint({ ...baseDependency, attractionPodsBlock: 'pod B' })).not.toBe(original);
+    expect(buildPromptFingerprint({ ...baseDependency, logisticsFactsBlock: 'departure max 0' })).not.toBe(original);
+    expect(buildPromptFingerprint({ ...baseDependency, structureValidator: 'v2' })).not.toBe(original);
   });
 
   test('writes triplets and rejects expired entries', async () => {

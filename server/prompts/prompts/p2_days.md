@@ -13,6 +13,12 @@ norm={{NORM_JSON}}
 ATTRACTION SHORTLIST (ranked, use first when relevant):
 {{ATTRACTION_SHORTLIST}}
 
+ATTRACTION PODS (finish one pod before changing areas):
+{{ATTRACTION_PODS}}
+
+LOGISTICS FACTS (hard scheduling limits):
+{{LOGISTICS_FACTS}}
+
 TASK:
 Fill dy[] with one entry per travel day from norm.sd..norm.ed (inclusive).
 Rules:
@@ -30,6 +36,12 @@ Rules:
 12) If shortlist is provided, prioritize shortlist items before inventing alternatives. Only fallback when shortlist coverage is insufficient.
 13) Do not repeat the same activity text across multiple days of the same trip.
 14) Keep activity locality at or below the selected base locality. Do not switch to broader parent labels (state/country) for day items.
+15) Prefer completing one geographic POD before moving to another. A locality-only pod has no distance guarantee; retain its relevant items but do not claim they are nearby.
+16) Obey LOGISTICS FACTS activity caps and soft-start/finish-by constraints exactly.
+17) Photography/golden-hour: place photography-tagged outdoor/viewpoint items in the first or last suitable activity slot; do not invent sunrise/sunset times.
+18) Food-market lunch: when a food market is present in the shortlist/pod and food is relevant, pair it with LC instead of inventing a restaurant.
+19) For groups larger than 4, add a short logistics note to verify a group-size-appropriate transfer (public transit or larger vehicle as locally appropriate); do not assume a private vehicle is cheaper.
+20) If comfort=L, avoid explicitly budget-oriented commercial experiences, while retaining relevant free iconic/open-access places.
 
 OUTPUT MUST MATCH schema: {STEP2_SCHEMA_MIN}
 
@@ -58,4 +70,3 @@ LOW-SYNTHETIC GUARD:
 Set cf='M' (unvalidated).
 
 OUTPUT must match schema: {{STEP2_SCHEMA_MIN}}
-
