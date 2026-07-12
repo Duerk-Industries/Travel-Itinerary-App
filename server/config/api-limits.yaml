@@ -189,6 +189,21 @@ budgeting:
     alertThresholdPercent: 80
     models: {}
 
+# Per-request USD price for providers that aren't token-priced. 0 = genuinely free today; the admin
+# cost-estimator panel (Phase 3) will make these editable without a code deploy. Unlisted providers
+# default to 0 via getApiRequestPricingUsd().
+requestPricing:
+  SERPAPI: 0
+  WIKIMEDIA: 0
+  GOOGLE_ROUTES: 0
+  UNSPLASH: 0
+  SMTP: 0
+  COUNTRY_NOW: 0
+  GEONAMES: 0
+  AIRPORT_DATASET: 0
+  FRANKFURTER: 0
+  OPEN_METEO: 0
+
 caching:
   attractions:
     refreshDays: 365

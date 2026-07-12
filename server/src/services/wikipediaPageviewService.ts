@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { logError } from '../logger';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 const cache = new Map<string, { value: number | null; expiresAt: number }>();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -18,6 +19,7 @@ export const fetchWikipediaPopularityScore = async (title: string, now = new Dat
   const start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
   try {
     await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_WIKIMEDIA_PAGEVIEWS' });
+    await recordProviderRequestCost({ provider: 'WIKIMEDIA' });
     const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/${encodeURIComponent(clean)}/daily/${dateKey(start)}/${dateKey(end)}`;
     const response = await axios.get(url, { timeout: 8000, headers: { 'User-Agent': 'WanderBunnies-Itinerary-Generator/1.0 (contact: support@wanderbunnies.app)' } });
     const views = (Array.isArray(response.data?.items) ? response.data.items : []).reduce((sum: number, item: any) => sum + Math.max(0, Number(item?.views) || 0), 0);

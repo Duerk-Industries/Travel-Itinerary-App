@@ -5,6 +5,7 @@ jest.mock('../src/apis/usageLimiter', () => ({
 }));
 
 jest.mock('../src/config/apiLimits', () => ({
+  ...jest.requireActual('../src/config/apiLimits'),
   getApiCacheSetting: jest.fn(() => 60),
 }));
 

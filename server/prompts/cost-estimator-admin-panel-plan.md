@@ -160,13 +160,31 @@ rather than adding migrations).
 
 ## 6. Phased implementation & test plan (for an LLM implementer)
 
-### Phase 1 — Backend cost recording for non-token providers
-- Add `estimateRequestCostMicros`/`recordProviderRequestCost` to `providerBudgeting.ts`.
-- Wire it into all 11 non-token call sites listed in §4.
-- **Tests:** `recordProviderRequestCost` no-ops (no DB write) at `costPerRequestUsd = 0`; records the
-  correct micros amount otherwise. Table-driven test asserting each of the 11 call sites actually invokes
-  it (mock `recordApiCost`, assert called with the right provider per call site) — this closes the same
-  kind of "is every API actually wired in" gap found and fixed this session, so don't skip it.
+### Phase 1 — Backend cost recording for non-token providers — **implemented**
+- Added `estimateRequestCostMicros`/`recordProviderRequestCost` to `providerBudgeting.ts`, reading the
+  configured price via a new `getApiRequestPricingUsd(provider)` accessor in `apiLimits.ts` (design
+  refinement vs. §3's original wording: pricing lives directly in `api-limits.yaml`'s new
+  top-level `requestPricing:` section — the same file/mechanism the 4 LLM providers' token pricing
+  already uses — rather than a separate `admin_settings` layer, since that's simpler and more consistent
+  with the existing `budgeting`/`caching` sections' edit-in-place pattern. `admin_settings` remains the
+  right choice for the genuinely-new concepts in Phase 2 (hosting line items, assumptions), which have no
+  YAML precedent). Seeded all 10 non-token providers at `0` (free) by default.
+- Wired `recordProviderRequestCost` into all **17** non-token call sites across 12 files (the plan's
+  original count of "11 call sites" undercounted — several files have more than one reservation call,
+  e.g. `attractionsCatalogService.ts` has 3, `openMeteoWeatherApi.ts` and `unsplashApi.ts` have 2 each).
+  Every site places the cost-recording call immediately next to its existing `reserveApiUsageOrThrow`
+  call, matching this codebase's established convention.
+- **Tests:** `__tests__/providerBudgeting.requestCost.test.ts` covers `estimateRequestCostMicros`
+  (rounding, negative clamp) and `recordProviderRequestCost` (no-op at $0, correct micros when priced,
+  explicit-override precedence, provider-key normalization). `__tests__/apiRequestCostWiring.test.ts` is
+  the table-driven audit covering all 17 call sites across all 12 files, including both branches
+  (primary + fallback) of `attractionsCatalogService.ts`'s Wikipedia discovery.
+- **Regression found and fixed while implementing:** two pre-existing test files
+  (`frankfurterApi.test.ts`, `unsplashCallers.test.ts`) narrowly mocked `../src/config/apiLimits` with
+  only the one export each test needed at the time, which silently broke once `providerBudgeting.ts`
+  started requiring `getApiRequestPricingUsd`/`normalizeApiLimitKeyPart` from that same module. Fixed
+  both to spread `jest.requireActual(...)` and override only the specific function under test, so this
+  class of breakage can't recur when the module gains more exports later.
 
 ### Phase 2 — `costEstimatorService.ts` + `admin_settings` storage
 - Implement `getCostEstimatorConfig`/`updateCostEstimatorConfig`/`computeProjectedMonthlyCost`/

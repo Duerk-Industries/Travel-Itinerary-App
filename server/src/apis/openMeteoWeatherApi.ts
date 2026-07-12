@@ -1,5 +1,6 @@
 import { getApiCacheSetting } from '../config/apiLimits';
 import { reserveApiUsageOrThrow } from './usageLimiter';
+import { recordProviderRequestCost } from './providerBudgeting';
 
 type WeatherRequest = {
   date: string;
@@ -157,6 +158,7 @@ const geocodeLocation = async (
   }
 
   await reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'OVERVIEW_DAY_WEATHER_GEOCODE' });
+  await recordProviderRequestCost({ provider: 'OPEN_METEO' });
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`;
   const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
   if (!res.ok) {
@@ -197,6 +199,7 @@ const fetchForecastRange = async (params: {
   }
 
   await reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'OVERVIEW_DAY_WEATHER_FORECAST' });
+  await recordProviderRequestCost({ provider: 'OPEN_METEO' });
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(String(params.latitude))}` +
     `&longitude=${encodeURIComponent(String(params.longitude))}` +

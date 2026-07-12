@@ -3,6 +3,7 @@ import { haversineKm, type LatLon } from '../utils/geo';
 import { isFeatureEnabled } from './entitlementService';
 import { getEnvValue } from '../env';
 import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 import { logError } from '../logger';
 
 export type TransferMobilityCode = 'L' | 'M' | 'H';
@@ -116,6 +117,7 @@ export class DirectionsApiTransferEstimator implements TransferEstimator {
       }
       throw err;
     }
+    await recordProviderRequestCost({ provider: 'GOOGLE_ROUTES' });
 
     const travelMode = chooseGoogleTravelMode(heuristicEstimate.mode);
     try {

@@ -1,5 +1,6 @@
 import { logError } from '../logger';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 export type MonthlyClimatology = {
   averageHighC: number | null;
@@ -59,6 +60,7 @@ export const fetchMonthlyClimatology = async (params: { lat: number; lon: number
   const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${params.lat}&longitude=${params.lon}&start_date=${startYear}-${month}-01&end_date=${endYear}-${month}-${lastDay}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
   try {
     await reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'ITINERARY_MONTHLY_CLIMATOLOGY' });
+    await recordProviderRequestCost({ provider: 'OPEN_METEO' });
     const response = await (params.fetchImpl ?? fetch)(url, { headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
     const body: any = await response.json();

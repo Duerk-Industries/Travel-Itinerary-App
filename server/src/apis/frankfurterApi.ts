@@ -1,6 +1,7 @@
 import { getApiCacheSetting } from '../config/apiLimits';
 import { createTtlCache } from '../utils/ttlCache';
 import { reserveApiUsageOrThrow } from './usageLimiter';
+import { recordProviderRequestCost } from './providerBudgeting';
 
 type ExchangeRateResult = {
   rate: number;
@@ -44,6 +45,7 @@ export const fetchFrankfurterExchangeRate = async (params: {
       key,
       async () => {
         await reserveApiUsageOrThrow({ provider: 'FRANKFURTER', caller: params.caller });
+        await recordProviderRequestCost({ provider: 'FRANKFURTER' });
 
         const url = `https://api.frankfurter.dev/v1/${encodeURIComponent(date)}?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
         const res = await fetch(url, {

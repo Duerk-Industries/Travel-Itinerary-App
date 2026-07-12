@@ -1,6 +1,7 @@
 import axios from 'axios';
 import pLimit from 'p-limit';
 import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 export interface LargeCitySeed {
   name: string;
@@ -184,6 +185,7 @@ async function postCountryNow<T>(url: string, body: unknown): Promise<T> {
   for (let attempt = 1; attempt <= MAX_PROVIDER_RETRIES; attempt += 1) {
     try {
       await reserveApiUsageOrThrow({ provider: 'COUNTRY_NOW', caller: 'DESTINATION_LARGE_CITY_COVERAGE' });
+      await recordProviderRequestCost({ provider: 'COUNTRY_NOW' });
       const response = await withProviderThrottle(
         countryNowLimiter,
         'CountryNow',
@@ -214,6 +216,7 @@ async function getGeoNames<T>(params: Record<string, string | number>): Promise<
   for (let attempt = 1; attempt <= MAX_PROVIDER_RETRIES; attempt += 1) {
     try {
       await reserveApiUsageOrThrow({ provider: 'GEONAMES', caller: 'DESTINATION_LARGE_CITY_COVERAGE' });
+      await recordProviderRequestCost({ provider: 'GEONAMES' });
       const response = await withProviderThrottle(
         geonamesLimiter,
         'GeoNames',

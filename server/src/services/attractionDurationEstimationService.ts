@@ -4,6 +4,7 @@ import { getAttractionDurationMetadata, upsertAttractionDurationMetadata } from 
 import { logError } from '../logger';
 import type { ActivityType, AttractionDurationMetadata } from '../types';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 export const ACTIVITY_TYPE_DURATION_MINUTES: Record<ActivityType, number> = {
   'Sights & Landmarks': 45,
@@ -85,6 +86,7 @@ export const fetchWikipediaSummary = async (name: string): Promise<string | null
   if (!trimmedName) return null;
   try {
     await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_WIKIPEDIA_SUMMARY' });
+    await recordProviderRequestCost({ provider: 'WIKIMEDIA' });
     const response = await axios.get(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(trimmedName)}`,
       {

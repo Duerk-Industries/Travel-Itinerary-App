@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { logError } from '../logger';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 export type WikipediaEnrichment = {
   canonicalTitle: string;
@@ -55,6 +56,7 @@ export const fetchWikipediaEnrichment = async (name: string, destination?: strin
   const task = (async () => {
     try {
       await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_WIKIPEDIA_ENRICHMENT' });
+      await recordProviderRequestCost({ provider: 'WIKIMEDIA' });
       const search = destination ? `${cleanName} ${String(destination).trim()}` : cleanName;
       const response = await axios.get('https://en.wikipedia.org/w/api.php', {
         timeout: 8000,

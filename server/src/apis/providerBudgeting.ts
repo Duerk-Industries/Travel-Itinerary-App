@@ -1,4 +1,9 @@
-import { getApiBudgetProviderConfig, getApiLimitsConfig, normalizeApiLimitKeyPart } from '../config/apiLimits';
+import {
+  getApiBudgetProviderConfig,
+  getApiLimitsConfig,
+  getApiRequestPricingUsd,
+  normalizeApiLimitKeyPart,
+} from '../config/apiLimits';
 import {
   getApiCostCounter,
   incrementApiCostCounter,
@@ -57,6 +62,27 @@ export const recordApiCost = async (params: {
     return getApiCostCounter(provider, windowKey);
   }
   return incrementApiCostCounter(provider, windowKey, amountMicros);
+};
+
+// USD-per-request providers (SerpAPI, Wikimedia, Google Routes, etc.) have no token counts to
+// price against, so cost is just the configured flat rate for that provider.
+export const estimateRequestCostMicros = (costPerRequestUsd: number): number =>
+  Math.round(Math.max(0, Number(costPerRequestUsd) || 0) * MICROS_PER_USD);
+
+// Records one request's cost against the same monthly `api_cost_counters` rows the token-priced
+// providers use, reusing recordApiCost rather than a parallel storage mechanism. Reads the
+// configured price by provider when the caller doesn't already have it (the common case), and
+// skips the DB write entirely for providers priced at $0 today so free APIs don't generate rows.
+export const recordProviderRequestCost = async (params: {
+  provider: string;
+  costPerRequestUsd?: number;
+  windowKey?: string;
+}): Promise<number | undefined> => {
+  const provider = normalizeApiLimitKeyPart(params.provider);
+  const costPerRequestUsd = params.costPerRequestUsd ?? getApiRequestPricingUsd(provider);
+  const amountMicros = estimateRequestCostMicros(costPerRequestUsd);
+  if (amountMicros <= 0) return undefined;
+  return recordApiCost({ provider, windowKey: params.windowKey, amountMicros });
 };
 
 export const getCurrentApiBudgetStatus = async (provider: string): Promise<{

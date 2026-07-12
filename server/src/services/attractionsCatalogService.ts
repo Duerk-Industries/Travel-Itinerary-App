@@ -9,6 +9,7 @@ import { parseDestinationsCsv } from './destinationsAttractionsCsv';
 import { fetchWikipediaEnrichment } from './wikipediaGeocodingService';
 import { fetchWikipediaPopularityScore } from './wikipediaPageviewService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 import { clusterAttractionsIntoPods, type AttractionPod } from './geoPodClusteringService';
 import {
   getAttractionShortlistBlob,
@@ -234,6 +235,7 @@ const discoverViaSerpApi = async (destination: string, limit: number): Promise<D
   if (!apiKey) return [];
   const query = `top attractions in ${destination}`;
   await reserveApiUsageOrThrow({ provider: 'SERPAPI', caller: 'ATTRACTION_DISCOVERY_SEARCH' });
+  await recordProviderRequestCost({ provider: 'SERPAPI' });
   const response = await axios.get('https://serpapi.com/search.json', {
     params: {
       engine: 'google',
@@ -255,6 +257,7 @@ const discoverViaWikipedia = async (destination: string, limit: number): Promise
   };
   const query = `${destination} tourist attractions`;
   await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_DISCOVERY_WIKIPEDIA' });
+  await recordProviderRequestCost({ provider: 'WIKIMEDIA' });
   try {
     const response = await axios.get('https://en.wikipedia.org/w/api.php', {
       params: {
@@ -281,6 +284,7 @@ const discoverViaWikipedia = async (destination: string, limit: number): Promise
     }));
   } catch {
     await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_DISCOVERY_WIKIPEDIA' });
+    await recordProviderRequestCost({ provider: 'WIKIMEDIA' });
     const fallback = await axios.get('https://en.wikipedia.org/w/rest.php/v1/search/title', {
       params: {
         q: query,
