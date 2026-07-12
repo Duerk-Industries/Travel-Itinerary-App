@@ -167,7 +167,7 @@ describe('getCostEstimatorConfig / updateCostEstimatorConfig', () => {
     expect(config.assumptions.freeGenerationsPerMonth).toBe(2);
 
     expect(mockedWriteAuditLog).toHaveBeenCalledWith(
-      expect.objectContaining({ actorUserId: 'admin-1', action: 'ADMIN_SETTING_UPDATED', reason: 'Re-forecasting after growth' })
+      expect.objectContaining({ actorUserId: 'admin-1', action: 'COST_ESTIMATOR_CONFIG_UPDATED', reason: 'Re-forecasting after growth' })
     );
   });
 

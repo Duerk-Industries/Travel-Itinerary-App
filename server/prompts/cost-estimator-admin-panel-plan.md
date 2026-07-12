@@ -218,11 +218,32 @@ rather than adding migrations).
   sanitization, and the "at least one field required" validation error; `getActualMonthlySpend`
   lookback-window grouping including zero-spend months and out-of-window exclusion.
 
-### Phase 3 — Admin routes
-- Implement `GET`/`PATCH` endpoints per §4.
-- **Tests:** admin-role-required (401/403 for non-admin), reason-required validation, numeric/shape
-  validation rejects bad input before any write, successful PATCH writes an audit-log row, `GET` response
-  shape matches what the UI expects.
+### Phase 3 — Admin routes — **implemented**
+- Added `GET /api/admin/cost-estimate` and three `PATCH` endpoints
+  (`/cost-estimate/assumptions`, `/cost-estimate/request-pricing`, `/cost-estimate/hosting`) to
+  `adminRoutes.ts`, mounted under the existing `authenticate + requireAdmin` guard
+  (`app.ts:377`) alongside `/api-limits`, matching §4's design exactly.
+- Added `updateApiRequestPricingConfig` to `apiLimits.ts` (mirrors `updateApiCachingConfig`'s
+  full-replace shape) since the request-pricing PATCH writes to `api-limits.yaml`, not
+  `admin_settings` — consistent with Phase 1/2's documented storage split. Added a matching
+  `updateCostEstimatorRequestPricing` wrapper in `costEstimatorService.ts` (kept separate from
+  `updateCostEstimatorConfig` since its validation/storage shape is genuinely different: known-provider
+  keys, non-negative numbers, YAML file rather than an admin_settings JSON blob).
+- Added a new `COST_ESTIMATOR_CONFIG_UPDATED` entry to the `AuditAction` union (`types.ts`) and switched
+  `costEstimatorService.ts`'s assumptions/hosting writes to use it instead of the generic
+  `ADMIN_SETTING_UPDATED` from Phase 2, for consistency with the request-pricing writes — all three PATCH
+  endpoints now log under one specific, queryable action name. Phase 2's test assertion was updated to
+  match.
+- Every PATCH validates its `reason` (min 3 chars) and shape/numeric fields **before** calling into
+  `costEstimatorService.ts`, mirroring `/api-limits/:provider`'s validate-then-write ordering exactly.
+- **Tests:** `__tests__/admin-cost-estimator-routes.test.ts` (12 tests, full-app `supertest` integration
+  matching `admin-billing-routes.test.ts`'s convention) — 401/403 for the GET route (representative; the
+  other three PATCH routes share the same mount-level guard), `GET` response shape, and for each of the
+  three PATCH endpoints: missing-reason rejection, invalid-input rejection (negative numbers / missing
+  name), and a successful update verified both in the response body and via a follow-up `GET`, plus an
+  audit-log entry confirmed through the real `/api/admin/audit-log` endpoint. The request-pricing test
+  points `API_LIMITS_CONFIG_PATH` at a throwaway temp file so it never writes to the real repo
+  `api-limits.yaml`.
 
 ### Phase 4 — Admin UI
 - Implement `CostEstimateSection` and wire it into `AdminTab.tsx` per §5.

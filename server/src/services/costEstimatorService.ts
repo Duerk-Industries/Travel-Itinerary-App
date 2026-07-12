@@ -1,13 +1,13 @@
 import { getAdminSetting, setAdminSetting, writeAuditLog, listApiCostCounters } from '../db';
-import { getApiLimitsConfig, normalizeApiLimitKeyPart } from '../config/apiLimits';
+import { getApiLimitsConfig, normalizeApiLimitKeyPart, updateApiRequestPricingConfig } from '../config/apiLimits';
 import { PLAN_DEFAULTS } from '../config/stripeBilling';
 
 // Phase 2 of cost-estimator-admin-panel-plan.md. Request-per-provider pricing is intentionally NOT
-// stored here — it lives directly in api-limits.yaml (see providerBudgeting.ts's
+// stored in admin_settings — it lives directly in api-limits.yaml (see providerBudgeting.ts's
 // recordProviderRequestCost / apiLimits.ts's getApiRequestPricingUsd from Phase 1), the same
-// mechanism the 4 LLM providers' token pricing already uses. This service only owns the two
-// genuinely new concepts that have no existing storage: hosting line items and estimation
-// assumptions.
+// mechanism the 4 LLM providers' token pricing already uses. Reads go through getCostEstimatorConfig()
+// below; writes go through updateCostEstimatorRequestPricing (Phase 3), which delegates to
+// apiLimits.ts's own YAML writer rather than duplicating storage here.
 
 export type CostEstimatorAssumptions = {
   totalUsers: number;
@@ -165,7 +165,7 @@ export const updateCostEstimatorConfig = async (params: {
 
   await writeAuditLog({
     actorUserId: params.actorId,
-    action: 'ADMIN_SETTING_UPDATED',
+    action: 'COST_ESTIMATOR_CONFIG_UPDATED',
     reason: params.reason,
     afterState: {
       key: params.assumptions ? ASSUMPTIONS_SETTING_KEY : HOSTING_LINE_ITEMS_SETTING_KEY,
@@ -174,6 +174,32 @@ export const updateCostEstimatorConfig = async (params: {
     },
   });
 
+  return getCostEstimatorConfig();
+};
+
+// Writes to api-limits.yaml (via apiLimits.ts's own writer), not admin_settings — see the module
+// comment above. Kept as its own function rather than folded into updateCostEstimatorConfig because
+// its storage/validation shape is genuinely different (known-provider-keyed non-negative numbers in a
+// YAML file, not an arbitrary JSON blob in admin_settings).
+export const updateCostEstimatorRequestPricing = async (params: {
+  requestPricing: Record<string, number>;
+  actorId: string;
+  reason: string;
+}): Promise<CostEstimatorConfig> => {
+  const before = getApiLimitsConfig().requestPricing;
+  const sanitized = Object.fromEntries(
+    Object.entries(params.requestPricing)
+      .map(([provider, value]) => [normalizeApiLimitKeyPart(provider), Number(value)])
+      .filter(([, value]) => Number.isFinite(value) && (value as number) >= 0)
+  );
+  updateApiRequestPricingConfig(sanitized);
+  await writeAuditLog({
+    actorUserId: params.actorId,
+    action: 'COST_ESTIMATOR_CONFIG_UPDATED',
+    reason: params.reason,
+    beforeState: { key: 'requestPricing', requestPricing: before },
+    afterState: { key: 'requestPricing', requestPricing: sanitized },
+  });
   return getCostEstimatorConfig();
 };
 

@@ -67,6 +67,13 @@ import {
   updateItineraryInstructionDocuments,
   type ItineraryInstructionPhase,
 } from '../services/itineraryInstructionService';
+import {
+  getCostEstimatorConfig,
+  computeProjectedMonthlyCost,
+  getActualMonthlySpend,
+  updateCostEstimatorConfig,
+  updateCostEstimatorRequestPricing,
+} from '../services/costEstimatorService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -1479,6 +1486,151 @@ router.patch('/api-limits/caching/:group', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update api caching config', err);
     res.status(500).json({ error: 'Failed to update API caching config' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Cost estimator (Phase 3 of cost-estimator-admin-panel-plan.md)
+// ---------------------------------------------------------------------------
+
+router.get('/cost-estimate', async (req, res) => {
+  try {
+    const monthsBackParam = Number(req.query.monthsBack);
+    const monthsBack = Number.isFinite(monthsBackParam) && monthsBackParam > 0 ? Math.floor(monthsBackParam) : 6;
+    const config = await getCostEstimatorConfig();
+    const [projected, actualMonths] = await Promise.all([
+      Promise.resolve(computeProjectedMonthlyCost(config)),
+      getActualMonthlySpend(monthsBack),
+    ]);
+    res.json({
+      assumptions: config.assumptions,
+      requestPricing: config.requestPricing,
+      hostingLineItems: config.hostingLineItems,
+      projected,
+      actual: { months: actualMonths },
+    });
+  } catch (err) {
+    logError('[admin] failed to get cost estimate', err);
+    res.status(500).json({ error: 'Failed to get cost estimate' });
+  }
+});
+
+router.patch('/cost-estimate/assumptions', async (req, res) => {
+  const { reason, ...assumptions } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (typeof assumptions !== 'object' || assumptions === null || Array.isArray(assumptions)) {
+    res.status(400).json({ error: 'request body must be an object of assumption fields plus reason' });
+    return;
+  }
+  const NUMERIC_FIELDS = [
+    'totalUsers',
+    'premiumConversionPercent',
+    'freeGenerationsPerMonth',
+    'premiumGenerationsPerMonth',
+    'costPerGenerationUsd',
+    'stripeFeePercent',
+    'stripeFeeFixedUsd',
+  ] as const;
+  for (const field of NUMERIC_FIELDS) {
+    const value = (assumptions as Record<string, unknown>)[field];
+    if (typeof value !== 'undefined' && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+      res.status(400).json({ error: `${field} must be a non-negative number` });
+      return;
+    }
+  }
+  if (
+    typeof assumptions.premiumMonthlyPriceUsdOverride !== 'undefined' &&
+    assumptions.premiumMonthlyPriceUsdOverride !== null &&
+    (!Number.isFinite(Number(assumptions.premiumMonthlyPriceUsdOverride)) || Number(assumptions.premiumMonthlyPriceUsdOverride) < 0)
+  ) {
+    res.status(400).json({ error: 'premiumMonthlyPriceUsdOverride must be null or a non-negative number' });
+    return;
+  }
+  if (
+    typeof assumptions.providerCallsPerUserPerMonth !== 'undefined' &&
+    (typeof assumptions.providerCallsPerUserPerMonth !== 'object' ||
+      assumptions.providerCallsPerUserPerMonth === null ||
+      Array.isArray(assumptions.providerCallsPerUserPerMonth))
+  ) {
+    res.status(400).json({ error: 'providerCallsPerUserPerMonth must be an object of non-negative numbers' });
+    return;
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = await updateCostEstimatorConfig({ assumptions, actorId, reason: reasonStr });
+    res.json(config);
+  } catch (err) {
+    logError('[admin] failed to update cost estimator assumptions', err);
+    res.status(500).json({ error: 'Failed to update cost estimator assumptions' });
+  }
+});
+
+router.patch('/cost-estimate/request-pricing', async (req, res) => {
+  const { reason, requestPricing } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (typeof requestPricing !== 'object' || requestPricing === null || Array.isArray(requestPricing)) {
+    res.status(400).json({ error: 'requestPricing must be an object of non-negative per-provider prices' });
+    return;
+  }
+  const invalidEntry = Object.entries(requestPricing as Record<string, unknown>).find(
+    ([, value]) => !Number.isFinite(Number(value)) || Number(value) < 0
+  );
+  if (invalidEntry) {
+    res.status(400).json({ error: `requestPricing.${invalidEntry[0]} must be a non-negative number` });
+    return;
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = await updateCostEstimatorRequestPricing({ requestPricing, actorId, reason: reasonStr });
+    res.json(config);
+  } catch (err) {
+    logError('[admin] failed to update cost estimator request pricing', err);
+    res.status(500).json({ error: 'Failed to update cost estimator request pricing' });
+  }
+});
+
+router.patch('/cost-estimate/hosting', async (req, res) => {
+  const { reason, hostingLineItems } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (!Array.isArray(hostingLineItems)) {
+    res.status(400).json({ error: 'hostingLineItems must be an array' });
+    return;
+  }
+  const invalidItem = hostingLineItems.find(
+    (item: any) =>
+      typeof item?.id !== 'string' ||
+      !item.id.trim() ||
+      typeof item?.name !== 'string' ||
+      !item.name.trim() ||
+      !Number.isFinite(Number(item?.monthlyCostUsd)) ||
+      Number(item.monthlyCostUsd) < 0
+  );
+  if (invalidItem) {
+    res.status(400).json({ error: 'each hosting line item requires a non-empty id, a non-empty name, and a non-negative monthlyCostUsd' });
+    return;
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = await updateCostEstimatorConfig({ hostingLineItems, actorId, reason: reasonStr });
+    res.json(config);
+  } catch (err) {
+    logError('[admin] failed to update cost estimator hosting line items', err);
+    res.status(500).json({ error: 'Failed to update cost estimator hosting line items' });
   }
 });
 

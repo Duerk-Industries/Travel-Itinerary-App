@@ -325,6 +325,30 @@ export const updateApiCachingConfig = (
   return loadConfigFromFile();
 };
 
+// Full replace of the requestPricing map — mirrors updateApiCachingConfig's single-section-replace
+// shape. Values may be 0 (a genuinely free provider); callers are responsible for rejecting negative
+// values before calling this (parseNonNegativeNumber below defends the file itself either way).
+export const updateApiRequestPricingConfig = (nextValues: Record<string, number>): ApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  const rawConfig = loadRawConfigFromFile();
+  const nextRequestPricing = Object.fromEntries(
+    Object.entries(nextValues)
+      .map(([provider, value]) => [normalizeApiLimitKeyPart(provider), value])
+      .filter(([, value]) => parseNonNegativeNumber(value) !== undefined)
+      .sort(([a], [b]) => String(a).localeCompare(String(b)))
+  );
+  const nextRawConfig: RawApiLimitsConfig = {
+    providers: rawConfig.providers ?? {},
+    budgeting: rawConfig.budgeting ?? {},
+    caching: rawConfig.caching ?? {},
+    requestPricing: nextRequestPricing,
+  };
+
+  fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');
+  invalidateConfigCache();
+  return loadConfigFromFile();
+};
+
 export const updateApiBudgetProviderConfig = (
   provider: string,
   nextBudgeting: {
