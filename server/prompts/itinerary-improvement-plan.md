@@ -477,7 +477,21 @@ metrics/fixtures being in place to judge "did this actually help."
   explicitly, since a silent stale-trait hit would be a correctness bug (e.g. serving a "Luxury" cached
   itinerary to a "Budget" request), not just a missed cost optimization.
 
-### Phase 5 — Optional real routing API (only if Phase 3's heuristic proves insufficient in practice)
+### Phase 5 — Optional real routing API (only if Phase 3's heuristic proves insufficient in practice) — **implemented**
+`DirectionsApiTransferEstimator` in `transferEstimationService.ts` now calls Google's Routes API
+(`computeRouteMatrix`) behind the `attractions_transfer_directions_api` flag. It reuses the free
+haversine heuristic to pick a travel mode first (so only one paid element is requested per pair, never
+one per mode), and falls back to that same heuristic estimate — never throws, never leaves a pair
+unestimated — on missing `GOOGLE_ROUTES_API_KEY`, a rate-limit/budget block
+(`ApiLimitExceededError` via the shared `reserveApiUsageOrThrow` pattern), or any API/network failure.
+Rate limiting is wired through `api-limits.yaml` (`providers.GOOGLE_ROUTES`, 200/day overall and per-caller
+cap, matching the SERPAPI/WIKIMEDIA convention) — no `budgeting` entry, since that section is
+token-cost-based (LLM-only) and doesn't apply to this per-element-priced API.
+Tests: `server/__tests__/transferEstimationService.test.ts` covers a mocked successful Routes API
+response (including asserting `TRANSIT` mode is requested for the mode the heuristic chose), the
+missing-API-key fallback, the API-failure fallback, and the rate-limit fallback (all falling back to the
+heuristic, never throwing to the caller) — matching all three cases called for below.
+
 - Implement a provider-neutral route estimator behind the existing
   `attractions_transfer_directions_api` feature flag. Validate high-impact inter-base legs and only the
   small set of intra-day edges that could change the winning schedule; never request a full unbounded

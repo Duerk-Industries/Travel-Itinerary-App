@@ -131,6 +131,13 @@ providers:
     callers:
       ATTRACTION_DISCOVERY_SEARCH: 100
 
+  GOOGLE_ROUTES:
+    window: hour
+    windowHours: 24
+    overall: 200
+    callers:
+      ATTRACTION_TRANSFER_MATRIX: 200
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80

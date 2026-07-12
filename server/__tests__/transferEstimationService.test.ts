@@ -1,14 +1,23 @@
 /// <reference types="jest" />
 /// <reference types="node" />
+import axios from 'axios';
 import { HeuristicTransferEstimator, getTransferEstimator, DirectionsApiTransferEstimator } from '../src/services/transferEstimationService';
+import { ApiLimitExceededError } from '../src/apis/usageLimiter';
 
 jest.mock('../src/services/entitlementService', () => ({
   isFeatureEnabled: jest.fn(),
 }));
+jest.mock('axios');
+jest.mock('../src/apis/usageLimiter', () => {
+  const actual = jest.requireActual('../src/apis/usageLimiter');
+  return { ...actual, reserveApiUsageOrThrow: jest.fn(async () => undefined) };
+});
 
 const mockedEntitlement = jest.requireMock('../src/services/entitlementService') as {
   isFeatureEnabled: jest.Mock;
 };
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedReserve = jest.requireMock('../src/apis/usageLimiter').reserveApiUsageOrThrow as jest.Mock;
 
 describe('HeuristicTransferEstimator', () => {
   const estimator = new HeuristicTransferEstimator();
@@ -81,12 +90,66 @@ describe('getTransferEstimator', () => {
     expect(estimator).toBeInstanceOf(HeuristicTransferEstimator);
   });
 
-  it('returns the (inert) directions-api estimator when the flag is on, and its estimate() rejects safely', async () => {
+  it('returns the directions-api estimator when the flag is on', async () => {
     mockedEntitlement.isFeatureEnabled.mockResolvedValue(true);
     const estimator = await getTransferEstimator();
     expect(estimator).toBeInstanceOf(DirectionsApiTransferEstimator);
-    // The stub is unimplemented; callers (attachAttractionMetadata) must catch this per-call
-    // so a prematurely-flipped flag can't crash generation.
-    await expect(estimator.estimate({} as any)).rejects.toThrow();
+  });
+});
+
+describe('DirectionsApiTransferEstimator', () => {
+  const from = { lat: 40.7813, lon: -73.9737 };
+  const to = { lat: 40.7484, lon: -73.9857 }; // ~4km apart -> heuristic picks 'transit'
+  const estimator = new DirectionsApiTransferEstimator();
+  const originalKey = process.env.GOOGLE_ROUTES_API_KEY;
+
+  beforeEach(() => {
+    mockedAxios.post.mockReset();
+    mockedReserve.mockReset();
+    mockedReserve.mockResolvedValue(undefined);
+    process.env.GOOGLE_ROUTES_API_KEY = 'test-key';
+  });
+
+  afterAll(() => {
+    process.env.GOOGLE_ROUTES_API_KEY = originalKey;
+  });
+
+  it('returns the heuristic estimate without a network call when no API key is configured', async () => {
+    delete process.env.GOOGLE_ROUTES_API_KEY;
+    const result = await estimator.estimate({ from, to, mobility: 'M' });
+    expect(result?.source).toBe('heuristic');
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+  });
+
+  it('uses the mocked Directions/Routes API response when available', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: [{ originIndex: 0, destinationIndex: 0, duration: '900s', distanceMeters: 4200, condition: 'ROUTE_EXISTS' }],
+    } as any);
+    const result = await estimator.estimate({ from, to, mobility: 'M' });
+    expect(result).toEqual({ mode: 'transit', minutes: 15, distanceKm: 4.2, source: 'directions_api' });
+    expect(mockedReserve).toHaveBeenCalledWith({ provider: 'GOOGLE_ROUTES', caller: 'ATTRACTION_TRANSFER_MATRIX' });
+    const [, body] = mockedAxios.post.mock.calls[0];
+    expect((body as any).travelMode).toBe('TRANSIT');
+  });
+
+  it('falls back to the heuristic estimate when the API call fails', async () => {
+    mockedAxios.post.mockRejectedValue(new Error('network error'));
+    const result = await estimator.estimate({ from, to, mobility: 'M' });
+    expect(result?.source).toBe('heuristic');
+  });
+
+  it('falls back to the heuristic estimate, without calling the network, once the rate limit is reached', async () => {
+    mockedReserve.mockRejectedValue(
+      new ApiLimitExceededError({ provider: 'GOOGLE_ROUTES', caller: 'ATTRACTION_TRANSFER_MATRIX', scope: 'overall', limit: 200, used: 200 })
+    );
+    const result = await estimator.estimate({ from, to, mobility: 'M' });
+    expect(result?.source).toBe('heuristic');
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+  });
+
+  it('returns null when coordinates are missing, without reserving usage', async () => {
+    const result = await estimator.estimate({ from: { lat: NaN, lon: NaN }, to, mobility: 'M' });
+    expect(result).toBeNull();
+    expect(mockedReserve).not.toHaveBeenCalled();
   });
 });
