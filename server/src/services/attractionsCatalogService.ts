@@ -9,6 +9,7 @@ import { parseDestinationsCsv } from './destinationsAttractionsCsv';
 import { fetchWikipediaEnrichment } from './wikipediaGeocodingService';
 import { fetchWikipediaPopularityScore } from './wikipediaPageviewService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { clusterAttractionsIntoPods, type AttractionPod } from './geoPodClusteringService';
 import {
   getAttractionShortlistBlob,
   listAttractionCatalogEntries,
@@ -1143,7 +1144,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   promptItemsPerDestination?: number;
   refreshDays?: number;
   allowDiscovery?: boolean;
-}): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string }> => {
+}): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string; attractionPodsByDestination?: Record<string, AttractionPod[]> }> => {
   const shortlistPromptItemsPerDestination =
     Math.min(
       Math.max(
@@ -1158,7 +1159,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
     new Set((params.destinations ?? []).map((item) => normalizeWhitespace(String(item ?? ''))).filter(Boolean))
   );
   if (!destinations.length) {
-    return { shortlistByDestination: {}, promptBlock: 'none' };
+    return { shortlistByDestination: {}, promptBlock: 'none', attractionPodsByDestination: {} };
   }
   const normalizedDateKey = normalizeDateKey(params.dateKey);
   const refreshDays =
@@ -1222,6 +1223,10 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   return {
     shortlistByDestination,
     promptBlock: blocks.length ? blocks.join('\n') : 'none',
+    attractionPodsByDestination: Object.fromEntries(destinations.map((destination) => [
+      destination,
+      clusterAttractionsIntoPods({ destination, entries: shortlistByDestination[destination] ?? [], radiusKm: 2, maxItemsPerPod: 3 }),
+    ])),
   };
 };
 

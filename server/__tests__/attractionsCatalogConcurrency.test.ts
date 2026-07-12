@@ -135,6 +135,9 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
     });
 
     expect(result.promptBlock).toContain('Destination: Mexico City');
+    expect(result.attractionPodsByDestination?.['Mexico City']?.[0]).toMatchObject({
+      kind: 'locality-only', distanceGuaranteed: false,
+    });
     expect(mockedDb.upsertAttractionShortlistBlob).not.toHaveBeenCalled();
   });
 
