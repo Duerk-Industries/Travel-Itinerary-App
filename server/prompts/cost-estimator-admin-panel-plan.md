@@ -186,14 +186,37 @@ rather than adding migrations).
   both to spread `jest.requireActual(...)` and override only the specific function under test, so this
   class of breakage can't recur when the module gains more exports later.
 
-### Phase 2 — `costEstimatorService.ts` + `admin_settings` storage
-- Implement `getCostEstimatorConfig`/`updateCostEstimatorConfig`/`computeProjectedMonthlyCost`/
-  `computeBreakEvenPremiumUsers`/`getActualMonthlySpend`.
-- **Tests:** `computeProjectedMonthlyCost` and `computeBreakEvenPremiumUsers` against fixtures built from
-  this session's manual estimate (10,000 users / 3% premium / $5 premium price → ~$139 variable API +
-  ~$150 hosting, ~63 break-even users) as a golden regression case — if the arithmetic in code diverges
-  from that hand-verified reference, that's a bug, not a rounding nuance to wave away. Round-trip test for
-  config get/update including the audit-log entry.
+### Phase 2 — `costEstimatorService.ts` + `admin_settings` storage — **implemented**
+- Implemented `getCostEstimatorConfig`/`updateCostEstimatorConfig`/`computeProjectedMonthlyCost`/
+  `computeBreakEvenPremiumUsers`/`computeNetRevenuePerPremiumUserUsd`/`getActualMonthlySpend` in
+  `costEstimatorService.ts`. Two `admin_settings` keys (`cost_estimator_assumptions`,
+  `cost_estimator_hosting_line_items`), not three — `requestPricing` isn't stored here at all; per
+  Phase 1's documented deviation it's read live from `api-limits.yaml` via `getApiLimitsConfig()`, so
+  `getCostEstimatorConfig()`'s three-field return shape (`assumptions`, `hostingLineItems`,
+  `requestPricing`) is unchanged from §4's original design even though the storage split isn't.
+  `updateCostEstimatorConfig` takes one call accepting a partial `{ assumptions?, hostingLineItems? }` +
+  `actorId` + `reason` (mirrors `updateItineraryInstructionDocuments`'s partial-phases shape) rather than
+  three separate functions, since Phase 3's two PATCH endpoints for these fields can each call it with
+  just the one field they own.
+- Defaults for `costPerGenerationUsd` ($0.0021) and the hosting/assumptions baseline reproduce this
+  session's own hand-verified reference estimate, not arbitrary placeholders.
+- **Golden-fixture precision note:** the original hand-estimate's "~$139 variable API" figure mixed
+  rigorous math (the $44.52 LLM cost) with admittedly-speculative non-tracked-provider guesses (e.g. a
+  Google Places cost that was never a real registered provider in this codebase). The golden regression
+  tests anchor only to the rigorous parts: the $44.52 LLM baseline (exact), a $150 hosting sum from
+  clearly-labeled round line items, and a break-even calculation using clean, explicit inputs — not a
+  forced re-derivation of every speculative number from the first draft. Separately,
+  `computeBreakEvenPremiumUsers` rounds **up** (a fractional break-even count still leaves the business
+  short), so the original prose's "~63" (an approximation of 63.44) is confirmed in tests to precisely
+  ceiling to **64**, not 63 — documented in the test file as a precision fix, not an arithmetic
+  divergence.
+- **Tests:** `__tests__/costEstimatorService.test.ts` (16 tests) — `computeNetRevenuePerPremiumUserUsd`
+  and `computeBreakEvenPremiumUsers` unit tests including the zero/negative-fee-clamp and
+  null-break-even edge cases; `computeProjectedMonthlyCost` golden fixtures (LLM-only, hosting-only,
+  combined-with-break-even, price-override); `getCostEstimatorConfig`/`updateCostEstimatorConfig`
+  round-trip through mocked `admin_settings` including the audit-log assertion, malformed-input
+  sanitization, and the "at least one field required" validation error; `getActualMonthlySpend`
+  lookback-window grouping including zero-spend months and out-of-window exclusion.
 
 ### Phase 3 — Admin routes
 - Implement `GET`/`PATCH` endpoints per §4.
