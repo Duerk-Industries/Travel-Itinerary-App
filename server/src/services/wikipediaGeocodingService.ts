@@ -15,7 +15,7 @@ type CacheEntry<T> = { value: T; expiresAt: number };
 const cache = new Map<string, CacheEntry<WikipediaEnrichment | null>>();
 const inFlight = new Map<string, Promise<WikipediaEnrichment | null>>();
 const SUCCESS_TTL_MS = 365 * 24 * 60 * 60 * 1000;
-const NEGATIVE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const NEGATIVE_TTL_MS = 15 * 24 * 60 * 60 * 1000;
 const USER_AGENT = 'WanderBunnies-Itinerary-Generator/1.0 (contact: support@wanderbunnies.app)';
 
 const keyFor = (name: string, destination?: string): string => `${name}|${destination ?? ''}`.trim().toLowerCase().replace(/\s+/g, ' ');

@@ -469,6 +469,18 @@ export interface AttractionShortlistBlob {
   updatedAt: string;
 }
 
+export interface ItineraryPlanCacheEntry {
+  id: string;
+  cacheKey: string;
+  stage: 'route' | 'day';
+  signature: string;
+  dependencyFingerprint: string;
+  payload: unknown;
+  fragments?: unknown[];
+  expiresAt: string;
+  updatedAt: string;
+}
+
 export interface AttractionDurationMetadata {
   id: string;
   destinationKey: string;

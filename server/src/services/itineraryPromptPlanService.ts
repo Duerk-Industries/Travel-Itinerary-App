@@ -29,6 +29,17 @@ import {
   type NormalizedPreferenceContract,
 } from './itineraryPreferenceContract';
 import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
+import type { AttractionPod } from './geoPodClusteringService';
+import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
+import {
+  buildCatalogFingerprint,
+  buildDayFragments,
+  buildPromptFingerprint,
+  buildTripSignature,
+  readItineraryPlanCache,
+  stableHash,
+  writeItineraryPlanCache,
+} from './itineraryPlanCacheService';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -229,6 +240,7 @@ export type ItineraryPromptPlanResult = {
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
   preferenceContract: NormalizedPreferenceContract;
   evaluation: ItineraryBaselineMetrics;
+  cacheUsage: { routeHit: boolean; dayHit: boolean };
 };
 
 export type MustSeeAttractionInput = string | { name: string; destinationName?: string | null };
@@ -761,15 +773,6 @@ const normalizeMustSeeAttractions = (
     if (out.length >= 20) break;
   }
   return out;
-};
-
-const buildMustSeePromptBlock = (mustSeeAttractions: NormalizedMustSeeAttraction[]): string => {
-  if (!mustSeeAttractions.length) return '';
-  const lines = ['Must-see attractions selected by travelers (prioritize these):'];
-  mustSeeAttractions.forEach((item, idx) => {
-    lines.push(`${idx + 1}. ${item.name}`);
-  });
-  return lines.join('\n');
 };
 
 const buildPromptRequest = (input: ItineraryPromptPlanServiceInput): PromptReq => {
@@ -1956,8 +1959,9 @@ const runGenerateItineraryViaPromptPlan = async (
   const promptRequest = buildPromptRequest(input);
   const preferenceContract = buildPreferenceContract(input);
   const normalizedMustSee = normalizeMustSeeAttractions(input.mustSeeAttractions);
-  const mustSeePromptBlock = buildMustSeePromptBlock(normalizedMustSee);
   const allowAttractionDiscovery = getEnvFlag('ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED', { defaultValue: false });
+  const allowPlanCache = getEnvFlag('ITINERARY_PLAN_CACHE_ENABLED', { defaultValue: true });
+  const cacheUsage = { routeHit: false, dayHit: false };
   logInfo(
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
   );
@@ -2012,6 +2016,7 @@ const runGenerateItineraryViaPromptPlan = async (
 
   let attractionShortlistBlock = 'none';
   let shortlistByDestination: Record<string, AttractionCatalogEntry[]> = {};
+  let attractionPodsByDestination: Record<string, AttractionPod[]> = {};
   if (input.userId) {
     try {
       const limitPerDestination = Number(getApiCacheSetting('attractions', 'limitPerDestination')) || 20;
@@ -2029,6 +2034,7 @@ const runGenerateItineraryViaPromptPlan = async (
       });
       attractionShortlistBlock = shortlist.promptBlock;
       shortlistByDestination = shortlist.shortlistByDestination ?? {};
+      attractionPodsByDestination = shortlist.attractionPodsByDestination ?? {};
       const totalItems = Object.values(shortlist.shortlistByDestination).reduce((sum, list) => sum + list.length, 0);
       logInfo(
         `[itinerary] attractions shortlist loaded destinations=${Object.keys(shortlist.shortlistByDestination).length} items=${totalItems}`
@@ -2037,42 +2043,75 @@ const runGenerateItineraryViaPromptPlan = async (
       logError('[itinerary] attractions shortlist load failed; continuing without shortlist', err);
       attractionShortlistBlock = 'none';
       shortlistByDestination = {};
+      attractionPodsByDestination = {};
     }
   }
-  const mergedAttractionBlocks = [mustSeePromptBlock, attractionShortlistBlock]
+  // Shared LLM stages must remain free of private must-see selections. Those
+  // are injected deterministically after cache reads/validation below.
+  const mergedAttractionBlocks = [attractionShortlistBlock]
     .map((block) => normalizeText(block))
     .filter((block) => block && block !== 'none');
   const attractionContextBlock = mergedAttractionBlocks.length ? mergedAttractionBlocks.join('\n') : 'none';
 
-  const routeRaw = await runJsonStage<unknown>({
-    apiKey: input.apiKey,
-    aiProvider: input.aiProvider,
-    caller: OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
-    template: bundle.p1,
-    replacements: {
-      REQ_JSON: JSON.stringify(promptRequest),
-      NORM_JSON: JSON.stringify(normalized),
-      STEP1_SCHEMA_MIN: bundle.step1Schema,
-      ATTRACTION_SHORTLIST: attractionContextBlock,
-    },
-    maxTokens: 1200,
-    fallbackValue: {},
-    acc: tokenAcc,
-    captureStages,
-    usageContext,
-  });
-  const route = sanitizeRoute(routeRaw, normalized, promptRequest);
+  const signatureInput = {
+    destinations: promptRequest.d, duration: promptRequest.dur ?? input.days, pace: normalized.p,
+    comfort: normalized.c, mobility: normalized.mob, car: normalized.car, interactionStyle: normalized.is,
+    budgetMin: input.budgetMin, budgetMax: input.budgetMax, startDate: normalized.sd, endDate: normalized.ed,
+    weights: normalized.w,
+    startHub: promptRequest.s ?? null, endHub: promptRequest.e ?? null,
+  };
+  const cacheSafeRequest: PromptReq = {
+    $: 'req1', d: promptRequest.d, sd: normalized.sd, ed: normalized.ed, dur: promptRequest.dur,
+    s: promptRequest.s, e: promptRequest.e, tt: {
+      p: normalized.p, c: normalized.c, mob: normalized.mob, car: normalized.car, w: normalized.w, is: normalized.is,
+    }, budgetMin: promptRequest.budgetMin, budgetMax: promptRequest.budgetMax,
+  };
+  const cacheSafeNormalized: PromptNorm = { ...normalized, a: [] };
+  const routeSignature = buildTripSignature(signatureInput, false);
+  const daySignature = buildTripSignature(signatureInput, true);
+  const catalogFingerprint = buildCatalogFingerprint(shortlistByDestination);
+  const routeDependency = buildPromptFingerprint({ p1: bundle.p1, schema: bundle.step1Schema, catalogFingerprint });
+
+  let cachedRoute: PromptRoute | null = null;
+  if (allowPlanCache) {
+    try { cachedRoute = await readItineraryPlanCache<PromptRoute>({ stage: 'route', signature: routeSignature, dependencyFingerprint: routeDependency }); }
+    catch (err) { logError('[itinerary] route cache read failed; treating as miss', err); }
+  }
+  let route: PromptRoute;
+  if (cachedRoute) {
+    cacheUsage.routeHit = true;
+    route = sanitizeRoute(cachedRoute, normalized, promptRequest);
+  } else {
+    const routeRaw = await runJsonStage<unknown>({
+      apiKey: input.apiKey, aiProvider: input.aiProvider, caller: OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
+      template: bundle.p1, replacements: { REQ_JSON: JSON.stringify(cacheSafeRequest), NORM_JSON: JSON.stringify(cacheSafeNormalized), STEP1_SCHEMA_MIN: bundle.step1Schema, ATTRACTION_SHORTLIST: attractionContextBlock },
+      maxTokens: 1200, fallbackValue: {}, acc: tokenAcc, captureStages, usageContext,
+    });
+    route = sanitizeRoute(routeRaw, normalized, promptRequest);
+    if (allowPlanCache) try {
+      await writeItineraryPlanCache({ stage: 'route', signature: routeSignature, dependencyFingerprint: routeDependency, payload: route, ttlDays: Number(getApiCacheSetting('itineraryPlan', 'routeCacheTtlDays')) || 60 });
+    } catch (err) { logError('[itinerary] route cache write failed; continuing', err); }
+  }
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE} bases=${route.b.length} transfers=${route.x.length} hasRentalCar=${route.rc ? 'yes' : 'no'}`
   );
 
+  const dayDependency = buildPromptFingerprint({ p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route) });
+  let cachedDay: PromptItinerary | null = null;
+  if (allowPlanCache) try { cachedDay = await readItineraryPlanCache<PromptItinerary>({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency }); }
+  catch (err) { logError('[itinerary] day cache read failed; treating as miss', err); }
+  let filteredItinerary: PromptItinerary;
+  if (cachedDay) {
+    cacheUsage.dayHit = true;
+    filteredItinerary = sanitizeItinerary(cachedDay, route, normalized, promptRequest);
+  } else {
   const dayRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
     aiProvider: input.aiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
     template: bundle.p2,
     replacements: {
-      NORM_JSON: JSON.stringify(normalized),
+      NORM_JSON: JSON.stringify(cacheSafeNormalized),
       STEP1_JSON: JSON.stringify(route),
       STEP2_SCHEMA_MIN: bundle.step2Schema,
       ATTRACTION_SHORTLIST: attractionContextBlock,
@@ -2110,7 +2149,7 @@ const runGenerateItineraryViaPromptPlan = async (
   );
   const itinerary = enforceAttractionDestinationConsistency(groundedItinerary, shortlistByDestination);
   const blockedActivityDates = getActivityBlockedDates(itinerary, normalized);
-  const filteredItinerary: PromptItinerary = {
+  filteredItinerary = {
     ...itinerary,
     dy: itinerary.dy.map((day) =>
       blockedActivityDates.has(day.dt)
@@ -2125,8 +2164,18 @@ const runGenerateItineraryViaPromptPlan = async (
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length} activityBlockedDays=${blockedActivityDates.size}`
   );
+  if (allowPlanCache) try {
+    await writeItineraryPlanCache({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency, payload: filteredItinerary, fragments: buildDayFragments(filteredItinerary.dy, 3), ttlDays: Number(getApiCacheSetting('itineraryPlan', 'dayCacheTtlDays')) || 30 });
+  } catch (err) { logError('[itinerary] day cache write failed; continuing', err); }
+  }
   const profile = mapProfile(normalized);
-  const itineraryWithMustSee = enforceMustSeeAttractions(filteredItinerary, normalizedMustSee, promptRequest.d);
+  const fragmentInjected = injectMustSeesIntoCachedFragments({
+    itinerary: filteredItinerary,
+    mustSees: normalizedMustSee,
+    podsByDestination: attractionPodsByDestination,
+    maxItemsPerDay: MAX_ITEMS_PER_DAY,
+  });
+  const itineraryWithMustSee = enforceMustSeeAttractions(fragmentInjected, normalizedMustSee, promptRequest.d);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     itineraryWithMustSee,
     normalized,
@@ -2222,5 +2271,6 @@ const runGenerateItineraryViaPromptPlan = async (
     },
     preferenceContract,
     evaluation,
+    cacheUsage,
   };
 };

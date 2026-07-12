@@ -177,6 +177,10 @@ caching:
     minAttractionsAfterConfidenceFilter: 6
     promptBlobRefreshDays: 30
     durationMetadataRefreshDays: 60
+  itineraryPlan:
+    routeCacheTtlDays: 60
+    dayCacheTtlDays: 30
+    shadowSamplePercent: 5
   locations:
     csvCacheTtlMinutes: 60
     refreshCooldownSeconds: 15

@@ -6,6 +6,11 @@ import * as attractionsCatalogService from '../src/services/attractionsCatalogSe
 import { initDb } from '../src/db';
 import { seedEntitlementDefaults } from '../src/services/entitlementService';
 import { estimateOpenAiCostMicros } from '../src/apis/providerBudgeting';
+import {
+  OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
+  OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
+  runItineraryPromptStageViaOpenAi,
+} from '../src/apis/openaiCallers';
 
 jest.mock('axios');
 jest.mock('../src/apis/openaiCallers', () => {
@@ -54,6 +59,7 @@ jest.mock('../src/services/attractionsCatalogService', () => {
   };
 });
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedPromptStage = runItineraryPromptStageViaOpenAi as jest.Mock;
 const mockedAttractionsCatalogService = attractionsCatalogService as jest.Mocked<typeof attractionsCatalogService>;
 
 describe('itinerary prompt plan service', () => {
@@ -67,6 +73,7 @@ describe('itinerary prompt plan service', () => {
   });
 
   beforeEach(() => {
+    mockedPromptStage.mockClear();
     mockedAxios.post.mockReset();
     mockedAxios.get.mockReset();
     // Attraction duration/description lookups hit Wikipedia's summary API by
@@ -2008,5 +2015,39 @@ describe('itinerary prompt plan service', () => {
     const commonActivity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'boston common');
     expect(gardenActivity).toBeDefined();
     expect(commonActivity).toBeDefined();
+  });
+
+  it('reuses shared route/day caches across users and injects different must-sees after the hit', async () => {
+    const jsonStage = (content: unknown) => ({ data: { choices: [{ message: { content: JSON.stringify(content) } }] } });
+    const renderStage = (content: string) => ({ data: { choices: [{ message: { content } }] } });
+    const norm = { $: 'norm1', sd: '2026-11-01', ed: '2026-11-02', p: 'B', c: 'M', mob: 'M', car: 'P', w: { outdoors: 10, adventure: 5, culture: 40, food: 10, nightlife: 5, relax: 10, photography: 5, authentic_local: 10, iconic_landmarks: 5 }, a: [], is: 'mixed' };
+    const route = { $: 'r1', eh: 'BOS', xh: 'BOS', b: [{ l: 'Cacheville', ci: '2026-11-01', co: '2026-11-03', dn: [] }], x: [], rc: null, w: norm.w, a: [] };
+    const itinerary = { $: 'it1', ...route, dy: [
+      { d: 1, dt: '2026-11-01', b: 'Cacheville', it: [['M', 'O', 'Flexible activity block']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Cacheville'", ln: [], cf: 'H' },
+      { d: 2, dt: '2026-11-02', b: 'Cacheville', it: [['M', 'O', 'Central Park Walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Cacheville'", ln: [], cf: 'H' },
+    ], cf: 'H' };
+    mockedAxios.post
+      .mockResolvedValueOnce(jsonStage(norm)).mockResolvedValueOnce(jsonStage(route))
+      .mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(renderStage('first'))
+      .mockResolvedValueOnce(jsonStage(norm)).mockResolvedValueOnce(renderStage('second'));
+    const common = {
+      apiKey: 'test-key', destinations: ['Cacheville'], days: 2, budgetMin: 1000, budgetMax: 2000,
+      departureAirport: 'BOS', groupTraits: [], tripStartDate: '2026-11-01', tripEndDate: '2026-11-02',
+      promptTraits: { tt: { p: 'B' as const, c: 'M' as const, mob: 'M' as const, car: 'P' as const, is: 'mixed' as const, w: norm.w } },
+    };
+    const first = await generateItineraryViaPromptPlan({ ...common, userId: 'cache-user-a', tripIdSeed: 'cache-trip-a', mustSeeAttractions: [{ name: 'Museum A', destinationName: 'Cacheville' }] });
+    const firstP1Call = mockedPromptStage.mock.calls.find((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE)?.[0];
+    const firstP1Prompts = `${firstP1Call?.systemPrompt ?? ''}\n${firstP1Call?.userPrompt ?? ''}`;
+    expect(firstP1Prompts).not.toContain('Museum A');
+    expect(firstP1Prompts).not.toContain('cache-user-a');
+    const p1AfterFirst = mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE).length;
+    const p2AfterFirst = mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS).length;
+    const second = await generateItineraryViaPromptPlan({ ...common, userId: 'cache-user-b', tripIdSeed: 'cache-trip-b', mustSeeAttractions: [{ name: 'Museum B', destinationName: 'Cacheville' }] });
+    expect(first.cacheUsage).toEqual({ routeHit: false, dayHit: false });
+    expect(second.cacheUsage).toEqual({ routeHit: true, dayHit: true });
+    expect(mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE)).toHaveLength(p1AfterFirst);
+    expect(mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS)).toHaveLength(p2AfterFirst);
+    expect(second.generatedItems.activities.some((activity) => activity.name === 'Museum B')).toBe(true);
+    expect(second.generatedItems.activities.some((activity) => activity.name === 'Museum A')).toBe(false);
   });
 });

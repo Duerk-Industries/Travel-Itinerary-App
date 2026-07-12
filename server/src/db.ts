@@ -16,6 +16,7 @@ import type {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  ItineraryPlanCacheEntry,
   AttractionDurationMetadata,
   TripActivity,
   TripComment,
@@ -273,6 +274,12 @@ export const getAttractionShortlistBlob = async (
 export const upsertAttractionShortlistBlob = async (
   ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionShortlistBlob']>
 ) => adapter().upsertAttractionShortlistBlob(...args);
+export const getItineraryPlanCacheEntry = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryPlanCacheEntry']>
+): Promise<ItineraryPlanCacheEntry | null> => adapter().getItineraryPlanCacheEntry(...args);
+export const upsertItineraryPlanCacheEntry = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryPlanCacheEntry']>
+) => adapter().upsertItineraryPlanCacheEntry(...args);
 export const getAttractionDurationMetadata = async (
   ...args: Parameters<ReturnType<typeof adapter>['getAttractionDurationMetadata']>
 ): Promise<AttractionDurationMetadata | null> => adapter().getAttractionDurationMetadata(...args);

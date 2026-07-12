@@ -21,6 +21,7 @@ import {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  ItineraryPlanCacheEntry,
   AttractionDurationMetadata,
   TripActivity,
   TripActivityType,
@@ -7263,6 +7264,38 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
   if (!parsed) {
     throw new Error('Failed to parse attraction shortlist blob after upsert.');
   }
+  return parsed;
+};
+
+const toItineraryPlanCacheEntry = (row: any): ItineraryPlanCacheEntry | null => {
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  if (!payload.cacheKey || !['route', 'day'].includes(payload.stage) || !payload.signature || !payload.dependencyFingerprint) return null;
+  return {
+    id: row.id, cacheKey: String(payload.cacheKey), stage: payload.stage, signature: String(payload.signature),
+    dependencyFingerprint: String(payload.dependencyFingerprint), payload: payload.value,
+    fragments: Array.isArray(payload.fragments) ? payload.fragments : [], expiresAt: String(payload.expiresAt),
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
+};
+
+export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<ItineraryPlanCacheEntry | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT id, payload, updated_at as "updatedAt" FROM locations WHERE id = $1 AND source_type = 'itinerary_plan_cache' LIMIT 1`, [cacheKey]);
+  return rows.length ? toItineraryPlanCacheEntry(rows[0]) : null;
+};
+
+export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEntry): Promise<ItineraryPlanCacheEntry> => {
+  const p = getPool();
+  const payload = { cacheKey: entry.cacheKey, stage: entry.stage, signature: entry.signature, dependencyFingerprint: entry.dependencyFingerprint, value: entry.payload, fragments: entry.fragments ?? [], expiresAt: entry.expiresAt };
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, search_name, payload, updated_at)
+     VALUES ($1, 'itinerary_plan_cache', 'itinerary_plan_cache', $2, $2, $3::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+     RETURNING id, payload, updated_at as "updatedAt"`,
+    [entry.id, entry.cacheKey, JSON.stringify(payload)]
+  );
+  const parsed = toItineraryPlanCacheEntry(rows[0]);
+  if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
   return parsed;
 };
 

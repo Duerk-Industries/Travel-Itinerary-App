@@ -24,6 +24,7 @@ import {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  ItineraryPlanCacheEntry,
   AttractionDurationMetadata,
   TripActivity,
   TripActivityType,
@@ -4284,6 +4285,25 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
   if (!parsed) {
     throw new Error('Failed to parse attraction shortlist blob after upsert.');
   }
+  return parsed;
+};
+
+const toItineraryPlanCacheEntry = (id: string, data: any): ItineraryPlanCacheEntry | null => {
+  if (!data?.cacheKey || !['route', 'day'].includes(data.stage) || !data.signature || !data.dependencyFingerprint) return null;
+  return { id, cacheKey: String(data.cacheKey), stage: data.stage, signature: String(data.signature), dependencyFingerprint: String(data.dependencyFingerprint), payload: data.payload, fragments: Array.isArray(data.fragments) ? data.fragments : [], expiresAt: String(data.expiresAt), updatedAt: String(data.updatedAt ?? nowIso()) };
+};
+
+export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<ItineraryPlanCacheEntry | null> => {
+  const doc = await getDb().collection('itinerary_plan_cache').doc(cacheKey).get();
+  return doc.exists ? toItineraryPlanCacheEntry(doc.id, doc.data()) : null;
+};
+
+export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEntry): Promise<ItineraryPlanCacheEntry> => {
+  const ref = getDb().collection('itinerary_plan_cache').doc(entry.id);
+  await ref.set({ cacheKey: entry.cacheKey, stage: entry.stage, signature: entry.signature, dependencyFingerprint: entry.dependencyFingerprint, payload: entry.payload, fragments: entry.fragments ?? [], expiresAt: entry.expiresAt, updatedAt: nowIso() });
+  const saved = await ref.get();
+  const parsed = toItineraryPlanCacheEntry(saved.id, saved.data());
+  if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
   return parsed;
 };
 
