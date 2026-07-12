@@ -1,5 +1,9 @@
 # Prompt 3: Validator & Formatter
 
+> **Superseded — documentation only.** This combined prompt is not loaded by the application. Runtime
+> validation and rendering are separate p0–p4 stages in `prompts/p3_validate.md` and
+> `prompts/p4_render_md.md`, orchestrated by `itineraryPromptPlanService.ts`.
+
 **System**:
 You are a travel editor. Ensure logical flow and date continuity.
 Output the final result in clean Markdown.

@@ -5,6 +5,7 @@ import { generateItineraryViaPromptPlan } from '../src/services/itineraryPromptP
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
 import { initDb } from '../src/db';
 import { seedEntitlementDefaults } from '../src/services/entitlementService';
+import { estimateOpenAiCostMicros } from '../src/apis/providerBudgeting';
 
 jest.mock('axios');
 jest.mock('../src/apis/openaiCallers', () => {
@@ -83,6 +84,7 @@ describe('itinerary prompt plan service', () => {
     mockedAxios.post
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 180, completion_tokens: 300 },
           choices: [
             {
               message: {
@@ -105,6 +107,7 @@ describe('itinerary prompt plan service', () => {
       })
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 240, completion_tokens: 400 },
           choices: [
             {
               message: {
@@ -125,6 +128,7 @@ describe('itinerary prompt plan service', () => {
       })
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 320, completion_tokens: 500 },
           choices: [
             {
               message: {
@@ -157,6 +161,7 @@ describe('itinerary prompt plan service', () => {
       })
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 300, completion_tokens: 300 },
           choices: [
             {
               message: {
@@ -189,6 +194,7 @@ describe('itinerary prompt plan service', () => {
       })
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 260, completion_tokens: 700 },
           choices: [{ message: { content: '## Rendered itinerary' } }],
         },
       });
@@ -242,6 +248,15 @@ describe('itinerary prompt plan service', () => {
     expect(result.generatedItems.activities[1].status).toBe('Proposed');
     expect(result.generatedItems.activities[0].notes).toMatch(/what|fits this day|Things to know|concrete/i);
     expect(result.generatedItems.carRentals[0].status).toBe('Needed');
+    // plan.md operational output targets: p0 <350, p1 <450,
+    // p2 <600 per seven days, p3 <350. Rendering has no documented target,
+    // so use its configured 900-token ceiling. This fixture supplies nonzero
+    // provider usage to verify aggregation as well as the regression ceiling.
+    expect(result.tokenUsage).toEqual({ promptTokens: 1300, completionTokens: 2200, totalTokens: 3500 });
+    expect(result.tokenUsage.completionTokens).toBeLessThan(350 + 450 + 600 + 350 + 900);
+    const estimatedCostMicros = estimateOpenAiCostMicros({ model: 'gpt-4o-mini', ...result.tokenUsage });
+    expect(estimatedCostMicros).toBe(1515);
+    expect(estimatedCostMicros).toBeLessThanOrEqual(2000); // $0.002 fixture ceiling
   });
 
   it('falls back to local markdown rendering when render stage returns empty content', async () => {
