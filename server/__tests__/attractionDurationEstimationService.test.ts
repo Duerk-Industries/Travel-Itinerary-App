@@ -11,6 +11,7 @@ import {
 } from '../src/services/attractionDurationEstimationService';
 
 jest.mock('axios');
+jest.mock('../src/apis/usageLimiter', () => ({ reserveApiUsageOrThrow: jest.fn(async () => undefined) }));
 jest.mock('../src/db', () => ({
   getAttractionDurationMetadata: jest.fn(),
   upsertAttractionDurationMetadata: jest.fn(),
@@ -205,5 +206,18 @@ describe('attraction duration metadata caching', () => {
 
     expect(mockedDb.upsertAttractionDurationMetadata).toHaveBeenCalledTimes(2);
     expect(result.size).toBe(2);
+  });
+
+  it('reuses a catalog-cached Wikipedia summary without another HTTP call', async () => {
+    mockedDb.getAttractionDurationMetadata.mockResolvedValue(null);
+    mockedDb.upsertAttractionDurationMetadata.mockImplementation(async (entry) => ({ ...entry, id: 'attr-dur:test' }));
+    mockedAxios.get.mockReset();
+    const result = await getOrCreateAttractionDurationMetadata({
+      userId: 'user-1', destinationKey: 'paris', destinationDisplayName: 'Paris',
+      name: 'Louvre Museum', activityType: 'Ticketed Attraction',
+      cachedWikipediaSummary: 'The Louvre is a national art museum in Paris.',
+    });
+    expect(result.description).toBe('The Louvre is a national art museum in Paris.');
+    expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 });

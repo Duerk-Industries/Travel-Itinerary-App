@@ -1577,6 +1577,7 @@ const attachAttractionMetadata = async (
         activityType: entry?.activityType ?? ACTIVITY_CODE_TO_LONG[activityCode],
         lat: entry?.lat ?? null,
         lon: entry?.lon ?? null,
+        cachedWikipediaSummary: entry?.wikipediaSummary ?? null,
       };
     });
 
@@ -1585,7 +1586,7 @@ const attachAttractionMetadata = async (
         userId,
         destinationKey,
         destinationDisplayName,
-        entries: dayEntries.map(({ name, activityType }) => ({ name, activityType })),
+        entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary }) => ({ name, activityType, cachedWikipediaSummary })),
       });
       for (const [key, metadata] of batch) durationMetadataByName.set(key, metadata);
     } catch (err) {

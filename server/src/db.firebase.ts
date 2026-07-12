@@ -3971,6 +3971,11 @@ const toAttractionCatalogEntry = (id: string, data: any): AttractionCatalogEntry
     qid: typeof payload.qid === 'string' ? payload.qid : null,
     lat: Number.isFinite(lat) ? lat : null,
     lon: Number.isFinite(lon) ? lon : null,
+    popularityScore: payload.popularityScore != null && Number.isFinite(Number(payload.popularityScore)) ? Number(payload.popularityScore) : null,
+    primaryTag: typeof payload.primaryTag === 'string' ? payload.primaryTag as AttractionCatalogEntry['primaryTag'] : null,
+    wikipediaTitle: typeof payload.wikipediaTitle === 'string' ? payload.wikipediaTitle : null,
+    wikipediaPageId: payload.wikipediaPageId != null && Number.isFinite(Number(payload.wikipediaPageId)) ? Number(payload.wikipediaPageId) : null,
+    wikipediaSummary: typeof payload.wikipediaSummary === 'string' ? payload.wikipediaSummary : null,
     updatedAt: String(data.updatedAt ?? nowIso()),
   };
 };
@@ -4195,6 +4200,11 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
     qid: entry.qid ?? null,
     lat: Number.isFinite(Number(entry.lat)) ? Number(entry.lat) : null,
     lon: Number.isFinite(Number(entry.lon)) ? Number(entry.lon) : null,
+    popularityScore: entry.popularityScore != null && Number.isFinite(Number(entry.popularityScore)) ? Number(entry.popularityScore) : null,
+    primaryTag: entry.primaryTag ?? null,
+    wikipediaTitle: entry.wikipediaTitle ?? null,
+    wikipediaPageId: entry.wikipediaPageId != null && Number.isFinite(Number(entry.wikipediaPageId)) ? Number(entry.wikipediaPageId) : null,
+    wikipediaSummary: entry.wikipediaSummary ?? null,
     updatedAt: entry.updatedAt,
   };
   const docRef = db.collection('locations').doc(entry.id);

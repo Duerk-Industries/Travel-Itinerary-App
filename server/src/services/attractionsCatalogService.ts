@@ -6,6 +6,9 @@ import { getStorage } from 'firebase-admin/storage';
 import { getEnvValue, isLocalEnv } from '../env';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { parseDestinationsCsv } from './destinationsAttractionsCsv';
+import { fetchWikipediaEnrichment } from './wikipediaGeocodingService';
+import { fetchWikipediaPopularityScore } from './wikipediaPageviewService';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import {
   getAttractionShortlistBlob,
   listAttractionCatalogEntries,
@@ -60,6 +63,11 @@ const CSV_HEADER = [
   'qid',
   'lat',
   'lon',
+  'popularity_score',
+  'primary_tag',
+  'wikipedia_title',
+  'wikipedia_page_id',
+  'wikipedia_summary',
 ] as const;
 
 const destinationRefreshLocks = new Map<string, Promise<AttractionCatalogEntry[]>>();
@@ -224,6 +232,7 @@ const discoverViaSerpApi = async (destination: string, limit: number): Promise<D
   const apiKey = getEnvValue('SERPAPI_API_KEY');
   if (!apiKey) return [];
   const query = `top attractions in ${destination}`;
+  await reserveApiUsageOrThrow({ provider: 'SERPAPI', caller: 'ATTRACTION_DISCOVERY_SEARCH' });
   const response = await axios.get('https://serpapi.com/search.json', {
     params: {
       engine: 'google',
@@ -244,6 +253,7 @@ const discoverViaWikipedia = async (destination: string, limit: number): Promise
     Accept: 'application/json',
   };
   const query = `${destination} tourist attractions`;
+  await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_DISCOVERY_WIKIPEDIA' });
   try {
     const response = await axios.get('https://en.wikipedia.org/w/api.php', {
       params: {
@@ -269,6 +279,7 @@ const discoverViaWikipedia = async (destination: string, limit: number): Promise
       snippet: typeof item?.snippet === 'string' ? String(item.snippet).replace(/<[^>]+>/g, '') : null,
     }));
   } catch {
+    await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_DISCOVERY_WIKIPEDIA' });
     const fallback = await axios.get('https://en.wikipedia.org/w/rest.php/v1/search/title', {
       params: {
         q: query,
@@ -545,6 +556,11 @@ export const stringifyAttractionCatalogCsv = (rows: AttractionCatalogEntry[]): s
         row.qid ?? '',
         row.lat == null ? '' : String(row.lat),
         row.lon == null ? '' : String(row.lon),
+        row.popularityScore == null ? '' : String(row.popularityScore),
+        row.primaryTag ?? '',
+        row.wikipediaTitle ?? '',
+        row.wikipediaPageId == null ? '' : String(row.wikipediaPageId),
+        row.wikipediaSummary ?? '',
       ]
         .map(csvEscape)
         .join(',')
@@ -613,6 +629,11 @@ export const parseAttractionCatalogCsv = (raw: string): AttractionCatalogEntry[]
   const iQid = indexOf('qid');
   const iLat = indexOf('lat');
   const iLon = indexOf('lon');
+  const iPopularityScore = indexOf('popularity_score');
+  const iPrimaryTag = indexOf('primary_tag');
+  const iWikipediaTitle = indexOf('wikipedia_title');
+  const iWikipediaPageId = indexOf('wikipedia_page_id');
+  const iWikipediaSummary = indexOf('wikipedia_summary');
 
   const read = (cols: string[], idx: number): string => (idx >= 0 && idx < cols.length ? String(cols[idx] ?? '') : '');
   const toNumberOrNull = (value: string): number | null => {
@@ -649,6 +670,11 @@ export const parseAttractionCatalogCsv = (raw: string): AttractionCatalogEntry[]
       qid: read(cols, iQid) || null,
       lat: toNumberOrNull(read(cols, iLat)),
       lon: toNumberOrNull(read(cols, iLon)),
+      popularityScore: toNumberOrNull(read(cols, iPopularityScore)),
+      primaryTag: (read(cols, iPrimaryTag) as InterestTag) || null,
+      wikipediaTitle: read(cols, iWikipediaTitle) || null,
+      wikipediaPageId: toNumberOrNull(read(cols, iWikipediaPageId)),
+      wikipediaSummary: read(cols, iWikipediaSummary) || null,
     });
   }
   return rows;
@@ -858,6 +884,45 @@ type CompactPromptItem = {
   tags: InterestTag[];
   tier: AttractionBudgetTier;
   rank: number;
+  popularityScore?: number;
+};
+
+const enrichCatalogEntries = async (
+  entries: AttractionCatalogEntry[],
+  destinationDisplayName: string
+): Promise<AttractionCatalogEntry[]> => {
+  const output = [...entries];
+  let cursor = 0;
+  const worker = async (): Promise<void> => {
+    while (cursor < output.length) {
+      const index = cursor++;
+      const entry = output[index];
+      if (entry.lat != null && entry.lon != null && entry.popularityScore != null && entry.primaryTag && entry.wikipediaSummary) continue;
+      const wikipedia = await fetchWikipediaEnrichment(entry.wikipediaTitle || entry.name, destinationDisplayName);
+      const popularityScore = entry.popularityScore ?? (wikipedia?.canonicalTitle
+        ? await fetchWikipediaPopularityScore(wikipedia.canonicalTitle)
+        : null);
+      output[index] = {
+        ...entry,
+        lat: entry.lat ?? wikipedia?.lat ?? null,
+        lon: entry.lon ?? wikipedia?.lon ?? null,
+        popularityScore,
+        primaryTag: entry.primaryTag ?? entry.interestTags[0] ?? 'culture',
+        wikipediaTitle: entry.wikipediaTitle ?? wikipedia?.canonicalTitle ?? null,
+        wikipediaPageId: entry.wikipediaPageId ?? wikipedia?.pageId ?? null,
+        wikipediaSummary: entry.wikipediaSummary ?? wikipedia?.summary ?? null,
+      };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, output.length) }, () => worker()));
+  return output;
+};
+
+export const classifyAttractionPopularity = (score: number | null | undefined): 'must-see' | 'popular' | 'hidden-gem' | 'unknown' => {
+  if (score === null || score === undefined || !Number.isFinite(Number(score))) return 'unknown';
+  if (Number(score) >= 80) return 'must-see';
+  if (Number(score) >= 55) return 'popular';
+  return 'hidden-gem';
 };
 
 const buildCompactPromptItems = (entries: AttractionCatalogEntry[]): CompactPromptItem[] =>
@@ -867,6 +932,7 @@ const buildCompactPromptItems = (entries: AttractionCatalogEntry[]): CompactProm
     tags: entry.interestTags,
     tier: entry.budgetTier ?? 'paid',
     rank: entry.rank,
+    ...(entry.popularityScore == null ? {} : { popularityScore: entry.popularityScore }),
   }));
 
 const buildPromptBlockFromCompact = (
@@ -898,7 +964,8 @@ const buildPromptBlockFromCompact = (
   if (!selected.length) return '';
   const lines = [`Destination: ${destination}`];
   selected.forEach((entry, idx) => {
-    lines.push(`${idx + 1}. ${entry.name} | tier=${entry.tier} | type=${entry.type} | tags=${entry.tags.join('/') || 'culture'}`);
+    const popularity = classifyAttractionPopularity(entry.popularityScore);
+    lines.push(`${idx + 1}. ${entry.name} | tier=${entry.tier}${popularity === 'unknown' ? '' : ` | popularity=${popularity}`} | type=${entry.type} | tags=${entry.tags.join('/') || 'culture'}`);
   });
   return lines.join('\n');
 };
@@ -980,7 +1047,7 @@ const ensureDestinationCatalog = async (params: {
       };
     });
 
-    const finalEntries = fillRowsGeo(
+    const mergedEntries = fillRowsGeo(
       mergeCuratedWithDiscovered(
         current,
         entries,
@@ -991,6 +1058,7 @@ const ensureDestinationCatalog = async (params: {
       ),
       destinationGeo
     );
+    const finalEntries = await enrichCatalogEntries(mergedEntries, destinationDisplayName);
     if (!finalEntries.length) return current.slice(0, params.limit);
     for (const entry of finalEntries) {
       await upsertAttractionCatalogEntry(entry);
@@ -1058,7 +1126,7 @@ export const buildAttractionShortlistPromptBlock = (
     lines.push(`Destination: ${destination}`);
     shortlist.forEach((entry) => {
       lines.push(
-        `${entry.rank}. ${entry.name} | tier=${entry.budgetTier ?? 'paid'} | type=${entry.activityType} | tags=${entry.interestTags.join('/') || 'culture'}`
+        `${entry.rank}. ${entry.name} | tier=${entry.budgetTier ?? 'paid'}${classifyAttractionPopularity(entry.popularityScore) === 'unknown' ? '' : ` | popularity=${classifyAttractionPopularity(entry.popularityScore)}`} | type=${entry.activityType} | tags=${entry.interestTags.join('/') || 'culture'}`
       );
     });
   }

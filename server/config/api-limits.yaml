@@ -112,6 +112,24 @@ providers:
     callers:
       OVERVIEW_DAY_WEATHER_GEOCODE: 1000
       OVERVIEW_DAY_WEATHER_FORECAST: 1000
+      ITINERARY_MONTHLY_CLIMATOLOGY: 250
+
+  WIKIMEDIA:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      ATTRACTION_DISCOVERY_WIKIPEDIA: 250
+      ATTRACTION_WIKIPEDIA_ENRICHMENT: 500
+      ATTRACTION_WIKIPEDIA_SUMMARY: 500
+      ATTRACTION_WIKIMEDIA_PAGEVIEWS: 500
+
+  SERPAPI:
+    window: hour
+    windowHours: 24
+    overall: 100
+    callers:
+      ATTRACTION_DISCOVERY_SEARCH: 100
 
 budgeting:
   OPENAI:

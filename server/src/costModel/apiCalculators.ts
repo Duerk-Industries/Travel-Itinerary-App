@@ -63,6 +63,12 @@ export const calculateGoogleAiCost: ApiCostCalculator = (source, usage) =>
 export const calculateDoclingCost: ApiCostCalculator = (source, usage) =>
   calculateUsageLevelCost(usage, source.usageLevels);
 
+export const calculateSerpApiCost: ApiCostCalculator = (source, usage) =>
+  calculateUsageLevelCost(usage, source.usageLevels);
+
+export const calculateWikimediaCost: ApiCostCalculator = (source, usage) =>
+  calculateUsageLevelCost(usage, source.usageLevels);
+
 const apiCalculators: Record<string, ApiCostCalculator> = {
   airportDataset: calculateAirportDatasetCost,
   docling: calculateDoclingCost,
@@ -74,8 +80,10 @@ const apiCalculators: Record<string, ApiCostCalculator> = {
   mailgun: calculateMailgunCost,
   openMeteo: calculateOpenMeteoCost,
   openai: calculateOpenAiCost,
+  serpApi: calculateSerpApiCost,
   smtp: calculateSmtpCost,
   unsplash: calculateUnsplashCost,
+  wikimedia: calculateWikimediaCost,
 };
 
 export const getApiCostCalculator = (api: string): ApiCostCalculator =>

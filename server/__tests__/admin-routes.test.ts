@@ -827,6 +827,15 @@ describe('Admin routes', () => {
 
         const openAiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPENAI');
         expect(openAiProvider).toBeTruthy();
+        const wikimediaProvider = getRes.body.providers.find((provider: any) => provider.provider === 'WIKIMEDIA');
+        const serpApiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'SERPAPI');
+        const openMeteoProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPEN_METEO');
+        expect(wikimediaProvider.callers.map((caller: any) => caller.caller)).toEqual(expect.arrayContaining([
+          'ATTRACTION_DISCOVERY_WIKIPEDIA', 'ATTRACTION_WIKIPEDIA_ENRICHMENT',
+          'ATTRACTION_WIKIPEDIA_SUMMARY', 'ATTRACTION_WIKIMEDIA_PAGEVIEWS',
+        ]));
+        expect(serpApiProvider.callers.map((caller: any) => caller.caller)).toContain('ATTRACTION_DISCOVERY_SEARCH');
+        expect(openMeteoProvider.callers.map((caller: any) => caller.caller)).toContain('ITINERARY_MONTHLY_CLIMATOLOGY');
 
         const callers = Object.fromEntries(
           openAiProvider.callers.map((caller: any) => [caller.caller, caller.limit])

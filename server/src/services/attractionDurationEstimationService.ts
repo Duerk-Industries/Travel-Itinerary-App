@@ -3,6 +3,7 @@ import { getApiCacheSetting } from '../config/apiLimits';
 import { getAttractionDurationMetadata, upsertAttractionDurationMetadata } from '../db';
 import { logError } from '../logger';
 import type { ActivityType, AttractionDurationMetadata } from '../types';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 
 export const ACTIVITY_TYPE_DURATION_MINUTES: Record<ActivityType, number> = {
   'Sights & Landmarks': 45,
@@ -83,6 +84,7 @@ export const fetchWikipediaSummary = async (name: string): Promise<string | null
   const trimmedName = name.trim();
   if (!trimmedName) return null;
   try {
+    await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_WIKIPEDIA_SUMMARY' });
     const response = await axios.get(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(trimmedName)}`,
       {
@@ -108,6 +110,7 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   destinationDisplayName: string;
   name: string;
   activityType: ActivityType;
+  cachedWikipediaSummary?: string | null;
 }): Promise<AttractionDurationMetadata> => {
   const refreshDays = Number(getApiCacheSetting('attractions', 'durationMetadataRefreshDays')) || 60;
   const existing = await getAttractionDurationMetadata(params.userId, params.destinationKey, params.name);
@@ -115,7 +118,7 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
 
   const estimatedDurationMinutes = estimateAttractionDurationMinutes(params.name, params.activityType);
   const requiresPreOrderTickets = inferRequiresPreOrderTickets(params.name, params.activityType);
-  const description = await fetchWikipediaSummary(params.name);
+  const description = String(params.cachedWikipediaSummary ?? '').trim() || await fetchWikipediaSummary(params.name);
   const entry: AttractionDurationMetadata = {
     id: '',
     destinationKey: params.destinationKey,
@@ -137,7 +140,7 @@ export const getAttractionDurationMetadataBatch = async (params: {
   userId: string;
   destinationKey: string;
   destinationDisplayName: string;
-  entries: Array<{ name: string; activityType: ActivityType }>;
+  entries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null }>;
 }): Promise<Map<string, AttractionDurationMetadata>> => {
   const result = new Map<string, AttractionDurationMetadata>();
   const seen = new Set<string>();
@@ -151,6 +154,7 @@ export const getAttractionDurationMetadataBatch = async (params: {
       destinationDisplayName: params.destinationDisplayName,
       name: entry.name,
       activityType: entry.activityType,
+      cachedWikipediaSummary: entry.cachedWikipediaSummary,
     });
     result.set(key, metadata);
   }

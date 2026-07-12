@@ -450,6 +450,11 @@ export interface AttractionCatalogEntry {
   qid?: string | null;
   lat?: number | null;
   lon?: number | null;
+  popularityScore?: number | null;
+  primaryTag?: InterestTag | null;
+  wikipediaTitle?: string | null;
+  wikipediaPageId?: number | null;
+  wikipediaSummary?: string | null;
   updatedAt: string;
 }
 
