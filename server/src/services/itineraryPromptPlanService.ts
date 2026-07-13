@@ -355,6 +355,8 @@ const DEFAULT_WEIGHTS: PromptWeights = {
   iconic_landmarks: 7,
 };
 
+const MAX_ITEMS_PER_DAY = 5;
+
 const PROMPTS_ROOT = path.resolve(__dirname, '../../prompts');
 
 const readText = (relativePath: string): string => {
@@ -1097,10 +1099,74 @@ const buildShortlistPools = (
   return { byDestination, global };
 };
 
+// Chapter 16 §2: Fairness Floor. Ensures every traveler's primary interests are
+// represented in the daily activity slots. Deterministically injects a
+// high-relevance item for an under-served traveler interest if the LLM
+// output drifted.
+const enforceFairnessFloor = (
+  itinerary: PromptItinerary,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  travelerInterests: Array<keyof InterestWeights>
+): { itinerary: PromptItinerary; changed: boolean } => {
+  if (!travelerInterests.length) return { itinerary, changed: false };
+  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
+  let changed = false;
+
+  const allEntries = Object.values(shortlistByDestination).flat();
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+
+  const servedInterests = new Set<string>();
+  for (const day of output.dy) {
+    for (const item of day.it) {
+      const entry = entryByName.get(normalizeText(item[2]).toLowerCase());
+      if (entry) {
+        for (const tag of entry.interestTags) {
+          const interest = String(tag).toLowerCase().replace(/\s+/g, '_');
+          servedInterests.add(interest);
+        }
+      }
+    }
+  }
+
+  const missingInterests = travelerInterests.filter((interest) => !servedInterests.has(interest));
+  if (!missingInterests.length) return { itinerary, changed: false };
+
+  // For each underserved interest, find a suitable candidate and inject it.
+  for (const interest of missingInterests) {
+    const candidate = allEntries.find((entry) =>
+      entry.interestTags.some((tag) => String(tag).toLowerCase().replace(/\s+/g, '_') === interest)
+    );
+    if (!candidate) continue;
+
+    const day = output.dy.find((d) => normalizeDestinationKey(d.b) === candidate.destinationKey) ?? output.dy[0];
+    const genericIndex = day.it.findIndex((item) =>
+      GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(normalizeText(item[2]))) ||
+      EXTRA_GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(normalizeText(item[2])))
+    );
+
+    if (genericIndex >= 0) {
+      day.it[genericIndex] = ['D', 'A', candidate.name];
+      changed = true;
+      servedInterests.add(interest);
+    } else if (day.it.length < MAX_ITEMS_PER_DAY) {
+      day.it.push(['D', 'A', candidate.name]);
+      changed = true;
+      servedInterests.add(interest);
+    }
+  }
+
+  return { itinerary: output, changed };
+};
+
 const enforceShortlistGrounding = (
   itinerary: PromptItinerary,
   req: PromptReq,
-  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  travelerInterests?: Array<keyof InterestWeights>
 ): PromptItinerary => {
   const requested = Array.isArray(req.d) ? req.d.map((item) => normalizeText(item)).filter(Boolean) : [];
   const pools = buildShortlistPools(shortlistByDestination, requested);
@@ -1160,16 +1226,22 @@ const enforceShortlistGrounding = (
     });
   }
 
+  let grounded = itinerary;
+  if (travelerInterests?.length) {
+    const floor = enforceFairnessFloor(itinerary, shortlistByDestination, travelerInterests);
+    grounded = floor.itinerary;
+  }
+
   const primaryDestination = requested[0];
   const primaryTop = (pools.byDestination[primaryDestination] ?? []).slice(0, 3);
   const pickInjectionDay = (): PromptDay | undefined => {
-    const middleDay = itinerary.dy.find((day, idx) => idx > 0 && idx < itinerary.dy.length - 1 && day.it.length > 0);
+    const middleDay = grounded.dy.find((day, idx) => idx > 0 && idx < grounded.dy.length - 1 && day.it.length > 0);
     if (middleDay) return middleDay;
-    return itinerary.dy.find((day) => day.it.length > 0);
+    return grounded.dy.find((day) => day.it.length > 0);
   };
   const forceInjectTopAttraction = (topName: string): void => {
     if (!topName) return;
-    const alreadyPresent = itinerary.dy.some((day) =>
+    const alreadyPresent = grounded.dy.some((day) =>
       day.it.some((item) => normalizeText(item[2]).toLowerCase() === normalizeText(topName).toLowerCase())
     );
     if (alreadyPresent) return;
@@ -1182,12 +1254,12 @@ const enforceShortlistGrounding = (
   forceInjectTopAttraction(primaryTop[0] ?? '');
 
   for (const topName of primaryTop.slice(1)) {
-    const alreadyPresent = itinerary.dy.some((day) =>
+    const alreadyPresent = grounded.dy.some((day) =>
       day.it.some((item) => normalizeText(item[2]).toLowerCase() === normalizeText(topName).toLowerCase())
     );
     if (alreadyPresent) continue;
     let injected = false;
-    for (const day of itinerary.dy) {
+    for (const day of grounded.dy) {
       const replaceIndex = day.it.findIndex((item) => {
         const text = normalizeText(item[2]);
         return (
@@ -1205,7 +1277,7 @@ const enforceShortlistGrounding = (
     if (!injected) {
       const injectionDay = pickInjectionDay();
       if (!injectionDay) continue;
-      if (injectionDay.it.length < 5) {
+      if (injectionDay.it.length < MAX_ITEMS_PER_DAY) {
         const seed = injectionDay.it[injectionDay.it.length - 1] ?? ['D', 'A', topName];
         injectionDay.it.push([seed[0], seed[1], topName]);
       } else {
@@ -1215,10 +1287,117 @@ const enforceShortlistGrounding = (
     }
   }
 
-  return itinerary;
+  return grounded;
 };
 
-const MAX_ITEMS_PER_DAY = 5;
+import { accumulateDayFriction } from './frictionAccumulatorService';
+
+// Chapter 16 §9: Final polishing pass for Master Travel Agent nuance.
+// 1. Farewell Night: Suggst a high-quality food attraction for the final night.
+// 2. Golden Hour: Ensure photography-tagged items are in the first/last slots.
+const polishItineraryFinalPass = (
+  itinerary: PromptItinerary,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+): PromptItinerary => {
+  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
+  if (!output.dy.length) return output;
+
+  const allEntries = Object.values(shortlistByDestination).flat();
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+
+  // 1. Farewell Night Crescendo
+  const lastDay = output.dy[output.dy.length - 1];
+  const lastDinnerIndex = lastDay.it.length - 1;
+  if (lastDinnerIndex >= 0) {
+    const topFood = allEntries
+      .filter((e) => e.interestTags.includes('food') && normalizeDestinationKey(lastDay.b) === e.destinationKey)
+      .sort((a, b) => a.rank - b.rank)[0];
+
+    if (topFood && !lastDay.it.some((item) => normalizeText(item[2]).toLowerCase() === topFood.name.toLowerCase())) {
+      lastDay.it[lastDinnerIndex] = ['E', 'A', topFood.name];
+      lastDay.ln = Array.from(new Set([...(lastDay.ln ?? []), `Farewell Dinner: celebrating the trip at ${topFood.name}.`])).slice(0, 2);
+    }
+  }
+
+  // 2. Golden Hour Pins
+  for (const day of output.dy) {
+    if (day.it.length < 2) continue;
+    const photoIndex = day.it.findIndex((item) => {
+      const entry = entryByName.get(normalizeText(item[2]).toLowerCase());
+      return entry?.interestTags.includes('photography');
+    });
+
+    if (photoIndex > 0 && photoIndex < day.it.length - 1) {
+      // If it's in the middle, try to move it to the end (best light usually)
+      const item = day.it.splice(photoIndex, 1)[0];
+      day.it.push(['E', item[1], item[2]]);
+      day.ln = Array.from(new Set([...(day.ln ?? []), `${item[2]} moved to evening for optimal lighting.`])).slice(0, 2);
+    }
+  }
+
+  return output;
+};
+
+// Chapter 16 §1: Fatigue Accumulator. Tracks cumulative travel friction and
+// forces a "Rest/Hub" day (no vehicle transfers, capped activities) when
+// travelers are likely to be burned out.
+const enforceFatigueManagement = (
+  itinerary: PromptItinerary,
+  transferNotesByDay: Map<number, TransferNote[]>,
+  durationMetadataByName: Map<string, AttractionDurationMetadata>,
+  groupSize: number
+): { itinerary: PromptItinerary; issues: string[] } => {
+  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
+  const issues: string[] = [];
+  let rollingFriction = 0;
+
+  for (const day of output.dy) {
+    const notes = transferNotesByDay.get(day.d) ?? [];
+    const transferMinutes = notes.reduce((sum, n) => sum + n.minutes, 0);
+    const transferCount = notes.length;
+    const activityMinutes = day.it.reduce((sum, [, , text]) => {
+      return sum + (durationMetadataByName.get(normalizeText(text).toLowerCase())?.estimatedDurationMinutes ?? DEFAULT_ACTIVITY_DURATION_MINUTES);
+    }, 0);
+    // Rough estimate of walking based on transfer modes
+    const walkingKm = notes.filter((n) => n.mode === 'walk').reduce((sum, n) => sum + n.distanceKm, 0);
+
+    const result = accumulateDayFriction({
+      transferMinutes,
+      transferCount,
+      baseChange: day.d > 1 && output.dy[day.d - 2].b !== day.b,
+      activityMinutes,
+      walkingKm,
+      groupBufferMinutes: groupSize > 1 ? groupSize * 5 : 0,
+    });
+
+    rollingFriction += result.score;
+
+    // If cumulative friction is high (e.g. > 15 over 2-3 days) or single day is high,
+    // force a rest status.
+    if (rollingFriction >= 15 || result.status === 'rest-hub') {
+      if (day.it.length > 2) {
+        day.it = day.it.slice(0, 2);
+        issues.push(`${day.dt}: forced rest-hub day due to travel fatigue (score: ${rollingFriction.toFixed(1)}).`);
+        rollingFriction = Math.max(0, rollingFriction - 5); // Recovery credit
+      }
+      day.ln = Array.from(new Set([...(day.ln ?? []), 'Rest day: light activities to recover from travel fatigue.'])).slice(0, 2);
+    } else if (result.status === 'lighten') {
+      if (day.it.length > 3) {
+        day.it = day.it.slice(0, 3);
+        issues.push(`${day.dt}: lightened day to manage travel friction (score: ${rollingFriction.toFixed(1)}).`);
+      }
+    }
+
+    // Decay friction slightly each day
+    rollingFriction = Math.max(0, rollingFriction - 2);
+  }
+
+  return { itinerary: output, issues };
+};
 
 // Verifies each generated attraction is scheduled under the day whose
 // destination actually matches the attraction's catalog destinationKey
@@ -1454,27 +1633,6 @@ const computeDayItemSchedule = (
   });
 };
 
-const transferDurationHours = (td: unknown): number | null => {
-  const raw = Number(td);
-  if (!Number.isFinite(raw) || raw <= 0) return null;
-  if (raw > 24) return raw / 60;
-  return raw;
-};
-
-const getActivityBlockedDates = (itinerary: PromptItinerary, norm: PromptNorm): Set<string> => {
-  const blocked = new Set<string>();
-  if (isIsoDate(norm.sd)) blocked.add(norm.sd);
-  if (isIsoDate(norm.ed)) blocked.add(norm.ed);
-  for (const transfer of itinerary.x) {
-    if (!isIsoDate(transfer.dt)) continue;
-    const durationHours = transferDurationHours(transfer.td);
-    if (durationHours !== null && durationHours > 4) {
-      blocked.add(transfer.dt);
-    }
-  }
-  return blocked;
-};
-
 const ALL_ACTIVITY_TYPES: ActivityType[] = [
   'Class',
   'Concert/Show',
@@ -1548,7 +1706,8 @@ const attachAttractionMetadata = async (
   itinerary: PromptItinerary,
   norm: PromptNorm,
   shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
-  userId: string | undefined
+  userId: string | undefined,
+  groupSize?: number
 ): Promise<{
   durationMetadataByName: Map<string, AttractionDurationMetadata>;
   transferNotesByDay: Map<number, TransferNote[]>;
@@ -1609,6 +1768,7 @@ const attachAttractionMetadata = async (
           from: { lat: from.lat, lon: from.lon },
           to: { lat: to.lat, lon: to.lon },
           mobility: norm.mob,
+          groupSize,
         });
         if (!estimate) continue;
         const notes = transferNotesByDay.get(day.d) ?? [];
@@ -2172,25 +2332,13 @@ const runGenerateItineraryViaPromptPlan = async (
   const groundedItinerary = enforceShortlistGrounding(
     sanitizeItinerary(validatedRaw, route, normalized, promptRequest),
     promptRequest,
-    shortlistByDestination
+    shortlistByDestination,
+    preferenceContract.travelerInterests
   );
   const itinerary = enforceAttractionDestinationConsistency(groundedItinerary, shortlistByDestination);
-  const blockedActivityDates = getActivityBlockedDates(itinerary, normalized);
-  filteredItinerary = {
-    ...itinerary,
-    dy: itinerary.dy.map((day) =>
-      blockedActivityDates.has(day.dt)
-        ? {
-            ...day,
-            it: [],
-            ln: Array.from(new Set([...(Array.isArray(day.ln) ? day.ln : []), 'Travel day: no activities scheduled'])).slice(0, 2),
-          }
-        : day
-    ),
-  };
-  filteredItinerary = validateAndRepairItineraryStructure({ itinerary: filteredItinerary, logisticsFacts }).itinerary;
+  filteredItinerary = validateAndRepairItineraryStructure({ itinerary, logisticsFacts }).itinerary;
   logInfo(
-    `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length} activityBlockedDays=${blockedActivityDates.size}`
+    `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length}`
   );
   if (allowPlanCache) try {
     await writeItineraryPlanCache({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency, payload: filteredItinerary, fragments: buildDayFragments(filteredItinerary.dy, 3), ttlDays: Number(getApiCacheSetting('itineraryPlan', 'dayCacheTtlDays')) || 30 });
@@ -2205,13 +2353,23 @@ const runGenerateItineraryViaPromptPlan = async (
     maxItemsPerDay: MAX_ITEMS_PER_DAY,
   });
   const itineraryWithMustSee = enforceMustSeeAttractions(fragmentInjected, normalizedMustSee, promptRequest.d);
+  const polishedItinerary = polishItineraryFinalPass(itineraryWithMustSee, shortlistByDestination);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
-    itineraryWithMustSee,
+    polishedItinerary,
     normalized,
     shortlistByDestination,
-    input.userId
+    input.userId,
+    input.groupTraits.length
   );
-  enforceDescriptionBasedDestinationConsistency(itineraryWithMustSee, promptRequest.d, durationMetadataByName);
+  enforceDescriptionBasedDestinationConsistency(polishedItinerary, promptRequest.d, durationMetadataByName);
+
+  const fatigueManaged = enforceFatigueManagement(
+    polishedItinerary,
+    transferNotesByDay,
+    durationMetadataByName,
+    input.groupTraits.length
+  );
+  const finalItinerary = fatigueManaged.itinerary;
 
   const whyFitsByName = new Map<string, string>();
   for (const entries of Object.values(shortlistByDestination)) {
@@ -2231,7 +2389,7 @@ const runGenerateItineraryViaPromptPlan = async (
     aiProvider: input.aiProvider,
     template: bundle.p4,
     replacements: {
-      FINAL_JSON: JSON.stringify({ itinerary: itineraryWithMustSee, activityContext }),
+      FINAL_JSON: JSON.stringify({ itinerary: finalItinerary, activityContext }),
     },
     acc: tokenAcc,
     captureStages,
@@ -2241,9 +2399,9 @@ const runGenerateItineraryViaPromptPlan = async (
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .trim();
   logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
-  const fallbackMarkdown = renderMarkdownFallback(itineraryWithMustSee, profile);
+  const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
   const planMarkdown = hasVisibleText(renderedMarkdown) ? renderedMarkdown : fallbackMarkdown;
-  const details = buildDetails(itineraryWithMustSee, transferNotesByDay, durationMetadataByName);
+  const details = buildDetails(finalItinerary, transferNotesByDay, durationMetadataByName);
   const safeDetails = details.length
     ? details
     : [
@@ -2254,9 +2412,23 @@ const runGenerateItineraryViaPromptPlan = async (
           cost: null,
         },
       ];
-  const items = mapItems(itineraryWithMustSee, profile.weights, durationMetadataByName, transferNotesByDay, whyFitsByName);
+  const allEntries = Object.values(shortlistByDestination).flat();
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+
+  const items = mapItems(finalItinerary, profile.weights, durationMetadataByName, transferNotesByDay, whyFitsByName);
+  const transferMinutesByDay = new Map<number, number>();
+  for (const [dayNum, notes] of transferNotesByDay) {
+    transferMinutesByDay.set(dayNum, notes.reduce((sum, n) => sum + n.minutes, 0));
+  }
   const evaluation = evaluateItineraryBaseline({
-    activities: items.activities,
+    activities: items.activities.map((a) => {
+      const entry = entryByName.get(normalizeText(a.name).toLowerCase());
+      return { ...a, interestTags: entry?.interestTags };
+    }),
     transfers: items.transfers,
     mustSees: normalizedMustSee.map((item) => item.name),
     weights: normalized.w,
@@ -2267,6 +2439,7 @@ const runGenerateItineraryViaPromptPlan = async (
       totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
     },
     stageLatenciesMs: captureStages.map((stage) => stage.latencyMs),
+    transferMinutesByDay,
   });
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
@@ -2294,6 +2467,7 @@ const runGenerateItineraryViaPromptPlan = async (
       carRentalsCount: items.carRentals.length,
       usedRenderFallback: planMarkdown === fallbackMarkdown,
       evaluation,
+      fatigueIssues: fatigueManaged.issues,
     },
   });
 
@@ -2301,7 +2475,7 @@ const runGenerateItineraryViaPromptPlan = async (
     promptRequest,
     normalized,
     route,
-    itinerary: itineraryWithMustSee,
+    itinerary: finalItinerary,
     planMarkdown,
     details: safeDetails,
     generatedItems: items,

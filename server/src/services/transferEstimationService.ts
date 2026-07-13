@@ -18,7 +18,12 @@ export interface TransferEstimate {
 }
 
 export interface TransferEstimator {
-  estimate(params: { from: LatLon; to: LatLon; mobility: TransferMobilityCode }): Promise<TransferEstimate | null>;
+  estimate(params: {
+    from: LatLon;
+    to: LatLon;
+    mobility: TransferMobilityCode;
+    groupSize?: number;
+  }): Promise<TransferEstimate | null>;
 }
 
 // Baseline (mobility 'M') walking speed and walk/transit/taxi/rideshare distance cutoffs.
@@ -39,9 +44,21 @@ const MOBILITY_WALK_CUTOFF_MULTIPLIER: Record<TransferMobilityCode, number> = {
   H: 1.3,
 };
 
+const getGroupBufferMultiplier = (groupSize?: number): number => {
+  const size = Math.max(1, Math.round(Number(groupSize) || 1));
+  // Chapter 16 §3: Scale all transfer buffers by 1 + (GroupSize * 0.05).
+  // A group of 8 needs ~40% more time for transition states (gathering, boarding).
+  return 1 + size * 0.05;
+};
+
 export class HeuristicTransferEstimator implements TransferEstimator {
-  async estimate(params: { from: LatLon; to: LatLon; mobility: TransferMobilityCode }): Promise<TransferEstimate | null> {
-    const { from, to, mobility } = params;
+  async estimate(params: {
+    from: LatLon;
+    to: LatLon;
+    mobility: TransferMobilityCode;
+    groupSize?: number;
+  }): Promise<TransferEstimate | null> {
+    const { from, to, mobility, groupSize } = params;
     if (
       !Number.isFinite(from?.lat) ||
       !Number.isFinite(from?.lon) ||
@@ -53,20 +70,21 @@ export class HeuristicTransferEstimator implements TransferEstimator {
     const distanceKm = haversineKm(from, to);
     const walkCutoffKm = BASE_WALK_CUTOFF_KM * (MOBILITY_WALK_CUTOFF_MULTIPLIER[mobility] ?? 1);
     const walkSpeedKmh = MOBILITY_WALK_SPEED_KMH[mobility] ?? BASE_WALK_SPEED_KMH;
+    const groupMultiplier = getGroupBufferMultiplier(groupSize);
 
     if (distanceKm <= walkCutoffKm) {
-      const minutes = Math.max(1, Math.round((distanceKm / walkSpeedKmh) * 60));
+      const minutes = Math.max(1, Math.round(((distanceKm / walkSpeedKmh) * 60) * groupMultiplier));
       return { mode: 'walk', minutes, distanceKm, source: 'heuristic' };
     }
     if (distanceKm <= TRANSIT_CUTOFF_KM) {
-      const minutes = Math.max(5, Math.round((distanceKm / 18) * 60) + 8);
+      const minutes = Math.max(5, Math.round(((distanceKm / 18) * 60 + 8) * groupMultiplier));
       return { mode: 'transit', minutes, distanceKm, source: 'heuristic' };
     }
     if (distanceKm <= TAXI_CUTOFF_KM) {
-      const minutes = Math.max(5, Math.round((distanceKm / 30) * 60));
+      const minutes = Math.max(5, Math.round(((distanceKm / 30) * 60) * groupMultiplier));
       return { mode: 'taxi', minutes, distanceKm, source: 'heuristic' };
     }
-    const minutes = Math.max(10, Math.round((distanceKm / 35) * 60));
+    const minutes = Math.max(10, Math.round(((distanceKm / 35) * 60) * groupMultiplier));
     return { mode: 'rideshare', minutes, distanceKm, source: 'heuristic' };
   }
 }
@@ -98,12 +116,23 @@ const parseDurationSeconds = (raw: unknown): number | null => {
 // pair unestimated on failure — any missing config, rate-limit block, or API error falls back to
 // the (already-computed, free) heuristic estimate for that same pair.
 export class DirectionsApiTransferEstimator implements TransferEstimator {
-  async estimate(params: { from: LatLon; to: LatLon; mobility: TransferMobilityCode }): Promise<TransferEstimate | null> {
-    const { from, to, mobility } = params ?? ({} as typeof params);
+  async estimate(params: {
+    from: LatLon;
+    to: LatLon;
+    mobility: TransferMobilityCode;
+    groupSize?: number;
+  }): Promise<TransferEstimate | null> {
+    const { from, to, mobility, groupSize } = params ?? ({} as typeof params);
 
     // Mirrors HeuristicTransferEstimator's own guard, and doubles as the free mode-selection step.
-    const heuristicEstimate = await new HeuristicTransferEstimator().estimate({ from, to, mobility });
+    const heuristicEstimate = await new HeuristicTransferEstimator().estimate({ from, to, mobility, groupSize });
     if (!heuristicEstimate) return null;
+
+    // Chapter 16 §6: Minimize costs by skipping paid API calls for short walking legs
+    // where haversine is highly accurate.
+    if (heuristicEstimate.distanceKm < 0.5 && heuristicEstimate.mode === 'walk') {
+      return heuristicEstimate;
+    }
 
     const apiKey = getEnvValue('GOOGLE_ROUTES_API_KEY');
     if (!apiKey) return heuristicEstimate;
@@ -144,9 +173,10 @@ export class DirectionsApiTransferEstimator implements TransferEstimator {
       if (element?.condition !== 'ROUTE_EXISTS' || seconds == null || !Number.isFinite(distanceMeters)) {
         return heuristicEstimate;
       }
+      const groupMultiplier = getGroupBufferMultiplier(groupSize);
       return {
         mode: heuristicEstimate.mode,
-        minutes: Math.max(1, Math.round(seconds / 60)),
+        minutes: Math.max(1, Math.round((seconds / 60) * groupMultiplier)),
         distanceKm: distanceMeters / 1000,
         source: 'directions_api',
       };

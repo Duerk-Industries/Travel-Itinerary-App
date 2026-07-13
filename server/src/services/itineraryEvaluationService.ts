@@ -2,8 +2,15 @@ import type { InterestWeights } from './activityTypeInterestWeights';
 
 export const ITINERARY_EVALUATION_VERSION = 'itinerary-eval-v1' as const;
 
-export type EvaluationActivity = { name: string; date: string; activityType: string; cost?: string; notes?: string };
-export type EvaluationTransfer = { departureDate: string; arrivalDate: string };
+export type EvaluationActivity = {
+  name: string;
+  date: string;
+  activityType: string;
+  cost?: string;
+  notes?: string;
+  interestTags?: string[];
+};
+export type EvaluationTransfer = { departureDate: string; arrivalDate: string; durationHours?: number | null };
 
 export type ItineraryBaselineMetrics = {
   version: typeof ITINERARY_EVALUATION_VERSION;
@@ -40,6 +47,7 @@ export const evaluateItineraryBaseline = (input: {
   comfort: 'B' | 'M' | 'L';
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
   stageLatenciesMs?: number[];
+  transferMinutesByDay?: Map<number, number>;
 }): ItineraryBaselineMetrics => {
   const names = input.activities.map((activity) => normalize(activity.name)).filter(Boolean);
   const uniqueNames = new Set(names);
@@ -50,21 +58,42 @@ export const evaluateItineraryBaseline = (input: {
   const freeCount = explicitCosts.filter((cost) => /^(0|0\.00|free|\$0)$/i.test(cost)).length;
   const latencies = [...(input.stageLatenciesMs ?? [])].filter((value) => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
   const percentile = (p: number): number | null => latencies.length ? latencies[Math.min(latencies.length - 1, Math.ceil(latencies.length * p) - 1)] : null;
+
+  // Weighted Interest Coverage
+  const weightedInterestCoverage = (() => {
+    const highInterests = Object.entries(input.weights)
+      .filter(([, weight]) => weight >= 36)
+      .map(([key]) => key as keyof InterestWeights);
+    if (!highInterests.length) return null;
+
+    const coveredInterests = highInterests.filter((interest) =>
+      input.activities.some((activity) =>
+        (activity.interestTags ?? []).some((tag) => normalize(tag).replace(/\s+/g, '_') === interest)
+      )
+    );
+    return coveredInterests.length / highInterests.length;
+  })();
+
+  // Travel Minutes
+  const totalTravelMinutes = Array.from(input.transferMinutesByDay?.values() ?? []).reduce((a, b) => a + b, 0);
+  const activityDays = new Set(input.activities.map((a) => a.date)).size;
+  const estimatedTravelMinutesPerActivityDay = activityDays > 0 ? totalTravelMinutes / activityDays : null;
+
   const unavailableReasons = [
-    'Interest tags are not yet retained on generated activities.',
     'Hard constraints are not yet represented as machine-checkable activity requirements.',
-    'Travel-minute and schedule-window metrics require Phase 1/2 metadata.',
+    'Schedule-window metrics require per-item opening hours/reservation metadata.',
     'Arrival/departure feasibility requires booked/local-time travel constraints.',
     'Unsupported-fact scoring requires evidence provenance.',
   ];
+
   return {
     version: ITINERARY_EVALUATION_VERSION,
     mustSeeCoverage: mustSees.length ? matchedMustSees / mustSees.length : null,
-    weightedInterestCoverage: null,
+    weightedInterestCoverage,
     duplicateRate: names.length ? duplicates / names.length : 0,
     freeOrLowCostShare: explicitCosts.length ? freeCount / explicitCosts.length : null,
     hardConstraintViolations: null,
-    estimatedTravelMinutesPerActivityDay: null,
+    estimatedTravelMinutesPerActivityDay,
     scheduleWindowViolations: null,
     arrivalDepartureFeasible: null,
     unsupportedFactRate: null,
