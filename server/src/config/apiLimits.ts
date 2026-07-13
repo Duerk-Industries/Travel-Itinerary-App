@@ -70,6 +70,15 @@ const parsePositiveInt = (raw: unknown): number | undefined => {
   return Math.floor(value);
 };
 
+// Zero is meaningful for kill-switch style cache/API budgets (for example,
+// GetYourGuide Partner API lookups remain disabled until the account contract
+// is approved). Other cache settings still clamp values at their call sites.
+const parseNonNegativeInt = (raw: unknown): number | undefined => {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return undefined;
+  return Math.floor(value);
+};
+
 const parsePositiveNumber = (raw: unknown): number | undefined => {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) return undefined;
@@ -135,7 +144,7 @@ const normalizeCaching = (
     const normalizedGroupName = normalizeApiLimitKeyPart(groupName);
     const normalizedGroup: Record<string, number> = {};
     for (const [settingName, settingValue] of Object.entries(groupValues ?? {})) {
-      const parsed = parsePositiveInt(settingValue);
+      const parsed = parseNonNegativeInt(settingValue);
       if (parsed !== undefined) {
         normalizedGroup[normalizeApiLimitKeyPart(settingName)] = parsed;
       }

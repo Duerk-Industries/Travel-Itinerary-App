@@ -58,7 +58,7 @@ const HOSTING_LINE_ITEMS_SETTING_KEY = 'cost_estimator_hosting_line_items';
 /** Complete allowlist of non-token providers whose request pricing is admin-editable. */
 export const REQUEST_PRICED_PROVIDER_KEYS = [
   'SERPAPI', 'WIKIMEDIA', 'GOOGLE_ROUTES', 'GMAIL', 'GOOGLE_STATIC_MAPS', 'UNSPLASH', 'SMTP',
-  'COUNTRY_NOW', 'GEONAMES', 'AIRPORT_DATASET', 'FRANKFURTER', 'OPEN_METEO', 'NOMINATIM', 'CLAMAV', 'DOCLING',
+  'COUNTRY_NOW', 'GEONAMES', 'AIRPORT_DATASET', 'FRANKFURTER', 'OPEN_METEO', 'NOMINATIM', 'CLAMAV', 'DOCLING', 'GETYOURGUIDE',
 ] as const;
 
 // Defaults reproduce this project's own hand-verified reference estimate (10,000 users, 3% premium,

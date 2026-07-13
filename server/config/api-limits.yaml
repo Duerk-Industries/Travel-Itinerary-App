@@ -214,6 +214,17 @@ providers:
     callers:
       DESTINATION_LARGE_CITY_COVERAGE: 300
 
+  # Phase 5 safety default. The account-specific Partner API quota must be
+  # approved and changed in admin/config before enabling lookups; one request
+  # per hour keeps an accidental enablement fail-closed.
+  GETYOURGUIDE:
+    window: hour
+    windowHours: 1
+    overall: 1
+    callers:
+      GETYOURGUIDE_ITINERARY_ACTIVITY_SUGGESTION: 1
+      GETYOURGUIDE_ACTIVITY_TAB_LOOKUP: 1
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80
@@ -273,6 +284,7 @@ requestPricing:
   AIRPORT_DATASET: 0
   FRANKFURTER: 0
   OPEN_METEO: 0
+  GETYOURGUIDE: 0
 
 caching:
   attractions:
@@ -310,6 +322,10 @@ caching:
     descriptorConcurrency: 2
     maxPartnerApiLookupsPerGeneration: 0
     maxPartnerApiLookupsPerDay: 0
+    apiTimeoutMs: 4000
+    apiMaxRetries: 1
+    circuitFailureThreshold: 3
+    circuitOpenSeconds: 30
     redirectPerMinutePerIp: 60
     redirectPerDayPerAccount: 300
   unsplash:

@@ -1,11 +1,17 @@
 import { getFeatureFlag } from '../db';
-import { getEnvValue } from '../env';
+import { getEnvFlag, getEnvValue } from '../env';
 
 /** The seed flag is intentionally fail-closed for the optional affiliate feature. */
 export const GETYOURGUIDE_FEATURE_FLAG = 'getyourguide_activity_suggestions';
 export const GETYOURGUIDE_PARTNER_ID_ENV = 'GET_YOUR_GUIDE_AFFILIATE_PARTNER_ID';
 export const GETYOURGUIDE_API_TOKEN_ENV = 'GETYOURGUIDE_API_TOKEN';
 export const GETYOURGUIDE_API_KEY_FALLBACK_ENV = 'GETYOURGUIDE_API_KEY';
+/** Exact Partner API endpoint supplied by the approved account contract. */
+export const GETYOURGUIDE_API_BASE_URL_ENV = 'GETYOURGUIDE_API_BASE_URL';
+/** Written permission to persist normalized partner responses is opt-in. */
+export const GETYOURGUIDE_API_CACHE_PERMISSION_ENV = 'GETYOURGUIDE_API_CACHE_PERMISSION';
+export const GETYOURGUIDE_API_CURRENCY_ENV = 'GETYOURGUIDE_API_CURRENCY';
+export const GETYOURGUIDE_API_LANGUAGE_ENV = 'GETYOURGUIDE_API_LANGUAGE';
 export const GETYOURGUIDE_DEEP_LINK_BASE_URL_ENV = 'GETYOURGUIDE_DEEP_LINK_BASE_URL';
 export const GETYOURGUIDE_ALLOWED_HOSTS_ENV = 'GETYOURGUIDE_ALLOWED_HOSTS';
 export const GETYOURGUIDE_ALLOWED_PATH_PREFIXES_ENV = 'GETYOURGUIDE_ALLOWED_PATH_PREFIXES';
@@ -13,10 +19,24 @@ export const GETYOURGUIDE_ALLOWED_PATH_PREFIXES_ENV = 'GETYOURGUIDE_ALLOWED_PATH
 export type GetYourGuidePartnerConfig = {
   partnerId?: string;
   hasApiToken: boolean;
+  apiBaseUrl?: string;
+  hasApiCachePermission: boolean;
 };
 
 const getApiToken = (): string | undefined =>
   getEnvValue(GETYOURGUIDE_API_TOKEN_ENV) ?? getEnvValue(GETYOURGUIDE_API_KEY_FALLBACK_ENV);
+
+const getApiBaseUrl = (): string | undefined => {
+  const raw = getEnvValue(GETYOURGUIDE_API_BASE_URL_ENV);
+  if (!raw) return undefined;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.hash) return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+};
 
 /**
  * Reads only server-side configuration. The token itself is deliberately not
@@ -25,10 +45,26 @@ const getApiToken = (): string | undefined =>
 export const getGetYourGuidePartnerConfig = (): GetYourGuidePartnerConfig => ({
   partnerId: getEnvValue(GETYOURGUIDE_PARTNER_ID_ENV),
   hasApiToken: Boolean(getApiToken()),
+  apiBaseUrl: getApiBaseUrl(),
+  hasApiCachePermission: getEnvFlag(GETYOURGUIDE_API_CACHE_PERMISSION_ENV, { defaultValue: false }),
 });
 
 export const hasGetYourGuidePartnerConfiguration = (): boolean =>
   Boolean(getGetYourGuidePartnerConfig().partnerId);
+
+export const hasGetYourGuideApiConfiguration = (): boolean => {
+  const config = getGetYourGuidePartnerConfig();
+  return Boolean(config.hasApiToken && config.apiBaseUrl);
+};
+
+export const hasGetYourGuideApiCachePermission = (): boolean =>
+  getGetYourGuidePartnerConfig().hasApiCachePermission;
+
+export const getGetYourGuideApiLocale = (): { currency: string; language: string } | null => {
+  const currency = getEnvValue(GETYOURGUIDE_API_CURRENCY_ENV)?.trim().toUpperCase();
+  const language = getEnvValue(GETYOURGUIDE_API_LANGUAGE_ENV)?.trim();
+  return currency && language ? { currency, language } : null;
+};
 
 /**
  * URL configuration is intentionally kept separate from the partner token.

@@ -1,10 +1,15 @@
 import {
   buildGetYourGuideItineraryCandidates,
   enrichGetYourGuideDescriptors,
+  enrichGetYourGuidePartnerActivities,
   selectGetYourGuideItineraryCandidates,
 } from '../src/services/getYourGuideItineraryEnrichmentService';
 
 jest.mock('../src/db', () => ({ getFeatureFlag: jest.fn() }));
+jest.mock('../src/apis/getYourGuideCallers', () => ({
+  GETYOURGUIDE_CALLER_ITINERARY_ACTIVITY_SUGGESTION: 'GETYOURGUIDE_ITINERARY_ACTIVITY_SUGGESTION',
+  getGetYourGuideActivitySuggestions: jest.fn(),
+}));
 
 const activity = (overrides: Record<string, unknown> = {}) => ({
   status: 'Proposed' as const,
@@ -21,6 +26,7 @@ const activity = (overrides: Record<string, unknown> = {}) => ({
   notes: '',
   ...overrides,
 });
+const mockedPartnerLookup = jest.requireMock('../src/apis/getYourGuideCallers').getGetYourGuideActivitySuggestions as jest.Mock;
 
 describe('GetYourGuide Phase 4 itinerary enrichment', () => {
   it('builds candidates from verified catalog metadata and adjacent transfer legs', () => {
@@ -113,5 +119,23 @@ describe('GetYourGuide Phase 4 itinerary enrichment', () => {
       signal: controller.signal,
     });
     expect(issueDescriptor).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs optional partner lookups asynchronously without changing candidate order', async () => {
+    mockedPartnerLookup.mockReset();
+    mockedPartnerLookup.mockImplementation(async (params: any) => ({
+      products: [{ productId: params.query, name: params.query, lastVerifiedAt: 'now' }],
+      negative: false,
+      fetchedAt: 'now',
+      stale: false,
+    }));
+    const candidates = [
+      { id: 'a', name: 'Paris Museum Guided Tour', activityType: 'Tour', date: '2026-09-01', destination: { destination: 'Paris, France', city: 'Paris', country: 'France' } },
+      { id: 'b', name: 'Paris River Cruise Tour', activityType: 'Tour', date: '2026-09-01', destination: { destination: 'Paris, France' } },
+    ] as any[];
+    const result = await enrichGetYourGuidePartnerActivities({ candidates, currency: 'USD', language: 'en', scopeKey: 'scope', concurrency: 2 });
+    expect(Object.keys(result.productsByCandidateId)).toEqual(['a', 'b']);
+    expect(mockedPartnerLookup).toHaveBeenCalledTimes(2);
+    expect(mockedPartnerLookup.mock.calls[0][0]).toEqual(expect.objectContaining({ currency: 'USD', language: 'en', scopeKey: 'scope' }));
   });
 });

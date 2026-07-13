@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { isGetYourGuideFeatureEnabled } from '../config/getYourGuide';
+import { getGetYourGuideApiLocale, isGetYourGuideFeatureEnabled } from '../config/getYourGuide';
 import { incrementMetric, recordTiming } from '../metrics';
 import type { ActivityType, AttractionCatalogEntry, AttractionDurationMetadata, ItineraryGeneratedActivity } from '../types';
 import {
@@ -13,6 +13,11 @@ import {
   type GetYourGuideCandidate,
   type GetYourGuideTravelerContext,
 } from '../utils/getYourGuideEligibility';
+import {
+  GETYOURGUIDE_CALLER_ITINERARY_ACTIVITY_SUGGESTION,
+  getGetYourGuideActivitySuggestions,
+  type GetYourGuideActivityLookupResult,
+} from '../apis/getYourGuideCallers';
 
 type TransferNoteLike = { fromName: string; toName: string; minutes: number };
 
@@ -35,6 +40,10 @@ export type GetYourGuideItineraryCandidateSelection = {
 export type GetYourGuideDescriptorEnrichmentResult = {
   candidates: GetYourGuideCandidate[];
   descriptors: Record<string, GetYourGuideDescriptor>;
+};
+
+export type GetYourGuidePartnerEnrichmentResult = {
+  productsByCandidateId: Record<string, GetYourGuideActivityLookupResult>;
 };
 
 const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
@@ -184,21 +193,79 @@ export const enrichGetYourGuideDescriptors = async (params: {
   return { candidates: params.candidates, descriptors };
 };
 
+/**
+ * Optional Partner API enrichment. It deliberately returns normalized data to
+ * the caller and never mutates an itinerary activity. The caller's generation
+ * budget prevents this bounded candidate list from turning into one lookup per
+ * generated activity.
+ */
+export const enrichGetYourGuidePartnerActivities = async (params: {
+  candidates: GetYourGuideCandidate[];
+  currency: string;
+  language: string;
+  scopeKey: string;
+  signal?: AbortSignal;
+  concurrency?: number;
+}): Promise<GetYourGuidePartnerEnrichmentResult> => {
+  const productsByCandidateId: Record<string, GetYourGuideActivityLookupResult> = {};
+  let nextIndex = 0;
+  const worker = async (): Promise<void> => {
+    while (true) {
+      if (params.signal?.aborted) return;
+      const index = nextIndex++;
+      if (index >= params.candidates.length) return;
+      const candidate = params.candidates[index];
+      try {
+        const lookup = await getGetYourGuideActivitySuggestions({
+          caller: GETYOURGUIDE_CALLER_ITINERARY_ACTIVITY_SUGGESTION,
+          query: candidate.name,
+          destination: candidate.destination.city ?? candidate.destination.destination ?? undefined,
+          country: candidate.destination.country ?? undefined,
+          locationHint: candidate.destination.coordinates && Number.isFinite(Number(candidate.destination.coordinates.lat)) && Number.isFinite(Number(candidate.destination.coordinates.lon))
+            ? { lat: Number(candidate.destination.coordinates.lat), lon: Number(candidate.destination.coordinates.lon) }
+            : undefined,
+          date: candidate.date ?? undefined,
+          currency: params.currency,
+          language: params.language,
+          scopeKey: params.scopeKey,
+          signal: params.signal,
+        });
+        if (lookup) productsByCandidateId[candidate.id] = lookup;
+      } catch {
+        // Partner data is optional; Phase-A descriptor fallback remains valid.
+      }
+    }
+  };
+  const concurrency = Math.max(1, Math.min(4, Math.floor(params.concurrency ?? getApiCacheSetting('getYourGuide', 'descriptorConcurrency') ?? 2)));
+  await Promise.all(Array.from({ length: Math.min(concurrency, params.candidates.length) }, () => worker()));
+  return { productsByCandidateId };
+};
+
 export const scheduleGetYourGuideDescriptorEnrichment = (candidates: GetYourGuideCandidate[]): void => {
   if (!candidates.length) return;
   const startedAt = Date.now();
   void isGetYourGuideFeatureEnabled().then((enabled) => {
     if (!enabled) return null;
-    return enrichGetYourGuideDescriptors({ candidates });
+    const locale = getGetYourGuideApiLocale();
+    const scopeKey = createHash('sha256').update(candidates.map((candidate) => candidate.id).sort().join('|')).digest('hex').slice(0, 32);
+    return Promise.all([
+      enrichGetYourGuideDescriptors({ candidates }),
+      locale
+        ? enrichGetYourGuidePartnerActivities({ candidates, currency: locale.currency, language: locale.language, scopeKey })
+        : Promise.resolve({ productsByCandidateId: {} }),
+    ]);
   }).then((result) => {
     if (!result) return;
+    const [descriptors, partner] = result;
     incrementMetric('getyourguide_affiliate_enrichment', {
-      selected: result.candidates.length,
-      issued: Object.keys(result.descriptors).length,
+      selected: descriptors.candidates.length,
+      issued: Object.keys(descriptors.descriptors).length,
+      products: Object.keys(partner.productsByCandidateId).length,
     });
     recordTiming('getyourguide_affiliate_enrichment_ms', Date.now() - startedAt, {
-      selected: result.candidates.length,
-      issued: Object.keys(result.descriptors).length,
+      selected: descriptors.candidates.length,
+      issued: Object.keys(descriptors.descriptors).length,
+      products: Object.keys(partner.productsByCandidateId).length,
     });
   }).catch(() => undefined);
 };

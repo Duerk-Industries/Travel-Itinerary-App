@@ -74,6 +74,12 @@ describe('api-limits yaml config', () => {
     expect(getApiCacheSetting('getYourGuide', 'maxAffiliateLinksPerItinerary')).toBe(4);
   });
 
+  it('preserves zero-valued cache budgets as an explicit kill switch', () => {
+    const tempConfig = fs.readFileSync(configPath, 'utf8');
+    fs.writeFileSync(configPath, `${tempConfig}\n    maxPartnerApiLookupsPerGeneration: 0\n`, 'utf8');
+    expect(getApiCacheSetting('getYourGuide', 'maxPartnerApiLookupsPerGeneration')).toBe(0);
+  });
+
   it('updates a caching group and round-trips the new value', () => {
     const updated = updateApiCachingConfig('attractions', { refreshDays: 365, durationMetadataRefreshDays: 60 });
     expect(updated.caching.ATTRACTIONS.DURATIONMETADATAREFRESHDAYS).toBe(60);
