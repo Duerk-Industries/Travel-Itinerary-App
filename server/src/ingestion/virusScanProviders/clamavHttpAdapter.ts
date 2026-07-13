@@ -1,6 +1,8 @@
 import { getEnvValue } from '../../env';
 import { logError, logInfo } from '../../logger';
 import type { VirusScannerAdapter, VirusScanResult } from './types';
+import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
+import { recordProviderRequestCost } from '../../apis/providerBudgeting';
 
 /**
  * ClamAV HTTP adapter. Expects a clamav-rest-compatible sidecar reachable
@@ -63,6 +65,8 @@ export const clamavHttpAdapter: VirusScannerAdapter = {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), getTimeoutMs());
     try {
+      await reserveApiUsageOrThrow({ provider: 'CLAMAV', caller: 'VIRUS_SCAN_BUFFER' });
+      await recordProviderRequestCost({ provider: 'CLAMAV' });
       const response = await fetch(url, { method: 'POST', body: form as any, signal: controller.signal });
       const scannedAt = new Date().toISOString();
       if (response.status === 200) {

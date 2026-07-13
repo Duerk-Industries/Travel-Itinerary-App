@@ -23,6 +23,8 @@ providers:
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+      PARSE_FLIGHT_TEXT: 200
+      LEGACY_DOCUMENT_PARSE: 100
 
   ANTHROPIC:
     window: hour
@@ -73,6 +75,24 @@ providers:
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
 
+  OPENAI_COMPATIBLE:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      ITINERARY_GENERATE_PLAN: 50
+      ITINERARY_PLAN_P0_NORM: 200
+      ITINERARY_PLAN_P1_ROUTE: 200
+      ITINERARY_PLAN_P2_DAYS: 200
+      ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P4_RENDER: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
+      INGESTION_LLM_EXTRACT: 100
+      LLM_SHADOW_PARSE: 100
+      PARSE_FLIGHT_TEXT: 200
+      LEGACY_DOCUMENT_PARSE: 100
+
   UNSPLASH:
     window: hour
     windowHours: 1
@@ -91,6 +111,7 @@ providers:
       SHARE_EMAIL: 100
       VERIFICATION_EMAIL: 100
       TRIP_INVITE_EMAIL: 100
+      BILLING_TRIAL_REMINDER: 100
 
   AIRPORT_DATASET:
     window: hour
@@ -158,6 +179,27 @@ providers:
     callers:
       STATIC_MAP_PREVIEW: 500
 
+  NOMINATIM:
+    window: hour
+    windowHours: 24
+    overall: 500
+    callers:
+      MERCHANT_CATEGORY_LOOKUP: 500
+
+  CLAMAV:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      VIRUS_SCAN_BUFFER: 2000
+
+  DOCLING:
+    window: hour
+    windowHours: 24
+    overall: 200
+    callers:
+      DOCUMENT_CONVERSION: 200
+
   COUNTRY_NOW:
     window: hour
     windowHours: 24
@@ -196,6 +238,9 @@ budgeting:
       GEMINI_2_5_FLASH:
         inputCostPer1MTokensUsd: 0.30
         outputCostPer1MTokensUsd: 2.50
+  OPENAI_COMPATIBLE:
+    alertThresholdPercent: 80
+    models: {}
   ZAI:
     alertThresholdPercent: 80
     models:
@@ -218,6 +263,9 @@ requestPricing:
   GOOGLE_ROUTES: 0
   GMAIL: 0
   GOOGLE_STATIC_MAPS: 0
+  NOMINATIM: 0
+  CLAMAV: 0
+  DOCLING: 0
   UNSPLASH: 0
   SMTP: 0
   COUNTRY_NOW: 0

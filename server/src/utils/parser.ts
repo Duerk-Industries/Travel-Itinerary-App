@@ -4,6 +4,11 @@ import { readFileSync } from 'node:fs';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 import pLimit from 'p-limit';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost, recordProviderRequestCost } from '../apis/providerBudgeting';
+
+const LEGACY_DOCUMENT_PARSE_CALLER = 'LEGACY_DOCUMENT_PARSE';
+const DOCUMENT_CONVERSION_CALLER = 'DOCUMENT_CONVERSION';
 
 // Define the travel schema using Zod for type-safe extraction
 const TravelSchema = z.object({
@@ -40,6 +45,7 @@ const MARKDOWN_CHUNK_SIZE = 100000;
 
 async function parseChunk(chunk: string, openai: OpenAI): Promise<TravelData | null> {
   try {
+    await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: LEGACY_DOCUMENT_PARSE_CALLER });
     const response = await openai.chat.completions.parse({
       model: 'gpt-4o-mini',
       messages: [
@@ -54,6 +60,24 @@ async function parseChunk(chunk: string, openai: OpenAI): Promise<TravelData | n
       ],
       response_format: zodResponseFormat(TravelSchema, 'travel_data'),
     });
+
+    try {
+      const amountMicros = estimateAiCostMicros({
+        provider: 'OPENAI',
+        model: 'gpt-4o-mini',
+        promptTokens: response.usage?.prompt_tokens ?? 0,
+        completionTokens: response.usage?.completion_tokens ?? 0,
+      });
+      if ((amountMicros ?? 0) > 0) {
+        await recordApiCost({
+          provider: 'OPENAI',
+          windowKey: getApiBudgetWindowKey(),
+          amountMicros: amountMicros ?? 0,
+        });
+      }
+    } catch (accountingError) {
+      console.error('Failed to account for legacy OpenAI parsing:', accountingError);
+    }
 
     return response.choices[0].message.parsed;
   } catch (error) {
@@ -75,6 +99,8 @@ export async function parseTravelDocument(filePath: string): Promise<TravelData 
   try {
     // 2. Convert PDF or Image to Markdown
     const fileBuffer = readFileSync(filePath);
+    await reserveApiUsageOrThrow({ provider: 'DOCLING', caller: DOCUMENT_CONVERSION_CALLER });
+    await recordProviderRequestCost({ provider: 'DOCLING' });
     const conversion = await docling.convertFile({
       files: fileBuffer,
       filename: filePath.split('/').pop() || 'document.pdf',

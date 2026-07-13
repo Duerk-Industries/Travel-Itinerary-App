@@ -3,6 +3,10 @@ import { logError } from '../../logger';
 import { OpenAI } from 'openai';
 import { ParsedFlight } from './types';
 import { getEnvValue } from '../../env';
+import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
+import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from '../../apis/providerBudgeting';
+
+export const OPENAI_FLIGHT_PARSER_CALLER = 'PARSE_FLIGHT_TEXT';
 
 export class OpenAIFlightParser implements FlightParserStrategy {
   private openai: OpenAI;
@@ -40,6 +44,8 @@ Return a JSON object with two top-level keys:
 - "bulk": An array of ParsedFlight objects. If there are multiple passengers or multiple segments, create a separate object for each passenger-segment combination. If it's just one passenger and one segment, "bulk" can be an empty array or have one item.
 `;
 
+    await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: OPENAI_FLIGHT_PARSER_CALLER });
+
     try {
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -50,6 +56,24 @@ Return a JSON object with two top-level keys:
           { role: 'user', content: text.substring(0, 10000) },
         ],
       });
+
+      try {
+        const amountMicros = estimateAiCostMicros({
+          provider: 'OPENAI',
+          model: 'gpt-4o-mini',
+          promptTokens: response.usage?.prompt_tokens ?? 0,
+          completionTokens: response.usage?.completion_tokens ?? 0,
+        });
+        if ((amountMicros ?? 0) > 0) {
+          await recordApiCost({
+            provider: 'OPENAI',
+            windowKey: getApiBudgetWindowKey(),
+            amountMicros: amountMicros ?? 0,
+          });
+        }
+      } catch (accountingError) {
+        logError('[FlightParser] OpenAI cost accounting failed', accountingError);
+      }
 
       const contentText = response.choices[0]?.message?.content || '{}';
       

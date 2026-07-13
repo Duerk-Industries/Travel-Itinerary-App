@@ -12,6 +12,11 @@ jest.mock('../src/apis/providerBudgeting', () => ({
   recordApiCost: jest.fn(async () => 12_345),
 }));
 
+const mockOpenAiCreate = jest.fn();
+jest.mock('openai', () => ({
+  OpenAI: jest.fn(() => ({ chat: { completions: { create: mockOpenAiCreate } } })),
+}));
+
 const mockedReserve = jest.requireMock('../src/apis/usageLimiter').reserveApiUsageOrThrow as jest.Mock;
 const mockedRecordRequestCost = jest.requireMock('../src/apis/providerBudgeting').recordProviderRequestCost as jest.Mock;
 const mockedRecordApiCost = jest.requireMock('../src/apis/providerBudgeting').recordApiCost as jest.Mock;
@@ -23,6 +28,7 @@ describe('direct Google API accounting', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.GEMINI_API_KEY = 'test-gemini-key';
+    mockOpenAiCreate.mockReset();
   });
 
   afterEach(() => {
@@ -67,6 +73,24 @@ describe('direct Google API accounting', () => {
     expect(mockedReserve).toHaveBeenCalledWith({ provider: 'GEMINI', caller: 'PARSE_FLIGHT_TEXT' });
     expect(mockedRecordApiCost).toHaveBeenCalledWith({
       provider: 'GEMINI',
+      windowKey: '2026-07',
+      amountMicros: 12_345,
+    });
+  });
+
+  it('reserves direct OpenAI flight parsing and records token-based cost', async () => {
+    const { OpenAIFlightParser } = require('../src/services/flightParserLLM/openai') as typeof import('../src/services/flightParserLLM/openai');
+    mockOpenAiCreate.mockResolvedValue({
+      choices: [{ message: { content: '{"primary":{"flightNumber":"UA456"},"bulk":[]}' } }],
+      usage: { prompt_tokens: 25, completion_tokens: 8 },
+    });
+
+    const result = await new OpenAIFlightParser().parse('flight confirmation');
+
+    expect(result.primary.flightNumber).toBe('UA456');
+    expect(mockedReserve).toHaveBeenCalledWith({ provider: 'OPENAI', caller: 'PARSE_FLIGHT_TEXT' });
+    expect(mockedRecordApiCost).toHaveBeenCalledWith({
+      provider: 'OPENAI',
       windowKey: '2026-07',
       amountMicros: 12_345,
     });

@@ -1,6 +1,8 @@
 import { getEnvValue } from '../env';
 import { logInfo } from '../logger';
 import { getFeatureFlag } from '../db';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 export type ExpenseCategory =
   | 'Breakfast'
@@ -111,6 +113,8 @@ export const lookupMerchantCategory = async (
     const userAgent =
       getEnvValue('MERCHANT_LOOKUP_USER_AGENT') ??
       `WanderBunniesTravel/1.0 (merchant-category-lookup; ${getEnvValue('MERCHANT_LOOKUP_CONTACT', { defaultValue: 'contact-not-configured' })})`;
+    await reserveApiUsageOrThrow({ provider: 'NOMINATIM', caller: 'MERCHANT_CATEGORY_LOOKUP' });
+    await recordProviderRequestCost({ provider: 'NOMINATIM' });
     const res = await fetch(url, {
       headers: {
         Accept: 'application/json',
