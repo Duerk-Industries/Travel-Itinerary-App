@@ -83,33 +83,33 @@ exists today but is not piped into `p4_render_md`'s `activityContext` field. Cha
 
 ### 3. Chunked day generation for trips beyond ~4 days (small cost increase, largest quality gain)
 Split `p2_days` into blocks (e.g., 3-day windows) sharing the same `p1_route` skeleton, each
-getting its own `max_tokens` allowance rather than one shrinking pool for the whole trip. This
-directly targets §1.A. Expect modestly higher prompt-token cost from repeated shared context
-(route skeleton, traits, shortlist) across chunks, offset by point 4 below. Needs orchestration
-changes in `itineraryPromptPlanService.ts` (loop over day-ranges, merge results before p3), not
-just config.
+getting its own `max_tokens` allowance rather than one shrinking pool for the whole trip.
+- **State Transfer:** Subsequent chunk calls **must** include a list of `used_attraction_ids`
+  from previous chunks to prevent duplicates and maintain narrative continuity.
+- This directly targets §1.A. Expect modestly higher prompt-token cost from repeated shared context
+  (route skeleton, traits, shortlist) across chunks.
+- Needs orchestration changes in `itineraryPromptPlanService.ts` (loop over day-ranges, merge
+  results before p3), not just config.
 
-### 4. Bounded "fill" repair in p3 (small, targeted cost increase)
-Extend `itineraryStructureValidator.ts`/p3 so that when a day has fewer than ~2 items after p2, a
-single targeted re-prompt (reusing the same shortlist) fills it, instead of leaving thin days
-uncorrected. Cost scales with how often gaps actually occur, not universally.
+### 4. Bounded "fill" repair (cost-optimized)
+Extend `itineraryStructureValidator.ts` so that when a day has fewer than ~2 items after p2:
+- **Step A (Deterministic Fill):** First, try to inject the next-best item from the current
+  day's geographic POD directly via code (0 token cost).
+- **Step B (Targeted Re-prompt):** Only if Step A fails to find a viable candidate, perform a
+  single targeted re-prompt (reusing the same shortlist).
+- This ensures days are never "thin" while scaling cost with actual p2 failures.
 
 ### 5. One retry on JSON parse failure before falling back
 Cheap insurance in `runJsonStage`: retry once with backoff before returning `fallbackValue`.
 Parse failures are the uncommon case, so the added cost is negligible.
 
-### 6. Cross-trip reusable day fragments (bigger lift — do after 1-5 land)
-Today's day cache (`writeItineraryPlanCache(... stage: 'day' ...)`,
-`itineraryPromptPlanService.ts:2408`) is keyed by a full **trip signature**
-(`buildTripSignature` — destinations, duration, pace, comfort, mobility, car, budget band, dates,
-weights, hubs; `itineraryPlanCacheService.ts:44-52`), and `buildDayFragments` just chunks a
-generated day array into groups of 3 for storage — it does **not** currently provide cross-user
-reuse of a generic "great photography day in Rome" fragment; each trip only reuses its own past
-generations. Building a true reusable-fragment cache (keyed by destination + dominant interest tag
-+ pace, independent of the full trip signature) is a larger change than it initially looks, but
-would let you justify using `gpt-4o` for first-time fragment generation, knowing the cost
-amortizes across many users. Scope this as a follow-on once §2's cache-key model is validated, not
-a first step.
+### 7. Strategic Nuance: Climatology-Preference Alignment (Master Agent Logic)
+The orchestrator should perform a pre-generation check between the destination's climatology
+(Average high/low/rain for that month) and the user's weighted interests.
+- If a traveler has a high `outdoors` weight but the month is "Rainy Season" or "Extreme Cold",
+  p0 should explicitly add an assumption: "Outdoor activities may be limited by seasonal weather;
+  providing indoor alternatives where possible."
+- This prevents the "Hiking in December" failure mode that pure LLM generation often hits.
 
 ### Not recommended as a first step
 Switching the default model for all stages to `gpt-4o`/`gpt-4.1`. It's config-only to try, but
@@ -157,11 +157,11 @@ different itinerary format that can't be diffed against real output.
 
 ### What the CLI does with it
 - Write the gold itinerary JSON + rendered markdown to a fixture file (e.g.
-  `server/__fixtures__/gold/<trip-spec-id>.json`), alongside the trip spec used to generate it, so
-  runs are reproducible and reviewable in PRs.
-- Provide a companion `--compare <trip-spec-id>` mode that runs the *production* pipeline
-  (unmodified config) for the same trip spec and reports a structural + coverage diff against the
-  stored gold fixture:
+  `server/__fixtures__/gold/<trip-spec-id>.json`), alongside the trip spec used to generate it.
+- **Durable Quality Tracking:** Propose a `gold_comparison_results` DB table. The CLI should upload
+  its comparison metrics (coverage %, item count delta) so the **Executive Dashboard** can
+  report on the "Production vs. Gold Quality Gap" over time.
+- Provide a companion `--compare <trip-spec-id>` mode that runs the *production* pipeline...
   - **Structural**: item count per day, presence of logistics notes, base/hub changes — reuse
     `itineraryStructureValidator.ts`'s existing checks so the diff logic isn't duplicated.
   - **Coverage**: what fraction of gold-itinerary attraction IDs also appear in the production
