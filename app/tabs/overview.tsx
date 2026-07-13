@@ -70,6 +70,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
+import GetYourGuideCta from '../components/GetYourGuideCta';
 import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
@@ -2290,6 +2291,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}${tour.duration ? ` · ${tour.duration}` : ''}`}</Text>
                           {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
                           {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                          <GetYourGuideCta
+                            backendUrl={backendUrl}
+                            headers={headers}
+                            activity={tour}
+                            destination={trip?.destination}
+                            testID={`day-details-getyourguide-${tour.id}`}
+                          />
                         </View>
                       </View>
                     );
@@ -3085,13 +3093,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             .map((row) => {
               const tour = row.meta as Tour;
               return (
-                <TouchableOpacity key={tour.id} style={styles.flightRow} onPress={() => openTourEditor(tour)}>
-                  <Text style={styles.flightTitle}>{tour.name}</Text>
-                  <Text style={styles.helperText}>
-                    {formatFriendlyDate(tour.date, tour.startTime)} @ {tour.startLocation}
-                  </Text>
-                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus(tour.status, LEGACY_ITINERARY_STATUS)}</Text>
-                </TouchableOpacity>
+                <View key={tour.id} style={styles.flightRow}>
+                  <TouchableOpacity onPress={() => openTourEditor(tour)}>
+                    <Text style={styles.flightTitle}>{tour.name}</Text>
+                    <Text style={styles.helperText}>
+                      {formatFriendlyDate(tour.date, tour.startTime)} @ {tour.startLocation}
+                    </Text>
+                    <Text style={styles.helperText}>Status: {normalizeItineraryStatus(tour.status, LEGACY_ITINERARY_STATUS)}</Text>
+                  </TouchableOpacity>
+                  <GetYourGuideCta
+                    backendUrl={backendUrl}
+                    headers={headers}
+                    activity={tour}
+                    destination={trip?.destination}
+                    testID={`overview-getyourguide-${tour.id}`}
+                  />
+                </View>
               );
             })}
         </View>

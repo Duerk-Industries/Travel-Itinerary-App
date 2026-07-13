@@ -2776,6 +2776,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode}
                   defaultActivityDate={activeTrip?.startDate ?? null}
+                  destination={activeTrip?.destination ?? null}
                 />
               )
             : null}

@@ -67,6 +67,8 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 
 - [Implementation Plan: Entitlements](implementation-plan-entitlements.md)
 - [GetYourGuide Phase 0 Partner Contract](getyourguide-phase-0-contract.md)
+- [GetYourGuide Phase 2 Server Descriptor](getyourguide-phase-2.md)
+- [GetYourGuide Phase 3 Client CTA](getyourguide-phase-3.md)
 
 ## Root-Level Reference Notes
 
