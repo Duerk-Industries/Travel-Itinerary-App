@@ -28,6 +28,7 @@ import {
   type MustSeeAttractionInput,
 } from './itineraryPromptPlanService';
 import { computeUnmatchedDestinationAndAttractionWarnings } from './attractionMatchWarnings';
+import { scheduleGetYourGuideDescriptorEnrichment } from './getYourGuideItineraryEnrichmentService';
 import { renderSimplifiedItineraryMarkdown } from './itineraryMarkdownRenderer';
 import { tripNameToFileSlug } from '../utils/tripNameSlug';
 import type { ActivityType } from '../types';
@@ -772,6 +773,9 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       generatedItems: result.generatedItems,
       currentUserPreferredAirport: fallbackAirport || null,
     });
+    // Keep optional affiliate work off the generation critical path. The
+    // persisted itinerary is complete even if this best-effort task fails.
+    scheduleGetYourGuideDescriptorEnrichment(result.getYourGuideCandidates ?? []);
 
     job.status = 'completed';
     job.updatedAt = nowIso();

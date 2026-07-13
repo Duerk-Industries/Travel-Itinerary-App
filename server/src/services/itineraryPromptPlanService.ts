@@ -44,6 +44,11 @@ import {
   writeItineraryPlanCache,
 } from './itineraryPlanCacheService';
 import { accumulateDayFriction, calculateRouteFrictionScore } from './frictionAccumulatorService';
+import {
+  buildGetYourGuideItineraryCandidates,
+  selectGetYourGuideItineraryCandidates,
+} from './getYourGuideItineraryEnrichmentService';
+import type { GetYourGuideCandidate } from '../utils/getYourGuideEligibility';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -245,6 +250,8 @@ export type ItineraryPromptPlanResult = {
   preferenceContract: NormalizedPreferenceContract;
   evaluation: ItineraryBaselineMetrics;
   cacheUsage: { routeHit: boolean; dayHit: boolean };
+  /** Bounded, deterministic candidates for post-response affiliate enrichment. */
+  getYourGuideCandidates?: GetYourGuideCandidate[];
 };
 
 export type MustSeeAttractionInput = string | { name: string; destinationName?: string | null };
@@ -2507,6 +2514,27 @@ const runGenerateItineraryViaPromptPlan = async (
   }
 
   const items = mapItems(finalItinerary, profile.weights, durationMetadataByName, transferNotesByDay, whyFitsByName, normalized.mob);
+  const getYourGuideCandidates = buildGetYourGuideItineraryCandidates({
+    activities: items.activities,
+    destinations: promptRequest.d,
+    catalogEntries: allEntries,
+    durationMetadataByName,
+    transferNotesByDay,
+    dayNumberByDate: new Map(finalItinerary.dy.map((day) => [day.dt, day.d] as const)),
+    mustSeeNames: normalizedMustSee.map((item) => item.name),
+    context: {
+      comfort: preferenceContract.comfort.value === 'B' ? 'Budget' : preferenceContract.comfort.value === 'L' ? 'Luxury' : 'Midrange',
+      mobility: preferenceContract.mobility.value === 'L' ? 'Low' : preferenceContract.mobility.value === 'H' ? 'High' : 'Medium',
+      interestWeights: preferenceContract.weights,
+      requireDisambiguatedDestination: true,
+    },
+  });
+  const selectedGetYourGuide = selectGetYourGuideItineraryCandidates(getYourGuideCandidates, {
+    comfort: preferenceContract.comfort.value === 'B' ? 'Budget' : preferenceContract.comfort.value === 'L' ? 'Luxury' : 'Midrange',
+    mobility: preferenceContract.mobility.value === 'L' ? 'Low' : preferenceContract.mobility.value === 'H' ? 'High' : 'Medium',
+    interestWeights: preferenceContract.weights,
+    requireDisambiguatedDestination: true,
+  });
   const transferMinutesByDay = new Map<number, number>();
   for (const [dayNum, notes] of transferNotesByDay) {
     transferMinutesByDay.set(dayNum, notes.reduce((sum, n) => sum + n.minutes, 0));
@@ -2575,5 +2603,6 @@ const runGenerateItineraryViaPromptPlan = async (
     preferenceContract,
     evaluation,
     cacheUsage,
+    ...(selectedGetYourGuide.selected.length ? { getYourGuideCandidates: selectedGetYourGuide.selected } : {}),
   };
 };

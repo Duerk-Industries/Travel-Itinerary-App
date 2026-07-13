@@ -6,6 +6,7 @@ import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
 import { generateItineraryViaPromptPlan, type MustSeeAttractionInput } from '../services/itineraryPromptPlanService';
+import { scheduleGetYourGuideDescriptorEnrichment } from '../services/getYourGuideItineraryEnrichmentService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
@@ -349,6 +350,9 @@ router.post('/', async (req, res) => {
         itinerary: result.itinerary,
       },
     });
+    // Affiliate work is explicitly post-response/background work. It cannot
+    // change ordering, cache payloads, or add latency to itinerary generation.
+    scheduleGetYourGuideDescriptorEnrichment(result.getYourGuideCandidates ?? []);
     await finalizeGenerationUsage({
       userId,
       windowKey: getMonthWindowKey(),

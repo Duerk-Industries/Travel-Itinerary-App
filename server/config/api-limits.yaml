@@ -306,6 +306,8 @@ caching:
     freshTtlMinutes: 15
     staleTtlHours: 24
     maxAffiliateLinksPerItinerary: 4
+    maxAffiliateCandidatesPerDay: 2
+    descriptorConcurrency: 2
     maxPartnerApiLookupsPerGeneration: 0
     maxPartnerApiLookupsPerDay: 0
     redirectPerMinutePerIp: 60
