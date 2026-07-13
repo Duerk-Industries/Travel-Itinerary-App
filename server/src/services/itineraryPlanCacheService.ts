@@ -4,6 +4,28 @@ import type { AttractionCatalogEntry, ItineraryPlanCacheEntry } from '../types';
 
 export const ITINERARY_CACHE_SCHEMA_VERSION = 'itinerary-cache-v1';
 
+/**
+ * Firestore rejects undefined values, including values nested in arrays and
+ * objects.  Itinerary payloads are JSON-shaped, so omit undefined object
+ * properties and preserve array positions with nulls before persisting them.
+ * Keeping this at the cache boundary also makes the Postgres and Firestore
+ * adapters observe the same payload shape.
+ */
+export const stripUndefinedDeep = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value.map((item) => item === undefined ? null : stripUndefinedDeep(item)) as T;
+  }
+  if (value instanceof Date) return value;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, item]) => item !== undefined)
+        .map(([key, item]) => [key, stripUndefinedDeep(item)])
+    ) as T;
+  }
+  return value;
+};
+
 const canonicalize = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, canonicalize(item)]));
@@ -65,7 +87,8 @@ export const writeItineraryPlanCache = async <T>(params: { stage: 'route' | 'day
   const cacheKey = buildCacheKey(params.stage, params.signature, params.dependencyFingerprint);
   return upsertItineraryPlanCacheEntry({
     id: cacheKey, cacheKey, stage: params.stage, signature: params.signature,
-    dependencyFingerprint: params.dependencyFingerprint, payload: params.payload, fragments: params.fragments ?? [],
+    dependencyFingerprint: params.dependencyFingerprint, payload: stripUndefinedDeep(params.payload),
+    fragments: stripUndefinedDeep(params.fragments ?? []),
     expiresAt: new Date(now.getTime() + Math.max(1, params.ttlDays) * 86400000).toISOString(), updatedAt: now.toISOString(),
   });
 };

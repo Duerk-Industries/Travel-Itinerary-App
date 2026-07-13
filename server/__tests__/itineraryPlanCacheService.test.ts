@@ -1,6 +1,6 @@
 import {
   buildCacheKey, buildCatalogFingerprint, buildDayFragments, buildPromptFingerprint, buildTripSignature,
-  readItineraryPlanCache, writeItineraryPlanCache,
+  readItineraryPlanCache, stripUndefinedDeep, writeItineraryPlanCache,
 } from '../src/services/itineraryPlanCacheService';
 
 jest.mock('../src/db', () => ({ getItineraryPlanCacheEntry: jest.fn(), upsertItineraryPlanCacheEntry: jest.fn(async (entry) => entry) }));
@@ -51,6 +51,21 @@ describe('Phase 4 itinerary plan cache', () => {
     expect(written.fragments).toEqual([[1, 2, 3], [4]]);
     db.getItineraryPlanCacheEntry.mockResolvedValue(written);
     expect(await readItineraryPlanCache({ stage: 'day', signature: 'sig', dependencyFingerprint: 'dep', now: new Date('2026-02-01T00:00:00Z') })).toBeNull();
+  });
+
+  test('strips nested undefined values before cache persistence', async () => {
+    expect(stripUndefinedDeep({ x: [{ td: undefined, keep: 'yes', nested: { gone: undefined, ok: 1 } }, undefined] })).toEqual({
+      x: [{ keep: 'yes', nested: { ok: 1 } }, null],
+    });
+
+    await writeItineraryPlanCache({
+      stage: 'day', signature: 'sig', dependencyFingerprint: 'dep',
+      payload: { x: [{ td: undefined, keep: 'yes' }] }, fragments: [[{ td: undefined }]], ttlDays: 30,
+      now: new Date('2026-01-01T00:00:00Z'),
+    });
+    const persisted = db.upsertItineraryPlanCacheEntry.mock.calls.at(-1)?.[0];
+    expect(persisted.payload).toEqual({ x: [{ keep: 'yes' }] });
+    expect(persisted.fragments).toEqual([[{}]]);
   });
 
   test('explicitly misses when pace, comfort, or mobility signature differs', async () => {
