@@ -69,7 +69,11 @@ describe('GetYourGuide Phase 2 opaque affiliate descriptors', () => {
 
   it('rejects tampered and expired tokens and fails closed when the flag is disabled', async () => {
     const descriptor = await createGetYourGuideDescriptor({ candidate });
-    const tampered = `${descriptor!.token.slice(0, -1)}${descriptor!.token.endsWith('a') ? 'b' : 'a'}`;
+    const tokenParts = descriptor!.token.split('.');
+    // Change a significant byte in the authenticated tag rather than a
+    // trailing Base64URL padding bit (which can decode to the same value).
+    tokenParts[2] = `${tokenParts[2][0] === 'a' ? 'b' : 'a'}${tokenParts[2].slice(1)}`;
+    const tampered = tokenParts.join('.');
     await expect(resolveGetYourGuideRedirect(tampered)).resolves.toBeNull();
     db.getFeatureFlag.mockResolvedValue({ key: GETYOURGUIDE_FEATURE_FLAG, enabled: false });
     await expect(resolveGetYourGuideRedirect(descriptor!.token)).resolves.toBeNull();
