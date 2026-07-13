@@ -20,5 +20,28 @@ describe('Phase 2 fatigue and endpoint logistics', () => {
     ]));
     expect(renderLogisticsFactBlock(facts)).toContain('Heavy arrival day');
   });
+
+  test('a terminal-only day (no booked transfer, just the trip start/end date) blocks all activities', () => {
+    const facts = buildArrivalDepartureFacts({
+      arrival: { date: '2026-08-01', terminalOnly: true },
+      departure: { date: '2026-08-07', terminalOnly: true },
+      departureBufferMinutes: 180,
+    });
+    expect(facts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ date: '2026-08-01', kind: 'arrival', maxActivities: 0 }),
+      expect.objectContaining({ date: '2026-08-07', kind: 'departure', maxActivities: 0 }),
+    ]));
+    expect(renderLogisticsFactBlock(facts)).toContain('Travel day: no activities scheduled');
+  });
+
+  test('terminalOnly overrides a booked departure time that would otherwise still allow one activity', () => {
+    // Without terminalOnly, an afternoon departure (>= 12:00 local) still permits up to 1 activity —
+    // terminalOnly must force 0 regardless, since there's no confirmed transfer to plan around.
+    const facts = buildArrivalDepartureFacts({
+      departure: { date: '2026-08-07', localTime: '18:00', terminalOnly: true },
+      departureBufferMinutes: 180,
+    });
+    expect(facts[0].maxActivities).toBe(0);
+  });
 });
 

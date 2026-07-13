@@ -43,6 +43,7 @@ import {
   stableHash,
   writeItineraryPlanCache,
 } from './itineraryPlanCacheService';
+import { accumulateDayFriction, calculateRouteFrictionScore } from './frictionAccumulatorService';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -1099,7 +1100,7 @@ const buildShortlistPools = (
   return { byDestination, global };
 };
 
-// Chapter 16 §2: Fairness Floor. Ensures every traveler's primary interests are
+// itinerary-improvement-plan.md §2: Fairness Floor. Ensures every traveler's primary interests are
 // represented in the daily activity slots. Deterministically injects a
 // high-relevance item for an under-served traveler interest if the LLM
 // output drifted.
@@ -1290,12 +1291,10 @@ const enforceShortlistGrounding = (
   return grounded;
 };
 
-import { accumulateDayFriction, calculateRouteFrictionScore } from './frictionAccumulatorService';
-
-// Chapter 16 §9: Final polishing pass for Master Travel Agent nuance.
-// 1. Farewell Night: Suggst a high-quality food attraction for the final night.
-// 2. Golden Hour: Ensure photography-tagged items are in the first/last slots.
-const polishItineraryFinalPass = (
+// Final "master travel agent" polishing pass, per itinerary-improvement-plan.md §9:
+// 1. Farewell Night: bias the ranker toward a high-quality food attraction for the final night.
+// 2. Golden Hour: pin photography-tagged items to the first/last activity slot of their day.
+export const polishItineraryFinalPass = (
   itinerary: PromptItinerary,
   shortlistByDestination: Record<string, AttractionCatalogEntry[]>
 ): PromptItinerary => {
@@ -1342,7 +1341,7 @@ const polishItineraryFinalPass = (
   return output;
 };
 
-// Chapter 16 §1: Fatigue Accumulator. Tracks cumulative travel friction and
+// itinerary-improvement-plan.md §4 (Fatigue Accumulator). Tracks cumulative travel friction and
 // forces a "Rest/Hub" day (no vehicle transfers, capped activities) when
 // travelers are likely to be burned out.
 const enforceFatigueManagement = (
@@ -1827,7 +1826,7 @@ const attachAttractionMetadata = async (
   return { durationMetadataByName, transferNotesByDay };
 };
 
-const mapItems = (
+export const mapItems = (
   itinerary: PromptItinerary,
   preferenceWeights: PromptWeights,
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
@@ -2158,6 +2157,17 @@ export const generateItineraryViaPromptPlan = async (input: ItineraryPromptPlanS
   }
 };
 
+// Renders a p2_days logistics-block note for the ut.eb (early-bird) / ut.no (night-owl) user
+// overrides (§8 of itinerary-improvement-plan.md). Both flags set is treated as a conflict
+// (deliberately not "eb wins" or "no wins" — that would silently drop one traveler's stated
+// preference) rather than either preference alone.
+export const buildTimingPreferenceNote = (ut?: { eb?: boolean; no?: boolean }): string => {
+  if (ut?.eb && ut?.no) return '\nTiming preference conflict: keep morning/evening starts flexible.';
+  if (ut?.eb) return '\nEarly-bird preference: favor earlier starts when venue access is verified; do not invent opening times.';
+  if (ut?.no) return '\nNight-owl preference: favor later activity slots when feasible; preserve terminal and meal buffers.';
+  return '';
+};
+
 const runGenerateItineraryViaPromptPlan = async (
   input: ItineraryPromptPlanServiceInput,
   tokenAcc: { promptTokens: number; completionTokens: number },
@@ -2329,13 +2339,7 @@ const runGenerateItineraryViaPromptPlan = async (
       : null,
     departureBufferMinutes: 180,
   });
-  const timingPreferenceNote = promptRequest.ut?.eb && promptRequest.ut?.no
-    ? '\nTiming preference conflict: keep morning/evening starts flexible.'
-    : promptRequest.ut?.eb
-      ? '\nEarly-bird preference: favor earlier starts when venue access is verified; do not invent opening times.'
-      : promptRequest.ut?.no
-        ? '\nNight-owl preference: favor later activity slots when feasible; preserve terminal and meal buffers.'
-        : '';
+  const timingPreferenceNote = buildTimingPreferenceNote(promptRequest.ut);
   const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}`;
   const dayDependency = buildPromptFingerprint({
     p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),

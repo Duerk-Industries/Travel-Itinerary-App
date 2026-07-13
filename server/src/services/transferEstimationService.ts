@@ -129,8 +129,8 @@ export class DirectionsApiTransferEstimator implements TransferEstimator {
     const heuristicEstimate = await new HeuristicTransferEstimator().estimate({ from, to, mobility, groupSize });
     if (!heuristicEstimate) return null;
 
-    // Chapter 16 §6: Minimize costs by skipping paid API calls for short walking legs
-    // where haversine is highly accurate.
+    // cost-estimator-admin-panel-plan.md / itinerary-improvement-plan.md §5: minimize costs by
+    // skipping paid API calls for short walking legs where haversine is highly accurate.
     if (heuristicEstimate.distanceKm < 0.5 && heuristicEstimate.mode === 'walk') {
       return heuristicEstimate;
     }

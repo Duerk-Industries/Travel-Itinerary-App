@@ -314,3 +314,17 @@ rather than adding migrations).
 - Whether Stripe's platform/monthly fees (beyond the per-transaction rate already modeled in
   `computeBreakEvenPremiumUsers`) should be represented as another hosting-style line item — recommended
   default: yes, as a hosting line item, not a special case in the break-even formula.
+
+## 8. Post-implementation verification pass
+
+Re-verified all 5 phases against the live code, including further hardening added by a separate session
+after Phase 4 shipped. That session's additions were all correct and already test-covered: a
+`REQUEST_PRICED_PROVIDER_KEYS` allowlist now rejects unknown provider keys in both the
+`providerCallsPerUserPerMonth` assumptions field and the `request-pricing` PATCH body (previously any
+string key was silently accepted), a missing upper bound on `premiumConversionPercent` (>100 was
+previously accepted) was added, `monthsBack` on the `GET` route is now clamped to 36 to keep the query
+bounded, and `getActualMonthlySpend` now de-dupes/merges same-provider-same-month counter rows
+defensively. All of these already had corresponding test cases in
+`admin-cost-estimator-routes.test.ts` — no coverage gap found here, and no functional bugs found in this
+phase's code. Full server suite and typecheck confirmed clean (see itinerary-improvement-plan.md §11 for
+the shared verification run covering both plans together).

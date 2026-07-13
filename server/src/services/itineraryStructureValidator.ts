@@ -7,7 +7,8 @@ type Day = { dt: string; it: Item[]; me: string[]; ln: string[] };
 export type StructureValidationResult<T> = { itinerary: T; issues: string[]; changed: boolean };
 const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
-// Chapter 16 §4: Hand-curated, versioned category-level closure rules to warn
+// itinerary-improvement-plan.md §4 (Sunday/Monday Trap): hand-curated, versioned category-level
+// closure rules to warn
 // about Sunday closures (Europe) or Monday museum breaks. Applied as a
 // logistics note rather than per-attraction factual claims.
 const DEFAULT_CLOSED_WEEKDAYS_BY_CATEGORY: Record<string, number[]> = {

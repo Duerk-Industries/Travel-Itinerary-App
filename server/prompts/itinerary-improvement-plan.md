@@ -527,3 +527,38 @@ heuristic, never throwing to the caller) — matching all three cases called for
 - Run offline golden-set evaluation on every PR and a shadow/A-B rollout in production. Track user saves,
   deletes/replacements, regenerations, must-see retention, manual time edits, and explicit ratings as
   outcome signals; do not optimize solely for an LLM-as-judge score.
+
+## 11. Post-implementation verification pass
+
+All phases (0A through 5) were independently re-verified against the live code after a separate session
+extended the implementation further (Fairness Floor injection, Fatigue Accumulator wired into the main
+pipeline, Farewell Night/Golden Hour polish, comfort-tier coherence, group-size transfer buffering,
+`ut.eb`/`ut.no` timing-preference notes, `terminalOnly` arrival/departure handling, and the real Route
+Friction Score formula from §4 — all confirmed correctly implemented and wired into
+`runGenerateItineraryViaPromptPlan`, not dead code). This pass found and closed the following gaps rather
+than re-litigating already-correct work:
+
+- **Real test coverage gaps closed** (the underlying logic was correct; it just had zero test coverage):
+  `terminalOnly` in `buildArrivalDepartureFacts` (a day with no booked transfer must show `maxActivities:
+  0`, distinct from a "heavy" booked arrival's `1`) — added to `phase2LogisticsRules.test.ts`. The
+  category-level Sunday/Monday closure *warning* path in `validateAndRepairItineraryStructure` (distinct
+  from the verified-closure *removal* path, which was already tested) — added to
+  `itineraryPhase3Orchestration.test.ts`. `polishItineraryFinalPass` (Farewell Night + Golden Hour),
+  `mapItems`'s mobility-L accessibility note, and `buildTimingPreferenceNote` (`ut.eb`/`ut.no`) had no
+  test coverage at all and weren't even exported — exported all three (pure functions, no behavior
+  change) and added `itineraryPolishAndTiming.test.ts` (11 tests). `weightedInterestCoverage` and
+  `estimatedTravelMinutesPerActivityDay` in `evaluateItineraryBaseline` were implemented but every
+  existing test fixture happened to exercise only their `null` fallback path — added real coverage to
+  `itinerary-evaluation.test.ts`, which caught that an empty-but-present `transferMinutesByDay` map
+  correctly returns `0` (not `null`) since the real pipeline always passes the map.
+- **Code hygiene, no behavior change:** moved a `frictionAccumulatorService` import from mid-file back to
+  the top of `itineraryPromptPlanService.ts`, and replaced several `// Chapter 16 §N` code comments
+  (a citation to an unrelated deployment doc, `docs/temp/Chapter_16_Test_Deployment_and_Production_
+  Cutover.md`, that has nothing to do with itinerary logic) with correct references to this plan's own
+  section numbers.
+- **No functional bugs found.** Full server suite: 1341 tests, only the 2 known pre-existing failures
+  (`captureNeverBlocks`, `ingestion.non-llm-fixtures`) plus occasional unrelated ingestion-test timeouts
+  under full-suite load (confirmed to pass cleanly in isolation — a load/flakiness issue, not a
+  regression). Full app suite: 788 tests, only the 1 known pre-existing failure (`aiOpsDeepLinking`).
+  Both confirmed pre-existing via `git stash`/history in earlier verification passes. Typecheck clean on
+  both packages throughout.

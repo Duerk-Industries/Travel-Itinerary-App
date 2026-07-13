@@ -23,6 +23,20 @@ describe('Phase 3 prompt and deterministic orchestration', () => {
     expect(result.issues.some((issue) => /verified closure/i.test(issue))).toBe(true);
   });
 
+  test('warns (but does not remove) a category-level likely closure with no verified evidence', () => {
+    // 2026-08-03 is a Monday — many European museums close on Mondays (category default), but
+    // this is only ever a warning/logistics note, never a removal, since there's no per-attraction
+    // verified closure evidence for it (matches this project's no-fabricated-facts guardrail).
+    const itinerary = {
+      dy: [{ dt: '2026-08-03', me: ['BQ', 'LC', 'DL'], ln: [], it: [['M', 'A', 'City Art Museum'] as [string, string, string]] }],
+    };
+    const result = validateAndRepairItineraryStructure({ itinerary });
+    expect(result.itinerary.dy[0].it).toHaveLength(1);
+    expect(result.itinerary.dy[0].it[0][2]).toBe('City Art Museum');
+    expect(result.issues.some((issue) => /may be closed/i.test(issue))).toBe(true);
+    expect(result.issues.some((issue) => /verified closure/i.test(issue))).toBe(false);
+  });
+
   test('checked-in p2 includes pods, logistics, golden hour, market lunch, group, and luxury rules', () => {
     const prompt = fs.readFileSync(path.resolve(__dirname, '../prompts/prompts/p2_days.md'), 'utf8');
     for (const expected of ['{{ATTRACTION_PODS}}', '{{LOGISTICS_FACTS}}', 'golden-hour', 'Food-market lunch', 'groups larger than 4', 'comfort=L']) expect(prompt).toContain(expected);

@@ -39,4 +39,69 @@ describe('itinerary Phase 0A baseline evaluation', () => {
     });
     expect(evaluateBudgetMonotonicity({ higherBudget, lowerBudget, addedPaidItemsAreMustSees: true }).valid).toBe(true);
   });
+
+  test('weightedInterestCoverage: covers only the high-weight (>=36%) dimensions that have a matching activity', () => {
+    const highWeightMix = { outdoors: 10, adventure: 5, culture: 40, food: 40, nightlife: 5, relax: 0, photography: 0, authentic_local: 0, iconic_landmarks: 0 };
+    const result = evaluateItineraryBaseline({
+      activities: [
+        { name: 'Museum', date: '2026-08-01', activityType: 'Ticketed Attraction', interestTags: ['culture'] },
+        { name: 'Park walk', date: '2026-08-01', activityType: 'Open Access', interestTags: ['outdoors'] },
+      ],
+      transfers: [], mustSees: [], weights: highWeightMix, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    });
+    // culture (40%) and food (40%) are the only high-weight dims; only culture has a matching
+    // activity (the museum) — food (40%) has none, so coverage is 1/2, not 2/2 or null.
+    expect(result.weightedInterestCoverage).toBe(0.5);
+  });
+
+  test('weightedInterestCoverage: full coverage when every high-weight dimension has a match', () => {
+    const highWeightMix = { outdoors: 0, adventure: 0, culture: 36, food: 0, nightlife: 0, relax: 0, photography: 0, authentic_local: 0, iconic_landmarks: 64 };
+    const result = evaluateItineraryBaseline({
+      activities: [
+        { name: 'Museum', date: '2026-08-01', activityType: 'Ticketed Attraction', interestTags: ['culture'] },
+        { name: 'Landmark tour', date: '2026-08-02', activityType: 'Tour', interestTags: ['iconic_landmarks'] },
+      ],
+      transfers: [], mustSees: [], weights: highWeightMix, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    });
+    expect(result.weightedInterestCoverage).toBe(1);
+  });
+
+  test('estimatedTravelMinutesPerActivityDay: averages recorded transfer minutes across distinct activity days', () => {
+    const result = evaluateItineraryBaseline({
+      activities: [
+        { name: 'Museum', date: '2026-08-01', activityType: 'Ticketed Attraction' },
+        { name: 'Park', date: '2026-08-01', activityType: 'Open Access' },
+        { name: 'Tour', date: '2026-08-02', activityType: 'Tour' },
+      ],
+      transfers: [], mustSees: [], weights, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      transferMinutesByDay: new Map([[1, 40], [2, 20]]),
+    });
+    // 2 distinct activity dates (2026-08-01, 2026-08-02), total 60 minutes -> 30/day.
+    expect(result.estimatedTravelMinutesPerActivityDay).toBe(30);
+  });
+
+  test('estimatedTravelMinutesPerActivityDay: 0 (not null) when transferMinutesByDay is present but empty', () => {
+    // The real pipeline (itineraryPromptPlanService.ts) always builds and passes this map, even
+    // when it ends up empty (no consecutive geocoded pairs) — 0 correctly means "no recorded
+    // inter-item travel," not "unmeasured."
+    const result = evaluateItineraryBaseline({
+      activities: [{ name: 'Museum', date: '2026-08-01', activityType: 'Ticketed Attraction' }],
+      transfers: [], mustSees: [], weights, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      transferMinutesByDay: new Map(),
+    });
+    expect(result.estimatedTravelMinutesPerActivityDay).toBe(0);
+  });
+
+  test('estimatedTravelMinutesPerActivityDay: null when there are no activity days to average over', () => {
+    const result = evaluateItineraryBaseline({
+      activities: [],
+      transfers: [], mustSees: [], weights, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    });
+    expect(result.estimatedTravelMinutesPerActivityDay).toBeNull();
+  });
 });
