@@ -33,6 +33,7 @@ import internalBillingRoutes from './routes/internalBillingRoutes';
 import internalDeployRoutes from './routes/internalDeployRoutes';
 import prometheusRoutes from './routes/prometheusRoutes';
 import staticMapRoutes from './routes/staticMapRoutes';
+import getYourGuideRoutes from './routes/getYourGuideRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -117,7 +118,7 @@ app.use(cors({
     return callback(new Error(msg));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent'],
   exposedHeaders: ['X-Request-Id'],
 }));
 app.use(express.json());
@@ -365,6 +366,7 @@ app.use('/api/traits', traitRoutes);
 app.use('/api/lodgings', lodgingRoutes);
 app.use('/api/places', placeRoutes);
 app.use('/api/maps', staticMapRoutes);
+app.use('/api/affiliate', getYourGuideRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
