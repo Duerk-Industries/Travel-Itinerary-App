@@ -92,9 +92,15 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
 
   const photoUrl = placeDetails?.details?.photos?.[0]?.photoUri;
   const imageUrl = lodging?.imageUrl || photoUrl;
-  const mapImageUrl = lodging?.address ? buildStaticMapUrl(lodging.address) : '';
+  const mapImageUrl = lodging?.address ? buildStaticMapUrl(lodging.address, backendUrl) : '';
   const imageSource = useImageSource(imageUrl);
-  const mapImageSource = useImageSource(mapImageUrl);
+  // React Native's Image supports request headers, allowing the authenticated
+  // server proxy to protect the Google Maps key while still rendering bytes
+  // directly as an image.
+  const mapImageSource = useMemo(
+    () => (mapImageUrl ? { uri: mapImageUrl, headers: requestHeaders } : undefined),
+    [mapImageUrl, requestHeaders]
+  );
 
   if (!visible || !lodging) return null;
   const dateRange = `${lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD'}${lodging.checkOutDate ? ` – ${formatDateLong(lodging.checkOutDate)}` : ''}`;
@@ -238,7 +244,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
               <Image style={[detailStyles.mapImage, { height: mapHeight }]} source={mapImageSource} resizeMode="cover" />
               <View style={detailStyles.mapMeta}>
                 <Text style={detailStyles.summaryLabel}>Location preview</Text>
-                <Text style={detailStyles.summaryValue} numberOfLines={2}>
+                <Text style={detailStyles.summaryValue} numberOfLines={2} onPress={() => onOpenMap(lodging.address)}>
                   {lodging.address}
                 </Text>
                 <TouchableOpacity onPress={() => onOpenMap(lodging.address)}>

@@ -1,5 +1,7 @@
 import type { Request } from 'express';
 import { getEnvValue } from '../../env';
+import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
+import { recordProviderRequestCost } from '../../apis/providerBudgeting';
 import { createGmailOAuthState, decodeGmailOAuthState } from '../gmail/oauth';
 import type { ExtractionResult, IngestionPayload } from '../contracts';
 import { classifyDocumentContent, isSupportedMimeType, normalizeMimeType } from '../shared/parserSelection';
@@ -10,6 +12,15 @@ const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 const GOOGLE_AUTH_BASE_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GMAIL_API_BASE_URL = 'https://gmail.googleapis.com/gmail/v1/users/me';
+
+export const GMAIL_API_CALLERS = {
+  oauthTokenExchange: 'GMAIL_OAUTH_TOKEN_EXCHANGE',
+  oauthTokenRefresh: 'GMAIL_OAUTH_TOKEN_REFRESH',
+  profile: 'GMAIL_PROFILE',
+  messageSearch: 'GMAIL_MESSAGE_SEARCH',
+  messageRead: 'GMAIL_MESSAGE_READ',
+  attachmentRead: 'GMAIL_ATTACHMENT_READ',
+} as const;
 
 type GmailTokenResponse = {
   access_token: string;
@@ -74,7 +85,14 @@ const collectSupportedParts = (part: GmailPayloadPart | undefined): GmailPayload
   return currentSupported ? [part, ...nested] : nested;
 };
 
-const fetchGoogle = async (url: string, init: RequestInit): Promise<Response> => {
+/**
+ * All Gmail/OAuth HTTP requests go through this wrapper.  Keeping the
+ * reservation next to the actual fetch prevents new call sites from
+ * accidentally bypassing the app-wide limiter and cost accounting.
+ */
+const fetchGoogle = async (url: string, init: RequestInit, caller: string): Promise<Response> => {
+  await reserveApiUsageOrThrow({ provider: 'GMAIL', caller });
+  await recordProviderRequestCost({ provider: 'GMAIL' });
   return fetch(url, init);
 };
 
@@ -120,7 +138,7 @@ export const exchangeGmailCodeForTokens = async (params: {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
-  });
+  }, GMAIL_API_CALLERS.oauthTokenExchange);
   if (!response.ok) {
     throw new IngestionError('provider_auth_expired', 400, undefined, 'Unable to exchange Gmail authorization code.');
   }
@@ -151,7 +169,7 @@ export const refreshGmailAccessToken = async (params: {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
-  });
+  }, GMAIL_API_CALLERS.oauthTokenRefresh);
   if (!response.ok) {
     throw new IngestionError('provider_auth_expired', 400, undefined, 'Unable to refresh Gmail access token.');
   }
@@ -169,7 +187,7 @@ export const refreshGmailAccessToken = async (params: {
 export const fetchGmailProfile = async (accessToken: string): Promise<{ emailAddress: string; messagesTotal?: number; threadsTotal?: number }> => {
   const response = await fetchGoogle(`${GMAIL_API_BASE_URL}/profile`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  }, GMAIL_API_CALLERS.profile);
   if (!response.ok) {
     throw new IngestionError('provider_auth_expired', 400, undefined, 'Unable to read Gmail profile.');
   }
@@ -191,7 +209,7 @@ export const listCandidateGmailMessages = async (accessToken: string, lookbackDa
   url.searchParams.set('q', gmailSearchQuery(lookbackDays));
   const response = await fetchGoogle(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  }, GMAIL_API_CALLERS.messageSearch);
   if (!response.ok) {
     throw new IngestionError('provider_auth_expired', 400, undefined, 'Unable to search Gmail messages.');
   }
@@ -204,7 +222,7 @@ export const getGmailMessage = async (accessToken: string, messageId: string): P
   url.searchParams.set('format', 'full');
   const response = await fetchGoogle(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  }, GMAIL_API_CALLERS.messageRead);
   if (!response.ok) {
     throw new IngestionError('provider_auth_expired', 400, undefined, 'Unable to read Gmail message.');
   }
@@ -214,7 +232,7 @@ export const getGmailMessage = async (accessToken: string, messageId: string): P
 const fetchGmailAttachmentBytes = async (accessToken: string, messageId: string, attachmentId: string): Promise<Buffer> => {
   const response = await fetchGoogle(`${GMAIL_API_BASE_URL}/messages/${messageId}/attachments/${attachmentId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  }, GMAIL_API_CALLERS.attachmentRead);
   if (!response.ok) {
     throw new IngestionError('parse_failed_try_again', 400, undefined, 'Unable to read Gmail attachment.');
   }

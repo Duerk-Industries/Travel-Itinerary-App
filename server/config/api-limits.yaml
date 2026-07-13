@@ -55,6 +55,7 @@ providers:
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+      PARSE_FLIGHT_TEXT: 200
 
   ZAI:
     window: hour
@@ -138,6 +139,25 @@ providers:
     callers:
       ATTRACTION_TRANSFER_MATRIX: 200
 
+  GMAIL:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      GMAIL_OAUTH_TOKEN_EXCHANGE: 100
+      GMAIL_OAUTH_TOKEN_REFRESH: 500
+      GMAIL_PROFILE: 500
+      GMAIL_MESSAGE_SEARCH: 500
+      GMAIL_MESSAGE_READ: 1000
+      GMAIL_ATTACHMENT_READ: 1000
+
+  GOOGLE_STATIC_MAPS:
+    window: hour
+    windowHours: 24
+    overall: 500
+    callers:
+      STATIC_MAP_PREVIEW: 500
+
   COUNTRY_NOW:
     window: hour
     windowHours: 24
@@ -196,6 +216,8 @@ requestPricing:
   SERPAPI: 0
   WIKIMEDIA: 0
   GOOGLE_ROUTES: 0
+  GMAIL: 0
+  GOOGLE_STATIC_MAPS: 0
   UNSPLASH: 0
   SMTP: 0
   COUNTRY_NOW: 0
@@ -225,6 +247,8 @@ caching:
     signedUrlTtlMs: 3600000
   googlePlaces:
     detailsCacheTimeoutMinutes: 1440
+  googleStaticMaps:
+    cacheTtlMinutes: 1440
   unsplash:
     dnsLogTtlMs: 300000
   frankfurter:

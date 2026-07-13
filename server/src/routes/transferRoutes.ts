@@ -23,7 +23,7 @@ import { isEmailConfigured, sendShareEmail } from '../mailer';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
 import { assertCanUseFeature, getUserRoleForToken } from '../services/entitlementService';
-import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { FlightParserConfigurator } from '../services/flightParserLLM';
 
 const TRANSFER_TYPES = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
@@ -117,7 +117,7 @@ router.post('/parse', async (req, res) => {
     const result = await parser.parse(text);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
   }
 });
 

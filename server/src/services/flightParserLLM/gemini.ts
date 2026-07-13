@@ -2,6 +2,10 @@ import { FlightParserStrategy } from './strategy';
 import { logError } from '../../logger';
 import { ParsedFlight } from './types';
 import { getEnvValue } from '../../env';
+import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
+import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from '../../apis/providerBudgeting';
+
+export const GEMINI_FLIGHT_PARSER_CALLER = 'PARSE_FLIGHT_TEXT';
 
 export class GeminiFlightParser implements FlightParserStrategy {
   async parse(text: string): Promise<{ primary: Partial<ParsedFlight>; bulk: ParsedFlight[] }> {
@@ -9,6 +13,11 @@ export class GeminiFlightParser implements FlightParserStrategy {
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
+
+    // This parser predates the provider registry, so reserve and account for
+    // it explicitly to keep direct Gemini traffic in the same admin buckets
+    // as registry-backed Gemini calls.
+    await reserveApiUsageOrThrow({ provider: 'GEMINI', caller: GEMINI_FLIGHT_PARSER_CALLER });
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
@@ -60,7 +69,28 @@ ${text.substring(0, 10000)}
         throw new Error(`Gemini API error: ${response.status} ${errorText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
+      const promptTokens = Number(data?.usageMetadata?.promptTokenCount ?? 0);
+      const completionTokens = Number(data?.usageMetadata?.candidatesTokenCount ?? 0);
+      try {
+        const amountMicros = estimateAiCostMicros({
+          provider: 'GEMINI',
+          model: 'gemini-2.5-flash',
+          promptTokens: Number.isFinite(promptTokens) ? promptTokens : 0,
+          completionTokens: Number.isFinite(completionTokens) ? completionTokens : 0,
+        });
+        if ((amountMicros ?? 0) > 0) {
+          await recordApiCost({
+            provider: 'GEMINI',
+            windowKey: getApiBudgetWindowKey(),
+            amountMicros: amountMicros ?? 0,
+          });
+        }
+      } catch (accountingError) {
+        // Accounting must never turn a successful provider response into a
+        // failed flight parse; the limiter reservation already happened.
+        logError('[FlightParser] Gemini cost accounting failed', accountingError);
+      }
       const contentText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       
       const cleanJsonStr = contentText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
