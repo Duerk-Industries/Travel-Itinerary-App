@@ -4,6 +4,7 @@ import { getApiCacheSetting } from '../config/apiLimits';
 import { createGetYourGuideDescriptor, resolveGetYourGuideRedirect } from '../services/getYourGuideAffiliateService';
 import { HttpRateLimitExceededError, reserveRequestRateLimits } from '../services/httpRateLimitService';
 import { incrementMetric } from '../metrics';
+import { recordGetYourGuideClick } from '../services/getYourGuideObservability';
 
 const router = Router();
 const MAX_DESCRIPTOR_BODY_BYTES = 64 * 1024;
@@ -73,6 +74,7 @@ router.get('/getyourguide', async (req: Request, res: Response, next: NextFuncti
     }
     if (req.header('X-Analytics-Consent')?.toLowerCase() === 'granted') {
       incrementMetric('getyourguide_affiliate_click', { kind: 'activity' });
+      recordGetYourGuideClick();
     }
     res.redirect(302, redirectUrl);
   } catch (err) {

@@ -41,6 +41,7 @@ import {
   updateApiLimitProviderConfig,
 } from '../config/apiLimits';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
+import { GETYOURGUIDE_FEATURE_FLAG, getGetYourGuidePartnerConfig } from '../config/getYourGuide';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
 import {
@@ -51,6 +52,8 @@ import {
 import { readDto } from '../utils/dtoParse';
 import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
+import { getGetYourGuideObservabilitySnapshot } from '../services/getYourGuideObservability';
+import { getGetYourGuideApiCircuitStatus } from '../apis/getYourGuideApi';
 import { listLocalAiCaptures } from '../ai/analytics/captureBrowser';
 import { runAiDailyAggregation } from '../ai/analytics/aggregationJob';
 import {
@@ -1222,7 +1225,7 @@ router.get('/audit-log', async (req, res) => {
 router.get('/api-limits', async (_req, res) => {
   try {
     const config = getApiLimitsConfig();
-    const [usage, budgets] = await Promise.all([getApiUsageSummary(), getApiBudgetSummary()]);
+    const [usage, budgets, featureFlags] = await Promise.all([getApiUsageSummary(), getApiBudgetSummary(), listAdminFeatureFlags()]);
     const providers = Object.entries(config.providers).map(([provider, providerConfig]) => ({
       budgetingModels: Object.entries(getApiBudgetProviderConfig(provider)?.models ?? {}).map(([model, pricing]) => ({
         model,
@@ -1246,7 +1249,22 @@ router.get('/api-limits', async (_req, res) => {
       })),
       overallUsage: usage.find((u) => u.provider === provider && u.scope === 'overall')?.used ?? 0,
     }));
-    res.json({ providers, caching: config.caching });
+    const gygProvider = providers.find((provider) => provider.provider === 'GETYOURGUIDE') ?? null;
+    const gygConfig = getGetYourGuidePartnerConfig();
+    res.json({
+      providers,
+      caching: config.caching,
+      getYourGuide: {
+        featureEnabled: featureFlags.find((flag) => flag.key === GETYOURGUIDE_FEATURE_FLAG)?.enabled === true,
+        partnerConfigured: Boolean(gygConfig.partnerId),
+        apiConfigured: Boolean(gygConfig.apiBaseUrl && gygConfig.hasApiToken),
+        cachePermission: gygConfig.hasApiCachePermission,
+        provider: gygProvider,
+        observability: getGetYourGuideObservabilitySnapshot(),
+        circuit: getGetYourGuideApiCircuitStatus(),
+        revenueDashboard: 'separate',
+      },
+    });
   } catch (err) {
     logError('[admin] failed to get api limits', err);
     res.status(500).json({ error: 'Failed to get API limits' });

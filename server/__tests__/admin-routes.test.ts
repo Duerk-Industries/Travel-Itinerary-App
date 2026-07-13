@@ -830,6 +830,17 @@ describe('Admin routes', () => {
         const wikimediaProvider = getRes.body.providers.find((provider: any) => provider.provider === 'WIKIMEDIA');
         const serpApiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'SERPAPI');
         const openMeteoProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPEN_METEO');
+        expect(getRes.body.getYourGuide).toEqual(expect.objectContaining({
+          featureEnabled: false,
+          partnerConfigured: expect.any(Boolean),
+          apiConfigured: expect.any(Boolean),
+          cachePermission: expect.any(Boolean),
+          revenueDashboard: 'separate',
+          observability: expect.objectContaining({
+            cache: expect.objectContaining({ hits: expect.any(Number), stale: expect.any(Number), negative: expect.any(Number) }),
+            latencyMs: expect.objectContaining({ sampleCount: expect.any(Number) }),
+          }),
+        }));
         expect(wikimediaProvider.callers.map((caller: any) => caller.caller)).toEqual(expect.arrayContaining([
           'ATTRACTION_DISCOVERY_WIKIPEDIA', 'ATTRACTION_WIKIPEDIA_ENRICHMENT',
           'ATTRACTION_WIKIPEDIA_SUMMARY', 'ATTRACTION_WIKIMEDIA_PAGEVIEWS',

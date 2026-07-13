@@ -7,6 +7,7 @@ import {
   isGetYourGuideFeatureEnabled,
 } from '../config/getYourGuide';
 import { getEnvValue } from '../env';
+import { recordGetYourGuideApiRequest, recordGetYourGuideRetry } from '../services/getYourGuideObservability';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordProviderRequestCost } from './providerBudgeting';
 
@@ -166,6 +167,12 @@ const circuitOpenMs = (): number => Math.max(1_000, Math.min(10 * 60_000, Math.f
 
 export const resetGetYourGuideApiCircuitForTests = (): void => { circuit.failures = 0; circuit.openedUntilMs = 0; };
 
+export const getGetYourGuideApiCircuitStatus = (): { open: boolean; consecutiveFailures: number; openedUntil: string | null } => ({
+  open: circuit.openedUntilMs > Date.now(),
+  consecutiveFailures: circuit.failures,
+  openedUntil: circuit.openedUntilMs > Date.now() ? new Date(circuit.openedUntilMs).toISOString() : null,
+});
+
 const assertCircuitClosed = (): void => {
   if (circuit.openedUntilMs > Date.now()) throw new GetYourGuideApiError('circuit_open', 'GetYourGuide circuit is open');
   if (circuit.openedUntilMs) { circuit.openedUntilMs = 0; circuit.failures = 0; }
@@ -233,6 +240,8 @@ export const searchGetYourGuideActivities = async (params: GetYourGuideSearchReq
     if (params.signal?.aborted) throw new GetYourGuideApiError('aborted', 'GetYourGuide request aborted');
     await reserveApiUsageOrThrow({ provider: GETYOURGUIDE_PROVIDER, caller: params.caller });
     await recordProviderRequestCost({ provider: GETYOURGUIDE_PROVIDER });
+    const attemptStartedAt = Date.now();
+    let attemptRecorded = false;
     try {
       const response = await fetchAttempt(params, url, token);
       if (response.ok) {
@@ -243,21 +252,34 @@ export const searchGetYourGuideActivities = async (params: GetYourGuideSearchReq
           throw new GetYourGuideApiError('malformed_response', 'GetYourGuide response was not valid JSON');
         }
         const result = normalizeGetYourGuideSearchResponse(body);
+        recordGetYourGuideApiRequest({ success: true, status: response.status, durationMs: Date.now() - attemptStartedAt });
         recordSuccess();
         return result;
       }
+      recordGetYourGuideApiRequest({ success: false, status: response.status, durationMs: Date.now() - attemptStartedAt });
+      attemptRecorded = true;
       const retryable = response.status === 429 || response.status >= 500;
       const error = new GetYourGuideApiError('http', `GetYourGuide request failed with status ${response.status}`, {
         status: response.status,
         retryAfterMs: parseRetryAfterMs(response.headers.get('retry-after')),
       });
       if (!retryable || attempt >= retries) throw error;
+      recordGetYourGuideRetry();
       await sleep(error.retryAfterMs ?? Math.max(0, Math.min(5_000, Number(params.retryDelayMs ?? 100) * (attempt + 1))), params.signal);
     } catch (err) {
+      if (!attemptRecorded) {
+        recordGetYourGuideApiRequest({
+          success: false,
+          status: err instanceof GetYourGuideApiError ? err.status : undefined,
+          code: err instanceof GetYourGuideApiError ? err.code : 'network_error',
+          durationMs: Date.now() - attemptStartedAt,
+        });
+      }
       if (err instanceof GetYourGuideApiError && ['aborted', 'timeout', 'disabled', 'configuration', 'invalid_request', 'circuit_open'].includes(err.code)) throw err;
       if (err instanceof GetYourGuideApiError && err.code === 'malformed_response') { recordFailure(); throw err; }
       if (err instanceof GetYourGuideApiError && err.code === 'http' && err.status !== 429 && (err.status ?? 0) < 500) { recordFailure(); throw err; }
       if (attempt >= retries) { recordFailure(); throw err; }
+      recordGetYourGuideRetry();
       await sleep(Math.max(0, Math.min(5_000, Number(params.retryDelayMs ?? 100) * (attempt + 1))), params.signal);
     }
   }

@@ -2085,12 +2085,34 @@ type ApiLimitProviderForm = {
   callers: Record<string, string>;
 };
 
+type GetYourGuideAdminStatus = {
+  featureEnabled: boolean;
+  partnerConfigured: boolean;
+  apiConfigured: boolean;
+  cachePermission: boolean;
+  revenueDashboard: 'separate';
+  circuit?: { open: boolean; consecutiveFailures: number; openedUntil: string | null };
+  observability?: {
+    requests: number;
+    successes: number;
+    failures: number;
+    retries: number;
+    rateLimited: number;
+    clicks: number;
+    cache: { hits: number; stale: number; negative: number; misses: number; total: number };
+    suppressionByReason: Record<string, number>;
+    failuresByCode: Record<string, number>;
+    latencyMs: { p50: number | null; p95: number | null; sampleCount: number };
+  };
+};
+
 const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
   theme,
 }) => {
   const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
+  const [getYourGuideStatus, setGetYourGuideStatus] = useState<GetYourGuideAdminStatus | null>(null);
   const [providerForms, setProviderForms] = useState<Record<string, ApiLimitProviderForm>>({});
   const [caching, setCaching] = useState<Record<string, Record<string, number>>>({});
   const [cachingForms, setCachingForms] = useState<Record<string, { values: Record<string, string>; reason: string }>>({});
@@ -2108,6 +2130,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
       const data = await apiFetch(backendUrl, headers, '/api-limits');
       const nextProviders = ((data as any).providers ?? []) as ApiLimitProvider[];
       setProviders(nextProviders);
+      setGetYourGuideStatus(((data as any).getYourGuide ?? null) as GetYourGuideAdminStatus | null);
       setProviderForms(
         Object.fromEntries(
           nextProviders.map((provider) => [
@@ -2358,6 +2381,17 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
         Limits are configured in api-limits.yaml. Usage resets per window period, request counts are durable, and provider spend is estimated from recorded token usage.
       </Text>
       {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {getYourGuideStatus ? (
+        <View style={[localStyles.card, getCardStyle(theme)]} testID="admin-getyourguide-status">
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>GetYourGuide operations</Text>
+          <Text style={[localStyles.cardSub, { color: getYourGuideStatus.featureEnabled ? theme.colors.success : theme.colors.textMuted }]}>Kill switch: {getYourGuideStatus.featureEnabled ? 'enabled' : 'disabled'} | Partner configuration: {getYourGuideStatus.partnerConfigured ? 'present' : 'missing'} | API: {getYourGuideStatus.apiConfigured ? 'configured' : 'not configured'}</Text>
+          <Text style={[localStyles.cardSub, { color: getYourGuideStatus.circuit?.open ? theme.colors.error : theme.colors.textMuted }]}>Partner circuit: {getYourGuideStatus.circuit?.open ? 'open' : 'closed'} | Consecutive failures: {getYourGuideStatus.circuit?.consecutiveFailures ?? 0}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Cache permission: {getYourGuideStatus.cachePermission ? 'written permission recorded' : 'request-only (no persistence)'} | Revenue/commission: separate dashboard</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Requests: {getYourGuideStatus.observability?.requests ?? 0} | Successes: {getYourGuideStatus.observability?.successes ?? 0} | Failures: {getYourGuideStatus.observability?.failures ?? 0} | 429s: {getYourGuideStatus.observability?.rateLimited ?? 0} | Clicks: {getYourGuideStatus.observability?.clicks ?? 0}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Cache fresh: {getYourGuideStatus.observability?.cache.hits ?? 0} | stale: {getYourGuideStatus.observability?.cache.stale ?? 0} | negative: {getYourGuideStatus.observability?.cache.negative ?? 0} | misses: {getYourGuideStatus.observability?.cache.misses ?? 0}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Latency p95: {getYourGuideStatus.observability?.latencyMs.p95 == null ? 'n/a' : `${getYourGuideStatus.observability.latencyMs.p95} ms`} | Suppression reasons: {Object.keys(getYourGuideStatus.observability?.suppressionByReason ?? {}).length ? Object.entries(getYourGuideStatus.observability?.suppressionByReason ?? {}).map(([reason, count]) => `${reason}=${count}`).join(', ') : 'none'}</Text>
+        </View>
+      ) : null}
       {providers.map((provider) => (
         <View key={provider.provider} style={[localStyles.card, getCardStyle(theme)]}>
           <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { hasGetYourGuideApiCachePermission } from '../config/getYourGuide';
 import { incrementMetric } from '../metrics';
+import { recordGetYourGuideCacheEvent, recordGetYourGuideSuppression } from '../services/getYourGuideObservability';
 import {
   searchGetYourGuideActivities,
   type GetYourGuideActivityProduct,
@@ -115,6 +116,7 @@ const writeCache = (key: string, result: GetYourGuideSearchResult): GetYourGuide
 const fetchAndCache = async (params: GetYourGuideActivityLookup, key: string, scopeKey: string): Promise<GetYourGuideActivityLookupResult | null> => {
   if (!reserveLookupBudget(scopeKey)) {
     incrementMetric('getyourguide.partner_lookup_suppressed', { reason: 'budget' });
+    recordGetYourGuideSuppression('budget');
     return null;
   }
   const result = await searchGetYourGuideActivities({
@@ -159,6 +161,9 @@ export const getGetYourGuideActivitySuggestions = async (params: GetYourGuideAct
     const found = findEntry(key);
     if (found) {
       const stale = found.entry.freshUntilMs <= Date.now();
+      if (found.negative) recordGetYourGuideCacheEvent('negative');
+      else recordGetYourGuideCacheEvent(stale ? 'stale' : 'fresh');
+      if (found.negative && stale) recordGetYourGuideCacheEvent('stale');
       incrementMetric(found.negative ? (stale ? 'getyourguide.partner_cache_negative_stale' : 'getyourguide.partner_cache_negative_hit') : (stale ? 'getyourguide.partner_cache_stale' : 'getyourguide.partner_cache_hit'));
       if (stale) void startFetch(params, key, requestScope);
       return { ...found.entry.result, stale };
@@ -167,8 +172,10 @@ export const getGetYourGuideActivitySuggestions = async (params: GetYourGuideAct
   if (!cachePermission) {
     // With no written permission, only the in-flight promise exists; the
     // response itself is never retained after this request completes.
+    recordGetYourGuideCacheEvent('miss');
     return startFetch(params, key, requestScope);
   }
+  recordGetYourGuideCacheEvent('miss');
   return startFetch(params, key, requestScope);
 };
 

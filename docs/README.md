@@ -71,6 +71,7 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [GetYourGuide Phase 3 Client CTA](getyourguide-phase-3.md)
 - [GetYourGuide Phase 4 Itinerary Integration](getyourguide-phase-4.md)
 - [GetYourGuide Phase 5 Partner API Enrichment](getyourguide-phase-5.md)
+- [GetYourGuide Phase 6 Operations and Rollout](getyourguide-phase-6.md)
 
 ## Root-Level Reference Notes
 
