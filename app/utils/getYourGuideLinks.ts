@@ -25,6 +25,7 @@ export type GetYourGuideClientActivity = {
 };
 
 const TOKEN_PATTERN = /^g1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const MAX_DESCRIPTOR_CACHE_ENTRIES = 256;
 const descriptorCache = new Map<string, GetYourGuideClientDescriptor>();
 const descriptorRequests = new Map<string, Promise<GetYourGuideClientDescriptor | null>>();
 
@@ -116,7 +117,13 @@ export const requestGetYourGuideDescriptor = async (params: {
       if (!response.ok) return null;
       const value = await response.json().catch(() => null);
       const descriptor = isGetYourGuideDescriptor(value) ? value : null;
-      if (descriptor) descriptorCache.set(cacheKey, descriptor);
+      if (descriptor) {
+        if (descriptorCache.size >= MAX_DESCRIPTOR_CACHE_ENTRIES) {
+          const oldestKey = descriptorCache.keys().next().value;
+          if (typeof oldestKey === 'string') descriptorCache.delete(oldestKey);
+        }
+        descriptorCache.set(cacheKey, descriptor);
+      }
       return descriptor;
     } catch {
       return null;
