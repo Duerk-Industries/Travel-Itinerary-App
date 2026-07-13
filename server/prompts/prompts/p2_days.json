@@ -1,7 +1,0 @@
-{
-  "id": "p2_days",
-  "model_intent": "mini",
-  "runtime_source": "p2_days.md",
-  "sys": "See p2_days.md; the markdown document is the authoritative runtime/default prompt.",
-  "usr": "routing={{STEP1_JSON}}\nnorm={{NORM_JSON}}\nshortlist={{ATTRACTION_SHORTLIST}}\npods={{ATTRACTION_PODS}}\nlogistics={{LOGISTICS_FACTS}}\nschema={{STEP2_SCHEMA_MIN}}\nSpecificity requirement: use concrete anchors. do NOT add generic event/festival suggestions. Tours/day trips must name a specific place or route anchor. Follow pod, golden-hour, food-market lunch, large-group, luxury, and logistics rules in p2_days.md."
-}
