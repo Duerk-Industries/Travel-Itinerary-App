@@ -106,21 +106,21 @@ export const requestGetYourGuideDescriptor = async (params: {
   const pending = descriptorRequests.get(cacheKey);
   if (pending) return pending;
   const request = (async (): Promise<GetYourGuideClientDescriptor | null> => {
-  try {
-    const response = await fetch(`${params.backendUrl}/api/affiliate/getyourguide/descriptor`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(params.headers ?? {}) },
-      body: JSON.stringify({ candidate, context: params.context ?? {} }),
-      signal: params.signal,
-    });
-    if (!response.ok) return null;
-    const value = await response.json().catch(() => null);
-    const descriptor = isGetYourGuideDescriptor(value) ? value : null;
-    if (descriptor) descriptorCache.set(cacheKey, descriptor);
-    return descriptor;
-  } catch {
-    return null;
-  }
+    try {
+      const response = await fetch(`${params.backendUrl}/api/affiliate/getyourguide/descriptor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(params.headers ?? {}) },
+        body: JSON.stringify({ candidate, context: params.context ?? {} }),
+        signal: params.signal,
+      });
+      if (!response.ok) return null;
+      const value = await response.json().catch(() => null);
+      const descriptor = isGetYourGuideDescriptor(value) ? value : null;
+      if (descriptor) descriptorCache.set(cacheKey, descriptor);
+      return descriptor;
+    } catch {
+      return null;
+    }
   })();
   descriptorRequests.set(cacheKey, request);
   try {
