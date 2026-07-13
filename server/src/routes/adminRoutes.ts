@@ -73,6 +73,7 @@ import {
   getActualMonthlySpend,
   updateCostEstimatorConfig,
   updateCostEstimatorRequestPricing,
+  REQUEST_PRICED_PROVIDER_KEYS,
 } from '../services/costEstimatorService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
@@ -1496,7 +1497,12 @@ router.patch('/api-limits/caching/:group', async (req, res) => {
 router.get('/cost-estimate', async (req, res) => {
   try {
     const monthsBackParam = Number(req.query.monthsBack);
-    const monthsBack = Number.isFinite(monthsBackParam) && monthsBackParam > 0 ? Math.floor(monthsBackParam) : 6;
+    // Keep the admin endpoint bounded even if a client submits an untrusted
+    // lookback value; the database retains history, but the UI only needs a
+    // practical reporting window.
+    const monthsBack = Number.isFinite(monthsBackParam) && monthsBackParam > 0
+      ? Math.min(36, Math.floor(monthsBackParam))
+      : 6;
     const config = await getCostEstimatorConfig();
     const [projected, actualMonths] = await Promise.all([
       Promise.resolve(computeProjectedMonthlyCost(config)),
@@ -1542,6 +1548,10 @@ router.patch('/cost-estimate/assumptions', async (req, res) => {
       return;
     }
   }
+  if (typeof assumptions.premiumConversionPercent !== 'undefined' && Number(assumptions.premiumConversionPercent) > 100) {
+    res.status(400).json({ error: 'premiumConversionPercent must be between 0 and 100' });
+    return;
+  }
   if (
     typeof assumptions.premiumMonthlyPriceUsdOverride !== 'undefined' &&
     assumptions.premiumMonthlyPriceUsdOverride !== null &&
@@ -1558,6 +1568,21 @@ router.patch('/cost-estimate/assumptions', async (req, res) => {
   ) {
     res.status(400).json({ error: 'providerCallsPerUserPerMonth must be an object of non-negative numbers' });
     return;
+  }
+  if (typeof assumptions.providerCallsPerUserPerMonth !== 'undefined') {
+    const unknownProvider = Object.keys(assumptions.providerCallsPerUserPerMonth as Record<string, unknown>)
+      .map((provider) => normalizeApiLimitKeyPart(provider))
+      .find((provider) => !(REQUEST_PRICED_PROVIDER_KEYS as readonly string[]).includes(provider));
+    if (unknownProvider) {
+      res.status(400).json({ error: `providerCallsPerUserPerMonth.${unknownProvider} is not a request-priced provider` });
+      return;
+    }
+    const invalidVolume = Object.entries(assumptions.providerCallsPerUserPerMonth as Record<string, unknown>)
+      .find(([, value]) => !Number.isFinite(Number(value)) || Number(value) < 0);
+    if (invalidVolume) {
+      res.status(400).json({ error: `providerCallsPerUserPerMonth.${invalidVolume[0]} must be a non-negative number` });
+      return;
+    }
   }
 
   try {
@@ -1582,10 +1607,13 @@ router.patch('/cost-estimate/request-pricing', async (req, res) => {
     return;
   }
   const invalidEntry = Object.entries(requestPricing as Record<string, unknown>).find(
-    ([, value]) => !Number.isFinite(Number(value)) || Number(value) < 0
+    ([provider, value]) => !(REQUEST_PRICED_PROVIDER_KEYS as readonly string[]).includes(normalizeApiLimitKeyPart(provider)) || !Number.isFinite(Number(value)) || Number(value) < 0
   );
   if (invalidEntry) {
-    res.status(400).json({ error: `requestPricing.${invalidEntry[0]} must be a non-negative number` });
+    const provider = normalizeApiLimitKeyPart(invalidEntry[0]);
+    res.status(400).json({ error: (REQUEST_PRICED_PROVIDER_KEYS as readonly string[]).includes(provider)
+      ? `requestPricing.${invalidEntry[0]} must be a non-negative number`
+      : `requestPricing.${invalidEntry[0]} is not a request-priced provider` });
     return;
   }
 

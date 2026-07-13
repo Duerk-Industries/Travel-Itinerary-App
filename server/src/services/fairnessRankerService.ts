@@ -7,8 +7,9 @@ export type RankedAttraction = { entry: AttractionCatalogEntry; score: number; i
 export type TravelerInterest = { travelerId: string; interests: string[] };
 
 const tagToWeight: Record<InterestTag, keyof InterestWeights> = {
-  outdoors: 'outdoors', culture: 'culture', food: 'food', nightlife: 'nightlife', relax: 'relax',
+  outdoors: 'outdoors', photography: 'photography', adventure: 'adventure', culture: 'culture', food: 'food', nightlife: 'nightlife', relax: 'relax',
   shopping: 'authentic_local', 'day trips': 'adventure', events: 'nightlife', classes: 'authentic_local',
+  authentic_local: 'authentic_local', iconic_landmarks: 'iconic_landmarks',
 };
 const normalize = (value: string): string => {
   const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();

@@ -218,11 +218,17 @@ const processExistingImportJob = async (
       result: finalExtraction,
       outcome: 'success',
     });
-    void maybeRunShadowParse({
+    const shadowParsePromise = maybeRunShadowParse({
       intakeId: job.id,
       doc: normalized,
       productionResult: finalExtraction,
     });
+    // The worker normally keeps shadow evaluation off the critical path. Jest
+    // tears down its module environment as soon as the request promise settles,
+    // though, so awaiting it in test mode prevents an in-flight LLM extractor
+    // from requiring modules or logging after teardown. Production behavior is
+    // unchanged: shadow evaluation remains best-effort and non-blocking.
+    if (process.env.NODE_ENV === 'test') await shadowParsePromise;
 
     if (Number(finalExtraction.usageMetrics.estimatedCostUsd ?? 0) > INGESTION_JOB_TOKEN_BUDGET_USD) {
       throw new Error('Token budget exceeded for import job');

@@ -1290,7 +1290,7 @@ const enforceShortlistGrounding = (
   return grounded;
 };
 
-import { accumulateDayFriction } from './frictionAccumulatorService';
+import { accumulateDayFriction, calculateRouteFrictionScore } from './frictionAccumulatorService';
 
 // Chapter 16 §9: Final polishing pass for Master Travel Agent nuance.
 // 1. Farewell Night: Suggst a high-quality food attraction for the final night.
@@ -1511,6 +1511,44 @@ const enforceDescriptionBasedDestinationConsistency = (
     }
     day.it = keptItems;
   }
+};
+
+/** Keep the generated lineup coherent with the selected comfort tier. */
+export const enforceBudgetTierCoherence = (
+  itinerary: PromptItinerary,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  comfort: PromptComfortCode,
+  mustSeeNames: string[]
+): PromptItinerary => {
+  if (comfort === 'M') return itinerary;
+  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
+  const entriesByName = new Map<string, AttractionCatalogEntry>();
+  Object.values(shortlistByDestination).flat().forEach((entry) => entriesByName.set(normalizeText(entry.name).toLowerCase(), entry));
+  const entriesByDestination = new Map<string, AttractionCatalogEntry[]>();
+  Object.entries(shortlistByDestination).forEach(([destination, entries]) => entriesByDestination.set(normalizeDestinationKey(destination), entries));
+  const mustSees = new Set(mustSeeNames.map((name) => normalizeText(name).toLowerCase()));
+  for (const day of output.dy) {
+    const candidates = (entriesByDestination.get(normalizeDestinationKey(day.b)) ?? Object.values(shortlistByDestination).flat())
+      .filter((entry) => entry.budgetTier)
+      .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
+    const used = new Set(day.it.map((item) => normalizeText(item[2]).toLowerCase()));
+    day.it = day.it.map((item) => {
+      const entry = entriesByName.get(normalizeText(item[2]).toLowerCase());
+      const tier = entry?.budgetTier;
+      const disallowed = (comfort === 'B' && tier === 'premium') || (comfort === 'L' && tier === 'free');
+      if (!entry || !tier || !disallowed || mustSees.has(normalizeText(item[2]).toLowerCase())) return item;
+      const replacement = candidates.find((candidate) => {
+        if (used.has(normalizeText(candidate.name).toLowerCase())) return false;
+        if (comfort === 'B') return candidate.budgetTier !== 'premium';
+        return candidate.budgetTier !== 'free';
+      });
+      if (!replacement) return item;
+      used.delete(normalizeText(item[2]).toLowerCase());
+      used.add(normalizeText(replacement.name).toLowerCase());
+      return [item[0], item[1], replacement.name];
+    });
+  }
+  return output;
 };
 
 const enforceMustSeeAttractions = (
@@ -1794,7 +1832,8 @@ const mapItems = (
   preferenceWeights: PromptWeights,
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
   transferNotesByDay?: Map<number, TransferNote[]>,
-  whyFitsByName?: Map<string, string>
+  whyFitsByName?: Map<string, string>,
+  mobility: PromptMobilityCode = 'M'
 ): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
     status: 'Needed',
@@ -1831,7 +1870,10 @@ const mapItems = (
       const { startTime, durationMinutes } = schedule[index];
       const duration = formatMinutesAsDuration(durationMinutes);
       const description = durationMetadata?.description || buildGeneratedActivityDescription(day, text, closest);
-      const notesWithDuration = `${description} Plan for about ${duration} here.`;
+      const accessibilityNote = mobility === 'L'
+        ? ' Check step-free access, seating, and route length with the venue before booking.'
+        : '';
+      const notesWithDuration = `${description} Plan for about ${duration} here.${accessibilityNote}`;
       const bookingNotes = durationMetadata?.requiresPreOrderTickets
         ? `${notesWithDuration} Tickets may need to be pre-ordered.`
         : notesWithDuration;
@@ -2197,6 +2239,11 @@ const runGenerateItineraryViaPromptPlan = async (
         limitPerDestination,
         promptItemsPerDestination: shortlistPromptItemsPerDestination,
         allowDiscovery: allowAttractionDiscovery,
+        weights: normalized.w,
+        travelers: input.groupTraits.map((member) => ({
+          travelerId: member.userId,
+          interests: Array.isArray(member.traits) ? member.traits : [],
+        })),
       });
       attractionShortlistBlock = shortlist.promptBlock;
       shortlistByDestination = shortlist.shortlistByDestination ?? {};
@@ -2264,19 +2311,32 @@ const runGenerateItineraryViaPromptPlan = async (
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE} bases=${route.b.length} transfers=${route.x.length} hasRentalCar=${route.rc ? 'yes' : 'no'}`
   );
+  const routeFrictionScore = calculateRouteFrictionScore({
+    transferHours: route.x.reduce((sum, transfer) => sum + Math.max(0, Number(transfer.td) || 0), 0),
+    transfersCount: route.x.length,
+    baseChanges: Math.max(0, route.b.length - 1),
+  });
+  route.a = Array.from(new Set([...(route.a ?? []), `Route friction score (derived): ${routeFrictionScore}. Lower is easier; verify booked legs and terminal buffers.`]));
 
   const startTransfer = route.x.find((transfer) => transfer.dt === normalized.sd);
   const endTransfer = [...route.x].reverse().find((transfer) => transfer.dt === normalized.ed);
   const logisticsFacts = buildArrivalDepartureFacts({
     arrival: promptRequest.s || startTransfer
-      ? { date: normalized.sd, localTime: null, durationHours: startTransfer?.td ?? null, isLongHaul: (startTransfer?.td ?? 0) >= 7 }
+      ? { date: normalized.sd, localTime: null, durationHours: startTransfer?.td ?? null, isLongHaul: (startTransfer?.td ?? 0) >= 7, terminalOnly: !startTransfer }
       : null,
     departure: promptRequest.s || promptRequest.e || endTransfer
-      ? { date: normalized.ed, localTime: null, durationHours: endTransfer?.td ?? null, isLongHaul: (endTransfer?.td ?? 0) >= 7 }
+      ? { date: normalized.ed, localTime: null, durationHours: endTransfer?.td ?? null, isLongHaul: (endTransfer?.td ?? 0) >= 7, terminalOnly: !endTransfer }
       : null,
     departureBufferMinutes: 180,
   });
-  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}`;
+  const timingPreferenceNote = promptRequest.ut?.eb && promptRequest.ut?.no
+    ? '\nTiming preference conflict: keep morning/evening starts flexible.'
+    : promptRequest.ut?.eb
+      ? '\nEarly-bird preference: favor earlier starts when venue access is verified; do not invent opening times.'
+      : promptRequest.ut?.no
+        ? '\nNight-owl preference: favor later activity slots when feasible; preserve terminal and meal buffers.'
+        : '';
+  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}`;
   const dayDependency = buildPromptFingerprint({
     p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
     attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
@@ -2329,14 +2389,7 @@ const runGenerateItineraryViaPromptPlan = async (
     captureStages,
     usageContext,
   });
-  const groundedItinerary = enforceShortlistGrounding(
-    sanitizeItinerary(validatedRaw, route, normalized, promptRequest),
-    promptRequest,
-    shortlistByDestination,
-    preferenceContract.travelerInterests
-  );
-  const itinerary = enforceAttractionDestinationConsistency(groundedItinerary, shortlistByDestination);
-  filteredItinerary = validateAndRepairItineraryStructure({ itinerary, logisticsFacts }).itinerary;
+  filteredItinerary = sanitizeItinerary(validatedRaw, route, normalized, promptRequest);
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length}`
   );
@@ -2345,6 +2398,19 @@ const runGenerateItineraryViaPromptPlan = async (
   } catch (err) { logError('[itinerary] day cache write failed; continuing', err); }
   }
   filteredItinerary = validateAndRepairItineraryStructure({ itinerary: filteredItinerary, logisticsFacts }).itinerary;
+  // Shared day-cache hits contain only generic, validated content. Re-run the
+  // cheap grounding, destination, and logistics checks after every read so a
+  // cached skeleton cannot bypass this user's fairness/accessibility rules.
+  const groundedAfterCache = enforceShortlistGrounding(
+    filteredItinerary,
+    promptRequest,
+    shortlistByDestination,
+    preferenceContract.travelerInterests
+  );
+  filteredItinerary = validateAndRepairItineraryStructure({
+    itinerary: enforceAttractionDestinationConsistency(groundedAfterCache, shortlistByDestination),
+    logisticsFacts,
+  }).itinerary;
   const profile = mapProfile(normalized);
   const fragmentInjected = injectMustSeesIntoCachedFragments({
     itinerary: filteredItinerary,
@@ -2353,7 +2419,13 @@ const runGenerateItineraryViaPromptPlan = async (
     maxItemsPerDay: MAX_ITEMS_PER_DAY,
   });
   const itineraryWithMustSee = enforceMustSeeAttractions(fragmentInjected, normalizedMustSee, promptRequest.d);
-  const polishedItinerary = polishItineraryFinalPass(itineraryWithMustSee, shortlistByDestination);
+  const budgetCoherentItinerary = enforceBudgetTierCoherence(
+    itineraryWithMustSee,
+    shortlistByDestination,
+    normalized.c,
+    normalizedMustSee.map((item) => item.name)
+  );
+  const polishedItinerary = polishItineraryFinalPass(budgetCoherentItinerary, shortlistByDestination);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
     normalized,
@@ -2370,6 +2442,17 @@ const runGenerateItineraryViaPromptPlan = async (
     input.groupTraits.length
   );
   const finalItinerary = fatigueManaged.itinerary;
+
+  // Surface the same derived transfer estimates used for scheduling so the
+  // traveler can understand why activities are grouped and paced this way.
+  for (const day of finalItinerary.dy) {
+    const transferNotes = transferNotesByDay.get(day.d) ?? [];
+    if (!transferNotes.length) continue;
+    const logistics = transferNotes.slice(0, 2).map((note) =>
+      `Estimated ${describeTransferMode(note.mode).toLowerCase()} transfer: ${note.fromName} → ${note.toName}, about ${note.minutes} min (${note.distanceKm.toFixed(1)} km).`
+    );
+    day.ln = Array.from(new Set([...(day.ln ?? []), ...logistics])).slice(0, 2);
+  }
 
   const whyFitsByName = new Map<string, string>();
   for (const entries of Object.values(shortlistByDestination)) {
@@ -2419,7 +2502,7 @@ const runGenerateItineraryViaPromptPlan = async (
     if (key && !entryByName.has(key)) entryByName.set(key, entry);
   }
 
-  const items = mapItems(finalItinerary, profile.weights, durationMetadataByName, transferNotesByDay, whyFitsByName);
+  const items = mapItems(finalItinerary, profile.weights, durationMetadataByName, transferNotesByDay, whyFitsByName, normalized.mob);
   const transferMinutesByDay = new Map<number, number>();
   for (const [dayNum, notes] of transferNotesByDay) {
     transferMinutesByDay.set(dayNum, notes.reduce((sum, n) => sum + n.minutes, 0));

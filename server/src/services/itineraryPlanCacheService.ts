@@ -32,8 +32,18 @@ export const buildTripSignature = (input: TripSignatureInput, includeWeights = f
 export const buildCatalogFingerprint = (byDestination: Record<string, AttractionCatalogEntry[]>): string => stableHash(
   Object.entries(byDestination).sort(([a], [b]) => a.localeCompare(b)).map(([destination, entries]) => ({
     destination: destination.toLowerCase(), entries: [...entries].sort((a, b) => a.id.localeCompare(b.id)).map((entry) => ({
-      id: entry.id, rank: entry.rank, lat: entry.lat ?? null, lon: entry.lon ?? null,
-      primaryTag: entry.primaryTag ?? null, popularityScore: entry.popularityScore ?? null,
+      id: entry.id,
+      name: entry.name,
+      rank: entry.rank,
+      activityType: entry.activityType,
+      interestTags: [...entry.interestTags].sort(),
+      budgetTier: entry.budgetTier ?? null,
+      lat: entry.lat ?? null,
+      lon: entry.lon ?? null,
+      primaryTag: entry.primaryTag ?? null,
+      popularityScore: entry.popularityScore ?? null,
+      wikipediaTitle: entry.wikipediaTitle ?? null,
+      wikipediaSummary: entry.wikipediaSummary ?? null,
     })),
   }))
 );

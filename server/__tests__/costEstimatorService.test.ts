@@ -257,4 +257,16 @@ describe('getActualMonthlySpend', () => {
       { windowKey: '2026-06', byProvider: [], totalUsd: 0 },
     ]);
   });
+
+  it('normalizes and aggregates duplicate provider rows in a month', async () => {
+    mockedListApiCostCounters.mockResolvedValue([
+      { provider: 'serpapi', windowKey: '2026-07', amountMicros: 1_000_000 },
+      { provider: 'SERPAPI', windowKey: '2026-07', amountMicros: 2_000_000 },
+    ] as any);
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T00:00:00Z'));
+    const months = await getActualMonthlySpend(1);
+    jest.useRealTimers();
+    expect(months[0].byProvider).toEqual([{ provider: 'SERPAPI', spendUsd: 3 }]);
+    expect(months[0].totalUsd).toBe(3);
+  });
 });

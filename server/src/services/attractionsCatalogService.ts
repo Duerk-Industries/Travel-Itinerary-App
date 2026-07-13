@@ -11,6 +11,9 @@ import { fetchWikipediaPopularityScore } from './wikipediaPageviewService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { recordProviderRequestCost } from '../apis/providerBudgeting';
 import { clusterAttractionsIntoPods, type AttractionPod } from './geoPodClusteringService';
+import { buildPodBasedShortlist } from './podBasedShortlisterService';
+import type { InterestWeights } from './activityTypeInterestWeights';
+import type { TravelerInterest } from './fairnessRankerService';
 import {
   getAttractionShortlistBlob,
   listAttractionCatalogEntries,
@@ -183,6 +186,8 @@ export const inferInterestTags = (name: string, snippet?: string): InterestTag[]
   const text = `${name} ${snippet ?? ''}`.toLowerCase();
   const tags = new Set<InterestTag>();
   if (/\b(park|trail|hike|lake|beach|outdoor|garden)\b/.test(text)) tags.add('outdoors');
+  if (/\b(photo|photography|viewpoint|lookout|scenic overlook|sunset view)\b/.test(text)) tags.add('photography');
+  if (/\b(adventure|rafting|kayak|surf|snorkel|zipline|climb|expedition)\b/.test(text)) tags.add('adventure');
   if (/\b(museum|historic|cathedral|temple|archaeolog|gallery|palace)\b/.test(text)) tags.add('culture');
   if (/\b(food|market|restaurant|cuisine|street food|taco|wine|coffee|cooking)\b/.test(text)) tags.add('food');
   if (/\b(bar|club|nightlife|cantina|music venue|pub)\b/.test(text)) tags.add('nightlife');
@@ -191,6 +196,8 @@ export const inferInterestTags = (name: string, snippet?: string): InterestTag[]
   if (/\b(day trip|excursion|nearby town|puebla|teotihuacan)\b/.test(text)) tags.add('day trips');
   if (/\b(festival|event|concert|seasonal)\b/.test(text)) tags.add('events');
   if (/\b(class|workshop|lesson|cooking class)\b/.test(text)) tags.add('classes');
+  if (/\b(local|authentic|neighborhood|street food|artisan|craft)\b/.test(text)) tags.add('authentic_local');
+  if (/\b(landmark|monument|iconic|cathedral|palace|tower|historic center)\b/.test(text)) tags.add('iconic_landmarks');
   if (!tags.size) tags.add('culture');
   return Array.from(tags);
 };
@@ -931,12 +938,14 @@ export const classifyAttractionPopularity = (score: number | null | undefined): 
 };
 
 const buildCompactPromptItems = (entries: AttractionCatalogEntry[]): CompactPromptItem[] =>
-  entries.map((entry) => ({
+  entries.map((entry, index) => ({
     name: entry.name,
     type: entry.activityType,
     tags: entry.interestTags,
     tier: entry.budgetTier ?? 'paid',
-    rank: entry.rank,
+    // The prompt rank is the deterministic relevance order, not merely the
+    // discovery provider's original rank.
+    rank: index + 1,
     ...(entry.popularityScore == null ? {} : { popularityScore: entry.popularityScore }),
   }));
 
@@ -1148,6 +1157,9 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   promptItemsPerDestination?: number;
   refreshDays?: number;
   allowDiscovery?: boolean;
+  /** Optional deterministic relevance inputs used before the LLM sees the shortlist. */
+  weights?: InterestWeights;
+  travelers?: TravelerInterest[];
 }): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string; attractionPodsByDestination?: Record<string, AttractionPod[]> }> => {
   const shortlistPromptItemsPerDestination =
     Math.min(
@@ -1174,13 +1186,30 @@ export const getAttractionPromptBlockForDestinations = async (params: {
       ),
       365
     );
-  const shortlistByDestination = await getAttractionShortlistForDestinations({
+  const catalogByDestination = await getAttractionShortlistForDestinations({
     userId: params.userId,
     destinations,
     limitPerDestination: params.limitPerDestination,
     refreshDays: params.refreshDays,
     allowDiscovery: params.allowDiscovery,
   });
+  // Rank and pod the already-cached catalog deterministically. This keeps the
+  // expensive LLM stage focused on relevant, geographically coherent choices
+  // without putting private must-see names into shared prompt/cache keys.
+  const shortlistByDestination: Record<string, AttractionCatalogEntry[]> = {};
+  for (const destination of destinations) {
+    const entries = catalogByDestination[destination] ?? [];
+    shortlistByDestination[destination] = params.weights
+      ? buildPodBasedShortlist({
+          destination,
+          entries,
+          weights: params.weights,
+          travelers: params.travelers,
+          limit: entries.length,
+          radiusKm: 2,
+        }).selected
+      : entries;
+  }
   const budgetProfile = chooseBudgetProfile(params.budgetMin, params.budgetMax);
 
   const blocks: string[] = [];

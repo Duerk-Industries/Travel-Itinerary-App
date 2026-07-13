@@ -2973,14 +2973,21 @@ const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string
           <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
             {month.windowKey} — ${month.totalUsd.toFixed(2)}
           </Text>
-          {month.byProvider.length === 0 ? (
+          {month.byProvider.length === 0 && Object.keys(data.requestPricing).length === 0 ? (
             <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>No recorded spend.</Text>
           ) : (
-            month.byProvider.map((entry) => (
-              <Text key={entry.provider} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
-                {entry.provider}: ${entry.spendUsd.toFixed(2)}
-              </Text>
-            ))
+            Array.from(new Set([
+              ...Object.keys(data.requestPricing),
+              ...data.projected.byProvider.map((entry) => entry.provider),
+              ...month.byProvider.map((entry) => entry.provider),
+            ])).sort().map((provider) => {
+              const spend = month.byProvider.find((entry) => entry.provider === provider)?.spendUsd ?? 0;
+              return (
+                <Text key={provider} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                  {provider}: ${spend.toFixed(2)}
+                </Text>
+              );
+            })
           )}
         </View>
       ))}

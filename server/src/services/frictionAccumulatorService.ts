@@ -9,6 +9,19 @@ export type FrictionInput = {
 
 export type FrictionResult = { score: number; status: 'normal' | 'lighten' | 'rest-hub'; reasons: string[] };
 
+export type RouteFrictionInput = {
+  transferHours: number;
+  transfersCount: number;
+  baseChanges: number;
+};
+
+/** Door-to-door route friction used to explain inter-base routing decisions. */
+export const calculateRouteFrictionScore = (input: RouteFrictionInput): number => Math.round((
+  Math.max(0, input.transferHours) * 2 +
+  Math.max(0, input.transfersCount) * 1.5 +
+  Math.max(0, input.baseChanges) * 2
+) * 10) / 10;
+
 export const accumulateDayFriction = (input: FrictionInput): FrictionResult => {
   const transferHours = Math.max(0, input.transferMinutes + (input.groupBufferMinutes ?? 0)) / 60;
   const activityHours = Math.max(0, input.activityMinutes) / 60;
@@ -21,4 +34,3 @@ export const accumulateDayFriction = (input: FrictionInput): FrictionResult => {
   if (activityHours >= 8) reasons.push('long activity day');
   return { score: rounded, status: rounded >= 10 ? 'rest-hub' : rounded >= 6 ? 'lighten' : 'normal', reasons };
 };
-

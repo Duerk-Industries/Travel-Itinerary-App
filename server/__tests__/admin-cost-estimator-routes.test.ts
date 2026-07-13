@@ -94,6 +94,27 @@ describe('Admin cost estimator routes', () => {
         .expect(400);
     });
 
+    it('rejects an impossible premium conversion percentage', async () => {
+      await request(app)
+        .patch('/api/admin/cost-estimate/assumptions')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ premiumConversionPercent: 101, reason: 'bad conversion assumption' })
+        .expect(400);
+    });
+
+    it('rejects malformed or unknown provider volume assumptions before writing', async () => {
+      await request(app)
+        .patch('/api/admin/cost-estimate/assumptions')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ providerCallsPerUserPerMonth: { UNKNOWN_PROVIDER: 1 }, reason: 'bad provider assumption' })
+        .expect(400);
+      await request(app)
+        .patch('/api/admin/cost-estimate/assumptions')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ providerCallsPerUserPerMonth: { SERPAPI: -1 }, reason: 'bad provider volume' })
+        .expect(400);
+    });
+
     it('applies a valid update and records an audit log entry', async () => {
       const response = await request(app)
         .patch('/api/admin/cost-estimate/assumptions')
@@ -126,6 +147,14 @@ describe('Admin cost estimator routes', () => {
         .patch('/api/admin/cost-estimate/request-pricing')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ requestPricing: { SERPAPI: -1 }, reason: 'bad input' })
+        .expect(400);
+    });
+
+    it('rejects unknown request-pricing providers', async () => {
+      await request(app)
+        .patch('/api/admin/cost-estimate/request-pricing')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ requestPricing: { UNKNOWN_PROVIDER: 0.1 }, reason: 'bad provider price' })
         .expect(400);
     });
 

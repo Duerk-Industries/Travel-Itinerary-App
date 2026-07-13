@@ -421,6 +421,8 @@ export interface LocationRecord {
 
 export type InterestTag =
   | 'outdoors'
+  | 'photography'
+  | 'adventure'
   | 'culture'
   | 'food'
   | 'nightlife'
@@ -428,7 +430,9 @@ export type InterestTag =
   | 'shopping'
   | 'day trips'
   | 'events'
-  | 'classes';
+  | 'classes'
+  | 'authentic_local'
+  | 'iconic_landmarks';
 
 export type AttractionBudgetTier = 'free' | 'paid' | 'premium';
 

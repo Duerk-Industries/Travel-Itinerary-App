@@ -55,6 +55,12 @@ export type MonthlyProviderSpend = {
 const ASSUMPTIONS_SETTING_KEY = 'cost_estimator_assumptions';
 const HOSTING_LINE_ITEMS_SETTING_KEY = 'cost_estimator_hosting_line_items';
 
+/** Complete allowlist of non-token providers whose request pricing is admin-editable. */
+export const REQUEST_PRICED_PROVIDER_KEYS = [
+  'SERPAPI', 'WIKIMEDIA', 'GOOGLE_ROUTES', 'UNSPLASH', 'SMTP',
+  'COUNTRY_NOW', 'GEONAMES', 'AIRPORT_DATASET', 'FRANKFURTER', 'OPEN_METEO',
+] as const;
+
 // Defaults reproduce this project's own hand-verified reference estimate (10,000 users, 3% premium,
 // ~7-day/2-destination trip, gpt-4o-mini pricing) so a fresh install shows a sane starting point
 // rather than all-zero. See computeProjectedMonthlyCost's test fixtures for the derivation.
@@ -288,7 +294,11 @@ export const getActualMonthlySpend = async (monthsBack: number): Promise<Monthly
   for (const counter of counters) {
     if (!windowKeys.includes(counter.windowKey)) continue;
     const bucket = byWindowKey.get(counter.windowKey) ?? [];
-    bucket.push({ provider: counter.provider, spendUsd: roundCents(counter.amountMicros / MICROS_PER_USD) });
+    const provider = normalizeApiLimitKeyPart(counter.provider);
+    const spendUsd = roundCents(counter.amountMicros / MICROS_PER_USD);
+    const existing = bucket.find((entry) => entry.provider === provider);
+    if (existing) existing.spendUsd = roundCents(existing.spendUsd + spendUsd);
+    else bucket.push({ provider, spendUsd });
     byWindowKey.set(counter.windowKey, bucket);
   }
   return windowKeys.map((windowKey) => {

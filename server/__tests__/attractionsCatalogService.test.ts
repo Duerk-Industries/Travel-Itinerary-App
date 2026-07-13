@@ -22,6 +22,11 @@ describe('attractions catalog helpers', () => {
     expect(tags).toContain('food');
   });
 
+  it('assigns the expanded relevance tags used by the ranker', () => {
+    const tags = inferInterestTags('Iconic sunset viewpoint and neighborhood photo walk');
+    expect(tags).toEqual(expect.arrayContaining(['photography', 'iconic_landmarks', 'authentic_local']));
+  });
+
   it('assigns budget tiers from attraction text and type', () => {
     expect(inferBudgetTier('Chapultepec Park walk', '', 'Open Access')).toBe('free');
     expect(inferBudgetTier('Private luxury food tour', '', 'Tour')).toBe('premium');

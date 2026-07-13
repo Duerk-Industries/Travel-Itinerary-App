@@ -30,6 +30,14 @@ describe('Phase 4 itinerary plan cache', () => {
     expect(buildCacheKey('day', 'sig', first)).not.toBe(buildCacheKey('day', 'sig', moved));
   });
 
+  test('catalog content changes invalidate dependent cache keys', () => {
+    const row = { id: 'a', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Museum', rank: 1, activityType: 'Ticketed Attraction' as const, interestTags: ['culture'] as any, budgetTier: 'paid' as const, updatedAt: 'x' };
+    const first = buildCatalogFingerprint({ Paris: [row] });
+    expect(buildCatalogFingerprint({ Paris: [{ ...row, name: 'Renamed Museum' }] })).not.toBe(first);
+    expect(buildCatalogFingerprint({ Paris: [{ ...row, interestTags: ['food'] as any }] })).not.toBe(first);
+    expect(buildCatalogFingerprint({ Paris: [{ ...row, wikipediaSummary: 'Updated verified summary' }] })).not.toBe(first);
+  });
+
   test('Phase 3 pod, logistics, and validator changes invalidate day dependencies', () => {
     const baseDependency = { p2: 'prompt', p3: 'validator', attractionPodsBlock: 'pod A', logisticsFactsBlock: 'arrival max 1', structureValidator: 'v1' };
     const original = buildPromptFingerprint(baseDependency);

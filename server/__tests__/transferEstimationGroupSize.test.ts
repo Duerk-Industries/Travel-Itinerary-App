@@ -14,10 +14,8 @@ describe('HeuristicTransferEstimator with group size', () => {
     expect(size8).toBeDefined();
     if (size2 && size8) {
       expect(size8.minutes).toBeGreaterThan(size2.minutes);
-      // Group of 8 multiplier = 1 + 8 * 0.05 = 1.4
-      // Group of 2 multiplier = 1 + 2 * 0.05 = 1.1
-      // 1.4 / 1.1 ~= 1.27
-      expect(size8.minutes / size2.minutes).toBeCloseTo(1.27, 1);
+      // Two travelers are the baseline; six additional travelers add 30%.
+      expect(size8.minutes / size2.minutes).toBeCloseTo(1.3, 1);
     }
   });
 

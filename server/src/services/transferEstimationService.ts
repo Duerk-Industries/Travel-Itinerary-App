@@ -46,9 +46,10 @@ const MOBILITY_WALK_CUTOFF_MULTIPLIER: Record<TransferMobilityCode, number> = {
 
 const getGroupBufferMultiplier = (groupSize?: number): number => {
   const size = Math.max(1, Math.round(Number(groupSize) || 1));
-  // Chapter 16 §3: Scale all transfer buffers by 1 + (GroupSize * 0.05).
-  // A group of 8 needs ~40% more time for transition states (gathering, boarding).
-  return 1 + size * 0.05;
+  // Two travelers are the baseline used by the duration heuristics. Add 5%
+  // per additional traveler so omitted/small groups do not get an arbitrary
+  // penalty while a group of eight receives the intended ~30% gathering buffer.
+  return 1 + Math.max(0, size - 2) * 0.05;
 };
 
 export class HeuristicTransferEstimator implements TransferEstimator {
