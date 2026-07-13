@@ -40,6 +40,9 @@ describe('api-limits yaml config', () => {
         '    refreshDays: 365',
         '  images:',
         '    cacheTtlMs: 12345',
+        '  getYourGuide:',
+        '    redirectTokenTtlMinutes: 10',
+        '    maxAffiliateLinksPerItinerary: 4',
       ].join('\n'),
       'utf8'
     );
@@ -67,6 +70,8 @@ describe('api-limits yaml config', () => {
     expect(budget?.models?.GPT_4O_MINI?.outputCostPer1MTokensUsd).toBe(0.6);
     expect(getApiCacheSetting('attractions', 'refreshDays')).toBe(365);
     expect(getApiCacheSetting('images', 'cacheTtlMs')).toBe(12345);
+    expect(getApiCacheSetting('getYourGuide', 'redirectTokenTtlMinutes')).toBe(10);
+    expect(getApiCacheSetting('getYourGuide', 'maxAffiliateLinksPerItinerary')).toBe(4);
   });
 
   it('updates a caching group and round-trips the new value', () => {

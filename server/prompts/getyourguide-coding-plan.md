@@ -61,7 +61,9 @@ partner response is invalid.
 
 ### Phase B (Partner API)
 
-Before coding the API client, obtain the approved GYG quota and billing terms. Add one provider entry to
+Before coding the API client, obtain the approved GYG quota and billing terms. The public getting-started
+guide currently documents a default of 130 calls/minute and a five-minute block after exhaustion, but this
+is only a reference and the account-specific quota wins. Add one provider entry to
 `server/config/api-limits.yaml`:
 
 ```yaml
@@ -95,7 +97,8 @@ LLM tasks:
 - Verify the current GYG partner docs/dashboard: approved domains and paths, search-link eligibility,
   partner ID/API-key requirements, sub-ID rules, redirect restrictions, quotas, price/currency/locale rules,
   image/content rights, caching limits, disclosure language, and reporting fields.
-- Record those facts and their verification date in a small config/contract note. Treat unknown facts as
+- Record those facts and their verification date in [the Phase 0 contract record](../../docs/getyourguide-phase-0-contract.md).
+  Treat unknown facts as
   blockers for production, not assumptions.
 - Define configuration keys and defaults: feature flag, partner status, redirect TTL, per-itinerary CTA cap,
   per-generation API lookup cap, fresh/stale cache TTLs, internal redirect throttles, and a kill switch.
@@ -207,9 +210,10 @@ Files/tasks:
   destination/country, activity concept, date bucket, party-size bucket, language, accessibility, and budget;
   never use raw user IDs.
 - **Performance:** Use a **Stale-While-Revalidate (SWR)** pattern for API results to ensure the UI remains snappy. A stale result from the cache is better than a spinner, provided it is eventually updated.
-- Cache resolved product IDs, normalized metadata, and negative/no-match results separately. Use fresh/stale
-  TTLs, stale-while-revalidate, single-flight de-duplication, and a maximum result count. Do not cache
-  user-specific URLs, sensitive preferences, or data beyond GYG's terms.
+- Cache resolved product IDs, normalized metadata, and negative/no-match results separately only if the
+  account has written permission. The public API guide warns against scraping to cache output and the
+  partner terms restrict copying/caching content. Without written permission, cache only internal request
+  de-duplication for the duration of a request and use deep links rather than persisted GYG content.
 - Display only verified fields with currency, locale, `lastVerifiedAt`, duration, meeting point, cancellation
   notes, and accessibility information. A stale/missing field is omitted rather than replaced with a guess.
 - Keep API enrichment asynchronous and best-effort. Fall back to the Phase-A descriptor; if that is also

@@ -70,3 +70,6 @@ flags:
   attractions_transfer_directions_api:
     enabled: false
     description: "Use Google Directions/Distance Matrix API for inter-attraction transfer time instead of the haversine heuristic"
+  getyourguide_activity_suggestions:
+    enabled: false
+    description: "Enable optional GetYourGuide affiliate activity suggestions (requires verified partner configuration)"

@@ -66,6 +66,7 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 ## Architecture, Entitlements, and Roadmap Notes
 
 - [Implementation Plan: Entitlements](implementation-plan-entitlements.md)
+- [GetYourGuide Phase 0 Partner Contract](getyourguide-phase-0-contract.md)
 
 ## Root-Level Reference Notes
 

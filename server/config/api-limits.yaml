@@ -297,6 +297,19 @@ caching:
     detailsCacheTimeoutMinutes: 1440
   googleStaticMaps:
     cacheTtlMinutes: 1440
+  # Phase 0 guardrails for the optional GetYourGuide integration. No Partner
+  # API calls are enabled until the verified partner quota/terms are recorded.
+  # The API TTL values are reserved configuration only; do not persist GYG
+  # content until written partner permission is recorded.
+  getYourGuide:
+    redirectTokenTtlMinutes: 10
+    freshTtlMinutes: 15
+    staleTtlHours: 24
+    maxAffiliateLinksPerItinerary: 4
+    maxPartnerApiLookupsPerGeneration: 0
+    maxPartnerApiLookupsPerDay: 0
+    redirectPerMinutePerIp: 60
+    redirectPerDayPerAccount: 300
   unsplash:
     dnsLogTtlMs: 300000
   frankfurter:

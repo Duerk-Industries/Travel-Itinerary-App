@@ -10,6 +10,10 @@ is **suggestions, not a locked spec** — the exact GYG integration surface (API
 should be confirmed against GetYourGuide's current partner documentation/dashboard before implementation,
 since affiliate program mechanics and endpoints can change.
 
+Phase 0 verification is recorded in the [GetYourGuide Phase 0 Partner Contract](../../docs/getyourguide-phase-0-contract.md).
+The public API guide currently documents a 130-calls/minute default with a five-minute block after exhaustion,
+but the account-specific quota and written content/caching terms take precedence.
+
 ## 0. Senior-review decisions to carry through both GYG plans
 
 The companion deep-link plan is intentionally narrow, but it should follow these stronger boundaries:
@@ -104,11 +108,13 @@ integration should copy this shape, not invent a new one:
   - A `createTtlCache` (reusing `ttlCache.ts`, the same utility Unsplash uses) keyed by a versioned,
     normalized request: destination/country, activity concept, date window, party-size bucket, language,
     accessibility needs, and budget tier. Do not key by raw user ID. Use a short fresh TTL for availability
-    and a longer stale TTL for discovery metadata (for example 15 minutes/24 hours), with stale-while-
-    revalidate and single-flight de-duplication to prevent a cache stampede.
-  - Cache resolved product IDs, normalized search results, and negative/no-match results separately. Never
-    cache a user-specific booking URL or sensitive traveler data; invalidate when partner terms or the
-    response schema version changes.
+    and a longer stale TTL for discovery metadata (for example 15 minutes/24 hours) only when written GYG
+    permission allows persistence. Otherwise use request-lifetime single-flight de-duplication only; do not
+    scrape or persist API output.
+  - Cache resolved product IDs, normalized search results, and negative/no-match results separately only
+    after written GYG permission is recorded. The public API guide warns against scraping to cache output;
+    without permission, use request-lifetime de-duplication only and never persist GYG content, URLs, or
+    sensitive traveler data.
   - Empty-query short-circuit before touching the cache or network, matching the Unsplash callers exactly.
 - **`server/config/api-limits.yaml`**: add a `GETYOURGUIDE` block under `providers` (window/overall/callers,
   matching every other provider added this year) and a `GETYOURGUIDE: 0` line under `requestPricing` —
