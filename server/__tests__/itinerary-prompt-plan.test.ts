@@ -419,6 +419,14 @@ describe('itinerary prompt plan service', () => {
           choices: [{ message: { content: 'Still not JSON' } }],
         },
       })
+      // Every day here is thin (<2 items) after malformed p2 output, so the Phase 4B repair
+      // call (dayFillRepairEnabled defaults on) fires once before render; malformed content
+      // makes it a no-op fallback, same as the other stages in this test.
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: 'Not JSON either' } }],
+        },
+      })
       .mockResolvedValueOnce({
         data: {
           choices: [{ message: { content: '' } }],
@@ -554,6 +562,16 @@ describe('itinerary prompt plan service', () => {
               },
             },
           ],
+        },
+      })
+      // Day 2 ("City tour") is a single-item, non-arrival/departure day, so it's genuinely thin
+      // (<2 items) — unlike days 1/3, which are excluded from fill/repair as zero-activity
+      // arrival/departure days. The Phase 4B repair call (dayFillRepairEnabled defaults on) fires
+      // once for day 2 with no shortlist/pods available (default empty mock) and falls back to
+      // the deterministic itinerary, leaving "City tour" as the only activity.
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: '' } }],
         },
       })
       .mockResolvedValueOnce({

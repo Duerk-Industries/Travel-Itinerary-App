@@ -30,6 +30,18 @@ export type DayFillResult<T> = {
   issues: string[];
 };
 
+/**
+ * A date whose arrivalDepartureRulesService.LogisticsFact caps activities at 0 (a terminal-only
+ * arrival/departure day) is intentionally empty — not "thin". Neither deterministic fill nor the
+ * LLM repair call may add anything there; the structural validator already truncated it to 0 for a
+ * hard-constraint reason (protecting terminal/transfer/checkout time), and this module must not
+ * silently undo that. Callers pass whichever dates currently have maxActivities === 0.
+ */
+export type ZeroActivityDayDates = ReadonlySet<string> | readonly string[];
+
+const toZeroActivitySet = (dates?: ZeroActivityDayDates): Set<string> =>
+  dates instanceof Set ? dates : new Set(dates ?? []);
+
 export type ThinDayRepairPayload = { dt: string; destination: string; existingItems: FillItem[] };
 
 const normalizeName = (value: unknown): string =>
@@ -84,9 +96,12 @@ export const fillThinDaysDeterministically = <T extends FillItinerary>(params: {
   transferNotesByDay?: Map<number, TransferMinutesLike[]>;
   minItemsPerDay?: number;
   maxItemsPerDay?: number;
+  /** Dates with a hard-constraint 0-activity cap (see ZeroActivityDayDates) — never filled. */
+  zeroActivityDayDates?: ZeroActivityDayDates;
 }): DayFillResult<T> => {
   const minItems = Math.max(1, params.minItemsPerDay ?? THIN_DAY_MIN_ITEMS);
   const maxItems = Math.max(minItems, params.maxItemsPerDay ?? DEFAULT_MAX_ITEMS_PER_DAY);
+  const zeroActivityDates = toZeroActivitySet(params.zeroActivityDayDates);
   const output = JSON.parse(JSON.stringify(params.itinerary)) as T;
   const issues: string[] = [];
   const filledDayDates = new Set<string>();
@@ -109,6 +124,7 @@ export const fillThinDaysDeterministically = <T extends FillItinerary>(params: {
   for (const day of output.dy) {
     if (!day || !Array.isArray(day.it)) continue;
     if (day.it.length >= minItems) continue;
+    if (zeroActivityDates.has(day.dt)) continue;
 
     const weekday = Number.isFinite(Date.parse(`${day.dt}T12:00:00Z`))
       ? new Date(`${day.dt}T12:00:00Z`).getUTCDay()
@@ -147,7 +163,9 @@ export const fillThinDaysDeterministically = <T extends FillItinerary>(params: {
     }
   }
 
-  const thinDayDates = output.dy.filter((day) => (day.it?.length ?? 0) < minItems).map((day) => day.dt);
+  const thinDayDates = output.dy
+    .filter((day) => (day.it?.length ?? 0) < minItems && !zeroActivityDates.has(day.dt))
+    .map((day) => day.dt);
   return { itinerary: output, filledDayDates: Array.from(filledDayDates), thinDayDates, issues };
 };
 
@@ -172,9 +190,12 @@ export const mergeThinDayRepairResult = <T extends FillItinerary>(params: {
   repaired: unknown;
   minItemsPerDay?: number;
   maxItemsPerDay?: number;
+  /** Dates with a hard-constraint 0-activity cap (see ZeroActivityDayDates) — never merged into. */
+  zeroActivityDayDates?: ZeroActivityDayDates;
 }): { itinerary: T; repairedDayDates: string[]; stillThinDayDates: string[] } => {
   const minItems = Math.max(1, params.minItemsPerDay ?? THIN_DAY_MIN_ITEMS);
   const maxItems = Math.max(minItems, params.maxItemsPerDay ?? DEFAULT_MAX_ITEMS_PER_DAY);
+  const zeroActivityDates = toZeroActivitySet(params.zeroActivityDayDates);
   const output = JSON.parse(JSON.stringify(params.itinerary)) as T;
   const repairedDayDates: string[] = [];
   const byDate = new Map(output.dy.map((day) => [day.dt, day]));
@@ -189,6 +210,7 @@ export const mergeThinDayRepairResult = <T extends FillItinerary>(params: {
     if (!raw || typeof raw !== 'object') continue;
     const dt = typeof (raw as { dt?: unknown }).dt === 'string' ? (raw as { dt: string }).dt : null;
     if (!dt) continue;
+    if (zeroActivityDates.has(dt)) continue;
     const target = byDate.get(dt);
     if (!target) continue;
 
@@ -218,6 +240,8 @@ export const mergeThinDayRepairResult = <T extends FillItinerary>(params: {
     }
   }
 
-  const stillThinDayDates = output.dy.filter((day) => day.it.length < minItems).map((day) => day.dt);
+  const stillThinDayDates = output.dy
+    .filter((day) => day.it.length < minItems && !zeroActivityDates.has(day.dt))
+    .map((day) => day.dt);
   return { itinerary: output, repairedDayDates, stillThinDayDates };
 };

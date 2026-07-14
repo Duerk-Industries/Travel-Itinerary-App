@@ -2705,6 +2705,13 @@ const runGenerateItineraryViaPromptPlan = async (
   // repair call, capped at exactly one attempt per generation.
   const dayFillEnabled = Number(getApiCacheSetting('itineraryPlan', 'dayFillEnabled')) !== 0;
   if (dayFillEnabled) {
+    // arrivalDepartureRulesService/itineraryStructureValidator already truncated any date with
+    // maxActivities === 0 (terminal-only arrival/departure day) down to zero items for a hard
+    // logistics reason — that's an intentional empty day, not a "thin" one. Neither deterministic
+    // fill nor the repair call below may re-populate it.
+    const zeroActivityDayDates = new Set(
+      logisticsFacts.filter((fact) => fact.maxActivities === 0).map((fact) => fact.date)
+    );
     const deterministicFill = fillThinDaysDeterministically({
       itinerary: finalItinerary,
       mustSees: normalizedMustSee,
@@ -2712,6 +2719,7 @@ const runGenerateItineraryViaPromptPlan = async (
       transferNotesByDay,
       minItemsPerDay: THIN_DAY_MIN_ITEMS,
       maxItemsPerDay: MAX_ITEMS_PER_DAY,
+      zeroActivityDayDates,
     });
     finalItinerary = deterministicFill.itinerary;
     if (deterministicFill.filledDayDates.length || deterministicFill.thinDayDates.length) {
@@ -2760,6 +2768,7 @@ const runGenerateItineraryViaPromptPlan = async (
           repaired: repairedRaw,
           minItemsPerDay: THIN_DAY_MIN_ITEMS,
           maxItemsPerDay: MAX_ITEMS_PER_DAY,
+          zeroActivityDayDates,
         });
         finalItinerary = merged.itinerary;
         logInfo(

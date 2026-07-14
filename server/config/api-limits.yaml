@@ -337,10 +337,11 @@ caching:
     # for thin days (fewer than ~2 items). Zero token cost; default on.
     dayFillEnabled: 1
     # Single, batched targeted-repair call (at most one per generation), only invoked when
-    # deterministic fill above could not raise every thin day to the minimum. Disabled by
-    # default until production Phase 1 metrics show how often deterministic fill alone leaves
-    # days thin — same "measure before spending" posture as escalationEnabled above.
-    dayFillRepairEnabled: 0
+    # deterministic fill above could not raise every thin day to the minimum. Default on —
+    # full test coverage exists for the cap/fallback behavior (dayFillService.test.ts,
+    # dayFillRepairIntegration.test.ts), so this branch's shipped state is the baseline
+    # rather than waiting on separate production metrics.
+    dayFillRepairEnabled: 1
     # Phase 2B: augment LOGISTICS_FACTS with per-destination climatology/daylight
     # facts from destinationLogisticsService.buildDestinationLogistics. Only runs
     # when the (already fetched) attraction shortlist has coordinates, so it never

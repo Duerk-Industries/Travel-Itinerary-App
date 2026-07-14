@@ -5,25 +5,12 @@
 // even with multiple thin days, and degrades to the deterministic (possibly still-thin)
 // itinerary on malformed JSON / provider timeout without throwing to the caller.
 //
-// dayFillRepairEnabled defaults to 0 in server/config/api-limits.yaml (cost-gated, same posture
-// as escalationEnabled) so the large itinerary-prompt-plan.test.ts suite — which doesn't supply
-// a userId/shortlist and therefore has no deterministic-fill candidates for its thin fixture
-// days — is unaffected. This file points API_LIMITS_CONFIG_PATH at a temp copy of the real
-// config with dayFillRepairEnabled turned on, so it must run in its own process (Jest isolates
-// module state per test file already).
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+// dayFillRepairEnabled defaults to 1 in server/config/api-limits.yaml, so this file exercises the
+// real config directly. The large itinerary-prompt-plan.test.ts suite — which doesn't supply a
+// userId/shortlist and therefore has no deterministic-fill candidates for its thin fixture days —
+// accounts for the repair call firing in its own fixtures rather than being unaffected by it.
 import axios from 'axios';
 
-const realConfigPath = path.resolve(__dirname, '../config/api-limits.yaml');
-const tempConfigPath = path.join(os.tmpdir(), `api-limits-dayfill-repair-${process.pid}-${Date.now()}.yaml`);
-const realConfigText = fs.readFileSync(realConfigPath, 'utf8');
-if (!realConfigText.includes('dayFillRepairEnabled: 0')) {
-  throw new Error('Expected dayFillRepairEnabled: 0 default in api-limits.yaml — update this test fixture.');
-}
-fs.writeFileSync(tempConfigPath, realConfigText.replace('dayFillRepairEnabled: 0', 'dayFillRepairEnabled: 1'), 'utf8');
-process.env.API_LIMITS_CONFIG_PATH = tempConfigPath;
 // All three tests below intentionally reuse the same trip parameters (same destinations/dates/
 // userId) to isolate the repair-call behavior under test. Without this, the itinerary plan cache
 // (itineraryPlanCacheService) would serve a cache hit for the route/day stage on the 2nd/3rd test
@@ -171,9 +158,7 @@ describe('itinerary prompt plan — Phase 4B targeted repair integration', () =>
   });
 
   afterAll(() => {
-    delete process.env.API_LIMITS_CONFIG_PATH;
     delete process.env.ITINERARY_PLAN_CACHE_ENABLED;
-    fs.rmSync(tempConfigPath, { force: true });
   });
 
   beforeEach(() => {

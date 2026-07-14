@@ -41,6 +41,22 @@ describe('dayFillService — deterministic fill (Phase 4B)', () => {
     expect(result.thinDayDates).toHaveLength(0);
   });
 
+  it('never fills a zero-activity day (terminal-only arrival/departure), even with candidates available', () => {
+    const mustSees = [{ name: 'Louvre', destinationName: 'Paris' }];
+    const pods = { Paris: [pod('p1', [entry({ id: 'a1', name: 'Eiffel Tower', rank: 1 })])] };
+    const input = itinerary([{ dt: '2026-08-01', it: [] }]);
+    const result = fillThinDaysDeterministically({
+      itinerary: input,
+      mustSees,
+      podsByDestination: pods,
+      zeroActivityDayDates: new Set(['2026-08-01']),
+    });
+    expect(result.itinerary.dy[0].it).toHaveLength(0);
+    expect(result.filledDayDates).toHaveLength(0);
+    // Excluded from repair candidates too — it's intentionally empty, not "thin".
+    expect(result.thinDayDates).not.toContain('2026-08-01');
+  });
+
   it('Priority 1: recovers an unused must-see for the day destination', () => {
     const input = itinerary([{ dt: '2026-08-01', it: [] }]);
     const result = fillThinDaysDeterministically({
@@ -146,6 +162,16 @@ describe('dayFillService — mergeThinDayRepairResult (targeted repair merge)', 
   it('empty p2-shaped output (no dy array) falls back to unchanged itinerary', () => {
     const result = mergeThinDayRepairResult({ itinerary: thin, repaired: {} });
     expect(result.stillThinDayDates).toEqual(['2026-08-01']);
+  });
+
+  it('refuses to merge a repaired day that is a zero-activity (terminal-only) day, even if the model returns items for it', () => {
+    const result = mergeThinDayRepairResult({
+      itinerary: thin,
+      repaired: { dy: [{ dt: '2026-08-01', it: [['D', 'A', 'Repaired Landmark'], ['E', 'A', 'Repaired Dinner']] }] },
+      zeroActivityDayDates: new Set(['2026-08-01']),
+    });
+    expect(result.repairedDayDates).toHaveLength(0);
+    expect(result.itinerary.dy[0].it).toHaveLength(0);
   });
 
   it('applies a well-formed repair response and clears the thin flag', () => {
