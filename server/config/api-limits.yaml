@@ -307,6 +307,10 @@ caching:
     escalationMinCoveragePercent: 0.5
     # 1 = gpt-4o; keep this numeric because cache settings are validated as numbers.
     escalationModel: 1
+    chunkingEnabled: 1
+    chunkingMinDays: 8
+    chunkSizeDays: 3
+    skipValidatorWhenClean: 0
   locations:
     csvCacheTtlMinutes: 60
     refreshCooldownSeconds: 15

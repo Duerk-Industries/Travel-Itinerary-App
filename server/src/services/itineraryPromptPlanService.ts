@@ -2388,10 +2388,13 @@ const runGenerateItineraryViaPromptPlan = async (
     cacheUsage.dayHit = true;
     filteredItinerary = sanitizeItinerary(cachedDay, route, normalized, promptRequest);
   } else {
-  const shouldChunkP2 = getEnvFlag('ITINERARY_GOLD_MODE') || Number(promptRequest.dur ?? input.days) >= 8;
+  const chunkingEnabled = getEnvFlag('ITINERARY_GOLD_MODE') || Number(getApiCacheSetting('itineraryPlan', 'chunkingEnabled')) > 0;
+  const chunkingMinDays = Math.max(1, Number(getApiCacheSetting('itineraryPlan', 'chunkingMinDays')) || 8);
+  const chunkSizeDays = Math.max(1, Number(getApiCacheSetting('itineraryPlan', 'chunkSizeDays')) || 3);
+  const shouldChunkP2 = chunkingEnabled && Number(promptRequest.dur ?? input.days) >= chunkingMinDays;
   const dayItineraries: PromptItinerary[] = [];
   const ranges = shouldChunkP2
-    ? chunkDayRanges(normalized.sd, normalized.ed, 3)
+    ? chunkDayRanges(normalized.sd, normalized.ed, chunkSizeDays)
     : [{ start: normalized.sd, end: normalized.ed, offset: 0 }];
   let usedAttractionNames: string[] = [];
   for (const range of ranges) {
