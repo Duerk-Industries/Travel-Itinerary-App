@@ -89,6 +89,8 @@ describe('AI capture never blocks user-facing work', () => {
         a: [],
         cf: 'M',
       }))
+      // Clean mechanical validation skips p3 in the default configuration, so
+      // this fourth provider response is consumed by the p4 renderer.
       .mockResolvedValueOnce(jsonResponse('## Captured itinerary result'));
 
     const result = await generateItineraryViaPromptPlan({
