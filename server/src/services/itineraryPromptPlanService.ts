@@ -34,10 +34,10 @@ import { decideItineraryEscalation } from './itineraryEscalationService';
 import { chooseSafeItineraryMarkdown } from './itineraryDegradedFallbackService';
 import { persistItineraryGenerationMetrics } from './itineraryMetricsService';
 import type { AttractionPod } from './geoPodClusteringService';
-import { scheduleDayItems } from './daySchedulingService';
+import { scheduleDayItems, scheduleAdjacentDaySwaps } from './daySchedulingService';
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
-import { buildArrivalDepartureFacts, renderLogisticsFactBlock } from './arrivalDepartureRulesService';
+import { buildArrivalDepartureFacts, renderLogisticsFactBlock, type LogisticsFact } from './arrivalDepartureRulesService';
 import { ITINERARY_STRUCTURE_VALIDATOR_VERSION, validateAndRepairItineraryStructure } from './itineraryStructureValidator';
 import {
   buildCatalogFingerprint,
@@ -1356,7 +1356,8 @@ const enforceShortlistGrounding = (
 // that remains a separate, unimplemented stretch goal per the plan.
 export const scheduleItineraryDaysDeterministically = (
   itinerary: PromptItinerary,
-  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  logisticsFacts?: LogisticsFact[]
 ): PromptItinerary => {
   const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
   if (!output.dy.length) return output;
@@ -1376,6 +1377,22 @@ export const scheduleItineraryDaysDeterministically = (
     for (const note of result.notes) {
       logInfo(`[itinerary] day-scheduling day=${day.d} ${note}`);
     }
+  }
+
+  // Phase 2A "adjacent-day swap" pass: after each day is internally ordered above, run a single
+  // bounded forward sweep over adjacent day pairs to relocate at most one catalog-mismatched
+  // activity per pair. Reuses the same zero-activity-day derivation as dayFillService's callers
+  // (arrivalDepartureRulesService facts with maxActivities === 0) so a terminal-only day is never
+  // touched by two different mechanisms in two different ways.
+  const zeroActivityDayDates = new Set(
+    (logisticsFacts ?? []).filter((fact) => fact.maxActivities === 0).map((fact) => fact.date)
+  );
+  const swapResult = scheduleAdjacentDaySwaps(output.dy, lookupEntry, {
+    maxItemsPerDay: MAX_ITEMS_PER_DAY,
+    zeroActivityDayDates,
+  });
+  for (const note of swapResult.notes) {
+    logInfo(`[itinerary] adjacent-day-swap ${note}`);
   }
 
   return output;
@@ -2679,7 +2696,7 @@ const runGenerateItineraryViaPromptPlan = async (
     normalized.c,
     normalizedMustSee.map((item) => item.name)
   );
-  const scheduledItinerary = scheduleItineraryDaysDeterministically(budgetCoherentItinerary, shortlistByDestination);
+  const scheduledItinerary = scheduleItineraryDaysDeterministically(budgetCoherentItinerary, shortlistByDestination, logisticsFacts);
   const polishedItinerary = polishItineraryFinalPass(scheduledItinerary, shortlistByDestination);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,

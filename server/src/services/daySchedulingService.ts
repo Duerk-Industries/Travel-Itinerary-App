@@ -1,6 +1,7 @@
 // itinerary-improvements-coding-plan.md Phase 2A ("Implement bounded day-sized
 // scheduling: density/pod seed, nearest insertion, bounded 2-opt, and adjacent-day
-// swap passes.") — this module implements the WITHIN-DAY portion only:
+// swap passes.") — this module implements both the within-day and adjacent-day
+// portions:
 //   1. Pod-density seeding — sequence pods (from geoPodClusteringService) so that
 //      walkable clusters stay together instead of being interleaved.
 //   2. Nearest-insertion ordering inside each pod, using the same haversine helper
@@ -8,9 +9,12 @@
 //   3. A bounded 2-opt pass: a single forward sweep over adjacent pairs that swaps
 //      only when it strictly reduces local tour distance. This is intentionally NOT
 //      iterated to convergence, to keep the pass cheap and deterministic.
-//
-// Cross-day / adjacent-day swaps are explicitly OUT OF SCOPE for this module (see
-// plan's "adjacent-day swap" as a separate, later concern) and are not attempted here.
+//   4. `scheduleAdjacentDaySwaps` — a bounded adjacent-day pass (see its doc comment
+//      below) that relocates at most one catalog-mismatched activity per adjacent
+//      day pair, per forward sweep, when the activity's real destination matches the
+//      neighboring day's base instead of its own. This is intentionally NOT a full
+//      cross-trip optimization: it is a single forward sweep over day pairs, bounded
+//      to one move per pair, and it never touches a zero-activity or rest-hub day.
 //
 // This is pure, zero-LLM-cost, deterministic code: no Math.random, no unstable sort
 // (all comparators have explicit tiebreakers), same input always produces same output.
@@ -28,6 +32,7 @@
 import type { AttractionCatalogEntry } from '../types';
 import { haversineKm, type LatLon } from '../utils/geo';
 import { clusterAttractionsIntoPods } from './geoPodClusteringService';
+import { normalizeDestinationKey } from './attractionsCatalogService';
 
 /** Structurally matches a day's `it` tuple: [timeSlotCode, activityTypeCode, name]. */
 export type DaySchedulingItem = readonly [string, string, string];
@@ -181,4 +186,132 @@ export const scheduleDayItems = <TItem extends DaySchedulingItem>(
   }
 
   return { items: finalItems, changed, notes };
+};
+
+/** Default per-day item cap used when a caller doesn't pass one explicitly (tests, mainly). */
+export const DEFAULT_ADJACENT_DAY_SWAP_MAX_ITEMS_PER_DAY = 5;
+
+const REST_HUB_NOTE_PATTERN = /rest[\s-]?hub|rest day|fatigue/i;
+
+/**
+ * Mirrors dayFillService.ts's `isRestHubByNote` — a day is treated as a rest/hub day if any of
+ * its `ln` notes match the same pattern used elsewhere in the pipeline
+ * (frictionAccumulatorService / dayFillService). Reused rather than reimplemented so the two
+ * modules can never disagree about what counts as a rest-hub day.
+ */
+const isRestHubDayByNote = (day: { ln?: readonly string[] }): boolean =>
+  (day.ln ?? []).some((note) => REST_HUB_NOTE_PATTERN.test(note));
+
+const toDateSet = (dates?: ReadonlySet<string> | readonly string[]): Set<string> =>
+  dates instanceof Set ? dates : new Set(dates ?? []);
+
+/** Minimal shape `scheduleAdjacentDaySwaps` needs from a day; matches PromptDay/FillDay's `dt`/`b`/`it`/`ln`. */
+export type AdjacentSwapDay<TItem extends DaySchedulingItem> = {
+  dt: string;
+  b: string;
+  it: TItem[];
+  ln?: readonly string[];
+};
+
+export type AdjacentDaySwapOptions = {
+  /** Per-day item cap; reuse whatever cap the caller already enforces (e.g. itineraryPromptPlanService's MAX_ITEMS_PER_DAY). */
+  maxItemsPerDay?: number;
+  /** Dates with a hard-constraint 0-activity cap (arrivalDepartureRulesService). Never touched. */
+  zeroActivityDayDates?: ReadonlySet<string> | readonly string[];
+};
+
+export type AdjacentDaySwapResult = {
+  /** True if at least one item was relocated across a day boundary. */
+  changed: boolean;
+  notes: string[];
+};
+
+/**
+ * Bounded adjacent-day swap pass (itinerary-improvements-coding-plan.md Phase 2A, "adjacent-day
+ * swap passes"). Runs AFTER `scheduleDayItems` has already ordered each day internally.
+ *
+ * For every pair of chronologically adjacent days (day i, day i+1) with genuinely different base
+ * destinations, this looks for an item whose catalog `destinationKey` matches the *other* day's
+ * base instead of its own — i.e. an activity that was scheduled on the wrong day of a multi-
+ * destination trip. If exactly one such misplaced item is found in one direction, it is relocated
+ * to the day it actually belongs to.
+ *
+ * Hard bounds (per the plan's "deterministic scheduling is authoritative" rule):
+ *   - Single forward sweep over adjacent day pairs — never iterated to convergence.
+ *   - At most ONE item moved per adjacent day-pair, per pass.
+ *   - Never touches a day in `zeroActivityDayDates` (arrival/departure terminal-only days) or a
+ *     day whose `ln` notes mark it as a rest-hub day — on either side of the pair.
+ *   - Never moves an item whose destination matches neither day's base (only relocates when the
+ *     catalog destinationKey unambiguously matches the *neighboring* day, never a guess).
+ *   - Never exceeds `maxItemsPerDay` on the receiving day, and never empties the donor day (a
+ *     donor day must have more than one item before losing one), so this pass can never turn a
+ *     day into a brand-new zero-activity day.
+ *   - Never changes the total item SET for the trip — it only moves an existing item's `it` tuple
+ *     from one day's array to another; nothing is dropped, duplicated, or fabricated.
+ *   - Deterministic: items are scanned in their existing array order (no sort), and when both
+ *     directions have a misplaced item, the forward direction (day i -> day i+1) is preferred as a
+ *     fixed, explicit tiebreak.
+ *
+ * Mutates the `it` arrays of the day objects passed in (same convention as `scheduleDayItems`,
+ * which mutates the itinerary it's handed) and returns only the change/notes summary; the caller
+ * already owns a deep-cloned itinerary by this point in the pipeline.
+ */
+export const scheduleAdjacentDaySwaps = <TItem extends DaySchedulingItem>(
+  days: Array<AdjacentSwapDay<TItem>>,
+  lookupEntry: (name: string) => AttractionCatalogEntry | null | undefined,
+  options?: AdjacentDaySwapOptions
+): AdjacentDaySwapResult => {
+  const notes: string[] = [];
+  let changed = false;
+
+  if (days.length < 2) return { changed, notes };
+
+  const maxItemsPerDay = options?.maxItemsPerDay ?? DEFAULT_ADJACENT_DAY_SWAP_MAX_ITEMS_PER_DAY;
+  const zeroActivityDates = toDateSet(options?.zeroActivityDayDates);
+
+  for (let i = 0; i < days.length - 1; i += 1) {
+    const dayA = days[i];
+    const dayB = days[i + 1];
+
+    // Never touch a zero-activity (terminal-only) or rest-hub day on either side.
+    if (zeroActivityDates.has(dayA.dt) || zeroActivityDates.has(dayB.dt)) continue;
+    if (isRestHubDayByNote(dayA) || isRestHubDayByNote(dayB)) continue;
+
+    const keyA = normalizeDestinationKey(dayA.b);
+    const keyB = normalizeDestinationKey(dayB.b);
+    // Same base on both sides: no cross-destination misplacement is possible.
+    if (!keyA || !keyB || keyA === keyB) continue;
+
+    // First item in day A whose catalog entry's destinationKey unambiguously matches day B's
+    // base (and therefore not day A's). Original array order = deterministic scan order.
+    const misplacedForward = dayA.it
+      .map((item, index) => ({ item, index, entry: lookupEntry(item[2]) ?? null }))
+      .find(({ entry }) => !!entry?.destinationKey && entry.destinationKey === keyB);
+    const misplacedBackward = dayB.it
+      .map((item, index) => ({ item, index, entry: lookupEntry(item[2]) ?? null }))
+      .find(({ entry }) => !!entry?.destinationKey && entry.destinationKey === keyA);
+
+    // Bounded to one move per pair: prefer the forward direction deterministically when both
+    // directions happen to have a misplaced candidate.
+    if (misplacedForward && dayA.it.length > 1 && dayB.it.length < maxItemsPerDay) {
+      const [moved] = dayA.it.splice(misplacedForward.index, 1);
+      dayB.it.push(['D', moved[1], moved[2]] as unknown as TItem);
+      changed = true;
+      notes.push(
+        `Moved "${moved[2]}" from day ${dayA.dt} (${dayA.b}) to day ${dayB.dt} (${dayB.b}) — catalog destination matches the adjacent day's base.`
+      );
+      continue;
+    }
+
+    if (misplacedBackward && dayB.it.length > 1 && dayA.it.length < maxItemsPerDay) {
+      const [moved] = dayB.it.splice(misplacedBackward.index, 1);
+      dayA.it.push(['D', moved[1], moved[2]] as unknown as TItem);
+      changed = true;
+      notes.push(
+        `Moved "${moved[2]}" from day ${dayB.dt} (${dayB.b}) to day ${dayA.dt} (${dayA.b}) — catalog destination matches the adjacent day's base.`
+      );
+    }
+  }
+
+  return { changed, notes };
 };
