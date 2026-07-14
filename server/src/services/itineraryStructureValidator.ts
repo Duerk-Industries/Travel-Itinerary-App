@@ -11,7 +11,7 @@ const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0
 // closure rules to warn
 // about Sunday closures (Europe) or Monday museum breaks. Applied as a
 // logistics note rather than per-attraction factual claims.
-const DEFAULT_CLOSED_WEEKDAYS_BY_CATEGORY: Record<string, number[]> = {
+export const DEFAULT_CLOSED_WEEKDAYS_BY_CATEGORY: Record<string, number[]> = {
   'museum': [1], // Many European museums close on Mondays
   'art gallery': [1],
   'shopping': [0], // Many shops close on Sundays in Europe

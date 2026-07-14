@@ -11,6 +11,10 @@ export const OPENAI_CALLER_ITINERARY_PLAN_P0_NORM = 'ITINERARY_PLAN_P0_NORM';
 export const OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE = 'ITINERARY_PLAN_P1_ROUTE';
 export const OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS = 'ITINERARY_PLAN_P2_DAYS';
 export const OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE = 'ITINERARY_PLAN_P3_VALIDATE';
+// itinerary-improvements-coding-plan.md Phase 4B: single, batched targeted-repair call used only
+// when deterministic thin-day fill (dayFillService.ts) can't raise a day to the minimum item
+// count. Capped to one attempt per generation by the caller.
+export const OPENAI_CALLER_ITINERARY_PLAN_P3B_REPAIR = 'ITINERARY_PLAN_P3B_REPAIR';
 export const OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER = 'ITINERARY_PLAN_P4_RENDER';
 
 type TextCompletionResult = {
@@ -111,6 +115,7 @@ export const runItineraryPromptStageViaOpenAi = async (params: {
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE
+    | typeof OPENAI_CALLER_ITINERARY_PLAN_P3B_REPAIR
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER;
   systemPrompt: string;
   userPrompt: string;

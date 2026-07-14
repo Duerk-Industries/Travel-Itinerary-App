@@ -5,6 +5,7 @@ import {
   OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
   OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
   OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE,
+  OPENAI_CALLER_ITINERARY_PLAN_P3B_REPAIR,
   OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
   runItineraryPromptStageViaOpenAi,
 } from '../apis/openaiCallers';
@@ -47,6 +48,12 @@ import {
   writeItineraryPlanCache,
 } from './itineraryPlanCacheService';
 import { accumulateDayFriction, calculateRouteFrictionScore } from './frictionAccumulatorService';
+import {
+  fillThinDaysDeterministically,
+  buildThinDayRepairPayload,
+  mergeThinDayRepairResult,
+  THIN_DAY_MIN_ITEMS,
+} from './dayFillService';
 import { buildDestinationLogistics, calculateTransferBuffer, type LogisticsMobility } from './destinationLogisticsService';
 import {
   buildGetYourGuideItineraryCandidates,
@@ -396,6 +403,36 @@ const getPromptBundle = async (): Promise<PromptBundle> => {
     step1Schema: readText(path.join('schemas', 'step1_schema_min.json')),
     step2Schema: readText(path.join('schemas', 'step2_schema_min.json')),
   };
+};
+
+// Phase 4B repair prompt is intentionally not wired into the admin-editable p0-p4 instruction
+// document system (itineraryInstructionService.ts): it is a single, capped, code-triggered
+// fallback rather than a per-generation stage, so it is loaded directly from disk with the same
+// "## System" / "## User" markdown convention as the other prompt files.
+let dayFillRepairTemplateCache: PromptTemplate | null = null;
+const parseSimplePromptTemplate = (id: string, markdown: string): PromptTemplate => {
+  const text = markdown.replace(/\r\n/g, '\n').trim();
+  const systemMatch = text.match(/^##\s+System\s*$/im);
+  const userMatch = text.match(/^##\s+User\s*$/im);
+  if (!systemMatch || !userMatch || (userMatch.index ?? 0) <= (systemMatch.index ?? 0)) {
+    throw new Error(`Prompt template ${id} must include "## System" followed by "## User"`);
+  }
+  const sysStart = (systemMatch.index ?? 0) + systemMatch[0].length;
+  const usrStart = (userMatch.index ?? 0) + userMatch[0].length;
+  return {
+    id,
+    sys: text.slice(sysStart, userMatch.index).trim(),
+    usr: text.slice(usrStart).trim(),
+  };
+};
+const getDayFillRepairTemplate = (): PromptTemplate => {
+  if (!dayFillRepairTemplateCache) {
+    dayFillRepairTemplateCache = parseSimplePromptTemplate(
+      'p3b_day_repair',
+      readText(path.join('prompts', 'p3b_day_repair.md'))
+    );
+  }
+  return dayFillRepairTemplateCache;
 };
 
 const replaceAll = (template: string, key: string, value: string): string =>
@@ -2078,7 +2115,8 @@ const runJsonStage = async <T>(params: {
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P0_NORM
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE
     | typeof OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS
-    | typeof OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE;
+    | typeof OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE
+    | typeof OPENAI_CALLER_ITINERARY_PLAN_P3B_REPAIR;
   template: PromptTemplate;
   replacements: Record<string, string>;
   maxTokens: number;
@@ -2624,7 +2662,79 @@ const runGenerateItineraryViaPromptPlan = async (
     input.groupTraits.length,
     normalized.mob
   );
-  const finalItinerary = fatigueManaged.itinerary;
+  let finalItinerary = fatigueManaged.itinerary;
+
+  // itinerary-improvements-coding-plan.md Phase 4B ("Deterministic fill + one targeted repair"):
+  // thin days (fewer than ~2 items) get filled from already-fetched must-see/shortlist data
+  // before any new LLM call; only if that can't resolve a day do we spend one small, batched
+  // repair call, capped at exactly one attempt per generation.
+  const dayFillEnabled = Number(getApiCacheSetting('itineraryPlan', 'dayFillEnabled')) !== 0;
+  if (dayFillEnabled) {
+    const deterministicFill = fillThinDaysDeterministically({
+      itinerary: finalItinerary,
+      mustSees: normalizedMustSee,
+      podsByDestination: attractionPodsByDestination,
+      transferNotesByDay,
+      minItemsPerDay: THIN_DAY_MIN_ITEMS,
+      maxItemsPerDay: MAX_ITEMS_PER_DAY,
+    });
+    finalItinerary = deterministicFill.itinerary;
+    if (deterministicFill.filledDayDates.length || deterministicFill.thinDayDates.length) {
+      logInfo(
+        `[itinerary] day-fill deterministic filled=${deterministicFill.filledDayDates.length} stillThin=${deterministicFill.thinDayDates.length}`
+      );
+    }
+
+    const dayFillRepairEnabled = Number(getApiCacheSetting('itineraryPlan', 'dayFillRepairEnabled')) !== 0;
+    if (deterministicFill.thinDayDates.length && dayFillRepairEnabled) {
+      // Hard cap: exactly one repair attempt per generation, batching every thin day into this
+      // single call rather than looping per day. Any failure (thrown network/provider error, or
+      // an empty/malformed response — the latter already falls back inside runJsonStage/
+      // mergeThinDayRepairResult) leaves finalItinerary as the deterministic, possibly-still-thin
+      // itinerary; there is no retry.
+      try {
+        const repairPayload = buildThinDayRepairPayload(finalItinerary, deterministicFill.thinDayDates);
+        const repairedRaw = await runJsonStage<unknown>({
+          apiKey: input.apiKey,
+          aiProvider: input.aiProvider,
+          caller: OPENAI_CALLER_ITINERARY_PLAN_P3B_REPAIR,
+          template: getDayFillRepairTemplate(),
+          replacements: {
+            MIN_ITEMS: String(THIN_DAY_MIN_ITEMS),
+            THIN_DAYS_JSON: JSON.stringify(repairPayload),
+            SHORTLIST_JSON: JSON.stringify(
+              Object.fromEntries(
+                Object.entries(shortlistByDestination).map(([destination, entries]) => [
+                  destination,
+                  entries.slice(0, 12).map((entry) => entry.name),
+                ])
+              )
+            ),
+            USED_NAMES_JSON: JSON.stringify(
+              Array.from(new Set(finalItinerary.dy.flatMap((day) => day.it.map((item) => item[2]))))
+            ),
+          },
+          maxTokens: scaleItineraryTokenBudget(500),
+          fallbackValue: null,
+          acc: tokenAcc,
+          captureStages,
+          usageContext,
+        });
+        const merged = mergeThinDayRepairResult({
+          itinerary: finalItinerary,
+          repaired: repairedRaw,
+          minItemsPerDay: THIN_DAY_MIN_ITEMS,
+          maxItemsPerDay: MAX_ITEMS_PER_DAY,
+        });
+        finalItinerary = merged.itinerary;
+        logInfo(
+          `[itinerary] day-fill repair caller=${OPENAI_CALLER_ITINERARY_PLAN_P3B_REPAIR} repaired=${merged.repairedDayDates.length} stillThin=${merged.stillThinDayDates.length}`
+        );
+      } catch (err) {
+        logError('[itinerary] day-fill repair call failed; keeping deterministic (possibly still-thin) itinerary', err);
+      }
+    }
+  }
 
   // Surface the same derived transfer estimates used for scheduling so the
   // traveler can understand why activities are grouped and paced this way.
