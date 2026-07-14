@@ -727,3 +727,20 @@ For each phase above:
   documented as never running in a per-PR job.
 - Phase 9's fixture suite is the standing regression gate for any future itinerary-pipeline change,
   not just this plan's phases.
+
+## Implementation status (2026-07-14)
+
+The phased work is implemented on the `Itinerary-Rework` branch and remains
+rollback-safe through feature flags and `api-limits.yaml` values. The final
+pass added per-generation de-identified metrics persistence with Postgres,
+Firebase, and memory-adapter parity; long-trip chunking and clean validation
+short-circuiting; selective escalation; degraded rendering; gold fixture
+output; and a scheduled mocked quality-gate workflow.
+
+Focused regression coverage for the new services passes, and server typecheck
+passes. Escalation remains disabled by default (`escalationEnabled: 0`) and
+gold `--judge` is an explicit reserved hook. The existing capture contract
+continues to propagate an early p0–p3 provider failure, while p4/render and
+chunk/repair failures use grounded deterministic fallbacks. An all-provider
+outage mode can therefore be enabled later behind a separate flag without
+changing the default error semantics.
