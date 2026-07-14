@@ -661,6 +661,30 @@ export interface ItineraryPromptProfile {
   };
 }
 
+/** De-identified, per-generation telemetry used for rollout and cost analysis. */
+export interface ItineraryGenerationMetrics {
+  generationId: string;
+  tripId?: string | null;
+  userId?: string | null;
+  provider: string;
+  model: string;
+  outcome: 'success' | 'failure';
+  tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  stageMetrics: Array<{
+    stage: string;
+    callerId: string;
+    latencyMs: number;
+    promptTokens: number;
+    completionTokens: number;
+    outcome: 'success' | 'failure';
+    parseFailure: boolean;
+  }>;
+  evaluation?: Record<string, unknown> | null;
+  cacheUsage?: Record<string, unknown> | null;
+  fallbackUsed?: boolean;
+  createdAt?: string;
+}
+
 export interface ItineraryGeneratedTransfer {
   status: 'Needed';
   transferType: TransferMode;

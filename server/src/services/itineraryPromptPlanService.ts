@@ -31,6 +31,7 @@ import {
 import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
 import { decideItineraryEscalation } from './itineraryEscalationService';
 import { chooseSafeItineraryMarkdown } from './itineraryDegradedFallbackService';
+import { persistItineraryGenerationMetrics } from './itineraryMetricsService';
 import type { AttractionPod } from './geoPodClusteringService';
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
@@ -2164,6 +2165,20 @@ export const generateItineraryViaPromptPlan = async (input: ItineraryPromptPlanS
         error: err instanceof Error ? err.message : String(err),
       },
     });
+    persistItineraryGenerationMetrics({
+      generationId: input.captureId ?? input.tripIdSeed,
+      tripId: input.tripIdSeed,
+      userId: input.userId,
+      provider: input.aiProvider?.provider,
+      model: input.aiProvider?.model,
+      outcome: 'failure',
+      stages: captureStages,
+      tokenUsage: {
+        promptTokens: tokenAcc.promptTokens,
+        completionTokens: tokenAcc.completionTokens,
+        totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+      },
+    });
     throw err;
   }
 };
@@ -2643,6 +2658,23 @@ const runGenerateItineraryViaPromptPlan = async (
       evaluation,
       fatigueIssues: fatigueManaged.issues,
     },
+  });
+  persistItineraryGenerationMetrics({
+    generationId: input.captureId ?? input.tripIdSeed,
+    tripId: input.tripIdSeed,
+    userId: input.userId,
+    provider: input.aiProvider?.provider,
+    model: input.aiProvider?.model,
+    outcome: 'success',
+    stages: captureStages,
+    tokenUsage: {
+      promptTokens: tokenAcc.promptTokens,
+      completionTokens: tokenAcc.completionTokens,
+      totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+    },
+    evaluation,
+    cacheUsage: cacheUsage as unknown as Record<string, unknown>,
+    fallbackUsed: safeRender.fallbackUsed,
   });
 
   return {

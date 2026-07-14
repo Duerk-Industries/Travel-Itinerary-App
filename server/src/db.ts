@@ -499,6 +499,8 @@ export const listApiCostCounters = async (...args: Parameters<ReturnType<typeof 
   adapter().listApiCostCounters(...args);
 export const resetApiCostCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiCostCounters']>) =>
   adapter().resetApiCostCounters(...args);
+export const recordItineraryGenerationMetrics = async (...args: Parameters<ReturnType<typeof adapter>['recordItineraryGenerationMetrics']>) =>
+  adapter().recordItineraryGenerationMetrics(...args);
 export const atomicIncrementIfUnderLimit = async (...args: Parameters<ReturnType<typeof adapter>['atomicIncrementIfUnderLimit']>) =>
   adapter().atomicIncrementIfUnderLimit(...args);
 export const getGenerationIdempotency = async (

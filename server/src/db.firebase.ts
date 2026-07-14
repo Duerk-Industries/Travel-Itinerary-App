@@ -62,6 +62,7 @@ import {
   AiAbTestMetric,
   AiProviderCertification,
   AiRecommendation,
+  ItineraryGenerationMetrics,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -6676,6 +6677,23 @@ export const incrementApiCostCounter = async (
     );
     return nextAmountMicros;
   });
+};
+
+export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerationMetrics): Promise<void> => {
+  const db = getDb();
+  await db.collection('itinerary_generation_metrics').doc(metrics.generationId).set(
+    {
+      generationId: metrics.generationId,
+      tripId: metrics.tripId ?? null,
+      userId: metrics.userId ?? null,
+      provider: metrics.provider,
+      model: metrics.model,
+      outcome: metrics.outcome,
+      metrics,
+      createdAt: metrics.createdAt ?? nowIso(),
+    },
+    { merge: true }
+  );
 };
 
 export const getApiUsageCount = async (

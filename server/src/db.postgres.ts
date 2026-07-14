@@ -61,6 +61,7 @@ import {
   AiAbTestMetric,
   AiProviderCertification,
   AiRecommendation,
+  ItineraryGenerationMetrics,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -1253,6 +1254,20 @@ export const initDb = async (): Promise<void> => {
     );
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_api_cost_counters_lookup ON api_cost_counters(provider, window_key);`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS itinerary_generation_metrics (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      generation_id TEXT NOT NULL UNIQUE,
+      trip_id       TEXT,
+      user_id       UUID REFERENCES users(id) ON DELETE SET NULL,
+      provider      TEXT NOT NULL,
+      model         TEXT NOT NULL,
+      outcome       TEXT NOT NULL,
+      metrics       JSONB NOT NULL,
+      created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_generation_metrics_created ON itinerary_generation_metrics(created_at DESC);`);
   await p.query(`
     CREATE TABLE IF NOT EXISTS usage_events (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -9924,6 +9939,31 @@ export const listApiCostCounters = async (): Promise<
 export const resetApiCostCounters = async (): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM api_cost_counters`);
+};
+
+export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerationMetrics): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO itinerary_generation_metrics
+      (generation_id, trip_id, user_id, provider, model, outcome, metrics, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,NOW())
+     ON CONFLICT (generation_id) DO UPDATE SET
+       trip_id = EXCLUDED.trip_id,
+       user_id = EXCLUDED.user_id,
+       provider = EXCLUDED.provider,
+       model = EXCLUDED.model,
+       outcome = EXCLUDED.outcome,
+       metrics = EXCLUDED.metrics`,
+    [
+      metrics.generationId,
+      metrics.tripId ?? null,
+      metrics.userId ?? null,
+      metrics.provider,
+      metrics.model,
+      metrics.outcome,
+      JSON.stringify(metrics),
+    ]
+  );
 };
 
 export const atomicIncrementIfUnderLimit = async (
