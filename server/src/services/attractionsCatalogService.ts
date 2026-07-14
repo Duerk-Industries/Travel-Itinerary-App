@@ -1460,3 +1460,36 @@ export const syncAttractionsCatalogFromCsvToDbOnStartup = async (): Promise<void
     logError('[attractions] startup CSV import failed', err);
   }
 };
+
+/**
+ * Manual cache-invalidation trigger (itinerary-improvements-coding-plan.md Phase 2B).
+ * Allows operators to bust the activityContext cache for a specific attraction or
+ * destination without a code deploy if source data is found to be incorrect.
+ * Re-runs Wikipedia enrichment on the next catalog refresh or discovery.
+ */
+export const invalidateAttractionCatalogCache = async (params: {
+  destinationKey?: string;
+  attractionId?: string;
+}): Promise<{ count: number }> => {
+  const existing = await readCatalogCsv();
+  let count = 0;
+  const updated = existing.map((row) => {
+    const match =
+      (params.destinationKey && normalizeDestinationKey(row.destinationKey) === normalizeDestinationKey(params.destinationKey)) ||
+      (params.attractionId && row.id === params.attractionId);
+    if (!match) return row;
+    count += 1;
+    return {
+      ...row,
+      wikipediaSummary: null,
+      wikipediaTitle: null,
+      wikipediaPageId: null,
+      updatedAt: '1970-01-01T00:00:00.000Z', // Force stale
+    };
+  });
+  if (count > 0) {
+    await writeCatalogCsv(updated);
+    logInfo(`[attractions] manual cache invalidation: flushed ${count} entries`);
+  }
+  return { count };
+};

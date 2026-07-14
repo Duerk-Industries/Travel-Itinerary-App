@@ -104,4 +104,13 @@ describe('itinerary Phase 0A baseline evaluation', () => {
     });
     expect(result.estimatedTravelMinutesPerActivityDay).toBeNull();
   });
+
+  test('reports groupCohesionScore correctly when provided', () => {
+    const result = evaluateItineraryBaseline({
+      activities: [], transfers: [], mustSees: [], weights, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      groupCohesionScore: 0.75,
+    });
+    expect(result.groupCohesionScore).toBe(0.75);
+  });
 });

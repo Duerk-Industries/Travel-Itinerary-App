@@ -22,6 +22,9 @@ LOGISTICS FACTS (hard scheduling limits):
 DAY RANGE TO GENERATE:
 {{DAY_RANGE}}
 
+NARRATIVE CONTINUITY (emotional state from previous days):
+{{NARRATIVE_CONTINUITY_CONTEXT}}
+
 ALREADY USED ATTRACTION NAMES (do not repeat across chunks):
 {{USED_ATTRACTION_IDS}}
 

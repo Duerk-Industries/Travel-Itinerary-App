@@ -38,7 +38,11 @@ import { scheduleDayItems, scheduleAdjacentDaySwaps } from './daySchedulingServi
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
 import { buildArrivalDepartureFacts, renderLogisticsFactBlock, type LogisticsFact } from './arrivalDepartureRulesService';
-import { ITINERARY_STRUCTURE_VALIDATOR_VERSION, validateAndRepairItineraryStructure } from './itineraryStructureValidator';
+import {
+  ITINERARY_STRUCTURE_VALIDATOR_VERSION,
+  validateAndRepairItineraryStructure,
+  DEFAULT_CLOSED_WEEKDAYS_BY_CATEGORY,
+} from './itineraryStructureValidator';
 import {
   buildCatalogFingerprint,
   buildDayFragments,
@@ -450,7 +454,7 @@ export const applyTemplate = (template: string, replacements: Record<string, str
   for (const [key, value] of Object.entries(replacements)) {
     output = replaceAll(output, key, value);
   }
-  return output.replace(/\{\{(?:ATTRACTION_PODS|LOGISTICS_FACTS|DAY_RANGE|USED_ATTRACTION_IDS)\}\}/g, 'none');
+  return output.replace(/\{\{(?:ATTRACTION_PODS|LOGISTICS_FACTS|DAY_RANGE|USED_ATTRACTION_IDS|NARRATIVE_CONTINUITY_CONTEXT)\}\}/g, 'none');
 };
 
 const parseModelJson = <T>(raw: string): T => {
@@ -1170,8 +1174,8 @@ const enforceFairnessFloor = (
   itinerary: PromptItinerary,
   shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
   travelerInterests: Array<keyof InterestWeights>
-): { itinerary: PromptItinerary; changed: boolean } => {
-  if (!travelerInterests.length) return { itinerary, changed: false };
+): { itinerary: PromptItinerary; changed: boolean; missingCount: number; servedCount: number } => {
+  if (!travelerInterests.length) return { itinerary, changed: false, missingCount: 0, servedCount: 0 };
   const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
   let changed = false;
 
@@ -1195,8 +1199,9 @@ const enforceFairnessFloor = (
     }
   }
 
+  const initialServedCount = travelerInterests.filter((interest) => servedInterests.has(interest)).length;
   const missingInterests = travelerInterests.filter((interest) => !servedInterests.has(interest));
-  if (!missingInterests.length) return { itinerary, changed: false };
+  if (!missingInterests.length) return { itinerary, changed: false, missingCount: 0, servedCount: initialServedCount };
 
   // For each underserved interest, find a suitable candidate and inject it.
   for (const interest of missingInterests) {
@@ -1222,7 +1227,7 @@ const enforceFairnessFloor = (
     }
   }
 
-  return { itinerary: output, changed };
+  return { itinerary: output, changed, missingCount: missingInterests.length, servedCount: initialServedCount };
 };
 
 const enforceShortlistGrounding = (
@@ -1230,10 +1235,10 @@ const enforceShortlistGrounding = (
   req: PromptReq,
   shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
   travelerInterests?: Array<keyof InterestWeights>
-): PromptItinerary => {
+): { itinerary: PromptItinerary; groupCohesionScore: number | null } => {
   const requested = Array.isArray(req.d) ? req.d.map((item) => normalizeText(item)).filter(Boolean) : [];
   const pools = buildShortlistPools(shortlistByDestination, requested);
-  if (!pools.global.length) return itinerary;
+  if (!pools.global.length) return { itinerary, groupCohesionScore: null };
 
   const usedText = new Set<string>();
   const usedShortlist = new Set<string>();
@@ -1290,9 +1295,11 @@ const enforceShortlistGrounding = (
   }
 
   let grounded = itinerary;
+  let groupCohesionScore: number | null = null;
   if (travelerInterests?.length) {
     const floor = enforceFairnessFloor(itinerary, shortlistByDestination, travelerInterests);
     grounded = floor.itinerary;
+    groupCohesionScore = floor.servedCount / travelerInterests.length;
   }
 
   const primaryDestination = requested[0];
@@ -1350,7 +1357,7 @@ const enforceShortlistGrounding = (
     }
   }
 
-  return grounded;
+  return { itinerary: grounded, groupCohesionScore };
 };
 
 // itinerary-improvements-coding-plan.md Phase 2A: bounded, deterministic WITHIN-DAY
@@ -1404,11 +1411,14 @@ export const scheduleItineraryDaysDeterministically = (
 };
 
 // Final "master travel agent" polishing pass, per itinerary-improvement-plan.md §9:
-// 1. Farewell Night: bias the ranker toward a high-quality food attraction for the final night.
+// 1. Farewell Night: bias the ranker toward a high-quality food attraction for the final night,
+//    geographically central to the group's lodging (proximity to the day's base centroid).
 // 2. Golden Hour: pin photography-tagged items to the first/last activity slot of their day.
+// Respects category-level closure rules (Sunday/Monday trap).
 export const polishItineraryFinalPass = (
   itinerary: PromptItinerary,
-  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  podsByDestination: Record<string, AttractionPod[]>
 ): PromptItinerary => {
   const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
   if (!output.dy.length) return output;
@@ -1420,13 +1430,36 @@ export const polishItineraryFinalPass = (
     if (key && !entryByName.has(key)) entryByName.set(key, entry);
   }
 
+  const isClosed = (name: string, dateStr: string): boolean => {
+    const date = new Date(`${dateStr}T12:00:00Z`);
+    if (Number.isNaN(date.getTime())) return false;
+    const weekday = date.getUTCDay();
+    const normalized = normalizeText(name).toLowerCase();
+    for (const [category, closedDays] of Object.entries(DEFAULT_CLOSED_WEEKDAYS_BY_CATEGORY)) {
+      if (normalized.includes(category) && closedDays.includes(weekday)) return true;
+    }
+    return false;
+  };
+
   // 1. Farewell Night Crescendo
   const lastDay = output.dy[output.dy.length - 1];
   const lastDinnerIndex = lastDay.it.length - 1;
   if (lastDinnerIndex >= 0) {
-    const topFood = allEntries
+    const destinationPods = podsByDestination[lastDay.b] ?? [];
+    const centralPod = destinationPods.find((p) => p.kind === 'geographic');
+
+    const foodCandidates = allEntries
       .filter((e) => e.interestTags.includes('food') && normalizeDestinationKey(lastDay.b) === e.destinationKey)
-      .sort((a, b) => a.rank - b.rank)[0];
+      .filter((e) => !isClosed(e.name, lastDay.dt))
+      .sort((a, b) => {
+        // Boost items in the central pod
+        const aInCentral = centralPod?.items.some((item) => item.id === a.id) ? 1 : 0;
+        const bInCentral = centralPod?.items.some((item) => item.id === b.id) ? 1 : 0;
+        if (aInCentral !== bInCentral) return bInCentral - aInCentral;
+        return a.rank - b.rank;
+      });
+
+    const topFood = foodCandidates[0];
 
     if (topFood && !lastDay.it.some((item) => normalizeText(item[2]).toLowerCase() === topFood.name.toLowerCase())) {
       lastDay.it[lastDinnerIndex] = ['E', 'A', topFood.name];
@@ -1439,7 +1472,7 @@ export const polishItineraryFinalPass = (
     if (day.it.length < 2) continue;
     const photoIndex = day.it.findIndex((item) => {
       const entry = entryByName.get(normalizeText(item[2]).toLowerCase());
-      return entry?.interestTags.includes('photography');
+      return entry?.interestTags.includes('photography') && !isClosed(item[2], day.dt);
     });
 
     if (photoIndex > 0 && photoIndex < day.it.length - 1) {
@@ -2618,6 +2651,8 @@ const runGenerateItineraryViaPromptPlan = async (
     ? chunkDayRanges(normalized.sd, normalized.ed, chunkSizeDays)
     : [{ start: normalized.sd, end: normalized.ed, offset: 0 }];
   let usedAttractionNames: string[] = [];
+  let narrativeContinuityContext = 'none';
+
   for (const range of ranges) {
     const chunkDays = diffDaysInclusive(range.start, range.end);
     const chunkNorm = { ...cacheSafeNormalized, sd: range.start, ed: range.end };
@@ -2644,6 +2679,7 @@ const runGenerateItineraryViaPromptPlan = async (
           LOGISTICS_FACTS: logisticsFactsBlock,
           DAY_RANGE: `${range.start}..${range.end}`,
           USED_ATTRACTION_IDS: usedAttractionNames.join(', ') || 'none',
+          NARRATIVE_CONTINUITY_CONTEXT: narrativeContinuityContext,
         },
         maxTokens: scaleItineraryTokenBudget(Math.max(1100, Math.min(3500, chunkDays * 280))),
         fallbackValue: {},
@@ -2673,6 +2709,14 @@ const runGenerateItineraryViaPromptPlan = async (
       ...usedAttractionNames,
       ...chunkItinerary.dy.flatMap((day) => day.it.map((item) => item[2])),
     ]));
+
+    // Update narrative continuity context for the next chunk: a 1-sentence emotional/tonal
+    // summary of how the previous chunk ended.
+    if (chunkItinerary.dy.length > 0) {
+      const lastDay = chunkItinerary.dy[chunkItinerary.dy.length - 1];
+      const items = lastDay.it.map((item) => item[2]).join(', ');
+      narrativeContinuityContext = `The previous chunk ended on Day ${lastDay.d} at ${lastDay.b} with: ${items}. The group is satisfied and ready for the next phase of the trip.`;
+    }
   }
   const dayItinerary = shouldChunkP2
     ? mergeChunkedItineraries(dayItineraries, route)
@@ -2715,14 +2759,15 @@ const runGenerateItineraryViaPromptPlan = async (
   // Shared day-cache hits contain only generic, validated content. Re-run the
   // cheap grounding, destination, and logistics checks after every read so a
   // cached skeleton cannot bypass this user's fairness/accessibility rules.
-  const groundedAfterCache = enforceShortlistGrounding(
+  const groundedResult = enforceShortlistGrounding(
     filteredItinerary,
     promptRequest,
     shortlistByDestination,
     preferenceContract.travelerInterests
   );
+  filteredItinerary = groundedResult.itinerary;
   filteredItinerary = validateAndRepairItineraryStructure({
-    itinerary: enforceAttractionDestinationConsistency(groundedAfterCache, shortlistByDestination),
+    itinerary: enforceAttractionDestinationConsistency(filteredItinerary, shortlistByDestination),
     logisticsFacts,
   }).itinerary;
   const profile = mapProfile(normalized);
@@ -2740,7 +2785,7 @@ const runGenerateItineraryViaPromptPlan = async (
     normalizedMustSee.map((item) => item.name)
   );
   const scheduledItinerary = scheduleItineraryDaysDeterministically(budgetCoherentItinerary, shortlistByDestination, logisticsFacts);
-  const polishedItinerary = polishItineraryFinalPass(scheduledItinerary, shortlistByDestination);
+  const polishedItinerary = polishItineraryFinalPass(scheduledItinerary, shortlistByDestination, attractionPodsByDestination);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
     normalized,
@@ -2942,6 +2987,7 @@ const runGenerateItineraryViaPromptPlan = async (
     },
     stageLatenciesMs: captureStages.map((stage) => stage.latencyMs),
     transferMinutesByDay,
+    groupCohesionScore: groundedResult.groupCohesionScore,
   });
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${safeRender.fallbackUsed ? 'yes' : 'no'}`

@@ -29,6 +29,8 @@ export type ItineraryBaselineMetrics = {
   totalTokens: number;
   latencyP50Ms: number | null;
   latencyP95Ms: number | null;
+  /** Fairness Floor hit rate: fraction of traveler interests served without post-hoc injection. */
+  groupCohesionScore: number | null;
   unavailableReasons: string[];
 };
 
@@ -48,6 +50,7 @@ export const evaluateItineraryBaseline = (input: {
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
   stageLatenciesMs?: number[];
   transferMinutesByDay?: Map<number, number>;
+  groupCohesionScore?: number | null;
 }): ItineraryBaselineMetrics => {
   const names = input.activities.map((activity) => normalize(activity.name)).filter(Boolean);
   const uniqueNames = new Set(names);
@@ -99,7 +102,9 @@ export const evaluateItineraryBaseline = (input: {
     unsupportedFactRate: null,
     llmCalls: latencies.length,
     ...input.tokenUsage,
-    latencyP50Ms: percentile(0.5), latencyP95Ms: percentile(0.95), unavailableReasons,
+    latencyP50Ms: percentile(0.5), latencyP95Ms: percentile(0.95),
+    groupCohesionScore: input.groupCohesionScore ?? null,
+    unavailableReasons,
   };
 };
 

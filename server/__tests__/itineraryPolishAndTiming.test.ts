@@ -27,7 +27,7 @@ describe('polishItineraryFinalPass', () => {
     } as any;
     const shortlist = { Paris: [entry('Le Bistro Classique', ['food'], { rank: 1 })] };
 
-    const result = polishItineraryFinalPass(itinerary, shortlist);
+    const result = polishItineraryFinalPass(itinerary, shortlist, {});
 
     expect(result.dy[0].it[0]).toEqual(['E', 'A', 'Le Bistro Classique']);
     expect(result.dy[0].ln.some((note: string) => /Farewell Dinner/i.test(note))).toBe(true);
@@ -41,7 +41,7 @@ describe('polishItineraryFinalPass', () => {
     } as any;
     const shortlist = { Paris: [entry('Le Bistro Classique', ['food'], { rank: 1 })] };
 
-    const result = polishItineraryFinalPass(itinerary, shortlist);
+    const result = polishItineraryFinalPass(itinerary, shortlist, {});
 
     expect(result.dy[0].it).toEqual([['D', 'A', 'Le Bistro Classique']]);
   });
@@ -68,7 +68,7 @@ describe('polishItineraryFinalPass', () => {
       Paris: [entry('Sunset Viewpoint', ['photography'], { rank: 1 }), entry('Evening stroll', ['culture'], { rank: 2 })],
     };
 
-    const result = polishItineraryFinalPass(itinerary, shortlist);
+    const result = polishItineraryFinalPass(itinerary, shortlist, {});
 
     expect(result.dy[0].it[result.dy[0].it.length - 1][2]).toBe('Sunset Viewpoint');
     expect(result.dy[0].ln.some((note: string) => /optimal lighting/i.test(note))).toBe(true);
@@ -93,12 +93,33 @@ describe('polishItineraryFinalPass', () => {
     } as any;
     const shortlist = { Paris: [entry('Sunset Viewpoint', ['photography'], { rank: 1 })] };
 
-    const result = polishItineraryFinalPass(itinerary, shortlist);
+    const result = polishItineraryFinalPass(itinerary, shortlist, {});
 
     expect(result.dy[0].it).toEqual([
       ['M', 'O', 'Morning market'],
       ['E', 'A', 'Sunset Viewpoint'],
     ]);
+  });
+
+  test('Farewell Night: boosts food items in the central geographic pod', () => {
+    const itinerary = {
+      dy: [
+        { d: 1, dt: '2026-07-01', b: 'Paris', it: [['E', 'O', 'Walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [] },
+      ],
+    } as any;
+    const entryA = entry('Regular Bistro', ['food'], { rank: 1, id: 'a' });
+    const entryB = entry('Central Bistro', ['food'], { rank: 2, id: 'b' });
+    const shortlist = { Paris: [entryA, entryB] };
+    const pods = {
+      Paris: [
+        { kind: 'geographic', items: [entryB] },
+      ],
+    } as any;
+
+    const result = polishItineraryFinalPass(itinerary, shortlist, pods);
+
+    // Central Bistro (entryB) should win even though it has a lower rank (2 vs 1)
+    expect(result.dy[0].it[0][2]).toBe('Central Bistro');
   });
 });
 
