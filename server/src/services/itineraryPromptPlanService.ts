@@ -29,6 +29,7 @@ import {
   type NormalizedPreferenceContract,
 } from './itineraryPreferenceContract';
 import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
+import { decideItineraryEscalation } from './itineraryEscalationService';
 import type { AttractionPod } from './geoPodClusteringService';
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
@@ -2286,6 +2287,28 @@ const runGenerateItineraryViaPromptPlan = async (
     .map(([destination, pods]) => `Destination: ${destination}\n${renderAttractionPods(pods)}`)
     .join('\n') || 'none';
 
+  const shortlistCoverage = (() => {
+    const entries = Object.values(shortlistByDestination).flat();
+    const requested = Object.entries(normalized.w).filter(([, weight]) => Number(weight) >= 10).map(([key]) => key);
+    if (!requested.length) return null;
+    const covered = requested.filter((interest) => entries.some((entry) => entry.interestTags.some((tag) =>
+      String(tag).toLowerCase().replace(/\s+/g, '_') === interest
+    )));
+    return covered.length / requested.length;
+  })();
+  const escalation = decideItineraryEscalation({
+    days: Number(promptRequest.dur ?? input.days),
+    destinationCount: promptRequest.d.length,
+    shortlistCoverage,
+    provider: input.aiProvider?.provider,
+  });
+  if (escalation.shouldEscalate) {
+    logInfo(`[itinerary] selective p2 escalation model=${escalation.model} reasons=${escalation.reasons.join(',')}`);
+  }
+  const p2AiProvider = escalation.shouldEscalate
+    ? { ...(input.aiProvider ?? {}), provider: input.aiProvider?.provider ?? 'openai', model: escalation.model! }
+    : input.aiProvider;
+
   const signatureInput = {
     destinations: promptRequest.d, duration: promptRequest.dur ?? input.days, pace: normalized.p,
     comfort: normalized.c, mobility: normalized.mob, car: normalized.car, interactionStyle: normalized.is,
@@ -2362,7 +2385,7 @@ const runGenerateItineraryViaPromptPlan = async (
   } else {
   const dayRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
-    aiProvider: input.aiProvider,
+    aiProvider: p2AiProvider,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
     template: bundle.p2,
     replacements: {

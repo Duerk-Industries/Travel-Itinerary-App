@@ -299,6 +299,14 @@ caching:
     routeCacheTtlDays: 60
     dayCacheTtlDays: 30
     shadowSamplePercent: 5
+    # Selective p2 model escalation is disabled until production metrics prove
+    # that the trigger cases correlate with measurable quality loss.
+    escalationEnabled: 0
+    escalationMinDays: 10
+    escalationMinDestinations: 3
+    escalationMinCoveragePercent: 0.5
+    # 1 = gpt-4o; keep this numeric because cache settings are validated as numbers.
+    escalationModel: 1
   locations:
     csvCacheTtlMinutes: 60
     refreshCooldownSeconds: 15
