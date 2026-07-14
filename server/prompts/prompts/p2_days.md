@@ -19,8 +19,16 @@ ATTRACTION PODS (finish one pod before changing areas):
 LOGISTICS FACTS (hard scheduling limits):
 {{LOGISTICS_FACTS}}
 
+DAY RANGE TO GENERATE:
+{{DAY_RANGE}}
+
+ALREADY USED ATTRACTION NAMES (do not repeat across chunks):
+{{USED_ATTRACTION_IDS}}
+
 TASK:
-Fill dy[] with one entry per travel day from norm.sd..norm.ed (inclusive).
+Fill dy[] with one entry per travel day in DAY RANGE. When DAY RANGE is "all", use norm.sd..norm.ed
+(inclusive). When generating a chunk, do not emit days outside the requested range and do not repeat
+an attraction named in ALREADY USED ATTRACTION NAMES.
 Rules:
 1) Each day has it[] items. Each item is [t,k,text] where t in {M,D,E} and k in {A,R,T,O,E}. it<=5 total items per day; allow up to 2 evening items (t=E).
 2) Transfer days (any date present in x[]): keep plans light and near fr/to. Transfer mode (x[].m) must be one of Flight, Train, Bus, Private, Ferry, Other.

@@ -406,7 +406,7 @@ export const applyTemplate = (template: string, replacements: Record<string, str
   for (const [key, value] of Object.entries(replacements)) {
     output = replaceAll(output, key, value);
   }
-  return output.replace(/\{\{(?:ATTRACTION_PODS|LOGISTICS_FACTS)\}\}/g, 'none');
+  return output.replace(/\{\{(?:ATTRACTION_PODS|LOGISTICS_FACTS|DAY_RANGE|USED_ATTRACTION_IDS)\}\}/g, 'none');
 };
 
 const parseModelJson = <T>(raw: string): T => {
@@ -2388,26 +2388,47 @@ const runGenerateItineraryViaPromptPlan = async (
     cacheUsage.dayHit = true;
     filteredItinerary = sanitizeItinerary(cachedDay, route, normalized, promptRequest);
   } else {
-  const dayRaw = await runJsonStage<unknown>({
-    apiKey: input.apiKey,
-    aiProvider: p2AiProvider,
-    caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
-    template: bundle.p2,
-    replacements: {
-      NORM_JSON: JSON.stringify(cacheSafeNormalized),
-      STEP1_JSON: JSON.stringify(route),
-      STEP2_SCHEMA_MIN: bundle.step2Schema,
-      ATTRACTION_SHORTLIST: attractionContextBlock,
-      ATTRACTION_PODS: attractionPodsBlock,
-      LOGISTICS_FACTS: logisticsFactsBlock,
-    },
-    maxTokens: scaleItineraryTokenBudget(Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280))),
-    fallbackValue: {},
-    acc: tokenAcc,
-    captureStages,
-    usageContext,
-  });
-  const dayItinerary = sanitizeItinerary(dayRaw, route, normalized, promptRequest);
+  const shouldChunkP2 = getEnvFlag('ITINERARY_GOLD_MODE') || Number(promptRequest.dur ?? input.days) >= 8;
+  const dayItineraries: PromptItinerary[] = [];
+  const ranges = shouldChunkP2
+    ? chunkDayRanges(normalized.sd, normalized.ed, 3)
+    : [{ start: normalized.sd, end: normalized.ed, offset: 0 }];
+  let usedAttractionNames: string[] = [];
+  for (const range of ranges) {
+    const chunkDays = diffDaysInclusive(range.start, range.end);
+    const chunkNorm = { ...cacheSafeNormalized, sd: range.start, ed: range.end };
+    const chunkReq = { ...promptRequest, sd: range.start, ed: range.end, dur: chunkDays };
+    const dayRaw = await runJsonStage<unknown>({
+      apiKey: input.apiKey,
+      aiProvider: p2AiProvider,
+      caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
+      template: bundle.p2,
+      replacements: {
+        NORM_JSON: JSON.stringify(chunkNorm),
+        STEP1_JSON: JSON.stringify(route),
+        STEP2_SCHEMA_MIN: bundle.step2Schema,
+        ATTRACTION_SHORTLIST: attractionContextBlock,
+        ATTRACTION_PODS: attractionPodsBlock,
+        LOGISTICS_FACTS: logisticsFactsBlock,
+        DAY_RANGE: `${range.start}..${range.end}`,
+        USED_ATTRACTION_IDS: usedAttractionNames.join(', ') || 'none',
+      },
+      maxTokens: scaleItineraryTokenBudget(Math.max(1100, Math.min(3500, chunkDays * 280))),
+      fallbackValue: {},
+      acc: tokenAcc,
+      captureStages,
+      usageContext,
+    });
+    const chunkItinerary = sanitizeItinerary(dayRaw, route, chunkNorm, chunkReq);
+    dayItineraries.push(chunkItinerary);
+    usedAttractionNames = Array.from(new Set([
+      ...usedAttractionNames,
+      ...chunkItinerary.dy.flatMap((day) => day.it.map((item) => item[2])),
+    ]));
+  }
+  const dayItinerary = shouldChunkP2
+    ? mergeChunkedItineraries(dayItineraries, route)
+    : (dayItineraries[0] ?? sanitizeItinerary({}, route, normalized, promptRequest));
   const mechanicallyValidated = validateAndRepairItineraryStructure({ itinerary: dayItinerary, logisticsFacts });
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS} days=${dayItinerary.dy.length} transfers=${dayItinerary.x.length}`
@@ -2634,4 +2655,35 @@ const runGenerateItineraryViaPromptPlan = async (
     cacheUsage,
     ...(selectedGetYourGuide.selected.length ? { getYourGuideCandidates: selectedGetYourGuide.selected } : {}),
   };
+};
+
+const chunkDayRanges = (start: string, end: string, size: number): Array<{ start: string; end: string; offset: number }> => {
+  const total = diffDaysInclusive(start, end);
+  const ranges: Array<{ start: string; end: string; offset: number }> = [];
+  for (let offset = 0; offset < total; offset += size) {
+    const chunkStart = addDays(start, offset);
+    const chunkEnd = addDays(start, Math.min(total - 1, offset + size - 1));
+    ranges.push({ start: chunkStart, end: chunkEnd, offset });
+  }
+  return ranges;
+};
+
+const mergeChunkedItineraries = (chunks: PromptItinerary[], route: PromptRoute): PromptItinerary => {
+  const seen = new Set<string>();
+  const days = chunks.flatMap((chunk) => chunk.dy).sort((a, b) => a.dt.localeCompare(b.dt)).map((day, index) => ({
+    ...day,
+    d: index + 1,
+    it: day.it.filter((item) => {
+      const key = normalizeText(item[2]).toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }),
+  }));
+  return {
+    ...(chunks[0] ?? { $: 'it1', eh: route.eh, xh: route.xh, b: route.b, x: route.x, a: route.a, cf: 'M' }),
+    dy: days,
+    b: route.b,
+    x: route.x,
+  } as PromptItinerary;
 };
