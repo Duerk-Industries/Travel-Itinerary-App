@@ -5,6 +5,9 @@ on:
     - cron: '17 3 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   mocked-itinerary-regression:
     runs-on: ubuntu-latest
@@ -13,12 +16,26 @@ jobs:
       USE_IN_MEMORY_DB: '1'
       ITINERARY_METRICS_CAPTURE: '0'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
+      # Keep this workflow free of third-party action resolution so local
+      # workflow diagnostics and restricted GitHub runners can still load it.
+      - name: Checkout repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags --prune --depth=1 origin "+${GITHUB_REF}:refs/remotes/origin/event-ref"
+          git checkout --force refs/remotes/origin/event-ref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify Node
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 20) throw new Error('Node 20 or newer is required');"
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck:server
       - run: >-
           npm --prefix server test -- --runInBand
