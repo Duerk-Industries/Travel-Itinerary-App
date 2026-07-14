@@ -1,0 +1,28 @@
+{
+  "version": "itinerary-quality-gate-v1",
+  "fixtures": [
+    "short-city-break",
+    "long-multi-city",
+    "open-jaw-date-line",
+    "late-arrival-early-departure",
+    "low-mobility-family",
+    "large-group-conflicting-preferences",
+    "strict-budget-must-sees",
+    "missing-coordinates",
+    "seasonal-outdoor-trip",
+    "repeat-visitor"
+  ],
+  "assertions": {
+    "travelerOrderInvariant": true,
+    "stricterMobilityCannotIncreaseWalking": true,
+    "lowerBudgetCannotIncreasePaidShareWithoutMustSee": true,
+    "noUnsupportedFacts": true,
+    "noHardConstraintViolations": true
+  },
+  "rolloutThresholds": {
+    "minimumTransferReductionPercent": 20,
+    "maximumWeightedInterestRegression": 0.02,
+    "maximumUnsupportedFactRate": 0,
+    "maximumP95CostIncreasePercent": 0
+  }
+}
