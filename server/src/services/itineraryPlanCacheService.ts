@@ -15,6 +15,7 @@ export const ITINERARY_CACHE_SCHEMA_VERSION = 'itinerary-cache-v1';
 export const stripUndefinedDeep = <T>(value: T): T => {
   if (value === undefined) return null as T;
   if (typeof value === 'bigint') return String(value) as T;
+  if (typeof value === 'function' || typeof value === 'symbol') return null as T;
   if (typeof value === 'number' && !Number.isFinite(value)) return null as T;
   if (Array.isArray(value)) return value.map((item) => stripUndefinedDeep(item)) as T;
   if (value instanceof Date) return value;
