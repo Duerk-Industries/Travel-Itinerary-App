@@ -416,6 +416,18 @@ const main = async () => {
         overrides: options.gold ? { strongerModel: 'gpt-4o', tokenMultiplier: 2, shortlistTarget: 20, cacheWritesDisabled: true } : undefined,
         captureId, startedAt, completedAt: new Date().toISOString(), result,
       }, null, 2));
+      if (options.gold) {
+        const tripSpecId = safeFilePart(
+          typeof requestCandidate.tripIdSeed === 'string'
+            ? requestCandidate.tripIdSeed
+            : typeof requestCandidate.tripName === 'string' ? requestCandidate.tripName : label
+        );
+        const goldFixtureDir = path.resolve(__dirname, '../__fixtures__/gold');
+        fs.mkdirSync(goldFixtureDir, { recursive: true });
+        const goldFixturePath = path.join(goldFixtureDir, `${tripSpecId}.json`);
+        fs.copyFileSync(outputPath, goldFixturePath);
+        process.stdout.write(`[itinerary-replay] gold-fixture=${goldFixturePath}\n`);
+      }
 
       const tripName = typeof requestCandidate.tripName === 'string' ? requestCandidate.tripName : label;
       const markdownPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.md`);
