@@ -41,6 +41,35 @@ describe('itinerary metrics persistence', () => {
     expect(JSON.stringify(metrics)).not.toContain('private prompt');
   });
 
+  it('estimates cost in micros by reusing the shared provider pricing table', async () => {
+    persistItineraryGenerationMetrics({
+      generationId: 'generation-cost-1',
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      outcome: 'success',
+      tokenUsage: { promptTokens: 1_000_000, completionTokens: 1_000_000, totalTokens: 2_000_000 },
+      stages: [],
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    const metrics = save.mock.calls[0][0];
+    // GPT_4O_MINI pricing (config/api-limits.yaml): $0.15/1M input + $0.60/1M output => 750000 micros.
+    expect(metrics.estimatedCostMicros).toBe(750_000);
+  });
+
+  it('falls back to a null cost estimate for an unpriced model rather than throwing', async () => {
+    persistItineraryGenerationMetrics({
+      generationId: 'generation-cost-2',
+      provider: 'openai',
+      model: 'some-unpriced-model',
+      outcome: 'success',
+      tokenUsage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+      stages: [],
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    const metrics = save.mock.calls[0][0];
+    expect(metrics.estimatedCostMicros).toBeNull();
+  });
+
   it('is disabled when the capture flag is off', () => {
     process.env.ITINERARY_METRICS_CAPTURE = '0';
     persistItineraryGenerationMetrics({

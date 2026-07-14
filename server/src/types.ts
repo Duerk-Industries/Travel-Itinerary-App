@@ -682,6 +682,8 @@ export interface ItineraryGenerationMetrics {
   evaluation?: Record<string, unknown> | null;
   cacheUsage?: Record<string, unknown> | null;
   fallbackUsed?: boolean;
+  /** Estimated cost in micros (1e-6 USD), derived via providerBudgeting's shared pricing tables. Null when the provider/model has no configured pricing. */
+  estimatedCostMicros?: number | null;
   createdAt?: string;
 }
 
