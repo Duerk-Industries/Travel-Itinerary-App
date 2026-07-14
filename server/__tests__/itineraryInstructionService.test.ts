@@ -38,6 +38,16 @@ describe('itineraryInstructionService', () => {
     expect(templates.p0.usr).toContain('{{REQ_JSON}}');
   });
 
+  it('fails open to checked-in defaults when admin settings are unavailable', async () => {
+    mockedGetAdminSetting.mockRejectedValueOnce(new Error('admin_settings is unavailable'));
+
+    const templates = await getItineraryPromptTemplates();
+
+    expect(templates.p0.id).toBe('p0_norm');
+    expect(templates.p1.id).toBe('p1_route');
+    expect(templates.p4.id).toBe('p4_render_md');
+  });
+
   it('persists admin overrides and audits the changed phases', async () => {
     await updateItineraryInstructionDocuments({
       actorId: 'admin-1',

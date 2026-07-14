@@ -24,6 +24,20 @@ export type GetYourGuideCandidateDecision = { eligible: boolean; reasons: string
 export type GetYourGuideSelection = { selected: GetYourGuideCandidate[]; rejected: Array<{ candidate: GetYourGuideCandidate; reasons: string[] }> };
 
 export const BOOKABLE_GETYOURGUIDE_ACTIVITY_TYPES: readonly GetYourGuideActivityType[] = ['Tour', 'Ticketed Attraction', 'Reservation', 'Day Trip', 'Class', 'Event', 'Concert/Show', 'Outdoor Activity', 'Spa/Wellness'];
+
+/**
+ * itinerary-improvement-plan.md §4 (Sunday/Monday Trap): hand-curated category-level
+ * closure rules. Suggestions are suppressed for a category on a day it is
+ * likely to be closed (e.g. many European museums on Mondays).
+ */
+export const GYG_CLOSED_WEEKDAYS_BY_CATEGORY: Record<string, number[]> = {
+  'museum': [1],
+  'art gallery': [1],
+  'shopping': [0],
+  'boutique': [0],
+  'market': [1],
+};
+
 const STOPWORDS = new Set(['a', 'an', 'and', 'at', 'for', 'from', 'in', 'of', 'on', 'the', 'this', 'to', 'with']);
 const GENERIC_WORDS = new Set(['activity', 'event', 'experience', 'museum', 'restaurant', 'sight', 'tour', 'walk']);
 
@@ -76,12 +90,26 @@ export const isGetYourGuideTravelWindowFeasible = (candidate: GetYourGuideCandid
 const isBudgetCompatible = (tier: GetYourGuideBudgetTier | null | undefined, comfort: GetYourGuideComfort | null | undefined): boolean => !tier || !comfort || (comfort === 'Budget' ? tier !== 'premium' : comfort === 'Luxury' ? tier !== 'free' : true);
 const isLanguageCompatible = (languages: string[] | null | undefined, language: string | null | undefined): boolean => !language || !languages?.length || languages.some((value) => { const normalized = normalizeGetYourGuideText(value), requested = normalizeGetYourGuideText(language); return normalized === requested || normalized.startsWith(`${requested} `); });
 const matchesAvoidTerm = (candidate: GetYourGuideCandidate, avoid: string[] | null | undefined): boolean => { const terms = (avoid ?? []).map(normalizeGetYourGuideText).filter(Boolean); const haystack = [candidate.name, ...(candidate.interestTags ?? [])].map(normalizeGetYourGuideText).join(' '); return terms.some((term) => haystack.includes(term)); };
+
+const isLikelyClosedOnDay = (candidate: GetYourGuideCandidate): boolean => {
+  if (!candidate.date) return false;
+  const date = new Date(`${candidate.date}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return false;
+  const weekday = date.getUTCDay();
+  const name = normalizeGetYourGuideText(candidate.name);
+  for (const [category, closedDays] of Object.entries(GYG_CLOSED_WEEKDAYS_BY_CATEGORY)) {
+    if (name.includes(category) && closedDays.includes(weekday)) return true;
+  }
+  return false;
+};
+
 export const getGetYourGuideCanonicalKey = (candidate: GetYourGuideCandidate): string => [candidate.date ?? '', normalizeGetYourGuideDestination(candidate.destination)?.query ?? '', normalizeGetYourGuideText(candidate.name)].join('|');
 export const evaluateGetYourGuideCandidate = (candidate: GetYourGuideCandidate, context: GetYourGuideTravelerContext = {}): GetYourGuideCandidateDecision => {
   const reasons: string[] = [], destination = normalizeGetYourGuideDestination(candidate.destination), requireDestination = context.requireDisambiguatedDestination ?? true;
   if (!isBookableGetYourGuideActivityType(candidate.activityType)) reasons.push('activity_type_not_eligible'); if (!isLikelySpecificGetYourGuideActivityName(candidate.name)) reasons.push('activity_name_not_specific');
   if (!destination) reasons.push('destination_missing'); else if (requireDestination && !destination.disambiguated) reasons.push('destination_not_disambiguated'); if (candidate.alreadyBooked) reasons.push('already_booked');
   if (matchesAvoidTerm(candidate, context.avoid)) reasons.push('matches_avoid_preference'); if (!isBudgetCompatible(candidate.budgetTier, context.comfort)) reasons.push('budget_incompatible'); if (!isLanguageCompatible(candidate.languages, context.language)) reasons.push('language_unavailable'); if (!isGetYourGuideTravelWindowFeasible(candidate, context.mobility)) reasons.push('travel_window_infeasible');
+  if (isLikelyClosedOnDay(candidate)) reasons.push('likely_closed_on_day');
   const interestScore = (candidate.interestTags ?? []).reduce((sum, tag) => sum + Number(context.interestWeights?.[tag] ?? context.interestWeights?.[normalizeGetYourGuideText(tag)] ?? 0), 0);
   return { eligible: reasons.length === 0, reasons, relevanceScore: (candidate.mustSee ? 100000 : 0) + (Number.isFinite(interestScore) ? interestScore : 0), canonicalKey: getGetYourGuideCanonicalKey(candidate) };
 };

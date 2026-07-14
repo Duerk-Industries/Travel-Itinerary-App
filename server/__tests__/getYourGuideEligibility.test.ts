@@ -78,6 +78,26 @@ describe('GetYourGuide Phase 1 eligibility rules', () => {
     expect(domain.evaluateGetYourGuideCandidate(baseCandidate({ budgetTier: 'free' }), { comfort: 'Luxury' }).reasons).toContain('budget_incompatible');
   });
 
+  it('respects the Sunday/Monday trap by suppressing activities on likely closed days', () => {
+    // 2026-08-03 is a Monday (UTCDay 1)
+    const mondayMuseum = baseCandidate({ name: 'Paris Museum of Art', activityType: 'Ticketed Attraction', date: '2026-08-03' });
+    expect(domain.evaluateGetYourGuideCandidate(mondayMuseum).reasons).toContain('likely_closed_on_day');
+
+    // 2026-08-02 is a Sunday (UTCDay 0)
+    const sundayShopping = baseCandidate({ name: 'Paris Fashion Boutique', activityType: 'Tour', date: '2026-08-02' });
+    expect(domain.evaluateGetYourGuideCandidate(sundayShopping).reasons).toContain('likely_closed_on_day');
+
+    // Tuesday is usually fine
+    const tuesdayMuseum = baseCandidate({ name: 'Paris Museum of Art', activityType: 'Ticketed Attraction', date: '2026-08-04' });
+    expect(domain.evaluateGetYourGuideCandidate(tuesdayMuseum).eligible).toBe(true);
+
+    // No date: cannot check closures, so assume fine (itinerary items should have dates)
+    expect(domain.evaluateGetYourGuideCandidate(baseCandidate({ date: null })).reasons).not.toContain('likely_closed_on_day');
+
+    // Invalid date: cannot check closures
+    expect(domain.evaluateGetYourGuideCandidate(baseCandidate({ date: 'not-a-date' })).reasons).not.toContain('likely_closed_on_day');
+  });
+
   it('prioritizes must-sees, deduplicates per date/destination/name, and enforces the cap', () => {
     const normal = baseCandidate({ id: 'normal', name: 'Eiffel Tower Evening Tour', interestTags: ['culture'] });
     const duplicate = baseCandidate({ id: 'duplicate', name: 'Louvre Museum Guided Tour' });

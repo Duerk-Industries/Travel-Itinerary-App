@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getAdminSetting, setAdminSetting, writeAuditLog } from '../db';
+import { logError } from '../logger';
 
 export const ITINERARY_INSTRUCTION_PHASES = ['p0', 'p1', 'p2', 'p3', 'p4'] as const;
 export type ItineraryInstructionPhase = (typeof ITINERARY_INSTRUCTION_PHASES)[number];
@@ -79,7 +80,15 @@ const readDefaultMarkdown = (phase: ItineraryInstructionPhase): string => {
 };
 
 const readStoredInstructionSet = async (): Promise<StoredInstructionSet> => {
-  const row = await getAdminSetting(ADMIN_SETTING_KEY);
+  let row: Awaited<ReturnType<typeof getAdminSetting>>;
+  try {
+    row = await getAdminSetting(ADMIN_SETTING_KEY);
+  } catch (error) {
+    // Admin overrides are optional. A missing/unavailable admin_settings table must not
+    // prevent the user-facing itinerary pipeline from using the bundled prompts.
+    logError('[itinerary-instructions] failed to load admin overrides; using bundled prompts', error);
+    return { schemaVersion: 1, phases: {} };
+  }
   if (!row?.value) return { schemaVersion: 1, phases: {} };
   try {
     const parsed = JSON.parse(row.value) as StoredInstructionSet;

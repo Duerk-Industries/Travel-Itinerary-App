@@ -96,6 +96,19 @@ export const BOOKABLE_GETYOURGUIDE_ACTIVITY_TYPES: readonly GetYourGuideActivity
   'Event', 'Concert/Show', 'Outdoor Activity', 'Spa/Wellness',
 ];
 
+/**
+ * itinerary-improvement-plan.md §4 (Sunday/Monday Trap): hand-curated category-level
+ * closure rules. Suggestions are suppressed for a category on a day it is
+ * likely to be closed (e.g. many European museums on Mondays).
+ */
+export const GYG_CLOSED_WEEKDAYS_BY_CATEGORY: Record<string, number[]> = {
+  'museum': [1],
+  'art gallery': [1],
+  'shopping': [0],
+  'boutique': [0],
+  'market': [1],
+};
+
 const STOPWORDS = new Set(['a', 'an', 'and', 'at', 'for', 'from', 'in', 'of', 'on', 'the', 'this', 'to', 'with']);
 const GENERIC_WORDS = new Set(['activity', 'event', 'experience', 'museum', 'restaurant', 'sight', 'tour', 'walk']);
 
@@ -237,6 +250,18 @@ const matchesAvoidTerm = (candidate: GetYourGuideCandidate, avoid: string[] | nu
   return terms.some((term) => haystack.includes(term));
 };
 
+const isLikelyClosedOnDay = (candidate: GetYourGuideCandidate): boolean => {
+  if (!candidate.date) return false;
+  const date = new Date(`${candidate.date}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return false;
+  const weekday = date.getUTCDay();
+  const name = normalizeGetYourGuideText(candidate.name);
+  for (const [category, closedDays] of Object.entries(GYG_CLOSED_WEEKDAYS_BY_CATEGORY)) {
+    if (name.includes(category) && closedDays.includes(weekday)) return true;
+  }
+  return false;
+};
+
 export const getGetYourGuideCanonicalKey = (candidate: GetYourGuideCandidate): string => {
   const destination = normalizeGetYourGuideDestination(candidate.destination)?.query ?? '';
   return [candidate.date ?? '', destination, normalizeGetYourGuideText(candidate.name)].join('|');
@@ -258,6 +283,7 @@ export const evaluateGetYourGuideCandidate = (
   if (!isBudgetCompatible(candidate.budgetTier, context.comfort)) reasons.push('budget_incompatible');
   if (!isLanguageCompatible(candidate.languages, context.language)) reasons.push('language_unavailable');
   if (!isGetYourGuideTravelWindowFeasible(candidate, context.mobility)) reasons.push('travel_window_infeasible');
+  if (isLikelyClosedOnDay(candidate)) reasons.push('likely_closed_on_day');
   const interestScore = (candidate.interestTags ?? []).reduce((sum, tag) => sum + Number(context.interestWeights?.[tag] ?? context.interestWeights?.[normalizeGetYourGuideText(tag)] ?? 0), 0);
   const relevanceScore = (candidate.mustSee ? 100000 : 0) + (Number.isFinite(interestScore) ? interestScore : 0);
   return { eligible: reasons.length === 0, reasons, relevanceScore, canonicalKey: getGetYourGuideCanonicalKey(candidate) };
