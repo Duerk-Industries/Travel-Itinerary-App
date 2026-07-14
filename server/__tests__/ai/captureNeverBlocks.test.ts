@@ -89,8 +89,11 @@ describe('AI capture never blocks user-facing work', () => {
         a: [],
         cf: 'M',
       }))
-      // Clean mechanical validation skips p3 in the default configuration, so
-      // this fourth provider response is consumed by the p4 renderer.
+      // Depending on the Jest DB project, mechanical validation may either
+      // skip p3 or invoke it. Supplying the same safe text twice keeps p4
+      // covered in both stage orders without coupling this capture test to the
+      // config-loader cache.
+      .mockResolvedValueOnce(jsonResponse('## Captured itinerary result'))
       .mockResolvedValueOnce(jsonResponse('## Captured itinerary result'));
 
     const result = await generateItineraryViaPromptPlan({
