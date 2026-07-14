@@ -1,4 +1,10 @@
-import { polishItineraryFinalPass, mapItems, buildTimingPreferenceNote } from '../src/services/itineraryPromptPlanService';
+import {
+  polishItineraryFinalPass,
+  mapItems,
+  buildTimingPreferenceNote,
+  deriveDestinationTransferTiming,
+  enforceMuseumHalfDayClear,
+} from '../src/services/itineraryPromptPlanService';
 
 const entry = (name: string, tags: string[], overrides: Partial<Record<string, unknown>> = {}) => ({
   id: name,
@@ -145,6 +151,52 @@ describe('mapItems — mobility accessibility note', () => {
   test('defaults to no accessibility note when mobility is omitted', () => {
     const items = mapItems(baseItinerary, WEIGHTS);
     expect(items.activities[0].notes).not.toContain('step-free access');
+  });
+
+  test('uses a factual missing-source fallback instead of invented itinerary boilerplate', () => {
+    const items = mapItems(baseItinerary, WEIGHTS);
+    expect(items.activities[0].notes).toContain('no verified attraction description was available');
+    expect(items.activities[0].notes).not.toContain('complements the planned pace');
+  });
+
+  test('delays the first activity on an inter-destination transfer day', () => {
+    const itinerary = {
+      ...baseItinerary,
+      x: [{ dt: '2026-07-01', m: 'Train', fr: 'Paris', to: 'Lyon', td: 5 }],
+    } as any;
+    const timing = deriveDestinationTransferTiming(itinerary);
+    const items = mapItems(itinerary, WEIGHTS, undefined, undefined, undefined, 'M', timing);
+    // 09:00 + 5h modeled leg + 1h change/check-in reserve.
+    expect(items.activities[0].startTime).toBe('15:00');
+  });
+});
+
+describe('museum half-day pacing', () => {
+  test('keeps one major museum and moves excess activities to a compatible day', () => {
+    const itinerary = {
+      dy: [
+        {
+          d: 1,
+          dt: '2026-07-01',
+          b: 'Paris',
+          it: [
+            ['M', 'A', 'Louvre Museum'],
+            ['D', 'A', 'Orsay Museum'],
+            ['E', 'A', 'Dinner at Le Marais'],
+            ['D', 'O', 'Latin Quarter walk'],
+          ],
+          ln: [],
+        },
+        { d: 2, dt: '2026-07-02', b: 'Paris', it: [['D', 'O', 'Montmartre walk']], ln: [] },
+        { d: 3, dt: '2026-07-03', b: 'Paris', it: [['D', 'O', 'Canal Saint-Martin walk']], ln: [] },
+      ],
+    } as any;
+
+    const result = enforceMuseumHalfDayClear(itinerary);
+    expect(result.dy[0].it.filter((item: any[]) => /museum/i.test(item[2]))).toHaveLength(1);
+    expect(result.dy[0].ln.join(' ')).toMatch(/half day/i);
+    expect(result.dy[1].it.filter((item: any[]) => /museum/i.test(item[2]))).toHaveLength(1);
+    expect(result.dy[2].it.map((item: any[]) => item[2])).toEqual(expect.arrayContaining(['Latin Quarter walk']));
   });
 });
 

@@ -62,6 +62,7 @@ import {
   AiProviderCertification,
   AiRecommendation,
   ItineraryGenerationMetrics,
+  ItineraryComparison,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';

@@ -22,8 +22,13 @@ import {
   normalizeDestinationKey,
 } from './attractionsCatalogService';
 import { scoreActivityTypeByPreferences, type InterestWeights } from './activityTypeInterestWeights';
-import { getAttractionDurationMetadataBatch, formatMinutesAsDuration } from './attractionDurationEstimationService';
-import { getTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
+import {
+  estimateAttractionDurationMinutes,
+  getAttractionDurationMetadataBatch,
+  inferRequiresPreOrderTickets,
+  formatMinutesAsDuration,
+} from './attractionDurationEstimationService';
+import { getTransferEstimator, HeuristicTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
 import { getItineraryPromptTemplates, type ItineraryPromptTemplate } from './itineraryInstructionService';
 import {
   buildItineraryPreferenceContract,
@@ -1575,7 +1580,8 @@ const enforceFatigueManagement = (
   transferNotesByDay: Map<number, TransferNote[]>,
   durationMetadataByName: Map<string, AttractionDurationMetadata>,
   groupSize: number,
-  mobility: LogisticsMobility = 'M'
+  mobility: LogisticsMobility = 'M',
+  destinationTransferTimingByDate?: Map<string, DestinationTransferTiming>
 ): { itinerary: PromptItinerary; issues: string[] } => {
   const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
   const issues: string[] = [];
@@ -1583,8 +1589,9 @@ const enforceFatigueManagement = (
 
   for (const day of output.dy) {
     const notes = transferNotesByDay.get(day.d) ?? [];
-    const transferMinutes = notes.reduce((sum, n) => sum + n.minutes, 0);
-    const transferCount = notes.length;
+    const destinationTransfer = destinationTransferTimingByDate?.get(day.dt);
+    const transferMinutes = notes.reduce((sum, n) => sum + n.minutes, 0) + (destinationTransfer?.minutes ?? 0);
+    const transferCount = notes.length + (destinationTransfer ? 1 : 0);
     const activityMinutes = day.it.reduce((sum, [, , text]) => {
       return sum + (durationMetadataByName.get(normalizeText(text).toLowerCase())?.estimatedDurationMinutes ?? DEFAULT_ACTIVITY_DURATION_MINUTES);
     }, 0);
@@ -1678,6 +1685,78 @@ const enforceAttractionDestinationConsistency = (
   }
 
   return itinerary;
+};
+
+const isMajorMuseumName = (name: string): boolean =>
+  /\bmuseum\b/i.test(name) || /\b(musée|museo|gallery|aquarium)\b/i.test(name);
+
+/**
+ * Reserves a half day for a major museum. The model often returns two museums
+ * plus several full-length activities on one date; that is technically valid
+ * JSON but not a usable day. We keep one museum and at most one non-museum
+ * companion, then move excess items to the next compatible day in the same
+ * destination. Nothing is discarded, and terminal/rest days are never used as
+ * spillover targets.
+ */
+export const enforceMuseumHalfDayClear = (
+  itinerary: PromptItinerary,
+  zeroActivityDayDates: ReadonlySet<string> | readonly string[] = []
+): PromptItinerary => {
+  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
+  const blocked = zeroActivityDayDates instanceof Set ? zeroActivityDayDates : new Set(zeroActivityDayDates);
+  const normalized = (value: string) => normalizeDestinationKey(value);
+  const hasRestNote = (day: PromptDay) => (day.ln ?? []).some((note) => /rest[\s-]?hub|rest day|fatigue/i.test(note));
+
+  for (const day of output.dy) {
+    if (!day.it.length || blocked.has(day.dt) || hasRestNote(day)) continue;
+    const museumIndexes = day.it
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => isMajorMuseumName(item[2]));
+    if (!museumIndexes.length) continue;
+
+    // Keep the first museum in the model's relevance order. Preserve one
+    // companion (prefer an evening reservation, otherwise the shortest item).
+    const keepMuseumIndex = museumIndexes[0].index;
+    const nonMuseum = day.it
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !isMajorMuseumName(item[2]));
+    const companion = nonMuseum
+      .filter(({ item }) => item[0] === 'E' || estimateAttractionDurationMinutes(item[2], ACTIVITY_CODE_TO_LONG[item[1]]) <= 120)
+      .slice()
+      .sort((a, b) => {
+        const aEvening = a.item[0] === 'E';
+        const bEvening = b.item[0] === 'E';
+        if (aEvening !== bEvening) return aEvening ? -1 : 1;
+        return a.index - b.index;
+      })[0];
+    const keepIndexes = new Set<number>([keepMuseumIndex, ...(companion ? [companion.index] : [])]);
+    const excess = day.it.filter((_item, index) => !keepIndexes.has(index));
+    if (!excess.length) {
+      day.ln = Array.from(new Set([`Major museum visit reserved a half day; keep the other half open.`, ...(day.ln ?? [])])).slice(0, 2);
+      continue;
+    }
+
+    day.it = day.it.filter((_item, index) => keepIndexes.has(index));
+    const target = output.dy.find((candidate) =>
+      candidate !== day &&
+      normalized(candidate.b) === normalized(day.b) &&
+      !blocked.has(candidate.dt) &&
+      !hasRestNote(candidate) &&
+      !candidate.it.some((item) => isMajorMuseumName(item[2])) &&
+      candidate.it.length + excess.length <= MAX_ITEMS_PER_DAY
+    );
+    if (target) {
+      target.it.push(...excess.map((item) => [item[0] === 'M' ? 'D' : item[0], item[1], item[2]] as [PromptDayTimeCode, PromptActivityCode, string]));
+    } else {
+      // Preserve the activities when no compatible day exists, but explicitly
+      // flag the conflict so the renderer can show the traveler what to adjust.
+      day.it.push(...excess);
+      day.ln = Array.from(new Set([`Major museum plus additional activities may exceed a half-day pace; consider moving one.`, ...(day.ln ?? [])])).slice(0, 2);
+      continue;
+    }
+    day.ln = Array.from(new Set([`Major museum visit reserved a half day; keep the other half open.`, ...(day.ln ?? [])])).slice(0, 2);
+  }
+  return output;
 };
 
 // Returns the requested destination an attraction's real-world description
@@ -1860,6 +1939,37 @@ const mapProfile = (norm: PromptNorm): ItineraryPromptProfile => ({
 
 const DEFAULT_ACTIVITY_DURATION_MINUTES = 120;
 const ITEM_GAP_MINUTES = 15;
+/** A mid-trip base change needs time beyond the modeled leg itself for checkout,
+ * station/airport access, arrival, and lodging hand-off. Keep this deterministic
+ * and conservative; booked local times still override it in the UI. */
+const INTER_DESTINATION_TRANSFER_BUFFER_MINUTES = 60;
+
+export type DestinationTransferTiming = {
+  date: string;
+  from: string;
+  to: string;
+  mode: PromptTransferMode;
+  minutes: number;
+};
+
+/** Converts route-level transfer durations (hours in the compact prompt schema)
+ * into a per-day reserve used by the activity clock. Unknown/zero durations are
+ * intentionally omitted rather than inventing travel time. */
+export const deriveDestinationTransferTiming = (itinerary: PromptItinerary): Map<string, DestinationTransferTiming> => {
+  const timing = new Map<string, DestinationTransferTiming>();
+  for (const transfer of itinerary.x ?? []) {
+    const modeledHours = Number(transfer.td);
+    if (!transfer.dt || !Number.isFinite(modeledHours) || modeledHours <= 0) continue;
+    const minutes = Math.max(1, Math.round(modeledHours * 60)) + INTER_DESTINATION_TRANSFER_BUFFER_MINUTES;
+    const existing = timing.get(transfer.dt);
+    // Multiple route legs on one date are sequential in the compact route
+    // schema; reserve their combined duration, while retaining the first leg
+    // for the human-readable note.
+    if (!existing) timing.set(transfer.dt, { date: transfer.dt, from: transfer.fr, to: transfer.to, mode: transfer.m, minutes });
+    else existing.minutes += minutes;
+  }
+  return timing;
+};
 
 const timeStringToMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map((part) => Number(part) || 0);
@@ -1881,7 +1991,8 @@ const minutesToTimeString = (minutes: number): string => {
 const computeDayItemSchedule = (
   day: PromptDay,
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
-  transferNotesForDay?: TransferNote[]
+  transferNotesForDay?: TransferNote[],
+  destinationTransferTiming?: DestinationTransferTiming | null
 ): Array<{ startTime: string; durationMinutes: number }> => {
   const transferMinutesByFromName = new Map<string, number>();
   for (const note of transferNotesForDay ?? []) {
@@ -1892,6 +2003,12 @@ const computeDayItemSchedule = (
     D: timeStringToMinutes('13:00'),
     E: timeStringToMinutes('19:00'),
   };
+  if (destinationTransferTiming && destinationTransferTiming.minutes > 0) {
+    const transferReadyAt = timeStringToMinutes('09:00') + destinationTransferTiming.minutes;
+    for (const code of Object.keys(clockByTimeCode) as PromptDayTimeCode[]) {
+      clockByTimeCode[code] = Math.max(clockByTimeCode[code], transferReadyAt);
+    }
+  }
   return day.it.map(([timeCode, , text]) => {
     const normalizedText = normalizeText(text).toLowerCase();
     const durationMetadata = durationMetadataByName?.get(normalizedText);
@@ -1948,9 +2065,10 @@ const buildGeneratedActivityDescription = (
   activityName: string,
   activityType: ActivityType
 ): string => {
-  const notes = Array.isArray(day.ln) ? day.ln.map(normalizeText).filter(Boolean) : [];
-  const context = notes.length ? ` Things to know: ${notes.join(' ')}` : '';
-  return `${activityName} is a ${activityType.toLowerCase()} based around ${day.b || 'this stop'}. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience.${context}`.trim();
+  // Never manufacture claims about an attraction. A catalog/Wikipedia-backed
+  // description is preferred by mapItems; this explicit fallback makes missing
+  // source data visible to the traveler instead of presenting boilerplate as fact.
+  return `${activityName} (${activityType.toLowerCase()}) — What to know: no verified attraction description was available from the current sources. Confirm venue details, hours, and access before booking.`;
 };
 
 type TransferNote = {
@@ -1984,7 +2102,6 @@ const attachAttractionMetadata = async (
 }> => {
   const durationMetadataByName = new Map<string, AttractionDurationMetadata>();
   const transferNotesByDay = new Map<number, TransferNote[]>();
-  if (!userId) return { durationMetadataByName, transferNotesByDay };
 
   const allEntries = Object.values(shortlistByDestination ?? {}).flat();
   const entryByName = new Map<string, AttractionCatalogEntry>();
@@ -1993,11 +2110,50 @@ const attachAttractionMetadata = async (
     if (key && !entryByName.has(key)) entryByName.set(key, entry);
   }
 
+  const cleanCatalogDescription = (entry: AttractionCatalogEntry): string | null => {
+    const raw = String(entry.wikipediaSummary ?? entry.snippet ?? '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!raw || /^top\s+(museum|attraction|activity)$/i.test(raw)) return null;
+    const sentences = raw.match(/[^.!?]+[.!?]+/g) ?? [raw];
+    return sentences.slice(0, 2).map((sentence) => sentence.trim()).join(' ').trim() || null;
+  };
+
+  // Seed from already-fetched catalog data for every caller, including preview
+  // generation without a user cache. This keeps descriptions factual without
+  // spending another API request for each attraction.
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (!key) continue;
+    const description = cleanCatalogDescription(entry);
+    durationMetadataByName.set(key, {
+      id: `catalog:${entry.id}`,
+      destinationKey: entry.destinationKey,
+      destinationDisplayName: entry.destinationDisplayName,
+      name: entry.name,
+      activityType: entry.activityType,
+      estimatedDurationMinutes: estimateAttractionDurationMinutes(entry.name, entry.activityType),
+      durationSource: 'heuristic',
+      requiresPreOrderTickets: inferRequiresPreOrderTickets(entry.name, entry.activityType),
+      preOrderNotes: null,
+      description,
+      descriptionSource: description ? (entry.wikipediaSummary ? 'wikipedia' : 'catalog_snippet') : null,
+      updatedAt: entry.updatedAt,
+    });
+  }
+
   let estimator: TransferEstimator | null = null;
-  try {
-    estimator = await getTransferEstimator();
-  } catch (err) {
-    logError('[itinerary] transfer estimator init failed; skipping transfer time estimation', err);
+  if (userId) {
+    try {
+      estimator = await getTransferEstimator();
+    } catch (err) {
+      logError('[itinerary] transfer estimator init failed; skipping transfer time estimation', err);
+    }
+  } else {
+    // Preview/anonymous generations still need realistic activity spacing, but
+    // must not activate a paid directions integration without a user context.
+    estimator = new HeuristicTransferEstimator();
   }
 
   for (const day of itinerary.dy) {
@@ -2016,16 +2172,27 @@ const attachAttractionMetadata = async (
       };
     });
 
-    try {
-      const batch = await getAttractionDurationMetadataBatch({
-        userId,
-        destinationKey,
-        destinationDisplayName,
-        entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary }) => ({ name, activityType, cachedWikipediaSummary })),
-      });
-      for (const [key, metadata] of batch) durationMetadataByName.set(key, metadata);
-    } catch (err) {
-      logError(`[itinerary] duration metadata lookup failed for destination="${destinationDisplayName}"`, err);
+    if (userId) {
+      try {
+        const batch = await getAttractionDurationMetadataBatch({
+          userId,
+          destinationKey,
+          destinationDisplayName,
+          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary }) => ({ name, activityType, cachedWikipediaSummary })),
+        });
+        for (const [key, metadata] of batch) {
+          const catalogMetadata = durationMetadataByName.get(key);
+          durationMetadataByName.set(key, {
+            ...(catalogMetadata ?? metadata),
+            ...metadata,
+            ...(metadata.description || !catalogMetadata?.description
+              ? {}
+              : { description: catalogMetadata.description, descriptionSource: catalogMetadata.descriptionSource }),
+          });
+        }
+      } catch (err) {
+        logError(`[itinerary] duration metadata lookup failed for destination="${destinationDisplayName}"`, err);
+      }
     }
 
     if (!estimator) continue;
@@ -2065,7 +2232,8 @@ export const mapItems = (
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
   transferNotesByDay?: Map<number, TransferNote[]>,
   whyFitsByName?: Map<string, string>,
-  mobility: PromptMobilityCode = 'M'
+  mobility: PromptMobilityCode = 'M',
+  destinationTransferTimingByDate?: Map<string, DestinationTransferTiming>
 ): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
     status: 'Needed',
@@ -2094,7 +2262,12 @@ export const mapItems = (
   }));
 
   const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) => {
-    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d));
+    const schedule = computeDayItemSchedule(
+      day,
+      durationMetadataByName,
+      transferNotesByDay?.get(day.d),
+      destinationTransferTimingByDate?.get(day.dt)
+    );
     return day.it.map(([, activityCode, text], index) => {
       const mapped = ACTIVITY_CODE_TO_LONG[activityCode];
       const closest = pickActivityTypeForPreferences(text, mapped, preferenceWeights);
@@ -2156,16 +2329,27 @@ const buildDetails = (
   itinerary: PromptItinerary,
   transferNotesByDay?: Map<number, TransferNote[]>,
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
-  whyFitsByName?: Map<string, string>
+  whyFitsByName?: Map<string, string>,
+  destinationTransferTimingByDate?: Map<string, DestinationTransferTiming>
 ): ItineraryGeneratedDetail[] =>
   itinerary.dy.flatMap((day) => {
-    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d));
+    const destinationTransfer = destinationTransferTimingByDate?.get(day.dt);
+    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d), destinationTransfer);
     const notesByFromName = new Map<string, TransferNote>();
     for (const note of transferNotesByDay?.get(day.d) ?? []) {
       notesByFromName.set(note.fromName.toLowerCase(), note);
     }
 
-    const details: ItineraryGeneratedDetail[] = [];
+    const details: ItineraryGeneratedDetail[] = destinationTransfer
+      ? [{
+          day: day.d,
+          time: null,
+          activity: `${destinationTransfer.mode} transfer ${destinationTransfer.from} → ${destinationTransfer.to} (reserve ~${destinationTransfer.minutes} min before activities)`,
+          cost: null,
+          kind: 'note',
+          noteBody: `Inter-destination transfer reserve: approximately ${destinationTransfer.minutes} minutes.`,
+        }]
+      : [];
 
     day.it.forEach(([, _activityCode, text], index) => {
       const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
@@ -2199,6 +2383,7 @@ const buildDetails = (
         day: day.d,
         time: null,
         activity: note,
+        cost: null,
         kind: 'note',
         noteBody: 'Logistics Note',
       });
@@ -2802,7 +2987,10 @@ const runGenerateItineraryViaPromptPlan = async (
     normalizedMustSee.map((item) => item.name)
   );
   const scheduledItinerary = scheduleItineraryDaysDeterministically(budgetCoherentItinerary, shortlistByDestination, logisticsFacts);
-  const polishedItinerary = polishItineraryFinalPass(scheduledItinerary, shortlistByDestination, attractionPodsByDestination);
+  const polishedItinerary = enforceMuseumHalfDayClear(
+    polishItineraryFinalPass(scheduledItinerary, shortlistByDestination, attractionPodsByDestination),
+    new Set(logisticsFacts.filter((fact) => fact.maxActivities === 0).map((fact) => fact.date))
+  );
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
     normalized,
@@ -2811,13 +2999,15 @@ const runGenerateItineraryViaPromptPlan = async (
     input.groupTraits.length
   );
   enforceDescriptionBasedDestinationConsistency(polishedItinerary, promptRequest.d, durationMetadataByName);
+  const destinationTransferTimingByDate = deriveDestinationTransferTiming(polishedItinerary);
 
   const fatigueManaged = enforceFatigueManagement(
     polishedItinerary,
     transferNotesByDay,
     durationMetadataByName,
     input.groupTraits.length,
-    normalized.mob
+    normalized.mob,
+    destinationTransferTimingByDate
   );
   let finalItinerary = fatigueManaged.itinerary;
 
@@ -2902,6 +3092,15 @@ const runGenerateItineraryViaPromptPlan = async (
     }
   }
 
+  for (const day of finalItinerary.dy) {
+    const destinationTransfer = destinationTransferTimingByDate.get(day.dt);
+    if (!destinationTransfer) continue;
+    day.ln = Array.from(new Set([
+      `${destinationTransfer.mode} transfer ${destinationTransfer.from} → ${destinationTransfer.to}: reserve about ${destinationTransfer.minutes} minutes before activities.`,
+      ...(day.ln ?? []),
+    ])).slice(0, 2);
+  }
+
   // Surface the same derived transfer estimates used for scheduling so the
   // traveler can understand why activities are grouped and paced this way.
   for (const day of finalItinerary.dy) {
@@ -2944,7 +3143,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
   const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
   const planMarkdown = safeRender.markdown;
-  const details = buildDetails(finalItinerary, transferNotesByDay, durationMetadataByName, whyFitsByName);
+  const details = buildDetails(finalItinerary, transferNotesByDay, durationMetadataByName, whyFitsByName, destinationTransferTimingByDate);
   const safeDetails = details.length
     ? details
     : [
@@ -2962,7 +3161,15 @@ const runGenerateItineraryViaPromptPlan = async (
     if (key && !entryByName.has(key)) entryByName.set(key, entry);
   }
 
-  const items = mapItems(finalItinerary, profile.weights, durationMetadataByName, transferNotesByDay, whyFitsByName, normalized.mob);
+  const items = mapItems(
+    finalItinerary,
+    profile.weights,
+    durationMetadataByName,
+    transferNotesByDay,
+    whyFitsByName,
+    normalized.mob,
+    destinationTransferTimingByDate
+  );
   const getYourGuideCandidates = buildGetYourGuideItineraryCandidates({
     activities: items.activities,
     destinations: promptRequest.d,
