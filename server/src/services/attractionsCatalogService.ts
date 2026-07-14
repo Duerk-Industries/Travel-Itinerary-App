@@ -14,6 +14,8 @@ import { clusterAttractionsIntoPods, type AttractionPod } from './geoPodClusteri
 import { buildPodBasedShortlist } from './podBasedShortlisterService';
 import type { InterestWeights } from './activityTypeInterestWeights';
 import type { TravelerInterest } from './fairnessRankerService';
+import type { HardRejection } from './candidateHardFilterService';
+import type { MobilityCode, PreferenceExclusion } from './itineraryPreferenceContract';
 import {
   getAttractionShortlistBlob,
   listAttractionCatalogEntries,
@@ -1147,6 +1149,101 @@ export const buildAttractionShortlistPromptBlock = (
   return lines.length ? lines.join('\n') : 'none';
 };
 
+// itinerary-improvements-coding-plan.md Phase 3C: adaptive shortlist thresholds.
+// A traveler interest weight at/above this value counts as "high-weight" for
+// both the >=5-interests trigger and the coverage check. Matches the
+// threshold already used for the (separate) model-escalation coverage signal
+// in itineraryPromptPlanService.ts, so the two features agree on what
+// "high-weight interest" means.
+const HIGH_WEIGHT_INTEREST_THRESHOLD = 10;
+const MIN_HIGH_WEIGHT_INTERESTS_FOR_ADAPTIVE = 5;
+const MIN_TRIP_LENGTH_DAYS_FOR_ADAPTIVE = 7;
+const ADAPTIVE_SHORTLIST_HARD_CEILING = 15;
+// Bump when the compact prompt-item shape or ranking/pod logic changes, so
+// stale cached blobs (keyed in part on this version) don't get served after a
+// behavior change. See buildShortlistCacheKey below.
+const ATTRACTION_SHORTLIST_CACHE_VERSION = 1;
+// Fixed placeholder: the itinerary prompt pipeline generates English-only
+// prompts today. Included in the cache key now so a future locale dimension
+// doesn't require another cache-key migration.
+const ATTRACTION_SHORTLIST_CACHE_LOCALE = 'en';
+
+const countHighWeightInterests = (weights?: InterestWeights): number =>
+  weights ? Object.values(weights).filter((weight) => Number(weight) >= HIGH_WEIGHT_INTEREST_THRESHOLD).length : 0;
+
+const highWeightInterestKeys = (weights?: InterestWeights): string[] =>
+  weights
+    ? Object.entries(weights)
+        .filter(([, weight]) => Number(weight) >= HIGH_WEIGHT_INTEREST_THRESHOLD)
+        .map(([key]) => key)
+    : [];
+
+// Whether every high-weight interest is represented by at least one entry's
+// interestTags. Reuses the existing interestTags field on catalog entries —
+// no new tagging mechanism, per the plan.
+const shortlistCoversHighWeightInterests = (entries: AttractionCatalogEntry[], weights?: InterestWeights): boolean => {
+  const requested = highWeightInterestKeys(weights);
+  if (!requested.length) return true;
+  return requested.every((interest) =>
+    entries.some((entry) => entry.interestTags.some((tag) => String(tag).toLowerCase().replace(/\s+/g, '_') === interest))
+  );
+};
+
+export type AdaptiveShortlistPolicy = 'base' | 'adaptive';
+
+export interface AdaptiveShortlistDecision {
+  policy: AdaptiveShortlistPolicy;
+  itemsPerDestination: number;
+  reasons: string[];
+}
+
+/**
+ * itinerary-improvements-coding-plan.md Phase 3C ("Adaptive shortlist and
+ * validation contract"): decide whether the fixed floor-size shortlist
+ * (shortlistPromptItemsPerDestination, default 8) is enough, or whether the
+ * larger adaptiveShortlistMax cap should be used instead. Any one trigger is
+ * sufficient: trip length > 7 days, multiple destinations, >=5 high-weight
+ * traveler interests, or a coverage-check miss against the base shortlist.
+ *
+ * Flag-safe fallback: if adaptiveShortlistMax is configured at or below the
+ * floor, this always returns 'base' — operators can disable adaptive
+ * behavior entirely via config, no code path change required.
+ */
+export const decideAdaptiveShortlistPolicy = (params: {
+  baseEntriesByDestination: Record<string, AttractionCatalogEntry[]>;
+  destinationCount: number;
+  tripLengthDays?: number;
+  weights?: InterestWeights;
+  floorItemsPerDestination: number;
+  maxItemsPerDestination: number;
+}): AdaptiveShortlistDecision => {
+  const floor = Math.max(1, Math.floor(params.floorItemsPerDestination));
+  const ceiling = Math.min(ADAPTIVE_SHORTLIST_HARD_CEILING, Math.max(floor, Math.floor(params.maxItemsPerDestination)));
+  if (ceiling <= floor) {
+    return { policy: 'base', itemsPerDestination: floor, reasons: [] };
+  }
+  const reasons: string[] = [];
+  const tripLengthDays = Number(params.tripLengthDays) || 0;
+  if (tripLengthDays > MIN_TRIP_LENGTH_DAYS_FOR_ADAPTIVE) reasons.push('trip_length_gt_7');
+  if (params.destinationCount > 1) reasons.push('multi_destination');
+  if (countHighWeightInterests(params.weights) >= MIN_HIGH_WEIGHT_INTERESTS_FOR_ADAPTIVE) reasons.push('high_weight_interest_count');
+  const allBaseEntries = Object.values(params.baseEntriesByDestination).flat();
+  if (!shortlistCoversHighWeightInterests(allBaseEntries, params.weights)) reasons.push('coverage_miss');
+  if (!reasons.length) {
+    return { policy: 'base', itemsPerDestination: floor, reasons };
+  }
+  return { policy: 'adaptive', itemsPerDestination: ceiling, reasons };
+};
+
+// Composite cache key: destination (applied by the caller via blobId) +
+// locale + catalog/compaction version + shortlist policy. Reuses the
+// existing promptBlobRefreshDays blob-cache mechanism (getAttractionShortlistBlob/
+// upsertAttractionShortlistBlob) — the AttractionShortlistBlob.dateKey field
+// is an opaque cache-key string, not parsed as a date anywhere, so widening
+// it to a composite key needs no schema change.
+const buildShortlistCacheKey = (dateKey: string, policy: AdaptiveShortlistPolicy, itemsPerDestination: number): string =>
+  `${dateKey}|loc=${ATTRACTION_SHORTLIST_CACHE_LOCALE}|v${ATTRACTION_SHORTLIST_CACHE_VERSION}|policy=${policy}|n=${itemsPerDestination}`;
+
 export const getAttractionPromptBlockForDestinations = async (params: {
   userId: string;
   destinations: string[];
@@ -1160,17 +1257,38 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   /** Optional deterministic relevance inputs used before the LLM sees the shortlist. */
   weights?: InterestWeights;
   travelers?: TravelerInterest[];
-}): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string; attractionPodsByDestination?: Record<string, AttractionPod[]> }> => {
-  const shortlistPromptItemsPerDestination =
-    Math.min(
-      Math.max(
-        Number(params.promptItemsPerDestination) ||
-          Number(getApiCacheSetting('attractions', 'shortlistPromptItemsPerDestination')) ||
-          8,
-        1
-      ),
-      20
-    );
+  /**
+   * Total trip length in days, used only for the Phase 3C adaptive-shortlist
+   * trigger (trip length > 7 days). Not required — omitting it just means
+   * that one trigger condition can never fire.
+   */
+  tripLengthDays?: number;
+  /** Phase 2A hard-filter inputs, applied before ranking/scoring. See candidateHardFilterService.ts. */
+  exclusions?: PreferenceExclusion[];
+  mobility?: MobilityCode;
+}): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string; attractionPodsByDestination?: Record<string, AttractionPod[]>; hardRejectionsByDestination?: Record<string, HardRejection[]> }> => {
+  if (params.weights === undefined) {
+    // itinerary-improvements-coding-plan.md Phase 3C: the one known real
+    // (non-test) orchestration call site always passes deterministic
+    // interest weights. If a new call site is added without them, the
+    // deterministic pod ranking, coverage check, and adaptive shortlist
+    // trigger silently degrade to catalog order — surface that loudly.
+    logError('[attractions] getAttractionPromptBlockForDestinations called without params.weights; ' +
+      'deterministic ranking, coverage checks, and the adaptive shortlist trigger are disabled for this call', {
+      userId: params.userId,
+      destinations: params.destinations,
+    });
+  }
+  const configuredFloorItemsPerDestination = Math.min(
+    Math.max(Number(getApiCacheSetting('attractions', 'shortlistPromptItemsPerDestination')) || 8, 1),
+    20
+  );
+  const hasExplicitItemsOverride =
+    params.promptItemsPerDestination != null && Number.isFinite(Number(params.promptItemsPerDestination)) && Number(params.promptItemsPerDestination) > 0;
+  const explicitItemsPerDestination = hasExplicitItemsOverride
+    ? Math.min(Math.max(Number(params.promptItemsPerDestination), 1), 20)
+    : null;
+  let shortlistPromptItemsPerDestination = explicitItemsPerDestination ?? configuredFloorItemsPerDestination;
   const destinations = Array.from(
     new Set((params.destinations ?? []).map((item) => normalizeWhitespace(String(item ?? ''))).filter(Boolean))
   );
@@ -1197,26 +1315,81 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   // expensive LLM stage focused on relevant, geographically coherent choices
   // without putting private must-see names into shared prompt/cache keys.
   const shortlistByDestination: Record<string, AttractionCatalogEntry[]> = {};
+  const hardRejectionsByDestination: Record<string, HardRejection[]> = {};
   for (const destination of destinations) {
     const entries = catalogByDestination[destination] ?? [];
-    shortlistByDestination[destination] = params.weights
-      ? buildPodBasedShortlist({
-          destination,
-          entries,
-          weights: params.weights,
-          travelers: params.travelers,
-          limit: entries.length,
-          radiusKm: 2,
-        }).selected
-      : entries;
+    if (params.weights) {
+      const podResult = buildPodBasedShortlist({
+        destination,
+        entries,
+        weights: params.weights,
+        travelers: params.travelers,
+        limit: entries.length,
+        radiusKm: 2,
+        exclusions: params.exclusions,
+        mobility: params.mobility,
+        dateKey: normalizedDateKey,
+      });
+      shortlistByDestination[destination] = podResult.selected;
+      if (podResult.hardRejections.length) {
+        hardRejectionsByDestination[destination] = podResult.hardRejections;
+        // Phase 2A: keep rejection reasons visible instead of silently dropping candidates —
+        // metrics/UI wiring is Phase 3B territory, but the information must not be lost here.
+        logInfo(
+          `[attractions] hard-filtered ${podResult.hardRejections.length} candidate(s) for ${destination}: ` +
+            podResult.hardRejections.map((r) => `${r.entry.name}(${r.reason})`).join(', ')
+        );
+      }
+    } else {
+      shortlistByDestination[destination] = entries;
+    }
   }
   const budgetProfile = chooseBudgetProfile(params.budgetMin, params.budgetMax);
+
+  // itinerary-improvements-coding-plan.md Phase 3C: decide base-8 vs adaptive
+  // shortlist size. Skipped when the caller passed an explicit override
+  // (e.g. ITINERARY_GOLD_MODE requesting the full catalog) so existing
+  // explicit-override behavior is unchanged.
+  let shortlistPolicy: AdaptiveShortlistPolicy = 'base';
+  if (!hasExplicitItemsOverride) {
+    const baseEntriesByDestination: Record<string, AttractionCatalogEntry[]> = {};
+    for (const destination of destinations) {
+      baseEntriesByDestination[destination] = (shortlistByDestination[destination] ?? []).slice(0, configuredFloorItemsPerDestination);
+    }
+    const configuredAdaptiveMax = Math.max(
+      Number(getApiCacheSetting('attractions', 'adaptiveShortlistMax')) || configuredFloorItemsPerDestination,
+      configuredFloorItemsPerDestination
+    );
+    const decision = decideAdaptiveShortlistPolicy({
+      baseEntriesByDestination,
+      destinationCount: destinations.length,
+      tripLengthDays: params.tripLengthDays,
+      weights: params.weights,
+      floorItemsPerDestination: configuredFloorItemsPerDestination,
+      maxItemsPerDestination: configuredAdaptiveMax,
+    });
+    shortlistPromptItemsPerDestination = decision.itemsPerDestination;
+    shortlistPolicy = decision.policy;
+    // eslint-disable-next-line no-console
+    console.log('DEBUG decision', JSON.stringify(decision), 'floor', configuredFloorItemsPerDestination, 'max', configuredAdaptiveMax, 'hasOverride', hasExplicitItemsOverride);
+    if (decision.policy === 'adaptive') {
+      logInfo(
+        `[attractions] adaptive shortlist triggered destinations=${destinations.length} items=${decision.itemsPerDestination} reasons=${decision.reasons.join(',')}`
+      );
+    }
+  }
+  // Cache blobs by destination + a fixed locale placeholder (the prompt
+  // pipeline is single-locale today) + a catalog/compaction version + the
+  // shortlist policy, so a base-8 blob is never served for an adaptive-N
+  // request or vice versa, and a future compaction-logic change can bust the
+  // cache by bumping ATTRACTION_SHORTLIST_CACHE_VERSION.
+  const shortlistCacheKey = buildShortlistCacheKey(normalizedDateKey, shortlistPolicy, shortlistPromptItemsPerDestination);
 
   const blocks: string[] = [];
   for (const destination of destinations) {
     const destinationKey = normalizeDestinationKey(destination);
-    const blobId = buildPromptBlobId(destinationKey, normalizedDateKey);
-    const existingBlob = await getAttractionShortlistBlob(params.userId, destinationKey, normalizedDateKey);
+    const blobId = buildPromptBlobId(destinationKey, shortlistCacheKey);
+    const existingBlob = await getAttractionShortlistBlob(params.userId, destinationKey, shortlistCacheKey);
     const blobUpdatedMs = existingBlob?.updatedAt ? new Date(existingBlob.updatedAt).getTime() : 0;
     const isBlobFresh =
       Number.isFinite(blobUpdatedMs) &&
@@ -1243,7 +1416,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
       id: blobId,
       destinationKey,
       destinationDisplayName: destination,
-      dateKey: normalizedDateKey,
+      dateKey: shortlistCacheKey,
       promptBlock: computedBlock,
       compact: compactSignature,
       itemCount: compactItems.length,
@@ -1260,6 +1433,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
       destination,
       clusterAttractionsIntoPods({ destination, entries: shortlistByDestination[destination] ?? [], radiusKm: 2, maxItemsPerPod: 3 }),
     ])),
+    hardRejectionsByDestination,
   };
 };
 

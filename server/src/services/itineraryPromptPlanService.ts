@@ -33,7 +33,6 @@ import { decideItineraryEscalation } from './itineraryEscalationService';
 import { chooseSafeItineraryMarkdown } from './itineraryDegradedFallbackService';
 import { persistItineraryGenerationMetrics } from './itineraryMetricsService';
 import type { AttractionPod } from './geoPodClusteringService';
-import { scheduleDayItems } from './daySchedulingService';
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
 import { buildArrivalDepartureFacts, renderLogisticsFactBlock } from './arrivalDepartureRulesService';
@@ -1310,50 +1309,6 @@ const enforceShortlistGrounding = (
   return grounded;
 };
 
-// Builds a name -> catalog entry lookup (first match wins) from every destination's
-// shortlist. Shared by the deterministic day-scheduling pass and the polish pass below
-// so both resolve coordinates/tags for a scheduled item's display name the same way.
-const buildAttractionEntryByName = (
-  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
-): Map<string, AttractionCatalogEntry> => {
-  const entryByName = new Map<string, AttractionCatalogEntry>();
-  for (const entry of Object.values(shortlistByDestination).flat()) {
-    const key = normalizeText(entry.name).toLowerCase();
-    if (key && !entryByName.has(key)) entryByName.set(key, entry);
-  }
-  return entryByName;
-};
-
-// itinerary-improvements-coding-plan.md Phase 2A: bounded, deterministic WITHIN-DAY
-// scheduling (pod-density seed, nearest insertion, bounded 2-opt — see
-// daySchedulingService.ts for the algorithm). Runs after grounding/must-see/budget
-// passes and BEFORE polishItineraryFinalPass, so the explicit golden-hour/farewell-
-// dinner pins below always get the final say over any single item's slot. Does not
-// attempt cross-day (adjacent-day swap) scheduling — that remains a separate,
-// unimplemented stretch goal per the plan.
-export const scheduleItineraryDaysDeterministically = (
-  itinerary: PromptItinerary,
-  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
-): PromptItinerary => {
-  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
-  if (!output.dy.length) return output;
-
-  const entryByName = buildAttractionEntryByName(shortlistByDestination);
-  const lookupEntry = (name: string): AttractionCatalogEntry | null =>
-    entryByName.get(normalizeText(name).toLowerCase()) ?? null;
-
-  for (const day of output.dy) {
-    const result = scheduleDayItems(day.b, day.it, lookupEntry);
-    if (!result.changed) continue;
-    day.it = result.items;
-    for (const note of result.notes) {
-      logInfo(`[itinerary] day-scheduling day=${day.d} ${note}`);
-    }
-  }
-
-  return output;
-};
-
 // Final "master travel agent" polishing pass, per itinerary-improvement-plan.md §9:
 // 1. Farewell Night: bias the ranker toward a high-quality food attraction for the final night.
 // 2. Golden Hour: pin photography-tagged items to the first/last activity slot of their day.
@@ -1364,8 +1319,12 @@ export const polishItineraryFinalPass = (
   const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
   if (!output.dy.length) return output;
 
-  const entryByName = buildAttractionEntryByName(shortlistByDestination);
   const allEntries = Object.values(shortlistByDestination).flat();
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
 
   // 1. Farewell Night Crescendo
   const lastDay = output.dy[output.dy.length - 1];
@@ -2305,10 +2264,16 @@ const runGenerateItineraryViaPromptPlan = async (
   if (input.userId) {
     try {
       const limitPerDestination = Number(getApiCacheSetting('attractions', 'limitPerDestination')) || 20;
-      const shortlistPromptItemsPerDestination =
-        getEnvFlag('ITINERARY_GOLD_MODE')
-          ? Math.min(20, Math.max(1, limitPerDestination))
-          : Number(getApiCacheSetting('attractions', 'shortlistPromptItemsPerDestination')) || 8;
+      // ITINERARY_GOLD_MODE is an explicit forced override (wants the full catalog, not the
+      // regular floor/adaptive shortlist), so it still passes promptItemsPerDestination
+      // directly. Otherwise leave it undefined so getAttractionPromptBlockForDestinations
+      // picks base-8 vs adaptive-N itself per itinerary-improvements-coding-plan.md Phase 3C
+      // (trip length > 7 days, multiple destinations, >=5 high-weight interests, or a
+      // coverage-check miss against the base shortlist).
+      const shortlistPromptItemsPerDestination = getEnvFlag('ITINERARY_GOLD_MODE')
+        ? Math.min(20, Math.max(1, limitPerDestination))
+        : undefined;
+      const tripLengthDaysForShortlist = Number(promptRequest.dur ?? input.days) || undefined;
       const shortlist = await getAttractionPromptBlockForDestinations({
         userId: input.userId,
         destinations: promptRequest.d,
@@ -2317,6 +2282,7 @@ const runGenerateItineraryViaPromptPlan = async (
         budgetMax: input.budgetMax,
         limitPerDestination,
         promptItemsPerDestination: shortlistPromptItemsPerDestination,
+        tripLengthDays: tripLengthDaysForShortlist,
         allowDiscovery: allowAttractionDiscovery,
         weights: normalized.w,
         travelers: input.groupTraits.map((member) => ({
@@ -2577,8 +2543,7 @@ const runGenerateItineraryViaPromptPlan = async (
     normalized.c,
     normalizedMustSee.map((item) => item.name)
   );
-  const scheduledItinerary = scheduleItineraryDaysDeterministically(budgetCoherentItinerary, shortlistByDestination);
-  const polishedItinerary = polishItineraryFinalPass(scheduledItinerary, shortlistByDestination);
+  const polishedItinerary = polishItineraryFinalPass(budgetCoherentItinerary, shortlistByDestination);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
     normalized,

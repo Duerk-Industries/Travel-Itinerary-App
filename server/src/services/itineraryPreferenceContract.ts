@@ -14,6 +14,16 @@ export const INTEREST_KEYS: Array<keyof InterestWeights> = [
 
 export type PreferenceValue<T> = { value: T; source: PreferenceSource; reason: string };
 
+/**
+ * A hard-exclusion request derived from traveler traits (e.g. "no museums", "avoid nightlife").
+ * `tag` is normalized to a known interest key when recognized, otherwise the free-form,
+ * de-identified label itself (never a name/address/medical/free-text note — see
+ * `normalizeExclusionLabel`). Consumed by `candidateHardFilterService` to reject candidates
+ * before scoring, per plan §2A ("hard filters first ... do not hide a hard rejection as a low
+ * score").
+ */
+export type PreferenceExclusion = { tag: string; source: 'traveler'; reason: string };
+
 export type NormalizedPreferenceContract = {
   version: 'preference-contract-v1';
   pace: PreferenceValue<PaceCode>;
@@ -23,6 +33,8 @@ export type NormalizedPreferenceContract = {
   interactionStyle: PreferenceValue<InteractionStyleCode>;
   weights: InterestWeights;
   travelerInterests: Array<keyof InterestWeights>;
+  /** Hard-exclusion tags parsed from traveler traits; see `PreferenceExclusion`. */
+  exclusions: PreferenceExclusion[];
   conflicts: string[];
   assumptions: string[];
   privacy: 'private-trip';
@@ -57,6 +69,25 @@ const TRAIT_MOBILITY: Record<string, MobilityCode> = {
 const mobilityRank: Record<MobilityCode, number> = { L: 0, M: 1, H: 2 };
 const normalizeLabel = (value: unknown): string => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 
+// Recognized negation phrasing for traveler-stated exclusions, e.g. "no museums", "avoid
+// nightlife", "skip shopping". Only a fixed vocabulary of recognized topics is ever surfaced as
+// an exclusion tag; unrecognized remainders are dropped rather than passed through as free text,
+// keeping this consistent with the "no private free-text" rule already applied to interests.
+const EXCLUSION_PATTERN = /^(?:no|avoid|skip|dislike|hate)\s+(.+)$/;
+const EXCLUSION_TOPICS: Record<string, keyof InterestWeights> = {
+  ...TRAIT_INTERESTS,
+  museum: 'culture', museums: 'culture', crowds: 'nightlife', nightlife: 'nightlife',
+  shopping: 'authentic_local', hiking: 'outdoors', walking: 'outdoors',
+};
+
+/** Parses a normalized traveler trait label into a recognized exclusion topic, if any. */
+const parseExclusionLabel = (label: string): keyof InterestWeights | null => {
+  const match = EXCLUSION_PATTERN.exec(label);
+  if (!match) return null;
+  const remainder = match[1].trim();
+  return EXCLUSION_TOPICS[remainder] ?? null;
+};
+
 export const normalizeInterestWeights = (raw: Partial<InterestWeights>): InterestWeights => {
   const safe = Object.fromEntries(INTEREST_KEYS.map((key) => [key, Math.max(0, Number(raw[key]) || 0)])) as InterestWeights;
   const sum = INTEREST_KEYS.reduce((total, key) => total + safe[key], 0);
@@ -82,6 +113,17 @@ export const buildItineraryPreferenceContract = (input: PreferenceContractInput)
     .filter(Boolean)
     .sort();
   const interests = Array.from(new Set([...accountLabels, ...travelerLabels].map((label) => TRAIT_INTERESTS[label]).filter(Boolean))) as Array<keyof InterestWeights>;
+
+  // Deterministic and order-independent: dedupe by tag over the sorted label set, exactly like
+  // `travelerInterests` above, so reordering travelers cannot change which exclusions apply.
+  const exclusionTags = new Map<keyof InterestWeights, string>();
+  for (const label of travelerLabels) {
+    const tag = parseExclusionLabel(label);
+    if (tag && !exclusionTags.has(tag)) exclusionTags.set(tag, label);
+  }
+  const exclusions: PreferenceExclusion[] = Array.from(exclusionTags.entries())
+    .map(([tag, label]) => ({ tag, source: 'traveler' as const, reason: `Recognized traveler exclusion: ${label}` }))
+    .sort((a, b) => a.tag.localeCompare(b.tag));
 
   const mobilityCandidates: Array<{ value: MobilityCode; source: PreferenceSource; reason: string }> = [
     { value: input.trip.mob, source: 'trip', reason: 'Trip mobility preference' },
@@ -118,7 +160,7 @@ export const buildItineraryPreferenceContract = (input: PreferenceContractInput)
     comfort: { value: input.trip.c, source: 'trip', reason: 'Trip comfort preference' },
     mobility, car: { value: input.trip.car, source: 'trip', reason: 'Trip transport preference' },
     interactionStyle: { value: input.trip.is, source: 'trip', reason: 'Trip interaction preference' },
-    weights, travelerInterests: interests.sort(), conflicts: conflicts.sort(), assumptions: assumptions.sort(),
+    weights, travelerInterests: interests.sort(), exclusions, conflicts: conflicts.sort(), assumptions: assumptions.sort(),
     privacy: 'private-trip',
     sharedCacheDimensions: { pace: pace.value, comfort: input.trip.c, mobility: mobility.value, car: input.trip.car, interactionStyle: input.trip.is, weightBucket: weightBucket(weights) },
   };

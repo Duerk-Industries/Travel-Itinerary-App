@@ -15,7 +15,9 @@ const normalize = (value: string): string => {
   const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   return ({ museums: 'culture', cultural: 'culture', foodie: 'food', hiking: 'outdoors', outdoorsy: 'outdoors', relaxing: 'relax' } as Record<string, string>)[normalized] ?? normalized;
 };
-const entryInterests = (entry: AttractionCatalogEntry): Set<string> => new Set(entry.interestTags.flatMap((tag) => [normalize(tag), normalize(tagToWeight[tag])]));
+/** Normalized interest-key vocabulary for an entry's tags; exported so `candidateHardFilterService`
+ *  can match against the same vocabulary used for scoring (e.g. exclusion tags). */
+export const entryInterests = (entry: AttractionCatalogEntry): Set<string> => new Set(entry.interestTags.flatMap((tag) => [normalize(tag), normalize(tagToWeight[tag])]));
 
 export const rankAttractionsForGroup = (params: {
   entries: AttractionCatalogEntry[];
