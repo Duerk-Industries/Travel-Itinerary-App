@@ -2437,25 +2437,31 @@ const runGenerateItineraryViaPromptPlan = async (
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS} days=${dayItinerary.dy.length} transfers=${dayItinerary.x.length}`
   );
 
-  const validatedRaw = await runJsonStage<unknown>({
-    apiKey: input.apiKey,
-    aiProvider: input.aiProvider,
-    caller: OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE,
-    template: bundle.p3,
-    replacements: {
-      STEP2_JSON: JSON.stringify(mechanicallyValidated.itinerary),
-      STEP2_SCHEMA_MIN: bundle.step2Schema,
-    },
-    maxTokens: scaleItineraryTokenBudget(1400),
-    fallbackValue: mechanicallyValidated.itinerary,
-    acc: tokenAcc,
-    captureStages,
-    usageContext,
-  });
-  filteredItinerary = sanitizeItinerary(validatedRaw, route, normalized, promptRequest);
-  logInfo(
-    `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length}`
-  );
+  const skipCleanValidator = Number(getApiCacheSetting('itineraryPlan', 'skipValidatorWhenClean')) > 0;
+  if (skipCleanValidator && !mechanicallyValidated.changed) {
+    filteredItinerary = mechanicallyValidated.itinerary;
+    logInfo('[itinerary] skipped clean p3 validator; mechanical checks passed');
+  } else {
+    const validatedRaw = await runJsonStage<unknown>({
+      apiKey: input.apiKey,
+      aiProvider: input.aiProvider,
+      caller: OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE,
+      template: bundle.p3,
+      replacements: {
+        STEP2_JSON: JSON.stringify(mechanicallyValidated.itinerary),
+        STEP2_SCHEMA_MIN: bundle.step2Schema,
+      },
+      maxTokens: scaleItineraryTokenBudget(1400),
+      fallbackValue: mechanicallyValidated.itinerary,
+      acc: tokenAcc,
+      captureStages,
+      usageContext,
+    });
+    filteredItinerary = sanitizeItinerary(validatedRaw, route, normalized, promptRequest);
+    logInfo(
+      `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length}`
+    );
+  }
   if (allowPlanCache) try {
     await writeItineraryPlanCache({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency, payload: filteredItinerary, fragments: buildDayFragments(filteredItinerary.dy, 3), ttlDays: Number(getApiCacheSetting('itineraryPlan', 'dayCacheTtlDays')) || 30 });
   } catch (err) { logError('[itinerary] day cache write failed; continuing', err); }
