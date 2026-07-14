@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { tripNameToFileSlug } from '../src/utils/tripNameSlug';
 import { renderSimplifiedItineraryMarkdown } from '../src/services/itineraryMarkdownRenderer';
 import { computeUnmatchedDestinationAndAttractionWarnings } from '../src/services/attractionMatchWarnings';
+import { validateAndRepairItineraryStructure } from '../src/services/itineraryStructureValidator';
 
 type ReplayRun = {
   provider?: string;
@@ -46,6 +47,12 @@ Options:
   --compare <gold-file>    Compare the generated production result with a stored gold JSON file.
   --judge                  Reserved opt-in judge hook; never runs unless explicitly implemented.
   --help                   Show this help.
+
+COST WARNING: --gold runs a high-effort generation (stronger model, doubled max_tokens, forced
+chunking, full ~20-item shortlist, and all itinerary plan-cache reads/writes disabled). It is
+intentionally expensive per trip and MUST NEVER be run in a per-PR CI job. Use it on-demand
+locally, or from a slow nightly/scheduled job over a fixed fixture set — never on every pull
+request. See server/prompts/itinerary-improvements-coding-plan.md Phase 8 for the full policy.
 `;
 
 const loadEnv = () => {
@@ -309,15 +316,32 @@ type ItineraryComparison = {
   goldDays: number;
   productionDays: number;
   attractionCoveragePercent: number | null;
+  goldStructuralIssues: string[];
+  productionStructuralIssues: string[];
 };
 
-const itineraryItemNames = (value: unknown): string[] => {
+const extractItineraryShape = (value: unknown): { dy: any[] } | null => {
   const days = Array.isArray((value as any)?.itinerary?.dy)
     ? (value as any).itinerary.dy
     : Array.isArray((value as any)?.result?.itinerary?.dy)
       ? (value as any).result.itinerary.dy
-      : [];
+      : null;
+  return days ? { dy: days } : null;
+};
+
+const itineraryItemNames = (value: unknown): string[] => {
+  const days = extractItineraryShape(value)?.dy ?? [];
   return days.flatMap((day: any) => Array.isArray(day?.it) ? day.it.map((item: any) => String(item?.[2] ?? '').trim()).filter(Boolean) : []);
+};
+
+// Reuses the same structural checker the live pipeline runs after every generation
+// (itineraryStructureValidator.ts) rather than re-implementing diff/validity logic here, per the
+// coding plan's Phase 8 requirement. Any issue it reports (capped days, repaired meal codes,
+// verified-closure removals, etc.) on either side is surfaced as-is, not re-derived.
+const structuralIssuesFor = (value: unknown): string[] => {
+  const itinerary = extractItineraryShape(value);
+  if (!itinerary) return [];
+  return validateAndRepairItineraryStructure({ itinerary }).issues;
 };
 
 export const compareItineraryRuns = (gold: unknown, production: unknown): ItineraryComparison => {
@@ -325,12 +349,8 @@ export const compareItineraryRuns = (gold: unknown, production: unknown): Itiner
   const productionItems = itineraryItemNames(production);
   const productionNormalized = new Set(productionItems.map((item) => item.toLowerCase()));
   const matched = goldItems.filter((item) => productionNormalized.has(item.toLowerCase())).length;
-  const goldDays = Array.isArray((gold as any)?.result?.itinerary?.dy)
-    ? (gold as any).result.itinerary.dy.length
-    : Array.isArray((gold as any)?.itinerary?.dy) ? (gold as any).itinerary.dy.length : 0;
-  const productionDays = Array.isArray((production as any)?.result?.itinerary?.dy)
-    ? (production as any).result.itinerary.dy.length
-    : Array.isArray((production as any)?.itinerary?.dy) ? (production as any).itinerary.dy.length : 0;
+  const goldDays = extractItineraryShape(gold)?.dy.length ?? 0;
+  const productionDays = extractItineraryShape(production)?.dy.length ?? 0;
   return {
     goldItemCount: goldItems.length,
     productionItemCount: productionItems.length,
@@ -338,6 +358,8 @@ export const compareItineraryRuns = (gold: unknown, production: unknown): Itiner
     goldDays,
     productionDays,
     attractionCoveragePercent: goldItems.length ? Math.round((matched / goldItems.length) * 10000) / 100 : null,
+    goldStructuralIssues: structuralIssuesFor(gold),
+    productionStructuralIssues: structuralIssuesFor(production),
   };
 };
 

@@ -116,6 +116,8 @@ describe('compareItineraryRuns', () => {
       goldDays: 1,
       productionDays: 1,
       attractionCoveragePercent: 50,
+      goldStructuralIssues: ['undefined: repaired meal codes.'],
+      productionStructuralIssues: ['undefined: repaired meal codes.'],
     });
   });
 });
