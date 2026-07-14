@@ -305,8 +305,9 @@ No new paid discovery sources are proposed; SerpAPI usage should stay exactly as
 
 ## 7. Richer attraction/activity descriptions
 
-- **Persona-based fit clause.** Add a "Why this fits you" sentence, generated deterministically from
-  interest tags: `buildGeneratedActivityDescription` should append (not replace) a fit clause.
+- **Persona-based fit clause.** Add a separate "Why this fits you" sentence, generated
+  deterministically from interest tags. Keep it separate from the factual attraction description;
+  if no verified description exists, leave the description blank rather than adding generic prose.
   *Example:* "Since you listed 'Photography', this terrace offers the best sunset view in Paris."
 - **Lodging area summaries.** Apply Wikipedia-summary lookups to lodging base areas.
 

@@ -13,7 +13,8 @@ Use `itinerary` for the compact plan and `activityContext` for verified descript
 and ticket-preorder flags. Omit missing context fields rather than inventing them. Never replace a
 populated `activityContext` fact (description, duration, pre-order flag) with invented, paraphrased,
 or "improved" prose — when a field is present, render it as-is (trimmed for markdown formatting
-only). Only fall back to generic wording when the corresponding `activityContext` field is absent.
+only). If a corresponding `activityContext` description is absent, omit the description entirely;
+do not substitute generic wording or claims about the attraction.
 
 FORMAT:
 ## Trip Overview
@@ -30,7 +31,7 @@ FORMAT:
   - Evening: items with t=E
   - Meals: ...
   - Notes: ...
-  - Why this fits your group: use only preference-fit information already present in the input
+  - Why this fits your group: use only preference-fit information already present in the input. If `whyThisFits` is absent for an activity, OMIT this line entirely. Do NOT generate generic boilerplate like "complements the pace."
   - Logistics note: explain pod proximity, transfer buffer, or arrival/departure constraint when present
 
 RULES:

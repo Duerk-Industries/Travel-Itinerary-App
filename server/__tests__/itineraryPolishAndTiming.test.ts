@@ -153,9 +153,9 @@ describe('mapItems — mobility accessibility note', () => {
     expect(items.activities[0].notes).not.toContain('step-free access');
   });
 
-  test('uses a factual missing-source fallback instead of invented itinerary boilerplate', () => {
+  test('leaves the description blank instead of inventing itinerary boilerplate', () => {
     const items = mapItems(baseItinerary, WEIGHTS);
-    expect(items.activities[0].notes).toContain('no verified attraction description was available');
+    expect(items.activities[0].notes).toBe('Plan for about 2.5h here.');
     expect(items.activities[0].notes).not.toContain('complements the planned pace');
   });
 

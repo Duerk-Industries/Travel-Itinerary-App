@@ -323,8 +323,9 @@ departure rules, and generalized friction-score component calculations.
 - Unit: metadata precedence (verified field wins over any LLM-authored text if both are present),
   stale-but-labeled serving, negative-cache expiry, locale fallback (e.g., no `fr` summary falls
   back to `en` with a flag, not silently blank).
-- Integration: p4 output for an attraction with full cached data vs. one with none (must degrade to
-  the existing generic-but-honest fallback, not a placeholder or blank card).
+- Integration: p4 output for an attraction with full cached data vs. one with none (must render the
+  verified description when present and omit the description entirely when absent; never invent a
+  placeholder or generic attraction claim).
 - Regression: confirm no existing itinerary-rendering test currently asserting on old LLM-prose
   behavior breaks silently — update fixtures deliberately, don't let them bit-rot.
 
@@ -573,7 +574,7 @@ mini-only.
 honest itinerary — never a placeholder, blank card, or raw error.
 
 - Audit every new code path introduced in Phases 2–6 for a failure branch: enrichment lookup
-  failure → generic-but-honest description (already partly required by Phase 2); routing/weather
+  failure → omit the description while retaining verified duration/logistics facts; routing/weather
   provider failure → deterministic distance/climate fallback (Phase 6); chunk call failure →
   deterministic fill only, no infinite retry; repair-call failure → deterministic fallback (Phase
   4 already specifies this — verify it holds after Phases 5/6 are layered on top). A p4 render

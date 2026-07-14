@@ -247,7 +247,7 @@ describe('itinerary prompt plan service', () => {
     expect(result.generatedItems.activities.length).toBeGreaterThanOrEqual(2);
     expect(result.generatedItems.activities[0].status).toBe('Proposed');
     expect(result.generatedItems.activities[1].status).toBe('Proposed');
-    expect(result.generatedItems.activities[0].notes).toMatch(/what|fits this day|Things to know|concrete/i);
+    expect(result.generatedItems.activities[0].notes).toMatch(/Plan for about/i);
     expect(result.generatedItems.carRentals[0].status).toBe('Needed');
     // plan.md operational output targets: p0 <350, p1 <450,
     // p2 <600 per seven days, p3 <350. Rendering has no documented target,
@@ -2029,6 +2029,103 @@ describe('itinerary prompt plan service', () => {
     const commonActivity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'boston common');
     expect(gardenActivity).toBeDefined();
     expect(commonActivity).toBeDefined();
+  });
+
+  it('infers duration and fit for wild activities not in catalog', async () => {
+    const jsonStage = (content: unknown) => ({ data: { choices: [{ message: { content: JSON.stringify(content) } }] } });
+    const renderStage = (content: string) => ({ data: { choices: [{ message: { content } }] } });
+
+    const norm = {
+      $: 'norm1',
+      sd: '2026-11-01',
+      ed: '2026-11-01',
+      p: 'B',
+      c: 'M',
+      mob: 'M',
+      car: 'P',
+      w: {
+        outdoors: 50,
+        adventure: 10,
+        culture: 10,
+        food: 50,
+        nightlife: 10,
+        relax: 10,
+        photography: 10,
+        authentic_local: 10,
+        iconic_landmarks: 10,
+      },
+      a: [],
+      is: 'mixed',
+    };
+    const route = {
+      $: 'r1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-11-01', co: '2026-11-02', dn: [] }],
+      x: [],
+      rc: null,
+      w: norm.w,
+      a: [],
+    };
+    const itinerary = {
+      $: 'it1',
+      ...route,
+      dy: [
+        {
+          d: 1,
+          dt: '2026-11-01',
+          b: 'Boston',
+          it: [
+            ['M', 'O', 'Wild Hike'],
+            ['D', 'O', 'Wild Dinner'],
+          ],
+          me: ['BQ', 'LC', 'DL'],
+          sl: "Lodging at 'Boston'",
+          ln: [],
+          cf: 'H',
+        },
+      ],
+      cf: 'H',
+    };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(jsonStage(norm))
+      .mockResolvedValueOnce(jsonStage(route))
+      .mockResolvedValueOnce(jsonStage(itinerary))
+      .mockResolvedValueOnce(jsonStage(itinerary))
+      .mockResolvedValueOnce(renderStage('rendered'));
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-wild',
+      destinations: ['Boston'],
+      days: 1,
+      budgetMin: 1000,
+      budgetMax: 2000,
+      groupTraits: [],
+      tripIdSeed: 'wild-trip-new',
+      promptTraits: {
+        tt: {
+          p: 'B',
+          c: 'M',
+          mob: 'M',
+          car: 'P',
+          is: 'mixed',
+          w: norm.w,
+        },
+      },
+    });
+
+    const hike = result.generatedItems.activities.find((a) => a.name === 'Wild Hike');
+    const dinner = result.generatedItems.activities.find((a) => a.name === 'Wild Dinner');
+
+    // Hike default is 150m (2.5h)
+    expect(hike?.duration).toBe('2.5h');
+    // Food & Drink default is 90m (1.5h)
+    expect(dinner?.duration).toBe('1.5h');
+
+    expect(hike?.notes).toContain('supports your outdoors interests');
+    expect(dinner?.notes).toContain('supports your food interests');
   });
 
   it('reuses shared route/day caches across users and injects different must-sees after the hit', async () => {

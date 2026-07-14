@@ -1990,6 +1990,7 @@ const minutesToTimeString = (minutes: number): string => {
 // every "D" (daytime) item defaulting to 13:00 or a flat generic buffer.
 const computeDayItemSchedule = (
   day: PromptDay,
+  preferenceWeights: PromptWeights,
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
   transferNotesForDay?: TransferNote[],
   destinationTransferTiming?: DestinationTransferTiming | null
@@ -2009,10 +2010,15 @@ const computeDayItemSchedule = (
       clockByTimeCode[code] = Math.max(clockByTimeCode[code], transferReadyAt);
     }
   }
-  return day.it.map(([timeCode, , text]) => {
+  return day.it.map(([timeCode, activityCode, text]) => {
     const normalizedText = normalizeText(text).toLowerCase();
     const durationMetadata = durationMetadataByName?.get(normalizedText);
-    const durationMinutes = durationMetadata?.estimatedDurationMinutes ?? DEFAULT_ACTIVITY_DURATION_MINUTES;
+    const durationMinutes =
+      durationMetadata?.estimatedDurationMinutes ??
+      estimateAttractionDurationMinutes(
+        text,
+        pickActivityTypeForPreferences(text, ACTIVITY_CODE_TO_LONG[activityCode], preferenceWeights)
+      );
     const startMinutes = clockByTimeCode[timeCode] ?? clockByTimeCode.D;
     const gapMinutes = transferMinutesByFromName.get(normalizedText) ?? ITEM_GAP_MINUTES;
     clockByTimeCode[timeCode] = startMinutes + durationMinutes + gapMinutes;
@@ -2060,15 +2066,60 @@ const pickActivityTypeForPreferences = (
   return best;
 };
 
-const buildGeneratedActivityDescription = (
-  day: PromptDay,
-  activityName: string,
-  activityType: ActivityType
-): string => {
-  // Never manufacture claims about an attraction. A catalog/Wikipedia-backed
-  // description is preferred by mapItems; this explicit fallback makes missing
-  // source data visible to the traveler instead of presenting boilerplate as fact.
-  return `${activityName} (${activityType.toLowerCase()}) — What to know: no verified attraction description was available from the current sources. Confirm venue details, hours, and access before booking.`;
+const resolveActivityFitReason = (
+  text: string,
+  activityType: ActivityType,
+  weights: PromptWeights
+): string | null => {
+  const input = String(text ?? '').toLowerCase();
+  const interests: string[] = [];
+
+  // Keyword-based interest matching for activities missing from the verified catalog.
+  // Threshold (10) matches the shortlist-fit criteria in the main generation loop.
+  if (/\b(museum|gallery|art|history|historic|culture|temple|palace|castle)\b/.test(input) && weights.culture >= 10)
+    interests.push('culture');
+  if (
+    /\b(food|eat|restaurant|tasting|market|drink|bar|wine|beer|cafe|distillery|brewery|dining|eatery|breakfast|lunch|dinner|brunch)\b/.test(
+      input
+    ) &&
+    weights.food >= 10
+  )
+    interests.push('food');
+  if (
+    /\b(hike|walk|outdoor|trail|park|nature|beach|mountain|garden|lake|river|climb|stroll)\b/.test(input) &&
+    weights.outdoors >= 10
+  )
+    interests.push('outdoors');
+  if (
+    /\b(party|club|pub|nightlife|cocktail|speakeasy|dance|concert|show|event)\b/.test(input) &&
+    weights.nightlife >= 10
+  )
+    interests.push('nightlife');
+  if (/\b(adventure|adrenaline|expedition|safari|rafting|zip|surfing|trek)\b/.test(input) && weights.adventure >= 10)
+    interests.push('adventure');
+  if (/\b(relax|spa|wellness|massage|onsen|yoga|meditation|sauna)\b/.test(input) && weights.relax >= 10)
+    interests.push('relax');
+  if (/\b(landmark|monument|view|iconic|famous|statue|square|tower)\b/.test(input) && weights.iconic_landmarks >= 10)
+    interests.push('iconic landmarks');
+  if (/\b(local|authentic|hidden|neighborhood|resident|traditional)\b/.test(input) && weights.authentic_local >= 10)
+    interests.push('authentic local');
+  if (/\b(photo|picture|viewpoint|scenic|panoramic)\b/.test(input) && weights.photography >= 10)
+    interests.push('photography');
+
+  // If no keyword match, use a coarser activity-type backup.
+  if (!interests.length) {
+    if (activityType === 'Food & Drink' && weights.food >= 10) interests.push('food');
+    if (activityType === 'Outdoor Activity' || activityType === 'Hike') {
+      if (weights.outdoors >= 10) interests.push('outdoors');
+    }
+    if (activityType === 'Sights & Landmarks') {
+      if (weights.culture >= 10) interests.push('culture');
+      else if (weights.iconic_landmarks >= 10) interests.push('iconic landmarks');
+    }
+  }
+
+  if (!interests.length) return null;
+  return `it supports your ${interests.slice(0, 2).join(' and ')} interests.`;
 };
 
 type TransferNote = {
@@ -2163,9 +2214,12 @@ const attachAttractionMetadata = async (
     const dayEntries = day.it.map(([, activityCode, text]) => {
       const cleanText = normalizeText(text);
       const entry = entryByName.get(cleanText.toLowerCase());
+      const activityType =
+        entry?.activityType ??
+        pickActivityTypeForPreferences(text, ACTIVITY_CODE_TO_LONG[activityCode], norm.w as any);
       return {
         name: cleanText,
-        activityType: entry?.activityType ?? ACTIVITY_CODE_TO_LONG[activityCode],
+        activityType,
         lat: entry?.lat ?? null,
         lon: entry?.lon ?? null,
         cachedWikipediaSummary: entry?.wikipediaSummary ?? null,
@@ -2264,6 +2318,7 @@ export const mapItems = (
   const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) => {
     const schedule = computeDayItemSchedule(
       day,
+      preferenceWeights,
       durationMetadataByName,
       transferNotesByDay?.get(day.d),
       destinationTransferTimingByDate?.get(day.dt)
@@ -2274,11 +2329,16 @@ export const mapItems = (
       const durationMetadata = durationMetadataByName?.get(normalizeText(text).toLowerCase());
       const { startTime, durationMinutes } = schedule[index];
       const duration = formatMinutesAsDuration(durationMinutes);
-      const description = durationMetadata?.description || buildGeneratedActivityDescription(day, text, closest);
+      // Descriptions are factual enrichment only. If no catalog/Wikipedia
+      // description is available, leave that portion blank rather than adding
+      // generic or unverifiable prose.
+      const description = durationMetadata?.description?.trim() ?? '';
       const accessibilityNote = mobility === 'L'
         ? ' Check step-free access, seating, and route length with the venue before booking.'
         : '';
-      const notesWithDuration = `${description} Plan for about ${duration} here.${accessibilityNote}`;
+      const notesWithDuration = [description, `Plan for about ${duration} here.`, accessibilityNote.trim()]
+        .filter(Boolean)
+        .join(' ');
       const bookingNotes = durationMetadata?.requiresPreOrderTickets
         ? `${notesWithDuration} Tickets may need to be pre-ordered.`
         : notesWithDuration;
@@ -2327,6 +2387,7 @@ export const mapItems = (
 
 const buildDetails = (
   itinerary: PromptItinerary,
+  preferenceWeights: PromptWeights,
   transferNotesByDay?: Map<number, TransferNote[]>,
   durationMetadataByName?: Map<string, AttractionDurationMetadata>,
   whyFitsByName?: Map<string, string>,
@@ -2334,7 +2395,7 @@ const buildDetails = (
 ): ItineraryGeneratedDetail[] =>
   itinerary.dy.flatMap((day) => {
     const destinationTransfer = destinationTransferTimingByDate?.get(day.dt);
-    const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d), destinationTransfer);
+    const schedule = computeDayItemSchedule(day, preferenceWeights, durationMetadataByName, transferNotesByDay?.get(day.d), destinationTransfer);
     const notesByFromName = new Map<string, TransferNote>();
     for (const note of transferNotesByDay?.get(day.d) ?? []) {
       notesByFromName.set(note.fromName.toLowerCase(), note);
@@ -3119,6 +3180,18 @@ const runGenerateItineraryViaPromptPlan = async (
       if (relevantTags.length) whyFitsByName.set(entry.name.toLowerCase(), `it supports your ${relevantTags.slice(0, 2).join(' and ')} interests.`);
     }
   }
+
+  // Fallback fit reasoning for "wild" activities not in the pre-fetched catalog
+  for (const day of finalItinerary.dy) {
+    for (const [, code, text] of day.it) {
+      const key = normalizeText(text).toLowerCase();
+      if (!whyFitsByName.has(key)) {
+        const fit = resolveActivityFitReason(text, ACTIVITY_CODE_TO_LONG[code], normalized.w as any);
+        if (fit) whyFitsByName.set(key, fit);
+      }
+    }
+  }
+
   const activityContext = Array.from(durationMetadataByName.entries()).map(([name, metadata]) => ({
     name, description: metadata.description ?? undefined,
     whyThisFits: whyFitsByName.get(name),
@@ -3143,7 +3216,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
   const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
   const planMarkdown = safeRender.markdown;
-  const details = buildDetails(finalItinerary, transferNotesByDay, durationMetadataByName, whyFitsByName, destinationTransferTimingByDate);
+  const details = buildDetails(finalItinerary, normalized.w as any, transferNotesByDay, durationMetadataByName, whyFitsByName, destinationTransferTimingByDate);
   const safeDetails = details.length
     ? details
     : [
