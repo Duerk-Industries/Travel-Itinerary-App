@@ -23,6 +23,9 @@ type CliOptions = {
   outputDir: string | null;
   runs: ReplayRun[];
   captureRaw: boolean;
+  gold: boolean;
+  comparePath: string | null;
+  judge: boolean;
   help: boolean;
 };
 
@@ -39,6 +42,9 @@ Options:
   --provider <provider>    Single provider override, used with --model.
   --model <model>          Single model override, used with --provider.
   --raw-capture            Sets ENABLE_RAW_AI_CAPTURE=1 for this replay process.
+  --gold                   Run a high-effort local reference generation (no plan-cache writes).
+  --compare <gold-file>    Compare the generated production result with a stored gold JSON file.
+  --judge                  Reserved opt-in judge hook; never runs unless explicitly implemented.
   --help                   Show this help.
 `;
 
@@ -76,6 +82,9 @@ const parseArgs = (argv: string[]): CliOptions => {
     outputDir: null,
     runs: [],
     captureRaw: false,
+    gold: false,
+    comparePath: null,
+    judge: false,
     help: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -104,6 +113,13 @@ const parseArgs = (argv: string[]): CliOptions => {
       i += 1;
     } else if (arg === '--raw-capture') {
       options.captureRaw = true;
+    } else if (arg === '--gold') {
+      options.gold = true;
+    } else if (arg === '--compare') {
+      options.comparePath = next ?? null;
+      i += 1;
+    } else if (arg === '--judge') {
+      options.judge = true;
     } else if (!options.requestPath && !arg.startsWith('-')) {
       options.requestPath = arg;
     } else {
@@ -286,6 +302,45 @@ export const warnOnUnmatchedDestinationsAndAttractions = async (request: Record<
   }
 };
 
+type ItineraryComparison = {
+  goldItemCount: number;
+  productionItemCount: number;
+  itemCountDelta: number;
+  goldDays: number;
+  productionDays: number;
+  attractionCoveragePercent: number | null;
+};
+
+const itineraryItemNames = (value: unknown): string[] => {
+  const days = Array.isArray((value as any)?.itinerary?.dy)
+    ? (value as any).itinerary.dy
+    : Array.isArray((value as any)?.result?.itinerary?.dy)
+      ? (value as any).result.itinerary.dy
+      : [];
+  return days.flatMap((day: any) => Array.isArray(day?.it) ? day.it.map((item: any) => String(item?.[2] ?? '').trim()).filter(Boolean) : []);
+};
+
+export const compareItineraryRuns = (gold: unknown, production: unknown): ItineraryComparison => {
+  const goldItems = itineraryItemNames(gold);
+  const productionItems = itineraryItemNames(production);
+  const productionNormalized = new Set(productionItems.map((item) => item.toLowerCase()));
+  const matched = goldItems.filter((item) => productionNormalized.has(item.toLowerCase())).length;
+  const goldDays = Array.isArray((gold as any)?.result?.itinerary?.dy)
+    ? (gold as any).result.itinerary.dy.length
+    : Array.isArray((gold as any)?.itinerary?.dy) ? (gold as any).itinerary.dy.length : 0;
+  const productionDays = Array.isArray((production as any)?.result?.itinerary?.dy)
+    ? (production as any).result.itinerary.dy.length
+    : Array.isArray((production as any)?.itinerary?.dy) ? (production as any).itinerary.dy.length : 0;
+  return {
+    goldItemCount: goldItems.length,
+    productionItemCount: productionItems.length,
+    itemCountDelta: productionItems.length - goldItems.length,
+    goldDays,
+    productionDays,
+    attractionCoveragePercent: goldItems.length ? Math.round((matched / goldItems.length) * 10000) / 100 : null,
+  };
+};
+
 const main = async () => {
   const options = parseArgs(process.argv.slice(2));
   if (options.help || !options.requestPath) {
@@ -305,12 +360,21 @@ const main = async () => {
     ? process.env.AUTH_SECRET
     : 'itinerary-replay-secret';
   if (options.captureRaw || wrapper.captureRaw) process.env.ENABLE_RAW_AI_CAPTURE = '1';
+  if (options.gold) {
+    process.env.ITINERARY_GOLD_MODE = '1';
+    process.env.ITINERARY_GOLD_TOKEN_MULTIPLIER = '2';
+  }
+  if (options.judge) {
+    process.stderr.write('[itinerary-replay] --judge is opt-in and requires an explicit judge implementation; deterministic comparison only.\n');
+  }
 
   const requestCandidate = (wrapper.request && typeof wrapper.request === 'object' ? wrapper.request : file) as Record<string, unknown>;
   const request = resolveReplayRequest(file);
   validateRequest(request);
   await warnOnUnmatchedDestinationsAndAttractions(request);
-  const runs = normalizeRuns(options.runs, wrapper.runs, request.aiProvider);
+  const runs = options.gold
+    ? [{ provider: 'openai', model: 'gpt-4o', label: 'gold' }]
+    : normalizeRuns(options.runs, wrapper.runs, request.aiProvider);
   const outputDir = options.outputDir || wrapper.outputDir
     ? resolveReplayPath(String(options.outputDir ?? wrapper.outputDir))
     : path.resolve(__dirname, '../logs/ai-replay', timestamp());
@@ -347,7 +411,11 @@ const main = async () => {
         captureId,
       });
       const outputPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.json`);
-      fs.writeFileSync(outputPath, JSON.stringify({ run, captureId, startedAt, completedAt: new Date().toISOString(), result }, null, 2));
+      fs.writeFileSync(outputPath, JSON.stringify({
+        run, mode: options.gold ? 'gold' : 'production',
+        overrides: options.gold ? { strongerModel: 'gpt-4o', tokenMultiplier: 2, shortlistTarget: 20, cacheWritesDisabled: true } : undefined,
+        captureId, startedAt, completedAt: new Date().toISOString(), result,
+      }, null, 2));
 
       const tripName = typeof requestCandidate.tripName === 'string' ? requestCandidate.tripName : label;
       const markdownPath = path.join(outputDir, `${String(i + 1).padStart(2, '0')}-${safeFilePart(label)}.md`);
@@ -369,6 +437,18 @@ const main = async () => {
       fs.writeFileSync(outputPath, JSON.stringify({ run, captureId, startedAt, completedAt: new Date().toISOString(), error }, null, 2));
       summary.push({ run, captureId, ok: false, outputPath, error: error.message });
       process.stderr.write(`[itinerary-replay] failed label=${label} output=${outputPath} error=${error.message}\n`);
+    }
+  }
+
+  if (options.comparePath && summary.some((run) => run.ok)) {
+    const gold = readJson(options.comparePath);
+    const productionOutput = summary.find((run) => run.ok)?.outputPath;
+    if (productionOutput) {
+      const production = JSON.parse(fs.readFileSync(String(productionOutput), 'utf8'));
+      const comparison = compareItineraryRuns(gold, production);
+      const comparisonPath = path.join(outputDir, 'comparison.json');
+      fs.writeFileSync(comparisonPath, JSON.stringify(comparison, null, 2));
+      process.stdout.write(`[itinerary-replay] comparison=${comparisonPath}\n`);
     }
   }
 

@@ -8,6 +8,7 @@ import {
   resolveReplayPath,
   validateRequest,
   warnOnUnmatchedDestinationsAndAttractions,
+  compareItineraryRuns,
 } from '../scripts/replay-itinerary-generation';
 import { WIZARD_CLI_INPUT_EXAMPLE } from '../scripts/wizardCliInputTypes';
 
@@ -101,6 +102,21 @@ describe('validateRequest', () => {
 
   it('passes for a valid request', () => {
     expect(() => validateRequest({ destinations: ['Paris'], days: 1, budgetMin: 0, budgetMax: 100 })).not.toThrow();
+  });
+});
+
+describe('compareItineraryRuns', () => {
+  it('reports deterministic attraction coverage and item deltas', () => {
+    const gold = { result: { itinerary: { dy: [{ d: 1, it: [['D', 'A', 'Museum'], ['E', 'O', 'Market']] }] } } };
+    const production = { result: { itinerary: { dy: [{ d: 1, it: [['D', 'A', 'Museum']] }] } } };
+    expect(compareItineraryRuns(gold, production)).toEqual({
+      goldItemCount: 2,
+      productionItemCount: 1,
+      itemCountDelta: -1,
+      goldDays: 1,
+      productionDays: 1,
+      attractionCoveragePercent: 50,
+    });
   });
 });
 

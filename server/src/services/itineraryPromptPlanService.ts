@@ -8,7 +8,7 @@ import {
   OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
   runItineraryPromptStageViaOpenAi,
 } from '../apis/openaiCallers';
-import { getEnvFlag } from '../env';
+import { getEnvFlag, getEnvValue } from '../env';
 import { logError, logInfo } from '../logger';
 import type { ActivityType, AttractionCatalogEntry, AttractionDurationMetadata, ItineraryDetailKind } from '../types';
 import { getApiCacheSetting } from '../config/apiLimits';
@@ -365,7 +365,15 @@ const DEFAULT_WEIGHTS: PromptWeights = {
   iconic_landmarks: 7,
 };
 
+export const ITINERARY_PIPELINE_VERSION = 'itinerary-pipeline-v7';
 const MAX_ITEMS_PER_DAY = 5;
+
+const scaleItineraryTokenBudget = (base: number): number => {
+  if (!getEnvFlag('ITINERARY_GOLD_MODE')) return base;
+  const configured = Number(getEnvValue('ITINERARY_GOLD_TOKEN_MULTIPLIER', { defaultValue: '2' }));
+  const multiplier = Number.isFinite(configured) ? Math.max(1, Math.min(4, configured)) : 2;
+  return Math.round(base * multiplier);
+};
 
 const PROMPTS_ROOT = path.resolve(__dirname, '../../prompts');
 
@@ -2098,7 +2106,8 @@ const runRenderStage = async (params: {
   const usr = applyTemplate(params.template.usr, params.replacements);
   const startedMs = Date.now();
   const startedAt = new Date(startedMs).toISOString();
-  logInfo('[itinerary] stage start caller=ITINERARY_PLAN_P4_RENDER maxTokens=900');
+  const maxTokens = scaleItineraryTokenBudget(900);
+  logInfo(`[itinerary] stage start caller=ITINERARY_PLAN_P4_RENDER maxTokens=${maxTokens}`);
   const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
     providerOverride: params.aiProvider?.provider,
@@ -2106,7 +2115,7 @@ const runRenderStage = async (params: {
     caller: OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
     systemPrompt: sys,
     userPrompt: usr,
-    maxTokens: 900,
+    maxTokens,
     usageContext: params.usageContext,
   });
   if (params.acc) {
@@ -2180,7 +2189,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const preferenceContract = buildPreferenceContract(input);
   const normalizedMustSee = normalizeMustSeeAttractions(input.mustSeeAttractions);
   const allowAttractionDiscovery = getEnvFlag('ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED', { defaultValue: false });
-  const allowPlanCache = getEnvFlag('ITINERARY_PLAN_CACHE_ENABLED', { defaultValue: true });
+  const allowPlanCache = !getEnvFlag('ITINERARY_GOLD_MODE') && getEnvFlag('ITINERARY_PLAN_CACHE_ENABLED', { defaultValue: true });
   const cacheUsage = { routeHit: false, dayHit: false };
   logInfo(
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
@@ -2206,7 +2215,7 @@ const runGenerateItineraryViaPromptPlan = async (
       REQ_JSON: JSON.stringify(promptRequest),
       NORM_SCHEMA_MIN: bundle.normSchema,
     },
-    maxTokens: 700,
+    maxTokens: scaleItineraryTokenBudget(700),
     fallbackValue: {},
     acc: tokenAcc,
     captureStages,
@@ -2241,7 +2250,9 @@ const runGenerateItineraryViaPromptPlan = async (
     try {
       const limitPerDestination = Number(getApiCacheSetting('attractions', 'limitPerDestination')) || 20;
       const shortlistPromptItemsPerDestination =
-        Number(getApiCacheSetting('attractions', 'shortlistPromptItemsPerDestination')) || 8;
+        getEnvFlag('ITINERARY_GOLD_MODE')
+          ? Math.min(20, Math.max(1, limitPerDestination))
+          : Number(getApiCacheSetting('attractions', 'shortlistPromptItemsPerDestination')) || 8;
       const shortlist = await getAttractionPromptBlockForDestinations({
         userId: input.userId,
         destinations: promptRequest.d,
@@ -2320,7 +2331,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const routeSignature = buildTripSignature(signatureInput, false);
   const daySignature = buildTripSignature(signatureInput, true);
   const catalogFingerprint = buildCatalogFingerprint(shortlistByDestination);
-  const routeDependency = buildPromptFingerprint({ p1: bundle.p1, schema: bundle.step1Schema, catalogFingerprint });
+  const routeDependency = buildPromptFingerprint({ pipeline: ITINERARY_PIPELINE_VERSION, p1: bundle.p1, schema: bundle.step1Schema, catalogFingerprint });
 
   let cachedRoute: PromptRoute | null = null;
   if (allowPlanCache) {
@@ -2335,7 +2346,7 @@ const runGenerateItineraryViaPromptPlan = async (
     const routeRaw = await runJsonStage<unknown>({
       apiKey: input.apiKey, aiProvider: input.aiProvider, caller: OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
       template: bundle.p1, replacements: { REQ_JSON: JSON.stringify(cacheSafeRequest), NORM_JSON: JSON.stringify(cacheSafeNormalized), STEP1_SCHEMA_MIN: bundle.step1Schema, ATTRACTION_SHORTLIST: attractionContextBlock },
-      maxTokens: 1200, fallbackValue: {}, acc: tokenAcc, captureStages, usageContext,
+      maxTokens: scaleItineraryTokenBudget(1200), fallbackValue: {}, acc: tokenAcc, captureStages, usageContext,
     });
     route = sanitizeRoute(routeRaw, normalized, promptRequest);
     if (allowPlanCache) try {
@@ -2366,7 +2377,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const timingPreferenceNote = buildTimingPreferenceNote(promptRequest.ut);
   const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}`;
   const dayDependency = buildPromptFingerprint({
-    p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
+    pipeline: ITINERARY_PIPELINE_VERSION, p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
     attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
   });
   let cachedDay: PromptItinerary | null = null;
@@ -2390,7 +2401,7 @@ const runGenerateItineraryViaPromptPlan = async (
       ATTRACTION_PODS: attractionPodsBlock,
       LOGISTICS_FACTS: logisticsFactsBlock,
     },
-    maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
+    maxTokens: scaleItineraryTokenBudget(Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280))),
     fallbackValue: {},
     acc: tokenAcc,
     captureStages,
@@ -2411,7 +2422,7 @@ const runGenerateItineraryViaPromptPlan = async (
       STEP2_JSON: JSON.stringify(mechanicallyValidated.itinerary),
       STEP2_SCHEMA_MIN: bundle.step2Schema,
     },
-    maxTokens: 1400,
+    maxTokens: scaleItineraryTokenBudget(1400),
     fallbackValue: mechanicallyValidated.itinerary,
     acc: tokenAcc,
     captureStages,
