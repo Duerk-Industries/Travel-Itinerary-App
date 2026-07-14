@@ -289,6 +289,9 @@ export const listAttractionDurationMetadataByDestination = async (
 export const upsertAttractionDurationMetadata = async (
   ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionDurationMetadata']>
 ) => adapter().upsertAttractionDurationMetadata(...args);
+export const deleteAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['deleteAttractionDurationMetadata']>
+): Promise<number> => adapter().deleteAttractionDurationMetadata(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { getAttractionDurationMetadata, upsertAttractionDurationMetadata } from '../db';
+import { getAttractionDurationMetadata, listAttractionDurationMetadataByDestination, upsertAttractionDurationMetadata } from '../db';
 import { logError } from '../logger';
 import type { ActivityType, AttractionDurationMetadata } from '../types';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
@@ -62,6 +62,16 @@ const isStale = (metadata: AttractionDurationMetadata | null, refreshDays: numbe
   return Date.now() - ts > thresholdMs;
 };
 
+// Negative-cache entries (a Wikipedia lookup that found no description) use a
+// much shorter refresh window than a successful lookup so a transient
+// Wikipedia outage or a rate-limit blip doesn't get "permanently" recorded as
+// "this attraction has no description" for the full 60-day refresh window.
+const negativeCacheIsStale = (metadata: AttractionDurationMetadata | null): boolean => {
+  if (!metadata) return true;
+  const negativeRefreshDays = Number(getApiCacheSetting('attractions', 'durationMetadataNegativeRefreshDays')) || 1;
+  return isStale(metadata, negativeRefreshDays);
+};
+
 const WIKIPEDIA_SUMMARY_TIMEOUT_MS = 8000;
 const MAX_DESCRIPTION_SENTENCES = 2;
 
@@ -116,7 +126,9 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
 }): Promise<AttractionDurationMetadata> => {
   const refreshDays = Number(getApiCacheSetting('attractions', 'durationMetadataRefreshDays')) || 60;
   const existing = await getAttractionDurationMetadata(params.userId, params.destinationKey, params.name);
-  if (!isStale(existing, refreshDays)) return existing as AttractionDurationMetadata;
+  const isNegativeCacheEntry = !!existing && !existing.description;
+  const stale = isNegativeCacheEntry ? negativeCacheIsStale(existing) : isStale(existing, refreshDays);
+  if (!stale) return existing as AttractionDurationMetadata;
 
   const estimatedDurationMinutes = estimateAttractionDurationMinutes(params.name, params.activityType);
   const requiresPreOrderTickets = inferRequiresPreOrderTickets(params.name, params.activityType);
@@ -138,6 +150,13 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   return upsertAttractionDurationMetadata(entry);
 };
 
+// Batched by destination: a single `listAttractionDurationMetadataByDestination`
+// read covers every attraction in this destination in one query instead of one
+// `getAttractionDurationMetadata` read per attraction (per plan §2C
+// "enrichment lookups must be batched — one query for all attraction IDs in a
+// trip, not N+1 per activity"). Only cache misses/stale rows fall through to
+// an individual fetch-and-upsert, since a Wikipedia lookup is inherently
+// per-attraction and cannot itself be batched.
 export const getAttractionDurationMetadataBatch = async (params: {
   userId: string;
   destinationKey: string;
@@ -145,11 +164,34 @@ export const getAttractionDurationMetadataBatch = async (params: {
   entries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null }>;
 }): Promise<Map<string, AttractionDurationMetadata>> => {
   const result = new Map<string, AttractionDurationMetadata>();
+  const dedupedEntries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null }> = [];
   const seen = new Set<string>();
   for (const entry of params.entries) {
     const key = entry.name.trim().toLowerCase();
     if (!key || seen.has(key)) continue;
     seen.add(key);
+    dedupedEntries.push(entry);
+  }
+  if (!dedupedEntries.length) return result;
+
+  let cachedByName = new Map<string, AttractionDurationMetadata>();
+  try {
+    const cached = await listAttractionDurationMetadataByDestination(params.userId, params.destinationKey);
+    cachedByName = new Map(cached.map((metadata) => [metadata.name.trim().toLowerCase(), metadata]));
+  } catch (err) {
+    logError(`[attractions] batched duration metadata lookup failed for destination="${params.destinationDisplayName}"; falling back to per-attraction reads`, err);
+  }
+
+  const refreshDays = Number(getApiCacheSetting('attractions', 'durationMetadataRefreshDays')) || 60;
+  for (const entry of dedupedEntries) {
+    const key = entry.name.trim().toLowerCase();
+    const existing = cachedByName.get(key) ?? null;
+    const isNegativeCacheEntry = !!existing && !existing.description;
+    const stale = isNegativeCacheEntry ? negativeCacheIsStale(existing) : isStale(existing, refreshDays);
+    if (existing && !stale) {
+      result.set(key, existing);
+      continue;
+    }
     const metadata = await getOrCreateAttractionDurationMetadata({
       userId: params.userId,
       destinationKey: params.destinationKey,

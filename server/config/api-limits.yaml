@@ -295,6 +295,11 @@ caching:
     minAttractionsAfterConfidenceFilter: 6
     promptBlobRefreshDays: 30
     durationMetadataRefreshDays: 60
+    # Short negative-cache TTL: a duration-metadata row with no Wikipedia
+    # description (fetch failed/outage/no article) refreshes this often
+    # instead of waiting the full durationMetadataRefreshDays, so a transient
+    # provider outage isn't cached as "no data" for 60 days.
+    durationMetadataNegativeRefreshDays: 1
   itineraryPlan:
     routeCacheTtlDays: 60
     dayCacheTtlDays: 30

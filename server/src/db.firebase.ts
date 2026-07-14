@@ -4340,6 +4340,35 @@ export const listAttractionDurationMetadataByDestination = async (
     .filter(Boolean) as AttractionDurationMetadata[];
 };
 
+// Manual cache-invalidation trigger (plan §2C "Maintainability" requirement):
+// mirrors db.postgres.ts's deleteAttractionDurationMetadata for adapter parity.
+export const deleteAttractionDurationMetadata = async (
+  destinationKey: string,
+  name?: string | null
+): Promise<number> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return 0;
+  const db = getDb();
+  if (name && String(name).trim()) {
+    const id = toDurationMetadataId(key, String(name).trim().toLowerCase());
+    const docRef = db.collection('locations').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) return 0;
+    await docRef.delete();
+    return 1;
+  }
+  const snapshot = await db
+    .collection('locations')
+    .where('sourceType', '==', 'attraction_duration_metadata')
+    .where('destinationKey', '==', key)
+    .get();
+  if (snapshot.empty) return 0;
+  const batch = db.batch();
+  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+  return snapshot.size;
+};
+
 export const upsertAttractionDurationMetadata = async (
   entry: AttractionDurationMetadata
 ): Promise<AttractionDurationMetadata> => {

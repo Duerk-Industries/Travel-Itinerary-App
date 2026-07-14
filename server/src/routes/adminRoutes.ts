@@ -22,6 +22,7 @@ import {
   listAuditLog,
   adminSearchUsers, adminGetUser, adminGetUserData,
   getUniversalPackingList, replaceUniversalPackingList,
+  deleteAttractionDurationMetadata,
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -1730,6 +1731,44 @@ router.get('/ingestion-queue-depth', async (_req, res) => {
 // ---------------------------------------------------------------------------
 
 const VALID_DELETION_STATES: readonly DataDeletionJobState[] = ['pending', 'running', 'succeeded', 'failed'];
+
+// ---------------------------------------------------------------------------
+// Attraction duration/description ("activityContext") cache invalidation.
+// Lets an operator bust the cached Wikipedia-backed duration metadata for a
+// single attraction (destinationKey + name) or a whole destination
+// (destinationKey only) without a code deploy or waiting out
+// durationMetadataRefreshDays, per itinerary-improvements-coding-plan.md
+// Phase 2C "Maintainability".
+// ---------------------------------------------------------------------------
+router.post('/attractions/duration-metadata/invalidate', async (req, res) => {
+  const destinationKey = typeof req.body?.destinationKey === 'string' ? req.body.destinationKey.trim() : '';
+  const name = typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name.trim() : null;
+  if (!destinationKey) {
+    res.status(400).json({ error: 'destinationKey is required' });
+    return;
+  }
+  try {
+    const deletedCount = await deleteAttractionDurationMetadata(destinationKey, name);
+    const actorId = (req as any).user ? ((req as any).user as TokenPayload).userId : null;
+    try {
+      await writeAuditLog({
+        actorUserId: actorId,
+        action: 'ATTRACTION_DURATION_METADATA_CACHE_INVALIDATED' as any,
+        beforeState: { destinationKey, name },
+        afterState: { deletedCount },
+        reason: name
+          ? `Invalidate cached duration/description metadata for "${name}" in ${destinationKey}`
+          : `Invalidate all cached duration/description metadata for ${destinationKey}`,
+      });
+    } catch (err) {
+      logError('[admin] audit write failed on duration-metadata cache invalidate', err);
+    }
+    res.json({ destinationKey, name, deletedCount });
+  } catch (err) {
+    logError('[admin] failed to invalidate attraction duration metadata cache', err);
+    res.status(500).json({ error: 'Failed to invalidate attraction duration metadata cache' });
+  }
+});
 
 router.get('/data-deletion-jobs', async (req, res) => {
   const stateParam = typeof req.query.state === 'string' ? req.query.state : undefined;

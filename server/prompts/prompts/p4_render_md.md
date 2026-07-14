@@ -10,7 +10,10 @@ INPUT JSON:
 {{FINAL_JSON}}
 
 Use `itinerary` for the compact plan and `activityContext` for verified descriptions, preference fit,
-and ticket-preorder flags. Omit missing context fields rather than inventing them.
+and ticket-preorder flags. Omit missing context fields rather than inventing them. Never replace a
+populated `activityContext` fact (description, duration, pre-order flag) with invented, paraphrased,
+or "improved" prose — when a field is present, render it as-is (trimmed for markdown formatting
+only). Only fall back to generic wording when the corresponding `activityContext` field is absent.
 
 FORMAT:
 ## Trip Overview

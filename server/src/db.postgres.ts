@@ -7353,6 +7353,35 @@ export const listAttractionDurationMetadataByDestination = async (
   return rows.map(toAttractionDurationMetadata).filter(Boolean) as AttractionDurationMetadata[];
 };
 
+// Manual cache-invalidation trigger (plan §2C "Maintainability" requirement):
+// lets an operator bust the activityContext/duration-metadata cache for a
+// single attraction (name + destinationKey) or an entire destination
+// (destinationKey only) without a code deploy. Returns the number of rows
+// removed so the caller/admin UI can confirm something actually happened.
+export const deleteAttractionDurationMetadata = async (
+  destinationKey: string,
+  name?: string | null
+): Promise<number> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return 0;
+  const p = getPool();
+  if (name && String(name).trim()) {
+    const id = toDurationMetadataId(key, String(name).trim().toLowerCase());
+    const { rowCount } = await p.query(
+      `DELETE FROM locations WHERE id = $1 AND source_type = 'attraction_duration_metadata'`,
+      [id]
+    );
+    return rowCount ?? 0;
+  }
+  const { rowCount } = await p.query(
+    `DELETE FROM locations
+      WHERE source_type = 'attraction_duration_metadata'
+        AND LOWER(COALESCE(payload->>'destinationKey', '')) = $1`,
+    [key]
+  );
+  return rowCount ?? 0;
+};
+
 export const upsertAttractionDurationMetadata = async (
   entry: AttractionDurationMetadata
 ): Promise<AttractionDurationMetadata> => {
