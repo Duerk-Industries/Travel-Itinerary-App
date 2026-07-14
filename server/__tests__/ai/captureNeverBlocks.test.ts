@@ -89,17 +89,6 @@ describe('AI capture never blocks user-facing work', () => {
         a: [],
         cf: 'M',
       }))
-      .mockResolvedValueOnce(jsonResponse({
-        $: 'it1',
-        eh: 'JFK',
-        xh: 'JFK',
-        b: [{ l: 'New York', ci: '2026-09-01', co: '2026-09-03', dn: [] }],
-        x: [],
-        rc: null,
-        dy: [{ d: 1, dt: '2026-09-01', b: 'New York', it: [['D', 'O', 'Central Park walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York'", ln: [], cf: 'M' }],
-        a: [],
-        cf: 'M',
-      }))
       .mockResolvedValueOnce(jsonResponse('## Captured itinerary result'));
 
     const result = await generateItineraryViaPromptPlan({
