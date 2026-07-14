@@ -30,6 +30,7 @@ import {
 } from './itineraryPreferenceContract';
 import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
 import { decideItineraryEscalation } from './itineraryEscalationService';
+import { chooseSafeItineraryMarkdown } from './itineraryDegradedFallbackService';
 import type { AttractionPod } from './geoPodClusteringService';
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
@@ -1989,13 +1990,6 @@ const renderMarkdownFallback = (itinerary: PromptItinerary, profile: ItineraryPr
   return lines.join('\n');
 };
 
-const hasVisibleText = (value: unknown): boolean => {
-  const text = String(value ?? '')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .trim();
-  return /[A-Za-z0-9]/.test(text);
-};
-
 // Raw prompt/response text is only attached to a stage capture when
 // ENABLE_RAW_AI_CAPTURE is set. Kept out of the default path so we don't hold
 // full prompt/response strings in memory for every generation. Even when
@@ -2517,7 +2511,8 @@ const runGenerateItineraryViaPromptPlan = async (
     .trim();
   logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
   const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
-  const planMarkdown = hasVisibleText(renderedMarkdown) ? renderedMarkdown : fallbackMarkdown;
+  const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
+  const planMarkdown = safeRender.markdown;
   const details = buildDetails(finalItinerary, transferNotesByDay, durationMetadataByName);
   const safeDetails = details.length
     ? details
@@ -2580,7 +2575,7 @@ const runGenerateItineraryViaPromptPlan = async (
     transferMinutesByDay,
   });
   logInfo(
-    `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
+    `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${safeRender.fallbackUsed ? 'yes' : 'no'}`
   );
   captureItineraryInteraction({
     captureId: input.captureId ?? input.tripIdSeed,
@@ -2603,7 +2598,7 @@ const runGenerateItineraryViaPromptPlan = async (
       lodgingsCount: items.lodgings.length,
       activitiesCount: items.activities.length,
       carRentalsCount: items.carRentals.length,
-      usedRenderFallback: planMarkdown === fallbackMarkdown,
+      usedRenderFallback: safeRender.fallbackUsed,
       evaluation,
       fatigueIssues: fatigueManaged.issues,
     },
