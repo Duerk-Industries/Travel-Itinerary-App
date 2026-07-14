@@ -2,6 +2,8 @@ import { clearClimatologyCacheForTests } from '../src/services/climatologyDaylig
 import {
   buildDestinationLogistics,
   calculateTransferBuffer,
+  compareOpenJawLogistics,
+  resolveCoarseHomeRegion,
 } from '../src/services/destinationLogisticsService';
 
 jest.mock('../src/apis/usageLimiter', () => ({ reserveApiUsageOrThrow: jest.fn(async () => undefined) }));
@@ -35,5 +37,25 @@ describe('Phase 1 destination logistics', () => {
     const groupLow = calculateTransferBuffer(5, 8, 'L');
     expect(groupLow).toBeGreaterThan(soloHigh);
     expect(groupLow).toBeLessThanOrEqual(90);
+  });
+
+  test('compares round-trip and open-jaw legs from a coarse airport anchor', () => {
+    const result = compareOpenJawLogistics({
+      home: { coordinates: { lat: 40.6413, lon: -73.7781 }, airportCode: 'JFK' },
+      entry: { lat: 48.8566, lon: 2.3522 },
+      exit: { lat: 51.4700, lon: -0.4543 },
+      entryAirport: 'CDG',
+      exitAirport: 'LHR',
+    });
+    expect(result.recommended).toBe('open_jaw');
+    expect(result.distanceSavingsKm).toBeGreaterThan(250);
+    expect(result.rationale).toMatch(/open-jaw/i);
+  });
+
+  test('resolves a bundled airport without accepting an exact home address', () => {
+    const result = resolveCoarseHomeRegion({ airportCode: 'JFK', region: 'New York' });
+    expect(result.label).toBe('JFK');
+    expect(result.coordinates).toEqual(expect.objectContaining({ lat: expect.any(Number), lon: expect.any(Number) }));
+    expect(resolveCoarseHomeRegion({ region: 'New York', airportCode: 'not-an-airport' }).coordinates).toBeNull();
   });
 });

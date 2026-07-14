@@ -286,16 +286,17 @@ export const scheduleAdjacentDaySwaps = <TItem extends DaySchedulingItem>(
     // base (and therefore not day A's). Original array order = deterministic scan order.
     const misplacedForward = dayA.it
       .map((item, index) => ({ item, index, entry: lookupEntry(item[2]) ?? null }))
-      .find(({ entry }) => !!entry?.destinationKey && entry.destinationKey === keyB);
+      .find(({ entry }) => !!entry?.destinationKey && normalizeDestinationKey(entry.destinationKey) === keyB);
     const misplacedBackward = dayB.it
       .map((item, index) => ({ item, index, entry: lookupEntry(item[2]) ?? null }))
-      .find(({ entry }) => !!entry?.destinationKey && entry.destinationKey === keyA);
+      .find(({ entry }) => !!entry?.destinationKey && normalizeDestinationKey(entry.destinationKey) === keyA);
 
     // Bounded to one move per pair: prefer the forward direction deterministically when both
     // directions happen to have a misplaced candidate.
     if (misplacedForward && dayA.it.length > 1 && dayB.it.length < maxItemsPerDay) {
       const [moved] = dayA.it.splice(misplacedForward.index, 1);
-      dayB.it.push(['D', moved[1], moved[2]] as unknown as TItem);
+      const targetTime = moved[0] === 'E' && dayB.it.filter((item) => item[0] === 'E').length >= 2 ? 'D' : moved[0];
+      dayB.it.push([targetTime, moved[1], moved[2]] as unknown as TItem);
       changed = true;
       notes.push(
         `Moved "${moved[2]}" from day ${dayA.dt} (${dayA.b}) to day ${dayB.dt} (${dayB.b}) — catalog destination matches the adjacent day's base.`
@@ -305,7 +306,8 @@ export const scheduleAdjacentDaySwaps = <TItem extends DaySchedulingItem>(
 
     if (misplacedBackward && dayB.it.length > 1 && dayA.it.length < maxItemsPerDay) {
       const [moved] = dayB.it.splice(misplacedBackward.index, 1);
-      dayA.it.push(['D', moved[1], moved[2]] as unknown as TItem);
+      const targetTime = moved[0] === 'E' && dayA.it.filter((item) => item[0] === 'E').length >= 2 ? 'D' : moved[0];
+      dayA.it.push([targetTime, moved[1], moved[2]] as unknown as TItem);
       changed = true;
       notes.push(
         `Moved "${moved[2]}" from day ${dayB.dt} (${dayB.b}) to day ${dayA.dt} (${dayA.b}) — catalog destination matches the adjacent day's base.`

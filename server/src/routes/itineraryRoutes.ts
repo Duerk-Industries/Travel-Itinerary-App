@@ -197,7 +197,7 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut } = req.body ?? {};
+  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, homeAirport, homeRegion, returnAirport, tripId, tripStyle, tt, ut } = req.body ?? {};
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
   const selectedLocations = Array.isArray(locations)
@@ -228,12 +228,11 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  let preferredAirportFallback = '';
-  if (!String(departureAirport ?? '').trim()) {
-    const profile = await getWebUserProfile(userId).catch(() => null);
-    preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
-  }
+  const profile = await getWebUserProfile(userId).catch(() => null);
+  const preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
   const effectiveDepartureAirport = String(departureAirport ?? '').trim() || preferredAirportFallback;
+  const effectiveHomeAirport = String(homeAirport ?? preferredAirportFallback ?? effectiveDepartureAirport).trim();
+  const effectiveReturnAirport = String(returnAirport ?? effectiveHomeAirport ?? effectiveDepartureAirport).trim();
   logInfo(
     `[itinerary] request start user=${userId} trip=${tripId} destinations="${destinationSummary}" days=${daysNum} budget=${min}-${max} departure="${String(
       effectiveDepartureAirport
@@ -314,6 +313,9 @@ router.post('/', async (req, res) => {
       budgetMin: min,
       budgetMax: max,
       departureAirport: effectiveDepartureAirport || undefined,
+      homeAirport: effectiveHomeAirport || undefined,
+      homeRegion: typeof homeRegion === 'string' ? homeRegion.trim() || undefined : undefined,
+      returnAirport: effectiveReturnAirport || undefined,
       tripStyle: tripStyle ? String(tripStyle).trim() : undefined,
       promptTraits: {
         tt: tt && typeof tt === 'object' ? tt : undefined,
@@ -386,7 +388,7 @@ router.post('/async', async (req, res) => {
     return;
   }
 
-  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut, itineraryId } = req.body ?? {};
+  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, homeAirport, homeRegion, returnAirport, tripId, tripStyle, tt, ut, itineraryId } = req.body ?? {};
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
   const selectedLocations = Array.isArray(locations)
@@ -488,12 +490,11 @@ router.post('/async', async (req, res) => {
     throw err;
   }
 
-  let preferredAirportFallback = '';
-  if (!String(departureAirport ?? '').trim()) {
-    const profile = await getWebUserProfile(userId).catch(() => null);
-    preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
-  }
+  const profile = await getWebUserProfile(userId).catch(() => null);
+  const preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
   const effectiveDepartureAirport = String(departureAirport ?? '').trim() || preferredAirportFallback;
+  const effectiveHomeAirport = String(homeAirport ?? preferredAirportFallback ?? effectiveDepartureAirport).trim();
+  const effectiveReturnAirport = String(returnAirport ?? effectiveHomeAirport ?? effectiveDepartureAirport).trim();
   const job = enqueueAsyncItineraryJob({
     apiKey: providerRuntime.apiKey,
     userId,
@@ -506,6 +507,9 @@ router.post('/async', async (req, res) => {
     budgetMin: min,
     budgetMax: max,
     departureAirport: effectiveDepartureAirport || undefined,
+    homeAirport: effectiveHomeAirport || undefined,
+    homeRegion: typeof homeRegion === 'string' ? homeRegion.trim() || undefined : undefined,
+    returnAirport: effectiveReturnAirport || undefined,
     tripStyle: tripStyle ? String(tripStyle).trim() : undefined,
     tt,
     ut,

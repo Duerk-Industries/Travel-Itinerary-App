@@ -55,7 +55,7 @@ import {
   mergeThinDayRepairResult,
   THIN_DAY_MIN_ITEMS,
 } from './dayFillService';
-import { buildDestinationLogistics, calculateTransferBuffer, type LogisticsMobility } from './destinationLogisticsService';
+import { buildDestinationLogistics, calculateTransferBuffer, compareOpenJawLogistics, resolveCoarseHomeRegion, type CoarseHomeRegion, type LogisticsMobility } from './destinationLogisticsService';
 import {
   buildGetYourGuideItineraryCandidates,
   selectGetYourGuideItineraryCandidates,
@@ -282,6 +282,10 @@ export type ItineraryPromptPlanServiceInput = {
   budgetMax: number;
   mustSeeAttractions?: MustSeeAttractionInput[];
   departureAirport?: string;
+  /** Consented coarse return/home airport or region; never an address. */
+  homeAirport?: string;
+  homeRegion?: string;
+  returnAirport?: string;
   tripStyle?: string;
   promptTraits?: {
     tt?: Partial<{
@@ -849,6 +853,7 @@ const buildPromptRequest = (input: ItineraryPromptPlanServiceInput): PromptReq =
     d: destinations,
     dur: Math.max(1, Math.round(input.days)),
     s: input.departureAirport ? input.departureAirport.trim() : undefined,
+    e: (input.returnAirport ?? input.homeAirport ?? input.departureAirport) ? String(input.returnAirport ?? input.homeAirport ?? input.departureAirport).trim() : undefined,
     p: input.groupTraits.map((member) => ({
       t: Array.isArray(member.traits) ? member.traits.map((t) => String(t)).filter(Boolean) : [],
     })),
@@ -1352,8 +1357,8 @@ const enforceShortlistGrounding = (
 // scheduling (pod-density seed, nearest insertion, bounded 2-opt — see
 // daySchedulingService.ts for the algorithm). Runs before polishItineraryFinalPass so
 // the explicit golden-hour/farewell-dinner pins below always get the final say over
-// any single item's slot. Does not attempt cross-day (adjacent-day swap) scheduling —
-// that remains a separate, unimplemented stretch goal per the plan.
+// any single item's slot. The bounded adjacent-day pass runs immediately after each
+// within-day ordering pass and only moves catalog-grounded items to their neighboring base.
 export const scheduleItineraryDaysDeterministically = (
   itinerary: PromptItinerary,
   shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
@@ -1502,6 +1507,36 @@ export const buildDestinationClimatologyBlock = async (
   return lines.join('\n');
 };
 
+/** Build a non-PII terminal-routing hint even when climatology is disabled. */
+export const buildHomeTerminalLogisticsNote = (
+  route: PromptRoute,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  home?: CoarseHomeRegion | null,
+  terminals?: { entryAirport?: string | null; exitAirport?: string | null }
+): string => {
+  const coarseHome = resolveCoarseHomeRegion(home);
+  if (!coarseHome.label) return '';
+  const byKey = new Map(Object.entries(shortlistByDestination).map(([key, entries]) => [normalizeDestinationKey(key), entries]));
+  const coordinates = route.b.map((base) => {
+    const entries = (byKey.get(normalizeDestinationKey(base.l)) ?? []).filter((entry) => entry.lat != null && entry.lon != null);
+    if (!entries.length) return null;
+    return {
+      label: base.l,
+      lat: entries.reduce((sum, entry) => sum + Number(entry.lat), 0) / entries.length,
+      lon: entries.reduce((sum, entry) => sum + Number(entry.lon), 0) / entries.length,
+    };
+  }).filter((value): value is { label: string; lat: number; lon: number } => Boolean(value));
+  if (coordinates.length < 2) return `Home-terminal routing anchor: ${coarseHome.label}; compare round-trip and open-jaw terminal access, elapsed time, and fare.`;
+  const comparison = compareOpenJawLogistics({
+    home: { region: coarseHome.label, coordinates: coarseHome.coordinates },
+    entry: coordinates[0],
+    exit: coordinates[coordinates.length - 1],
+    entryAirport: terminals?.entryAirport ?? home?.airportCode,
+    exitAirport: terminals?.exitAirport ?? home?.airportCode,
+  });
+  return `Home-terminal routing (${coarseHome.label}): ${comparison.rationale}`;
+};
+
 const enforceFatigueManagement = (
   itinerary: PromptItinerary,
   transferNotesByDay: Map<number, TransferNote[]>,
@@ -1589,19 +1624,20 @@ const enforceAttractionDestinationConsistency = (
     for (const item of day.it) {
       const text = normalizeText(item[2]);
       const entry = entryByName.get(text.toLowerCase());
-      if (!entry || !entry.destinationKey || entry.destinationKey === dayKey) {
+      const entryDestinationKey = entry?.destinationKey ? normalizeDestinationKey(entry.destinationKey) : '';
+      if (!entry || !entryDestinationKey || entryDestinationKey === dayKey) {
         keptItems.push(item);
         continue;
       }
-      const targetDay = itinerary.dy.find((candidate) => dayDestinationKey(candidate) === entry.destinationKey);
+      const targetDay = itinerary.dy.find((candidate) => dayDestinationKey(candidate) === entryDestinationKey);
       if (targetDay && targetDay.it.length < MAX_ITEMS_PER_DAY) {
         targetDay.it.push(item);
         logInfo(
-          `[itinerary] reassigned attraction "${text}" from "${day.b}" to "${targetDay.b}" (destinationKey mismatch: ${dayKey} vs ${entry.destinationKey})`
+          `[itinerary] reassigned attraction "${text}" from "${day.b}" to "${targetDay.b}" (destinationKey mismatch: ${dayKey} vs ${entryDestinationKey})`
         );
       } else {
         logError(
-          `[itinerary] dropped attraction "${text}" from "${day.b}" — no available day found for destinationKey="${entry.destinationKey}"`
+          `[itinerary] dropped attraction "${text}" from "${day.b}" — no available day found for destinationKey="${entryDestinationKey}"`
         );
       }
     }
@@ -2550,7 +2586,14 @@ const runGenerateItineraryViaPromptPlan = async (
   } catch (err) {
     logError('[itinerary] destination climatology block build failed; continuing without it', err);
   }
-  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}`;
+  const homeTerminalNote = buildHomeTerminalLogisticsNote(route, shortlistByDestination, {
+    airportCode: input.homeAirport ?? input.returnAirport ?? input.departureAirport,
+    region: input.homeRegion,
+  }, {
+    entryAirport: input.departureAirport,
+    exitAirport: input.returnAirport ?? input.homeAirport ?? input.departureAirport,
+  });
+  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${homeTerminalNote ? `\n${homeTerminalNote}` : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}`;
   const dayDependency = buildPromptFingerprint({
     pipeline: ITINERARY_PIPELINE_VERSION, p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
     attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,

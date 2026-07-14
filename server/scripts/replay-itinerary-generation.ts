@@ -192,6 +192,8 @@ export const compactPromptRequestToServiceRequest = (promptRequest: Record<strin
   budgetMax: Number(promptRequest.budgetMax ?? promptRequest.rs ?? 0),
   mustSeeAttractions: Array.isArray(promptRequest.ms) ? promptRequest.ms : [],
   departureAirport: typeof promptRequest.s === 'string' ? promptRequest.s : undefined,
+  returnAirport: typeof promptRequest.e === 'string' ? promptRequest.e : undefined,
+  homeAirport: typeof promptRequest.e === 'string' ? promptRequest.e : undefined,
   tripStyle: typeof promptRequest.tripStyle === 'string' ? promptRequest.tripStyle : undefined,
   promptTraits: {
     tt: promptRequest.tt && typeof promptRequest.tt === 'object' ? promptRequest.tt : undefined,
@@ -216,6 +218,9 @@ export const apiRouteBodyToServiceRequest = (request: Record<string, unknown>): 
     budgetMax: request.budgetMax,
     mustSeeAttractions: Array.isArray(request.mustSeeAttractions) ? request.mustSeeAttractions : [],
     departureAirport: request.departureAirport,
+    returnAirport: request.returnAirport,
+    homeAirport: request.homeAirport,
+    homeRegion: request.homeRegion,
     tripStyle: request.tripStyle,
     promptTraits: {
       tt: request.tt && typeof request.tt === 'object' ? request.tt : undefined,

@@ -67,6 +67,9 @@ type QueueInput = {
   budgetMin: number;
   budgetMax: number;
   departureAirport?: string;
+  homeAirport?: string;
+  homeRegion?: string;
+  returnAirport?: string;
   tripStyle?: string;
   tt?: unknown;
   ut?: unknown;
@@ -678,6 +681,9 @@ const writeLocalGenerationArtifacts = async (
     budgetMin: generationInput.budgetMin,
     budgetMax: generationInput.budgetMax,
     departureAirport: generationInput.departureAirport,
+    homeAirport: generationInput.homeAirport,
+    homeRegion: generationInput.homeRegion,
+    returnAirport: generationInput.returnAirport,
     tripStyle: generationInput.tripStyle,
     promptTraits: generationInput.promptTraits,
     tripStartDate: generationInput.tripStartDate,
@@ -735,6 +741,9 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       budgetMin: input.budgetMin,
       budgetMax: input.budgetMax,
       departureAirport: fallbackAirport || undefined,
+      homeAirport: input.homeAirport || fallbackAirport || undefined,
+      homeRegion: input.homeRegion || undefined,
+      returnAirport: input.returnAirport || input.homeAirport || fallbackAirport || undefined,
       tripStyle: input.tripStyle ? String(input.tripStyle).trim() : undefined,
       promptTraits: {
         tt: input.tt && typeof input.tt === 'object' ? (input.tt as any) : undefined,

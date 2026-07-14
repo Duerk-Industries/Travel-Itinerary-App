@@ -744,3 +744,13 @@ continues to propagate an early p0–p3 provider failure, while p4/render and
 chunk/repair failures use grounded deterministic fallbacks. An all-provider
 outage mode can therefore be enabled later behind a separate flag without
 changing the default error semantics.
+
+The scheduling/logistics audit also closed two previously incomplete seams:
+
+- adjacent-day swaps now normalize catalog destination keys, preserve the
+  moved activity's time slot (with an evening-cap guard), avoid terminal/rest
+  days, and are covered by live-path scheduling tests;
+- route requests carry a consented coarse home/return airport or region,
+  compare round-trip versus open-jaw home-terminal legs, and inject only a
+  non-PII routing note into logistics prompts. Airport coordinates come from
+  the bundled dataset; exact home addresses are not accepted or cached.

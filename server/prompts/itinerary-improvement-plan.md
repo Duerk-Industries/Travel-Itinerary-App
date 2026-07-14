@@ -562,3 +562,14 @@ than re-litigating already-correct work:
   regression). Full app suite: 788 tests, only the 1 known pre-existing failure (`aiOpsDeepLinking`).
   Both confirmed pre-existing via `git stash`/history in earlier verification passes. Typecheck clean on
   both packages throughout.
+
+### Follow-up scheduling and home-terminal fixes
+
+The subsequent audit closed two implementation gaps in the live pipeline:
+
+- adjacent-day scheduling now normalizes catalog destination keys (including
+  slug/case variants), preserves the moved activity's time slot, and has
+  terminal/rest-day guards and cross-day regression coverage;
+- generation requests carry only a coarse consented home/return airport or
+  region. Bundled airport coordinates support round-trip/open-jaw comparison,
+  while logistics prompts receive a routing rationale without home addresses.

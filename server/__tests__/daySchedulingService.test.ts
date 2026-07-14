@@ -1,4 +1,4 @@
-import { scheduleDayItems, type DaySchedulingItem } from '../src/services/daySchedulingService';
+import { scheduleAdjacentDaySwaps, scheduleDayItems, type DaySchedulingItem } from '../src/services/daySchedulingService';
 import type { AttractionCatalogEntry, InterestTag } from '../src/types';
 
 const entry = (name: string, rank: number, lat?: number, lon?: number, tags: InterestTag[] = ['culture']): AttractionCatalogEntry => ({
@@ -102,5 +102,32 @@ describe('Phase 2 day scheduling (within-day nearest-insertion + bounded 2-opt)'
     const originalCodes = interleavedItems.map((item) => item[0]);
     const resultCodes = result.items.map((item) => item[0]);
     expect(resultCodes).toEqual(originalCodes);
+  });
+});
+
+describe('bounded cross-day scheduling swaps', () => {
+  test('moves one unambiguously misplaced attraction to its adjacent destination day', () => {
+    const nyc: AttractionCatalogEntry = { ...entry('Central Park', 1), destinationKey: 'NEW-YORK-CITY', destinationDisplayName: 'New York City' };
+    const boston: AttractionCatalogEntry = { ...entry('Freedom Trail', 1), destinationKey: 'BOSTON', destinationDisplayName: 'Boston' };
+    const days = [
+      { dt: '2026-09-01', b: 'New York City', it: [['M', 'A', 'Freedom Trail'], ['E', 'O', 'Central Park']] as DaySchedulingItem[], ln: [] },
+      { dt: '2026-09-02', b: 'Boston', it: [['M', 'A', 'Boston Common']] as DaySchedulingItem[], ln: [] },
+    ];
+    const result = scheduleAdjacentDaySwaps(days, (name) => name === 'Freedom Trail' ? boston : name === 'Central Park' ? nyc : null);
+    expect(result.changed).toBe(true);
+    expect(days[0].it.map((item) => item[2])).toEqual(['Central Park']);
+    expect(days[1].it.map((item) => item[2])).toEqual(['Boston Common', 'Freedom Trail']);
+    expect(days[1].it[1][0]).toBe('M');
+  });
+
+  test('does not swap terminal-only or rest-hub days', () => {
+    const entryBoston = { ...entry('Freedom Trail', 1), destinationKey: 'boston', destinationDisplayName: 'Boston' };
+    const days = [
+      { dt: '2026-09-01', b: 'New York City', it: [['M', 'A', 'Freedom Trail'], ['E', 'O', 'Central Park']] as DaySchedulingItem[], ln: ['Travel day: no activities scheduled'] },
+      { dt: '2026-09-02', b: 'Boston', it: [['M', 'A', 'Boston Common']] as DaySchedulingItem[], ln: [] },
+    ];
+    const result = scheduleAdjacentDaySwaps(days, (name) => name === 'Freedom Trail' ? entryBoston : null, { zeroActivityDayDates: ['2026-09-01'] });
+    expect(result.changed).toBe(false);
+    expect(days[0].it).toHaveLength(2);
   });
 });

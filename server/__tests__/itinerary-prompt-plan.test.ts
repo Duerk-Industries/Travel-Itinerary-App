@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 /// <reference types="node" />
 import axios from 'axios';
-import { generateItineraryViaPromptPlan, buildDestinationClimatologyBlock } from '../src/services/itineraryPromptPlanService';
+import { generateItineraryViaPromptPlan, buildDestinationClimatologyBlock, buildHomeTerminalLogisticsNote } from '../src/services/itineraryPromptPlanService';
 import { clearClimatologyCacheForTests } from '../src/services/climatologyDaylightService';
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
 import { initDb } from '../src/db';
@@ -64,6 +64,26 @@ const mockedPromptStage = runItineraryPromptStageViaOpenAi as jest.Mock;
 const mockedAttractionsCatalogService = attractionsCatalogService as jest.Mocked<typeof attractionsCatalogService>;
 
 describe('itinerary prompt plan service', () => {
+  test('includes a coarse home-terminal open-jaw hint without an address', () => {
+    const note = buildHomeTerminalLogisticsNote(
+      {
+        eh: 'JFK', xh: 'LHR',
+        b: [
+          { l: 'Paris', ci: '2026-07-01', co: '2026-07-03', dn: [] },
+          { l: 'London', ci: '2026-07-03', co: '2026-07-05', dn: [] },
+        ],
+        x: [], rc: null, w: {} as any, a: [],
+      },
+      {
+        Paris: [{ id: 'paris-1', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Louvre', rank: 1, activityType: 'Ticketed Attraction', interestTags: ['culture'], lat: 48.8566, lon: 2.3522, updatedAt: '2026-01-01' } as any],
+        London: [{ id: 'london-1', destinationKey: 'london', destinationDisplayName: 'London', name: 'British Museum', rank: 1, activityType: 'Ticketed Attraction', interestTags: ['culture'], lat: 51.5194, lon: -0.1270, updatedAt: '2026-01-01' } as any],
+      },
+      { airportCode: 'JFK', region: 'New York', coordinates: { lat: 40.6413, lon: -73.7781 } }
+    );
+    expect(note).toMatch(/Home-terminal routing/i);
+    expect(note).not.toMatch(/street|address|email/i);
+  });
+
   beforeAll(async () => {
     await initDb();
     // Seeds feature_flags from server/config/feature-flags.yaml (including

@@ -116,3 +116,14 @@ export const searchBundledAirportDataset = (query: string, limit = 15): string[]
     .slice(0, limit)
     .map((airport) => airport.label);
 };
+
+/** Resolve a coarse airport anchor without geocoding an address or calling an API. */
+export const findBundledAirport = (query: string | null | undefined): AirportCatalogRecord | null => {
+  const normalized = normalizeText(query).toUpperCase();
+  if (!normalized) return null;
+  return loadBundledAirportDataset().find((airport) =>
+    airport.iata_code === normalized ||
+    airport.city.toUpperCase() === normalized ||
+    airport.label.toUpperCase() === normalized
+  ) ?? null;
+};
