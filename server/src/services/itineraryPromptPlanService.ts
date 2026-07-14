@@ -288,7 +288,15 @@ export type ItineraryPromptPlanServiceInput = {
   tripStartYear?: number | null;
   tripIdSeed?: string;
   captureId?: string;
+  /** Fired synchronously as generation moves between named prompt-pipeline
+   * stages, so a caller (e.g. the async job runner) can surface live
+   * progress/ETA without needing to inspect internals of this function. */
+  onStageChange?: (stage: ItineraryGenerationStageId) => void;
 };
+
+// Mirrors the p0_norm/p1_route/p2_days/p3_validate/p4_render_md prompt
+// pipeline (see server/prompts/prompts/), in execution order.
+export type ItineraryGenerationStageId = 'norm' | 'route' | 'days' | 'validate' | 'render';
 
 type PromptTemplate = ItineraryPromptTemplate;
 
@@ -2183,6 +2191,7 @@ const runGenerateItineraryViaPromptPlan = async (
   logInfo(
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
   );
+  input.onStageChange?.('norm');
 
   const usageContext = input.userId
     ? {
@@ -2231,6 +2240,7 @@ const runGenerateItineraryViaPromptPlan = async (
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P0_NORM} sd=${normalized.sd} ed=${normalized.ed} pace=${normalized.p} comfort=${normalized.c}`
   );
+  input.onStageChange?.('route');
 
   let attractionShortlistBlock = 'none';
   let shortlistByDestination: Record<string, AttractionCatalogEntry[]> = {};
@@ -2345,6 +2355,7 @@ const runGenerateItineraryViaPromptPlan = async (
     p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
     attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
   });
+  input.onStageChange?.('days');
   let cachedDay: PromptItinerary | null = null;
   if (allowPlanCache) try { cachedDay = await readItineraryPlanCache<PromptItinerary>({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency }); }
   catch (err) { logError('[itinerary] day cache read failed; treating as miss', err); }
@@ -2377,6 +2388,7 @@ const runGenerateItineraryViaPromptPlan = async (
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS} days=${dayItinerary.dy.length} transfers=${dayItinerary.x.length}`
   );
+  input.onStageChange?.('validate');
 
   const validatedRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
@@ -2402,6 +2414,7 @@ const runGenerateItineraryViaPromptPlan = async (
   } catch (err) { logError('[itinerary] day cache write failed; continuing', err); }
   }
   filteredItinerary = validateAndRepairItineraryStructure({ itinerary: filteredItinerary, logisticsFacts }).itinerary;
+  input.onStageChange?.('render');
   // Shared day-cache hits contain only generic, validated content. Re-run the
   // cheap grounding, destination, and logistics checks after every read so a
   // cached skeleton cannot bypass this user's fairness/accessibility rules.

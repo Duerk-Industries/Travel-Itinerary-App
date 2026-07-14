@@ -226,6 +226,72 @@ describe('AI itinerary limits and idempotency', () => {
     await cleanupTestUsersByEmail([asyncEmail]);
   });
 
+  it('surfaces stage/ETA progress fields on the async job status endpoint', async () => {
+    const asyncEmail = `itinerary-limits-test+stage-${TS}@example.com`;
+    const asyncUser = await registerAndLoginWebUser({
+      firstName: 'AI',
+      lastName: 'Stage',
+      email: asyncEmail,
+      password: 'TestPass1!',
+    });
+    const asyncGroupResponse = await request(app)
+      .post('/api/groups')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .send({ name: `Stage Group ${TS}` })
+      .expect(201);
+    const asyncGroupId = asyncGroupResponse.body.id ?? asyncGroupResponse.body.group?.id;
+    const asyncTripResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .send({ name: `Stage Trip ${TS}`, groupId: asyncGroupId, endDate: '2099-12-31' })
+      .expect(201);
+    const asyncTripId = asyncTripResponse.body.id ?? asyncTripResponse.body.trip?.id;
+
+    jest.spyOn(itineraryPromptPlanService, 'generateItineraryViaPromptPlan').mockResolvedValue({
+      planMarkdown: '# Day 1\nWalk the city.',
+      normalized: null,
+      route: null,
+      itinerary: null,
+      details: [],
+      generatedItems: { transfers: [], lodgings: [], activities: [], carRentals: [] },
+      tokenUsage: { totalTokens: 10 },
+      profile: null,
+    } as any);
+
+    const res = await request(app)
+      .post('/api/itinerary/async')
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .set('Idempotency-Key', 'async-stage')
+      .send({
+        tripId: asyncTripId,
+        country: 'France',
+        locations: ['Paris'],
+        days: 3,
+        budgetMin: 100,
+        budgetMax: 500,
+      })
+      .expect(202);
+
+    await asyncItineraryTesting.waitForJob(res.body.jobId);
+
+    const statusRes = await request(app)
+      .get(`/api/itinerary/async/${res.body.jobId}`)
+      .set('Authorization', `Bearer ${asyncUser.token}`)
+      .expect(200);
+
+    expect(statusRes.body.status).toBe('completed');
+    // The mocked generateItineraryViaPromptPlan never fires the real
+    // pipeline's onStageChange callback, so the last stage transition on a
+    // completed job is the 'saving' step the job runner sets itself just
+    // before persisting results.
+    expect(statusRes.body.stage).toBe('saving');
+    expect(statusRes.body.stageLabel).toEqual(expect.stringContaining('Saving'));
+    expect(typeof statusRes.body.stageDetail).toBe('string');
+    expect(statusRes.body.etaSeconds).toBe(0);
+
+    await cleanupTestUsersByEmail([asyncEmail]);
+  });
+
   it('persists generated lodging cost per night using the generated checkout date', async () => {
     const asyncEmail = `itinerary-limits-test+lodging-${TS}@example.com`;
     const asyncUser = await registerAndLoginWebUser({

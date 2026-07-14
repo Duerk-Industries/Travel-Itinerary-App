@@ -24,6 +24,7 @@ import {
   generateItineraryViaPromptPlan,
   type ItineraryGeneratedItems,
   type ItineraryGeneratedTransfer,
+  type ItineraryGenerationStageId,
   type ItineraryPromptPlanResult,
   type MustSeeAttractionInput,
 } from './itineraryPromptPlanService';
@@ -35,6 +36,12 @@ import type { ActivityType } from '../types';
 type AsyncStatus = 'queued' | 'running' | 'completed' | 'failed';
 type TransferWithPassengers = ItineraryGeneratedTransfer & { passengerIds?: string[] };
 
+// The prompt-pipeline stages reported by itineraryPromptPlanService, plus a
+// final 'saving' stage covering the DB writes that happen after generation
+// (see persistResult below) — that part of the job has no LLM stage but is
+// still a real, sometimes-slow chunk of wall-clock time worth surfacing.
+export type AsyncItineraryStageId = ItineraryGenerationStageId | 'saving';
+
 export type AsyncItineraryJob = {
   id: string;
   userId: string;
@@ -44,6 +51,12 @@ export type AsyncItineraryJob = {
   createdAt: string;
   updatedAt: string;
   error?: string;
+  stage?: AsyncItineraryStageId;
+  stageLabel?: string;
+  stageDetail?: string;
+  /** Rough remaining-time estimate in seconds; null once terminal. Refined
+   * over time via ETA_CALIBRATION below as real job durations are observed. */
+  etaSeconds?: number | null;
   result?: {
     itineraryId: string;
     detailsCount: number;
@@ -52,6 +65,88 @@ export type AsyncItineraryJob = {
     activitiesCount: number;
     carRentalsCount: number;
   };
+};
+
+type StageMeta = { label: string; detail: string; weight: number };
+
+// Ordered to match actual pipeline execution; weight is each stage's rough
+// share of total generation time (sums to 1), used to derive an ETA. Based on
+// each LLM stage's maxTokens budget in itineraryPromptPlanService.ts (norm 700,
+// route 1200, days ~1100-3500 scaling with trip length, validate 1400, render
+// 900) plus a slice for the DB persistence work after generation finishes.
+const STAGE_ORDER: AsyncItineraryStageId[] = ['norm', 'route', 'days', 'validate', 'render', 'saving'];
+const STAGE_META: Record<AsyncItineraryStageId, StageMeta> = {
+  norm: {
+    label: 'Phase 1 of 6: Reading your trip preferences',
+    detail: 'Interpreting pace, comfort, budget, and traveler interests to set the plan.',
+    weight: 0.08,
+  },
+  route: {
+    label: 'Phase 2 of 6: Mapping your route',
+    detail: 'Sequencing destinations and the travel legs between them.',
+    weight: 0.12,
+  },
+  days: {
+    label: 'Phase 3 of 6: Building day-by-day activities',
+    detail: 'Choosing attractions, tours, and pacing for each day of the trip.',
+    weight: 0.4,
+  },
+  validate: {
+    label: 'Phase 4 of 6: Validating the itinerary',
+    detail: 'Checking dates, transfers, and activity details for consistency.',
+    weight: 0.15,
+  },
+  render: {
+    label: 'Phase 5 of 6: Finalizing your itinerary',
+    detail: 'Polishing activity order and writing the day-by-day summary.',
+    weight: 0.15,
+  },
+  saving: {
+    label: 'Phase 6 of 6: Saving to your trip',
+    detail: 'Adding the generated flights, lodging, and activities to your trip.',
+    weight: 0.1,
+  },
+};
+
+const cumulativeWeightBeforeStage = (stage: AsyncItineraryStageId): number => {
+  let sum = 0;
+  for (const id of STAGE_ORDER) {
+    if (id === stage) break;
+    sum += STAGE_META[id].weight;
+  }
+  return sum;
+};
+
+// Self-calibrating multiplier applied to the heuristic duration estimate
+// below, nudged toward the ratio of actual/predicted duration after every
+// completed job. Starts at 1 (trust the heuristic) and is clamped so a single
+// outlier job (e.g. a cold cache or a slow provider blip) can't wildly skew
+// future ETAs. Resets on server restart — good enough for "roughly how long
+// is this taking today" rather than a precise historical model.
+let etaCalibration = 1;
+const ETA_CALIBRATION_MIN = 0.4;
+const ETA_CALIBRATION_MAX = 3;
+
+// No historical per-trip-length duration data is tracked, so this is a
+// straightforward heuristic (base cost plus a per-day cost for the days
+// stage, which scales with trip length) rather than a learned estimate.
+const estimateBaseTotalDurationMs = (days: number): number => {
+  const safeDays = Number.isFinite(days) && days > 0 ? days : 1;
+  return Math.min(150000, Math.max(15000, 15000 + safeDays * 2500));
+};
+
+const updateJobStage = (jobId: string, stage: AsyncItineraryStageId, days: number): void => {
+  const job = jobs.get(jobId);
+  if (!job) return;
+  const meta = STAGE_META[stage];
+  const predictedTotalMs = estimateBaseTotalDurationMs(days) * etaCalibration;
+  const remainingFraction = Math.max(0, 1 - cumulativeWeightBeforeStage(stage));
+  job.stage = stage;
+  job.stageLabel = meta.label;
+  job.stageDetail = meta.detail;
+  job.etaSeconds = Math.max(2, Math.round((predictedTotalMs * remainingFraction) / 1000));
+  job.updatedAt = nowIso();
+  jobs.set(jobId, job);
 };
 
 type QueueInput = {
@@ -703,6 +798,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
   job.status = 'running';
   job.updatedAt = nowIso();
   jobs.set(jobId, job);
+  updateJobStage(jobId, 'norm', input.days);
 
   const jobStart = Date.now();
   try {
@@ -747,6 +843,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripIdSeed: input.tripId,
       captureId: jobId,
       usageWindowKey: input.usageWindowKey,
+      onStageChange: (stage: ItineraryGenerationStageId) => updateJobStage(jobId, stage, input.days),
     };
     const result = await generateItineraryViaPromptPlan(generationInput);
 
@@ -764,6 +861,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       days: input.days,
       budget: input.budgetMax,
     });
+    updateJobStage(jobId, 'saving', input.days);
     const persisted = await persistResult({
       userId: input.userId,
       tripId: input.tripId,
@@ -775,8 +873,20 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
 
     job.status = 'completed';
     job.updatedAt = nowIso();
+    job.etaSeconds = 0;
     job.result = { itineraryId, ...persisted };
     jobs.set(jobId, job);
+    // Nudge the ETA heuristic toward how long this job actually took, so later
+    // jobs' remaining-time estimates track real server/provider performance
+    // instead of staying pinned to the static initial guess.
+    const predictedTotalMs = estimateBaseTotalDurationMs(input.days);
+    if (predictedTotalMs > 0) {
+      const actualRatio = (Date.now() - jobStart) / predictedTotalMs;
+      etaCalibration = Math.min(
+        ETA_CALIBRATION_MAX,
+        Math.max(ETA_CALIBRATION_MIN, etaCalibration * 0.8 + actualRatio * 0.2)
+      );
+    }
     if (input.idempotencyKey && input.usageWindowKey) {
       await finalizeGenerationUsage({
         userId: input.userId,
@@ -800,6 +910,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     const message = err instanceof Error ? err.message : String(err);
     job.status = 'failed';
     job.error = message;
+    job.etaSeconds = null;
     job.updatedAt = nowIso();
     jobs.set(jobId, job);
     if (input.idempotencyKey) {

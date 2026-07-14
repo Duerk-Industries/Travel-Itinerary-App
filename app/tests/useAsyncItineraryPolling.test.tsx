@@ -88,7 +88,16 @@ describe('useAsyncItineraryPolling', () => {
 
     await waitFor(() => {
       expect(result.current.trackers).toEqual({
-        tripA: { jobId: 'job-1', status: 'completed', itineraryId: 'itin-1', error: undefined },
+        tripA: {
+          jobId: 'job-1',
+          status: 'completed',
+          itineraryId: 'itin-1',
+          error: undefined,
+          stage: null,
+          stageLabel: null,
+          stageDetail: null,
+          etaSeconds: null,
+        },
       });
     });
     expect(refreshPageData).toHaveBeenCalledTimes(1);
@@ -110,7 +119,15 @@ describe('useAsyncItineraryPolling', () => {
 
     await waitFor(() => {
       expect(result.current.trackers).toEqual({
-        tripA: { jobId: 'job-2', status: 'failed', error: 'model overloaded' },
+        tripA: {
+          jobId: 'job-2',
+          status: 'failed',
+          error: 'model overloaded',
+          stage: null,
+          stageLabel: null,
+          stageDetail: null,
+          etaSeconds: null,
+        },
       });
     });
   });
@@ -152,7 +169,16 @@ describe('useAsyncItineraryPolling', () => {
     });
     await waitFor(() => {
       expect(result.current.trackers).toEqual({
-        tripA: { jobId: 'job-4', status: 'completed', itineraryId: 'itin-4', error: undefined },
+        tripA: {
+          jobId: 'job-4',
+          status: 'completed',
+          itineraryId: 'itin-4',
+          error: undefined,
+          stage: null,
+          stageLabel: null,
+          stageDetail: null,
+          etaSeconds: null,
+        },
       });
     });
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -202,10 +228,53 @@ describe('useAsyncItineraryPolling', () => {
 
     await waitFor(() => {
       expect(result.current.trackers).toEqual({
-        tripA: { jobId: 'job-3', status: 'completed', itineraryId: 'itin-3', error: undefined },
+        tripA: {
+          jobId: 'job-3',
+          status: 'completed',
+          itineraryId: 'itin-3',
+          error: undefined,
+          stage: null,
+          stageLabel: null,
+          stageDetail: null,
+          etaSeconds: null,
+        },
       });
     });
     expect(refreshPageData).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces stage/label/detail/eta while still pending', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementation(() =>
+      createJsonResponse({
+        status: 'running',
+        stage: 'days',
+        stageLabel: 'Phase 3 of 6: Building day-by-day activities',
+        stageDetail: 'Choosing attractions, tours, and pacing for each day of the trip.',
+        etaSeconds: 42,
+      })
+    );
+
+    const { result } = renderHook(() =>
+      usePollingHarness({
+        initialTrackers: {
+          tripA: { jobId: 'job-5', status: 'pending' },
+        },
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.trackers).toEqual({
+        tripA: {
+          jobId: 'job-5',
+          status: 'pending',
+          stage: 'days',
+          stageLabel: 'Phase 3 of 6: Building day-by-day activities',
+          stageDetail: 'Choosing attractions, tours, and pacing for each day of the trip.',
+          etaSeconds: 42,
+        },
+      });
+    });
   });
 });

@@ -180,6 +180,13 @@ type ItineraryDetail = {
   reactions?: ReactionSummary;
 };
 
+const formatEtaSeconds = (seconds?: number | null): string | null => {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) return null;
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes} min`;
+};
+
 type OverviewTabProps = {
   backendUrl: string;
   headers: Record<string, string>;
@@ -205,6 +212,9 @@ type OverviewTabProps = {
   mapApp: MapApp;
   temperatureUnit?: TemperatureUnit;
   aiItineraryPending?: boolean;
+  aiItineraryStageLabel?: string | null;
+  aiItineraryStageDetail?: string | null;
+  aiItineraryEtaSeconds?: number | null;
   aiItineraryFailedMessage?: string | null;
   editSignal?: number;
   goToDay1Signal?: number;
@@ -399,6 +409,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   mapApp,
   temperatureUnit = 'fahrenheit',
   aiItineraryPending,
+  aiItineraryStageLabel,
+  aiItineraryStageDetail,
+  aiItineraryEtaSeconds,
   aiItineraryFailedMessage,
   editSignal,
   goToDay1Signal,
@@ -3138,7 +3151,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <ActivityIndicator size="small" color="#2563eb" testID="ai-itinerary-pending-spinner" />
             <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
           </View>
-          <Text style={styles.helperText}>Your AI trip plan is being generated and will appear here automatically.</Text>
+          <Text style={styles.helperText} testID="ai-itinerary-stage-label">
+            {aiItineraryStageLabel || 'Starting up…'}
+            {formatEtaSeconds(aiItineraryEtaSeconds) ? ` — about ${formatEtaSeconds(aiItineraryEtaSeconds)} left` : ''}
+          </Text>
+          <Text style={styles.helperText}>
+            {aiItineraryStageDetail || 'Your AI trip plan is being generated and will appear here automatically.'}
+          </Text>
         </View>
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (

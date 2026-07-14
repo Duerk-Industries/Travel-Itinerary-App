@@ -3266,6 +3266,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   mapApp={mapApp}
                   temperatureUnit={accountProfile.temperatureUnit}
                   aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
+                  aiItineraryStageLabel={activeTripId ? asyncItineraryByTrip[activeTripId]?.stageLabel ?? null : null}
+                  aiItineraryStageDetail={activeTripId ? asyncItineraryByTrip[activeTripId]?.stageDetail ?? null : null}
+                  aiItineraryEtaSeconds={activeTripId ? asyncItineraryByTrip[activeTripId]?.etaSeconds ?? null : null}
                   aiItineraryFailedMessage={
                     activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
                       ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
