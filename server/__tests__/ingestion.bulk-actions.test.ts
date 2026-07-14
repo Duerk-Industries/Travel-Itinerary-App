@@ -30,7 +30,10 @@ const seedReviewItems = async (
   await helpers.waitFor(async () => {
     const review = await request(app).get('/api/ingestion/review-items').set(auth);
     return (review.body.items ?? []).length === count;
-  });
+  // PDF normalization and the in-process worker can be CPU-bound when this
+  // suite runs alongside the other ingestion suites; five seconds made this
+  // setup race the worker even though the job eventually completed.
+  }, 15000, 100);
   const review = await request(app).get('/api/ingestion/review-items').set(auth).expect(200);
   return review.body.items.map((item: any) => item.id);
 };
