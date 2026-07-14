@@ -2155,7 +2155,8 @@ export const mapItems = (
 const buildDetails = (
   itinerary: PromptItinerary,
   transferNotesByDay?: Map<number, TransferNote[]>,
-  durationMetadataByName?: Map<string, AttractionDurationMetadata>
+  durationMetadataByName?: Map<string, AttractionDurationMetadata>,
+  whyFitsByName?: Map<string, string>
 ): ItineraryGeneratedDetail[] =>
   itinerary.dy.flatMap((day) => {
     const schedule = computeDayItemSchedule(day, durationMetadataByName, transferNotesByDay?.get(day.d));
@@ -2165,12 +2166,16 @@ const buildDetails = (
     }
 
     const details: ItineraryGeneratedDetail[] = [];
+
     day.it.forEach(([, _activityCode, text], index) => {
+      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
       details.push({
         day: day.d,
         time: schedule[index].startTime,
         activity: text,
         cost: null,
+        kind: 'place',
+        noteBody: fit ? `Why this fits your group: ${fit}` : undefined,
       });
       // Insert the travel segment to the NEXT activity right after this one,
       // between the two activities it connects, rather than lumped at the
@@ -2187,6 +2192,18 @@ const buildDetails = (
         });
       }
     });
+
+    // Add logistics notes at the end of the day
+    (day.ln ?? []).forEach((note) => {
+      details.push({
+        day: day.d,
+        time: null,
+        activity: note,
+        kind: 'note',
+        noteBody: 'Logistics Note',
+      });
+    });
+
     return details;
   });
 
@@ -2927,7 +2944,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
   const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
   const planMarkdown = safeRender.markdown;
-  const details = buildDetails(finalItinerary, transferNotesByDay, durationMetadataByName);
+  const details = buildDetails(finalItinerary, transferNotesByDay, durationMetadataByName, whyFitsByName);
   const safeDetails = details.length
     ? details
     : [

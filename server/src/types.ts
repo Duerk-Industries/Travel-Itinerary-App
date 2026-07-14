@@ -687,6 +687,23 @@ export interface ItineraryGenerationMetrics {
   createdAt?: string;
 }
 
+/** Offline-safe comparison between a production generation and a "Gold" reference. */
+export interface ItineraryComparison {
+  id?: string;
+  requestPath: string;
+  goldCaptureId: string | null;
+  productionCaptureId: string | null;
+  goldItemCount: number;
+  productionItemCount: number;
+  itemCountDelta: number;
+  goldDays: number;
+  productionDays: number;
+  attractionCoveragePercent: number | null;
+  goldStructuralIssues: string[];
+  productionStructuralIssues: string[];
+  createdAt?: string;
+}
+
 export interface ItineraryGeneratedTransfer {
   status: 'Needed';
   transferType: TransferMode;

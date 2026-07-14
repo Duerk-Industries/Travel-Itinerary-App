@@ -488,6 +488,15 @@ const main = async () => {
       const comparisonPath = path.join(outputDir, 'comparison.json');
       fs.writeFileSync(comparisonPath, JSON.stringify(comparison, null, 2));
       process.stdout.write(`[itinerary-replay] comparison=${comparisonPath}\n`);
+
+      const { recordItineraryComparison } = await import('../src/db');
+      await recordItineraryComparison({
+        requestPath: options.requestPath!,
+        goldCaptureId: (gold as any).captureId || null,
+        productionCaptureId: (production as any).captureId || null,
+        ...comparison,
+      });
+      process.stdout.write(`[itinerary-replay] uploaded comparison to DB\n`);
     }
   }
 

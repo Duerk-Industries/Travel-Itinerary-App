@@ -4291,7 +4291,26 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
 
 const toItineraryPlanCacheEntry = (id: string, data: any): ItineraryPlanCacheEntry | null => {
   if (!data?.cacheKey || !['route', 'day'].includes(data.stage) || !data.signature || !data.dependencyFingerprint) return null;
-  return { id, cacheKey: String(data.cacheKey), stage: data.stage, signature: String(data.signature), dependencyFingerprint: String(data.dependencyFingerprint), payload: data.payload, fragments: Array.isArray(data.fragments) ? data.fragments : [], expiresAt: String(data.expiresAt), updatedAt: String(data.updatedAt ?? nowIso()) };
+  // payload and fragments are stored as JSON strings because they can contain
+  // nested arrays (e.g. PromptDay.it), which Firestore rejects.
+  let payload = data.payload;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      // return null if payload is unparseable
+      return null;
+    }
+  }
+  let fragments = data.fragments;
+  if (typeof fragments === 'string') {
+    try {
+      fragments = JSON.parse(fragments);
+    } catch {
+      fragments = [];
+    }
+  }
+  return { id, cacheKey: String(data.cacheKey), stage: data.stage, signature: String(data.signature), dependencyFingerprint: String(data.dependencyFingerprint), payload, fragments: Array.isArray(fragments) ? fragments : [], expiresAt: String(data.expiresAt), updatedAt: String(data.updatedAt ?? nowIso()) };
 };
 
 export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<ItineraryPlanCacheEntry | null> => {
@@ -4301,7 +4320,19 @@ export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<Itin
 
 export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEntry): Promise<ItineraryPlanCacheEntry> => {
   const ref = getDb().collection('itinerary_plan_cache').doc(entry.id);
-  await ref.set({ cacheKey: entry.cacheKey, stage: entry.stage, signature: entry.signature, dependencyFingerprint: entry.dependencyFingerprint, payload: entry.payload, fragments: entry.fragments ?? [], expiresAt: entry.expiresAt, updatedAt: nowIso() });
+  // payload and fragments can contain arrays nested directly inside arrays
+  // (e.g. PromptDay.it), which Firestore rejects outright
+  // ("Property payload contains an invalid nested entity").
+  await ref.set({
+    cacheKey: entry.cacheKey,
+    stage: entry.stage,
+    signature: entry.signature,
+    dependencyFingerprint: entry.dependencyFingerprint,
+    payload: JSON.stringify(entry.payload),
+    fragments: JSON.stringify(entry.fragments ?? []),
+    expiresAt: entry.expiresAt,
+    updatedAt: nowIso(),
+  });
   const saved = await ref.get();
   const parsed = toItineraryPlanCacheEntry(saved.id, saved.data());
   if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
@@ -6710,6 +6741,9 @@ export const incrementApiCostCounter = async (
 
 export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerationMetrics): Promise<void> => {
   const db = getDb();
+  // metrics object can contain stage-level captures which might eventually
+  // contain nested arrays, which Firestore rejects. Storing as a JSON string
+  // ensures we don't hit "invalid nested entity" errors in production.
   await db.collection('itinerary_generation_metrics').doc(metrics.generationId).set(
     {
       generationId: metrics.generationId,
@@ -6718,11 +6752,33 @@ export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerat
       provider: metrics.provider,
       model: metrics.model,
       outcome: metrics.outcome,
-      metrics,
+      metrics: JSON.stringify(metrics),
       createdAt: metrics.createdAt ?? nowIso(),
     },
     { merge: true }
   );
+};
+
+export const getItineraryGenerationMetrics = async (generationId: string): Promise<ItineraryGenerationMetrics | null> => {
+  const doc = await getDb().collection('itinerary_generation_metrics').doc(generationId).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  if (typeof data.metrics === 'string') {
+    try {
+      return JSON.parse(data.metrics);
+    } catch {
+      return null;
+    }
+  }
+  return data.metrics ?? null;
+};
+
+export const recordItineraryComparison = async (comparison: ItineraryComparison): Promise<void> => {
+  const db = getDb();
+  await db.collection('itinerary_comparisons').add({
+    ...comparison,
+    createdAt: comparison.createdAt ?? nowIso(),
+  });
 };
 
 export const getApiUsageCount = async (

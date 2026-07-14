@@ -504,6 +504,12 @@ export const resetApiCostCounters = async (...args: Parameters<ReturnType<typeof
   adapter().resetApiCostCounters(...args);
 export const recordItineraryGenerationMetrics = async (...args: Parameters<ReturnType<typeof adapter>['recordItineraryGenerationMetrics']>) =>
   adapter().recordItineraryGenerationMetrics(...args);
+export const getItineraryGenerationMetrics = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryGenerationMetrics']>
+): Promise<any> => adapter().getItineraryGenerationMetrics(...args);
+export const recordItineraryComparison = async (
+  ...args: Parameters<ReturnType<typeof adapter>['recordItineraryComparison']>
+) => adapter().recordItineraryComparison(...args);
 export const atomicIncrementIfUnderLimit = async (...args: Parameters<ReturnType<typeof adapter>['atomicIncrementIfUnderLimit']>) =>
   adapter().atomicIncrementIfUnderLimit(...args);
 export const getGenerationIdempotency = async (

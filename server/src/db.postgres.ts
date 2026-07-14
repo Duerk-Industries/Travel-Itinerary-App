@@ -1266,8 +1266,24 @@ export const initDb = async (): Promise<void> => {
       metrics       JSONB NOT NULL,
       created_at    TIMESTAMP NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS itinerary_comparisons (
+      id                          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      request_path                TEXT NOT NULL,
+      gold_capture_id             TEXT,
+      production_capture_id       TEXT,
+      gold_item_count             INTEGER,
+      production_item_count       INTEGER,
+      item_count_delta            INTEGER,
+      gold_days                   INTEGER,
+      production_days             INTEGER,
+      attraction_coverage_percent DECIMAL,
+      gold_structural_issues      JSONB,
+      production_structural_issues JSONB,
+      created_at                  TIMESTAMP NOT NULL DEFAULT NOW()
+    );
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_generation_metrics_created ON itinerary_generation_metrics(created_at DESC);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_comparisons_created ON itinerary_comparisons(created_at DESC);`);
   await p.query(`
     CREATE TABLE IF NOT EXISTS usage_events (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -9991,6 +10007,40 @@ export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerat
       metrics.model,
       metrics.outcome,
       JSON.stringify(metrics),
+    ]
+  );
+};
+
+export const getItineraryGenerationMetrics = async (generationId: string): Promise<ItineraryGenerationMetrics | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ metrics: Record<string, unknown> }>(
+    `SELECT metrics FROM itinerary_generation_metrics WHERE generation_id = $1`,
+    [generationId]
+  );
+  return (rows[0]?.metrics as unknown as ItineraryGenerationMetrics) ?? null;
+};
+
+export const recordItineraryComparison = async (comparison: ItineraryComparison): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO itinerary_comparisons (
+      request_path, gold_capture_id, production_capture_id,
+      gold_item_count, production_item_count, item_count_delta,
+      gold_days, production_days, attraction_coverage_percent,
+      gold_structural_issues, production_structural_issues
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      comparison.requestPath,
+      comparison.goldCaptureId,
+      comparison.productionCaptureId,
+      comparison.goldItemCount,
+      comparison.productionItemCount,
+      comparison.itemCountDelta,
+      comparison.goldDays,
+      comparison.productionDays,
+      comparison.attractionCoveragePercent,
+      JSON.stringify(comparison.goldStructuralIssues),
+      JSON.stringify(comparison.productionStructuralIssues),
     ]
   );
 };
