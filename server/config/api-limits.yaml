@@ -18,6 +18,7 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
@@ -36,6 +37,7 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
@@ -52,6 +54,7 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
@@ -69,6 +72,7 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
@@ -85,6 +89,7 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
@@ -291,6 +296,14 @@ caching:
     refreshDays: 365
     limitPerDestination: 20
     shortlistPromptItemsPerDestination: 8
+    # itinerary-improvements-coding-plan.md Phase 3C: adaptive shortlist ceiling.
+    # Trip length > 7 days, multiple destinations, >=5 high-weight interests, or a
+    # coverage-check miss against the base shortlistPromptItemsPerDestination
+    # (floor) rebuilds the shortlist up to this cap instead of the floor. Hard
+    # ceiling is 15 regardless of what's configured here. If an operator sets
+    # this equal to (or below) the floor, adaptive logic is a no-op and every
+    # trip stays on the fixed floor-item behavior.
+    adaptiveShortlistMax: 12
     minDistinctSourcesPerAttraction: 2
     minAttractionsAfterConfidenceFilter: 6
     promptBlobRefreshDays: 30
@@ -320,6 +333,19 @@ caching:
     # validator when those checks actually changed something. Default on — this is a
     # required cost-saving behavior, not an opt-in experiment.
     skipValidatorWhenClean: 1
+    # itinerary-improvements-coding-plan.md Phase 4B: deterministic must-see/pod-proximity fill
+    # for thin days (fewer than ~2 items). Zero token cost; default on.
+    dayFillEnabled: 1
+    # Single, batched targeted-repair call (at most one per generation), only invoked when
+    # deterministic fill above could not raise every thin day to the minimum. Disabled by
+    # default until production Phase 1 metrics show how often deterministic fill alone leaves
+    # days thin — same "measure before spending" posture as escalationEnabled above.
+    dayFillRepairEnabled: 0
+    # Phase 2B: augment LOGISTICS_FACTS with per-destination climatology/daylight
+    # facts from destinationLogisticsService.buildDestinationLogistics. Only runs
+    # when the (already fetched) attraction shortlist has coordinates, so it never
+    # adds extra network calls when the shortlist block is empty/mocked.
+    logisticsClimatologyEnabled: 1
   locations:
     csvCacheTtlMinutes: 60
     refreshCooldownSeconds: 15

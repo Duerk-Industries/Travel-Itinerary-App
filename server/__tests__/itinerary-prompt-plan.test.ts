@@ -1,7 +1,8 @@
 /// <reference types="jest" />
 /// <reference types="node" />
 import axios from 'axios';
-import { generateItineraryViaPromptPlan } from '../src/services/itineraryPromptPlanService';
+import { generateItineraryViaPromptPlan, buildDestinationClimatologyBlock } from '../src/services/itineraryPromptPlanService';
+import { clearClimatologyCacheForTests } from '../src/services/climatologyDaylightService';
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
 import { initDb } from '../src/db';
 import { seedEntitlementDefaults } from '../src/services/entitlementService';
@@ -2033,5 +2034,76 @@ describe('itinerary prompt plan service', () => {
     expect(mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS)).toHaveLength(p2AfterFirst);
     expect(second.generatedItems.activities.some((activity) => activity.name === 'Museum B')).toBe(true);
     expect(second.generatedItems.activities.some((activity) => activity.name === 'Museum A')).toBe(false);
+  });
+
+  describe('destination logistics (climatology/daylight) wiring — coding plan Phase 2B', () => {
+    const originalFetch = global.fetch;
+    afterEach(() => {
+      global.fetch = originalFetch;
+      clearClimatologyCacheForTests();
+    });
+
+    it('buildDestinationClimatologyBlock reflects buildDestinationLogistics output for a destination with known coordinates', async () => {
+      const fetchImpl = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          daily: {
+            time: ['2016-07-15', '2017-07-15'],
+            temperature_2m_max: [29, 27],
+            temperature_2m_min: [19, 18],
+            precipitation_sum: [1, 0],
+          },
+        }),
+      })) as unknown as typeof fetch;
+
+      const route = { $: 'r1' as const, eh: 'CDG', xh: 'CDG', b: [{ l: 'Paris', ci: '2026-07-01', co: '2026-07-05', dn: [] }], x: [], rc: null, w: { o: 25, c: 25, f: 20, n: 10, r: 20 }, a: [] };
+      const shortlistByDestination = {
+        Paris: [
+          { id: 'paris-a', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Eiffel Tower', rank: 1, activityType: 'Ticketed Attraction' as const, interestTags: ['iconic_landmarks'] as any, lat: 48.8584, lon: 2.2945, updatedAt: '2026-01-01T00:00:00Z' },
+          { id: 'paris-b', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Louvre', rank: 2, activityType: 'Ticketed Attraction' as const, interestTags: ['culture'] as any, lat: 48.8606, lon: 2.3376, updatedAt: '2026-01-01T00:00:00Z' },
+        ],
+      };
+
+      const block = await buildDestinationClimatologyBlock(route as any, shortlistByDestination, '2026-07-01', fetchImpl);
+      expect(block).toContain('Paris');
+      expect(block).toMatch(/climate: Peak Summer Heat/);
+      expect(block).toMatch(/daylight ~\d+\.\d+h/);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it('is reflected in the actual p2 prompt content sent for generation', async () => {
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({ daily: { time: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_sum: [] } }),
+      })) as unknown as typeof fetch;
+
+      const parisAttraction = { id: 'paris-logistics', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Eiffel Tower', rank: 1, activityType: 'Ticketed Attraction' as const, interestTags: ['iconic_landmarks'] as any, lat: 48.8584, lon: 2.2945, updatedAt: '2026-01-01T00:00:00Z' };
+      mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+        shortlistByDestination: { Paris: [parisAttraction] },
+        promptBlock: 'Destination: Paris\n1. Eiffel Tower | tier=paid | type=Ticketed Attraction | tags=iconic_landmarks',
+      });
+
+      const jsonStage = (content: unknown) => ({ data: { choices: [{ message: { content: JSON.stringify(content) } }] } });
+      const renderStage = (content: string) => ({ data: { choices: [{ message: { content } }] } });
+      const norm = { $: 'norm1', sd: '2026-07-01', ed: '2026-07-02', p: 'B', c: 'M', mob: 'M', car: 'P', w: { outdoors: 10, adventure: 5, culture: 40, food: 10, nightlife: 5, relax: 10, photography: 5, authentic_local: 10, iconic_landmarks: 5 }, a: [], is: 'mixed' };
+      const route = { $: 'r1', eh: 'CDG', xh: 'CDG', b: [{ l: 'Paris', ci: '2026-07-01', co: '2026-07-03', dn: [] }], x: [], rc: null, w: norm.w, a: [] };
+      const itinerary = { $: 'it1', ...route, dy: [
+        { d: 1, dt: '2026-07-01', b: 'Paris', it: [['M', 'O', 'Eiffel Tower']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'H' },
+        { d: 2, dt: '2026-07-02', b: 'Paris', it: [['M', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'H' },
+      ], cf: 'H' };
+      mockedAxios.post
+        .mockResolvedValueOnce(jsonStage(norm)).mockResolvedValueOnce(jsonStage(route))
+        .mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(renderStage('rendered'));
+
+      await generateItineraryViaPromptPlan({
+        apiKey: 'test-key', userId: 'logistics-user', destinations: ['Paris'], days: 2,
+        budgetMin: 1000, budgetMax: 3000, groupTraits: [], tripIdSeed: 'logistics-trip-paris',
+      });
+
+      const p2Call = mockedPromptStage.mock.calls.find((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS)?.[0];
+      // destinationLogisticsService.calculateDaylightWindow output (via buildDestinationLogistics),
+      // not the previous ad hoc LOGISTICS_FACTS text, which never included daylight/climate facts.
+      expect(p2Call?.userPrompt).toMatch(/Paris:.*daylight ~\d+\.\d+h/);
+    });
   });
 });

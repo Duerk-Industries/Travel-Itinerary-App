@@ -47,6 +47,7 @@ import {
   writeItineraryPlanCache,
 } from './itineraryPlanCacheService';
 import { accumulateDayFriction, calculateRouteFrictionScore } from './frictionAccumulatorService';
+import { buildDestinationLogistics, calculateTransferBuffer, type LogisticsMobility } from './destinationLogisticsService';
 import {
   buildGetYourGuideItineraryCandidates,
   selectGetYourGuideItineraryCandidates,
@@ -366,7 +367,7 @@ const DEFAULT_WEIGHTS: PromptWeights = {
   iconic_landmarks: 7,
 };
 
-export const ITINERARY_PIPELINE_VERSION = 'itinerary-pipeline-v7';
+export const ITINERARY_PIPELINE_VERSION = 'itinerary-pipeline-v8';
 const MAX_ITEMS_PER_DAY = 5;
 
 const scaleItineraryTokenBudget = (base: number): number => {
@@ -1362,11 +1363,63 @@ export const polishItineraryFinalPass = (
 // itinerary-improvement-plan.md §4 (Fatigue Accumulator). Tracks cumulative travel friction and
 // forces a "Rest/Hub" day (no vehicle transfers, capped activities) when
 // travelers are likely to be burned out.
+// itinerary-improvements-coding-plan.md Phase 2B: for each destination base in the route, look up
+// (already-fetched, publicly-locatable) attraction coordinates to derive a coarse destination
+// centroid, then call destinationLogisticsService.buildDestinationLogistics for climatology/
+// daylight facts. No home/traveler location is passed in — only public destination coordinates
+// already used elsewhere in the pipeline — so this never puts a home address in a shared cache key
+// or LLM prompt (plan §2B privacy rule). Silently skips destinations with no coordinate data so it
+// never blocks generation when the shortlist is empty (e.g. mocked in tests or a cold cache).
+export const buildDestinationClimatologyBlock = async (
+  route: PromptRoute,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  tripStartDate: string,
+  fetchImpl?: typeof fetch
+): Promise<string> => {
+  if (Number(getApiCacheSetting('itineraryPlan', 'logisticsClimatologyEnabled')) <= 0) return '';
+  const entriesByKey = new Map<string, AttractionCatalogEntry[]>();
+  for (const [name, entries] of Object.entries(shortlistByDestination)) {
+    entriesByKey.set(normalizeDestinationKey(name), entries);
+  }
+  const fallbackYearMonth = (() => {
+    const parsed = new Date(`${tripStartDate}T00:00:00Z`);
+    return Number.isNaN(parsed.getTime())
+      ? { year: new Date().getUTCFullYear(), month: 1 }
+      : { year: parsed.getUTCFullYear(), month: parsed.getUTCMonth() + 1 };
+  })();
+  const lines: string[] = [];
+  const seen = new Set<string>();
+  for (const base of route.b) {
+    const key = normalizeDestinationKey(base.l);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const entries = (entriesByKey.get(key) ?? []).filter((entry) => entry.lat != null && entry.lon != null);
+    if (!entries.length) continue;
+    const lat = entries.reduce((sum, entry) => sum + (entry.lat as number), 0) / entries.length;
+    const lon = entries.reduce((sum, entry) => sum + (entry.lon as number), 0) / entries.length;
+    const [yearStr, monthStr] = String(base.ci || '').split('-');
+    const year = Number(yearStr) || fallbackYearMonth.year;
+    const month = Number(monthStr) || fallbackYearMonth.month;
+    try {
+      const logistics = await buildDestinationLogistics({ destination: { lat, lon }, home: null, year, month, fetchImpl });
+      const climate = logistics.climatology
+        ? `climate: ${logistics.climatology.label}${logistics.climatology.averageHighC != null ? ` (avg high ${logistics.climatology.averageHighC}C)` : ''}`
+        : null;
+      const daylight = `daylight ~${logistics.daylight.daylightHours.toFixed(1)}h (sunrise ${logistics.daylight.sunriseLocalHours.toFixed(1)}h local)`;
+      lines.push(`${base.l}: ${[climate, daylight].filter(Boolean).join('; ')}.`);
+    } catch (err) {
+      logError(`[itinerary] destination logistics lookup failed for destination="${base.l}"`, err);
+    }
+  }
+  return lines.join('\n');
+};
+
 const enforceFatigueManagement = (
   itinerary: PromptItinerary,
   transferNotesByDay: Map<number, TransferNote[]>,
   durationMetadataByName: Map<string, AttractionDurationMetadata>,
-  groupSize: number
+  groupSize: number,
+  mobility: LogisticsMobility = 'M'
 ): { itinerary: PromptItinerary; issues: string[] } => {
   const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
   const issues: string[] = [];
@@ -1381,6 +1434,11 @@ const enforceFatigueManagement = (
     }, 0);
     // Rough estimate of walking based on transfer modes
     const walkingKm = notes.filter((n) => n.mode === 'walk').reduce((sum, n) => sum + n.distanceKm, 0);
+    // destinationLogisticsService.calculateTransferBuffer (Phase 2B: "Scale transfer
+    // buffers by group size/mobility") replaces the previous flat groupSize*5 estimate
+    // with one that also accounts for each transfer's actual distance and the
+    // traveler's mobility level, summed across the day's transfers.
+    const groupBufferMinutes = notes.reduce((sum, note) => sum + calculateTransferBuffer(note.distanceKm, groupSize, mobility), 0);
 
     const result = accumulateDayFriction({
       transferMinutes,
@@ -1388,7 +1446,7 @@ const enforceFatigueManagement = (
       baseChange: day.d > 1 && output.dy[day.d - 2].b !== day.b,
       activityMinutes,
       walkingKm,
-      groupBufferMinutes: groupSize > 1 ? groupSize * 5 : 0,
+      groupBufferMinutes,
     });
 
     rollingFriction += result.score;
@@ -2397,7 +2455,13 @@ const runGenerateItineraryViaPromptPlan = async (
     departureBufferMinutes: 180,
   });
   const timingPreferenceNote = buildTimingPreferenceNote(promptRequest.ut);
-  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}`;
+  let destinationClimatologyBlock = '';
+  try {
+    destinationClimatologyBlock = await buildDestinationClimatologyBlock(route, shortlistByDestination, normalized.sd);
+  } catch (err) {
+    logError('[itinerary] destination climatology block build failed; continuing without it', err);
+  }
+  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}`;
   const dayDependency = buildPromptFingerprint({
     pipeline: ITINERARY_PIPELINE_VERSION, p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
     attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
@@ -2557,7 +2621,8 @@ const runGenerateItineraryViaPromptPlan = async (
     polishedItinerary,
     transferNotesByDay,
     durationMetadataByName,
-    input.groupTraits.length
+    input.groupTraits.length,
+    normalized.mob
   );
   const finalItinerary = fatigueManaged.itinerary;
 
