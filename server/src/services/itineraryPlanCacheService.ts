@@ -5,18 +5,26 @@ import type { AttractionCatalogEntry, ItineraryPlanCacheEntry } from '../types';
 export const ITINERARY_CACHE_SCHEMA_VERSION = 'itinerary-cache-v1';
 
 /**
- * Firestore rejects undefined values, including values nested in arrays and
- * objects.  Itinerary payloads are JSON-shaped, so omit undefined object
- * properties and preserve array positions with nulls before persisting them.
- * Keeping this at the cache boundary also makes the Postgres and Firestore
- * adapters observe the same payload shape.
+ * Convert cache payloads to the small set of values accepted by every DB
+ * adapter. Firestore rejects undefined values and arbitrary class instances
+ * nested inside an entity (for example a Date-like SDK object, Map, or a
+ * provider response wrapper). Itinerary caches are JSON-shaped, so preserve
+ * Dates, recurse through arrays/plain objects, and serialize any other
+ * object through toJSON/string rather than sending an invalid nested entity.
  */
 export const stripUndefinedDeep = <T>(value: T): T => {
-  if (Array.isArray(value)) {
-    return value.map((item) => item === undefined ? null : stripUndefinedDeep(item)) as T;
-  }
+  if (value === undefined) return null as T;
+  if (typeof value === 'bigint') return String(value) as T;
+  if (typeof value === 'number' && !Number.isFinite(value)) return null as T;
+  if (Array.isArray(value)) return value.map((item) => stripUndefinedDeep(item)) as T;
   if (value instanceof Date) return value;
   if (value && typeof value === 'object') {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      const toJSON = (value as any).toJSON;
+      if (typeof toJSON === 'function') return stripUndefinedDeep(toJSON.call(value)) as T;
+      return String(value) as T;
+    }
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
         .filter(([, item]) => item !== undefined)

@@ -68,6 +68,27 @@ describe('Phase 4 itinerary plan cache', () => {
     expect(persisted.fragments).toEqual([[{}]]);
   });
 
+  test('normalizes non-plain nested entities before Firestore persistence', () => {
+    class ProviderWrapper {
+      constructor(private readonly value: string) {}
+      toJSON() { return { value: this.value, omitted: undefined }; }
+    }
+    const normalized = stripUndefinedDeep({
+      invalid: new ProviderWrapper('route-note'),
+      map: new Map([['ignored', 'value']]),
+      bigint: BigInt(7),
+      infinity: Infinity,
+      date: new Date('2026-01-01T00:00:00Z'),
+    });
+    expect(normalized).toEqual({
+      invalid: { value: 'route-note' },
+      map: '[object Map]',
+      bigint: '7',
+      infinity: null,
+      date: new Date('2026-01-01T00:00:00Z'),
+    });
+  });
+
   test('explicitly misses when pace, comfort, or mobility signature differs', async () => {
     const oldSignature = buildTripSignature(base, false);
     db.getItineraryPlanCacheEntry.mockResolvedValue({
