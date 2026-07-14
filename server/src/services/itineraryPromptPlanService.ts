@@ -2403,10 +2403,13 @@ const runGenerateItineraryViaPromptPlan = async (
     cacheUsage.dayHit = true;
     filteredItinerary = sanitizeItinerary(cachedDay, route, normalized, promptRequest);
   } else {
-  const chunkingEnabled = getEnvFlag('ITINERARY_GOLD_MODE') || Number(getApiCacheSetting('itineraryPlan', 'chunkingEnabled')) > 0;
+  const goldMode = getEnvFlag('ITINERARY_GOLD_MODE');
+  const chunkingEnabled = goldMode || Number(getApiCacheSetting('itineraryPlan', 'chunkingEnabled')) > 0;
   const chunkingMinDays = Math.max(1, Number(getApiCacheSetting('itineraryPlan', 'chunkingMinDays')) || 8);
   const chunkSizeDays = Math.max(1, Number(getApiCacheSetting('itineraryPlan', 'chunkSizeDays')) || 3);
-  const shouldChunkP2 = chunkingEnabled && Number(promptRequest.dur ?? input.days) >= chunkingMinDays;
+  // Gold mode forces chunking regardless of trip length (coding plan Phase 8, override (c)) —
+  // production's chunkingMinDays threshold only applies outside gold mode.
+  const shouldChunkP2 = chunkingEnabled && (goldMode || Number(promptRequest.dur ?? input.days) >= chunkingMinDays);
   const dayItineraries: PromptItinerary[] = [];
   const ranges = shouldChunkP2
     ? chunkDayRanges(normalized.sd, normalized.ed, chunkSizeDays)
@@ -2416,27 +2419,51 @@ const runGenerateItineraryViaPromptPlan = async (
     const chunkDays = diffDaysInclusive(range.start, range.end);
     const chunkNorm = { ...cacheSafeNormalized, sd: range.start, ed: range.end };
     const chunkReq = { ...promptRequest, sd: range.start, ed: range.end, dur: chunkDays };
-    const dayRaw = await runJsonStage<unknown>({
-      apiKey: input.apiKey,
-      aiProvider: p2AiProvider,
-      caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
-      template: bundle.p2,
-      replacements: {
-        NORM_JSON: JSON.stringify(chunkNorm),
-        STEP1_JSON: JSON.stringify(route),
-        STEP2_SCHEMA_MIN: bundle.step2Schema,
-        ATTRACTION_SHORTLIST: attractionContextBlock,
-        ATTRACTION_PODS: attractionPodsBlock,
-        LOGISTICS_FACTS: logisticsFactsBlock,
-        DAY_RANGE: `${range.start}..${range.end}`,
-        USED_ATTRACTION_IDS: usedAttractionNames.join(', ') || 'none',
-      },
-      maxTokens: scaleItineraryTokenBudget(Math.max(1100, Math.min(3500, chunkDays * 280))),
-      fallbackValue: {},
-      acc: tokenAcc,
-      captureStages,
-      usageContext,
-    });
+    // A thrown error here (network failure, rate limit, missing key) is NOT the same as the
+    // empty-response/parse-failure case runJsonStage already handles internally — those return
+    // fallbackValue, but a *thrown* error would otherwise propagate out of this loop and fail the
+    // entire multi-chunk generation just because one window's call failed. Per the "clean
+    // offline/degraded fallback" requirement, a single chunk failure must degrade to the same
+    // deterministic day skeleton used for other degraded cases, not crash the whole itinerary.
+    let dayRaw: unknown = {};
+    try {
+      dayRaw = await runJsonStage<unknown>({
+        apiKey: input.apiKey,
+        aiProvider: p2AiProvider,
+        caller: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
+        template: bundle.p2,
+        replacements: {
+          NORM_JSON: JSON.stringify(chunkNorm),
+          STEP1_JSON: JSON.stringify(route),
+          STEP2_SCHEMA_MIN: bundle.step2Schema,
+          ATTRACTION_SHORTLIST: attractionContextBlock,
+          ATTRACTION_PODS: attractionPodsBlock,
+          LOGISTICS_FACTS: logisticsFactsBlock,
+          DAY_RANGE: `${range.start}..${range.end}`,
+          USED_ATTRACTION_IDS: usedAttractionNames.join(', ') || 'none',
+        },
+        maxTokens: scaleItineraryTokenBudget(Math.max(1100, Math.min(3500, chunkDays * 280))),
+        fallbackValue: {},
+        acc: tokenAcc,
+        captureStages,
+        usageContext,
+      });
+    } catch (err) {
+      logError(`[itinerary] p2 chunk call threw for range=${range.start}..${range.end}; falling back to deterministic day skeleton for this window`, err);
+      captureStages?.push({
+        stage: bundle.p2.id,
+        callerId: OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        latencyMs: 0,
+        outcome: 'failure',
+        promptTokens: 0,
+        completionTokens: 0,
+        responseChars: 0,
+        parseError: err instanceof Error ? err.message : String(err),
+      });
+      dayRaw = {};
+    }
     const chunkItinerary = sanitizeItinerary(dayRaw, route, chunkNorm, chunkReq);
     dayItineraries.push(chunkItinerary);
     usedAttractionNames = Array.from(new Set([
