@@ -34,6 +34,7 @@ import { decideItineraryEscalation } from './itineraryEscalationService';
 import { chooseSafeItineraryMarkdown } from './itineraryDegradedFallbackService';
 import { persistItineraryGenerationMetrics } from './itineraryMetricsService';
 import type { AttractionPod } from './geoPodClusteringService';
+import { scheduleDayItems } from './daySchedulingService';
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
 import { buildArrivalDepartureFacts, renderLogisticsFactBlock } from './arrivalDepartureRulesService';
@@ -1347,6 +1348,39 @@ const enforceShortlistGrounding = (
   return grounded;
 };
 
+// itinerary-improvements-coding-plan.md Phase 2A: bounded, deterministic WITHIN-DAY
+// scheduling (pod-density seed, nearest insertion, bounded 2-opt — see
+// daySchedulingService.ts for the algorithm). Runs before polishItineraryFinalPass so
+// the explicit golden-hour/farewell-dinner pins below always get the final say over
+// any single item's slot. Does not attempt cross-day (adjacent-day swap) scheduling —
+// that remains a separate, unimplemented stretch goal per the plan.
+export const scheduleItineraryDaysDeterministically = (
+  itinerary: PromptItinerary,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+): PromptItinerary => {
+  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
+  if (!output.dy.length) return output;
+
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of Object.values(shortlistByDestination).flat()) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+  const lookupEntry = (name: string): AttractionCatalogEntry | null =>
+    entryByName.get(normalizeText(name).toLowerCase()) ?? null;
+
+  for (const day of output.dy) {
+    const result = scheduleDayItems(day.b, day.it, lookupEntry);
+    if (!result.changed) continue;
+    day.it = result.items;
+    for (const note of result.notes) {
+      logInfo(`[itinerary] day-scheduling day=${day.d} ${note}`);
+    }
+  }
+
+  return output;
+};
+
 // Final "master travel agent" polishing pass, per itinerary-improvement-plan.md §9:
 // 1. Farewell Night: bias the ranker toward a high-quality food attraction for the final night.
 // 2. Golden Hour: pin photography-tagged items to the first/last activity slot of their day.
@@ -2645,7 +2679,8 @@ const runGenerateItineraryViaPromptPlan = async (
     normalized.c,
     normalizedMustSee.map((item) => item.name)
   );
-  const polishedItinerary = polishItineraryFinalPass(budgetCoherentItinerary, shortlistByDestination);
+  const scheduledItinerary = scheduleItineraryDaysDeterministically(budgetCoherentItinerary, shortlistByDestination);
+  const polishedItinerary = polishItineraryFinalPass(scheduledItinerary, shortlistByDestination);
   const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
     normalized,
