@@ -70,6 +70,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
+import GetYourGuideCta from '../components/GetYourGuideCta';
 import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
@@ -180,6 +181,13 @@ type ItineraryDetail = {
   reactions?: ReactionSummary;
 };
 
+const formatEtaSeconds = (seconds?: number | null): string | null => {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) return null;
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes} min`;
+};
+
 type OverviewTabProps = {
   backendUrl: string;
   headers: Record<string, string>;
@@ -205,6 +213,9 @@ type OverviewTabProps = {
   mapApp: MapApp;
   temperatureUnit?: TemperatureUnit;
   aiItineraryPending?: boolean;
+  aiItineraryStageLabel?: string | null;
+  aiItineraryStageDetail?: string | null;
+  aiItineraryEtaSeconds?: number | null;
   aiItineraryFailedMessage?: string | null;
   editSignal?: number;
   goToDay1Signal?: number;
@@ -399,6 +410,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   mapApp,
   temperatureUnit = 'fahrenheit',
   aiItineraryPending,
+  aiItineraryStageLabel,
+  aiItineraryStageDetail,
+  aiItineraryEtaSeconds,
   aiItineraryFailedMessage,
   editSignal,
   goToDay1Signal,
@@ -464,12 +478,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
   const [showAddLodging, setShowAddLodging] = useState(false);
-  const [locationNames, setLocationNames] = useState<string[]>([]);
+  const [tripLocationOptions, setTripLocationOptions] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     const ids = Array.isArray(trip?.locationIds) ? trip!.locationIds : [];
     if (!ids.length) {
-      setLocationNames([]);
+      setTripLocationOptions([]);
       return;
     }
     let active = true;
@@ -481,17 +495,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (!active) return;
-        const names = Array.isArray(data) ? data.map((item: any) => String(item?.name ?? '')).filter(Boolean) : [];
-        setLocationNames(names);
+        const options = Array.isArray(data)
+          ? data
+              .map((item: any) => ({ id: String(item?.place_id ?? item?.id ?? ''), name: String(item?.name ?? '') }))
+              .filter((item: { id: string; name: string }) => item.name)
+          : [];
+        setTripLocationOptions(options);
       })
       .catch(() => {
-        if (active) setLocationNames([]);
+        if (active) setTripLocationOptions([]);
       });
     return () => {
       active = false;
     };
   }, [backendUrl, headers, trip?.id, trip?.locationIds]);
+  const locationNames = useMemo(() => tripLocationOptions.map((o) => o.name), [tripLocationOptions]);
   const tripLocationLabel = locationNames.length ? locationNames.join(', ') : trip?.destination || '';
+  const tripAttractionsLabel = Array.isArray(trip?.mustSeeAttractions) ? trip!.mustSeeAttractions.join(', ') : '';
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
@@ -2165,6 +2185,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
               {tripLocationLabel ? <Text style={styles.helperText}>{tripLocationLabel}</Text> : null}
+              {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
               {narrativeLines.length ? (
@@ -2280,9 +2301,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           </TouchableOpacity>
                           <Text
                             style={styles.helperText}
-                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
+                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}${tour.duration ? ` · ${tour.duration}` : ''}`}</Text>
                           {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
                           {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                          <GetYourGuideCta
+                            backendUrl={backendUrl}
+                            headers={headers}
+                            activity={tour}
+                            destination={trip?.destination}
+                            testID={`day-details-getyourguide-${tour.id}`}
+                          />
                         </View>
                       </View>
                     );
@@ -2488,6 +2516,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
           <Text style={styles.flightTitle}>{trip.name}</Text>
           {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
+          {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
           {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
           {!dateRange && monthLabel && trip.durationDays ? (
             <Text style={styles.helperText}>
@@ -2564,6 +2593,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
         <Text style={styles.flightTitle}>{trip.name}</Text>
         {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
+        {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
         {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
         {!dateRange && monthLabel && trip.durationDays ? (
           <Text style={styles.helperText}>
@@ -3076,13 +3106,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             .map((row) => {
               const tour = row.meta as Tour;
               return (
-                <TouchableOpacity key={tour.id} style={styles.flightRow} onPress={() => openTourEditor(tour)}>
-                  <Text style={styles.flightTitle}>{tour.name}</Text>
-                  <Text style={styles.helperText}>
-                    {formatFriendlyDate(tour.date, tour.startTime)} @ {tour.startLocation}
-                  </Text>
-                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus(tour.status, LEGACY_ITINERARY_STATUS)}</Text>
-                </TouchableOpacity>
+                <View key={tour.id} style={styles.flightRow}>
+                  <TouchableOpacity onPress={() => openTourEditor(tour)}>
+                    <Text style={styles.flightTitle}>{tour.name}</Text>
+                    <Text style={styles.helperText}>
+                      {formatFriendlyDate(tour.date, tour.startTime)} @ {tour.startLocation}
+                    </Text>
+                    <Text style={styles.helperText}>Status: {normalizeItineraryStatus(tour.status, LEGACY_ITINERARY_STATUS)}</Text>
+                  </TouchableOpacity>
+                  <GetYourGuideCta
+                    backendUrl={backendUrl}
+                    headers={headers}
+                    activity={tour}
+                    destination={trip?.destination}
+                    testID={`overview-getyourguide-${tour.id}`}
+                  />
+                </View>
               );
             })}
         </View>
@@ -3129,7 +3168,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <ActivityIndicator size="small" color="#2563eb" testID="ai-itinerary-pending-spinner" />
             <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
           </View>
-          <Text style={styles.helperText}>Your AI trip plan is being generated and will appear here automatically.</Text>
+          <Text style={styles.helperText} testID="ai-itinerary-stage-label">
+            {aiItineraryStageLabel || 'Starting up…'}
+            {formatEtaSeconds(aiItineraryEtaSeconds) ? ` — about ${formatEtaSeconds(aiItineraryEtaSeconds)} left` : ''}
+          </Text>
+          <Text style={styles.helperText}>
+            {aiItineraryStageDetail || 'Your AI trip plan is being generated and will appear here automatically.'}
+          </Text>
         </View>
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (
@@ -3303,6 +3348,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <PlacePickerDialog
           visible
           defaultDay={addPopoverDay ?? 1}
+          backendUrl={backendUrl}
+          headers={headers}
+          selectedLocationIds={tripLocationOptions.map((o) => o.id)}
+          selectedLocationNames={locationNames}
           onSubmit={handleAddPlace}
           onCancel={closeAllAddDialogs}
         />

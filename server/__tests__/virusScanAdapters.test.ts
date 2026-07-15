@@ -1,6 +1,17 @@
 /// <reference types="jest" />
 /// <reference types="node" />
+
+jest.mock('../src/apis/usageLimiter', () => ({
+  reserveApiUsageOrThrow: jest.fn(async () => undefined),
+}));
+
+jest.mock('../src/apis/providerBudgeting', () => ({
+  recordProviderRequestCost: jest.fn(async () => undefined),
+}));
+
 import { clamavHttpAdapter, stubAdapter, getVirusScanner } from '../src/ingestion/virusScanProviders';
+import { reserveApiUsageOrThrow } from '../src/apis/usageLimiter';
+import { recordProviderRequestCost } from '../src/apis/providerBudgeting';
 
 const ORIG_FETCH = global.fetch;
 const ORIG_ENV = { ...process.env };
@@ -96,5 +107,7 @@ describe('clamavHttpAdapter.scanBuffer', () => {
     expect(url).toBe('http://clamav.test/scan');
     expect(init.method).toBe('POST');
     expect(init.body).toBeInstanceOf(FormData);
+    expect(reserveApiUsageOrThrow).toHaveBeenCalledWith({ provider: 'CLAMAV', caller: 'VIRUS_SCAN_BUFFER' });
+    expect(recordProviderRequestCost).toHaveBeenCalledWith({ provider: 'CLAMAV' });
   });
 });

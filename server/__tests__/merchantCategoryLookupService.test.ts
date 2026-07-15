@@ -2,9 +2,19 @@
 /// <reference types="node" />
 import { mapMerchantCategory, lookupMerchantCategory, clearMerchantCategoryCacheForTests } from '../src/services/merchantCategoryLookupService';
 import { getFeatureFlag } from '../src/db';
+import { reserveApiUsageOrThrow } from '../src/apis/usageLimiter';
+import { recordProviderRequestCost } from '../src/apis/providerBudgeting';
 
 jest.mock('../src/db', () => ({
   getFeatureFlag: jest.fn(),
+}));
+
+jest.mock('../src/apis/usageLimiter', () => ({
+  reserveApiUsageOrThrow: jest.fn(async () => undefined),
+}));
+
+jest.mock('../src/apis/providerBudgeting', () => ({
+  recordProviderRequestCost: jest.fn(async () => undefined),
 }));
 
 describe('merchant category lookup mapping', () => {
@@ -69,6 +79,9 @@ describe('merchant category lookup service', () => {
     // The second call should wait roughly 1000ms
     expect(duration).toBeGreaterThanOrEqual(950);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(reserveApiUsageOrThrow).toHaveBeenCalledTimes(2);
+    expect(reserveApiUsageOrThrow).toHaveBeenCalledWith({ provider: 'NOMINATIM', caller: 'MERCHANT_CATEGORY_LOOKUP' });
+    expect(recordProviderRequestCost).toHaveBeenCalledTimes(2);
   });
 
   it('timeout returns null', async () => {

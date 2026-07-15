@@ -253,6 +253,8 @@ export type AuditAction =
   | 'ADMIN_SETTING_UPDATED'
   | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'
+  | 'API_CACHING_CONFIG_UPDATED'
+  | 'COST_ESTIMATOR_CONFIG_UPDATED'
   | 'BILLING_CONFIG_UPDATED'
   | 'BILLING_PRICE_PUBLISHED'
   | 'BILLING_RECONCILIATION_RUN'
@@ -363,6 +365,7 @@ export interface Trip {
   description?: string | null;
   destination?: string | null;
   locationIds?: string[];
+  mustSeeAttractions?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -418,6 +421,8 @@ export interface LocationRecord {
 
 export type InterestTag =
   | 'outdoors'
+  | 'photography'
+  | 'adventure'
   | 'culture'
   | 'food'
   | 'nightlife'
@@ -425,7 +430,9 @@ export type InterestTag =
   | 'shopping'
   | 'day trips'
   | 'events'
-  | 'classes';
+  | 'classes'
+  | 'authentic_local'
+  | 'iconic_landmarks';
 
 export type AttractionBudgetTier = 'free' | 'paid' | 'premium';
 
@@ -448,6 +455,11 @@ export interface AttractionCatalogEntry {
   qid?: string | null;
   lat?: number | null;
   lon?: number | null;
+  popularityScore?: number | null;
+  primaryTag?: InterestTag | null;
+  wikipediaTitle?: string | null;
+  wikipediaPageId?: number | null;
+  wikipediaSummary?: string | null;
   updatedAt: string;
 }
 
@@ -459,6 +471,33 @@ export interface AttractionShortlistBlob {
   promptBlock: string;
   compact: string;
   itemCount: number;
+  updatedAt: string;
+}
+
+export interface ItineraryPlanCacheEntry {
+  id: string;
+  cacheKey: string;
+  stage: 'route' | 'day';
+  signature: string;
+  dependencyFingerprint: string;
+  payload: unknown;
+  fragments?: unknown[];
+  expiresAt: string;
+  updatedAt: string;
+}
+
+export interface AttractionDurationMetadata {
+  id: string;
+  destinationKey: string;
+  destinationDisplayName: string;
+  name: string;
+  activityType: ActivityType;
+  estimatedDurationMinutes: number;
+  durationSource: 'heuristic' | 'override';
+  requiresPreOrderTickets: boolean;
+  preOrderNotes?: string | null;
+  description?: string | null;
+  descriptionSource?: 'wikipedia' | 'catalog_snippet' | null;
   updatedAt: string;
 }
 
@@ -622,6 +661,49 @@ export interface ItineraryPromptProfile {
   };
 }
 
+/** De-identified, per-generation telemetry used for rollout and cost analysis. */
+export interface ItineraryGenerationMetrics {
+  generationId: string;
+  tripId?: string | null;
+  userId?: string | null;
+  provider: string;
+  model: string;
+  outcome: 'success' | 'failure';
+  tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  stageMetrics: Array<{
+    stage: string;
+    callerId: string;
+    latencyMs: number;
+    promptTokens: number;
+    completionTokens: number;
+    outcome: 'success' | 'failure';
+    parseFailure: boolean;
+  }>;
+  evaluation?: Record<string, unknown> | null;
+  cacheUsage?: Record<string, unknown> | null;
+  fallbackUsed?: boolean;
+  /** Estimated cost in micros (1e-6 USD), derived via providerBudgeting's shared pricing tables. Null when the provider/model has no configured pricing. */
+  estimatedCostMicros?: number | null;
+  createdAt?: string;
+}
+
+/** Offline-safe comparison between a production generation and a "Gold" reference. */
+export interface ItineraryComparison {
+  id?: string;
+  requestPath: string;
+  goldCaptureId: string | null;
+  productionCaptureId: string | null;
+  goldItemCount: number;
+  productionItemCount: number;
+  itemCountDelta: number;
+  goldDays: number;
+  productionDays: number;
+  attractionCoveragePercent: number | null;
+  goldStructuralIssues: string[];
+  productionStructuralIssues: string[];
+  createdAt?: string;
+}
+
 export interface ItineraryGeneratedTransfer {
   status: 'Needed';
   transferType: TransferMode;
@@ -689,6 +771,8 @@ export interface ItineraryGeneratedDetail {
   time: string | null;
   activity: string;
   cost: number | null;
+  kind?: ItineraryDetailKind;
+  noteBody?: string | null;
 }
 
 export interface PlaceDetailsCache {

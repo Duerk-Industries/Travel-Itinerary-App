@@ -23,6 +23,7 @@ export type RootStackParamList = {
   AdminAiOpsShadowReplay: undefined;
   AdminAiOpsExecutive: undefined;
   AdminAiOpsRuntimeSettings: undefined;
+  AdminAiOpsItineraryInstructions: undefined;
   AdminAiOpsAiAuditLog: undefined;
 };
 
@@ -50,6 +51,7 @@ export const aiOpsScreenBySection: Record<AiOpsSectionRoute, keyof RootStackPara
   'shadow-replay': 'AdminAiOpsShadowReplay',
   executive: 'AdminAiOpsExecutive',
   'runtime-settings': 'AdminAiOpsRuntimeSettings',
+  'itinerary-instructions': 'AdminAiOpsItineraryInstructions',
   'ai-audit-log': 'AdminAiOpsAiAuditLog',
 };
 
@@ -90,6 +92,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AdminAiOpsShadowReplay: 'admin/ai-ops/shadow-replay',
       AdminAiOpsExecutive: 'admin/ai-ops/executive',
       AdminAiOpsRuntimeSettings: 'admin/ai-ops/runtime-settings',
+      AdminAiOpsItineraryInstructions: 'admin/ai-ops/itinerary-instructions',
       AdminAiOpsAiAuditLog: 'admin/ai-ops/ai-audit-log',
     },
   },

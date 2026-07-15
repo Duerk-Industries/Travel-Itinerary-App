@@ -12,7 +12,7 @@ export type { AiOpsSection } from '../components/admin/aiOps/types';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics' | 'billing';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'cost-estimate' | 'metrics' | 'billing';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -273,6 +273,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
         { label: 'API Limits', section: 'api-limits' as AdminSection, desc: 'View API rate limits and current usage' },
+        { label: 'Cost Estimator', section: 'cost-estimate' as AdminSection, desc: 'Projected monthly cost vs. actual recorded spend, hosting, and break-even' },
         { label: 'Billing', section: 'billing' as AdminSection, desc: 'Manage Premium pricing, trial, grace period, tax, and checkout' },
         { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
         { label: 'Metrics', section: 'metrics' as AdminSection, desc: 'In-process counters and cache hit rates' },
@@ -2084,13 +2085,38 @@ type ApiLimitProviderForm = {
   callers: Record<string, string>;
 };
 
+type GetYourGuideAdminStatus = {
+  featureEnabled: boolean;
+  partnerConfigured: boolean;
+  apiConfigured: boolean;
+  cachePermission: boolean;
+  revenueDashboard: 'separate';
+  circuit?: { open: boolean; consecutiveFailures: number; openedUntil: string | null };
+  observability?: {
+    requests: number;
+    successes: number;
+    failures: number;
+    retries: number;
+    rateLimited: number;
+    clicks: number;
+    cache: { hits: number; stale: number; negative: number; misses: number; total: number };
+    suppressionByReason: Record<string, number>;
+    failuresByCode: Record<string, number>;
+    latencyMs: { p50: number | null; p95: number | null; sampleCount: number };
+  };
+};
+
 const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
   theme,
 }) => {
   const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
+  const [getYourGuideStatus, setGetYourGuideStatus] = useState<GetYourGuideAdminStatus | null>(null);
   const [providerForms, setProviderForms] = useState<Record<string, ApiLimitProviderForm>>({});
+  const [caching, setCaching] = useState<Record<string, Record<string, number>>>({});
+  const [cachingForms, setCachingForms] = useState<Record<string, { values: Record<string, string>; reason: string }>>({});
+  const [savingCachingGroup, setSavingCachingGroup] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -2104,6 +2130,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
       const data = await apiFetch(backendUrl, headers, '/api-limits');
       const nextProviders = ((data as any).providers ?? []) as ApiLimitProvider[];
       setProviders(nextProviders);
+      setGetYourGuideStatus(((data as any).getYourGuide ?? null) as GetYourGuideAdminStatus | null);
       setProviderForms(
         Object.fromEntries(
           nextProviders.map((provider) => [
@@ -2126,6 +2153,19 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
                 ])
               ),
               callers: Object.fromEntries(provider.callers.map((caller) => [caller.caller, String(caller.limit)])),
+            },
+          ])
+        )
+      );
+      const nextCaching = ((data as any).caching ?? {}) as Record<string, Record<string, number>>;
+      setCaching(nextCaching);
+      setCachingForms(
+        Object.fromEntries(
+          Object.entries(nextCaching).map(([group, values]) => [
+            group,
+            {
+              values: Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value)])),
+              reason: '',
             },
           ])
         )
@@ -2184,6 +2224,63 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
         },
       },
     }));
+  };
+
+  const updateCachingValue = (group: string, key: string, value: string) => {
+    setCachingForms((current) => ({
+      ...current,
+      [group]: {
+        reason: current[group]?.reason ?? '',
+        values: {
+          ...(current[group]?.values ?? {}),
+          [key]: value,
+        },
+      },
+    }));
+  };
+
+  const updateCachingReason = (group: string, reason: string) => {
+    setCachingForms((current) => ({
+      ...current,
+      [group]: {
+        values: current[group]?.values ?? {},
+        reason,
+      },
+    }));
+  };
+
+  const saveCachingGroup = async (group: string) => {
+    const form = cachingForms[group];
+    if (!form) return;
+    if (form.reason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+    const parsedValues = Object.fromEntries(
+      Object.entries(caching[group] ?? {}).map(([key]) => [key, Number(form.values[key] ?? '')])
+    );
+    const invalidValue = Object.entries(parsedValues).find(([, value]) => !Number.isFinite(value) || value <= 0);
+    if (invalidValue) {
+      setError(`${invalidValue[0]} must be a positive number.`);
+      return;
+    }
+
+    setSavingCachingGroup(group);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, `/api-limits/caching/${group}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: parsedValues, reason: form.reason.trim() }),
+      });
+      setMessage(`${group} caching settings updated.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingCachingGroup(null);
+    }
   };
 
   const saveProvider = async (provider: ApiLimitProvider) => {
@@ -2284,6 +2381,17 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
         Limits are configured in api-limits.yaml. Usage resets per window period, request counts are durable, and provider spend is estimated from recorded token usage.
       </Text>
       {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {getYourGuideStatus ? (
+        <View style={[localStyles.card, getCardStyle(theme)]} testID="admin-getyourguide-status">
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>GetYourGuide operations</Text>
+          <Text style={[localStyles.cardSub, { color: getYourGuideStatus.featureEnabled ? theme.colors.success : theme.colors.textMuted }]}>Kill switch: {getYourGuideStatus.featureEnabled ? 'enabled' : 'disabled'} | Partner configuration: {getYourGuideStatus.partnerConfigured ? 'present' : 'missing'} | API: {getYourGuideStatus.apiConfigured ? 'configured' : 'not configured'}</Text>
+          <Text style={[localStyles.cardSub, { color: getYourGuideStatus.circuit?.open ? theme.colors.error : theme.colors.textMuted }]}>Partner circuit: {getYourGuideStatus.circuit?.open ? 'open' : 'closed'} | Consecutive failures: {getYourGuideStatus.circuit?.consecutiveFailures ?? 0}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Cache permission: {getYourGuideStatus.cachePermission ? 'written permission recorded' : 'request-only (no persistence)'} | Revenue/commission: separate dashboard</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Requests: {getYourGuideStatus.observability?.requests ?? 0} | Successes: {getYourGuideStatus.observability?.successes ?? 0} | Failures: {getYourGuideStatus.observability?.failures ?? 0} | 429s: {getYourGuideStatus.observability?.rateLimited ?? 0} | Clicks: {getYourGuideStatus.observability?.clicks ?? 0}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Cache fresh: {getYourGuideStatus.observability?.cache.hits ?? 0} | stale: {getYourGuideStatus.observability?.cache.stale ?? 0} | negative: {getYourGuideStatus.observability?.cache.negative ?? 0} | misses: {getYourGuideStatus.observability?.cache.misses ?? 0}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Latency p95: {getYourGuideStatus.observability?.latencyMs.p95 == null ? 'n/a' : `${getYourGuideStatus.observability.latencyMs.p95} ms`} | Suppression reasons: {Object.keys(getYourGuideStatus.observability?.suppressionByReason ?? {}).length ? Object.entries(getYourGuideStatus.observability?.suppressionByReason ?? {}).map(([reason, count]) => `${reason}=${count}`).join(', ') : 'none'}</Text>
+        </View>
+      ) : null}
       {providers.map((provider) => (
         <View key={provider.provider} style={[localStyles.card, getCardStyle(theme)]}>
           <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
@@ -2421,6 +2529,503 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
           </TouchableOpacity>
         </View>
       ))}
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Caching</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+        Cache retention/refresh settings, in days unless otherwise noted.
+      </Text>
+      {Object.entries(caching).map(([group, values]) => (
+        <View key={group} style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{group}</Text>
+          {Object.keys(values).map((key) => (
+            <View key={key} style={localStyles.apiLimitCallerRow}>
+              <View style={localStyles.flex}>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{key}</Text>
+              </View>
+              <TextInput
+                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                placeholder={key}
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                value={cachingForms[group]?.values[key] ?? ''}
+                onChangeText={(value: string) => updateCachingValue(group, key, value)}
+              />
+            </View>
+          ))}
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Reason for change (required)"
+            placeholderTextColor={theme.colors.textMuted}
+            value={cachingForms[group]?.reason ?? ''}
+            onChangeText={(value: string) => updateCachingReason(group, value)}
+          />
+          <TouchableOpacity
+            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingCachingGroup === group && localStyles.buttonDisabled]}
+            disabled={savingCachingGroup === group}
+            onPress={() => saveCachingGroup(group)}
+          >
+            <Text style={localStyles.smallButtonText}>Save {group}</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
+        <Text style={localStyles.smallButtonText}>Refresh</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+};
+
+// --- Cost Estimator (Phase 4 of cost-estimator-admin-panel-plan.md) ---
+type CostEstimatorAssumptions = {
+  totalUsers: number;
+  premiumConversionPercent: number;
+  freeGenerationsPerMonth: number;
+  premiumGenerationsPerMonth: number;
+  costPerGenerationUsd: number;
+  premiumMonthlyPriceUsdOverride: number | null;
+  stripeFeePercent: number;
+  stripeFeeFixedUsd: number;
+  providerCallsPerUserPerMonth: Record<string, number>;
+};
+type HostingLineItem = { id: string; name: string; monthlyCostUsd: number };
+type ProjectedCostBreakdown = {
+  llmCostUsd: number;
+  requestApiCostUsd: number;
+  hostingCostUsd: number;
+  totalCostUsd: number;
+  premiumMonthlyPriceUsd: number;
+  netRevenuePerPremiumUserUsd: number;
+  breakEvenPremiumUsers: number | null;
+  byProvider: Array<{ provider: string; costUsd: number }>;
+};
+type MonthlyProviderSpend = { windowKey: string; byProvider: Array<{ provider: string; spendUsd: number }>; totalUsd: number };
+type CostEstimateData = {
+  assumptions: CostEstimatorAssumptions;
+  requestPricing: Record<string, number>;
+  hostingLineItems: HostingLineItem[];
+  projected: ProjectedCostBreakdown;
+  actual: { months: MonthlyProviderSpend[] };
+};
+
+// Per-request provider spend (SerpAPI, Wikimedia, Google Routes, etc.) only started being recorded
+// once Phase 1 shipped; months before that show $0 for those providers even though real usage
+// occurred — say so explicitly rather than let it read as "these APIs were free until now." LLM
+// (token-priced) provider spend has been tracked for longer and isn't affected by this caveat.
+const COST_ESTIMATOR_TRACKING_STARTED_LABEL =
+  'Per-request API cost tracking (SerpAPI, Wikimedia, Google Routes, etc.) started 2026-07 — months before that show $0 for those providers even though real usage occurred. LLM cost tracking is unaffected.';
+
+type AssumptionsFormState = {
+  totalUsers: string;
+  premiumConversionPercent: string;
+  freeGenerationsPerMonth: string;
+  premiumGenerationsPerMonth: string;
+  costPerGenerationUsd: string;
+  premiumMonthlyPriceUsdOverride: string;
+  stripeFeePercent: string;
+  stripeFeeFixedUsd: string;
+  providerCallsPerUserPerMonth: Record<string, string>;
+  reason: string;
+};
+type HostingFormRow = { id: string; name: string; monthlyCostUsd: string };
+
+const toAssumptionsForm = (assumptions: CostEstimatorAssumptions, providers: string[]): AssumptionsFormState => ({
+  totalUsers: String(assumptions.totalUsers),
+  premiumConversionPercent: String(assumptions.premiumConversionPercent),
+  freeGenerationsPerMonth: String(assumptions.freeGenerationsPerMonth),
+  premiumGenerationsPerMonth: String(assumptions.premiumGenerationsPerMonth),
+  costPerGenerationUsd: String(assumptions.costPerGenerationUsd),
+  premiumMonthlyPriceUsdOverride:
+    assumptions.premiumMonthlyPriceUsdOverride == null ? '' : String(assumptions.premiumMonthlyPriceUsdOverride),
+  stripeFeePercent: String(assumptions.stripeFeePercent),
+  stripeFeeFixedUsd: String(assumptions.stripeFeeFixedUsd),
+  providerCallsPerUserPerMonth: Object.fromEntries(
+    providers.map((provider) => [provider, String(assumptions.providerCallsPerUserPerMonth[provider] ?? 0)])
+  ),
+  reason: '',
+});
+
+const newHostingRowId = (): string => `hosting-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+
+const CostEstimateSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [data, setData] = useState<CostEstimateData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const [assumptionsForm, setAssumptionsForm] = useState<AssumptionsFormState | null>(null);
+  const [savingAssumptions, setSavingAssumptions] = useState(false);
+
+  const [hostingRows, setHostingRows] = useState<HostingFormRow[]>([]);
+  const [hostingReason, setHostingReason] = useState('');
+  const [savingHosting, setSavingHosting] = useState(false);
+
+  const [pricingForm, setPricingForm] = useState<Record<string, string>>({});
+  const [pricingReason, setPricingReason] = useState('');
+  const [savingPricing, setSavingPricing] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = (await apiFetch(backendUrl, headers, '/cost-estimate')) as CostEstimateData;
+      setData(result);
+      const providers = Object.keys(result.requestPricing).sort((a, b) => a.localeCompare(b));
+      setAssumptionsForm(toAssumptionsForm(result.assumptions, providers));
+      setHostingRows(
+        result.hostingLineItems.map((item) => ({ id: item.id, name: item.name, monthlyCostUsd: String(item.monthlyCostUsd) }))
+      );
+      setPricingForm(Object.fromEntries(providers.map((provider) => [provider, String(result.requestPricing[provider])])));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const saveAssumptions = async () => {
+    if (!assumptionsForm) return;
+    if (assumptionsForm.reason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+    const numericFields: Array<keyof AssumptionsFormState> = [
+      'totalUsers',
+      'premiumConversionPercent',
+      'freeGenerationsPerMonth',
+      'premiumGenerationsPerMonth',
+      'costPerGenerationUsd',
+      'stripeFeePercent',
+      'stripeFeeFixedUsd',
+    ];
+    const parsed: Record<string, number> = {};
+    for (const field of numericFields) {
+      const value = Number(assumptionsForm[field] as string);
+      if (!Number.isFinite(value) || value < 0) {
+        setError(`${field} must be a non-negative number.`);
+        return;
+      }
+      parsed[field] = value;
+    }
+    const overrideRaw = assumptionsForm.premiumMonthlyPriceUsdOverride.trim();
+    const premiumMonthlyPriceUsdOverride = overrideRaw ? Number(overrideRaw) : null;
+    if (premiumMonthlyPriceUsdOverride !== null && (!Number.isFinite(premiumMonthlyPriceUsdOverride) || premiumMonthlyPriceUsdOverride < 0)) {
+      setError('Premium monthly price override must be blank or a non-negative number.');
+      return;
+    }
+    const providerCallsPerUserPerMonth: Record<string, number> = {};
+    for (const [provider, raw] of Object.entries(assumptionsForm.providerCallsPerUserPerMonth)) {
+      const value = raw.trim() ? Number(raw) : 0;
+      if (!Number.isFinite(value) || value < 0) {
+        setError(`Call volume for ${provider} must be a non-negative number.`);
+        return;
+      }
+      if (value > 0) providerCallsPerUserPerMonth[provider] = value;
+    }
+
+    setSavingAssumptions(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, '/cost-estimate/assumptions', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...parsed,
+          premiumMonthlyPriceUsdOverride,
+          providerCallsPerUserPerMonth,
+          reason: assumptionsForm.reason.trim(),
+        }),
+      });
+      setMessage('Assumptions updated.');
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingAssumptions(false);
+    }
+  };
+
+  const saveHosting = async () => {
+    if (hostingReason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+    const parsedItems: HostingLineItem[] = [];
+    for (const row of hostingRows) {
+      if (!row.name.trim()) {
+        setError('Every hosting line item needs a name.');
+        return;
+      }
+      const amount = Number(row.monthlyCostUsd);
+      if (!Number.isFinite(amount) || amount < 0) {
+        setError(`Monthly cost for ${row.name} must be a non-negative number.`);
+        return;
+      }
+      parsedItems.push({ id: row.id, name: row.name.trim(), monthlyCostUsd: amount });
+    }
+
+    setSavingHosting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, '/cost-estimate/hosting', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostingLineItems: parsedItems, reason: hostingReason.trim() }),
+      });
+      setMessage('Hosting line items updated.');
+      setHostingReason('');
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingHosting(false);
+    }
+  };
+
+  const savePricing = async () => {
+    if (pricingReason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+    const requestPricing: Record<string, number> = {};
+    for (const [provider, raw] of Object.entries(pricingForm)) {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0) {
+        setError(`Price for ${provider} must be a non-negative number.`);
+        return;
+      }
+      requestPricing[provider] = value;
+    }
+
+    setSavingPricing(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, '/cost-estimate/request-pricing', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestPricing, reason: pricingReason.trim() }),
+      });
+      setMessage('Per-request pricing updated.');
+      setPricingReason('');
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingPricing(false);
+    }
+  };
+
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error && !data) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (!data || !assumptionsForm) return null;
+
+  const { projected } = data;
+
+  return (
+    <ScrollView style={[localStyles.section, localStyles.apiLimitsScroll]} contentContainerStyle={localStyles.apiLimitsScrollContent}>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Cost Estimator</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+        Projected monthly cost from editable assumptions, versus actual recorded spend by month.
+      </Text>
+      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Projected monthly cost</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>LLM (itinerary generations): ${projected.llmCostUsd.toFixed(2)}</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Per-request APIs: ${projected.requestApiCostUsd.toFixed(2)}</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Hosting: ${projected.hostingCostUsd.toFixed(2)}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 8 }]}>Total: ${projected.totalCostUsd.toFixed(2)}/mo</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 8 }]}>
+          Premium price: ${projected.premiumMonthlyPriceUsd.toFixed(2)} | Net of Stripe fees: ${projected.netRevenuePerPremiumUserUsd.toFixed(2)}/user
+        </Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+          Break-even: {projected.breakEvenPremiumUsers == null ? 'not reachable at this price' : `${projected.breakEvenPremiumUsers} premium users`}
+        </Text>
+      </View>
+
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Assumptions</Text>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        {(
+          [
+            ['totalUsers', 'Total users'],
+            ['premiumConversionPercent', 'Premium conversion %'],
+            ['freeGenerationsPerMonth', 'Free generations / user / month'],
+            ['premiumGenerationsPerMonth', 'Premium generations / user / month'],
+            ['costPerGenerationUsd', 'LLM cost per generation (USD)'],
+            ['premiumMonthlyPriceUsdOverride', 'Premium price override (blank = live Stripe price)'],
+            ['stripeFeePercent', 'Stripe fee %'],
+            ['stripeFeeFixedUsd', 'Stripe fixed fee (USD)'],
+          ] as Array<[keyof AssumptionsFormState, string]>
+        ).map(([field, label]) => (
+          <View key={field}>
+            <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>{label}</Text>
+            <TextInput
+              style={[localStyles.smallInput, getInputStyle(theme)]}
+              placeholder={label}
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="numeric"
+              value={assumptionsForm[field] as string}
+              onChangeText={(value: string) => setAssumptionsForm((current) => (current ? { ...current, [field]: value } : current))}
+            />
+          </View>
+        ))}
+        <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Provider call volume (per user / month)</Text>
+        {Object.keys(assumptionsForm.providerCallsPerUserPerMonth).map((provider) => (
+          <View key={provider} style={localStyles.apiLimitCallerRow}>
+            <View style={localStyles.flex}>
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{provider}</Text>
+            </View>
+            <TextInput
+              style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+              placeholder="0"
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="numeric"
+              value={assumptionsForm.providerCallsPerUserPerMonth[provider] ?? ''}
+              onChangeText={(value: string) =>
+                setAssumptionsForm((current) =>
+                  current
+                    ? { ...current, providerCallsPerUserPerMonth: { ...current.providerCallsPerUserPerMonth, [provider]: value } }
+                    : current
+                )
+              }
+            />
+          </View>
+        ))}
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          placeholder="Reason for change (required)"
+          placeholderTextColor={theme.colors.textMuted}
+          value={assumptionsForm.reason}
+          onChangeText={(value: string) => setAssumptionsForm((current) => (current ? { ...current, reason: value } : current))}
+        />
+        <TouchableOpacity
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingAssumptions && localStyles.buttonDisabled]}
+          disabled={savingAssumptions}
+          onPress={saveAssumptions}
+        >
+          <Text style={localStyles.smallButtonText}>Save assumptions</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Hosting line items</Text>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        {hostingRows.map((row, index) => (
+          <View key={row.id} style={localStyles.apiLimitCallerRow}>
+            <TextInput
+              style={[localStyles.smallInput, getInputStyle(theme), localStyles.flex]}
+              placeholder="Name (e.g. Cloud Run)"
+              placeholderTextColor={theme.colors.textMuted}
+              value={row.name}
+              onChangeText={(value: string) =>
+                setHostingRows((current) => current.map((r, i) => (i === index ? { ...r, name: value } : r)))
+              }
+            />
+            <TextInput
+              style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+              placeholder="USD / month"
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="numeric"
+              value={row.monthlyCostUsd}
+              onChangeText={(value: string) =>
+                setHostingRows((current) => current.map((r, i) => (i === index ? { ...r, monthlyCostUsd: value } : r)))
+              }
+            />
+            <TouchableOpacity onPress={() => setHostingRows((current) => current.filter((_, i) => i !== index))}>
+              <Text style={[localStyles.breadcrumbLink, { color: theme.colors.error }]}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        <TouchableOpacity
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.backgroundAlt, borderWidth: 1, borderColor: theme.colors.border }]}
+          onPress={() => setHostingRows((current) => [...current, { id: newHostingRowId(), name: '', monthlyCostUsd: '0' }])}
+        >
+          <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>Add line item</Text>
+        </TouchableOpacity>
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          placeholder="Reason for change (required)"
+          placeholderTextColor={theme.colors.textMuted}
+          value={hostingReason}
+          onChangeText={setHostingReason}
+        />
+        <TouchableOpacity
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingHosting && localStyles.buttonDisabled]}
+          disabled={savingHosting}
+          onPress={saveHosting}
+        >
+          <Text style={localStyles.smallButtonText}>Save hosting line items</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Per-request API pricing</Text>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        {Object.keys(pricingForm).map((provider) => (
+          <View key={provider} style={localStyles.apiLimitCallerRow}>
+            <View style={localStyles.flex}>
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{provider}</Text>
+            </View>
+            <TextInput
+              style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+              placeholder="USD / request"
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="numeric"
+              value={pricingForm[provider] ?? ''}
+              onChangeText={(value: string) => setPricingForm((current) => ({ ...current, [provider]: value }))}
+            />
+          </View>
+        ))}
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          placeholder="Reason for change (required)"
+          placeholderTextColor={theme.colors.textMuted}
+          value={pricingReason}
+          onChangeText={setPricingReason}
+        />
+        <TouchableOpacity
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingPricing && localStyles.buttonDisabled]}
+          disabled={savingPricing}
+          onPress={savePricing}
+        >
+          <Text style={localStyles.smallButtonText}>Save pricing</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text, marginTop: 16 }]}>Actual spend by month</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 8 }]}>{COST_ESTIMATOR_TRACKING_STARTED_LABEL}</Text>
+      {data.actual.months.map((month) => (
+        <View key={month.windowKey} style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+            {month.windowKey} — ${month.totalUsd.toFixed(2)}
+          </Text>
+          {month.byProvider.length === 0 && Object.keys(data.requestPricing).length === 0 ? (
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>No recorded spend.</Text>
+          ) : (
+            Array.from(new Set([
+              ...Object.keys(data.requestPricing),
+              ...data.projected.byProvider.map((entry) => entry.provider),
+              ...month.byProvider.map((entry) => entry.provider),
+            ])).sort().map((provider) => {
+              const spend = month.byProvider.find((entry) => entry.provider === provider)?.spendUsd ?? 0;
+              return (
+                <Text key={provider} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                  {provider}: ${spend.toFixed(2)}
+                </Text>
+              );
+            })
+          )}
+        </View>
+      ))}
+
       <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
         <Text style={localStyles.smallButtonText}>Refresh</Text>
       </TouchableOpacity>
@@ -2646,6 +3251,8 @@ const AdminTab: React.FC<AdminTabProps> = ({
         return <IngestionSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'api-limits':
         return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'cost-estimate':
+        return <CostEstimateSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'metrics':
         return <MetricsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'billing':
@@ -2667,6 +3274,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
     'audit-log': 'Audit Log',
     ingestion: 'Ingestion Ops',
     'api-limits': 'API Limits',
+    'cost-estimate': 'Cost Estimator',
     metrics: 'Metrics',
     billing: 'Billing',
   };
@@ -2683,7 +3291,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
         </View>
       ) : null}
       <View style={localStyles.sectionHost}>
-        {section === 'api-limits' ? (
+        {section === 'api-limits' || section === 'cost-estimate' ? (
           renderSection()
         ) : (
           <ScrollView style={localStyles.sectionScroll} contentContainerStyle={localStyles.sectionScrollContent}>

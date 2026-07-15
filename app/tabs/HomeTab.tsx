@@ -32,6 +32,7 @@ type HomeTabProps = {
   onFollowTrip: (inviteCode: string) => Promise<string | null>;
   onOpenShareTrip?: () => void;
   canOpenShareTrip?: boolean;
+  onDeleteTrip?: (trip: { id: string; name: string }) => void;
   disabledPages?: Set<string>;
   hiddenPages?: Set<string>;
 };
@@ -59,6 +60,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   onFollowTrip,
   onOpenShareTrip = () => {},
   canOpenShareTrip = true,
+  onDeleteTrip,
   disabledPages,
   hiddenPages,
 }) => {
@@ -360,6 +362,22 @@ const HomeTab: React.FC<HomeTabProps> = ({
                       )}
                     </View>
                     {trip.id === activeTripId ? <Text style={styles.homeModalActiveBadge}>Active</Text> : null}
+                    {onDeleteTrip ? (
+                      <Pressable
+                        testID={`home-trip-row-delete-${trip.id}`}
+                        hitSlop={8}
+                        style={({ pressed }: { pressed: boolean }) => [
+                          styles.homeModalRowDelete,
+                          pressed && styles.homeModalRowDeletePressed,
+                        ]}
+                        onPress={(e: any) => {
+                          e?.stopPropagation?.();
+                          onDeleteTrip({ id: trip.id, name: trip.name });
+                        }}
+                      >
+                        <Text style={styles.homeModalRowDeleteText}>🗑 Delete</Text>
+                      </Pressable>
+                    ) : null}
                   </Pressable>
                 ))}
                 {followedTrips.length ? (

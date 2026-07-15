@@ -65,6 +65,16 @@ usagePerUser:
     openMeteo:
       geocode_requests: 1
       forecast_requests: 2
+      climatology_requests: 0.02
+    # Destination catalogs are shared for 365 days, so discovery/enrichment
+    # requests amortize across users rather than occurring per generation.
+    serpApi:
+      searches: 0.01
+    wikimedia:
+      discovery_requests: 0.02
+      enrichment_requests: 0.2
+      summary_requests: 0.1
+      pageview_requests: 0.2
     frankfurter:
       requests: 2
     airportDataset:
@@ -115,6 +125,14 @@ usagePerUser:
     openMeteo:
       geocode_requests: 5
       forecast_requests: 10
+      climatology_requests: 0.1
+    serpApi:
+      searches: 0.05
+    wikimedia:
+      discovery_requests: 0.1
+      enrichment_requests: 1
+      summary_requests: 0.5
+      pageview_requests: 1
     frankfurter:
       requests: 50
     airportDataset:
@@ -242,6 +260,33 @@ costSources:
       - metric: geocode_requests
         unitCostUsd: 0
       - metric: forecast_requests
+        unitCostUsd: 0
+      - metric: climatology_requests
+        unitCostUsd: 0
+
+  - id: serp_api
+    name: SerpAPI attraction discovery
+    type: variable
+    api: serpApi
+    usageLevels:
+      # Planning assumption based on the $25 / 1,000-search public tier.
+      # Keep this editable alongside other estimator assumptions.
+      - metric: searches
+        unitCostUsd: 25
+        perUnits: 1000
+
+  - id: wikimedia
+    name: Wikimedia attraction data
+    type: variable
+    api: wikimedia
+    usageLevels:
+      - metric: discovery_requests
+        unitCostUsd: 0
+      - metric: enrichment_requests
+        unitCostUsd: 0
+      - metric: summary_requests
+        unitCostUsd: 0
+      - metric: pageview_requests
         unitCostUsd: 0
 
   - id: frankfurter

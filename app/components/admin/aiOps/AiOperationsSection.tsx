@@ -5,6 +5,7 @@ import { AiOpsAiAuditLog } from './AiOpsAiAuditLog';
 import { AiOpsCaptures } from './AiOpsCaptures';
 import { AiOpsExecutiveDashboard } from './AiOpsExecutiveDashboard';
 import { AiOpsExperiments } from './AiOpsExperiments';
+import { AiOpsItineraryInstructions } from './AiOpsItineraryInstructions';
 import { AiOpsOverview } from './AiOpsOverview';
 import { AiOpsParserQuality } from './AiOpsParserQuality';
 import { AiOpsProviders } from './AiOpsProviders';
@@ -23,6 +24,7 @@ import type {
   AiProviderOption,
   AiRecommendation,
   AiRuntimeSetting,
+  ItineraryInstructionDocument,
 } from './types';
 
 const apiFetch = async (backendUrl: string, headers: Record<string, string>, path: string, opts?: RequestInit) => {
@@ -49,6 +51,10 @@ export const AiOperationsSection: React.FC<{
   const [runtimeSettings, setRuntimeSettings] = useState<AiRuntimeSetting[]>([]);
   const [runtimeDrafts, setRuntimeDrafts] = useState<Record<string, string>>({});
   const [runtimeReason, setRuntimeReason] = useState('');
+  const [instructionPhases, setInstructionPhases] = useState<ItineraryInstructionDocument[]>([]);
+  const [instructionDrafts, setInstructionDrafts] = useState<Record<string, string>>({});
+  const [instructionSelected, setInstructionSelected] = useState<Record<string, boolean>>({});
+  const [instructionReason, setInstructionReason] = useState('');
   const [captures, setCaptures] = useState<AiCaptureItem[]>([]);
   const [captureQuery, setCaptureQuery] = useState('');
   const [captureAnonymousUserIdQuery, setCaptureAnonymousUserIdQuery] = useState('');
@@ -76,9 +82,10 @@ export const AiOperationsSection: React.FC<{
     setLoading(true);
     setError(null);
     try {
-      const [data, runtimeData, capturesData, analyticsData, experimentsData, recommendationsData, executiveData] = await Promise.all([
+      const [data, runtimeData, instructionData, capturesData, analyticsData, experimentsData, recommendationsData, executiveData] = await Promise.all([
         apiFetch(backendUrl, headers, '/ai-config'),
         apiFetch(backendUrl, headers, '/runtime-settings'),
+        apiFetch(backendUrl, headers, '/itinerary-instructions'),
         apiFetch(backendUrl, headers, '/ai-captures?limit=10'),
         apiFetch(backendUrl, headers, '/analytics?limit=40'),
         apiFetch(backendUrl, headers, '/experiments?limit=25'),
@@ -93,6 +100,10 @@ export const AiOperationsSection: React.FC<{
       setDrafts(Object.fromEntries(loadedFeatures.map((item) => [item.featureKey, item])));
       setRuntimeSettings(loadedSettings);
       setRuntimeDrafts(Object.fromEntries(loadedSettings.map((item) => [item.key, item.value])));
+      const loadedInstructions = (Array.isArray(instructionData.phases) ? instructionData.phases : []) as ItineraryInstructionDocument[];
+      setInstructionPhases(loadedInstructions);
+      setInstructionDrafts(Object.fromEntries(loadedInstructions.map((item) => [item.phase, item.markdown])));
+      setInstructionSelected({});
       setCaptures((Array.isArray(capturesData.captures) ? capturesData.captures : []) as AiCaptureItem[]);
       setAnalytics((Array.isArray(analyticsData.metrics) ? analyticsData.metrics : []) as AiAnalyticsMetric[]);
       setExperiments((Array.isArray(experimentsData.experiments) ? experimentsData.experiments : []) as AiExperiment[]);
@@ -154,6 +165,36 @@ export const AiOperationsSection: React.FC<{
       await load();
     } catch (err: any) {
       setError(err.message ?? 'Failed to save runtime settings');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const saveItineraryInstructions = async () => {
+    const selectedEntries = Object.entries(instructionSelected).filter(([, isSelected]) => isSelected);
+    if (!selectedEntries.length) {
+      setError('Select at least one phase to save.');
+      return;
+    }
+    if (instructionReason.trim().length < 3) {
+      setError('Reason is required.');
+      return;
+    }
+    const phases = Object.fromEntries(selectedEntries.map(([phase]) => [phase, instructionDrafts[phase] ?? '']));
+    setSaving('itinerary-instructions');
+    setError(null);
+    setSaveMsg(null);
+    try {
+      await apiFetch(backendUrl, headers, '/itinerary-instructions', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phases, reason: instructionReason }),
+      });
+      setSaveMsg('Saved itinerary instructions');
+      setInstructionReason('');
+      await load();
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to save itinerary instructions');
     } finally {
       setSaving(null);
     }
@@ -319,6 +360,7 @@ export const AiOperationsSection: React.FC<{
       {aiOpsSection === 'overview' ? <AiOpsOverview theme={theme} providerCount={providers.length} experimentCount={experiments.length} recommendationCount={recommendations.length} metricCount={analytics.length} /> : null}
       {aiOpsSection === 'providers' ? <AiOpsProviders theme={theme} features={features} providers={providers} certifications={certifications} certificationVersion={providerCertificationVersion} certificationReason={providerCertificationReason} drafts={drafts} reasons={reasons} saving={saving} setCertificationVersion={setProviderCertificationVersion} setCertificationReason={setProviderCertificationReason} setDrafts={setDrafts} setReasons={setReasons} onSave={saveProviderConfig} onCertify={certifyProvider} /> : null}
       {aiOpsSection === 'runtime-settings' ? <AiOpsRuntimeSettings theme={theme} settings={runtimeSettings} drafts={runtimeDrafts} reason={runtimeReason} saving={saving} setDrafts={setRuntimeDrafts} setReason={setRuntimeReason} onSave={saveRuntimeSettings} /> : null}
+      {aiOpsSection === 'itinerary-instructions' ? <AiOpsItineraryInstructions theme={theme} phases={instructionPhases} drafts={instructionDrafts} selected={instructionSelected} reason={instructionReason} saving={saving} setDrafts={setInstructionDrafts} setSelected={setInstructionSelected} setReason={setInstructionReason} onSave={saveItineraryInstructions} /> : null}
       {aiOpsSection === 'captures' ? <AiOpsCaptures theme={theme} captures={captures} captureQuery={captureQuery} anonymousUserIdQuery={captureAnonymousUserIdQuery} saving={saving} setCaptureQuery={setCaptureQuery} setAnonymousUserIdQuery={setCaptureAnonymousUserIdQuery} onSearch={searchCaptures} /> : null}
       {aiOpsSection === 'parser-quality' ? <AiOpsParserQuality theme={theme} analytics={analytics} saving={saving} onRefresh={refreshAnalytics} /> : null}
       {aiOpsSection === 'shadow-replay' ? <AiOpsShadowReplay theme={theme} analytics={analytics} saving={saving} onRefresh={refreshAnalytics} title="Shadow Replay" /> : null}

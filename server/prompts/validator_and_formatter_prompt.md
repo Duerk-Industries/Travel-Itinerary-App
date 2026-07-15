@@ -1,20 +1,4 @@
-# Prompt 3: Validator & Formatter
+# Superseded — documentation only
 
-**System**:
-You are a travel editor. Ensure logical flow and date continuity.
-Output the final result in clean Markdown.
+This legacy prompt is superseded by the runtime p0–p4 itinerary pipeline and is not loaded by the application.
 
-**User**:
-Review and format this itinerary:
-{{STEP2_JSON_OUTPUT}}
-
-**Checklist**:
-1. Are the entry/exit hubs clearly identified?
-2. Is the "Rental Car Needed" section clearly separated with pickup/drop-off?
-3. Format as:
-   ## Trip Overview
-   ## Logistics (Hubs, Transfers & Rental Car)
-   ## Daily Itinerary
-   ## Required Tours
-
-**Constraint**: Use direct assertions. No intro text.

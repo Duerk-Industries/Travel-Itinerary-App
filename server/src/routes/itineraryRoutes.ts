@@ -5,7 +5,8 @@ import { getTripById, getWebUserProfile, listTraitsForGroupTrip } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
-import { generateItineraryViaPromptPlan } from '../services/itineraryPromptPlanService';
+import { generateItineraryViaPromptPlan, type MustSeeAttractionInput } from '../services/itineraryPromptPlanService';
+import { scheduleGetYourGuideDescriptorEnrichment } from '../services/getYourGuideItineraryEnrichmentService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
@@ -24,6 +25,25 @@ import {
   getConfiguredProviderApiKey,
   getProviderApiKeyEnvVar,
 } from '../services/aiProviderConfigService';
+
+// Accepts either a plain attraction name or `{ name, destinationName }` so the
+// generator can place must-see attractions on the correct destination's day.
+const parseMustSeeAttractions = (raw: unknown): MustSeeAttractionInput[] => {
+  if (!Array.isArray(raw)) return [];
+  const out: MustSeeAttractionInput[] = [];
+  for (const value of raw) {
+    if (value && typeof value === 'object') {
+      const name = String((value as any).name ?? '').trim();
+      if (!name) continue;
+      const destinationName = String((value as any).destinationName ?? '').trim();
+      out.push(destinationName ? { name, destinationName } : { name });
+      continue;
+    }
+    const name = String(value ?? '').trim();
+    if (name) out.push(name);
+  }
+  return out;
+};
 
 // Returns a UTC monthly window key, e.g. "2026-03"
 const getMonthWindowKey = (): string => {
@@ -177,15 +197,13 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut } = req.body ?? {};
+  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, homeAirport, homeRegion, returnAirport, tripId, tripStyle, tt, ut } = req.body ?? {};
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
-  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
-    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
-    : [];
+  const selectedMustSeeAttractions = parseMustSeeAttractions(mustSeeAttractions);
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
     : String(country ?? '').trim();
@@ -210,12 +228,11 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  let preferredAirportFallback = '';
-  if (!String(departureAirport ?? '').trim()) {
-    const profile = await getWebUserProfile(userId).catch(() => null);
-    preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
-  }
+  const profile = await getWebUserProfile(userId).catch(() => null);
+  const preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
   const effectiveDepartureAirport = String(departureAirport ?? '').trim() || preferredAirportFallback;
+  const effectiveHomeAirport = String(homeAirport ?? preferredAirportFallback ?? effectiveDepartureAirport).trim();
+  const effectiveReturnAirport = String(returnAirport ?? effectiveHomeAirport ?? effectiveDepartureAirport).trim();
   logInfo(
     `[itinerary] request start user=${userId} trip=${tripId} destinations="${destinationSummary}" days=${daysNum} budget=${min}-${max} departure="${String(
       effectiveDepartureAirport
@@ -296,6 +313,9 @@ router.post('/', async (req, res) => {
       budgetMin: min,
       budgetMax: max,
       departureAirport: effectiveDepartureAirport || undefined,
+      homeAirport: effectiveHomeAirport || undefined,
+      homeRegion: typeof homeRegion === 'string' ? homeRegion.trim() || undefined : undefined,
+      returnAirport: effectiveReturnAirport || undefined,
       tripStyle: tripStyle ? String(tripStyle).trim() : undefined,
       promptTraits: {
         tt: tt && typeof tt === 'object' ? tt : undefined,
@@ -332,6 +352,9 @@ router.post('/', async (req, res) => {
         itinerary: result.itinerary,
       },
     });
+    // Affiliate work is explicitly post-response/background work. It cannot
+    // change ordering, cache payloads, or add latency to itinerary generation.
+    scheduleGetYourGuideDescriptorEnrichment(result.getYourGuideCandidates ?? []);
     await finalizeGenerationUsage({
       userId,
       windowKey: getMonthWindowKey(),
@@ -365,15 +388,13 @@ router.post('/async', async (req, res) => {
     return;
   }
 
-  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut, itineraryId } = req.body ?? {};
+  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, homeAirport, homeRegion, returnAirport, tripId, tripStyle, tt, ut, itineraryId } = req.body ?? {};
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
-  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
-    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
-    : [];
+  const selectedMustSeeAttractions = parseMustSeeAttractions(mustSeeAttractions);
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
     : String(country ?? '').trim();
@@ -469,12 +490,11 @@ router.post('/async', async (req, res) => {
     throw err;
   }
 
-  let preferredAirportFallback = '';
-  if (!String(departureAirport ?? '').trim()) {
-    const profile = await getWebUserProfile(userId).catch(() => null);
-    preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
-  }
+  const profile = await getWebUserProfile(userId).catch(() => null);
+  const preferredAirportFallback = String((profile as any)?.preferredAirport ?? '').trim();
   const effectiveDepartureAirport = String(departureAirport ?? '').trim() || preferredAirportFallback;
+  const effectiveHomeAirport = String(homeAirport ?? preferredAirportFallback ?? effectiveDepartureAirport).trim();
+  const effectiveReturnAirport = String(returnAirport ?? effectiveHomeAirport ?? effectiveDepartureAirport).trim();
   const job = enqueueAsyncItineraryJob({
     apiKey: providerRuntime.apiKey,
     userId,
@@ -487,6 +507,9 @@ router.post('/async', async (req, res) => {
     budgetMin: min,
     budgetMax: max,
     departureAirport: effectiveDepartureAirport || undefined,
+    homeAirport: effectiveHomeAirport || undefined,
+    homeRegion: typeof homeRegion === 'string' ? homeRegion.trim() || undefined : undefined,
+    returnAirport: effectiveReturnAirport || undefined,
     tripStyle: tripStyle ? String(tripStyle).trim() : undefined,
     tt,
     ut,
@@ -520,6 +543,10 @@ router.get('/async/:jobId', async (req, res) => {
     status: job.status,
     error: job.error ?? null,
     result: job.result ?? null,
+    stage: job.stage ?? null,
+    stageLabel: job.stageLabel ?? null,
+    stageDetail: job.stageDetail ?? null,
+    etaSeconds: job.etaSeconds ?? null,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   });

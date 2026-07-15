@@ -18,11 +18,14 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+      PARSE_FLIGHT_TEXT: 200
+      LEGACY_DOCUMENT_PARSE: 100
 
   ANTHROPIC:
     window: hour
@@ -34,6 +37,7 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
@@ -50,11 +54,13 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+      PARSE_FLIGHT_TEXT: 200
 
   ZAI:
     window: hour
@@ -66,11 +72,31 @@ providers:
       ITINERARY_PLAN_P1_ROUTE: 200
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
       ITINERARY_PLAN_P4_RENDER: 200
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+
+  OPENAI_COMPATIBLE:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      ITINERARY_GENERATE_PLAN: 50
+      ITINERARY_PLAN_P0_NORM: 200
+      ITINERARY_PLAN_P1_ROUTE: 200
+      ITINERARY_PLAN_P2_DAYS: 200
+      ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P3B_REPAIR: 100
+      ITINERARY_PLAN_P4_RENDER: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
+      INGESTION_LLM_EXTRACT: 100
+      LLM_SHADOW_PARSE: 100
+      PARSE_FLIGHT_TEXT: 200
+      LEGACY_DOCUMENT_PARSE: 100
 
   UNSPLASH:
     window: hour
@@ -90,6 +116,7 @@ providers:
       SHARE_EMAIL: 100
       VERIFICATION_EMAIL: 100
       TRIP_INVITE_EMAIL: 100
+      BILLING_TRIAL_REMINDER: 100
 
   AIRPORT_DATASET:
     window: hour
@@ -112,6 +139,96 @@ providers:
     callers:
       OVERVIEW_DAY_WEATHER_GEOCODE: 1000
       OVERVIEW_DAY_WEATHER_FORECAST: 1000
+      ITINERARY_MONTHLY_CLIMATOLOGY: 250
+
+  WIKIMEDIA:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      ATTRACTION_DISCOVERY_WIKIPEDIA: 250
+      ATTRACTION_WIKIPEDIA_ENRICHMENT: 500
+      ATTRACTION_WIKIPEDIA_SUMMARY: 500
+      ATTRACTION_WIKIMEDIA_PAGEVIEWS: 500
+
+  SERPAPI:
+    window: hour
+    windowHours: 24
+    overall: 100
+    callers:
+      ATTRACTION_DISCOVERY_SEARCH: 100
+
+  GOOGLE_ROUTES:
+    window: hour
+    windowHours: 24
+    overall: 200
+    callers:
+      ATTRACTION_TRANSFER_MATRIX: 200
+
+  GMAIL:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      GMAIL_OAUTH_TOKEN_EXCHANGE: 100
+      GMAIL_OAUTH_TOKEN_REFRESH: 500
+      GMAIL_PROFILE: 500
+      GMAIL_MESSAGE_SEARCH: 500
+      GMAIL_MESSAGE_READ: 1000
+      GMAIL_ATTACHMENT_READ: 1000
+
+  GOOGLE_STATIC_MAPS:
+    window: hour
+    windowHours: 24
+    overall: 500
+    callers:
+      STATIC_MAP_PREVIEW: 500
+
+  NOMINATIM:
+    window: hour
+    windowHours: 24
+    overall: 500
+    callers:
+      MERCHANT_CATEGORY_LOOKUP: 500
+
+  CLAMAV:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      VIRUS_SCAN_BUFFER: 2000
+
+  DOCLING:
+    window: hour
+    windowHours: 24
+    overall: 200
+    callers:
+      DOCUMENT_CONVERSION: 200
+
+  COUNTRY_NOW:
+    window: hour
+    windowHours: 24
+    overall: 300
+    callers:
+      DESTINATION_LARGE_CITY_COVERAGE: 300
+
+  GEONAMES:
+    window: hour
+    windowHours: 24
+    overall: 300
+    callers:
+      DESTINATION_LARGE_CITY_COVERAGE: 300
+
+  # Phase 5 safety default. The account-specific Partner API quota must be
+  # approved and changed in admin/config before enabling lookups; one request
+  # per hour keeps an accidental enablement fail-closed.
+  GETYOURGUIDE:
+    window: hour
+    windowHours: 1
+    overall: 1
+    callers:
+      GETYOURGUIDE_ITINERARY_ACTIVITY_SUGGESTION: 1
+      GETYOURGUIDE_ACTIVITY_TAB_LOOKUP: 1
 
 budgeting:
   OPENAI:
@@ -137,6 +254,9 @@ budgeting:
       GEMINI_2_5_FLASH:
         inputCostPer1MTokensUsd: 0.30
         outputCostPer1MTokensUsd: 2.50
+  OPENAI_COMPATIBLE:
+    alertThresholdPercent: 80
+    models: {}
   ZAI:
     alertThresholdPercent: 80
     models:
@@ -150,14 +270,83 @@ budgeting:
     alertThresholdPercent: 80
     models: {}
 
+# Per-request USD price for providers that aren't token-priced. 0 = genuinely free today; the admin
+# cost-estimator panel (Phase 3) will make these editable without a code deploy. Unlisted providers
+# default to 0 via getApiRequestPricingUsd().
+requestPricing:
+  SERPAPI: 0
+  WIKIMEDIA: 0
+  GOOGLE_ROUTES: 0
+  GMAIL: 0
+  GOOGLE_STATIC_MAPS: 0
+  NOMINATIM: 0
+  CLAMAV: 0
+  DOCLING: 0
+  UNSPLASH: 0
+  SMTP: 0
+  COUNTRY_NOW: 0
+  GEONAMES: 0
+  AIRPORT_DATASET: 0
+  FRANKFURTER: 0
+  OPEN_METEO: 0
+  GETYOURGUIDE: 0
+
 caching:
   attractions:
     refreshDays: 365
     limitPerDestination: 20
     shortlistPromptItemsPerDestination: 8
+    # itinerary-improvements-coding-plan.md Phase 3C: adaptive shortlist ceiling.
+    # Trip length > 7 days, multiple destinations, >=5 high-weight interests, or a
+    # coverage-check miss against the base shortlistPromptItemsPerDestination
+    # (floor) rebuilds the shortlist up to this cap instead of the floor. Hard
+    # ceiling is 15 regardless of what's configured here. If an operator sets
+    # this equal to (or below) the floor, adaptive logic is a no-op and every
+    # trip stays on the fixed floor-item behavior.
+    adaptiveShortlistMax: 12
     minDistinctSourcesPerAttraction: 2
     minAttractionsAfterConfidenceFilter: 6
     promptBlobRefreshDays: 30
+    durationMetadataRefreshDays: 60
+    # Short negative-cache TTL: a duration-metadata row with no Wikipedia
+    # description (fetch failed/outage/no article) refreshes this often
+    # instead of waiting the full durationMetadataRefreshDays, so a transient
+    # provider outage isn't cached as "no data" for 60 days.
+    durationMetadataNegativeRefreshDays: 1
+  itineraryPlan:
+    routeCacheTtlDays: 60
+    dayCacheTtlDays: 30
+    shadowSamplePercent: 5
+    # Selective p2 model escalation is disabled until production metrics prove
+    # that the trigger cases correlate with measurable quality loss.
+    escalationEnabled: 0
+    escalationMinDays: 10
+    escalationMinDestinations: 3
+    escalationMinCoveragePercent: 0.5
+    # 1 = gpt-4o; keep this numeric because cache settings are validated as numbers.
+    escalationModel: 1
+    chunkingEnabled: 1
+    chunkingMinDays: 8
+    chunkSizeDays: 3
+    # itinerary-improvements-coding-plan.md Phase 4A: mechanical p3 checks (meal codes,
+    # item caps, verified closures, recovery-day rules) run first; only call the LLM p3
+    # validator when those checks actually changed something. Default on — this is a
+    # required cost-saving behavior, not an opt-in experiment.
+    skipValidatorWhenClean: 1
+    # itinerary-improvements-coding-plan.md Phase 4B: deterministic must-see/pod-proximity fill
+    # for thin days (fewer than ~2 items). Zero token cost; default on.
+    dayFillEnabled: 1
+    # Single, batched targeted-repair call (at most one per generation), only invoked when
+    # deterministic fill above could not raise every thin day to the minimum. Default on —
+    # full test coverage exists for the cap/fallback behavior (dayFillService.test.ts,
+    # dayFillRepairIntegration.test.ts), so this branch's shipped state is the baseline
+    # rather than waiting on separate production metrics.
+    dayFillRepairEnabled: 1
+    # Phase 2B: augment LOGISTICS_FACTS with per-destination climatology/daylight
+    # facts from destinationLogisticsService.buildDestinationLogistics. Only runs
+    # when the (already fetched) attraction shortlist has coordinates, so it never
+    # adds extra network calls when the shortlist block is empty/mocked.
+    logisticsClimatologyEnabled: 1
   locations:
     csvCacheTtlMinutes: 60
     refreshCooldownSeconds: 15
@@ -166,6 +355,27 @@ caching:
     signedUrlTtlMs: 3600000
   googlePlaces:
     detailsCacheTimeoutMinutes: 1440
+  googleStaticMaps:
+    cacheTtlMinutes: 1440
+  # Phase 0 guardrails for the optional GetYourGuide integration. No Partner
+  # API calls are enabled until the verified partner quota/terms are recorded.
+  # The API TTL values are reserved configuration only; do not persist GYG
+  # content until written partner permission is recorded.
+  getYourGuide:
+    redirectTokenTtlMinutes: 10
+    freshTtlMinutes: 15
+    staleTtlHours: 24
+    maxAffiliateLinksPerItinerary: 4
+    maxAffiliateCandidatesPerDay: 2
+    descriptorConcurrency: 2
+    maxPartnerApiLookupsPerGeneration: 0
+    maxPartnerApiLookupsPerDay: 0
+    apiTimeoutMs: 4000
+    apiMaxRetries: 1
+    circuitFailureThreshold: 3
+    circuitOpenSeconds: 30
+    redirectPerMinutePerIp: 60
+    redirectPerDayPerAccount: 300
   unsplash:
     dnsLogTtlMs: 300000
   frankfurter:

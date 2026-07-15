@@ -90,7 +90,30 @@ Rules:
 const emptyResult = (config: ExtractionConfig, strategyName: string): ExtractionResult => ({
   parsedItems: [],
   usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'llm', modelName: null, estimatedCostUsd: 0 },
-  metadata: { logicVersion: config.logicVersion, extractedAt: new Date().toISOString(), strategyName },
+  metadata: { logicVersion: config.logicVersion, extractedAt: new Date().toISOString(), strategyName, status: 'skipped' },
+});
+
+const skippedResult = (
+  config: ExtractionConfig,
+  strategyName: string,
+  skipReason: string,
+  usageMetrics?: Partial<ExtractionResult['usageMetrics']>
+): ExtractionResult => ({
+  parsedItems: [],
+  usageMetrics: {
+    tokensIn: usageMetrics?.tokensIn ?? 0,
+    tokensOut: usageMetrics?.tokensOut ?? 0,
+    provider: usageMetrics?.provider ?? 'llm',
+    modelName: usageMetrics?.modelName ?? null,
+    estimatedCostUsd: usageMetrics?.estimatedCostUsd ?? 0,
+  },
+  metadata: {
+    logicVersion: config.logicVersion,
+    extractedAt: new Date().toISOString(),
+    strategyName,
+    status: 'skipped',
+    skipReason,
+  },
 });
 
 const getMonthWindowKey = (): string => {
@@ -113,7 +136,7 @@ export class LlmExtractor implements ExtractionStrategy {
   }
 
   async extract(doc: NormalizedDocument, config: ExtractionConfig): Promise<ExtractionResult> {
-    if (!this.canRun(config)) return emptyResult(config, this.strategyName);
+    if (!this.canRun(config)) return skippedResult(config, this.strategyName, 'disabled-by-config');
 
     const inputText = doc.normalizedText.slice(0, INGESTION_LLM_MAX_INPUT_CHARS);
 
@@ -125,16 +148,19 @@ export class LlmExtractor implements ExtractionStrategy {
 
     try {
       const activeConfig = await getActiveAiProvider(INGESTION_LLM_FEATURE_KEY);
-      const apiKey = getConfiguredProviderApiKey(activeConfig.provider);
+      const providerOverride = config.aiProvider?.provider;
+      const modelOverride = config.aiProvider?.model;
+      const selectedProvider = providerOverride || activeConfig.provider;
+      const apiKey = getConfiguredProviderApiKey(selectedProvider);
       if (!apiKey) {
         logInfo(
-          `[ingestion][llm] No ${getProviderApiKeyEnvVar(activeConfig.provider)} configured for provider=${activeConfig.provider}, skipping LLM extraction`
+          `[ingestion][llm] No ${getProviderApiKeyEnvVar(selectedProvider)} configured for provider=${selectedProvider}, skipping LLM extraction`
         );
-        return emptyResult(config, this.strategyName);
+        return skippedResult(config, this.strategyName, 'missing-api-key');
       }
-      const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER);
+      const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER, providerOverride);
       providerId = provider.id;
-      modelName = activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
+      modelName = modelOverride || activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
       const ctx = createAiCallContext({
         correlationId: config.correlationId,
         jobId: config.importJobId,
@@ -174,10 +200,18 @@ export class LlmExtractor implements ExtractionStrategy {
       completionTokens = response?.usage?.completion_tokens ?? 0;
     } catch (err: any) {
       logError(`[ingestion][llm] provider call failed: ${err.message ?? err}`);
-      return emptyResult(config, this.strategyName);
+      return skippedResult(config, this.strategyName, 'provider-call-failed', { provider: providerId, modelName });
     }
 
-    if (!responseText) return emptyResult(config, this.strategyName);
+    if (!responseText) {
+      return skippedResult(config, this.strategyName, 'empty-provider-response', {
+        tokensIn: promptTokens,
+        tokensOut: completionTokens,
+        provider: providerId,
+        modelName,
+        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+      });
+    }
     if (getEnvFlag('INGESTION_DEBUG_LLM')) {
       logInfo(`[ingestion][debug][llm] raw response source=${detectSource(doc) ?? 'unknown'} itemType=${detectItemType(doc.normalizedText)} payload=${JSON.stringify(debugSnippet(responseText))}`);
     }
@@ -193,11 +227,25 @@ export class LlmExtractor implements ExtractionStrategy {
       }
     } catch {
       logError(`[ingestion][llm] Failed to parse LLM JSON response`);
-      return emptyResult(config, this.strategyName);
+      return skippedResult(config, this.strategyName, 'invalid-json-response', {
+        tokensIn: promptTokens,
+        tokensOut: completionTokens,
+        provider: providerId,
+        modelName,
+        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+      });
     }
 
     const llmItems: any[] = Array.isArray(parsed.items) ? parsed.items : [parsed];
-    if (!llmItems.length) return emptyResult(config, this.strategyName);
+    if (!llmItems.length) {
+      return skippedResult(config, this.strategyName, 'empty-items-array', {
+        tokensIn: promptTokens,
+        tokensOut: completionTokens,
+        provider: providerId,
+        modelName,
+        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+      });
+    }
 
     const itemType = (parsed.itemType ?? detectItemType(doc.normalizedText)) as ParsedItemType;
 
@@ -296,6 +344,7 @@ export class LlmExtractor implements ExtractionStrategy {
         logicVersion: config.logicVersion,
         extractedAt: new Date().toISOString(),
         strategyName: this.strategyName,
+        status: 'ok',
       },
     };
   }

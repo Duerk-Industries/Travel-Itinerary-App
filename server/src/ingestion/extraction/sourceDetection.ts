@@ -27,6 +27,7 @@ const SOURCE_SIGNATURES: SourceSignature[] = [
   { sourceKey: 'guruwalk', patterns: [/\bguruwalk\b/i] },
   { sourceKey: 'klook', patterns: [/\bklook\b/i] },
   { sourceKey: 'fareharbor', patterns: [/\bfareharbor\b/i] },
+  { sourceKey: 'uber', patterns: [/\buber receipts\b/i, /noreply@uber\.com/i, /\bthanks for riding\b/i] },
   { sourceKey: 'expedia', patterns: [/expedia\.com/i, /itinerary\s*#/i] },
   { sourceKey: 'hotels.com', patterns: [/hotels\.com/i] },
   { sourceKey: 'airbnb', patterns: [/airbnb\.com/i, /your reservation is confirmed/i] },
@@ -40,6 +41,7 @@ const SOURCE_SIGNATURES: SourceSignature[] = [
   { sourceKey: 'austrian_airlines', patterns: [/austrian airlines|operated by:\s*austrian|austrian air/i] },
   { sourceKey: 'american_airlines', patterns: [/aa\.com/i, /american airlines/i] },
   { sourceKey: 'southwest', patterns: [/southwest\.com/i, /southwest airlines/i] },
+  { sourceKey: 'reserve_with_google', patterns: [/reserve with google/i, /reserve-noreply@google\.com/i] },
 ];
 
 /**
@@ -101,7 +103,7 @@ export const detectItemType = (text: string): string => {
     && /\b(airport|airline|flight|terminal|gate|operated by|record locator)\b/.test(lower);
   const hasRailSignal = /\b(train|rail|high speed rail|rail ticket|station\b|thsr|hsr\b)\b/.test(lower);
   const hasPrivateTransferSignal =
-    /\b(one-way transfer|private transfer|pickup details|pick-up and drop-off|drop-off|pickup location|pickup at|driver(?:'s)? info|vehicle\b)\b/.test(lower);
+    /\b(one-way transfer|private transfer|pickup details|pick-up and drop-off|drop-off|pickup location|pickup at|driver(?:'s)? info|vehicle\b|thanks for riding|uberx)\b/.test(lower);
   const hasCarRentalSignal =
     /\b(car rental with driver|charter time|5-seater car|vehicle assigned|car rental|rental agreement|customized itinerary|driver customized itinerary)\b/.test(lower);
   const hasActivitySignal =
@@ -115,6 +117,7 @@ export const detectItemType = (text: string): string => {
     if (hasPrivateTransferSignal) return 'ferry_bus_transfer';
     if (hasActivitySignal) return 'tour_activity';
   }
+  if (/\buber receipts\b|\bthanks for riding\b|noreply@uber\.com/i.test(lower)) return 'ferry_bus_transfer';
   if (/\bgetyourguide\b/.test(lower)) {
     if (/\b(one-way transfer|pickup location|pickup at)\b/.test(lower)) return 'ferry_bus_transfer';
   }
@@ -132,6 +135,7 @@ export const detectItemType = (text: string): string => {
   }
   if (hasRailSignal) return 'rail';
   if (/\brestaurant\b/.test(lower)) return 'restaurant_reservation';
+  if (/\breserve with google\b/.test(lower)) return 'restaurant_reservation';
   if (hasEventTicketSignal) return 'event_ticket';
   if (hasActivitySignal) return 'tour_activity';
   if (/\bticket\b/.test(lower) && /\b(hot spring|museum|tour|activity|reservation)\b/.test(lower)) return 'tour_activity';

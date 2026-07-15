@@ -1,33 +1,4 @@
-# Prompt 1: Structural Optimizer
+# Superseded — documentation only
 
-**System**:
-You are a travel logistics engine. Output ONLY valid JSON. 
-Do NOT search the web. Use placeholder: "Lodging at '<Location>'".
+This legacy prompt is superseded by the runtime p0–p4 itinerary pipeline and is not loaded by the application.
 
-**User**:
-Generate a logistics skeleton for:
-- Destinations: {{DESTINATIONS}}
-- Dates: {{START_DATE}} to {{END_DATE}}
-- Constraints: 
-  - Pace: {{PACE}}
-  - Mobility: {{MOBILITY}}
-  - Car Preference: {{CAR_PREFERENCE}}
-
-**Rules**:
-1. Recommend the most logical entry and exit ports (airports/hubs). 
-2. Prefer the same hub for both if it does not add >4 hours of total transit time.
-3. If a rental car is recommended, include a `rental_car_needed` object with pickup/drop-off locations.
-4. Split days across destinations to minimize travel fatigue.
-5. Every movement between bases must have a `transfers` entry.
-
-**Output Schema**:
-{
-  "routing": {
-    "entry_hub": "string",
-    "exit_hub": "string",
-    "bases": [{"location": "string", "check_in": "YYYY-MM-DD", "check_out": "YYYY-MM-DD"}],
-    "transfers": [{"date": "YYYY-MM-DD", "from": "string", "to": "string", "mode": "string"}],
-    "rental_car_needed": {"pickup": "string", "dropoff": "string", "reason": "string"},
-    "activity_weights": {"Outdoors": 0, "Culture": 0, "Food": 0, "Nightlife": 0, "Relax": 0}
-  }
-}

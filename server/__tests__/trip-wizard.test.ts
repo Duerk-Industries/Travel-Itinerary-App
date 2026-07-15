@@ -31,6 +31,7 @@ describe('Trip wizard flow', () => {
         name: 'Test Trip',
         description: 'A **bold** trip',
         locationIds: ['paris-abc123', 'london-def456'],
+        mustSeeAttractions: ['Eiffel Tower', 'Louvre Museum'],
         startDate: '2027-03-01',
         endDate: '2027-03-05',
         participants: [
@@ -42,6 +43,7 @@ describe('Trip wizard flow', () => {
 
     expect(create.body.trip).toBeTruthy();
     expect(create.body.trip.locationIds).toEqual(['paris-abc123', 'london-def456']);
+    expect(create.body.trip.mustSeeAttractions).toEqual(['Eiffel Tower', 'Louvre Museum']);
     expect(create.body.invites.length).toBe(1);
     expect(create.body.invites[0].email).toBe('pat-invite@example.com');
 

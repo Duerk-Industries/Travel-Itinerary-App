@@ -204,7 +204,7 @@ This mode is intended solely for debugging and test environments.
 Development:
 
 ``` text
-server/data/ai-capture/
+server/logs/ai-capture/
 ```
 
 Production:

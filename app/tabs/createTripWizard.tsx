@@ -64,8 +64,9 @@ import { LocationSelector, type LocationOption } from '../components/LocationSel
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
+import DialogShell from '../components/DialogShell';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
-
+  
 type Suggestion = {
   id: string;
   firstName?: string;
@@ -743,6 +744,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setItineraryMode(mode);
     setItineraryEnabled(true);
     setGenerateItinerary(mode === 'ai');
+    setManualDay(null);
     setWizardError('');
   };
 
@@ -1190,6 +1192,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           name: details.name.trim(),
           description: description.trim() || undefined,
           locationIds: selectedLocations.map((location) => location.id),
+          mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
           startDate: dates.mode === 'range' ? dates.startDate || undefined : undefined,
           endDate: dates.mode === 'range' ? dates.endDate || undefined : undefined,
           startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,
@@ -1285,7 +1288,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   body: JSON.stringify({
                     country: destination,
                     locations: locationNames,
-                    mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
+                    mustSeeAttractions: selectedMustSeeAttractions
+                      .filter((item) => item.name)
+                      .map((item) =>
+                        item.destinationName ? { name: item.name, destinationName: item.destinationName } : item.name
+                      ),
                     days,
                     budgetMin: budgetRange.min,
                     budgetMax: budgetRange.max,
@@ -1899,31 +1906,43 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     );
                   })}
                 </View>
-                {manualDay ? (
-                  <View style={styles.card}>
-                    <Text style={styles.headerText}>Add item to {formatManualDayLabel(manualDay)}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Time (optional)"
-                      accessibilityLabel="Time"
-                      value={manualDraft.time}
-                      onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, time: text }))}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Activity description"
-                      accessibilityLabel="Activity description"
-                      value={manualDraft.activity}
-                      onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, activity: text }))}
-                    />
-                    <TouchableOpacity style={styles.button} onPress={() => addManualItem(manualDay)}>
-                      <Text style={styles.buttonText}>Add Itinerary Item</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <Text style={styles.helperText}>Select a day to add manual items.</Text>
-                )}
               </ScrollView>
+            ) : null}
+            {itineraryMode === 'manual' && manualDay ? (
+              <DialogShell
+                visible={manualDay !== null}
+                title={`Add item to ${formatManualDayLabel(manualDay)}`}
+                styles={styles}
+                onClose={() => setManualDay(null)}
+                useNativeModal
+                testID="manual-itinerary-item-dialog"
+              >
+                <TextInput
+                  style={styles.input}
+                  placeholder="Time (optional)"
+                  accessibilityLabel="Time"
+                  value={manualDraft.time}
+                  onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, time: text }))}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Activity description"
+                  accessibilityLabel="Activity description"
+                  value={manualDraft.activity}
+                  onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, activity: text }))}
+                />
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => addManualItem(manualDay)}>
+                    <Text style={styles.buttonText}>Add Itinerary Item</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                    onPress={() => setManualDay(null)}
+                  >
+                    <Text style={styles.dangerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </DialogShell>
             ) : null}
             {!itineraryMode ? (
               <Text style={styles.helperText}>You can always build an itinerary later.</Text>

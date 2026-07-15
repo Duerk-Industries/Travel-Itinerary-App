@@ -7,6 +7,7 @@ import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import GetYourGuideCta from '../components/GetYourGuideCta';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -234,6 +235,7 @@ type TourTabProps = {
   mode?: 'live' | 'wizard';
   readOnly?: boolean;
   defaultActivityDate?: string | null;
+  destination?: string | null;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -257,6 +259,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   mode = 'live',
   readOnly = false,
   defaultActivityDate = null,
+  destination = null,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -564,6 +567,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <TouchableOpacity onPress={() => setSelectedTourId(t.id)} testID={`activity-details-${t.id}`}>
                   <Text style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
                 </TouchableOpacity>
+                {mode !== 'wizard' ? (
+                  <GetYourGuideCta
+                    backendUrl={backendUrl}
+                    headers={jsonHeaders}
+                    activity={t}
+                    destination={destination}
+                  />
+                ) : null}
               </View>
               <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.startTime || '-'}</Text>

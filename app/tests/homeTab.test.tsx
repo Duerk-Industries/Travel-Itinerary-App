@@ -41,6 +41,9 @@ describe('HomeTab', () => {
     homeModalRowTitle: {},
     homeModalRowMeta: {},
     homeModalActiveBadge: {},
+    homeModalRowDelete: {},
+    homeModalRowDeletePressed: {},
+    homeModalRowDeleteText: {},
     row: {},
     button: {},
     smallButton: {},
@@ -92,6 +95,52 @@ describe('HomeTab', () => {
 
     fireEvent.press(getByTestId('home-trip-row-t1'));
     await waitFor(() => expect(queryByTestId('home-trip-modal')).toBeNull());
+  });
+
+  test('delete button appears per trip row and calls onDeleteTrip without selecting the trip', async () => {
+    const onDeleteTrip = jest.fn();
+    const onSelectTrip = jest.fn();
+    const { getByTestId } = render(
+      <HomeTab
+        backendUrl="http://localhost"
+        headers={{}}
+        activeTripId="t2"
+        trips={trips}
+        followedTrips={followedTrips}
+        styles={styles}
+        onSelectTrip={onSelectTrip}
+        onSelectFollowedTrip={jest.fn()}
+        onNavigate={jest.fn()}
+        onFollowTrip={jest.fn(async () => null)}
+        onDeleteTrip={onDeleteTrip}
+      />
+    );
+
+    fireEvent.press(getByTestId('home-hero-card'));
+    fireEvent.press(getByTestId('home-trip-row-delete-t1'));
+
+    expect(onDeleteTrip).toHaveBeenCalledWith({ id: 't1', name: 'Alpha Trip' });
+    expect(onSelectTrip).not.toHaveBeenCalled();
+  });
+
+  test('omits delete button when onDeleteTrip is not provided', async () => {
+    const { getByTestId, queryByTestId } = render(
+      <HomeTab
+        backendUrl="http://localhost"
+        headers={{}}
+        activeTripId="t2"
+        trips={trips}
+        followedTrips={followedTrips}
+        styles={styles}
+        onSelectTrip={jest.fn()}
+        onSelectFollowedTrip={jest.fn()}
+        onNavigate={jest.fn()}
+        onFollowTrip={jest.fn(async () => null)}
+      />
+    );
+
+    fireEvent.press(getByTestId('home-hero-card'));
+    expect(queryByTestId('home-trip-row-delete-t1')).toBeNull();
   });
 
   test('orders trips with active first, then no start date, then by start date', async () => {

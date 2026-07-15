@@ -1,8 +1,11 @@
 import { randomUUID } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import {
   addItineraryDetail,
   createItineraryRecord,
   ensureUserInTrip,
+  getTripById,
   getWebUserProfile,
   insertActivity,
   insertCarRental,
@@ -14,17 +17,31 @@ import {
   upsertExpenseForSource,
 } from '../db';
 import { logError, logInfo } from '../logger';
+import { getEnvFlag, isLocalEnv } from '../env';
 import { incrementMetric, recordTiming } from '../metrics';
 import { failGenerationUsage, finalizeGenerationUsage } from './entitlementService';
 import {
   generateItineraryViaPromptPlan,
   type ItineraryGeneratedItems,
   type ItineraryGeneratedTransfer,
+  type ItineraryGenerationStageId,
+  type ItineraryPromptPlanResult,
+  type MustSeeAttractionInput,
 } from './itineraryPromptPlanService';
+import { computeUnmatchedDestinationAndAttractionWarnings } from './attractionMatchWarnings';
+import { scheduleGetYourGuideDescriptorEnrichment } from './getYourGuideItineraryEnrichmentService';
+import { renderSimplifiedItineraryMarkdown } from './itineraryMarkdownRenderer';
+import { tripNameToFileSlug } from '../utils/tripNameSlug';
 import type { ActivityType } from '../types';
 
 type AsyncStatus = 'queued' | 'running' | 'completed' | 'failed';
 type TransferWithPassengers = ItineraryGeneratedTransfer & { passengerIds?: string[] };
+
+// The prompt-pipeline stages reported by itineraryPromptPlanService, plus a
+// final 'saving' stage covering the DB writes that happen after generation
+// (see persistResult below) — that part of the job has no LLM stage but is
+// still a real, sometimes-slow chunk of wall-clock time worth surfacing.
+export type AsyncItineraryStageId = ItineraryGenerationStageId | 'saving';
 
 export type AsyncItineraryJob = {
   id: string;
@@ -35,6 +52,12 @@ export type AsyncItineraryJob = {
   createdAt: string;
   updatedAt: string;
   error?: string;
+  stage?: AsyncItineraryStageId;
+  stageLabel?: string;
+  stageDetail?: string;
+  /** Rough remaining-time estimate in seconds; null once terminal. Refined
+   * over time via ETA_CALIBRATION below as real job durations are observed. */
+  etaSeconds?: number | null;
   result?: {
     itineraryId: string;
     detailsCount: number;
@@ -45,6 +68,88 @@ export type AsyncItineraryJob = {
   };
 };
 
+type StageMeta = { label: string; detail: string; weight: number };
+
+// Ordered to match actual pipeline execution; weight is each stage's rough
+// share of total generation time (sums to 1), used to derive an ETA. Based on
+// each LLM stage's maxTokens budget in itineraryPromptPlanService.ts (norm 700,
+// route 1200, days ~1100-3500 scaling with trip length, validate 1400, render
+// 900) plus a slice for the DB persistence work after generation finishes.
+const STAGE_ORDER: AsyncItineraryStageId[] = ['norm', 'route', 'days', 'validate', 'render', 'saving'];
+const STAGE_META: Record<AsyncItineraryStageId, StageMeta> = {
+  norm: {
+    label: 'Phase 1 of 6: Reading your trip preferences',
+    detail: 'Interpreting pace, comfort, budget, and traveler interests to set the plan.',
+    weight: 0.08,
+  },
+  route: {
+    label: 'Phase 2 of 6: Mapping your route',
+    detail: 'Sequencing destinations and the travel legs between them.',
+    weight: 0.12,
+  },
+  days: {
+    label: 'Phase 3 of 6: Building day-by-day activities',
+    detail: 'Choosing attractions, tours, and pacing for each day of the trip.',
+    weight: 0.4,
+  },
+  validate: {
+    label: 'Phase 4 of 6: Validating the itinerary',
+    detail: 'Checking dates, transfers, and activity details for consistency.',
+    weight: 0.15,
+  },
+  render: {
+    label: 'Phase 5 of 6: Finalizing your itinerary',
+    detail: 'Polishing activity order and writing the day-by-day summary.',
+    weight: 0.15,
+  },
+  saving: {
+    label: 'Phase 6 of 6: Saving to your trip',
+    detail: 'Adding the generated flights, lodging, and activities to your trip.',
+    weight: 0.1,
+  },
+};
+
+const cumulativeWeightBeforeStage = (stage: AsyncItineraryStageId): number => {
+  let sum = 0;
+  for (const id of STAGE_ORDER) {
+    if (id === stage) break;
+    sum += STAGE_META[id].weight;
+  }
+  return sum;
+};
+
+// Self-calibrating multiplier applied to the heuristic duration estimate
+// below, nudged toward the ratio of actual/predicted duration after every
+// completed job. Starts at 1 (trust the heuristic) and is clamped so a single
+// outlier job (e.g. a cold cache or a slow provider blip) can't wildly skew
+// future ETAs. Resets on server restart — good enough for "roughly how long
+// is this taking today" rather than a precise historical model.
+let etaCalibration = 1;
+const ETA_CALIBRATION_MIN = 0.4;
+const ETA_CALIBRATION_MAX = 3;
+
+// No historical per-trip-length duration data is tracked, so this is a
+// straightforward heuristic (base cost plus a per-day cost for the days
+// stage, which scales with trip length) rather than a learned estimate.
+const estimateBaseTotalDurationMs = (days: number): number => {
+  const safeDays = Number.isFinite(days) && days > 0 ? days : 1;
+  return Math.min(150000, Math.max(15000, 15000 + safeDays * 2500));
+};
+
+const updateJobStage = (jobId: string, stage: AsyncItineraryStageId, days: number): void => {
+  const job = jobs.get(jobId);
+  if (!job) return;
+  const meta = STAGE_META[stage];
+  const predictedTotalMs = estimateBaseTotalDurationMs(days) * etaCalibration;
+  const remainingFraction = Math.max(0, 1 - cumulativeWeightBeforeStage(stage));
+  job.stage = stage;
+  job.stageLabel = meta.label;
+  job.stageDetail = meta.detail;
+  job.etaSeconds = Math.max(2, Math.round((predictedTotalMs * remainingFraction) / 1000));
+  job.updatedAt = nowIso();
+  jobs.set(jobId, job);
+};
+
 type QueueInput = {
   apiKey?: string;
   userId: string;
@@ -52,11 +157,14 @@ type QueueInput = {
   itineraryId?: string;
   destinationSummary: string;
   locations: string[];
-  mustSeeAttractions?: string[];
+  mustSeeAttractions?: MustSeeAttractionInput[];
   days: number;
   budgetMin: number;
   budgetMax: number;
   departureAirport?: string;
+  homeAirport?: string;
+  homeRegion?: string;
+  returnAirport?: string;
   tripStyle?: string;
   tt?: unknown;
   ut?: unknown;
@@ -370,7 +478,13 @@ const persistResult = async (params: {
   userId: string;
   tripId: string;
   itineraryId: string;
-  details: Array<{ day: number; activity: string; cost: number | null }>;
+  details: Array<{
+    day: number;
+    activity: string;
+    cost: number | null;
+    kind?: 'activity' | 'place' | 'note' | 'checklist';
+    noteBody?: string | null;
+  }>;
   generatedItems: ItineraryGeneratedItems;
   currentUserPreferredAirport?: string | null;
 }): Promise<{
@@ -396,6 +510,8 @@ const persistResult = async (params: {
       time: null,
       activity: safeString(detail.activity),
       cost: detail.cost ?? null,
+      kind: detail.kind ?? 'activity',
+      noteBody: detail.noteBody ?? null,
     });
     detailKeys.add(key);
     detailsCount += 1;
@@ -519,15 +635,16 @@ const persistResult = async (params: {
   let lodgingsCount = 0;
   for (const lodging of lodgings) {
     const checkInDate = safeString(lodging.checkInDate) || today;
+    const checkOutDate = safeString(lodging.checkOutDate) || addDays(checkInDate, 1);
     const totalCost = Number(safeString(lodging.totalCost)) || 0;
-    const nights = Math.max(1, Math.round((new Date(addDays(checkInDate, 1)).getTime() - new Date(checkInDate).getTime()) / 86400000));
+    const nights = Math.max(1, Math.round((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / 86400000));
     const saved = await insertLodging({
       userId: params.userId,
       tripId: params.tripId,
       status: 'Needed',
       name: safeString(lodging.name) || 'Suggested lodging',
       checkInDate,
-      checkOutDate: safeString(lodging.checkOutDate) || addDays(checkInDate, 1),
+      checkOutDate,
       rooms: Number(safeString(lodging.rooms)) || 1,
       refundBy: null,
       totalCost,
@@ -634,12 +751,61 @@ const persistResult = async (params: {
   return { detailsCount, transfersCount, lodgingsCount, activitiesCount, carRentalsCount };
 };
 
+// When ENABLE_RAW_AI_CAPTURE is on in a local/dev environment, writes the
+// same three artifacts the CLI replay script produces (server/scripts/
+// replay-itinerary-generation.ts) — an input-capture JSON named after the
+// trip, the raw result JSON, and a simplified day-by-day markdown — so a
+// trip generated from the running web app can be inspected/replayed the
+// same way as a CLI run, without a manual gunzip-and-feed-to-the-CLI step.
+// Best-effort only: any failure here must never affect the real generation
+// or persistence flow.
+const writeLocalGenerationArtifacts = async (
+  jobId: string,
+  input: QueueInput,
+  generationInput: Record<string, unknown>,
+  result: ItineraryPromptPlanResult
+): Promise<void> => {
+  const trip = await getTripById(input.tripId).catch(() => null);
+  const tripName = trip?.name || input.destinationSummary || 'trip';
+
+  const inputSnapshot = {
+    tripName,
+    destinations: generationInput.destinations,
+    mustSeeAttractions: generationInput.mustSeeAttractions,
+    days: generationInput.days,
+    budgetMin: generationInput.budgetMin,
+    budgetMax: generationInput.budgetMax,
+    departureAirport: generationInput.departureAirport,
+    homeAirport: generationInput.homeAirport,
+    homeRegion: generationInput.homeRegion,
+    returnAirport: generationInput.returnAirport,
+    tripStyle: generationInput.tripStyle,
+    promptTraits: generationInput.promptTraits,
+    tripStartDate: generationInput.tripStartDate,
+    tripEndDate: generationInput.tripEndDate,
+  };
+
+  const warnings = await computeUnmatchedDestinationAndAttractionWarnings(inputSnapshot);
+  for (const warning of warnings) {
+    logError(`[itinerary] ${warning}`);
+  }
+
+  const outputDir = path.resolve(__dirname, '../../logs/ai-replay/live', jobId);
+  fs.mkdirSync(outputDir, { recursive: true });
+  const slug = tripNameToFileSlug(tripName);
+  fs.writeFileSync(path.join(outputDir, `${slug}-input.json`), JSON.stringify(inputSnapshot, null, 2));
+  fs.writeFileSync(path.join(outputDir, 'output.json'), JSON.stringify(result, null, 2));
+  fs.writeFileSync(path.join(outputDir, 'output.md'), renderSimplifiedItineraryMarkdown(result, tripName));
+  logInfo(`[itinerary] wrote local generation artifacts to ${outputDir}`);
+};
+
 const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
   const job = jobs.get(jobId);
   if (!job) return;
   job.status = 'running';
   job.updatedAt = nowIso();
   jobs.set(jobId, job);
+  updateJobStage(jobId, 'norm', input.days);
 
   const jobStart = Date.now();
   try {
@@ -649,17 +815,31 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       fallbackAirport = safeString((profile as any)?.preferredAirport);
     }
 
-    const result = await generateItineraryViaPromptPlan({
+    const generationInput = {
       apiKey: input.apiKey,
       userId: input.userId,
       destinations: input.locations.length ? input.locations : [input.destinationSummary],
       mustSeeAttractions: Array.isArray(input.mustSeeAttractions)
-        ? input.mustSeeAttractions.map((item) => safeString(item)).filter(Boolean)
+        ? (input.mustSeeAttractions
+            .map((item) => {
+              if (item && typeof item === 'object') {
+                const name = safeString((item as any).name);
+                if (!name) return null;
+                const destinationName = safeString((item as any).destinationName ?? '');
+                return destinationName ? { name, destinationName } : { name };
+              }
+              const name = safeString(item);
+              return name || null;
+            })
+            .filter(Boolean) as MustSeeAttractionInput[])
         : [],
       days: input.days,
       budgetMin: input.budgetMin,
       budgetMax: input.budgetMax,
       departureAirport: fallbackAirport || undefined,
+      homeAirport: input.homeAirport || fallbackAirport || undefined,
+      homeRegion: input.homeRegion || undefined,
+      returnAirport: input.returnAirport || input.homeAirport || fallbackAirport || undefined,
       tripStyle: input.tripStyle ? String(input.tripStyle).trim() : undefined,
       promptTraits: {
         tt: input.tt && typeof input.tt === 'object' ? (input.tt as any) : undefined,
@@ -673,7 +853,15 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripIdSeed: input.tripId,
       captureId: jobId,
       usageWindowKey: input.usageWindowKey,
-    });
+      onStageChange: (stage: ItineraryGenerationStageId) => updateJobStage(jobId, stage, input.days),
+    };
+    const result = await generateItineraryViaPromptPlan(generationInput);
+
+    if (getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false }) && isLocalEnv()) {
+      await writeLocalGenerationArtifacts(jobId, input, generationInput, result).catch((err) =>
+        logError('[itinerary] failed to write local generation artifacts', err)
+      );
+    }
 
     const itineraryId = await ensureItineraryId({
       userId: input.userId,
@@ -683,6 +871,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       days: input.days,
       budget: input.budgetMax,
     });
+    updateJobStage(jobId, 'saving', input.days);
     const persisted = await persistResult({
       userId: input.userId,
       tripId: input.tripId,
@@ -691,11 +880,26 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       generatedItems: result.generatedItems,
       currentUserPreferredAirport: fallbackAirport || null,
     });
+    // Keep optional affiliate work off the generation critical path. The
+    // persisted itinerary is complete even if this best-effort task fails.
+    scheduleGetYourGuideDescriptorEnrichment(result.getYourGuideCandidates ?? []);
 
     job.status = 'completed';
     job.updatedAt = nowIso();
+    job.etaSeconds = 0;
     job.result = { itineraryId, ...persisted };
     jobs.set(jobId, job);
+    // Nudge the ETA heuristic toward how long this job actually took, so later
+    // jobs' remaining-time estimates track real server/provider performance
+    // instead of staying pinned to the static initial guess.
+    const predictedTotalMs = estimateBaseTotalDurationMs(input.days);
+    if (predictedTotalMs > 0) {
+      const actualRatio = (Date.now() - jobStart) / predictedTotalMs;
+      etaCalibration = Math.min(
+        ETA_CALIBRATION_MAX,
+        Math.max(ETA_CALIBRATION_MIN, etaCalibration * 0.8 + actualRatio * 0.2)
+      );
+    }
     if (input.idempotencyKey && input.usageWindowKey) {
       await finalizeGenerationUsage({
         userId: input.userId,
@@ -719,6 +923,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     const message = err instanceof Error ? err.message : String(err);
     job.status = 'failed';
     job.error = message;
+    job.etaSeconds = null;
     job.updatedAt = nowIso();
     jobs.set(jobId, job);
     if (input.idempotencyKey) {
@@ -793,4 +998,5 @@ export const __testing = {
   pruneStaleJobs,
   JOB_RETENTION_LIMIT,
   JOB_RETENTION_TTL_MS,
+  writeLocalGenerationArtifacts,
 };

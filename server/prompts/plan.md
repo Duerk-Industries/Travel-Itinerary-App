@@ -98,11 +98,10 @@ Short code mapping:
 
 ## Files produced
 - `plan.md` (this document)
-- `prompts/p0_norm.json`
-- `prompts/p1_route.json`
-- `prompts/p2_days.json`
-- `prompts/p3_validate.json`
-- `prompts/p4_render_md.json`
+- `prompts/p0_norm.md`, `prompts/p1_route.md`, `prompts/p2_days.md`, `prompts/p3_validate.md`,
+  `prompts/p4_render_md.md` — the live prompt templates, loaded at runtime by
+  `itineraryInstructionService.ts`. (The `.json` siblings these once had were an unused, stale duplicate
+  of this same content and have been deleted.)
 - `traits/trip_traits_min.json`
 - `traits/user_traits_min.json`
 - `schemas/*_schema_min.json`

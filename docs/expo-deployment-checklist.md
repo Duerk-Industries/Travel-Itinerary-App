@@ -60,6 +60,12 @@ npx --yes eas-cli@20.2.0 secret:create --scope project --name EXPO_PUBLIC_RECAPT
 
 ### Optional — Google Maps / Places (if map features are enabled in the build)
 
+Static map previews are served through the authenticated backend proxy so
+Google quota and spend are enforced by the shared API limiter. Configure the
+backend secret `GOOGLE_STATIC_MAPS_API_KEY` (or `GOOGLE_MAPS_API_KEY`) on
+Cloud Run; an Expo-public key is only needed for any remaining native map SDK
+integration.
+
 ```bash
 npx --yes eas-cli@20.2.0 secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY   --value <key>
 npx --yes eas-cli@20.2.0 secret:create --scope project --name EXPO_PUBLIC_GOOGLE_PLACES_API_KEY --value <key>

@@ -1,8 +1,17 @@
 /// <reference types="jest" />
 /// <reference types="node" />
 import axios from 'axios';
-import { generateItineraryViaPromptPlan } from '../src/services/itineraryPromptPlanService';
+import { generateItineraryViaPromptPlan, buildDestinationClimatologyBlock, buildHomeTerminalLogisticsNote } from '../src/services/itineraryPromptPlanService';
+import { clearClimatologyCacheForTests } from '../src/services/climatologyDaylightService';
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
+import { initDb } from '../src/db';
+import { seedEntitlementDefaults } from '../src/services/entitlementService';
+import { estimateOpenAiCostMicros } from '../src/apis/providerBudgeting';
+import {
+  OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE,
+  OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS,
+  runItineraryPromptStageViaOpenAi,
+} from '../src/apis/openaiCallers';
 
 jest.mock('axios');
 jest.mock('../src/apis/openaiCallers', () => {
@@ -43,15 +52,55 @@ jest.mock('../src/services/aiProviderConfigService', () => ({
   })),
   clearAiProviderConfigCache: jest.fn(),
 }));
-jest.mock('../src/services/attractionsCatalogService', () => ({
-  getAttractionPromptBlockForDestinations: jest.fn(async () => ({ shortlistByDestination: {}, promptBlock: 'none' })),
-}));
+jest.mock('../src/services/attractionsCatalogService', () => {
+  const actual = jest.requireActual('../src/services/attractionsCatalogService');
+  return {
+    ...actual,
+    getAttractionPromptBlockForDestinations: jest.fn(async () => ({ shortlistByDestination: {}, promptBlock: 'none' })),
+  };
+});
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedPromptStage = runItineraryPromptStageViaOpenAi as jest.Mock;
 const mockedAttractionsCatalogService = attractionsCatalogService as jest.Mocked<typeof attractionsCatalogService>;
 
 describe('itinerary prompt plan service', () => {
+  test('includes a coarse home-terminal open-jaw hint without an address', () => {
+    const note = buildHomeTerminalLogisticsNote(
+      {
+        eh: 'JFK', xh: 'LHR',
+        b: [
+          { l: 'Paris', ci: '2026-07-01', co: '2026-07-03', dn: [] },
+          { l: 'London', ci: '2026-07-03', co: '2026-07-05', dn: [] },
+        ],
+        x: [], rc: null, w: {} as any, a: [],
+      },
+      {
+        Paris: [{ id: 'paris-1', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Louvre', rank: 1, activityType: 'Ticketed Attraction', interestTags: ['culture'], lat: 48.8566, lon: 2.3522, updatedAt: '2026-01-01' } as any],
+        London: [{ id: 'london-1', destinationKey: 'london', destinationDisplayName: 'London', name: 'British Museum', rank: 1, activityType: 'Ticketed Attraction', interestTags: ['culture'], lat: 51.5194, lon: -0.1270, updatedAt: '2026-01-01' } as any],
+      },
+      { airportCode: 'JFK', region: 'New York', coordinates: { lat: 40.6413, lon: -73.7781 } }
+    );
+    expect(note).toMatch(/Home-terminal routing/i);
+    expect(note).not.toMatch(/street|address|email/i);
+  });
+
+  beforeAll(async () => {
+    await initDb();
+    // Seeds feature_flags from server/config/feature-flags.yaml (including
+    // attractions_transfer_directions_api: false) — without this, the flag
+    // table is empty and fail-open behavior would enable the inert
+    // DirectionsApiTransferEstimator stub instead of the real heuristic.
+    await seedEntitlementDefaults();
+  });
+
   beforeEach(() => {
+    mockedPromptStage.mockClear();
     mockedAxios.post.mockReset();
+    mockedAxios.get.mockReset();
+    // Attraction duration/description lookups hit Wikipedia's summary API by
+    // default; tests that don't care about descriptions get a clean "no
+    // article" response instead of relying on an unmocked call throwing.
+    mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
     mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockReset();
     mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
       shortlistByDestination: {},
@@ -63,6 +112,7 @@ describe('itinerary prompt plan service', () => {
     mockedAxios.post
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 180, completion_tokens: 300 },
           choices: [
             {
               message: {
@@ -85,6 +135,7 @@ describe('itinerary prompt plan service', () => {
       })
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 240, completion_tokens: 400 },
           choices: [
             {
               message: {
@@ -105,6 +156,7 @@ describe('itinerary prompt plan service', () => {
       })
       .mockResolvedValueOnce({
         data: {
+          usage: { prompt_tokens: 320, completion_tokens: 500 },
           choices: [
             {
               message: {
@@ -135,40 +187,15 @@ describe('itinerary prompt plan service', () => {
           ],
         },
       })
+      // Note: no separate p3-validate mock here. The p2 output above is already
+      // mechanically clean (correct meal codes, <=5 items/day, no evening overflow,
+      // no verified closures), so with `skipValidatorWhenClean` (api-limits.yaml
+      // itineraryPlan, default on per Phase 4A) the LLM p3 validator call is skipped
+      // and the deterministic mechanical result is used directly. The next mocked
+      // call is therefore p4 (render), not p3.
       .mockResolvedValueOnce({
         data: {
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  $: 'it1',
-                  eh: 'LAX',
-                  xh: 'SFO',
-                  b: [{ l: 'California', ci: '2026-08-01', co: '2026-08-04', dn: [] }],
-                  x: [{ dt: '2026-08-01', m: 'Bus', fr: 'LAX', to: 'California' }],
-                  rc: { pu: 'LAX', do: 'SFO', r: 'Road segment' },
-                  dy: [
-                    {
-                      d: 1,
-                      dt: '2026-08-02',
-                      b: 'California',
-                      it: [['M', 'A', 'Major landmark entry'], ['D', 'R', 'Timed gallery slot']],
-                      me: ['BQ', 'LC', 'DL'],
-                      sl: "Lodging at 'California'",
-                      ln: [],
-                      cf: 'M',
-                    },
-                  ],
-                  a: [],
-                  cf: 'M',
-                }),
-              },
-            },
-          ],
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
+          usage: { prompt_tokens: 260, completion_tokens: 700 },
           choices: [{ message: { content: '## Rendered itinerary' } }],
         },
       });
@@ -209,7 +236,10 @@ describe('itinerary prompt plan service', () => {
     expect(result.planMarkdown).toContain('Rendered itinerary');
     expect(result.profile.pace).toBe('Relaxed');
     expect(result.profile.comfort).toBe('Luxury');
-    expect(result.profile.mobility).toBe('High');
+    // Explicit account mobility is a hard constraint and must win over both
+    // the trip's High setting and the model's attempted High output.
+    expect(result.profile.mobility).toBe('Medium');
+    expect(result.preferenceContract.mobility).toMatchObject({ value: 'M', source: 'account' });
     expect(result.profile.carPreference).toBe('FullTripRental');
     expect(result.profile.interactionStyle).toBe('Guided');
     expect(result.generatedItems.transfers[0].status).toBe('Needed');
@@ -217,8 +247,19 @@ describe('itinerary prompt plan service', () => {
     expect(result.generatedItems.activities.length).toBeGreaterThanOrEqual(2);
     expect(result.generatedItems.activities[0].status).toBe('Proposed');
     expect(result.generatedItems.activities[1].status).toBe('Proposed');
-    expect(result.generatedItems.activities[0].notes).toMatch(/what|fits this day|Things to know|concrete/i);
+    expect(result.generatedItems.activities[0].notes).toMatch(/Plan for about/i);
     expect(result.generatedItems.carRentals[0].status).toBe('Needed');
+    // plan.md operational output targets: p0 <350, p1 <450,
+    // p2 <600 per seven days, p3 <350. Rendering has no documented target,
+    // so use its configured 900-token ceiling. This fixture supplies nonzero
+    // provider usage to verify aggregation as well as the regression ceiling.
+    // p3-validate is skipped here (skipValidatorWhenClean, default on): the p2 output
+    // above is already mechanically clean, so its 300/300 prompt/completion tokens are
+    // never spent — that's the Phase 4A cost saving this test now exercises.
+    expect(result.tokenUsage).toEqual({ promptTokens: 1000, completionTokens: 1900, totalTokens: 2900 });
+    expect(result.tokenUsage.completionTokens).toBeLessThan(350 + 450 + 600 + 350 + 900);
+    const estimatedCostMicros = estimateOpenAiCostMicros({ model: 'gpt-4o-mini', ...result.tokenUsage });
+    expect(estimatedCostMicros).toBeLessThanOrEqual(2000); // $0.002 fixture ceiling
   });
 
   it('falls back to local markdown rendering when render stage returns empty content', async () => {
@@ -398,6 +439,14 @@ describe('itinerary prompt plan service', () => {
           choices: [{ message: { content: 'Still not JSON' } }],
         },
       })
+      // Every day here is thin (<2 items) after malformed p2 output, so the Phase 4B repair
+      // call (dayFillRepairEnabled defaults on) fires once before render; malformed content
+      // makes it a no-op fallback, same as the other stages in this test.
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: 'Not JSON either' } }],
+        },
+      })
       .mockResolvedValueOnce({
         data: {
           choices: [{ message: { content: '' } }],
@@ -533,6 +582,16 @@ describe('itinerary prompt plan service', () => {
               },
             },
           ],
+        },
+      })
+      // Day 2 ("City tour") is a single-item, non-arrival/departure day, so it's genuinely thin
+      // (<2 items) — unlike days 1/3, which are excluded from fill/repair as zero-activity
+      // arrival/departure days. The Phase 4B repair call (dayFillRepairEnabled defaults on) fires
+      // once for day 2 with no shortlist/pods available (default empty mock) and falls back to
+      // the deterministic itinerary, leaving "City tour" as the only activity.
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: '' } }],
         },
       })
       .mockResolvedValueOnce({
@@ -1075,5 +1134,1111 @@ describe('itinerary prompt plan service', () => {
     const itineraryActivities = result.itinerary.dy.flatMap((day) => day.it.map((item) => item[2].toLowerCase()));
     expect(itineraryActivities).toContain('eiffel tower');
     expect(itineraryActivities).toContain('louvre museum');
+  });
+
+  it('reassigns an attraction scheduled on the wrong destination day to the day matching its catalog destination', async () => {
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {
+        'New York': [
+          {
+            id: 'amnh',
+            destinationKey: 'new york',
+            destinationDisplayName: 'New York',
+            name: 'American Museum of Natural History',
+            rank: 1,
+            activityType: 'Ticketed Attraction',
+            interestTags: ['culture'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 2,
+            budgetTier: 'paid',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        Boston: [],
+      },
+      promptBlock: 'Destination: New York\n1. American Museum of Natural History',
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-04',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  relax: 10,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [
+                  { l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] },
+                  { l: 'New York', ci: '2026-09-03', co: '2026-09-05', dn: [] },
+                ],
+                x: [{ dt: '2026-09-03', m: 'Train', fr: 'Boston', to: 'New York' }],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    // Simulates the reported bug: AMNH (a New York attraction) generated on a Boston day.
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [
+        { l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] },
+        { l: 'New York', ci: '2026-09-03', co: '2026-09-05', dn: [] },
+      ],
+      x: [{ dt: '2026-09-03', m: 'Train', fr: 'Boston', to: 'New York' }],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'A', 'American Museum of Natural History']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-09-02', b: 'Boston', it: [['D', 'O', 'Freedom Trail walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 3, dt: '2026-09-03', b: 'New York', it: [['D', 'O', 'Times Square visit']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston', 'New York'],
+      days: 4,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-amnh-boston-bug',
+    });
+
+    const bostonDays = result.itinerary.dy.filter((day) => day.b === 'Boston');
+    const newYorkDays = result.itinerary.dy.filter((day) => day.b === 'New York');
+    const bostonActivities = bostonDays.flatMap((day) => day.it.map((item) => item[2].toLowerCase()));
+    const newYorkActivities = newYorkDays.flatMap((day) => day.it.map((item) => item[2].toLowerCase()));
+
+    expect(bostonActivities).not.toContain('american museum of natural history');
+    expect(newYorkActivities).toContain('american museum of natural history');
+  });
+
+  it('populates a heuristic duration and pre-order-ticket note for a matched catalog attraction', async () => {
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {
+        Boston: [
+          {
+            id: 'mfa',
+            destinationKey: 'boston',
+            destinationDisplayName: 'Boston',
+            name: 'Museum of Fine Arts',
+            rank: 1,
+            activityType: 'Ticketed Attraction',
+            interestTags: ['culture'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 2,
+            budgetTier: 'paid',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      promptBlock: 'Destination: Boston\n1. Museum of Fine Arts',
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-03',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  relax: 10,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+                x: [],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+      x: [],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-09-02', b: 'Boston', it: [['D', 'A', 'Museum of Fine Arts']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 3, dt: '2026-09-03', b: 'Boston', it: [['D', 'O', 'Local evening stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston'],
+      days: 3,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-duration-metadata',
+    });
+
+    const activity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'museum of fine arts');
+    expect(activity).toBeDefined();
+    expect(activity?.duration).not.toBe('2h');
+    expect(activity?.notes).toMatch(/pre-ordered/i);
+  });
+
+  it('uses the real cached Wikipedia description instead of generic boilerplate when one is available', async () => {
+    // Uses a name not referenced by any other test in this file, since the
+    // duration/description cache is backed by a real (shared, persistent
+    // across tests) DB in this suite, keyed by destinationKey+name.
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {
+        Boston: [
+          {
+            id: 'nea',
+            destinationKey: 'boston',
+            destinationDisplayName: 'Boston',
+            name: 'New England Aquarium',
+            rank: 1,
+            activityType: 'Ticketed Attraction',
+            interestTags: ['culture'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 2,
+            budgetTier: 'paid',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      promptBlock: 'Destination: Boston\n1. New England Aquarium',
+    });
+    mockedAxios.get.mockImplementation(async (url: string) => {
+      if (String(url).includes('New%20England%20Aquarium')) {
+        return {
+          status: 200,
+          data: { extract: 'The New England Aquarium is a public aquarium located in Boston, Massachusetts, known for its giant ocean tank.' },
+        };
+      }
+      return { status: 404, data: {} };
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-03',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  relax: 10,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+                x: [],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+      x: [],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-09-02', b: 'Boston', it: [['D', 'A', 'New England Aquarium']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 3, dt: '2026-09-03', b: 'Boston', it: [['D', 'O', 'Local evening stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston'],
+      days: 3,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-real-description',
+    });
+
+    const activity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'new england aquarium');
+    expect(activity?.notes).toMatch(/giant ocean tank/i);
+    expect(activity?.notes).not.toMatch(/it fits this day because/i);
+    expect(activity?.notes).toMatch(/plan for about/i);
+  });
+
+  it('reassigns an attraction with no catalog match to the correct day when its cached description names a different destination', async () => {
+    // No catalog entries at all — this attraction can only be caught by the
+    // description-based fallback, not the catalog-based consistency pass.
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {},
+      promptBlock: 'none',
+    });
+    mockedAxios.get.mockImplementation(async (url: string) => {
+      if (String(url).includes('Central%20Park')) {
+        return {
+          status: 200,
+          data: { extract: 'Central Park is an urban park in Manhattan, New York City.' },
+        };
+      }
+      return { status: 404, data: {} };
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-04',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  relax: 10,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [
+                  { l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] },
+                  { l: 'New York City', ci: '2026-09-03', co: '2026-09-05', dn: [] },
+                ],
+                x: [{ dt: '2026-09-03', m: 'Train', fr: 'Boston', to: 'New York City' }],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    // Central Park (a New York attraction) generated on a Boston day —
+    // reproduces the reported bug when no catalog entry exists for it.
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [
+        { l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] },
+        { l: 'New York City', ci: '2026-09-03', co: '2026-09-05', dn: [] },
+      ],
+      x: [{ dt: '2026-09-03', m: 'Train', fr: 'Boston', to: 'New York City' }],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-09-02', b: 'Boston', it: [['D', 'A', 'Central Park']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 3, dt: '2026-09-03', b: 'New York City', it: [['D', 'O', 'Times Square visit']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York City'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston', 'New York City'],
+      days: 4,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-central-park-no-catalog',
+    });
+
+    const bostonActivities = result.itinerary.dy
+      .filter((day) => day.b === 'Boston')
+      .flatMap((day) => day.it.map((item) => item[2].toLowerCase()));
+    const newYorkActivities = result.itinerary.dy
+      .filter((day) => day.b === 'New York City')
+      .flatMap((day) => day.it.map((item) => item[2].toLowerCase()));
+
+    expect(bostonActivities).not.toContain('central park');
+    expect(newYorkActivities).toContain('central park');
+  });
+
+  it('places a destination-tagged must-see attraction on the day matching its destination, not round-robin', async () => {
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-02',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  relax: 10,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [
+                  { l: 'Boston', ci: '2026-09-01', co: '2026-09-02', dn: [] },
+                  { l: 'New York City', ci: '2026-09-02', co: '2026-09-03', dn: [] },
+                ],
+                x: [{ dt: '2026-09-02', m: 'Train', fr: 'Boston', to: 'New York City' }],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    // Central Park (tagged "New York City") is deliberately absent from both
+    // days here so enforceMustSeeAttractions must inject it — without
+    // destination awareness, round-robin would place it on day 1 (Boston).
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [
+        { l: 'Boston', ci: '2026-09-01', co: '2026-09-02', dn: [] },
+        { l: 'New York City', ci: '2026-09-02', co: '2026-09-03', dn: [] },
+      ],
+      x: [{ dt: '2026-09-02', m: 'Train', fr: 'Boston', to: 'New York City' }],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'A', 'Freedom Trail']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-09-02', b: 'New York City', it: [['D', 'O', 'Times Square visit']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York City'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston', 'New York City'],
+      mustSeeAttractions: [{ name: 'Central Park', destinationName: 'New York City' }],
+      days: 2,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-must-see-destination-tag',
+    });
+
+    const bostonDay = result.itinerary.dy.find((day) => day.b === 'Boston');
+    const newYorkDay = result.itinerary.dy.find((day) => day.b === 'New York City');
+    const bostonActivities = (bostonDay?.it ?? []).map((item) => item[2].toLowerCase());
+    const newYorkActivities = (newYorkDay?.it ?? []).map((item) => item[2].toLowerCase());
+
+    expect(newYorkActivities).toContain('central park');
+    expect(bostonActivities).not.toContain('central park');
+  });
+
+  it('staggers start times for multiple same-day activities instead of colliding on the same clock time', async () => {
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-03',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  relax: 10,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+                x: [],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    // Two items both tagged 'D' (daytime) on the same day — previously both
+    // mapped to a hardcoded 13:00, colliding.
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+      x: [],
+      rc: null,
+      dy: [
+        {
+          d: 2,
+          dt: '2026-09-02',
+          b: 'Boston',
+          it: [
+            ['D', 'A', 'Museum of Fine Arts'],
+            ['D', 'A', 'Isabella Stewart Gardner Museum'],
+          ],
+          me: ['BQ', 'LC', 'DL'],
+          sl: "Lodging at 'Boston'",
+          ln: [],
+          cf: 'M',
+        },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      destinations: ['Boston'],
+      days: 3,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-time-collision',
+    });
+
+    const dayTwoActivities = result.generatedItems.activities.filter((a) => a.date === '2026-09-02');
+    expect(dayTwoActivities).toHaveLength(2);
+    const startTimes = dayTwoActivities.map((a) => a.startTime);
+    expect(new Set(startTimes).size).toBe(startTimes.length);
+
+    const dayTwoDetails = result.details.filter((d) => d.day === 2 && d.kind !== 'note');
+    const detailTimes = dayTwoDetails.map((d) => d.time);
+    expect(new Set(detailTimes).size).toBe(detailTimes.length);
+  });
+
+  it('inserts a travel segment between two same-day attractions with the estimated mode and time', async () => {
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {
+        Boston: [
+          {
+            id: 'attr-a',
+            destinationKey: 'boston',
+            destinationDisplayName: 'Boston',
+            name: 'Boston Public Garden',
+            rank: 1,
+            activityType: 'Outdoor Activity',
+            interestTags: ['outdoors'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 2,
+            budgetTier: 'free',
+            updatedAt: new Date().toISOString(),
+            // ~350m apart — well within the walking cutoff at default mobility.
+            lat: 42.3543,
+            lon: -71.0707,
+          },
+          {
+            id: 'attr-b',
+            destinationKey: 'boston',
+            destinationDisplayName: 'Boston',
+            name: 'Boston Common',
+            rank: 2,
+            activityType: 'Outdoor Activity',
+            interestTags: ['outdoors'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 2,
+            budgetTier: 'free',
+            updatedAt: new Date().toISOString(),
+            lat: 42.3555,
+            lon: -71.0656,
+          },
+        ],
+      },
+      promptBlock: 'Destination: Boston\n1. Boston Public Garden\n2. Boston Common',
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-03',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  relax: 10,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+                x: [],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+      x: [],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        {
+          d: 2,
+          dt: '2026-09-02',
+          b: 'Boston',
+          it: [
+            ['D', 'O', 'Boston Public Garden'],
+            ['D', 'O', 'Boston Common'],
+          ],
+          me: ['BQ', 'LC', 'DL'],
+          sl: "Lodging at 'Boston'",
+          ln: [],
+          cf: 'M',
+        },
+        { d: 3, dt: '2026-09-03', b: 'Boston', it: [['D', 'O', 'Local evening stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston'],
+      days: 3,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-travel-segment',
+    });
+
+    const dayTwoDetails = result.details.filter((d) => d.day === 2);
+    const fromIndex = dayTwoDetails.findIndex((d) => d.activity.toLowerCase() === 'boston public garden');
+    const toIndex = dayTwoDetails.findIndex((d) => d.activity.toLowerCase() === 'boston common');
+    const travelIndex = dayTwoDetails.findIndex((d) => d.kind === 'note');
+
+    expect(fromIndex).toBeGreaterThanOrEqual(0);
+    expect(toIndex).toBeGreaterThan(fromIndex);
+    // The travel segment sits between the two activities it connects, not
+    // appended after everything else in the day.
+    expect(travelIndex).toBe(fromIndex + 1);
+    expect(travelIndex).toBeLessThan(toIndex);
+
+    const travelDetail = dayTwoDetails[travelIndex];
+    expect(travelDetail.activity).toMatch(/walk/i);
+    expect(travelDetail.activity).toMatch(/boston common/i);
+    expect(travelDetail.activity).toMatch(/min/i);
+    expect(travelDetail.noteBody).toMatch(/walk/i);
+
+    // The second activity's start time should reflect the real travel time,
+    // not just a flat generic buffer.
+    const gardenActivity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'boston public garden');
+    const commonActivity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'boston common');
+    expect(gardenActivity).toBeDefined();
+    expect(commonActivity).toBeDefined();
+  });
+
+  it('infers duration and fit for wild activities not in catalog', async () => {
+    const jsonStage = (content: unknown) => ({ data: { choices: [{ message: { content: JSON.stringify(content) } }] } });
+    const renderStage = (content: string) => ({ data: { choices: [{ message: { content } }] } });
+
+    const norm = {
+      $: 'norm1',
+      sd: '2026-11-01',
+      ed: '2026-11-01',
+      p: 'B',
+      c: 'M',
+      mob: 'M',
+      car: 'P',
+      w: {
+        outdoors: 50,
+        adventure: 10,
+        culture: 10,
+        food: 50,
+        nightlife: 10,
+        relax: 10,
+        photography: 10,
+        authentic_local: 10,
+        iconic_landmarks: 10,
+      },
+      a: [],
+      is: 'mixed',
+    };
+    const route = {
+      $: 'r1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-11-01', co: '2026-11-02', dn: [] }],
+      x: [],
+      rc: null,
+      w: norm.w,
+      a: [],
+    };
+    const itinerary = {
+      $: 'it1',
+      ...route,
+      dy: [
+        {
+          d: 1,
+          dt: '2026-11-01',
+          b: 'Boston',
+          it: [
+            ['M', 'O', 'Wild Hike'],
+            ['D', 'O', 'Wild Dinner'],
+          ],
+          me: ['BQ', 'LC', 'DL'],
+          sl: "Lodging at 'Boston'",
+          ln: [],
+          cf: 'H',
+        },
+      ],
+      cf: 'H',
+    };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(jsonStage(norm))
+      .mockResolvedValueOnce(jsonStage(route))
+      .mockResolvedValueOnce(jsonStage(itinerary))
+      .mockResolvedValueOnce(jsonStage(itinerary))
+      .mockResolvedValueOnce(renderStage('rendered'));
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-wild',
+      destinations: ['Boston'],
+      days: 1,
+      budgetMin: 1000,
+      budgetMax: 2000,
+      groupTraits: [],
+      tripIdSeed: 'wild-trip-new',
+      promptTraits: {
+        tt: {
+          p: 'B',
+          c: 'M',
+          mob: 'M',
+          car: 'P',
+          is: 'mixed',
+          w: norm.w,
+        },
+      },
+    });
+
+    const hike = result.generatedItems.activities.find((a) => a.name === 'Wild Hike');
+    const dinner = result.generatedItems.activities.find((a) => a.name === 'Wild Dinner');
+
+    // Hike default is 150m (2.5h)
+    expect(hike?.duration).toBe('2.5h');
+    // Food & Drink default is 90m (1.5h)
+    expect(dinner?.duration).toBe('1.5h');
+
+    expect(hike?.notes).toContain('supports your outdoors interests');
+    expect(dinner?.notes).toContain('supports your food interests');
+  });
+
+  it('reuses shared route/day caches across users and injects different must-sees after the hit', async () => {
+    const cachedAttraction = { id: 'cache-museum', destinationKey: 'cacheville', destinationDisplayName: 'Cacheville', name: 'Cache Museum', rank: 1, activityType: 'Ticketed Attraction' as const, interestTags: ['culture'] as any, lat: 40, lon: -70, updatedAt: '2026-01-01T00:00:00Z' };
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: { Cacheville: [cachedAttraction] },
+      promptBlock: 'Destination: Cacheville\n1. Cache Museum | tier=paid | type=Ticketed Attraction | tags=culture',
+      attractionPodsByDestination: { Cacheville: [{ id: 'pod-1', destination: 'Cacheville', kind: 'geographic', items: [cachedAttraction], centroid: { lat: 40, lon: -70 }, radiusKm: 0, distanceGuaranteed: true }] },
+    });
+    const jsonStage = (content: unknown) => ({ data: { choices: [{ message: { content: JSON.stringify(content) } }] } });
+    const renderStage = (content: string) => ({ data: { choices: [{ message: { content } }] } });
+    const norm = { $: 'norm1', sd: '2026-11-01', ed: '2026-11-02', p: 'B', c: 'M', mob: 'M', car: 'P', w: { outdoors: 10, adventure: 5, culture: 40, food: 10, nightlife: 5, relax: 10, photography: 5, authentic_local: 10, iconic_landmarks: 5 }, a: [], is: 'mixed' };
+    const route = { $: 'r1', eh: 'BOS', xh: 'BOS', b: [{ l: 'Cacheville', ci: '2026-11-01', co: '2026-11-03', dn: [] }], x: [], rc: null, w: norm.w, a: [] };
+    const itinerary = { $: 'it1', ...route, dy: [
+      { d: 1, dt: '2026-11-01', b: 'Cacheville', it: [['M', 'O', 'Flexible activity block']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Cacheville'", ln: [], cf: 'H' },
+      { d: 2, dt: '2026-11-02', b: 'Cacheville', it: [['M', 'O', 'Central Park Walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Cacheville'", ln: [], cf: 'H' },
+    ], cf: 'H' };
+    mockedAxios.post
+      .mockResolvedValueOnce(jsonStage(norm)).mockResolvedValueOnce(jsonStage(route))
+      .mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(renderStage('first'))
+      .mockResolvedValueOnce(jsonStage(norm)).mockResolvedValueOnce(renderStage('second'));
+    const common = {
+      apiKey: 'test-key', destinations: ['Cacheville'], days: 2, budgetMin: 1000, budgetMax: 2000,
+      departureAirport: 'BOS', groupTraits: [], tripStartDate: '2026-11-01', tripEndDate: '2026-11-02',
+      promptTraits: { tt: { p: 'B' as const, c: 'M' as const, mob: 'M' as const, car: 'P' as const, is: 'mixed' as const, w: norm.w } },
+    };
+    const first = await generateItineraryViaPromptPlan({ ...common, userId: 'cache-user-a', tripIdSeed: 'cache-trip-a', mustSeeAttractions: [{ name: 'Museum A', destinationName: 'Cacheville' }] });
+    const firstP1Call = mockedPromptStage.mock.calls.find((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE)?.[0];
+    const firstP1Prompts = `${firstP1Call?.systemPrompt ?? ''}\n${firstP1Call?.userPrompt ?? ''}`;
+    expect(firstP1Prompts).not.toContain('Museum A');
+    expect(firstP1Prompts).not.toContain('cache-user-a');
+    const p1AfterFirst = mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE).length;
+    const p2AfterFirst = mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS).length;
+    const firstP2Call = mockedPromptStage.mock.calls.find((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS)?.[0];
+    expect(firstP2Call?.userPrompt).toContain('pod-1');
+    expect(firstP2Call?.userPrompt).toContain('Departure day: protect at least 180 minutes');
+    const second = await generateItineraryViaPromptPlan({ ...common, userId: 'cache-user-b', tripIdSeed: 'cache-trip-b', mustSeeAttractions: [{ name: 'Museum B', destinationName: 'Cacheville' }] });
+    expect(first.cacheUsage).toEqual({ routeHit: false, dayHit: false });
+    expect(second.cacheUsage).toEqual({ routeHit: true, dayHit: true });
+    expect(mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P1_ROUTE)).toHaveLength(p1AfterFirst);
+    expect(mockedPromptStage.mock.calls.filter((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS)).toHaveLength(p2AfterFirst);
+    expect(second.generatedItems.activities.some((activity) => activity.name === 'Museum B')).toBe(true);
+    expect(second.generatedItems.activities.some((activity) => activity.name === 'Museum A')).toBe(false);
+  });
+
+  describe('destination logistics (climatology/daylight) wiring — coding plan Phase 2B', () => {
+    const originalFetch = global.fetch;
+    afterEach(() => {
+      global.fetch = originalFetch;
+      clearClimatologyCacheForTests();
+    });
+
+    it('buildDestinationClimatologyBlock reflects buildDestinationLogistics output for a destination with known coordinates', async () => {
+      const fetchImpl = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          daily: {
+            time: ['2016-07-15', '2017-07-15'],
+            temperature_2m_max: [29, 27],
+            temperature_2m_min: [19, 18],
+            precipitation_sum: [1, 0],
+          },
+        }),
+      })) as unknown as typeof fetch;
+
+      const route = { $: 'r1' as const, eh: 'CDG', xh: 'CDG', b: [{ l: 'Paris', ci: '2026-07-01', co: '2026-07-05', dn: [] }], x: [], rc: null, w: { o: 25, c: 25, f: 20, n: 10, r: 20 }, a: [] };
+      const shortlistByDestination = {
+        Paris: [
+          { id: 'paris-a', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Eiffel Tower', rank: 1, activityType: 'Ticketed Attraction' as const, interestTags: ['iconic_landmarks'] as any, lat: 48.8584, lon: 2.2945, updatedAt: '2026-01-01T00:00:00Z' },
+          { id: 'paris-b', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Louvre', rank: 2, activityType: 'Ticketed Attraction' as const, interestTags: ['culture'] as any, lat: 48.8606, lon: 2.3376, updatedAt: '2026-01-01T00:00:00Z' },
+        ],
+      };
+
+      const block = await buildDestinationClimatologyBlock(route as any, shortlistByDestination, '2026-07-01', fetchImpl);
+      expect(block).toContain('Paris');
+      expect(block).toMatch(/climate: Peak Summer Heat/);
+      expect(block).toMatch(/daylight ~\d+\.\d+h/);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it('is reflected in the actual p2 prompt content sent for generation', async () => {
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({ daily: { time: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_sum: [] } }),
+      })) as unknown as typeof fetch;
+
+      const parisAttraction = { id: 'paris-logistics', destinationKey: 'paris', destinationDisplayName: 'Paris', name: 'Eiffel Tower', rank: 1, activityType: 'Ticketed Attraction' as const, interestTags: ['iconic_landmarks'] as any, lat: 48.8584, lon: 2.2945, updatedAt: '2026-01-01T00:00:00Z' };
+      mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+        shortlistByDestination: { Paris: [parisAttraction] },
+        promptBlock: 'Destination: Paris\n1. Eiffel Tower | tier=paid | type=Ticketed Attraction | tags=iconic_landmarks',
+      });
+
+      const jsonStage = (content: unknown) => ({ data: { choices: [{ message: { content: JSON.stringify(content) } }] } });
+      const renderStage = (content: string) => ({ data: { choices: [{ message: { content } }] } });
+      const norm = { $: 'norm1', sd: '2026-07-01', ed: '2026-07-02', p: 'B', c: 'M', mob: 'M', car: 'P', w: { outdoors: 10, adventure: 5, culture: 40, food: 10, nightlife: 5, relax: 10, photography: 5, authentic_local: 10, iconic_landmarks: 5 }, a: [], is: 'mixed' };
+      const route = { $: 'r1', eh: 'CDG', xh: 'CDG', b: [{ l: 'Paris', ci: '2026-07-01', co: '2026-07-03', dn: [] }], x: [], rc: null, w: norm.w, a: [] };
+      const itinerary = { $: 'it1', ...route, dy: [
+        { d: 1, dt: '2026-07-01', b: 'Paris', it: [['M', 'O', 'Eiffel Tower']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'H' },
+        { d: 2, dt: '2026-07-02', b: 'Paris', it: [['M', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'H' },
+      ], cf: 'H' };
+      mockedAxios.post
+        .mockResolvedValueOnce(jsonStage(norm)).mockResolvedValueOnce(jsonStage(route))
+        .mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(jsonStage(itinerary)).mockResolvedValueOnce(renderStage('rendered'));
+
+      await generateItineraryViaPromptPlan({
+        apiKey: 'test-key', userId: 'logistics-user', destinations: ['Paris'], days: 2,
+        budgetMin: 1000, budgetMax: 3000, groupTraits: [], tripIdSeed: 'logistics-trip-paris',
+      });
+
+      const p2Call = mockedPromptStage.mock.calls.find((call) => call[0]?.caller === OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS)?.[0];
+      // destinationLogisticsService.calculateDaylightWindow output (via buildDestinationLogistics),
+      // not the previous ad hoc LOGISTICS_FACTS text, which never included daylight/climate facts.
+      expect(p2Call?.userPrompt).toMatch(/Paris:.*daylight ~\d+\.\d+h/);
+    });
   });
 });

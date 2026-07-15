@@ -562,6 +562,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
+  const [tripToDelete, setTripToDelete] = useState<{ id: string; name: string; isLastTraveler: boolean } | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -2378,7 +2379,47 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       Alert.alert(data.error || 'Unable to delete trip');
       return;
     }
+    // Drop any in-flight async itinerary tracker for this trip so its poller
+    // doesn't keep hitting a trip the user no longer belongs to.
+    setAsyncItineraryByTrip((prev) => {
+      if (!(tripId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+    // If the deleted trip was the one currently open, every effect keyed on
+    // activeTripId (flights/lodgings/expenses/etc.) would otherwise keep
+    // fetching against a trip the user no longer has access to and surface a
+    // spurious "not authorized" permission-denied modal. Exit the trip first
+    // and land on the trip list ("account") page instead.
+    if (activeTripId === tripId) {
+      setActiveTripId(null);
+      setActivePage('account');
+    }
     fetchTrips();
+  };
+
+  // Opens the confirmation dialog immediately (no waiting on a network round
+  // trip) so it always appears the instant the delete button is pressed.
+  // Defaults to the stronger "permanent delete" warning since that's the
+  // worse-case outcome of deleting as the trip's last traveler (see server
+  // deleteTrip) — better to over-warn for a moment than under-warn. Once the
+  // membership check resolves in the background, the copy is relaxed to
+  // "leave trip" if other travelers are still on it.
+  const confirmDeleteTrip = (trip: { id: string; name: string }) => {
+    if (!userToken) return;
+    setTripToDelete({ id: trip.id, name: trip.name, isLastTraveler: true });
+    fetch(`${backendUrl}/api/account/trips/${trip.id}/members`, { headers })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((members) => {
+        if (!Array.isArray(members)) return;
+        const realMembers = members.filter((m: any) => m?.userId);
+        const isLastTraveler = realMembers.length <= 1;
+        setTripToDelete((prev) => (prev && prev.id === trip.id ? { ...prev, isLastTraveler } : prev));
+      })
+      .catch(() => {
+        // Best-effort check; keep showing the stronger "permanent delete" copy.
+      });
   };
 
   // PATCH /api/trips/:id/group is naturally idempotent (replaces the trip's
@@ -2707,6 +2748,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onFollowTrip={handleFollowTripByCode}
                   onOpenShareTrip={handleOpenShareTrip}
                   canOpenShareTrip={Boolean(activeTrip?.id && !isFollowingMode)}
+                  onDeleteTrip={confirmDeleteTrip}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
                 />
@@ -2734,6 +2776,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode}
                   defaultActivityDate={activeTrip?.startDate ?? null}
+                  destination={activeTrip?.destination ?? null}
                 />
               )
             : null}
@@ -3194,7 +3237,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     >
                       <Text style={styles.buttonText}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.dangerButton]}
+                      onPress={() => confirmDeleteTrip(trip)}
+                    >
                       <Text style={styles.dangerButtonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
@@ -3221,6 +3267,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   mapApp={mapApp}
                   temperatureUnit={accountProfile.temperatureUnit}
                   aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
+                  aiItineraryStageLabel={activeTripId ? asyncItineraryByTrip[activeTripId]?.stageLabel ?? null : null}
+                  aiItineraryStageDetail={activeTripId ? asyncItineraryByTrip[activeTripId]?.stageDetail ?? null : null}
+                  aiItineraryEtaSeconds={activeTripId ? asyncItineraryByTrip[activeTripId]?.etaSeconds ?? null : null}
                   aiItineraryFailedMessage={
                     activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
                       ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
@@ -3434,6 +3483,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           styles={styles}
         />
       ) : null}
+      {tripToDelete ? (
+        <ConfirmDialog
+          visible={true}
+          title={tripToDelete.isLastTraveler ? 'Delete Trip Permanently' : 'Leave Trip'}
+          message={
+            tripToDelete.isLastTraveler
+              ? `You're the last traveler on "${tripToDelete.name}". Deleting it will permanently remove the trip and everything in it — flights, lodging, activities, itineraries, expenses, and messages — for everyone. This cannot be undone.`
+              : `Are you sure you want to leave "${tripToDelete.name}"? You'll be removed from this trip, but it will remain for the other travelers.`
+          }
+          confirmLabel={tripToDelete.isLastTraveler ? 'Delete Trip' : 'Leave Trip'}
+          onConfirm={() => {
+            const tripId = tripToDelete.id;
+            setTripToDelete(null);
+            deleteTrip(tripId);
+          }}
+          onCancel={() => setTripToDelete(null)}
+          styles={styles}
+          testID="trip-delete-confirm-dialog"
+          useNativeModal
+        />
+      ) : null}
       {showLodgingDetails && selectedLodging ? (
         <LodgingDetailsDialog
           visible={showLodgingDetails}
@@ -3586,6 +3656,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </RootStack.Screen>
           <RootStack.Screen name="AdminAiOpsRuntimeSettings" options={{ title: 'AI Runtime Settings' }}>
             {() => renderAdminAiOpsScreen('runtime-settings')}
+          </RootStack.Screen>
+          <RootStack.Screen name="AdminAiOpsItineraryInstructions" options={{ title: 'Itinerary Instructions' }}>
+            {() => renderAdminAiOpsScreen('itinerary-instructions')}
           </RootStack.Screen>
           <RootStack.Screen name="AdminAiOpsAiAuditLog" options={{ title: 'AI Audit Log' }}>
             {() => renderAdminAiOpsScreen('ai-audit-log')}
@@ -3978,6 +4051,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexWrap: 'wrap',
     gap: 12,
     paddingVertical: 12,
+    paddingRight: 8,
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -4004,6 +4078,20 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     color: '#047857',
     fontSize: 12,
     fontWeight: '700',
+  },
+  homeModalRowDelete: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: theme.colors.error,
+  },
+  homeModalRowDeletePressed: {
+    opacity: 0.8,
+  },
+  homeModalRowDeleteText: {
+    color: '#FFFFFF',
+    fontWeight: theme.typography.weightBold,
+    fontSize: 13,
   },
   title: {
     fontSize: theme.typography.h2,

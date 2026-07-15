@@ -2,19 +2,11 @@
 
 import { aiOpsScreenBySection, linking } from '../navigationConfig';
 import type { AiOpsSection } from '../components/admin/aiOps/types';
+import { aiOpsSections as declaredAiOpsSections } from '../components/admin/aiOps/shared';
 
-const aiOpsSections: AiOpsSection[] = [
-  'overview',
-  'providers',
-  'experiments',
-  'recommendations',
-  'captures',
-  'parser-quality',
-  'shadow-replay',
-  'executive',
-  'runtime-settings',
-  'ai-audit-log',
-];
+// Keep the deep-link contract aligned with the navigation source of truth so
+// adding an AI Ops section cannot silently leave its route untested.
+const aiOpsSections: AiOpsSection[] = declaredAiOpsSections.map(({ key }) => key);
 
 describe('AI Ops deep links', () => {
   const screens = linking.config!.screens as Record<string, string>;

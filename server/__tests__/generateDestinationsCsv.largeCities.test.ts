@@ -3,15 +3,23 @@
 import axios from 'axios';
 import { getDestinationIdentityKey } from '../src/services/destinationCsvReconciliation';
 import { applyMillionPlusCoverage, fetchMillionPlusCitySeeds } from '../src/services/destinationLargeCityCoverage';
+import { ApiLimitExceededError } from '../src/apis/usageLimiter';
 
 jest.mock('axios');
+jest.mock('../src/apis/usageLimiter', () => ({
+  ...jest.requireActual('../src/apis/usageLimiter'),
+  reserveApiUsageOrThrow: jest.fn(async () => undefined),
+}));
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedReserve = jest.requireMock('../src/apis/usageLimiter').reserveApiUsageOrThrow as jest.Mock;
 
 describe('generate destinations csv large-city coverage', () => {
   beforeEach(() => {
     mockedAxios.get.mockReset();
     mockedAxios.post.mockReset();
+    mockedReserve.mockReset();
+    mockedReserve.mockImplementation(async () => undefined);
   });
 
   it('adds all 1M+ cities beyond quota and carries multiple source URLs for them', async () => {
@@ -105,5 +113,46 @@ describe('generate destinations csv large-city coverage', () => {
         'https://documentation-resources.huwise.com/api/datasets/1.0/doc-geonames-cities-5000/records/beta-record',
       ])
     );
+
+    expect(mockedReserve).toHaveBeenCalledWith({ provider: 'COUNTRY_NOW', caller: 'DESTINATION_LARGE_CITY_COVERAGE' });
+    expect(mockedReserve).toHaveBeenCalledWith({ provider: 'GEONAMES', caller: 'DESTINATION_LARGE_CITY_COVERAGE' });
+  });
+
+  it('fails fast without retrying or calling the network once the CountryNow rate limit is reached', async () => {
+    mockedReserve.mockImplementation(async ({ provider }: { provider: string; caller: string }) => {
+      if (provider === 'COUNTRY_NOW') {
+        throw new ApiLimitExceededError({ provider: 'COUNTRY_NOW', caller: 'DESTINATION_LARGE_CITY_COVERAGE', scope: 'overall', limit: 300, used: 300 });
+      }
+    });
+
+    // Uses a country/iso2 not seen in the earlier test so the module-level seed caches
+    // (keyed by country name / iso2) can't return a stale cached result instead of exercising
+    // the reservation path.
+    const seeds = await fetchMillionPlusCitySeeds(
+      { name: 'Ruritania', officialName: 'Kingdom of Ruritania', iso2: 'RU2', iso3: 'RUR', capital: ['Strelsau'], areaKm2: 1000, population: 5000000 },
+      ['Ruritania']
+    );
+
+    // The existing broad catch-and-cache-empty behavior absorbs the rate-limit error the same way
+    // it absorbs any other provider failure, so callers see an empty (not crashed) result.
+    expect(seeds).toEqual([]);
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+  });
+
+  it('fails fast without retrying or calling the network once the GeoNames rate limit is reached', async () => {
+    mockedAxios.post.mockResolvedValue({ data: { data: [] } } as any);
+    mockedReserve.mockImplementation(async ({ provider }: { provider: string; caller: string }) => {
+      if (provider === 'GEONAMES') {
+        throw new ApiLimitExceededError({ provider: 'GEONAMES', caller: 'DESTINATION_LARGE_CITY_COVERAGE', scope: 'overall', limit: 300, used: 300 });
+      }
+    });
+
+    const seeds = await fetchMillionPlusCitySeeds(
+      { name: 'Elbonia', officialName: 'Republic of Elbonia', iso2: 'EL2', iso3: 'ELB', capital: ['Elbon City'], areaKm2: 1000, population: 5000000 },
+      ['Elbonia']
+    );
+
+    expect(seeds).toEqual([]);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 });

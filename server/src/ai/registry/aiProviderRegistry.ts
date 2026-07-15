@@ -215,7 +215,10 @@ const resolveTrafficSplitVariant = async (
   });
 };
 
-export const resolveProvider = async (featureKey: string, _callerId: string): Promise<AiChatProvider> => {
+export const resolveProvider = async (featureKey: string, _callerId: string, providerOverride?: string): Promise<AiChatProvider> => {
+  if (providerOverride) {
+    return wrapWithRegistryGuards(providers.get(providerOverride) ?? openaiProvider);
+  }
   const trafficSplit = await getRunningExperiment(featureKey, 'traffic_split');
   if (trafficSplit) {
     const resolvedProvider = await resolveTrafficSplitVariant(featureKey, _callerId, trafficSplit);

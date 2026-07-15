@@ -27,6 +27,7 @@ export type ApiLimitsConfig = {
   providers: Record<string, ProviderLimits>;
   budgeting: Record<string, ProviderBudgeting>;
   caching: Record<string, Record<string, number>>;
+  requestPricing: Record<string, number>;
 };
 
 type RawProviderLimits = {
@@ -51,6 +52,7 @@ type RawApiLimitsConfig = {
   providers?: Record<string, RawProviderLimits>;
   budgeting?: Record<string, RawProviderBudgeting>;
   caching?: Record<string, Record<string, unknown>>;
+  requestPricing?: Record<string, unknown>;
 };
 
 const CONFIG_FILENAME = 'api-limits.yaml';
@@ -68,9 +70,26 @@ const parsePositiveInt = (raw: unknown): number | undefined => {
   return Math.floor(value);
 };
 
+// Zero is meaningful for kill-switch style cache/API budgets (for example,
+// GetYourGuide Partner API lookups remain disabled until the account contract
+// is approved). Other cache settings still clamp values at their call sites.
+const parseNonNegativeInt = (raw: unknown): number | undefined => {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return undefined;
+  return Math.floor(value);
+};
+
 const parsePositiveNumber = (raw: unknown): number | undefined => {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) return undefined;
+  return value;
+};
+
+// Unlike parsePositiveNumber, 0 is a valid, meaningful value here (a genuinely free API), so it
+// must not be treated the same as "unset".
+const parseNonNegativeNumber = (raw: unknown): number | undefined => {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return undefined;
   return value;
 };
 
@@ -125,12 +144,23 @@ const normalizeCaching = (
     const normalizedGroupName = normalizeApiLimitKeyPart(groupName);
     const normalizedGroup: Record<string, number> = {};
     for (const [settingName, settingValue] of Object.entries(groupValues ?? {})) {
-      const parsed = parsePositiveInt(settingValue);
+      const parsed = parseNonNegativeInt(settingValue);
       if (parsed !== undefined) {
         normalizedGroup[normalizeApiLimitKeyPart(settingName)] = parsed;
       }
     }
     out[normalizedGroupName] = normalizedGroup;
+  }
+  return out;
+};
+
+const normalizeRequestPricing = (raw: Record<string, unknown> | undefined): Record<string, number> => {
+  const out: Record<string, number> = {};
+  for (const [provider, value] of Object.entries(raw ?? {})) {
+    const parsed = parseNonNegativeNumber(value);
+    if (parsed !== undefined) {
+      out[normalizeApiLimitKeyPart(provider)] = parsed;
+    }
   }
   return out;
 };
@@ -163,24 +193,26 @@ const invalidateConfigCache = (): void => {
   cachedMtimeMs = -1;
 };
 
+const EMPTY_CONFIG: ApiLimitsConfig = { providers: {}, budgeting: {}, caching: {}, requestPricing: {} };
+
 const loadRawConfigFromFile = (): RawApiLimitsConfig => {
   const configPath = resolveConfigPath();
   if (!fs.existsSync(configPath)) {
-    return { providers: {}, budgeting: {}, caching: {} };
+    return { providers: {}, budgeting: {}, caching: {}, requestPricing: {} };
   }
   try {
     const rawText = fs.readFileSync(configPath, 'utf8');
     return (parse(rawText) ?? {}) as RawApiLimitsConfig;
   } catch (err) {
     logError(`[api-usage] Failed to load raw YAML config from ${configPath}`, err);
-    return { providers: {}, budgeting: {}, caching: {} };
+    return { providers: {}, budgeting: {}, caching: {}, requestPricing: {} };
   }
 };
 
 const loadConfigFromFile = (): ApiLimitsConfig => {
   const configPath = resolveConfigPath();
   if (!fs.existsSync(configPath)) {
-    return { providers: {}, budgeting: {}, caching: {} };
+    return EMPTY_CONFIG;
   }
   const stat = fs.statSync(configPath);
   if (
@@ -204,13 +236,14 @@ const loadConfigFromFile = (): ApiLimitsConfig => {
       budgeting[normalizeApiLimitKeyPart(provider)] = normalizeProviderBudgeting(rawBudgeting);
     }
     const caching = normalizeCaching(parsed.caching);
-    cachedConfig = { providers, budgeting, caching };
+    const requestPricing = normalizeRequestPricing(parsed.requestPricing);
+    cachedConfig = { providers, budgeting, caching, requestPricing };
     cachedPath = configPath;
     cachedMtimeMs = stat.mtimeMs;
     return cachedConfig;
   } catch (err) {
     logError(`[api-usage] Failed to load YAML config from ${configPath}`, err);
-    return { providers: {}, budgeting: {}, caching: {} };
+    return EMPTY_CONFIG;
   }
 };
 
@@ -230,6 +263,12 @@ export const getApiCacheSetting = (group: string, setting: string): number | und
   const config = loadConfigFromFile();
   return config.caching[normalizeApiLimitKeyPart(group)]?.[normalizeApiLimitKeyPart(setting)];
 };
+
+// Per-request USD price for non-token-priced providers (SerpAPI, Wikimedia, Google Routes, etc.).
+// Defaults to 0 (free) for any provider without an explicit entry, since that's the correct default
+// for every provider in this codebase today.
+export const getApiRequestPricingUsd = (provider: string): number =>
+  loadConfigFromFile().requestPricing[normalizeApiLimitKeyPart(provider)] ?? 0;
 
 export const updateApiLimitProviderConfig = (
   provider: string,
@@ -262,6 +301,56 @@ export const updateApiLimitProviderConfig = (
     providers: Object.fromEntries(Object.entries(rawProviders).sort(([a], [b]) => String(a).localeCompare(String(b)))),
     budgeting: rawConfig.budgeting ?? {},
     caching: rawConfig.caching ?? {},
+    requestPricing: rawConfig.requestPricing ?? {},
+  };
+
+  fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');
+  invalidateConfigCache();
+  return loadConfigFromFile();
+};
+
+export const updateApiCachingConfig = (
+  group: string,
+  nextGroupValues: Record<string, number>
+): ApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  const rawConfig = loadRawConfigFromFile();
+  const normalizedGroup = normalizeApiLimitKeyPart(group);
+  const rawCaching = { ...(rawConfig.caching ?? {}) };
+  rawCaching[normalizedGroup] = Object.fromEntries(
+    Object.entries(nextGroupValues)
+      .map(([key, value]) => [normalizeApiLimitKeyPart(key), Math.floor(value)])
+      .sort(([a], [b]) => String(a).localeCompare(String(b)))
+  );
+  const nextRawConfig: RawApiLimitsConfig = {
+    providers: rawConfig.providers ?? {},
+    budgeting: rawConfig.budgeting ?? {},
+    caching: Object.fromEntries(Object.entries(rawCaching).sort(([a], [b]) => String(a).localeCompare(String(b)))),
+    requestPricing: rawConfig.requestPricing ?? {},
+  };
+
+  fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');
+  invalidateConfigCache();
+  return loadConfigFromFile();
+};
+
+// Full replace of the requestPricing map — mirrors updateApiCachingConfig's single-section-replace
+// shape. Values may be 0 (a genuinely free provider); callers are responsible for rejecting negative
+// values before calling this (parseNonNegativeNumber below defends the file itself either way).
+export const updateApiRequestPricingConfig = (nextValues: Record<string, number>): ApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  const rawConfig = loadRawConfigFromFile();
+  const nextRequestPricing = Object.fromEntries(
+    Object.entries(nextValues)
+      .map(([provider, value]) => [normalizeApiLimitKeyPart(provider), value])
+      .filter(([, value]) => parseNonNegativeNumber(value) !== undefined)
+      .sort(([a], [b]) => String(a).localeCompare(String(b)))
+  );
+  const nextRawConfig: RawApiLimitsConfig = {
+    providers: rawConfig.providers ?? {},
+    budgeting: rawConfig.budgeting ?? {},
+    caching: rawConfig.caching ?? {},
+    requestPricing: nextRequestPricing,
   };
 
   fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');
@@ -312,6 +401,7 @@ export const updateApiBudgetProviderConfig = (
     providers: rawConfig.providers ?? {},
     budgeting: Object.fromEntries(Object.entries(rawBudgeting).sort(([a], [b]) => String(a).localeCompare(String(b)))),
     caching: rawConfig.caching ?? {},
+    requestPricing: rawConfig.requestPricing ?? {},
   };
 
   fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');

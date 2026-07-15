@@ -10,6 +10,7 @@ import {
 describe('resolveAndValidateRedirectUri', () => {
   const originalAllowlist = process.env.AUTH_REDIRECT_URI_ALLOWLIST;
   const originalKService = process.env.K_SERVICE;
+  const originalRunLocal = process.env.RUN_LOCAL;
 
   afterEach(() => {
     if (originalAllowlist === undefined) {
@@ -21,6 +22,11 @@ describe('resolveAndValidateRedirectUri', () => {
       delete process.env.K_SERVICE;
     } else {
       process.env.K_SERVICE = originalKService;
+    }
+    if (originalRunLocal === undefined) {
+      delete process.env.RUN_LOCAL;
+    } else {
+      process.env.RUN_LOCAL = originalRunLocal;
     }
   });
 
@@ -88,6 +94,7 @@ describe('resolveAndValidateRedirectUri', () => {
 
   it('still allows localhost web redirects in local development', () => {
     delete process.env.K_SERVICE;
+    process.env.RUN_LOCAL = '1';
     process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'http://localhost:4000';
     const result = resolveAndValidateRedirectUri('http://localhost:4000/login', 'https://duerk.org');
     expect(result.error).toBeUndefined();

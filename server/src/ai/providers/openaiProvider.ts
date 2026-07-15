@@ -7,6 +7,9 @@ import type { AiChatProvider } from './AiChatProvider';
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
 const OPENAI_SUPPORTED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'];
 
+const usesReasoningChatParameters = (model: string): boolean =>
+  /^gpt-5(?:\.|$|-)/i.test(model) || /^o\d/i.test(model);
+
 export const openaiProvider: AiChatProvider = {
   id: 'openai',
   get supportedModels(): string[] {
@@ -24,6 +27,7 @@ export const openaiProvider: AiChatProvider = {
     if (!apiKey) {
       throw new Error('Missing required env var: OPENAI_API_KEY');
     }
+    const reasoningModel = usesReasoningChatParameters(req.model);
     return postOpenAiChatCompletion({
       caller: ctx.callerId,
       apiKey,
@@ -31,8 +35,14 @@ export const openaiProvider: AiChatProvider = {
         model: req.model,
         messages: req.messages,
         response_format: req.response_format,
-        temperature: req.temperature,
-        max_tokens: req.max_tokens,
+        ...(reasoningModel
+          ? {
+              max_completion_tokens: req.max_completion_tokens ?? req.max_tokens,
+            }
+          : {
+              temperature: req.temperature,
+              max_tokens: req.max_tokens,
+            }),
       },
       skipApiUsageReservation: true,
       usageContext: compatibilityContext.usageAccountingEnabled

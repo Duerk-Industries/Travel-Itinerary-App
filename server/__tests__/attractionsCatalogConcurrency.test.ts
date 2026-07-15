@@ -8,6 +8,7 @@ import {
 } from '../src/services/attractionsCatalogService';
 
 jest.mock('axios');
+jest.mock('../src/apis/usageLimiter', () => ({ reserveApiUsageOrThrow: jest.fn(async () => undefined) }));
 jest.mock('../src/db', () => ({
   listAttractionCatalogEntries: jest.fn(),
   upsertAttractionCatalogEntry: jest.fn(),
@@ -78,8 +79,9 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
       }),
     ]);
 
-    // One refresh run should call both discovery sources once each.
-    expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+    // One refresh run calls both discovery sources and the new Wikipedia
+    // canonical-page enrichment source once. Concurrent callers still share it.
+    expect(mockedAxios.get).toHaveBeenCalledTimes(3);
   });
 
   it('reuses fresh prompt blob when compact signature matches', async () => {
@@ -133,6 +135,9 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
     });
 
     expect(result.promptBlock).toContain('Destination: Mexico City');
+    expect(result.attractionPodsByDestination?.['Mexico City']?.[0]).toMatchObject({
+      kind: 'locality-only', distanceGuaranteed: false,
+    });
     expect(mockedDb.upsertAttractionShortlistBlob).not.toHaveBeenCalled();
   });
 

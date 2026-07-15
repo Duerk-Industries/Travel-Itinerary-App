@@ -66,4 +66,31 @@ describe('image-service', () => {
     expect(getSignedUrl).toHaveBeenCalledTimes(1);
     expect(axios.get).not.toHaveBeenCalled();
   });
+
+  it('falls back to Unsplash when local GCS credentials cannot sign cached image URLs', async () => {
+    const exists = jest.fn().mockResolvedValue([true]);
+    const getMetadata = jest.fn().mockResolvedValue([
+      { timeCreated: new Date(Date.now() - 1000).toISOString() },
+    ]);
+    const signingError = Object.assign(new Error('Cannot sign data without `client_email`.'), {
+      name: 'SigningError',
+    });
+    const getSignedUrl = jest.fn().mockRejectedValue(signingError);
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockBucket.mockReturnValue({
+      file: jest.fn(() => ({ exists, getMetadata, getSignedUrl })),
+    });
+    (axios.get as jest.Mock).mockResolvedValue({
+      data: {
+        results: [{ urls: { regular: 'https://images.example.com/unsplash-paris.jpg' } }],
+      },
+    });
+
+    const result = await getUnsplashImage('Paris');
+
+    expect(result).toBe('https://images.example.com/unsplash-paris.jpg');
+    expect(getSignedUrl).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
 });

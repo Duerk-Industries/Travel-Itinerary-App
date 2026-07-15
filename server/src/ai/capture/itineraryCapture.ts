@@ -27,6 +27,8 @@ export const captureItineraryInteraction = (params: {
   captureId?: string;
   jobId?: string;
   userId?: string;
+  provider?: string;
+  model?: string;
   outcome: CaptureRecord['outcome'];
   stages: ItineraryStageCapture[];
   tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
@@ -40,8 +42,8 @@ export const captureItineraryInteraction = (params: {
       capturedAt: new Date().toISOString(),
       jobId: params.jobId,
       userId: params.userId,
-      provider: 'openai',
-      model: 'gpt-4o-mini',
+      provider: params.provider ?? 'openai',
+      model: params.model ?? 'gpt-4o-mini',
       outcome: params.outcome,
       tokenUsage: params.tokenUsage,
       payload: {

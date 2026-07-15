@@ -24,6 +24,8 @@ import {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  ItineraryPlanCacheEntry,
+  AttractionDurationMetadata,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -60,6 +62,8 @@ import {
   AiAbTestMetric,
   AiProviderCertification,
   AiRecommendation,
+  ItineraryGenerationMetrics,
+  ItineraryComparison,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -2332,6 +2336,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
         description: data.description ?? null,
         destination: data.destination ?? null,
         locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
+        mustSeeAttractions: Array.isArray(data.mustSeeAttractions) ? data.mustSeeAttractions : [],
         startDate: data.startDate ?? null,
         endDate: data.endDate ?? null,
         startMonth: data.startMonth ?? null,
@@ -2369,6 +2374,7 @@ export const createTrip = async (
     description: details.description ?? null,
     destination: details.destination ?? null,
     locationIds: Array.isArray(details.locationIds) ? details.locationIds : [],
+    mustSeeAttractions: Array.isArray(details.mustSeeAttractions) ? details.mustSeeAttractions : [],
     startDate: details.startDate ?? null,
     endDate: details.endDate ?? null,
     startMonth: details.startMonth ?? null,
@@ -2404,6 +2410,7 @@ export const updateTripDetails = async (
       description: updates.description ?? data.description ?? null,
       destination: updates.destination ?? data.destination ?? null,
       locationIds: Array.isArray(updates.locationIds) ? updates.locationIds : (Array.isArray(data.locationIds) ? data.locationIds : []),
+      mustSeeAttractions: Array.isArray(updates.mustSeeAttractions) ? updates.mustSeeAttractions : (Array.isArray(data.mustSeeAttractions) ? data.mustSeeAttractions : []),
       startDate: updates.startDate ?? data.startDate ?? null,
       endDate: updates.endDate ?? data.endDate ?? null,
       startMonth: updates.startMonth ?? data.startMonth ?? null,
@@ -2440,6 +2447,79 @@ export const updateTripCovering = async (
   return coveredBy ?? {};
 };
 
+// Deletes every artifact scoped to a trip once the last active traveler has
+// left it — Firestore has no FK cascade, so (unlike the Postgres adapter,
+// which relies on ON DELETE CASCADE for most of these tables) each
+// collection must be cleared explicitly here.
+const deleteAllTripArtifacts = async (tripId: string): Promise<void> => {
+  const db = getDb();
+
+  const deleteQueryBatch = async (query: any): Promise<void> => {
+    const snap = await query.get();
+    if (!snap.size) return;
+    const batch = db.batch();
+    snap.docs.forEach((doc: any) => batch.delete(doc.ref));
+    await batch.commit();
+  };
+
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+
+  // Itineraries + their details/checklist items/reactions.
+  const itinerariesSnap = await db.collection('itineraries').where('tripId', '==', tripId).get();
+  for (const itineraryDoc of itinerariesSnap.docs) {
+    const detailsSnap = await db.collection('itinerary_details').where('itineraryId', '==', itineraryDoc.id).get();
+    const detailIds = detailsSnap.docs.map((d) => d.id);
+    for (const ids of chunk(detailIds)) {
+      await deleteQueryBatch(db.collection('itinerary_checklist_items').where('detailId', 'in', ids));
+    }
+    if (detailsSnap.size) {
+      const batch = db.batch();
+      detailsSnap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+    await itineraryDoc.ref.delete();
+  }
+  await deleteQueryBatch(db.collection('itinerary_detail_reactions').where('tripId', '==', tripId));
+
+  // Chat: messages, their per-message reads, and the per-user watermark.
+  const messagesSnap = await db.collection('trip_messages').where('tripId', '==', tripId).get();
+  const messageIds = messagesSnap.docs.map((d) => d.id);
+  for (const ids of chunk(messageIds)) {
+    await deleteQueryBatch(db.collection('message_reads').where('messageId', 'in', ids));
+  }
+  if (messagesSnap.size) {
+    const batch = db.batch();
+    messagesSnap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
+  await deleteQueryBatch(db.collection('chat_read_watermarks').where('tripId', '==', tripId));
+
+  // Packing list nested subcollections are keyed directly by tripId.
+  await deleteQueryBatch(tripPackingCollection(tripId));
+  await deleteQueryBatch(tripPackingChecksCollection(tripId));
+
+  // Remaining trip-scoped collections and booking records (deleted
+  // unconditionally here regardless of remaining traveler ids, since the
+  // trip itself is going away).
+  await deleteQueryBatch(db.collection('car_rentals').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('item_votes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_activity').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_comments').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_followers').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('follow_codes').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_share_invites').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_payments').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('trip_removals').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('expenses').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('flights').where('tripId', '==', tripId));
+  await deleteQueryBatch(db.collection('lodgings').where('trip_id', '==', tripId));
+  await deleteQueryBatch(db.collection('tours').where('tripId', '==', tripId));
+};
+
 export const deleteTrip = async (userId: string, tripId: string): Promise<void> => {
   const db = getDb();
   const trip = await db.collection('trips').doc(tripId).get();
@@ -2469,11 +2549,8 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
     .filter((id) => typeof id === 'string' && id.length && !removedUserIds.has(id)).length;
 
   if (activeUserCount === 0) {
-    const expenses = await db.collection('expenses').where('tripId', '==', tripId).get();
-    const batch = db.batch();
-    expenses.forEach((doc) => batch.delete(doc.ref));
-    batch.delete(trip.ref);
-    await batch.commit();
+    await deleteAllTripArtifacts(tripId);
+    await trip.ref.delete();
     await clearTripAccessForTrip(tripId);
     await incrementAdminUserTripCount(userId, -1);
     return;
@@ -2573,6 +2650,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   description?: string | null;
   destination?: string | null;
   locationIds?: string[];
+  mustSeeAttractions?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -2590,6 +2668,7 @@ export const createTripWithGroupAndMembers = async (payload: {
     description: payload.description ?? null,
     destination: payload.destination ?? null,
     locationIds: Array.isArray(payload.locationIds) ? payload.locationIds : [],
+    mustSeeAttractions: Array.isArray(payload.mustSeeAttractions) ? payload.mustSeeAttractions : [],
     startDate: payload.startDate ?? null,
     endDate: payload.endDate ?? null,
     startMonth: payload.startMonth ?? null,
@@ -3895,6 +3974,11 @@ const toAttractionCatalogEntry = (id: string, data: any): AttractionCatalogEntry
     qid: typeof payload.qid === 'string' ? payload.qid : null,
     lat: Number.isFinite(lat) ? lat : null,
     lon: Number.isFinite(lon) ? lon : null,
+    popularityScore: payload.popularityScore != null && Number.isFinite(Number(payload.popularityScore)) ? Number(payload.popularityScore) : null,
+    primaryTag: typeof payload.primaryTag === 'string' ? payload.primaryTag as AttractionCatalogEntry['primaryTag'] : null,
+    wikipediaTitle: typeof payload.wikipediaTitle === 'string' ? payload.wikipediaTitle : null,
+    wikipediaPageId: payload.wikipediaPageId != null && Number.isFinite(Number(payload.wikipediaPageId)) ? Number(payload.wikipediaPageId) : null,
+    wikipediaSummary: typeof payload.wikipediaSummary === 'string' ? payload.wikipediaSummary : null,
     updatedAt: String(data.updatedAt ?? nowIso()),
   };
 };
@@ -3955,6 +4039,41 @@ const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
+};
+
+const toDurationMetadataId = (destinationKey: string, name: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-dur:${clean(destinationKey)}:${clean(name)}`.slice(0, 180);
+};
+
+const toAttractionDurationMetadata = (id: string, data: any): AttractionDurationMetadata | null => {
+  const payload = data?.payload && typeof data.payload === 'object' ? data.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const name = String(payload.name ?? '').trim();
+  const estimatedDurationMinutes = Number(payload.estimatedDurationMinutes);
+  if (!destinationKey || !name || !Number.isFinite(estimatedDurationMinutes)) return null;
+  return {
+    id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionDurationMetadata['activityType'],
+    estimatedDurationMinutes,
+    durationSource: payload.durationSource === 'override' ? 'override' : 'heuristic',
+    requiresPreOrderTickets: Boolean(payload.requiresPreOrderTickets),
+    preOrderNotes: typeof payload.preOrderNotes === 'string' ? payload.preOrderNotes : null,
+    description: typeof payload.description === 'string' ? payload.description : null,
+    descriptionSource:
+      payload.descriptionSource === 'wikipedia' || payload.descriptionSource === 'catalog_snippet'
+        ? payload.descriptionSource
+        : null,
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
 };
 
 export const searchLocations = async (
@@ -4084,6 +4203,11 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
     qid: entry.qid ?? null,
     lat: Number.isFinite(Number(entry.lat)) ? Number(entry.lat) : null,
     lon: Number.isFinite(Number(entry.lon)) ? Number(entry.lon) : null,
+    popularityScore: entry.popularityScore != null && Number.isFinite(Number(entry.popularityScore)) ? Number(entry.popularityScore) : null,
+    primaryTag: entry.primaryTag ?? null,
+    wikipediaTitle: entry.wikipediaTitle ?? null,
+    wikipediaPageId: entry.wikipediaPageId != null && Number.isFinite(Number(entry.wikipediaPageId)) ? Number(entry.wikipediaPageId) : null,
+    wikipediaSummary: entry.wikipediaSummary ?? null,
     updatedAt: entry.updatedAt,
   };
   const docRef = db.collection('locations').doc(entry.id);
@@ -4162,6 +4286,165 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
   const parsed = toAttractionShortlistBlob(saved.id, saved.data() as any);
   if (!parsed) {
     throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
+};
+
+const toItineraryPlanCacheEntry = (id: string, data: any): ItineraryPlanCacheEntry | null => {
+  if (!data?.cacheKey || !['route', 'day'].includes(data.stage) || !data.signature || !data.dependencyFingerprint) return null;
+  // payload and fragments are stored as JSON strings because they can contain
+  // nested arrays (e.g. PromptDay.it), which Firestore rejects.
+  let payload = data.payload;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      // return null if payload is unparseable
+      return null;
+    }
+  }
+  let fragments = data.fragments;
+  if (typeof fragments === 'string') {
+    try {
+      fragments = JSON.parse(fragments);
+    } catch {
+      fragments = [];
+    }
+  }
+  return { id, cacheKey: String(data.cacheKey), stage: data.stage, signature: String(data.signature), dependencyFingerprint: String(data.dependencyFingerprint), payload, fragments: Array.isArray(fragments) ? fragments : [], expiresAt: String(data.expiresAt), updatedAt: String(data.updatedAt ?? nowIso()) };
+};
+
+export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<ItineraryPlanCacheEntry | null> => {
+  const doc = await getDb().collection('itinerary_plan_cache').doc(cacheKey).get();
+  return doc.exists ? toItineraryPlanCacheEntry(doc.id, doc.data()) : null;
+};
+
+export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEntry): Promise<ItineraryPlanCacheEntry> => {
+  const ref = getDb().collection('itinerary_plan_cache').doc(entry.id);
+  // payload and fragments can contain arrays nested directly inside arrays
+  // (e.g. PromptDay.it), which Firestore rejects outright
+  // ("Property payload contains an invalid nested entity").
+  await ref.set({
+    cacheKey: entry.cacheKey,
+    stage: entry.stage,
+    signature: entry.signature,
+    dependencyFingerprint: entry.dependencyFingerprint,
+    payload: JSON.stringify(entry.payload),
+    fragments: JSON.stringify(entry.fragments ?? []),
+    expiresAt: entry.expiresAt,
+    updatedAt: nowIso(),
+  });
+  const saved = await ref.get();
+  const parsed = toItineraryPlanCacheEntry(saved.id, saved.data());
+  if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
+  return parsed;
+};
+
+export const getAttractionDurationMetadata = async (
+  _userId: string,
+  destinationKey: string,
+  name: string
+): Promise<AttractionDurationMetadata | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const cleanName = String(name ?? '').trim().toLowerCase();
+  if (!key || !cleanName) return null;
+  const id = toDurationMetadataId(key, cleanName);
+  const db = getDb();
+  const doc = await db.collection('locations').doc(id).get();
+  if (!doc.exists) return null;
+  return toAttractionDurationMetadata(doc.id, doc.data() as any);
+};
+
+export const listAttractionDurationMetadataByDestination = async (
+  _userId: string,
+  destinationKey: string
+): Promise<AttractionDurationMetadata[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const db = getDb();
+  const snapshot = await db
+    .collection('locations')
+    .where('sourceType', '==', 'attraction_duration_metadata')
+    .where('destinationKey', '==', key)
+    .get();
+  return snapshot.docs
+    .map((doc) => toAttractionDurationMetadata(doc.id, doc.data()))
+    .filter(Boolean) as AttractionDurationMetadata[];
+};
+
+// Manual cache-invalidation trigger (plan §2C "Maintainability" requirement):
+// mirrors db.postgres.ts's deleteAttractionDurationMetadata for adapter parity.
+export const deleteAttractionDurationMetadata = async (
+  destinationKey: string,
+  name?: string | null
+): Promise<number> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return 0;
+  const db = getDb();
+  if (name && String(name).trim()) {
+    const id = toDurationMetadataId(key, String(name).trim().toLowerCase());
+    const docRef = db.collection('locations').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) return 0;
+    await docRef.delete();
+    return 1;
+  }
+  const snapshot = await db
+    .collection('locations')
+    .where('sourceType', '==', 'attraction_duration_metadata')
+    .where('destinationKey', '==', key)
+    .get();
+  if (snapshot.empty) return 0;
+  const batch = db.batch();
+  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+  return snapshot.size;
+};
+
+export const upsertAttractionDurationMetadata = async (
+  entry: AttractionDurationMetadata
+): Promise<AttractionDurationMetadata> => {
+  const db = getDb();
+  const id = toDurationMetadataId(entry.destinationKey, entry.name);
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    name: entry.name,
+    activityType: entry.activityType,
+    estimatedDurationMinutes: Number(entry.estimatedDurationMinutes) || 0,
+    durationSource: entry.durationSource ?? 'heuristic',
+    requiresPreOrderTickets: Boolean(entry.requiresPreOrderTickets),
+    preOrderNotes: entry.preOrderNotes ?? null,
+    description: entry.description ?? null,
+    descriptionSource: entry.descriptionSource ?? null,
+    updatedAt: entry.updatedAt,
+  };
+  const docRef = db.collection('locations').doc(id);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    tx.set(
+      docRef,
+      {
+        id,
+        sourceType: 'attraction_duration_metadata',
+        category: 'attraction_duration_metadata',
+        name: entry.name,
+        address: null,
+        searchName: `${entry.name} ${entry.destinationDisplayName} attraction duration`.toLowerCase(),
+        // Top-level destinationKey for indexed Firestore compound queries
+        destinationKey: String(entry.destinationKey ?? '').trim().toLowerCase(),
+        payload: mergedPayload,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+  });
+  const saved = await docRef.get();
+  const parsed = toAttractionDurationMetadata(saved.id, saved.data() as any);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction duration metadata after upsert.');
   }
   return parsed;
 };
@@ -6454,6 +6737,48 @@ export const incrementApiCostCounter = async (
       { merge: true }
     );
     return nextAmountMicros;
+  });
+};
+
+export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerationMetrics): Promise<void> => {
+  const db = getDb();
+  // metrics object can contain stage-level captures which might eventually
+  // contain nested arrays, which Firestore rejects. Storing as a JSON string
+  // ensures we don't hit "invalid nested entity" errors in production.
+  await db.collection('itinerary_generation_metrics').doc(metrics.generationId).set(
+    {
+      generationId: metrics.generationId,
+      tripId: metrics.tripId ?? null,
+      userId: metrics.userId ?? null,
+      provider: metrics.provider,
+      model: metrics.model,
+      outcome: metrics.outcome,
+      metrics: JSON.stringify(metrics),
+      createdAt: metrics.createdAt ?? nowIso(),
+    },
+    { merge: true }
+  );
+};
+
+export const getItineraryGenerationMetrics = async (generationId: string): Promise<ItineraryGenerationMetrics | null> => {
+  const doc = await getDb().collection('itinerary_generation_metrics').doc(generationId).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  if (typeof data.metrics === 'string') {
+    try {
+      return JSON.parse(data.metrics);
+    } catch {
+      return null;
+    }
+  }
+  return data.metrics ?? null;
+};
+
+export const recordItineraryComparison = async (comparison: ItineraryComparison): Promise<void> => {
+  const db = getDb();
+  await db.collection('itinerary_comparisons').add({
+    ...comparison,
+    createdAt: comparison.createdAt ?? nowIso(),
   });
 };
 

@@ -12,12 +12,12 @@ server/.env
 server/.local_env
 server/.secrets
 server/logs
-server/data/ai-capture
 server/public/_expo
 server/node_modules
 server/Mailgun Example.js
 server/.env.example
 server/__tests__/test-credentials.json
+test_inputs/raw
 app/.expo
 app/android/.idea
 app/android/local.properties
@@ -47,3 +47,4 @@ firestore-debug.log
 app/desktop.ini
 server/desktop.ini
 test_inputs/default_accounts.json
+server/__fixtures__/gold

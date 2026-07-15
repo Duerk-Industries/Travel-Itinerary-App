@@ -8,6 +8,7 @@ export type AiOpsSection =
   | 'shadow-replay'
   | 'executive'
   | 'runtime-settings'
+  | 'itinerary-instructions'
   | 'ai-audit-log';
 
 export type AiProviderOption = { id: string; configured: boolean; registered: boolean; certified?: boolean; supportedModels: string[] };
@@ -27,6 +28,14 @@ export type AiProviderFeatureConfig = {
   updatedAt?: string | null;
 };
 export type AiRuntimeSetting = { key: string; value: string; updatedBy?: string | null; updatedAt?: string | null; source?: string };
+export type ItineraryInstructionPhase = 'p0' | 'p1' | 'p2' | 'p3' | 'p4';
+export type ItineraryInstructionDocument = {
+  phase: ItineraryInstructionPhase;
+  markdown: string;
+  source: 'default' | 'admin';
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+};
 export type AiCaptureItem = {
   captureId: string;
   featureKey: string;

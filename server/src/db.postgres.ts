@@ -21,6 +21,8 @@ import {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  ItineraryPlanCacheEntry,
+  AttractionDurationMetadata,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -59,6 +61,8 @@ import {
   AiAbTestMetric,
   AiProviderCertification,
   AiRecommendation,
+  ItineraryGenerationMetrics,
+  ItineraryComparison,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -615,6 +619,7 @@ export const initDb = async (): Promise<void> => {
       description TEXT,
       destination TEXT,
       location_ids JSONB DEFAULT '[]'::jsonb,
+      must_see_attractions JSONB DEFAULT '[]'::jsonb,
       start_date DATE,
       end_date DATE,
       start_month INTEGER,
@@ -628,6 +633,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS location_ids JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS must_see_attractions JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_date DATE;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS end_date DATE;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_month INTEGER;`);
@@ -638,6 +644,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
   await p.query(`UPDATE trips SET covered_by = '{}'::jsonb WHERE covered_by IS NULL;`);
   await p.query(`UPDATE trips SET location_ids = '[]'::jsonb WHERE location_ids IS NULL;`);
+  await p.query(`UPDATE trips SET must_see_attractions = '[]'::jsonb WHERE must_see_attractions IS NULL;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS universal_packing_list_items (
@@ -854,6 +861,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_attraction_dest_key ON locations(source_type, (LOWER(COALESCE(payload->>'destinationKey', ''))));`);
   // Partial index on category for shortlist blob lookups
   await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_shortlist_blob ON locations(id) WHERE source_type = 'attraction_shortlist_blob';`);
+  // Partial index for attraction duration/metadata cache lookups
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_duration_metadata ON locations(id) WHERE source_type = 'attraction_duration_metadata';`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_duration_metadata_dest_key ON locations(source_type, (LOWER(COALESCE(payload->>'destinationKey', '')))) WHERE source_type = 'attraction_duration_metadata';`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_removals (
@@ -1245,6 +1255,36 @@ export const initDb = async (): Promise<void> => {
     );
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_api_cost_counters_lookup ON api_cost_counters(provider, window_key);`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS itinerary_generation_metrics (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      generation_id TEXT NOT NULL UNIQUE,
+      trip_id       TEXT,
+      user_id       UUID REFERENCES users(id) ON DELETE SET NULL,
+      provider      TEXT NOT NULL,
+      model         TEXT NOT NULL,
+      outcome       TEXT NOT NULL,
+      metrics       JSONB NOT NULL,
+      created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS itinerary_comparisons (
+      id                          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      request_path                TEXT NOT NULL,
+      gold_capture_id             TEXT,
+      production_capture_id       TEXT,
+      gold_item_count             INTEGER,
+      production_item_count       INTEGER,
+      item_count_delta            INTEGER,
+      gold_days                   INTEGER,
+      production_days             INTEGER,
+      attraction_coverage_percent DECIMAL,
+      gold_structural_issues      JSONB,
+      production_structural_issues JSONB,
+      created_at                  TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_generation_metrics_created ON itinerary_generation_metrics(created_at DESC);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_comparisons_created ON itinerary_comparisons(created_at DESC);`);
   await p.query(`
     CREATE TABLE IF NOT EXISTS usage_events (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -3735,6 +3775,7 @@ export const updateTripDetails = async (
     description?: string | null;
     destination?: string | null;
     locationIds?: string[];
+    mustSeeAttractions?: string[];
     startDate?: string | null;
     endDate?: string | null;
     startMonth?: number | null;
@@ -3758,7 +3799,8 @@ export const updateTripDetails = async (
          start_month = CASE WHEN $7 = 'month' THEN $8::int WHEN $7 = 'range' THEN NULL ELSE start_month END,
          start_year = CASE WHEN $7 = 'month' THEN $9::int WHEN $7 = 'range' THEN NULL ELSE start_year END,
          duration_days = CASE WHEN $7 = 'month' THEN $10::int WHEN $7 = 'range' THEN NULL ELSE duration_days END,
-         currency = COALESCE($11, currency)
+         currency = COALESCE($11, currency),
+         must_see_attractions = COALESCE($12::jsonb, must_see_attractions)
      WHERE id = $6
      RETURNING id,
        group_id as "groupId",
@@ -3766,6 +3808,7 @@ export const updateTripDetails = async (
        description,
        destination,
        COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+       COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
        start_date as "startDate",
        end_date as "endDate",
        start_month as "startMonth",
@@ -3786,6 +3829,7 @@ export const updateTripDetails = async (
       updates.startYear ?? null,
       updates.durationDays ?? null,
       updates.currency ?? null,
+      Array.isArray(updates.mustSeeAttractions) ? JSON.stringify(updates.mustSeeAttractions) : null,
     ]
   );
   if (!rows.length) throw new Error('Trip not found');
@@ -6018,6 +6062,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               t.description,
               t.destination,
               COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
+              COALESCE(t.must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
               t.start_date as "startDate",
               t.end_date as "endDate",
               t.start_month as "startMonth",
@@ -6044,6 +6089,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.description,
             t.destination,
             COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
+            COALESCE(t.must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
             t.start_date as "startDate",
             t.end_date as "endDate",
             t.start_month as "startMonth",
@@ -6074,6 +6120,7 @@ export const createTrip = async (
     description?: string | null;
     destination?: string | null;
     locationIds?: string[];
+    mustSeeAttractions?: string[];
     startDate?: string | null;
     endDate?: string | null;
     startMonth?: number | null;
@@ -6107,14 +6154,15 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING id,
                group_id as "groupId",
                name,
                description,
                destination,
                COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+               COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
                start_date as "startDate",
                end_date as "endDate",
                start_month as "startMonth",
@@ -6137,6 +6185,7 @@ export const createTrip = async (
       details?.durationDays ?? null,
       details?.currency ?? 'USD',
       {},
+      JSON.stringify(Array.isArray(details?.mustSeeAttractions) ? details?.mustSeeAttractions : []),
     ]
   );
   await ensureTripPackingListWithRunner(p, id);
@@ -6314,6 +6363,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   description?: string | null;
   destination?: string | null;
   locationIds?: string[];
+  mustSeeAttractions?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -6373,14 +6423,15 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING id,
                  group_id as "groupId",
                  name,
                  description,
                  destination,
                  COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+                 COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
                  start_date as "startDate",
                  end_date as "endDate",
                  start_month as "startMonth",
@@ -6401,6 +6452,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.startYear ?? null,
         payload.durationDays ?? null,
         payload.currency ?? 'USD',
+        JSON.stringify(Array.isArray(payload.mustSeeAttractions) ? payload.mustSeeAttractions : []),
       ]
     );
 
@@ -6950,6 +7002,11 @@ const toAttractionCatalogEntry = (row: any): AttractionCatalogEntry => {
     qid: typeof payload.qid === 'string' ? payload.qid : null,
     lat: Number.isFinite(lat) ? lat : null,
     lon: Number.isFinite(lon) ? lon : null,
+    popularityScore: payload.popularityScore != null && Number.isFinite(Number(payload.popularityScore)) ? Number(payload.popularityScore) : null,
+    primaryTag: typeof payload.primaryTag === 'string' ? payload.primaryTag as AttractionCatalogEntry['primaryTag'] : null,
+    wikipediaTitle: typeof payload.wikipediaTitle === 'string' ? payload.wikipediaTitle : null,
+    wikipediaPageId: payload.wikipediaPageId != null && Number.isFinite(Number(payload.wikipediaPageId)) ? Number(payload.wikipediaPageId) : null,
+    wikipediaSummary: typeof payload.wikipediaSummary === 'string' ? payload.wikipediaSummary : null,
     updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
   };
 };
@@ -6980,6 +7037,41 @@ const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
+};
+
+const toDurationMetadataId = (destinationKey: string, name: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-dur:${clean(destinationKey)}:${clean(name)}`.slice(0, 180);
+};
+
+const toAttractionDurationMetadata = (row: any): AttractionDurationMetadata | null => {
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const name = String(payload.name ?? '').trim();
+  const estimatedDurationMinutes = Number(payload.estimatedDurationMinutes);
+  if (!destinationKey || !name || !Number.isFinite(estimatedDurationMinutes)) return null;
+  return {
+    id: row.id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionDurationMetadata['activityType'],
+    estimatedDurationMinutes,
+    durationSource: payload.durationSource === 'override' ? 'override' : 'heuristic',
+    requiresPreOrderTickets: Boolean(payload.requiresPreOrderTickets),
+    preOrderNotes: typeof payload.preOrderNotes === 'string' ? payload.preOrderNotes : null,
+    description: typeof payload.description === 'string' ? payload.description : null,
+    descriptionSource:
+      payload.descriptionSource === 'wikipedia' || payload.descriptionSource === 'catalog_snippet'
+        ? payload.descriptionSource
+        : null,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
 };
 
 export const searchLocations = async (
@@ -7129,6 +7221,11 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
     qid: entry.qid ?? null,
     lat: Number.isFinite(Number(entry.lat)) ? Number(entry.lat) : null,
     lon: Number.isFinite(Number(entry.lon)) ? Number(entry.lon) : null,
+    popularityScore: entry.popularityScore != null && Number.isFinite(Number(entry.popularityScore)) ? Number(entry.popularityScore) : null,
+    primaryTag: entry.primaryTag ?? null,
+    wikipediaTitle: entry.wikipediaTitle ?? null,
+    wikipediaPageId: entry.wikipediaPageId != null && Number.isFinite(Number(entry.wikipediaPageId)) ? Number(entry.wikipediaPageId) : null,
+    wikipediaSummary: entry.wikipediaSummary ?? null,
     updatedAt: entry.updatedAt,
   };
   const searchName = `${entry.name} ${entry.destinationDisplayName} ${entry.country ?? ''} ${entry.stateProvince ?? ''}`.toLowerCase();
@@ -7198,6 +7295,145 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
   const parsed = toAttractionShortlistBlob(rows[0]);
   if (!parsed) {
     throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
+};
+
+const toItineraryPlanCacheEntry = (row: any): ItineraryPlanCacheEntry | null => {
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  if (!payload.cacheKey || !['route', 'day'].includes(payload.stage) || !payload.signature || !payload.dependencyFingerprint) return null;
+  return {
+    id: row.id, cacheKey: String(payload.cacheKey), stage: payload.stage, signature: String(payload.signature),
+    dependencyFingerprint: String(payload.dependencyFingerprint), payload: payload.value,
+    fragments: Array.isArray(payload.fragments) ? payload.fragments : [], expiresAt: String(payload.expiresAt),
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
+};
+
+export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<ItineraryPlanCacheEntry | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT id, payload, updated_at as "updatedAt" FROM locations WHERE id = $1 AND source_type = 'itinerary_plan_cache' LIMIT 1`, [cacheKey]);
+  return rows.length ? toItineraryPlanCacheEntry(rows[0]) : null;
+};
+
+export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEntry): Promise<ItineraryPlanCacheEntry> => {
+  const p = getPool();
+  const payload = { cacheKey: entry.cacheKey, stage: entry.stage, signature: entry.signature, dependencyFingerprint: entry.dependencyFingerprint, value: entry.payload, fragments: entry.fragments ?? [], expiresAt: entry.expiresAt };
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, search_name, payload, updated_at)
+     VALUES ($1, 'itinerary_plan_cache', 'itinerary_plan_cache', $2, $2, $3::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+     RETURNING id, payload, updated_at as "updatedAt"`,
+    [entry.id, entry.cacheKey, JSON.stringify(payload)]
+  );
+  const parsed = toItineraryPlanCacheEntry(rows[0]);
+  if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
+  return parsed;
+};
+
+export const getAttractionDurationMetadata = async (
+  _userId: string,
+  destinationKey: string,
+  name: string
+): Promise<AttractionDurationMetadata | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const cleanName = String(name ?? '').trim().toLowerCase();
+  if (!key || !cleanName) return null;
+  const id = toDurationMetadataId(key, cleanName);
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE id = $1
+        AND source_type = 'attraction_duration_metadata'
+      LIMIT 1`,
+    [id]
+  );
+  if (!rows.length) return null;
+  return toAttractionDurationMetadata(rows[0]);
+};
+
+export const listAttractionDurationMetadataByDestination = async (
+  _userId: string,
+  destinationKey: string
+): Promise<AttractionDurationMetadata[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE source_type = 'attraction_duration_metadata'
+        AND LOWER(COALESCE(payload->>'destinationKey', '')) = $1`,
+    [key]
+  );
+  return rows.map(toAttractionDurationMetadata).filter(Boolean) as AttractionDurationMetadata[];
+};
+
+// Manual cache-invalidation trigger (plan §2C "Maintainability" requirement):
+// lets an operator bust the activityContext/duration-metadata cache for a
+// single attraction (name + destinationKey) or an entire destination
+// (destinationKey only) without a code deploy. Returns the number of rows
+// removed so the caller/admin UI can confirm something actually happened.
+export const deleteAttractionDurationMetadata = async (
+  destinationKey: string,
+  name?: string | null
+): Promise<number> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return 0;
+  const p = getPool();
+  if (name && String(name).trim()) {
+    const id = toDurationMetadataId(key, String(name).trim().toLowerCase());
+    const { rowCount } = await p.query(
+      `DELETE FROM locations WHERE id = $1 AND source_type = 'attraction_duration_metadata'`,
+      [id]
+    );
+    return rowCount ?? 0;
+  }
+  const { rowCount } = await p.query(
+    `DELETE FROM locations
+      WHERE source_type = 'attraction_duration_metadata'
+        AND LOWER(COALESCE(payload->>'destinationKey', '')) = $1`,
+    [key]
+  );
+  return rowCount ?? 0;
+};
+
+export const upsertAttractionDurationMetadata = async (
+  entry: AttractionDurationMetadata
+): Promise<AttractionDurationMetadata> => {
+  const p = getPool();
+  const id = toDurationMetadataId(entry.destinationKey, entry.name);
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    name: entry.name,
+    activityType: entry.activityType,
+    estimatedDurationMinutes: Number(entry.estimatedDurationMinutes) || 0,
+    durationSource: entry.durationSource ?? 'heuristic',
+    requiresPreOrderTickets: Boolean(entry.requiresPreOrderTickets),
+    preOrderNotes: entry.preOrderNotes ?? null,
+    description: entry.description ?? null,
+    descriptionSource: entry.descriptionSource ?? null,
+    updatedAt: entry.updatedAt,
+  };
+  const searchName = `${entry.name} ${entry.destinationDisplayName} attraction duration`.toLowerCase();
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, address, search_name, payload, updated_at)
+     VALUES ($1, 'attraction_duration_metadata', 'attraction_duration_metadata', $2, NULL, $3, $4::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       source_type = 'attraction_duration_metadata',
+       category = 'attraction_duration_metadata',
+       name = EXCLUDED.name,
+       search_name = EXCLUDED.search_name,
+       payload = locations.payload || EXCLUDED.payload,
+       updated_at = NOW()
+     RETURNING id, payload, updated_at as "updatedAt"`,
+    [id, entry.name, searchName, JSON.stringify(payload)]
+  );
+  const parsed = toAttractionDurationMetadata(rows[0]);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction duration metadata after upsert.');
   }
   return parsed;
 };
@@ -8325,6 +8561,7 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
             description,
             destination,
             COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+            COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
             start_date as "startDate",
             end_date as "endDate",
             start_month as "startMonth",
@@ -9748,6 +9985,65 @@ export const listApiCostCounters = async (): Promise<
 export const resetApiCostCounters = async (): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM api_cost_counters`);
+};
+
+export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerationMetrics): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO itinerary_generation_metrics
+      (generation_id, trip_id, user_id, provider, model, outcome, metrics, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,NOW())
+     ON CONFLICT (generation_id) DO UPDATE SET
+       trip_id = EXCLUDED.trip_id,
+       user_id = EXCLUDED.user_id,
+       provider = EXCLUDED.provider,
+       model = EXCLUDED.model,
+       outcome = EXCLUDED.outcome,
+       metrics = EXCLUDED.metrics`,
+    [
+      metrics.generationId,
+      metrics.tripId ?? null,
+      metrics.userId ?? null,
+      metrics.provider,
+      metrics.model,
+      metrics.outcome,
+      JSON.stringify(metrics),
+    ]
+  );
+};
+
+export const getItineraryGenerationMetrics = async (generationId: string): Promise<ItineraryGenerationMetrics | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ metrics: Record<string, unknown> }>(
+    `SELECT metrics FROM itinerary_generation_metrics WHERE generation_id = $1`,
+    [generationId]
+  );
+  return (rows[0]?.metrics as unknown as ItineraryGenerationMetrics) ?? null;
+};
+
+export const recordItineraryComparison = async (comparison: ItineraryComparison): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO itinerary_comparisons (
+      request_path, gold_capture_id, production_capture_id,
+      gold_item_count, production_item_count, item_count_delta,
+      gold_days, production_days, attraction_coverage_percent,
+      gold_structural_issues, production_structural_issues
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      comparison.requestPath,
+      comparison.goldCaptureId,
+      comparison.productionCaptureId,
+      comparison.goldItemCount,
+      comparison.productionItemCount,
+      comparison.itemCountDelta,
+      comparison.goldDays,
+      comparison.productionDays,
+      comparison.attractionCoveragePercent,
+      JSON.stringify(comparison.goldStructuralIssues),
+      JSON.stringify(comparison.productionStructuralIssues),
+    ]
+  );
 };
 
 export const atomicIncrementIfUnderLimit = async (

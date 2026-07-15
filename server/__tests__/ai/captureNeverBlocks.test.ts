@@ -21,12 +21,16 @@ jest.mock('../../src/apis/openaiCallers', () => {
     }),
   };
 });
-jest.mock('../../src/services/attractionsCatalogService', () => ({
-  getAttractionPromptBlockForDestinations: jest.fn(async () => ({
-    shortlistByDestination: {},
-    promptBlock: 'none',
-  })),
-}));
+jest.mock('../../src/services/attractionsCatalogService', () => {
+  const actual = jest.requireActual('../../src/services/attractionsCatalogService');
+  return {
+    ...actual,
+    getAttractionPromptBlockForDestinations: jest.fn(async () => ({
+      shortlistByDestination: {},
+      promptBlock: 'none',
+    })),
+  };
+});
 jest.mock('../../src/ai/capture/captureService', () => ({
   captureAiInteraction: jest.fn(),
 }));
@@ -85,17 +89,11 @@ describe('AI capture never blocks user-facing work', () => {
         a: [],
         cf: 'M',
       }))
-      .mockResolvedValueOnce(jsonResponse({
-        $: 'it1',
-        eh: 'JFK',
-        xh: 'JFK',
-        b: [{ l: 'New York', ci: '2026-09-01', co: '2026-09-03', dn: [] }],
-        x: [],
-        rc: null,
-        dy: [{ d: 1, dt: '2026-09-01', b: 'New York', it: [['D', 'O', 'Central Park walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York'", ln: [], cf: 'M' }],
-        a: [],
-        cf: 'M',
-      }))
+      // Depending on the Jest DB project, mechanical validation may either
+      // skip p3 or invoke it. Supplying the same safe text twice keeps p4
+      // covered in both stage orders without coupling this capture test to the
+      // config-loader cache.
+      .mockResolvedValueOnce(jsonResponse('## Captured itinerary result'))
       .mockResolvedValueOnce(jsonResponse('## Captured itinerary result'));
 
     const result = await generateItineraryViaPromptPlan({

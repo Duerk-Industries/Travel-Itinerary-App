@@ -827,6 +827,26 @@ describe('Admin routes', () => {
 
         const openAiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPENAI');
         expect(openAiProvider).toBeTruthy();
+        const wikimediaProvider = getRes.body.providers.find((provider: any) => provider.provider === 'WIKIMEDIA');
+        const serpApiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'SERPAPI');
+        const openMeteoProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPEN_METEO');
+        expect(getRes.body.getYourGuide).toEqual(expect.objectContaining({
+          featureEnabled: false,
+          partnerConfigured: expect.any(Boolean),
+          apiConfigured: expect.any(Boolean),
+          cachePermission: expect.any(Boolean),
+          revenueDashboard: 'separate',
+          observability: expect.objectContaining({
+            cache: expect.objectContaining({ hits: expect.any(Number), stale: expect.any(Number), negative: expect.any(Number) }),
+            latencyMs: expect.objectContaining({ sampleCount: expect.any(Number) }),
+          }),
+        }));
+        expect(wikimediaProvider.callers.map((caller: any) => caller.caller)).toEqual(expect.arrayContaining([
+          'ATTRACTION_DISCOVERY_WIKIPEDIA', 'ATTRACTION_WIKIPEDIA_ENRICHMENT',
+          'ATTRACTION_WIKIPEDIA_SUMMARY', 'ATTRACTION_WIKIMEDIA_PAGEVIEWS',
+        ]));
+        expect(serpApiProvider.callers.map((caller: any) => caller.caller)).toContain('ATTRACTION_DISCOVERY_SEARCH');
+        expect(openMeteoProvider.callers.map((caller: any) => caller.caller)).toContain('ITINERARY_MONTHLY_CLIMATOLOGY');
 
         const callers = Object.fromEntries(
           openAiProvider.callers.map((caller: any) => [caller.caller, caller.limit])
@@ -1042,6 +1062,37 @@ describe('Admin routes', () => {
       const entry = audit.entries.find((item) => item.actorUserId === adminUserId && item.reason === reason);
       expect(entry).toBeTruthy();
       expect((entry!.afterState as any).certification.providerId).toBe('openai');
+    });
+  });
+
+  describe('PATCH /api/admin/api-limits/caching/:group', () => {
+    it('rejects fractional caching settings instead of silently flooring them', async () => {
+      const originalConfigPath = process.env.API_LIMITS_CONFIG_PATH;
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-api-caching-'));
+      const tempConfigPath = path.join(tempDir, 'api-limits.yaml');
+      fs.copyFileSync(path.join(__dirname, '..', 'config', 'api-limits.yaml'), tempConfigPath);
+      process.env.API_LIMITS_CONFIG_PATH = tempConfigPath;
+
+      try {
+        await request(app)
+          .patch('/api/admin/api-limits/caching/attractions')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            values: { refreshDays: 1.5 },
+            reason: 'Reject fractional cache settings',
+          })
+          .expect(400);
+
+        const updatedYaml = fs.readFileSync(tempConfigPath, 'utf8');
+        expect(updatedYaml).not.toContain('refreshDays: 1');
+      } finally {
+        if (originalConfigPath) {
+          process.env.API_LIMITS_CONFIG_PATH = originalConfigPath;
+        } else {
+          delete process.env.API_LIMITS_CONFIG_PATH;
+        }
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 

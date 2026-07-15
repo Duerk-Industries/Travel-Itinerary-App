@@ -6,6 +6,7 @@ jest.mock('../src/apis/unsplashApi', () => ({
 }));
 
 jest.mock('../src/config/apiLimits', () => ({
+  ...jest.requireActual('../src/config/apiLimits'),
   getApiCacheSetting: jest.fn(),
 }));
 

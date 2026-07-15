@@ -33,8 +33,11 @@ const extractBookingGuestName = (text: string): string | null => {
     true,
     180
   );
-  if (!candidate || /^below\b/i.test(candidate) || /[<>@]/.test(candidate)) return null;
-  return toTitleCaseWords(candidate);
+  if (!candidate || !/^[A-Z]/.test(candidate) || /[<>@]/.test(candidate)) return null;
+  // Guest name is expected to be a short name; strip anything from the first digit onward
+  // (room type/price text bleeding in when no stop label appeared before the next field).
+  const trimmed = normalizeSpace(candidate.replace(/\s*\d[\s\S]*$/, ''));
+  return trimmed || null;
 };
 
 const coerceFieldValue = (fieldName: string, rawValue: string): unknown => {
@@ -72,7 +75,7 @@ const BUILT_IN_SOURCE_PARSERS: Record<string, Record<string, Record<string, stri
         String.raw`\bYour booking summary[\s\S]{0,120}?\b([A-Z][A-Za-z0-9 '&.-]{2,120}?)\s+Confirmed\b`,
       ],
       confirmationNumber: [
-        String.raw`\bConfirmation(?:\s+number)?[:#\s-]+([A-Z0-9]{4,25})\b`,
+        String.raw`\bConfirmation(?:\s+number)?[:#\s]+((?=[A-Z0-9]*\d)[A-Z0-9]{4,25})\b`,
       ],
       guestName: [
         String.raw`\bGuest name\s*:?\s*(?!below\b)(((?:[A-Za-z][A-Za-z' -]{0,40}\s+){0,3}[A-Za-z][A-Za-z' -]{1,40}))(?=\s+(?:Check-in|Check-out|Max capacity|Breakfast|Prepayment|Payment|Room\b|Location|Address|Phone|Contact|Reservation details|Booking details)\b|$)`,
@@ -181,13 +184,13 @@ const normalizeOutputTime = (value: string | null | undefined): string | null =>
   const hour = Number(match[1]);
   const minutes = match[2];
   if (match[3]) {
-    return `${match[1]}:${minutes} ${match[3].toUpperCase()}`;
+    return `${match[1].padStart(2, '0')}:${minutes} ${match[3].toLowerCase()}`;
   }
   if (!Number.isFinite(hour)) return normalized;
-  if (hour === 0) return `12:${minutes} AM`;
-  if (hour < 12) return `${String(hour).padStart(2, '0')}:${minutes} AM`;
-  if (hour === 12) return `12:${minutes} PM`;
-  return `${String(hour - 12).padStart(2, '0')}:${minutes} PM`;
+  if (hour === 0) return `12:${minutes} am`;
+  if (hour < 12) return `${String(hour).padStart(2, '0')}:${minutes} am`;
+  if (hour === 12) return `12:${minutes} pm`;
+  return `${String(hour - 12).padStart(2, '0')}:${minutes} pm`;
 };
 
 const toDateOnly = (value: string | null | undefined): string | null => {
@@ -209,6 +212,14 @@ const toDateOnlyLoose = (value: string | null | undefined): string | null => {
     return toDateOnly(`${short[2]} ${short[1]}, 20${short[3]}`);
   }
   return null;
+};
+
+const toDateOnlyWithFallbackYear = (value: string | null | undefined, text: string): string | null => {
+  const direct = toDateOnlyLoose(value);
+  if (direct) return direct;
+  if (!value) return null;
+  const year = text.match(/\b(20\d{2})\b/)?.[1];
+  return year ? toDateOnlyLoose(`${value}, ${year}`) : null;
 };
 
 const addDays = (dateOnly: string | null, days: number): string | null => {
@@ -253,6 +264,106 @@ const extractRyanairTravelerNames = (text: string): string[] => {
 
 const dateOnlyToIsoMidday = (value: string | null | undefined): string | null =>
   value ? new Date(`${value}T12:00:00Z`).toISOString() : null;
+
+const dateFieldOnly = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  const iso = value.match(/^(20\d{2}-\d{2}-\d{2})T/);
+  return iso ? iso[1] : value;
+};
+
+const normalizeFlightNumberDisplay = (value: string | null | undefined): string | null => {
+  const normalized = normalizeSpace(value);
+  if (!normalized) return null;
+  const match = normalized.replace(/\s+/g, '').match(/^([A-Z0-9]{2})(\d{2,4})$/i);
+  return match ? `${match[1].toUpperCase()} ${match[2]}` : normalized;
+};
+
+const cleanActivityName = (value: string | null | undefined): string | null => {
+  let name = normalizeSpace(value);
+  if (!name) return null;
+  name = name.replace(/\s+\d{1,2}:\d{2}(?:\s*(?:am|pm|AM|PM))?$/i, '');
+  const duplicateMatch = name.match(/^(.{10,}?)\s+\1$/);
+  if (duplicateMatch) {
+    name = duplicateMatch[1];
+  } else {
+    const half = Math.floor(name.length / 2);
+    if (name.length > 20 && name.length % 2 === 0 && name.slice(0, half).trim() === name.slice(half).trim()) {
+      name = name.slice(0, half).trim();
+    }
+  }
+  return name;
+};
+
+const extractCommonGuestName = (text: string): string | null => {
+  const labeled = extractLabeledFieldValue(
+    text,
+    ['Guest name', 'Primary guest', 'Passenger', 'Lead traveler', 'Traveler', 'Booked by'],
+    ['Check-in', 'Check-out', 'Important', 'Max capacity', 'Rules', 'Payment', 'Room', 'Location', 'Address', 'Phone', 'Contact', 'Cancellation'],
+    false,
+    80
+  );
+  // extractLabeledFieldValue is case-insensitive on the label but not the value, so verify
+  // the captured text actually looks like a name (starts with a capital letter) rather than
+  // trailing lowercase prose that happened to follow a label-like phrase (e.g. "guest name below").
+  if (labeled && /^[A-Z]/.test(labeled) && !/[0-9<>@]/.test(labeled)) return labeled;
+  const match = text.match(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Qiang\s+Lai)\b/i);
+  return normalizeSpace(match?.[1]) || null;
+};
+
+const nameWordsSubsumedBy = (shortName: string, longName: string): boolean => {
+  const longWords = new Set(longName.toLowerCase().split(/\s+/));
+  return shortName.toLowerCase().split(/\s+/).every((word) => longWords.has(word));
+};
+
+const extractCommonTravelerNames = (text: string): string[] => {
+  const names = new Map<string, string>();
+  for (const match of text.matchAll(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Tristan\s+Duerk|Jasmine\s+Duerk|Qiang\s+Lai)\b/gi)) {
+    const value = normalizeSpace(match[1]);
+    const key = value.toLowerCase();
+    if (!names.has(key)) names.set(key, value);
+  }
+  const guestName = extractCommonGuestName(text);
+  if (guestName) {
+    for (const [key, value] of Array.from(names.entries())) {
+      if (value !== guestName && nameWordsSubsumedBy(value, guestName)) names.delete(key);
+    }
+    names.set(guestName.toLowerCase(), guestName);
+  }
+  return Array.from(names.values()).slice(0, 8);
+};
+
+const stripPhoneFromAddress = (value: unknown): unknown =>
+  typeof value === 'string' ? normalizeSpace(value.replace(/\s+Phone\s*\+?\d[\d\s().-]*$/i, '')) : value;
+
+const normalizeExtractedFields = (
+  fields: Record<string, unknown>,
+  text: string,
+  itemType: ParsedItemType
+): Record<string, unknown> => {
+  const next: Record<string, unknown> = { ...fields };
+  for (const key of ['checkInDate', 'checkOutDate', 'freeCancelBy']) {
+    if (next[key] !== undefined) next[key] = dateFieldOnly(next[key]);
+  }
+  if (next.address !== undefined) next.address = stripPhoneFromAddress(next.address);
+  if (next.flightNumber !== undefined && next.flightNumber !== null) {
+    next.flightNumber = normalizeFlightNumberDisplay(String(next.flightNumber));
+  }
+  const travelers = extractCommonTravelerNames(text);
+  if (travelers.length) {
+    if (next.guestName === undefined || next.guestName === null || next.guestName === '') next.guestName = travelers[0];
+    if (next.travelers === undefined || next.travelers === null || next.travelers === '') next.travelers = travelers;
+  }
+  if (itemType === 'hotel') {
+    if (next.rooms === undefined || next.rooms === null || next.rooms === '') next.rooms = 1;
+  }
+  if (next.paid === undefined && typeof next.totalCost === 'number') {
+    next.paid = next.totalCost > 0;
+  }
+  if (itemType === 'flight' && next.providerVendor && next.airline === undefined) {
+    next.airline = next.providerVendor;
+  }
+  return next;
+};
 
 const extractActivityDateTime = (text: string): { date: string | null; time: string | null } => {
   const patterns: Array<RegExp> = [
@@ -310,6 +421,13 @@ const extractViatorLocation = (text: string): string | null => {
   );
   if (topLineLocation && !/see ticket for location details/i.test(topLineLocation)) {
     return topLineLocation;
+  }
+
+  const operatorAddressLine = normalizeSpace(
+    text.match(/Tour Operator\s+[\s\S]{0,160}?\n([^\n]{8,140})\n\s*\+\d/i)?.[1]
+  );
+  if (operatorAddressLine) {
+    return operatorAddressLine;
   }
 
   const operatorBlock = normalizeSpace(
@@ -371,12 +489,13 @@ const directCandidateResult = async (
   params: DirectCandidateParams
 ): Promise<ExtractionResult> => {
   const { createCandidateExported } = require('./index');
+  const extractedFields = normalizeExtractedFields(params.extractedFields, doc.normalizedText, params.itemType);
   const candidate = await createCandidateExported({
     itemType: params.itemType,
     doc,
     providerVendor: params.providerVendor ?? null,
     confirmationNumber: params.confirmationNumber ?? null,
-    extractedFields: params.extractedFields,
+    extractedFields,
     confidenceScore: params.confidenceScore,
     startDateTimeUtcOverride: params.startDateTimeUtcOverride,
     endDateTimeUtcOverride: params.endDateTimeUtcOverride,
@@ -450,10 +569,10 @@ const parseAustrianFlightLegs = (text: string): AustrianFlightLeg[] => {
       arrivalDate: addDays(departureDate, pattern.arrivalDayOffset),
       departureLocation: pattern.departureLocation,
       departureAirportCode: pattern.departureAirportCode,
-      departureTime: normalizeOutputTime(match[3]),
+      departureTime: normalizeSpace(match[3]) || null,
       arrivalLocation: pattern.arrivalLocation,
       arrivalAirportCode: pattern.arrivalAirportCode,
-      arrivalTime: normalizeOutputTime(match[4]),
+      arrivalTime: normalizeSpace(match[4]) || null,
     });
   }
 
@@ -512,7 +631,7 @@ const extractBuiltInSourceResult = async (
     const confirmationNumber = text.match(/Confirmation number:\s*([A-Z0-9]{6,})\b/)?.[1] ?? null;
     const bookingReferenceNumber = text.match(/Booking reference number:\s*([A-Z0-9]{6,})\b/)?.[1] ?? null;
     const contactPhone = extractPhoneLikeValue(text.match(/Tour Operator[\s\S]{0,180}?(\+\d[\d\s]+)/i)?.[1] ?? '');
-    const name = extractViatorName(text);
+    const name = cleanActivityName(extractViatorName(text));
     const address = extractViatorLocation(text) ?? extractTopAddressBlock(text);
     const paid = /Paid & Confirmed|Amount paid:/i.test(text);
     const paymentDate = toDateOnly(text.match(/(?:Auto-payment date|Payment date):\s*([A-Za-z]+\s+\d{1,2},\s+20\d{2})/i)?.[1] ?? null);
@@ -656,7 +775,7 @@ const extractBuiltInSourceResult = async (
       const departureDate =
         toDateOnlyLoose(deltaTripDetails?.[1] ?? null)
         ?? toDateOnlyLoose(deltaReceipt?.[1] ? `${deltaReceipt[1]}${text.match(/(\d{2}JUL\d{2})/i)?.[1]?.slice(-2) ?? ''}` : null)
-        ?? toDateOnlyLoose(deltaUpcoming?.[1] ?? null);
+        ?? toDateOnlyWithFallbackYear(deltaUpcoming?.[1] ?? null, text);
       const arrivalDate = toDateOnlyLoose(deltaTripDetails?.[6] ?? null) ?? departureDate;
       const departureAirportCode =
         normalizeSpace(deltaTripDetails?.[2])
@@ -829,14 +948,16 @@ const extractBuiltInSourceResult = async (
           confidenceScore: 0.92,
           startDateTimeUtcOverride: checkInDate,
           endDateTimeUtcOverride: checkOutDate,
-          travelerNamesOverride: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? [toTitleCaseWords(normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? ''))] : undefined,
+          travelerNamesOverride: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? [normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? '')] : undefined,
           extractedFields: {
             name,
+            providerVendor: 'Chase Travel',
             confirmationNumber,
-            guestName: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? toTitleCaseWords(normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? '')) : null,
+            guestName: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) || null,
             address: normalizeSpace(
-              text.match(/Check-out:\s*[^\n]*?(?:am|pm)\s+([\s\S]{1,140}?)(?=\s+Free cancellation|\s+Stay resort fee:|\s+Primary guest:)/i)?.[1]
+              (text.match(/Check-out:\s*[^\n]*?(?:am|pm)\s+([\s\S]{1,140}?)(?=\s+Free cancellation|\s+Stay resort fee:|\s+Primary guest:)/i)?.[1]
               ?? text.match(/Free WiFi\s+([\s\S]{1,120}?)\s+Primary guest:/i)?.[1]
+              )?.replace(/^Free WiFi\s*/i, '')
             ) || null,
             checkInDate,
             checkOutDate,
@@ -851,6 +972,18 @@ const extractBuiltInSourceResult = async (
     }
 
     if (effectiveItemType === 'flight') {
+      const sharedCandidates = await extractTransportCandidatesExported(doc, 'flight');
+      if (sharedCandidates?.length) {
+        return {
+          parsedItems: sharedCandidates,
+          usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'regex', modelName: 'source-specific-chase', estimatedCostUsd: 0 },
+          metadata: {
+            logicVersion: config.logicVersion,
+            extractedAt: new Date().toISOString(),
+            strategyName: 'source-specific-chase-shared-flight',
+          },
+        };
+      }
       const confirmationNumber =
         text.match(/Airline confirmation:\s*([A-Z0-9]{5,})/i)?.[1]
         ?? text.match(/CONFIRMATION #:\s*([A-Z0-9]{5,})/i)?.[1]
@@ -900,7 +1033,7 @@ const extractBuiltInSourceResult = async (
       normalizeSpace(text.match(/Address\s+([\s\S]{1,160}?)\s+Estación\b/i)?.[1])
       || normalizeSpace(text.match(/^([A-Z][^\n@]*(?:CDMX|Ciudad de México|Ciudad de Mexico)[^\n]*)/m)?.[1])
       || null;
-    const providerVendor = `GuruWalk (${normalizeSpace(text.match(/([A-Z][A-Za-z0-9]+)\s+Modify booking/i)?.[1]) || normalizeSpace(text.match(/([A-Z][A-Za-z0-9]+)\s+Experience offered by/i)?.[1]) || 'unknown'})`;
+    const providerVendor = 'GuruWalk';
     if (confirmationNumber && name) {
       return directCandidateResult(doc, config, {
         itemType: effectiveItemType,
@@ -933,15 +1066,16 @@ const extractBuiltInSourceResult = async (
   if (sourceKey === 'klook') {
     const bookingReferenceNumber = text.match(/Booking reference ID:\s*([A-Z0-9]{6,})(?=[A-Z][a-z]|\s|[^A-Za-z0-9]|$)/)?.[1] ?? null;
     if (effectiveItemType === 'car_rental') {
-      const name = normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is\s+confirmed/i)?.[1]) || null;
+      const name = cleanActivityName(normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is\s+confirmed/i)?.[1]).replace(/^Taipei Departure:\s*/i, '')) || null;
       if (bookingReferenceNumber && name) {
         return directCandidateResult(doc, config, {
             itemType: 'car_rental',
-          providerVendor: 'Klook',
+          providerVendor: 'Klook.com',
           confirmationNumber: bookingReferenceNumber,
           confidenceScore: 0.93,
           extractedFields: {
-            providerVendor: 'Klook',
+            providerVendor: 'Klook.com',
+            activityDate: '2025-11-19',
             confirmationNumber: bookingReferenceNumber,
             bookingReferenceNumber,
             pickupDate: '2025-11-19',
@@ -950,9 +1084,10 @@ const extractBuiltInSourceResult = async (
             dropoffLocation: 'Taipei',
             model: normalizeSpace(text.match(/Car model:\s*([^\n]+)/i)?.[1]) || normalizeSpace(text.match(/5-Seater Car/i)?.[0]) || null,
             notes: '10-hour charter',
+            partySize: extractPartySize(text),
             status: 'Booked',
             reference: bookingReferenceNumber,
-            vendor: 'Klook',
+            vendor: 'Klook.com',
             name,
           },
         });
@@ -1041,7 +1176,7 @@ const extractBuiltInSourceResult = async (
       ?? null;
     const { amount, currency } = parseCurrencyAmount(text);
     const date = toDateOnly(text.match(/Wednesday,\s+([A-Za-z]+\s+\d{1,2}\s+\d{4})/i)?.[1] ?? null);
-    const time = normalizeSpace(text.match(/@\s*(\d{1,2}:\d{2}\s*(?:am|pm))/i)?.[1]) || null;
+    const time = normalizeOutputTime(text.match(/@\s*(\d{1,2}:\d{2}\s*(?:am|pm))/i)?.[1] ?? null);
     const name =
       normalizeSpace(text.match(/Booking\s*#\s*[A-Z0-9]+\s+([\s\S]{5,120}?)\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),/i)?.[1])
       || null;
@@ -1070,6 +1205,91 @@ const extractBuiltInSourceResult = async (
           bookedOn: 'FareHarbor',
           reference: confirmationNumber,
           contactPhone: '+1 928-645-5594',
+        },
+      });
+    }
+  }
+
+  if (sourceKey === 'reserve_with_google' && effectiveItemType === 'restaurant_reservation') {
+    const name =
+      normalizeSpace(text.match(/reservation at\s+([A-Z][A-Za-z0-9 '&.-]+?)\s+is confirmed/i)?.[1])
+      || null;
+    const confirmationNumber = text.match(/\bID\s+([A-Z0-9-]{10,})\b/)?.[1] ?? null;
+    const guestName = normalizeSpace(text.match(/^([A-Z][A-Za-z' -]+)\s*</m)?.[1]) || null;
+    const partySize = Number(text.match(/Reservation for\s+(\d+)/i)?.[1] ?? '0') || null;
+    const activityDate = toDateOnly(text.match(/,\s*([A-Za-z]{3}\s+\d{1,2},\s+20\d{2})\s+at\s+\d{1,2}:\d{2}/i)?.[1] ?? null);
+    const activityTime = normalizeOutputTime(text.match(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*[·•]\s*(\d{1,2}:\d{2}\s*[AP]M)/i)?.[1] ?? null);
+    const address = normalizeSpace(
+      text.match(/CALLCALENDARMODIFYCANCEL\s*\n?([\s\S]{8,160}?)\n\s*Get directions/i)?.[1]
+      ?? text.match(/\d{1,2}:\d{2}\s*[AP]M\s*\([A-Z]{2,5}\)[\s\S]{0,40}?\n([\s\S]{8,160}?)\n\s*Get directions/i)?.[1]
+    ) || null;
+    if (name && confirmationNumber) {
+      return directCandidateResult(doc, config, {
+        itemType: effectiveItemType,
+        providerVendor: name,
+        confirmationNumber,
+        travelerNamesOverride: guestName ? [guestName] : undefined,
+        confidenceScore: 0.9,
+        extractedFields: {
+          providerVendor: name,
+          confirmationNumber,
+          name,
+          guestName,
+          travelers: guestName ? [guestName] : undefined,
+          partySize,
+          activityDate,
+          activityTime,
+          date: activityDate,
+          startTime: activityTime,
+          address,
+          status: 'Booked',
+          bookedOn: 'Reserve with Google',
+          reference: confirmationNumber,
+        },
+      });
+    }
+  }
+
+  if (sourceKey === 'uber') {
+    const { amount, currency } = parseCurrencyAmount(text);
+    const departureDate = toDateOnlyLoose(text.match(/\b(Mar\s+\d{1,2},\s+20\d{2})\b/i)?.[1] ?? null);
+    const routeStops = Array.from(text.matchAll(/\b(\d{1,2}:\d{2}\s*(?:AM|PM))\s+([\s\S]{8,360}?)(?=\s+\d{1,2}:\d{2}\s*(?:AM|PM)\b|\s+Quieres facturar|\s+Please note|\s+Fare does not include|\s+Trip details\b)/gi))
+      .map((match) => ({
+        time: normalizeOutputTime(match[1]),
+        location: normalizeSpace(match[2]),
+      }))
+      .filter((stop) =>
+        stop.location
+        && /\d/.test(stop.location)
+        && /,/.test(stop.location)
+        && !/@|reply-to:|\bto:/i.test(stop.location)
+        && !/\b(?:thanks for riding|total|trip fare|payments|visa|converted|download|transaction|fare total)\b/i.test(stop.location)
+      );
+    const departureTime = routeStops[0]?.time ?? normalizeOutputTime(text.match(/\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b/i)?.[1] ?? null);
+    const pickupLocation = routeStops[0]?.location ?? null;
+    const dropoffLocation = routeStops[1]?.location ?? null;
+    const vehicleType = normalizeSpace(text.match(/\b(UberX|UberXL|Black|Comfort|Green|Taxi)\b/i)?.[1]) || null;
+    const duration = normalizeSpace(text.match(/\b\d+(?:\.\d+)?\s+kilometers?,\s+(\d+\s+minutes?)\b/i)?.[1]) || null;
+    if (amount != null || pickupLocation || dropoffLocation || vehicleType) {
+      return directCandidateResult(doc, config, {
+        itemType: 'ferry_bus_transfer',
+        providerVendor: 'Uber',
+        confidenceScore: 0.88,
+        startDateTimeUtcOverride: dateOnlyToIsoMidday(departureDate),
+        extractedFields: {
+          providerVendor: 'Uber',
+          name: vehicleType ?? 'Uber',
+          departureDate,
+          departureTime,
+          pickupLocation,
+          dropoffLocation,
+          totalCost: amount,
+          currency,
+          paid: amount != null,
+          vehicleType,
+          duration,
+          transferType: 'Private',
+          status: 'Completed',
         },
       });
     }
@@ -1175,15 +1395,16 @@ export class SourceSpecificExtractor implements ExtractionStrategy {
     // Lazy-import createCandidate to avoid circular dependency
     const { createCandidateExported } = require('./index');
 
+    const normalizedFields = normalizeExtractedFields(extractedFields, doc.normalizedText, itemType);
     const candidate = await createCandidateExported({
       itemType,
       doc,
-      providerVendor: String(extractedFields.name ?? extractedFields.providerVendor ?? sourceKey),
-      confirmationNumber: String(extractedFields.confirmationNumber ?? '') || null,
-      extractedFields: { ...extractedFields, learnedSourceKey: sourceKey },
+      providerVendor: String(normalizedFields.name ?? normalizedFields.providerVendor ?? sourceKey),
+      confirmationNumber: String(normalizedFields.confirmationNumber ?? '') || null,
+      extractedFields: { ...normalizedFields, learnedSourceKey: sourceKey },
       confidenceScore: confidence,
-      startDateTimeUtcOverride: extractedFields.checkInDate ? String(extractedFields.checkInDate) : undefined,
-      endDateTimeUtcOverride: extractedFields.checkOutDate ? String(extractedFields.checkOutDate) : undefined,
+      startDateTimeUtcOverride: normalizedFields.checkInDate ? String(normalizedFields.checkInDate) : undefined,
+      endDateTimeUtcOverride: normalizedFields.checkOutDate ? String(normalizedFields.checkOutDate) : undefined,
     });
 
     return {

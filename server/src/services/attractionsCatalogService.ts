@@ -6,6 +6,16 @@ import { getStorage } from 'firebase-admin/storage';
 import { getEnvValue, isLocalEnv } from '../env';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { parseDestinationsCsv } from './destinationsAttractionsCsv';
+import { fetchWikipediaEnrichment } from './wikipediaGeocodingService';
+import { fetchWikipediaPopularityScore } from './wikipediaPageviewService';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
+import { clusterAttractionsIntoPods, type AttractionPod } from './geoPodClusteringService';
+import { buildPodBasedShortlist } from './podBasedShortlisterService';
+import type { InterestWeights } from './activityTypeInterestWeights';
+import type { TravelerInterest } from './fairnessRankerService';
+import type { HardRejection } from './candidateHardFilterService';
+import type { MobilityCode, PreferenceExclusion } from './itineraryPreferenceContract';
 import {
   getAttractionShortlistBlob,
   listAttractionCatalogEntries,
@@ -60,6 +70,11 @@ const CSV_HEADER = [
   'qid',
   'lat',
   'lon',
+  'popularity_score',
+  'primary_tag',
+  'wikipedia_title',
+  'wikipedia_page_id',
+  'wikipedia_summary',
 ] as const;
 
 const destinationRefreshLocks = new Map<string, Promise<AttractionCatalogEntry[]>>();
@@ -173,6 +188,8 @@ export const inferInterestTags = (name: string, snippet?: string): InterestTag[]
   const text = `${name} ${snippet ?? ''}`.toLowerCase();
   const tags = new Set<InterestTag>();
   if (/\b(park|trail|hike|lake|beach|outdoor|garden)\b/.test(text)) tags.add('outdoors');
+  if (/\b(photo|photography|viewpoint|lookout|scenic overlook|sunset view)\b/.test(text)) tags.add('photography');
+  if (/\b(adventure|rafting|kayak|surf|snorkel|zipline|climb|expedition)\b/.test(text)) tags.add('adventure');
   if (/\b(museum|historic|cathedral|temple|archaeolog|gallery|palace)\b/.test(text)) tags.add('culture');
   if (/\b(food|market|restaurant|cuisine|street food|taco|wine|coffee|cooking)\b/.test(text)) tags.add('food');
   if (/\b(bar|club|nightlife|cantina|music venue|pub)\b/.test(text)) tags.add('nightlife');
@@ -181,6 +198,8 @@ export const inferInterestTags = (name: string, snippet?: string): InterestTag[]
   if (/\b(day trip|excursion|nearby town|puebla|teotihuacan)\b/.test(text)) tags.add('day trips');
   if (/\b(festival|event|concert|seasonal)\b/.test(text)) tags.add('events');
   if (/\b(class|workshop|lesson|cooking class)\b/.test(text)) tags.add('classes');
+  if (/\b(local|authentic|neighborhood|street food|artisan|craft)\b/.test(text)) tags.add('authentic_local');
+  if (/\b(landmark|monument|iconic|cathedral|palace|tower|historic center)\b/.test(text)) tags.add('iconic_landmarks');
   if (!tags.size) tags.add('culture');
   return Array.from(tags);
 };
@@ -224,6 +243,8 @@ const discoverViaSerpApi = async (destination: string, limit: number): Promise<D
   const apiKey = getEnvValue('SERPAPI_API_KEY');
   if (!apiKey) return [];
   const query = `top attractions in ${destination}`;
+  await reserveApiUsageOrThrow({ provider: 'SERPAPI', caller: 'ATTRACTION_DISCOVERY_SEARCH' });
+  await recordProviderRequestCost({ provider: 'SERPAPI' });
   const response = await axios.get('https://serpapi.com/search.json', {
     params: {
       engine: 'google',
@@ -244,6 +265,8 @@ const discoverViaWikipedia = async (destination: string, limit: number): Promise
     Accept: 'application/json',
   };
   const query = `${destination} tourist attractions`;
+  await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_DISCOVERY_WIKIPEDIA' });
+  await recordProviderRequestCost({ provider: 'WIKIMEDIA' });
   try {
     const response = await axios.get('https://en.wikipedia.org/w/api.php', {
       params: {
@@ -269,6 +292,8 @@ const discoverViaWikipedia = async (destination: string, limit: number): Promise
       snippet: typeof item?.snippet === 'string' ? String(item.snippet).replace(/<[^>]+>/g, '') : null,
     }));
   } catch {
+    await reserveApiUsageOrThrow({ provider: 'WIKIMEDIA', caller: 'ATTRACTION_DISCOVERY_WIKIPEDIA' });
+    await recordProviderRequestCost({ provider: 'WIKIMEDIA' });
     const fallback = await axios.get('https://en.wikipedia.org/w/rest.php/v1/search/title', {
       params: {
         q: query,
@@ -545,6 +570,11 @@ export const stringifyAttractionCatalogCsv = (rows: AttractionCatalogEntry[]): s
         row.qid ?? '',
         row.lat == null ? '' : String(row.lat),
         row.lon == null ? '' : String(row.lon),
+        row.popularityScore == null ? '' : String(row.popularityScore),
+        row.primaryTag ?? '',
+        row.wikipediaTitle ?? '',
+        row.wikipediaPageId == null ? '' : String(row.wikipediaPageId),
+        row.wikipediaSummary ?? '',
       ]
         .map(csvEscape)
         .join(',')
@@ -613,6 +643,11 @@ export const parseAttractionCatalogCsv = (raw: string): AttractionCatalogEntry[]
   const iQid = indexOf('qid');
   const iLat = indexOf('lat');
   const iLon = indexOf('lon');
+  const iPopularityScore = indexOf('popularity_score');
+  const iPrimaryTag = indexOf('primary_tag');
+  const iWikipediaTitle = indexOf('wikipedia_title');
+  const iWikipediaPageId = indexOf('wikipedia_page_id');
+  const iWikipediaSummary = indexOf('wikipedia_summary');
 
   const read = (cols: string[], idx: number): string => (idx >= 0 && idx < cols.length ? String(cols[idx] ?? '') : '');
   const toNumberOrNull = (value: string): number | null => {
@@ -649,6 +684,11 @@ export const parseAttractionCatalogCsv = (raw: string): AttractionCatalogEntry[]
       qid: read(cols, iQid) || null,
       lat: toNumberOrNull(read(cols, iLat)),
       lon: toNumberOrNull(read(cols, iLon)),
+      popularityScore: toNumberOrNull(read(cols, iPopularityScore)),
+      primaryTag: (read(cols, iPrimaryTag) as InterestTag) || null,
+      wikipediaTitle: read(cols, iWikipediaTitle) || null,
+      wikipediaPageId: toNumberOrNull(read(cols, iWikipediaPageId)),
+      wikipediaSummary: read(cols, iWikipediaSummary) || null,
     });
   }
   return rows;
@@ -858,15 +898,57 @@ type CompactPromptItem = {
   tags: InterestTag[];
   tier: AttractionBudgetTier;
   rank: number;
+  popularityScore?: number;
+};
+
+const enrichCatalogEntries = async (
+  entries: AttractionCatalogEntry[],
+  destinationDisplayName: string
+): Promise<AttractionCatalogEntry[]> => {
+  const output = [...entries];
+  let cursor = 0;
+  const worker = async (): Promise<void> => {
+    while (cursor < output.length) {
+      const index = cursor++;
+      const entry = output[index];
+      if (entry.lat != null && entry.lon != null && entry.popularityScore != null && entry.primaryTag && entry.wikipediaSummary) continue;
+      const wikipedia = await fetchWikipediaEnrichment(entry.wikipediaTitle || entry.name, destinationDisplayName);
+      const popularityScore = entry.popularityScore ?? (wikipedia?.canonicalTitle
+        ? await fetchWikipediaPopularityScore(wikipedia.canonicalTitle)
+        : null);
+      output[index] = {
+        ...entry,
+        lat: entry.lat ?? wikipedia?.lat ?? null,
+        lon: entry.lon ?? wikipedia?.lon ?? null,
+        popularityScore,
+        primaryTag: entry.primaryTag ?? entry.interestTags[0] ?? 'culture',
+        wikipediaTitle: entry.wikipediaTitle ?? wikipedia?.canonicalTitle ?? null,
+        wikipediaPageId: entry.wikipediaPageId ?? wikipedia?.pageId ?? null,
+        wikipediaSummary: entry.wikipediaSummary ?? wikipedia?.summary ?? null,
+      };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, output.length) }, () => worker()));
+  return output;
+};
+
+export const classifyAttractionPopularity = (score: number | null | undefined): 'must-see' | 'popular' | 'hidden-gem' | 'unknown' => {
+  if (score === null || score === undefined || !Number.isFinite(Number(score))) return 'unknown';
+  if (Number(score) >= 80) return 'must-see';
+  if (Number(score) >= 55) return 'popular';
+  return 'hidden-gem';
 };
 
 const buildCompactPromptItems = (entries: AttractionCatalogEntry[]): CompactPromptItem[] =>
-  entries.map((entry) => ({
+  entries.map((entry, index) => ({
     name: entry.name,
     type: entry.activityType,
     tags: entry.interestTags,
     tier: entry.budgetTier ?? 'paid',
-    rank: entry.rank,
+    // The prompt rank is the deterministic relevance order, not merely the
+    // discovery provider's original rank.
+    rank: index + 1,
+    ...(entry.popularityScore == null ? {} : { popularityScore: entry.popularityScore }),
   }));
 
 const buildPromptBlockFromCompact = (
@@ -898,7 +980,8 @@ const buildPromptBlockFromCompact = (
   if (!selected.length) return '';
   const lines = [`Destination: ${destination}`];
   selected.forEach((entry, idx) => {
-    lines.push(`${idx + 1}. ${entry.name} | tier=${entry.tier} | type=${entry.type} | tags=${entry.tags.join('/') || 'culture'}`);
+    const popularity = classifyAttractionPopularity(entry.popularityScore);
+    lines.push(`${idx + 1}. ${entry.name} | tier=${entry.tier}${popularity === 'unknown' ? '' : ` | popularity=${popularity}`} | type=${entry.type} | tags=${entry.tags.join('/') || 'culture'}`);
   });
   return lines.join('\n');
 };
@@ -980,7 +1063,7 @@ const ensureDestinationCatalog = async (params: {
       };
     });
 
-    const finalEntries = fillRowsGeo(
+    const mergedEntries = fillRowsGeo(
       mergeCuratedWithDiscovered(
         current,
         entries,
@@ -991,6 +1074,7 @@ const ensureDestinationCatalog = async (params: {
       ),
       destinationGeo
     );
+    const finalEntries = await enrichCatalogEntries(mergedEntries, destinationDisplayName);
     if (!finalEntries.length) return current.slice(0, params.limit);
     for (const entry of finalEntries) {
       await upsertAttractionCatalogEntry(entry);
@@ -1058,12 +1142,107 @@ export const buildAttractionShortlistPromptBlock = (
     lines.push(`Destination: ${destination}`);
     shortlist.forEach((entry) => {
       lines.push(
-        `${entry.rank}. ${entry.name} | tier=${entry.budgetTier ?? 'paid'} | type=${entry.activityType} | tags=${entry.interestTags.join('/') || 'culture'}`
+        `${entry.rank}. ${entry.name} | tier=${entry.budgetTier ?? 'paid'}${classifyAttractionPopularity(entry.popularityScore) === 'unknown' ? '' : ` | popularity=${classifyAttractionPopularity(entry.popularityScore)}`} | type=${entry.activityType} | tags=${entry.interestTags.join('/') || 'culture'}`
       );
     });
   }
   return lines.length ? lines.join('\n') : 'none';
 };
+
+// itinerary-improvements-coding-plan.md Phase 3C: adaptive shortlist thresholds.
+// A traveler interest weight at/above this value counts as "high-weight" for
+// both the >=5-interests trigger and the coverage check. Matches the
+// threshold already used for the (separate) model-escalation coverage signal
+// in itineraryPromptPlanService.ts, so the two features agree on what
+// "high-weight interest" means.
+const HIGH_WEIGHT_INTEREST_THRESHOLD = 10;
+const MIN_HIGH_WEIGHT_INTERESTS_FOR_ADAPTIVE = 5;
+const MIN_TRIP_LENGTH_DAYS_FOR_ADAPTIVE = 7;
+const ADAPTIVE_SHORTLIST_HARD_CEILING = 15;
+// Bump when the compact prompt-item shape or ranking/pod logic changes, so
+// stale cached blobs (keyed in part on this version) don't get served after a
+// behavior change. See buildShortlistCacheKey below.
+const ATTRACTION_SHORTLIST_CACHE_VERSION = 1;
+// Fixed placeholder: the itinerary prompt pipeline generates English-only
+// prompts today. Included in the cache key now so a future locale dimension
+// doesn't require another cache-key migration.
+const ATTRACTION_SHORTLIST_CACHE_LOCALE = 'en';
+
+const countHighWeightInterests = (weights?: InterestWeights): number =>
+  weights ? Object.values(weights).filter((weight) => Number(weight) >= HIGH_WEIGHT_INTEREST_THRESHOLD).length : 0;
+
+const highWeightInterestKeys = (weights?: InterestWeights): string[] =>
+  weights
+    ? Object.entries(weights)
+        .filter(([, weight]) => Number(weight) >= HIGH_WEIGHT_INTEREST_THRESHOLD)
+        .map(([key]) => key)
+    : [];
+
+// Whether every high-weight interest is represented by at least one entry's
+// interestTags. Reuses the existing interestTags field on catalog entries —
+// no new tagging mechanism, per the plan.
+const shortlistCoversHighWeightInterests = (entries: AttractionCatalogEntry[], weights?: InterestWeights): boolean => {
+  const requested = highWeightInterestKeys(weights);
+  if (!requested.length) return true;
+  return requested.every((interest) =>
+    entries.some((entry) => entry.interestTags.some((tag) => String(tag).toLowerCase().replace(/\s+/g, '_') === interest))
+  );
+};
+
+export type AdaptiveShortlistPolicy = 'base' | 'adaptive';
+
+export interface AdaptiveShortlistDecision {
+  policy: AdaptiveShortlistPolicy;
+  itemsPerDestination: number;
+  reasons: string[];
+}
+
+/**
+ * itinerary-improvements-coding-plan.md Phase 3C ("Adaptive shortlist and
+ * validation contract"): decide whether the fixed floor-size shortlist
+ * (shortlistPromptItemsPerDestination, default 8) is enough, or whether the
+ * larger adaptiveShortlistMax cap should be used instead. Any one trigger is
+ * sufficient: trip length > 7 days, multiple destinations, >=5 high-weight
+ * traveler interests, or a coverage-check miss against the base shortlist.
+ *
+ * Flag-safe fallback: if adaptiveShortlistMax is configured at or below the
+ * floor, this always returns 'base' — operators can disable adaptive
+ * behavior entirely via config, no code path change required.
+ */
+export const decideAdaptiveShortlistPolicy = (params: {
+  baseEntriesByDestination: Record<string, AttractionCatalogEntry[]>;
+  destinationCount: number;
+  tripLengthDays?: number;
+  weights?: InterestWeights;
+  floorItemsPerDestination: number;
+  maxItemsPerDestination: number;
+}): AdaptiveShortlistDecision => {
+  const floor = Math.max(1, Math.floor(params.floorItemsPerDestination));
+  const ceiling = Math.min(ADAPTIVE_SHORTLIST_HARD_CEILING, Math.max(floor, Math.floor(params.maxItemsPerDestination)));
+  if (ceiling <= floor) {
+    return { policy: 'base', itemsPerDestination: floor, reasons: [] };
+  }
+  const reasons: string[] = [];
+  const tripLengthDays = Number(params.tripLengthDays) || 0;
+  if (tripLengthDays > MIN_TRIP_LENGTH_DAYS_FOR_ADAPTIVE) reasons.push('trip_length_gt_7');
+  if (params.destinationCount > 1) reasons.push('multi_destination');
+  if (countHighWeightInterests(params.weights) >= MIN_HIGH_WEIGHT_INTERESTS_FOR_ADAPTIVE) reasons.push('high_weight_interest_count');
+  const allBaseEntries = Object.values(params.baseEntriesByDestination).flat();
+  if (!shortlistCoversHighWeightInterests(allBaseEntries, params.weights)) reasons.push('coverage_miss');
+  if (!reasons.length) {
+    return { policy: 'base', itemsPerDestination: floor, reasons };
+  }
+  return { policy: 'adaptive', itemsPerDestination: ceiling, reasons };
+};
+
+// Composite cache key: destination (applied by the caller via blobId) +
+// locale + catalog/compaction version + shortlist policy. Reuses the
+// existing promptBlobRefreshDays blob-cache mechanism (getAttractionShortlistBlob/
+// upsertAttractionShortlistBlob) — the AttractionShortlistBlob.dateKey field
+// is an opaque cache-key string, not parsed as a date anywhere, so widening
+// it to a composite key needs no schema change.
+const buildShortlistCacheKey = (dateKey: string, policy: AdaptiveShortlistPolicy, itemsPerDestination: number): string =>
+  `${dateKey}|loc=${ATTRACTION_SHORTLIST_CACHE_LOCALE}|v${ATTRACTION_SHORTLIST_CACHE_VERSION}|policy=${policy}|n=${itemsPerDestination}`;
 
 export const getAttractionPromptBlockForDestinations = async (params: {
   userId: string;
@@ -1075,22 +1254,46 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   promptItemsPerDestination?: number;
   refreshDays?: number;
   allowDiscovery?: boolean;
-}): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string }> => {
-  const shortlistPromptItemsPerDestination =
-    Math.min(
-      Math.max(
-        Number(params.promptItemsPerDestination) ||
-          Number(getApiCacheSetting('attractions', 'shortlistPromptItemsPerDestination')) ||
-          8,
-        1
-      ),
-      20
-    );
+  /** Optional deterministic relevance inputs used before the LLM sees the shortlist. */
+  weights?: InterestWeights;
+  travelers?: TravelerInterest[];
+  /**
+   * Total trip length in days, used only for the Phase 3C adaptive-shortlist
+   * trigger (trip length > 7 days). Not required — omitting it just means
+   * that one trigger condition can never fire.
+   */
+  tripLengthDays?: number;
+  /** Phase 2A hard-filter inputs, applied before ranking/scoring. See candidateHardFilterService.ts. */
+  exclusions?: PreferenceExclusion[];
+  mobility?: MobilityCode;
+}): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string; attractionPodsByDestination?: Record<string, AttractionPod[]>; hardRejectionsByDestination?: Record<string, HardRejection[]> }> => {
+  if (params.weights === undefined) {
+    // itinerary-improvements-coding-plan.md Phase 3C: the one known real
+    // (non-test) orchestration call site always passes deterministic
+    // interest weights. If a new call site is added without them, the
+    // deterministic pod ranking, coverage check, and adaptive shortlist
+    // trigger silently degrade to catalog order — surface that loudly.
+    logError('[attractions] getAttractionPromptBlockForDestinations called without params.weights; ' +
+      'deterministic ranking, coverage checks, and the adaptive shortlist trigger are disabled for this call', {
+      userId: params.userId,
+      destinations: params.destinations,
+    });
+  }
+  const configuredFloorItemsPerDestination = Math.min(
+    Math.max(Number(getApiCacheSetting('attractions', 'shortlistPromptItemsPerDestination')) || 8, 1),
+    20
+  );
+  const hasExplicitItemsOverride =
+    params.promptItemsPerDestination != null && Number.isFinite(Number(params.promptItemsPerDestination)) && Number(params.promptItemsPerDestination) > 0;
+  const explicitItemsPerDestination = hasExplicitItemsOverride
+    ? Math.min(Math.max(Number(params.promptItemsPerDestination), 1), 20)
+    : null;
+  let shortlistPromptItemsPerDestination = explicitItemsPerDestination ?? configuredFloorItemsPerDestination;
   const destinations = Array.from(
     new Set((params.destinations ?? []).map((item) => normalizeWhitespace(String(item ?? ''))).filter(Boolean))
   );
   if (!destinations.length) {
-    return { shortlistByDestination: {}, promptBlock: 'none' };
+    return { shortlistByDestination: {}, promptBlock: 'none', attractionPodsByDestination: {} };
   }
   const normalizedDateKey = normalizeDateKey(params.dateKey);
   const refreshDays =
@@ -1101,20 +1304,92 @@ export const getAttractionPromptBlockForDestinations = async (params: {
       ),
       365
     );
-  const shortlistByDestination = await getAttractionShortlistForDestinations({
+  const catalogByDestination = await getAttractionShortlistForDestinations({
     userId: params.userId,
     destinations,
     limitPerDestination: params.limitPerDestination,
     refreshDays: params.refreshDays,
     allowDiscovery: params.allowDiscovery,
   });
+  // Rank and pod the already-cached catalog deterministically. This keeps the
+  // expensive LLM stage focused on relevant, geographically coherent choices
+  // without putting private must-see names into shared prompt/cache keys.
+  const shortlistByDestination: Record<string, AttractionCatalogEntry[]> = {};
+  const hardRejectionsByDestination: Record<string, HardRejection[]> = {};
+  for (const destination of destinations) {
+    const entries = catalogByDestination[destination] ?? [];
+    if (params.weights) {
+      const podResult = buildPodBasedShortlist({
+        destination,
+        entries,
+        weights: params.weights,
+        travelers: params.travelers,
+        limit: entries.length,
+        radiusKm: 2,
+        exclusions: params.exclusions,
+        mobility: params.mobility,
+        dateKey: normalizedDateKey,
+      });
+      shortlistByDestination[destination] = podResult.selected;
+      if (podResult.hardRejections.length) {
+        hardRejectionsByDestination[destination] = podResult.hardRejections;
+        // Phase 2A: keep rejection reasons visible instead of silently dropping candidates —
+        // metrics/UI wiring is Phase 3B territory, but the information must not be lost here.
+        logInfo(
+          `[attractions] hard-filtered ${podResult.hardRejections.length} candidate(s) for ${destination}: ` +
+            podResult.hardRejections.map((r) => `${r.entry.name}(${r.reason})`).join(', ')
+        );
+      }
+    } else {
+      shortlistByDestination[destination] = entries;
+    }
+  }
   const budgetProfile = chooseBudgetProfile(params.budgetMin, params.budgetMax);
+
+  // itinerary-improvements-coding-plan.md Phase 3C: decide base-8 vs adaptive
+  // shortlist size. Skipped when the caller passed an explicit override
+  // (e.g. ITINERARY_GOLD_MODE requesting the full catalog) so existing
+  // explicit-override behavior is unchanged.
+  let shortlistPolicy: AdaptiveShortlistPolicy = 'base';
+  if (!hasExplicitItemsOverride) {
+    const baseEntriesByDestination: Record<string, AttractionCatalogEntry[]> = {};
+    for (const destination of destinations) {
+      baseEntriesByDestination[destination] = (shortlistByDestination[destination] ?? []).slice(0, configuredFloorItemsPerDestination);
+    }
+    const configuredAdaptiveMax = Math.max(
+      Number(getApiCacheSetting('attractions', 'adaptiveShortlistMax')) || configuredFloorItemsPerDestination,
+      configuredFloorItemsPerDestination
+    );
+    const decision = decideAdaptiveShortlistPolicy({
+      baseEntriesByDestination,
+      destinationCount: destinations.length,
+      tripLengthDays: params.tripLengthDays,
+      weights: params.weights,
+      floorItemsPerDestination: configuredFloorItemsPerDestination,
+      maxItemsPerDestination: configuredAdaptiveMax,
+    });
+    shortlistPromptItemsPerDestination = decision.itemsPerDestination;
+    shortlistPolicy = decision.policy;
+    // eslint-disable-next-line no-console
+    console.log('DEBUG decision', JSON.stringify(decision), 'floor', configuredFloorItemsPerDestination, 'max', configuredAdaptiveMax, 'hasOverride', hasExplicitItemsOverride);
+    if (decision.policy === 'adaptive') {
+      logInfo(
+        `[attractions] adaptive shortlist triggered destinations=${destinations.length} items=${decision.itemsPerDestination} reasons=${decision.reasons.join(',')}`
+      );
+    }
+  }
+  // Cache blobs by destination + a fixed locale placeholder (the prompt
+  // pipeline is single-locale today) + a catalog/compaction version + the
+  // shortlist policy, so a base-8 blob is never served for an adaptive-N
+  // request or vice versa, and a future compaction-logic change can bust the
+  // cache by bumping ATTRACTION_SHORTLIST_CACHE_VERSION.
+  const shortlistCacheKey = buildShortlistCacheKey(normalizedDateKey, shortlistPolicy, shortlistPromptItemsPerDestination);
 
   const blocks: string[] = [];
   for (const destination of destinations) {
     const destinationKey = normalizeDestinationKey(destination);
-    const blobId = buildPromptBlobId(destinationKey, normalizedDateKey);
-    const existingBlob = await getAttractionShortlistBlob(params.userId, destinationKey, normalizedDateKey);
+    const blobId = buildPromptBlobId(destinationKey, shortlistCacheKey);
+    const existingBlob = await getAttractionShortlistBlob(params.userId, destinationKey, shortlistCacheKey);
     const blobUpdatedMs = existingBlob?.updatedAt ? new Date(existingBlob.updatedAt).getTime() : 0;
     const isBlobFresh =
       Number.isFinite(blobUpdatedMs) &&
@@ -1141,7 +1416,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
       id: blobId,
       destinationKey,
       destinationDisplayName: destination,
-      dateKey: normalizedDateKey,
+      dateKey: shortlistCacheKey,
       promptBlock: computedBlock,
       compact: compactSignature,
       itemCount: compactItems.length,
@@ -1154,6 +1429,11 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   return {
     shortlistByDestination,
     promptBlock: blocks.length ? blocks.join('\n') : 'none',
+    attractionPodsByDestination: Object.fromEntries(destinations.map((destination) => [
+      destination,
+      clusterAttractionsIntoPods({ destination, entries: shortlistByDestination[destination] ?? [], radiusKm: 2, maxItemsPerPod: 3 }),
+    ])),
+    hardRejectionsByDestination,
   };
 };
 
@@ -1179,4 +1459,37 @@ export const syncAttractionsCatalogFromCsvToDbOnStartup = async (): Promise<void
   } catch (err) {
     logError('[attractions] startup CSV import failed', err);
   }
+};
+
+/**
+ * Manual cache-invalidation trigger (itinerary-improvements-coding-plan.md Phase 2B).
+ * Allows operators to bust the activityContext cache for a specific attraction or
+ * destination without a code deploy if source data is found to be incorrect.
+ * Re-runs Wikipedia enrichment on the next catalog refresh or discovery.
+ */
+export const invalidateAttractionCatalogCache = async (params: {
+  destinationKey?: string;
+  attractionId?: string;
+}): Promise<{ count: number }> => {
+  const existing = await readCatalogCsv();
+  let count = 0;
+  const updated = existing.map((row) => {
+    const match =
+      (params.destinationKey && normalizeDestinationKey(row.destinationKey) === normalizeDestinationKey(params.destinationKey)) ||
+      (params.attractionId && row.id === params.attractionId);
+    if (!match) return row;
+    count += 1;
+    return {
+      ...row,
+      wikipediaSummary: null,
+      wikipediaTitle: null,
+      wikipediaPageId: null,
+      updatedAt: '1970-01-01T00:00:00.000Z', // Force stale
+    };
+  });
+  if (count > 0) {
+    await writeCatalogCsv(updated);
+    logInfo(`[attractions] manual cache invalidation: flushed ${count} entries`);
+  }
+  return { count };
 };

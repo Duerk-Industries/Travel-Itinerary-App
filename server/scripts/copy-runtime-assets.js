@@ -3,7 +3,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
-const assetsToCopy = ['data'];
+const assetsToCopy = ['data', 'prompts'];
 
 for (const asset of assetsToCopy) {
   const source = path.join(rootDir, asset);

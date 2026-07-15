@@ -16,6 +16,8 @@ import type {
   LocationRecord,
   AttractionCatalogEntry,
   AttractionShortlistBlob,
+  ItineraryPlanCacheEntry,
+  AttractionDurationMetadata,
   TripActivity,
   TripComment,
   CarRental,
@@ -272,6 +274,24 @@ export const getAttractionShortlistBlob = async (
 export const upsertAttractionShortlistBlob = async (
   ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionShortlistBlob']>
 ) => adapter().upsertAttractionShortlistBlob(...args);
+export const getItineraryPlanCacheEntry = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryPlanCacheEntry']>
+): Promise<ItineraryPlanCacheEntry | null> => adapter().getItineraryPlanCacheEntry(...args);
+export const upsertItineraryPlanCacheEntry = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryPlanCacheEntry']>
+) => adapter().upsertItineraryPlanCacheEntry(...args);
+export const getAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getAttractionDurationMetadata']>
+): Promise<AttractionDurationMetadata | null> => adapter().getAttractionDurationMetadata(...args);
+export const listAttractionDurationMetadataByDestination = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listAttractionDurationMetadataByDestination']>
+): Promise<AttractionDurationMetadata[]> => adapter().listAttractionDurationMetadataByDestination(...args);
+export const upsertAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionDurationMetadata']>
+) => adapter().upsertAttractionDurationMetadata(...args);
+export const deleteAttractionDurationMetadata = async (
+  ...args: Parameters<ReturnType<typeof adapter>['deleteAttractionDurationMetadata']>
+): Promise<number> => adapter().deleteAttractionDurationMetadata(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>
@@ -482,6 +502,14 @@ export const listApiCostCounters = async (...args: Parameters<ReturnType<typeof 
   adapter().listApiCostCounters(...args);
 export const resetApiCostCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiCostCounters']>) =>
   adapter().resetApiCostCounters(...args);
+export const recordItineraryGenerationMetrics = async (...args: Parameters<ReturnType<typeof adapter>['recordItineraryGenerationMetrics']>) =>
+  adapter().recordItineraryGenerationMetrics(...args);
+export const getItineraryGenerationMetrics = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryGenerationMetrics']>
+): Promise<any> => adapter().getItineraryGenerationMetrics(...args);
+export const recordItineraryComparison = async (
+  ...args: Parameters<ReturnType<typeof adapter>['recordItineraryComparison']>
+) => adapter().recordItineraryComparison(...args);
 export const atomicIncrementIfUnderLimit = async (...args: Parameters<ReturnType<typeof adapter>['atomicIncrementIfUnderLimit']>) =>
   adapter().atomicIncrementIfUnderLimit(...args);
 export const getGenerationIdempotency = async (

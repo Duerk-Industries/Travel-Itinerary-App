@@ -22,6 +22,7 @@ import {
   listAuditLog,
   adminSearchUsers, adminGetUser, adminGetUserData,
   getUniversalPackingList, replaceUniversalPackingList,
+  deleteAttractionDurationMetadata,
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -37,9 +38,11 @@ import {
   getApiLimitsConfig,
   normalizeApiLimitKeyPart,
   updateApiBudgetProviderConfig,
+  updateApiCachingConfig,
   updateApiLimitProviderConfig,
 } from '../config/apiLimits';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
+import { GETYOURGUIDE_FEATURE_FLAG, getGetYourGuidePartnerConfig } from '../config/getYourGuide';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
 import {
@@ -50,6 +53,8 @@ import {
 import { readDto } from '../utils/dtoParse';
 import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
+import { getGetYourGuideObservabilitySnapshot } from '../services/getYourGuideObservability';
+import { getGetYourGuideApiCircuitStatus } from '../apis/getYourGuideApi';
 import { listLocalAiCaptures } from '../ai/analytics/captureBrowser';
 import { runAiDailyAggregation } from '../ai/analytics/aggregationJob';
 import {
@@ -60,6 +65,20 @@ import {
 import { isProviderCertified } from '../ai/experiments/certification';
 import { getAiExecutiveSummary } from '../ai/analytics/executiveSummary';
 import { clearExperimentConfigCache } from '../ai/experiments/experimentConfigService';
+import {
+  ITINERARY_INSTRUCTION_PHASES,
+  listItineraryInstructionDocuments,
+  updateItineraryInstructionDocuments,
+  type ItineraryInstructionPhase,
+} from '../services/itineraryInstructionService';
+import {
+  getCostEstimatorConfig,
+  computeProjectedMonthlyCost,
+  getActualMonthlySpend,
+  updateCostEstimatorConfig,
+  updateCostEstimatorRequestPricing,
+  REQUEST_PRICED_PROVIDER_KEYS,
+} from '../services/costEstimatorService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -204,6 +223,54 @@ router.patch('/ai-config/:featureKey', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update AI provider config', err);
     res.status(500).json({ error: 'Failed to update AI provider config' });
+  }
+});
+
+router.get('/itinerary-instructions', async (_req, res) => {
+  try {
+    const phases = await listItineraryInstructionDocuments();
+    res.json({ phases });
+  } catch (err) {
+    logError('[admin] failed to list itinerary instructions', err);
+    res.status(500).json({ error: 'Failed to list itinerary instructions' });
+  }
+});
+
+router.patch('/itinerary-instructions', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  const phases = req.body?.phases;
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (!phases || typeof phases !== 'object' || Array.isArray(phases)) {
+    res.status(400).json({ error: 'phases object is required' });
+    return;
+  }
+  const phaseUpdates: Partial<Record<ItineraryInstructionPhase, string>> = {};
+  for (const phase of ITINERARY_INSTRUCTION_PHASES) {
+    const value = phases[phase];
+    if (typeof value === 'string' && value.trim()) phaseUpdates[phase] = value;
+  }
+  if (!Object.keys(phaseUpdates).length) {
+    res.status(400).json({ error: 'At least one non-empty phase markdown document is required' });
+    return;
+  }
+  try {
+    const updated = await updateItineraryInstructionDocuments({
+      phases: phaseUpdates,
+      actorId: getActorId(req),
+      reason: reasonStr,
+    });
+    res.json({ phases: updated });
+  } catch (err: any) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/Instruction markdown|phase markdown/i.test(message)) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    logError('[admin] failed to update itinerary instructions', err);
+    res.status(500).json({ error: 'Failed to update itinerary instructions' });
   }
 });
 
@@ -1159,7 +1226,7 @@ router.get('/audit-log', async (req, res) => {
 router.get('/api-limits', async (_req, res) => {
   try {
     const config = getApiLimitsConfig();
-    const [usage, budgets] = await Promise.all([getApiUsageSummary(), getApiBudgetSummary()]);
+    const [usage, budgets, featureFlags] = await Promise.all([getApiUsageSummary(), getApiBudgetSummary(), listAdminFeatureFlags()]);
     const providers = Object.entries(config.providers).map(([provider, providerConfig]) => ({
       budgetingModels: Object.entries(getApiBudgetProviderConfig(provider)?.models ?? {}).map(([model, pricing]) => ({
         model,
@@ -1183,7 +1250,22 @@ router.get('/api-limits', async (_req, res) => {
       })),
       overallUsage: usage.find((u) => u.provider === provider && u.scope === 'overall')?.used ?? 0,
     }));
-    res.json({ providers, caching: config.caching });
+    const gygProvider = providers.find((provider) => provider.provider === 'GETYOURGUIDE') ?? null;
+    const gygConfig = getGetYourGuidePartnerConfig();
+    res.json({
+      providers,
+      caching: config.caching,
+      getYourGuide: {
+        featureEnabled: featureFlags.find((flag) => flag.key === GETYOURGUIDE_FEATURE_FLAG)?.enabled === true,
+        partnerConfigured: Boolean(gygConfig.partnerId),
+        apiConfigured: Boolean(gygConfig.apiBaseUrl && gygConfig.hasApiToken),
+        cachePermission: gygConfig.hasApiCachePermission,
+        provider: gygProvider,
+        observability: getGetYourGuideObservabilitySnapshot(),
+        circuit: getGetYourGuideApiCircuitStatus(),
+        revenueDashboard: 'separate',
+      },
+    });
   } catch (err) {
     logError('[admin] failed to get api limits', err);
     res.status(500).json({ error: 'Failed to get API limits' });
@@ -1373,6 +1455,232 @@ router.patch('/api-limits/:provider', async (req, res) => {
   }
 });
 
+router.patch('/api-limits/caching/:group', async (req, res) => {
+  const { group } = req.params;
+  const { values, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (typeof values !== 'object' || values === null || Array.isArray(values)) {
+    res.status(400).json({ error: 'values must be an object of positive integer settings' });
+    return;
+  }
+
+  try {
+    const config = getApiLimitsConfig();
+    const normalizedGroup = normalizeApiLimitKeyPart(group);
+    const currentGroup = config.caching[normalizedGroup];
+    if (!currentGroup) {
+      res.status(404).json({ error: `Caching group not found: ${group}` });
+      return;
+    }
+
+    const normalizedValues = Object.fromEntries(
+      Object.entries(values as Record<string, unknown>).map(([key, value]) => [normalizeApiLimitKeyPart(key), Number(value)])
+    );
+    const unknownKeys = Object.keys(normalizedValues).filter((key) => !(key in currentGroup));
+    if (unknownKeys.length > 0) {
+      res.status(400).json({ error: `Unknown caching settings: ${unknownKeys.join(', ')}` });
+      return;
+    }
+    const invalid = Object.entries(normalizedValues).filter(([, value]) => !Number.isFinite(value) || value <= 0 || !Number.isInteger(value));
+    if (invalid.length > 0) {
+      res.status(400).json({ error: 'All caching settings must be positive integers' });
+      return;
+    }
+
+    const merged = { ...currentGroup, ...normalizedValues };
+    const actorId = getActorId(req);
+    updateApiCachingConfig(normalizedGroup, merged);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'API_CACHING_CONFIG_UPDATED',
+      beforeState: { group: normalizedGroup, values: currentGroup },
+      afterState: { group: normalizedGroup, values: merged },
+      reason: reasonStr,
+    });
+
+    res.json({ group: normalizedGroup, values: merged });
+  } catch (err) {
+    logError('[admin] failed to update api caching config', err);
+    res.status(500).json({ error: 'Failed to update API caching config' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Cost estimator (Phase 3 of cost-estimator-admin-panel-plan.md)
+// ---------------------------------------------------------------------------
+
+router.get('/cost-estimate', async (req, res) => {
+  try {
+    const monthsBackParam = Number(req.query.monthsBack);
+    // Keep the admin endpoint bounded even if a client submits an untrusted
+    // lookback value; the database retains history, but the UI only needs a
+    // practical reporting window.
+    const monthsBack = Number.isFinite(monthsBackParam) && monthsBackParam > 0
+      ? Math.min(36, Math.floor(monthsBackParam))
+      : 6;
+    const config = await getCostEstimatorConfig();
+    const [projected, actualMonths] = await Promise.all([
+      Promise.resolve(computeProjectedMonthlyCost(config)),
+      getActualMonthlySpend(monthsBack),
+    ]);
+    res.json({
+      assumptions: config.assumptions,
+      requestPricing: config.requestPricing,
+      hostingLineItems: config.hostingLineItems,
+      projected,
+      actual: { months: actualMonths },
+    });
+  } catch (err) {
+    logError('[admin] failed to get cost estimate', err);
+    res.status(500).json({ error: 'Failed to get cost estimate' });
+  }
+});
+
+router.patch('/cost-estimate/assumptions', async (req, res) => {
+  const { reason, ...assumptions } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (typeof assumptions !== 'object' || assumptions === null || Array.isArray(assumptions)) {
+    res.status(400).json({ error: 'request body must be an object of assumption fields plus reason' });
+    return;
+  }
+  const NUMERIC_FIELDS = [
+    'totalUsers',
+    'premiumConversionPercent',
+    'freeGenerationsPerMonth',
+    'premiumGenerationsPerMonth',
+    'costPerGenerationUsd',
+    'stripeFeePercent',
+    'stripeFeeFixedUsd',
+  ] as const;
+  for (const field of NUMERIC_FIELDS) {
+    const value = (assumptions as Record<string, unknown>)[field];
+    if (typeof value !== 'undefined' && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+      res.status(400).json({ error: `${field} must be a non-negative number` });
+      return;
+    }
+  }
+  if (typeof assumptions.premiumConversionPercent !== 'undefined' && Number(assumptions.premiumConversionPercent) > 100) {
+    res.status(400).json({ error: 'premiumConversionPercent must be between 0 and 100' });
+    return;
+  }
+  if (
+    typeof assumptions.premiumMonthlyPriceUsdOverride !== 'undefined' &&
+    assumptions.premiumMonthlyPriceUsdOverride !== null &&
+    (!Number.isFinite(Number(assumptions.premiumMonthlyPriceUsdOverride)) || Number(assumptions.premiumMonthlyPriceUsdOverride) < 0)
+  ) {
+    res.status(400).json({ error: 'premiumMonthlyPriceUsdOverride must be null or a non-negative number' });
+    return;
+  }
+  if (
+    typeof assumptions.providerCallsPerUserPerMonth !== 'undefined' &&
+    (typeof assumptions.providerCallsPerUserPerMonth !== 'object' ||
+      assumptions.providerCallsPerUserPerMonth === null ||
+      Array.isArray(assumptions.providerCallsPerUserPerMonth))
+  ) {
+    res.status(400).json({ error: 'providerCallsPerUserPerMonth must be an object of non-negative numbers' });
+    return;
+  }
+  if (typeof assumptions.providerCallsPerUserPerMonth !== 'undefined') {
+    const unknownProvider = Object.keys(assumptions.providerCallsPerUserPerMonth as Record<string, unknown>)
+      .map((provider) => normalizeApiLimitKeyPart(provider))
+      .find((provider) => !(REQUEST_PRICED_PROVIDER_KEYS as readonly string[]).includes(provider));
+    if (unknownProvider) {
+      res.status(400).json({ error: `providerCallsPerUserPerMonth.${unknownProvider} is not a request-priced provider` });
+      return;
+    }
+    const invalidVolume = Object.entries(assumptions.providerCallsPerUserPerMonth as Record<string, unknown>)
+      .find(([, value]) => !Number.isFinite(Number(value)) || Number(value) < 0);
+    if (invalidVolume) {
+      res.status(400).json({ error: `providerCallsPerUserPerMonth.${invalidVolume[0]} must be a non-negative number` });
+      return;
+    }
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = await updateCostEstimatorConfig({ assumptions, actorId, reason: reasonStr });
+    res.json(config);
+  } catch (err) {
+    logError('[admin] failed to update cost estimator assumptions', err);
+    res.status(500).json({ error: 'Failed to update cost estimator assumptions' });
+  }
+});
+
+router.patch('/cost-estimate/request-pricing', async (req, res) => {
+  const { reason, requestPricing } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (typeof requestPricing !== 'object' || requestPricing === null || Array.isArray(requestPricing)) {
+    res.status(400).json({ error: 'requestPricing must be an object of non-negative per-provider prices' });
+    return;
+  }
+  const invalidEntry = Object.entries(requestPricing as Record<string, unknown>).find(
+    ([provider, value]) => !(REQUEST_PRICED_PROVIDER_KEYS as readonly string[]).includes(normalizeApiLimitKeyPart(provider)) || !Number.isFinite(Number(value)) || Number(value) < 0
+  );
+  if (invalidEntry) {
+    const provider = normalizeApiLimitKeyPart(invalidEntry[0]);
+    res.status(400).json({ error: (REQUEST_PRICED_PROVIDER_KEYS as readonly string[]).includes(provider)
+      ? `requestPricing.${invalidEntry[0]} must be a non-negative number`
+      : `requestPricing.${invalidEntry[0]} is not a request-priced provider` });
+    return;
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = await updateCostEstimatorRequestPricing({ requestPricing, actorId, reason: reasonStr });
+    res.json(config);
+  } catch (err) {
+    logError('[admin] failed to update cost estimator request pricing', err);
+    res.status(500).json({ error: 'Failed to update cost estimator request pricing' });
+  }
+});
+
+router.patch('/cost-estimate/hosting', async (req, res) => {
+  const { reason, hostingLineItems } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (!Array.isArray(hostingLineItems)) {
+    res.status(400).json({ error: 'hostingLineItems must be an array' });
+    return;
+  }
+  const invalidItem = hostingLineItems.find(
+    (item: any) =>
+      typeof item?.id !== 'string' ||
+      !item.id.trim() ||
+      typeof item?.name !== 'string' ||
+      !item.name.trim() ||
+      !Number.isFinite(Number(item?.monthlyCostUsd)) ||
+      Number(item.monthlyCostUsd) < 0
+  );
+  if (invalidItem) {
+    res.status(400).json({ error: 'each hosting line item requires a non-empty id, a non-empty name, and a non-negative monthlyCostUsd' });
+    return;
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = await updateCostEstimatorConfig({ hostingLineItems, actorId, reason: reasonStr });
+    res.json(config);
+  } catch (err) {
+    logError('[admin] failed to update cost estimator hosting line items', err);
+    res.status(500).json({ error: 'Failed to update cost estimator hosting line items' });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Metrics snapshot (in-process counters + cache hit-rate)
 // ---------------------------------------------------------------------------
@@ -1423,6 +1731,44 @@ router.get('/ingestion-queue-depth', async (_req, res) => {
 // ---------------------------------------------------------------------------
 
 const VALID_DELETION_STATES: readonly DataDeletionJobState[] = ['pending', 'running', 'succeeded', 'failed'];
+
+// ---------------------------------------------------------------------------
+// Attraction duration/description ("activityContext") cache invalidation.
+// Lets an operator bust the cached Wikipedia-backed duration metadata for a
+// single attraction (destinationKey + name) or a whole destination
+// (destinationKey only) without a code deploy or waiting out
+// durationMetadataRefreshDays, per itinerary-improvements-coding-plan.md
+// Phase 2C "Maintainability".
+// ---------------------------------------------------------------------------
+router.post('/attractions/duration-metadata/invalidate', async (req, res) => {
+  const destinationKey = typeof req.body?.destinationKey === 'string' ? req.body.destinationKey.trim() : '';
+  const name = typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name.trim() : null;
+  if (!destinationKey) {
+    res.status(400).json({ error: 'destinationKey is required' });
+    return;
+  }
+  try {
+    const deletedCount = await deleteAttractionDurationMetadata(destinationKey, name);
+    const actorId = (req as any).user ? ((req as any).user as TokenPayload).userId : null;
+    try {
+      await writeAuditLog({
+        actorUserId: actorId,
+        action: 'ATTRACTION_DURATION_METADATA_CACHE_INVALIDATED' as any,
+        beforeState: { destinationKey, name },
+        afterState: { deletedCount },
+        reason: name
+          ? `Invalidate cached duration/description metadata for "${name}" in ${destinationKey}`
+          : `Invalidate all cached duration/description metadata for ${destinationKey}`,
+      });
+    } catch (err) {
+      logError('[admin] audit write failed on duration-metadata cache invalidate', err);
+    }
+    res.json({ destinationKey, name, deletedCount });
+  } catch (err) {
+    logError('[admin] failed to invalidate attraction duration metadata cache', err);
+    res.status(500).json({ error: 'Failed to invalidate attraction duration metadata cache' });
+  }
+});
 
 router.get('/data-deletion-jobs', async (req, res) => {
   const stateParam = typeof req.query.state === 'string' ? req.query.state : undefined;

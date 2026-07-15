@@ -78,13 +78,20 @@ describe('Chase Travel flight regex extraction', () => {
       expect(result.parsedItems).toHaveLength(2);
       expect(result.parsedItems.every((item) => item.itemType === 'flight')).toBe(true);
       expect(result.parsedItems.map((item) => item.travelerNames)).toEqual([
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
       ]);
       expect(result.parsedItems.map((item) => item.confirmationNumber)).toEqual(['SJCKCS', 'SJCKCS']);
       expect(result.parsedItems.map((item) => item.extractedFields.departureAirportCode)).toEqual(['BOS', 'SFO']);
       expect(result.parsedItems.map((item) => item.extractedFields.arrivalAirportCode)).toEqual(['LAX', 'BOS']);
-      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6187', 'B6734']);
+      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6 187', 'B6 734']);
+      expect(result.parsedItems.map((item) => item.extractedFields.departureDate)).toEqual(['2024-06-08', '2024-06-20']);
+      expect(result.parsedItems.map((item) => item.extractedFields.confirmationNumber)).toEqual(['SJCKCS', 'SJCKCS']);
+      expect(result.parsedItems.map((item) => item.extractedFields.paid)).toEqual([true, true]);
+      expect(result.parsedItems.map((item) => item.extractedFields.travelers)).toEqual([
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+      ]);
       expect(result.parsedItems.map((item) => item.extractedFields.cost)).toEqual([1257.6, 0]);
       expect(result.parsedItems.map((item) => item.extractedFields.currency)).toEqual(['USD', 'USD']);
     } finally {
@@ -151,10 +158,10 @@ describe('Chase Travel flight regex extraction', () => {
       });
 
       expect(result.parsedItems).toHaveLength(2);
-      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6187', 'B6734']);
+      expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6 187', 'B6 734']);
       expect(result.parsedItems.map((item) => item.travelerNames)).toEqual([
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
-        ['Bryan Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
+        ['BRYAN Edward Duerk', 'Vicky Duerk', 'Tristan Duerk'],
       ]);
     } finally {
       await deleteTempBytes(tempRef);
@@ -170,7 +177,54 @@ describe('Chase Travel flight regex extraction', () => {
       'Traveler 1: BRYAN Edward Duerk Traveler 2: Vicky Duerk Traveler 3: Tristan Duerk',
     ].join(' ');
 
-    expect(_parseChaseFlightLegs(flattenedText).map((leg) => leg.flightNumber)).toEqual(['B6187', 'B6734']);
+    expect(_parseChaseFlightLegs(flattenedText).map((leg) => leg.flightNumber)).toEqual(['B6 187', 'B6 734']);
+  });
+
+  it('parses Chase email-style departure and return flight sections', async () => {
+    const { _parseChaseFlightLegs } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
+
+    const emailStyleText = [
+      'Chase Travel Trip ID: 1011800549',
+      'Departure flight',
+      '$68.49',
+      'Thu, Feb 12, 2026 - Thu, Feb 12, 2026',
+      '1 traveler',
+      'Airline confirmation: GF2AJE',
+      'Boston (BOS)Cleveland (CLE)',
+      '09:10 am',
+      'BOS',
+      '11:25 am',
+      'CLE',
+      '2h 15m',
+      'Delta Air Lines',
+      'DL 5661 Embraer 175',
+      'Fare: Delta Main Basic',
+      'Traveler 1: BRYAN DUERK',
+      'Return flight',
+      '$68.49',
+      'Wed, Feb 18, 2026 - Wed, Feb 18, 2026',
+      '1 traveler',
+      'Airline confirmation: GGDDNN',
+      'Cleveland (CLE)Boston (BOS)',
+      '06:00 am',
+      'CLE',
+      '08:07 am',
+      'BOS',
+      '2h 7m',
+      'Delta Air Lines',
+      'DL 5684 Embraer 175',
+      'Fare: Delta Main Basic',
+      'Traveler 1: BRYAN DUERK',
+      'Rules and Policies',
+      'Departure flight $68.49 Return flight $68.49',
+    ].join('\n');
+
+    const legs = _parseChaseFlightLegs(emailStyleText);
+    expect(legs).toHaveLength(2);
+    expect(legs.map((leg) => leg.confirmationNumber)).toEqual(['GF2AJE', 'GGDDNN']);
+    expect(legs.map((leg) => leg.airline)).toEqual(['Delta Air Lines', 'Delta Air Lines']);
+    expect(legs.map((leg) => leg.flightNumber)).toEqual(['DL 5661', 'DL 5684']);
+    expect(legs.map((leg) => leg.legCost)).toEqual([68.49, 68.49]);
   });
 
   it('extracts two flight legs from the HAN-LPQ-CNX Chase Travel PDF', async () => {
