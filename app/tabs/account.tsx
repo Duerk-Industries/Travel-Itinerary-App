@@ -7,6 +7,7 @@ import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
 import PackingListTable from '../components/PackingListTable';
+import PackingPresetSelector from '../components/PackingPresetSelector';
 import PremiumSubscriptionPanel from '../components/PremiumSubscriptionPanel';
 import { useBillingStatus } from '../hooks/useBillingStatus';
 import { fetchBillingPlans, type PlanInfo } from '../utils/billing';
@@ -323,6 +324,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
           <Text style={styles.buttonText}>Open List</Text>
         </Pressable>
       </View>
+      <PackingPresetSelector backendUrl={backendUrl} headers={headers} jsonHeaders={jsonHeaders} theme={theme} />
       {showPackingList ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setShowPackingList(false)}>
           <View style={[localStyles.modalOverlay, { backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.68)' : 'rgba(17,24,39,0.35)' }]} testID="account-packing-list-modal">

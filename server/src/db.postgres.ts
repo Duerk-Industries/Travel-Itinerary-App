@@ -8714,7 +8714,8 @@ export const replaceUserPackingList = async (userId: string, itemsInput: Array<{
 
 export const getTripPackingList = async (userId: string, tripId: string): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
   const p = getPool();
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   await ensureTripPackingListWithRunner(p, tripId);
   const travelersResult = await p.query<PackingListTraveler>(
     `SELECT gm.id,
@@ -8764,7 +8765,8 @@ export const replaceTripPackingList = async (
   itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>
 ): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
   const p = getPool();
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   const items = sanitizePackingItems(itemsInput);
   if (!items.length) throw new Error('At least one packing item is required');
   const client = await p.connect();
@@ -8796,7 +8798,8 @@ export const setTripPackingItemPacked = async (
   packed: boolean
 ): Promise<void> => {
   const p = getPool();
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   const valid = await p.query(
     `SELECT 1
      FROM trip_packing_list_items item
@@ -9220,7 +9223,8 @@ export const getPackingListV2 = async (userId: string, tripId: string): Promise<
 
 export const addTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
   const p = getPool();
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   const preset = (await listPackingPresetsV2()).find((item) => item.key === presetKey && item.isActive);
   if (!preset) throw new Error('Packing preset not found');
   await p.query(
@@ -9234,7 +9238,8 @@ export const addTripPackingPresetV2 = async (userId: string, tripId: string, pre
 
 export const removeTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
   const p = getPool();
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   await p.query(`UPDATE trip_packing_contributions SET removed_at = NOW() WHERE trip_id = $1 AND source_kind = 'trip_preset' AND source_preset_key = $2`, [tripId, presetKey]);
   return getPackingListV2(userId, tripId);
 };
@@ -9286,7 +9291,8 @@ export const replaceTripPackingListV2 = async (
   itemsInput: Array<{ category?: unknown; label?: unknown }>
 ): Promise<PackingListV2Trip> => {
   const p = getPool();
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   const items = sanitizePackingItems(itemsInput);
   const client = await p.connect();
   try {

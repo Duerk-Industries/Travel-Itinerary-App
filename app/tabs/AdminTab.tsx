@@ -3182,11 +3182,16 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
 // Main AdminTab
 // ---------------------------------------------------------------------------
 
+type PackingPresetItem = { category: string; label: string; position?: number };
+type PackingPresetAdminRow = { key: string; label: string; isActive: boolean; items?: PackingPresetItem[] };
+
 const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
-  const [presets, setPresets] = useState<Array<{ key: string; label: string; isActive: boolean }>>([]);
+  const [presets, setPresets] = useState<PackingPresetAdminRow[]>([]);
   const [filename, setFilename] = useState('');
   const [markdown, setMarkdown] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [editableItems, setEditableItems] = useState<PackingPresetItem[]>([]);
   const endpoint = `${backendUrl}/api/admin/packing-list-presets`;
   const load = useCallback(async () => {
     const res = await fetch(endpoint, { headers });
@@ -3211,10 +3216,84 @@ const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<
     setMessage(res.ok ? 'Preset reactivated.' : 'Unable to reactivate preset');
     if (res.ok) void load();
   };
+  const toggleEdit = (preset: PackingPresetAdminRow) => {
+    if (expandedKey === preset.key) {
+      setExpandedKey(null);
+      return;
+    }
+    setExpandedKey(preset.key);
+    setEditableItems((preset.items ?? []).map((item) => ({ category: item.category, label: item.label })));
+  };
+  const updateEditableItem = (index: number, patch: Partial<PackingPresetItem>) => {
+    setEditableItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  };
+  const removeEditableItem = (index: number) => {
+    setEditableItems((prev) => prev.filter((_, i) => i !== index));
+  };
+  const addEditableItem = () => {
+    setEditableItems((prev) => [...prev, { category: '', label: '' }]);
+  };
+  const saveItems = async (key: string) => {
+    const res = await fetch(`${endpoint}/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: editableItems }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setMessage(res.ok ? 'Preset items saved.' : data.error ?? 'Unable to save preset items');
+    if (res.ok) { setExpandedKey(null); void load(); }
+  };
   return <View style={{ gap: 12 }}>
     <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '700' }}>Preset catalog</Text>
     {message ? <Text style={{ color: theme.colors.textMuted }}>{message}</Text> : null}
-    {presets.map((preset) => <View key={preset.key} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: theme.colors.text }}>{preset.label} ({preset.key}){preset.isActive ? '' : ' — removed'}</Text>{preset.key !== 'general' ? <Pressable onPress={() => void (preset.isActive ? remove(preset.key) : reactivate(preset.key))}><Text style={{ color: preset.isActive ? theme.colors.error : theme.colors.link }}>{preset.isActive ? 'Remove' : 'Reactivate'}</Text></Pressable> : null}</View>)}
+    {presets.map((preset) => <View key={preset.key} testID={`admin-packing-preset-row-${preset.key}`}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={{ color: theme.colors.text }}>{preset.label} ({preset.key}){preset.isActive ? '' : ' — removed'}</Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          {preset.key !== 'general' ? (
+            <Pressable onPress={() => toggleEdit(preset)} testID={`admin-packing-preset-edit-${preset.key}`}>
+              <Text style={{ color: theme.colors.link }}>{expandedKey === preset.key ? 'Close' : 'Edit items'}</Text>
+            </Pressable>
+          ) : null}
+          {preset.key !== 'general' ? <Pressable onPress={() => void (preset.isActive ? remove(preset.key) : reactivate(preset.key))}><Text style={{ color: preset.isActive ? theme.colors.error : theme.colors.link }}>{preset.isActive ? 'Remove' : 'Reactivate'}</Text></Pressable> : null}
+        </View>
+      </View>
+      {expandedKey === preset.key ? (
+        <View style={{ gap: 8, paddingVertical: 8, paddingLeft: 12 }} testID={`admin-packing-preset-editor-${preset.key}`}>
+          {editableItems.map((item, index) => (
+            <View key={index} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <TextInput
+                value={item.category}
+                onChangeText={(text) => updateEditableItem(index, { category: text })}
+                placeholder="Category"
+                placeholderTextColor={theme.colors.textMuted}
+                style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 6, borderRadius: 6, flex: 1 }}
+                testID={`admin-packing-preset-item-category-${preset.key}-${index}`}
+              />
+              <TextInput
+                value={item.label}
+                onChangeText={(text) => updateEditableItem(index, { label: text })}
+                placeholder="Item label"
+                placeholderTextColor={theme.colors.textMuted}
+                style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 6, borderRadius: 6, flex: 2 }}
+                testID={`admin-packing-preset-item-label-${preset.key}-${index}`}
+              />
+              <Pressable onPress={() => removeEditableItem(index)} testID={`admin-packing-preset-item-remove-${preset.key}-${index}`}>
+                <Text style={{ color: theme.colors.error }}>Remove</Text>
+              </Pressable>
+            </View>
+          ))}
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Pressable onPress={addEditableItem} testID={`admin-packing-preset-item-add-${preset.key}`}>
+              <Text style={{ color: theme.colors.link }}>+ Add item</Text>
+            </Pressable>
+            <Pressable onPress={() => void saveItems(preset.key)} testID={`admin-packing-preset-save-${preset.key}`}>
+              <Text style={{ color: theme.colors.cta, fontWeight: '700' }}>Save items</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+    </View>)}
     <TextInput value={filename} onChangeText={setFilename} placeholder="new_list.md" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6 }} />
     <TextInput value={markdown} onChangeText={setMarkdown} multiline numberOfLines={8} placeholder="Paste preset markdown" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6, minHeight: 140, textAlignVertical: 'top' }} />
     <Pressable onPress={() => void upload()} style={{ backgroundColor: theme.colors.cta, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}><Text style={{ color: '#0B1726', fontWeight: '700' }}>Upload preset</Text></Pressable>

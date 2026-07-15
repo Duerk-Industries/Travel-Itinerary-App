@@ -8286,7 +8286,8 @@ export const getPackingListV2 = async (userId: string, tripId: string): Promise<
 };
 
 export const addTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   const preset = (await listPackingPresetsV2()).find((item) => item.key === presetKey);
   if (!preset) throw new Error('Packing preset not found');
   const ref = packingV2TripCollection().doc(tripId);
@@ -8297,7 +8298,8 @@ export const addTripPackingPresetV2 = async (userId: string, tripId: string, pre
 };
 
 export const removeTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   const ref = packingV2TripCollection().doc(tripId);
   const current = (await ref.get()).data() as any;
   await ref.set({ presetKeys: (Array.isArray(current?.presetKeys) ? current.presetKeys : []).filter((key: string) => key !== presetKey), updatedAt: nowIso() }, { merge: true });
@@ -8339,7 +8341,8 @@ export const updatePackingPresetV2 = async (presetKey: string, patch: { label?: 
 };
 
 export const replaceTripPackingListV2 = async (userId: string, tripId: string, itemsInput: Array<{ category?: unknown; label?: unknown }>): Promise<PackingListV2Trip> => {
-  await ensureUserCanReadTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
   const items = sanitizePackingItems(itemsInput).map((item) => ({ ...item, normalizedLabel: normalizePackingLabel(item.label) }));
   await packingV2TripCollection().doc(tripId).set({ tripId, manualItems: items, updatedAt: nowIso() }, { merge: true });
   return getPackingListV2(userId, tripId);

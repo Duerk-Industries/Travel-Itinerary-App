@@ -1,6 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { createPackingListScrollSync } from '../utils/packingListScrollSync';
+import { toWebStyle } from '../utils/webStyle';
 
 type MatrixItem = {
   id: string;
@@ -24,11 +25,76 @@ const TRAVELER_WIDTH = 110;
 const HEADER_HEIGHT = 40;
 
 /**
+ * Web freezes the header row and item-name column with native CSS
+ * `position: sticky` inside one scroll container — simpler and jitter-free
+ * compared to synchronizing multiple ScrollViews, and `position: sticky` is
+ * not reliably available as a scroll behavior on native, hence the separate
+ * native implementation below.
+ */
+const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, disabled, colors }) => {
+  return (
+    <View style={toWebStyle(styles.webScroll, { overflow: 'auto', position: 'relative' })} testID="packing-matrix-web-scroll">
+      <View style={styles.horizontalRow}>
+        <View
+          style={toWebStyle({ ...styles.itemHeader, backgroundColor: colors.surface, borderColor: colors.border }, {
+            position: 'sticky',
+            top: 0,
+            left: 0,
+            zIndex: 4,
+          })}
+        >
+          <Text style={[styles.headerText, { color: colors.textMuted }]}>Item</Text>
+        </View>
+        {travelers.map((traveler) => (
+          <View
+            key={traveler.id}
+            style={toWebStyle({ ...styles.travelerHeader, backgroundColor: colors.surface, borderColor: colors.border }, {
+              position: 'sticky',
+              top: 0,
+              zIndex: 3,
+            })}
+          >
+            <Text numberOfLines={1} style={[styles.headerText, { color: colors.textMuted }]}>{traveler.name}</Text>
+          </View>
+        ))}
+      </View>
+      {items.map((item) => (
+        <View key={item.id} style={styles.horizontalRow}>
+          <View
+            style={toWebStyle({ ...styles.itemCell, borderColor: colors.border, backgroundColor: item.category ? colors.backgroundAlt : colors.surface }, {
+              position: 'sticky',
+              left: 0,
+              zIndex: 2,
+            })}
+          >
+            <Text style={[styles.itemText, { color: colors.text }]}>{item.label}</Text>
+          </View>
+          {travelers.map((traveler) => {
+            const checked = item.packedBy?.includes(traveler.id) ?? false;
+            return (
+              <Pressable
+                key={`${item.id}-${traveler.id}`}
+                testID={`packing-check-${item.id}-${traveler.id}`}
+                disabled={disabled || !onToggle}
+                onPress={() => onToggle?.(item, traveler)}
+                style={[styles.checkCell, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              >
+                <Text style={[styles.checkText, { color: checked ? colors.success : colors.textMuted }]}>{checked ? '✓' : ''}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+};
+
+/**
  * Four-pane matrix used on native. The two body panes own the scroll state;
  * the other panes are synchronized by offset, so the first column and header
  * stay frozen without a table dependency or per-cell layout virtualization.
  */
-const PackingListMatrix: React.FC<Props> = ({ items, travelers, onToggle, disabled, colors }) => {
+const PackingListMatrixNative: React.FC<Props> = ({ items, travelers, onToggle, disabled, colors }) => {
   const topHeaderRef = useRef<ScrollView>(null);
   const leftBodyRef = useRef<ScrollView>(null);
   const matrixRef = useRef<ScrollView>(null);
@@ -67,13 +133,15 @@ const PackingListMatrix: React.FC<Props> = ({ items, travelers, onToggle, disabl
           </ScrollView>
         </ScrollView>
       </View>
-      {Platform.OS === 'web' ? <Text style={{ color: colors.textMuted, fontSize: 11 }}>Scroll to view all travelers</Text> : null}
     </View>
   );
 };
 
+const PackingListMatrix: React.FC<Props> = (props) => (Platform.OS === 'web' ? <PackingListMatrixWeb {...props} /> : <PackingListMatrixNative {...props} />);
+
 const styles = StyleSheet.create({
   root: { minHeight: 100 },
+  webScroll: { maxHeight: 520 },
   headerRow: { flexDirection: 'row', height: HEADER_HEIGHT },
   bodyRow: { flexDirection: 'row', maxHeight: 520 },
   horizontalRow: { flexDirection: 'row' },

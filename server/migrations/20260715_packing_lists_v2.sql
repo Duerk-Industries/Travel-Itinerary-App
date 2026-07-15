@@ -70,16 +70,11 @@ UPDATE user_packing_list_items
 SET normalized_label = LOWER(TRIM(label))
 WHERE normalized_label IS NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_trip_packing_v2_normalized_label
-  ON trip_packing_list_items (trip_id, normalized_label)
-  WHERE normalized_label IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_preset_packing_lists_active ON preset_packing_lists (is_active, key);
-CREATE INDEX IF NOT EXISTS idx_preset_packing_items_preset ON preset_packing_list_items (preset_id, position);
-CREATE INDEX IF NOT EXISTS idx_trip_packing_contributions_trip ON trip_packing_contributions (trip_id, removed_at);
-CREATE INDEX IF NOT EXISTS idx_trip_packing_sources_contribution ON trip_packing_item_sources (contribution_id);
-
 -- Durable migration evidence. These tables intentionally have no foreign
--- keys so a failed backfill never destroys the original v1 records.
+-- keys so a failed backfill never destroys the original v1 records. They
+-- are populated BEFORE the duplicate-collapse step below so every row that
+-- existed pre-migration — including rows about to be merged away — can be
+-- restored exactly by the companion rollback.
 CREATE TABLE IF NOT EXISTS packing_lists_v2_user_item_backup (
   backup_id UUID PRIMARY KEY,
   original_id UUID NOT NULL,
@@ -122,6 +117,57 @@ ON CONFLICT (original_id) DO NOTHING;
 INSERT INTO packing_lists_v2_trip_check_backup (backup_id, item_id, traveler_id, packed, updated_at)
 SELECT uuid_generate_v4(), item_id, traveler_id, packed, updated_at FROM trip_packing_item_checks
 ON CONFLICT (item_id, traveler_id) DO NOTHING;
+
+-- Collapse pre-existing rows that share a (trip_id, normalized_label) but
+-- differ in exact category/label casing/whitespace (e.g. "Sunscreen" vs
+-- "sunscreen "). The v1 uniqueness rule allowed these to coexist; the new
+-- normalized-label uniqueness rule below does not, so the CREATE UNIQUE
+-- INDEX a few statements down would otherwise fail on any pre-existing trip
+-- with such a collision. One row per group (the lowest id) is kept as
+-- canonical; its provenance/packed-state is merged from the rows being
+-- removed, none of which lose data since the backup tables above already
+-- captured every original row.
+CREATE TABLE IF NOT EXISTS packing_lists_v2_dedup_map (
+  duplicate_id UUID PRIMARY KEY,
+  canonical_id UUID NOT NULL
+);
+
+INSERT INTO packing_lists_v2_dedup_map (duplicate_id, canonical_id)
+SELECT item.id, canonical.canonical_id
+FROM trip_packing_list_items item
+JOIN (
+  SELECT trip_id, normalized_label, MIN(id::text)::uuid AS canonical_id
+  FROM trip_packing_list_items
+  WHERE normalized_label IS NOT NULL
+  GROUP BY trip_id, normalized_label
+  HAVING COUNT(*) > 1
+) canonical
+  ON canonical.trip_id = item.trip_id AND canonical.normalized_label = item.normalized_label
+WHERE item.id <> canonical.canonical_id
+ON CONFLICT (duplicate_id) DO NOTHING;
+
+INSERT INTO trip_packing_item_sources (id, trip_item_id, contribution_id)
+SELECT uuid_generate_v4(), dedup.canonical_id, s.contribution_id
+FROM trip_packing_item_sources s
+JOIN packing_lists_v2_dedup_map dedup ON dedup.duplicate_id = s.trip_item_id
+ON CONFLICT (trip_item_id, contribution_id) DO NOTHING;
+
+INSERT INTO trip_packing_item_checks (item_id, traveler_id, packed, updated_at)
+SELECT dedup.canonical_id, c.traveler_id, c.packed, c.updated_at
+FROM trip_packing_item_checks c
+JOIN packing_lists_v2_dedup_map dedup ON dedup.duplicate_id = c.item_id
+ON CONFLICT (item_id, traveler_id) DO NOTHING;
+
+DELETE FROM trip_packing_list_items
+WHERE id IN (SELECT duplicate_id FROM packing_lists_v2_dedup_map);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_trip_packing_v2_normalized_label
+  ON trip_packing_list_items (trip_id, normalized_label)
+  WHERE normalized_label IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_preset_packing_lists_active ON preset_packing_lists (is_active, key);
+CREATE INDEX IF NOT EXISTS idx_preset_packing_items_preset ON preset_packing_list_items (preset_id, position);
+CREATE INDEX IF NOT EXISTS idx_trip_packing_contributions_trip ON trip_packing_contributions (trip_id, removed_at);
+CREATE INDEX IF NOT EXISTS idx_trip_packing_sources_contribution ON trip_packing_item_sources (contribution_id);
 
 INSERT INTO trip_packing_contributions (id, trip_id, source_kind, source_user_id, contribution_key)
 SELECT uuid_generate_v4(), trip_id, 'profile_personal', source_user_id, trip_id::text || ':profile_personal:' || source_user_id::text
