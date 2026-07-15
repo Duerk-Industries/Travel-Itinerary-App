@@ -6,6 +6,10 @@ export type AsyncItineraryTracker = {
   status: 'pending' | 'completed' | 'failed';
   error?: string;
   itineraryId?: string | null;
+  stage?: string | null;
+  stageLabel?: string | null;
+  stageDetail?: string | null;
+  etaSeconds?: number | null;
 };
 
 type UseAsyncItineraryPollingParams = {
@@ -61,18 +65,24 @@ export function useAsyncItineraryPolling({
           }
           const data = await res.json().catch(() => ({}));
           const status = String((data as any).status ?? '').toLowerCase();
+          const stageFields = {
+            stage: (data as any).stage ?? null,
+            stageLabel: (data as any).stageLabel ?? null,
+            stageDetail: (data as any).stageDetail ?? null,
+            etaSeconds: typeof (data as any).etaSeconds === 'number' ? (data as any).etaSeconds : null,
+          };
           if (status === 'completed') {
             const itineraryId =
               (data as any).itineraryId ?? (data as any).result?.itineraryId ?? null;
-            return [tripId, { ...tracker, status: 'completed' as const, itineraryId, error: undefined }] as const;
+            return [tripId, { ...tracker, ...stageFields, status: 'completed' as const, itineraryId, error: undefined }] as const;
           }
           if (status === 'failed') {
             return [
               tripId,
-              { ...tracker, status: 'failed' as const, error: String((data as any).error ?? 'generation failed') },
+              { ...tracker, ...stageFields, status: 'failed' as const, error: String((data as any).error ?? 'generation failed') },
             ] as const;
           }
-          return [tripId, tracker] as const;
+          return [tripId, { ...tracker, ...stageFields }] as const;
         } catch (err) {
           return [tripId, { ...tracker, status: 'failed' as const, error: (err as Error).message }] as const;
         }
@@ -89,7 +99,9 @@ export function useAsyncItineraryPolling({
         prevTracker.status !== nextTracker.status ||
         prevTracker.error !== nextTracker.error ||
         prevTracker.jobId !== nextTracker.jobId ||
-        prevTracker.itineraryId !== nextTracker.itineraryId
+        prevTracker.itineraryId !== nextTracker.itineraryId ||
+        prevTracker.stage !== nextTracker.stage ||
+        prevTracker.etaSeconds !== nextTracker.etaSeconds
       ) {
         nextState[tripId] = nextTracker;
         changed = true;

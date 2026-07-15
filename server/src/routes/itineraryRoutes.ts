@@ -543,6 +543,10 @@ router.get('/async/:jobId', async (req, res) => {
     status: job.status,
     error: job.error ?? null,
     result: job.result ?? null,
+    stage: job.stage ?? null,
+    stageLabel: job.stageLabel ?? null,
+    stageDetail: job.stageDetail ?? null,
+    etaSeconds: job.etaSeconds ?? null,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   });

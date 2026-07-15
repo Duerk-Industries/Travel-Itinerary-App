@@ -32,7 +32,10 @@ export const createSocketServer = (httpServer: HttpServer): Server => {
       methods: ['GET', 'POST'],
       credentials: true,
     },
-    // React Native requires websocket-only (no polling fallback)
+    // Accept both transports for every client. WebSocket upgrades can get
+    // blocked before reaching Socket.IO on some hosting paths (see the
+    // matching comment in app/utils/socket.ts); polling is the fallback that
+    // keeps chat reachable when that happens, on web and native alike.
     transports: ['websocket', 'polling'],
   });
 

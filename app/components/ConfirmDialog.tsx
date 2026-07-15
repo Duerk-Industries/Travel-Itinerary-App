@@ -12,6 +12,11 @@ type ConfirmDialogProps = {
   onCancel: () => void;
   styles: Record<string, any>;
   testID?: string;
+  /** Render via RN's native Modal portal instead of an inline absolutely-positioned
+   * view. Needed when this dialog must appear on top of another already-open
+   * Modal (e.g. a picker) — a plain positioned view can end up stacked behind
+   * a native Modal's portal regardless of zIndex. */
+  useNativeModal?: boolean;
 };
 
 const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
@@ -24,6 +29,7 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
   onCancel,
   styles,
   testID,
+  useNativeModal,
 }) => {
   return (
     <DialogShell
@@ -34,6 +40,7 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
       onClose={onCancel}
       testID={testID || 'confirm-dialog'}
       accessibilityRole="alert"
+      useNativeModal={useNativeModal}
     >
       <View style={styles.row}>
         <TouchableOpacity

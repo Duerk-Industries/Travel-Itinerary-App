@@ -40,14 +40,18 @@ describe('socket URL resolution', () => {
     expect(resolveSocketServerUrl()).toBe('http://localhost:4000');
   });
 
-  it('prefers websocket with a polling fallback on web to avoid Firebase Hosting CDN buffering', () => {
+  it('connects via polling first on web, upgrading to websocket opportunistically', () => {
+    // socket.io does not reliably fall back to polling when a websocket-first
+    // connection fails outright (a documented upstream limitation), so polling
+    // must be the first-listed transport for the connection to be reliable
+    // wherever the initial websocket handshake gets rejected upstream.
     Platform.OS = 'web';
-    expect(resolveSocketTransports()).toEqual(['websocket', 'polling']);
+    expect(resolveSocketTransports()).toEqual(['polling', 'websocket']);
   });
 
-  it('keeps websocket transport for native clients', () => {
+  it('also connects via polling first on native, for the same reason', () => {
     Platform.OS = 'ios';
-    expect(resolveSocketTransports()).toEqual(['websocket']);
+    expect(resolveSocketTransports()).toEqual(['polling', 'websocket']);
   });
 
   it('remaps a loopback socket URL to 10.0.2.2 on the Android emulator', () => {

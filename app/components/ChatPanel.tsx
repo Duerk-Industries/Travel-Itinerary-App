@@ -183,7 +183,13 @@ const ChatPanel: React.FC<Props> = ({
       setLoading(false);
     };
 
-    const onConnectError = () => {
+    const onConnectError = (err: unknown) => {
+      // Surfaced only to the console — the user-facing message stays generic —
+      // but this is the one place that would show *why* the handshake failed
+      // (auth rejection vs transport/network failure vs CORS), which is
+      // otherwise invisible once this resolves to the generic banner below.
+      // eslint-disable-next-line no-console
+      console.warn('[chat] connect_error', err instanceof Error ? err.message : err);
       clearTimeout(historyTimeout);
       setMessages([]);
       setErrorMessage('Unable to connect to chat right now.');
