@@ -133,7 +133,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     return [...travelers].sort((a, b) => {
       if (a.id === currentTravelerId) return -1;
       if (b.id === currentTravelerId) return 1;
-      return a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     });
   }, [currentTravelerId, isTrip, travelers]);
 

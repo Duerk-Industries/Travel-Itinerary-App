@@ -90,11 +90,6 @@ export const buildPackingListDisplayGroups = (
   const result: PackingDisplayGroup[] = [];
 
   for (const group of groups) {
-    const target = group.kind === 'personal'
-      ? (group.items.filter((item) => (personalOwners.get(item.normalizedLabel || normalizePackingLabel(item.label))?.size ?? 0) >= 2).length
-        ? sharedGroup
-        : null)
-      : null;
     const remaining: PackingDisplayItem[] = [];
     for (const item of group.items) {
       const normalizedLabel = item.normalizedLabel || normalizePackingLabel(item.label);

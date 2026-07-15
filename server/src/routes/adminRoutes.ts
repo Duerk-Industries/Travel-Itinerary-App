@@ -920,6 +920,21 @@ router.post('/packing-list-presets/:presetKey/reactivate', async (req, res) => {
 
 router.put('/packing-list-presets/:presetKey', async (req, res) => {
   try {
+    if (req.params.presetKey === 'general' && req.body?.items) {
+      res.status(400).json({ error: 'General items are managed by the repository catalog' });
+      return;
+    }
+    if (req.body?.items) {
+      const presets = await listPackingPresetsV2();
+      const general = presets.find((p) => p.key === 'general');
+      const generalLabels = new Set((general?.items ?? []).map((i) => normalizePackingLabel(i.label)));
+      const items = req.body.items as Array<{ label: string }>;
+      const collision = items.find((item) => generalLabels.has(normalizePackingLabel(item.label)));
+      if (collision) {
+        res.status(400).json({ error: `Item duplicates General: ${collision.label}` });
+        return;
+      }
+    }
     const preset = await updatePackingPresetV2(req.params.presetKey, {
       label: typeof req.body?.label === 'string' ? req.body.label : undefined,
       description: typeof req.body?.description === 'string' ? req.body.description : undefined,
