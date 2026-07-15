@@ -34,12 +34,19 @@ export const resolveSocketServerUrl = (): string =>
   });
 
 export const resolveSocketTransports = (): Array<'polling' | 'websocket'> =>
-  // Prefer WebSocket on all platforms: Firebase Hosting's CDN buffers HTTP
-  // responses before forwarding, which silently breaks Socket.IO's long-poll
-  // GET (events never arrive until the request completes). WebSocket upgrades
-  // bypass CDN buffering and are supported by Firebase → Cloud Run rewrites.
-  // Polling is kept as a fallback for environments that block WebSocket.
-  Platform.OS === 'web' ? ['websocket', 'polling'] : ['websocket'];
+  // Polling MUST be listed first. Confirmed via production Cloud Run logs:
+  // every `GET /socket.io/?transport=websocket` handshake gets HTTP 400
+  // (the Firebase Hosting → Cloud Run rewrite doesn't preserve the upgrade),
+  // and — per socket.io's own documented behavior — `['websocket', 'polling']`
+  // does NOT reliably fall back to polling when the initial websocket attempt
+  // fails; the client just retries websocket forever via its reconnection
+  // loop (see socketio/socket.io#2751, #5122, #3998). Polling-first avoids
+  // that failure mode entirely: the connection establishes over HTTP
+  // long-polling (which Firebase Hosting proxies fine), and Engine.IO then
+  // opportunistically tries to upgrade to websocket — an upgrade failure is
+  // handled gracefully and does not drop the connection, unlike an initial
+  // connection failure.
+  ['polling', 'websocket'];
 
 // ---------------------------------------------------------------------------
 // Singleton
@@ -53,6 +60,11 @@ export const getSocket = (): Socket => {
       // Firebase Hosting rewrites reliably proxy HTTP long polling to Cloud Run,
       // while websocket upgrades can be blocked before they reach Socket.IO.
       transports: resolveSocketTransports(),
+      // Belt-and-suspenders: if the first-listed transport still fails outright
+      // (e.g. polling itself gets blocked in some environment), this makes the
+      // client actually try the remaining ones instead of retrying the same
+      // failing transport forever. Available since socket.io-client 4.8.0.
+      tryAllTransports: true,
       autoConnect: false,
     });
   }

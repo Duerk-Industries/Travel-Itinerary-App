@@ -134,6 +134,27 @@ function Get-UniqueStrings([string[]]$Values) {
   return $unique
 }
 
+# gcloud's --update-env-vars/--set-secrets flags are KEY=VALUE dicts delimited
+# by commas, so a literal comma inside any VALUE (e.g. ZAI_MODELS=a,b,c) breaks
+# parsing unless the item delimiter itself is changed. Per `gcloud topic
+# escaping`, that's done by prefixing the whole flag value with `^DELIM^` and
+# joining pairs with DELIM instead of ','; there is no backslash-escape for a
+# literal comma within a value. This picks a delimiter that doesn't collide
+# with anything already present in the pairs being joined.
+function Get-SafeDelimiter([string[]]$Values) {
+  $joined = ($Values -join '')
+  foreach ($candidate in @('@', '~', '#', '|', '!')) {
+    if ($joined.IndexOf($candidate) -lt 0) { return $candidate }
+  }
+  return [guid]::NewGuid().ToString('N')
+}
+
+function Join-GcloudDictArg([string[]]$Pairs) {
+  if ($Pairs.Count -eq 0) { return '' }
+  $delimiter = Get-SafeDelimiter $Pairs
+  return "^$delimiter^" + ($Pairs -join $delimiter)
+}
+
 function Invoke-LegacySecretCleanup([string]$ServiceName, [string]$Region, [string[]]$EnvKeys, [string]$Memory, [bool]$AllowClearSecretsFallback, [string]$PhaseLabel) {
   if ($EnvKeys.Count -eq 0) { return $true }
 
@@ -197,7 +218,6 @@ if ($EnvFile) {
       $value = ($value -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
       $value = ($value -join ';')
     }
-    $value = $value -replace ',', '\,'
     $envPairs += "$($pair.Key)=$value"
   }
 }
@@ -242,7 +262,7 @@ $envKeys = Get-UniqueStrings ($envPairs | ForEach-Object { ($_ -split '=', 2)[0]
 
 $envArg = ''
 if ($envPairs.Count -gt 0) {
-  $envArg = ($envPairs -join ',')
+  $envArg = Join-GcloudDictArg $envPairs
   Write-Host "Env vars to upload:"
   foreach ($pair in $envPairs) { Write-Host "  $(Get-DisplayEnvPair $pair)" }
 }
@@ -252,7 +272,7 @@ if ($secretMap.Count -gt 0) {
   foreach ($key in @($secretMap.Keys)) {
     $secretPairs += ('{0}={1}' -f $key, [string]$secretMap[$key])
   }
-  $secretsArg = ($secretPairs -join ',')
+  $secretsArg = Join-GcloudDictArg $secretPairs
   Write-Host "Secret mappings to apply (names only):"
   foreach ($key in @($secretMap.Keys)) { Write-Host "  $key -> $($secretMap[$key])" }
 }
