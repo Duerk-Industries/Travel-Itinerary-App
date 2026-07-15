@@ -3182,6 +3182,45 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
 // Main AdminTab
 // ---------------------------------------------------------------------------
 
+const PackingPresetAdminSection: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
+  const [presets, setPresets] = useState<Array<{ key: string; label: string; isActive: boolean }>>([]);
+  const [filename, setFilename] = useState('');
+  const [markdown, setMarkdown] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  const endpoint = `${backendUrl}/api/admin/packing-list-presets`;
+  const load = useCallback(async () => {
+    const res = await fetch(endpoint, { headers });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) setPresets(data.presets ?? []);
+    else setMessage(data.error ?? 'Unable to load presets');
+  }, [endpoint, headers]);
+  useEffect(() => { void load(); }, [load]);
+  const upload = async () => {
+    const res = await fetch(endpoint, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, markdown }) });
+    const data = await res.json().catch(() => ({}));
+    setMessage(res.ok ? 'Preset uploaded.' : data.error ?? 'Unable to upload preset');
+    if (res.ok) { setFilename(''); setMarkdown(''); void load(); }
+  };
+  const remove = async (key: string) => {
+    const res = await fetch(`${endpoint}/${encodeURIComponent(key)}`, { method: 'DELETE', headers });
+    setMessage(res.ok ? 'Preset removed.' : 'Unable to remove preset');
+    if (res.ok) void load();
+  };
+  const reactivate = async (key: string) => {
+    const res = await fetch(`${endpoint}/${encodeURIComponent(key)}/reactivate`, { method: 'POST', headers });
+    setMessage(res.ok ? 'Preset reactivated.' : 'Unable to reactivate preset');
+    if (res.ok) void load();
+  };
+  return <View style={{ gap: 12 }}>
+    <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '700' }}>Preset catalog</Text>
+    {message ? <Text style={{ color: theme.colors.textMuted }}>{message}</Text> : null}
+    {presets.map((preset) => <View key={preset.key} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: theme.colors.text }}>{preset.label} ({preset.key}){preset.isActive ? '' : ' — removed'}</Text>{preset.key !== 'general' ? <Pressable onPress={() => void (preset.isActive ? remove(preset.key) : reactivate(preset.key))}><Text style={{ color: preset.isActive ? theme.colors.error : theme.colors.link }}>{preset.isActive ? 'Remove' : 'Reactivate'}</Text></Pressable> : null}</View>)}
+    <TextInput value={filename} onChangeText={setFilename} placeholder="new_list.md" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6 }} />
+    <TextInput value={markdown} onChangeText={setMarkdown} multiline numberOfLines={8} placeholder="Paste preset markdown" placeholderTextColor={theme.colors.textMuted} style={{ borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text, padding: 8, borderRadius: 6, minHeight: 140, textAlignVertical: 'top' }} />
+    <Pressable onPress={() => void upload()} style={{ backgroundColor: theme.colors.cta, padding: 10, borderRadius: 6, alignSelf: 'flex-start' }}><Text style={{ color: '#0B1726', fontWeight: '700' }}>Upload preset</Text></Pressable>
+  </View>;
+};
+
 const AdminTab: React.FC<AdminTabProps> = ({
   backendUrl,
   headers,
@@ -3227,7 +3266,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
           />
         );
       case 'packing-defaults':
-        return <PackingListTable backendUrl={backendUrl} headers={headers} variant="admin" title="Universal packing defaults" />;
+        return <View style={{ gap: 24 }}><PackingListTable backendUrl={backendUrl} headers={headers} variant="admin" title="Universal packing defaults" /><PackingPresetAdminSection backendUrl={backendUrl} headers={headers} theme={theme} /></View>;
       case 'users':
         return <UsersSection backendUrl={backendUrl} headers={headers} tiers={loadedTiers} onViewUser={handleViewUser} theme={theme} />;
       case 'user-detail':

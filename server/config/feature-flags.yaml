@@ -73,3 +73,6 @@ flags:
   getyourguide_activity_suggestions:
     enabled: false
     description: "Enable optional GetYourGuide affiliate activity suggestions (requires verified partner configuration)"
+  packing_lists_v2:
+    enabled: false
+    description: "Enable preset, provenance-aware packing lists v2"

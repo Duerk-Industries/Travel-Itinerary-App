@@ -22,6 +22,7 @@ import {
   listAuditLog,
   adminSearchUsers, adminGetUser, adminGetUserData,
   getUniversalPackingList, replaceUniversalPackingList,
+  listPackingPresetsV2, syncPackingPresetCatalogV2, removePackingPresetV2, reactivatePackingPresetV2, updatePackingPresetV2,
   deleteAttractionDurationMetadata,
 } from '../db';
 import { TokenPayload } from '../auth';
@@ -54,6 +55,8 @@ import { readDto } from '../utils/dtoParse';
 import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
 import { getGetYourGuideObservabilitySnapshot } from '../services/getYourGuideObservability';
+import { invalidatePackingPresetCatalogCache, parsePackingPresetDirectory, parsePresetMarkdown } from '../services/packingListCatalogService';
+import { normalizePackingLabel } from '../utils/packingListNormalize';
 import { getGetYourGuideApiCircuitStatus } from '../apis/getYourGuideApi';
 import { listLocalAiCaptures } from '../ai/analytics/captureBrowser';
 import { runAiDailyAggregation } from '../ai/analytics/aggregationJob';
@@ -839,6 +842,96 @@ router.put('/packing-list-defaults', async (req, res) => {
       reason: typeof req.body?.reason === 'string' && req.body.reason.trim() ? req.body.reason.trim() : 'Updated universal packing list defaults',
     });
     res.json({ items });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get('/packing-list-presets', async (_req, res) => {
+  try {
+    res.json({ presets: await listPackingPresetsV2(true) });
+  } catch (err) {
+    logError('[admin] failed to list packing presets', err);
+    res.status(500).json({ error: 'Failed to list packing presets' });
+  }
+});
+
+router.post('/packing-list-presets', async (req, res) => {
+  try {
+    const filename = String(req.body?.filename ?? '').trim().toLowerCase();
+    const markdown = typeof req.body?.markdown === 'string' ? req.body.markdown : '';
+    if (!/^[a-z0-9]+(?:_[a-z0-9]+)*\.md$/.test(filename) || !markdown) {
+      res.status(400).json({ error: 'filename and markdown are required' });
+      return;
+    }
+    if (filename === 'general.md') {
+      res.status(400).json({ error: 'General is managed by the repository catalog' });
+      return;
+    }
+    const general = parsePackingPresetDirectory().find((preset) => preset.key === 'general');
+    const parsed = parsePresetMarkdown(markdown, filename, general?.items.map((item) => item.normalizedLabel) ?? []);
+    const existing = (await listPackingPresetsV2(true)).filter((preset) => preset.isActive && preset.key !== parsed.key).map((preset) => ({
+      key: preset.key,
+      label: preset.label,
+      description: preset.description,
+      gendered: preset.gendered,
+      contentHash: preset.contentHash,
+      filename: preset.sourceFilename,
+      items: preset.items.map((item) => ({ category: item.category, label: item.label, normalizedLabel: normalizePackingLabel(item.label), position: item.position })),
+    }));
+    const saved = await syncPackingPresetCatalogV2([...existing, { ...parsed, filename: `admin:${filename}` }]);
+    invalidatePackingPresetCatalogCache();
+    await writeAuditLog({ actorUserId: getActorId(req), action: 'PACKING_PRESET_UPLOADED', afterState: { key: parsed.key, filename }, reason: 'Uploaded packing preset markdown' });
+    res.json({ preset: saved.find((preset) => preset.key === parsed.key) });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.delete('/packing-list-presets/:presetKey', async (req, res) => {
+  try {
+    if (req.params.presetKey === 'general') {
+      res.status(400).json({ error: 'General cannot be removed' });
+      return;
+    }
+    await removePackingPresetV2(req.params.presetKey);
+    invalidatePackingPresetCatalogCache();
+    await writeAuditLog({ actorUserId: getActorId(req), action: 'PACKING_PRESET_REMOVED', afterState: { key: req.params.presetKey }, reason: 'Removed packing preset' });
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post('/packing-list-presets/:presetKey/reactivate', async (req, res) => {
+  try {
+    if (req.params.presetKey === 'general') {
+      res.status(400).json({ error: 'General is always active' });
+      return;
+    }
+    await reactivatePackingPresetV2(req.params.presetKey);
+    invalidatePackingPresetCatalogCache();
+    await writeAuditLog({ actorUserId: getActorId(req), action: 'PACKING_PRESET_UPLOADED', afterState: { key: req.params.presetKey, active: true }, reason: 'Reactivated packing preset' });
+    res.json({ presets: await listPackingPresetsV2(true) });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.put('/packing-list-presets/:presetKey', async (req, res) => {
+  try {
+    const preset = await updatePackingPresetV2(req.params.presetKey, {
+      label: typeof req.body?.label === 'string' ? req.body.label : undefined,
+      description: typeof req.body?.description === 'string' ? req.body.description : undefined,
+      items: Array.isArray(req.body?.items) ? req.body.items : undefined,
+    });
+    if (!preset) {
+      res.status(404).json({ error: 'Packing preset not found' });
+      return;
+    }
+    invalidatePackingPresetCatalogCache();
+    await writeAuditLog({ actorUserId: getActorId(req), action: 'PACKING_PRESET_UPLOADED', afterState: { key: req.params.presetKey, edited: true }, reason: 'Edited packing preset' });
+    res.json({ preset });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }

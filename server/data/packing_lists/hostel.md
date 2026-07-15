@@ -15,13 +15,13 @@ gendered: false
 - Microfiber travel towel
 - Flip flops for communal showers
 - Earplugs (high NRR)
-- Eye mask
+- Sleep mask for dorms
 - Portable reading light
 - Travel sheet or sleeping bag liner
 
 ## Toiletries & Misc
 - Hanging toiletry bag
 - Laundry detergent (travel size)
-- Universal travel adapter
+- Compact plug adapter
 - Multi-plug extension cord
 - Tissues / Toilet paper roll

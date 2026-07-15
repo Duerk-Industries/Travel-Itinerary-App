@@ -23,6 +23,7 @@ import { installShutdownHandlers } from './shutdown';
 import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './config/stripeBilling';
 import { getBillingPlanConfig } from './db';
 import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
+import { syncPackingPresetCatalogFromDisk } from './services/packingListCatalogService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -86,6 +87,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await initDb();
     await seedEntitlementDefaults();
     await applyStartupFeatureFlagOverrides();
+    await syncPackingPresetCatalogFromDisk();
     await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();
   } catch (err) {

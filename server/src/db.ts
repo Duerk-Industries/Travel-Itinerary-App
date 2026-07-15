@@ -128,6 +128,36 @@ export const getUserPackingList = async (...args: Parameters<ReturnType<typeof a
   adapter().getUserPackingList(...args);
 export const replaceUserPackingList = async (...args: Parameters<ReturnType<typeof adapter>['replaceUserPackingList']>) =>
   adapter().replaceUserPackingList(...args);
+export const syncPackingPresetCatalogV2 = async (...args: Parameters<ReturnType<typeof adapter>['syncPackingPresetCatalogV2']>) =>
+  adapter().syncPackingPresetCatalogV2(...args);
+export const listPackingPresetsV2 = async (...args: Parameters<ReturnType<typeof adapter>['listPackingPresetsV2']>) =>
+  adapter().listPackingPresetsV2(...args);
+export const getUserPackingPreferencesV2 = async (...args: Parameters<ReturnType<typeof adapter>['getUserPackingPreferencesV2']>) =>
+  adapter().getUserPackingPreferencesV2(...args);
+export const getUserPackingListV2 = async (...args: Parameters<ReturnType<typeof adapter>['getUserPackingListV2']>) =>
+  adapter().getUserPackingListV2(...args);
+export const replaceUserPackingPreferencesV2 = async (...args: Parameters<ReturnType<typeof adapter>['replaceUserPackingPreferencesV2']>) =>
+  adapter().replaceUserPackingPreferencesV2(...args);
+export const getPackingListV2 = async (...args: Parameters<ReturnType<typeof adapter>['getPackingListV2']>) =>
+  adapter().getPackingListV2(...args);
+export const addTripPackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['addTripPackingPresetV2']>) =>
+  adapter().addTripPackingPresetV2(...args);
+export const removeTripPackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['removeTripPackingPresetV2']>) =>
+  adapter().removeTripPackingPresetV2(...args);
+export const removePackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['removePackingPresetV2']>) =>
+  adapter().removePackingPresetV2(...args);
+export const reactivatePackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['reactivatePackingPresetV2']>) =>
+  adapter().reactivatePackingPresetV2(...args);
+export const updatePackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['updatePackingPresetV2']>) =>
+  adapter().updatePackingPresetV2(...args);
+export const replaceTripPackingListV2 = async (...args: Parameters<ReturnType<typeof adapter>['replaceTripPackingListV2']>) =>
+  adapter().replaceTripPackingListV2(...args);
+export const addTripPackingItemV2 = async (...args: Parameters<ReturnType<typeof adapter>['addTripPackingItemV2']>) =>
+  adapter().addTripPackingItemV2(...args);
+export const removeTripPackingItemV2 = async (...args: Parameters<ReturnType<typeof adapter>['removeTripPackingItemV2']>) =>
+  adapter().removeTripPackingItemV2(...args);
+export const reconcileUserPackingListsV2 = async (...args: Parameters<ReturnType<typeof adapter>['reconcileUserPackingListsV2']>) =>
+  adapter().reconcileUserPackingListsV2(...args);
 export const getUniversalPackingList = async (...args: Parameters<ReturnType<typeof adapter>['getUniversalPackingList']>) =>
   adapter().getUniversalPackingList(...args);
 export const replaceUniversalPackingList = async (...args: Parameters<ReturnType<typeof adapter>['replaceUniversalPackingList']>) =>

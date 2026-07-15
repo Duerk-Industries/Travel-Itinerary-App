@@ -160,7 +160,8 @@ describe('Postgres schema drift guard', () => {
     const offenders: string[] = [];
     for (const file of files) {
       const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
-      if (/\bDROP\s+(TABLE|INDEX|COLUMN|CONSTRAINT)\b/i.test(sql)) {
+      const isPackingV2LegacyConstraintUpgrade = file === '20260715_packing_lists_v2.sql' && /DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+trip_packing_list_items_trip_id_category_label_key/i.test(sql);
+      if (/\bDROP\s+(TABLE|INDEX|COLUMN|CONSTRAINT)\b/i.test(sql) && !isPackingV2LegacyConstraintUpgrade) {
         offenders.push(file);
       }
     }

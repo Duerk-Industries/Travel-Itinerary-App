@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS trip_packing_item_sources;
+DROP TABLE IF EXISTS trip_packing_contributions;
+DROP TABLE IF EXISTS user_packing_list_preferences;
+DROP TABLE IF EXISTS preset_packing_list_items;
+DROP TABLE IF EXISTS preset_packing_lists;
+DROP TABLE IF EXISTS packing_lists_v2_trip_check_backup;
+DROP TABLE IF EXISTS packing_lists_v2_trip_item_backup;
+DROP TABLE IF EXISTS packing_lists_v2_user_item_backup;
+DROP INDEX IF EXISTS idx_trip_packing_v2_normalized_label;

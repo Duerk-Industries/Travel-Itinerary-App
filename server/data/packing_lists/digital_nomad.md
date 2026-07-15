@@ -15,7 +15,7 @@ gendered: false
 
 ## Connectivity & Power
 - Power bank (Laptop capable)
-- Universal travel adapter
+- Compact plug adapter
 - Multi-port USB charger
 - Ethernet cable and adapter
 - Cable organizer / tech pouch

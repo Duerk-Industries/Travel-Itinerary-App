@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
+import PackingListMatrix from './PackingListMatrix';
 import { getAppTheme } from '../theme/theme';
 
 export type PackingItem = {
@@ -9,6 +10,7 @@ export type PackingItem = {
   label: string;
   position: number;
   packedBy?: string[];
+  isCategory?: boolean;
 };
 
 type Traveler = {
@@ -116,10 +118,44 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [v2, setV2] = useState(false);
+  const [presets, setPresets] = useState<Array<{ key: string; label: string }>>([]);
+  const [selectedPresetKeys, setSelectedPresetKeys] = useState<string[]>(['general']);
+  const [tripPresetKeys, setTripPresetKeys] = useState<string[]>([]);
+  const [currentTravelerId, setCurrentTravelerId] = useState<string | null>(null);
 
   const url = endpointFor(variant, backendUrl, tripId);
   const canLoad = variant !== 'trip' || Boolean(tripId);
   const isTrip = variant === 'trip';
+
+  const orderedTravelers = useMemo(() => {
+    if (!isTrip) return travelers;
+    return [...travelers].sort((a, b) => {
+      if (a.id === currentTravelerId) return -1;
+      if (b.id === currentTravelerId) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [currentTravelerId, isTrip, travelers]);
+
+  const applyResponse = (data: any) => {
+    const hasGroups = Array.isArray(data.groups);
+    setV2(hasGroups || data.preferences !== undefined || Array.isArray(data.tripPresetKeys));
+    setPresets(Array.isArray(data.presets) ? data.presets : []);
+    setSelectedPresetKeys(Array.isArray(data.preferences?.presetKeys) ? data.preferences.presetKeys : ['general']);
+    setTripPresetKeys(Array.isArray(data.tripPresetKeys) ? data.tripPresetKeys : []);
+    setCurrentTravelerId(typeof data.currentTravelerId === 'string' ? data.currentTravelerId : null);
+    const nextItems = hasGroups
+      ? data.groups.flatMap((group: any) => [
+          { id: `category-${group.id}`, category: group.label, label: group.label, position: 0, isCategory: true },
+          ...(group.items ?? []).map((item: PackingItem) => ({ ...item, category: group.label })),
+        ])
+      : (data.items ?? []).map((item: PackingItem, index: number) => ({ ...item, position: index }));
+    setItems(nextItems);
+    setDraftItems(hasGroups
+      ? ((data.groups.find((group: any) => group.kind === 'trip_manual')?.items ?? []) as PackingItem[])
+      : nextItems.filter((item: PackingItem) => !item.isCategory));
+    setTravelers(data.travelers ?? []);
+  };
 
   const load = useCallback(async () => {
     if (!canLoad) return;
@@ -129,10 +165,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       const res = await fetch(url, { headers });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Unable to load packing list');
-      const nextItems = (data.items ?? []).map((item: PackingItem, index: number) => ({ ...item, position: index }));
-      setItems(nextItems);
-      setDraftItems(nextItems);
-      setTravelers(data.travelers ?? []);
+      applyResponse(data);
     } catch (err: any) {
       setError(err.message ?? 'Unable to load packing list');
     } finally {
@@ -190,18 +223,44 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       const res = await fetch(url, {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: payload, reason: 'Updated packing list defaults' }),
+        body: JSON.stringify({ items: payload, preferences: { presetKeys: selectedPresetKeys }, reason: 'Updated packing list defaults' }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Unable to save packing list');
-      const nextItems = (data.items ?? []).map((item: PackingItem, index: number) => ({ ...item, position: index }));
-      setItems(nextItems);
-      setDraftItems(nextItems);
+      applyResponse(data);
       setEditMode(false);
     } catch (err: any) {
       setError(err.message ?? 'Unable to save packing list');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const addPreset = async (presetKey: string) => {
+    if (!isTrip) {
+      if (presetKey === 'general') return;
+      setSelectedPresetKeys((previous) => previous.includes(presetKey) ? previous.filter((key) => key !== presetKey) : [...previous, presetKey]);
+      setEditMode(true);
+      return;
+    }
+    try {
+      const res = await fetch(`${url}/presets`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ presetKey }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Unable to add preset');
+      applyResponse(data);
+    } catch (err: any) {
+      setError(err.message ?? 'Unable to add preset');
+    }
+  };
+
+  const removePreset = async (presetKey: string) => {
+    try {
+      const res = await fetch(`${url}/presets/${encodeURIComponent(presetKey)}`, { method: 'DELETE', headers });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Unable to remove preset');
+      applyResponse(data);
+    } catch (err: any) {
+      setError(err.message ?? 'Unable to remove preset');
     }
   };
 
@@ -263,7 +322,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
         <View style={localStyles.actions}>
           {editMode ? (
             <>
-              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { setDraftItems(items); setEditMode(false); }}>
+              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { if (!v2 || !isTrip) setDraftItems(items); setEditMode(false); }}>
                 <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Cancel</Text>
               </Pressable>
               <Pressable style={[localStyles.button, { backgroundColor: theme.colors.cta }]} onPress={() => void save()} disabled={saving}>
@@ -281,7 +340,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                   <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Print</Text>
                 </Pressable>
               ) : null}
-              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { setDraftItems(items); setEditMode(true); }}>
+              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { if (!v2 || !isTrip) setDraftItems(items); setEditMode(true); }}>
                 <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Edit</Text>
               </Pressable>
             </>
@@ -299,11 +358,16 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           <Text style={[localStyles.addButtonText, { color: theme.colors.link }]}>+ Add item</Text>
         </Pressable>
       ) : null}
-      <HorizontalTableScroll>
+      {v2 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={localStyles.presetActions}>
+          {presets.map((preset) => <Pressable key={preset.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: selectedPresetKeys.includes(preset.key) || tripPresetKeys.includes(preset.key) ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void (isTrip && tripPresetKeys.includes(preset.key) ? removePreset(preset.key) : addPreset(preset.key))}><Text style={{ color: theme.colors.text }}>{isTrip ? tripPresetKeys.includes(preset.key) ? '− ' : '+ ' : selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</Text></Pressable>)}
+        </ScrollView>
+      ) : null}
+      {!(!editMode && isTrip) ? <HorizontalTableScroll>
         <View>
           <View style={[localStyles.row, localStyles.headerRow, { borderColor: theme.colors.border }]}>
             <Text style={[localStyles.itemHeader, { color: theme.colors.textMuted }]}>Item</Text>
-            {isTrip ? travelers.map((traveler) => (
+            {isTrip ? orderedTravelers.map((traveler) => (
               <Text key={traveler.id} style={[localStyles.travelerHeader, { color: theme.colors.textMuted }]} numberOfLines={1}>
                 {traveler.name}
               </Text>
@@ -344,7 +408,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                       <Text style={[localStyles.itemText, { color: theme.colors.text }]}>{item.label}</Text>
                     )}
                   </View>
-                  {isTrip ? travelers.map((traveler) => {
+                  {isTrip ? orderedTravelers.map((traveler) => {
                     const checked = item.packedBy?.includes(traveler.id) ?? false;
                     return (
                       <Pressable
@@ -378,7 +442,15 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
             </View>
           ))}
         </View>
-      </HorizontalTableScroll>
+      </HorizontalTableScroll> : null}
+      {!editMode && isTrip ? (
+        <PackingListMatrix
+          items={groupedItems.flatMap((group) => [{ id: `separator-${group.category}`, label: group.category, category: group.category, isCategory: true }, ...group.items])}
+          travelers={orderedTravelers}
+          colors={theme.colors}
+          onToggle={(item, traveler) => void togglePacked(item as PackingItem, traveler)}
+        />
+      ) : null}
     </View>
   );
 };
@@ -408,6 +480,8 @@ const localStyles = StyleSheet.create({
   orderButton: { minWidth: 28, minHeight: 28, alignItems: 'center', justifyContent: 'center' },
   orderText: { fontSize: 18, fontWeight: '700' },
   input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, minHeight: 36 },
+  presetActions: { gap: 8, paddingVertical: 2 },
+  presetButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7 },
 });
 
 export default PackingListTable;

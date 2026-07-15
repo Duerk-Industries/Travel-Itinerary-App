@@ -30,9 +30,16 @@ import {
   updateTripGroup,
   replaceTripPackingList,
   setTripPackingItemPacked,
+  getPackingListV2,
+  addTripPackingPresetV2,
+  removeTripPackingPresetV2,
+  replaceTripPackingListV2,
+  addTripPackingItemV2,
+  removeTripPackingItemV2,
   listTripMessages,
   acceptTripShareInviteById,
 } from '../db';
+import { isFeatureEnabled } from '../services/entitlementService';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 import { sendTripInviteEmailBestEffort } from '../mailer';
 import { aggregateTripActivity } from '../services/activityFeed';
@@ -363,6 +370,10 @@ router.get('/participants/search', async (req, res) => {
 router.get('/:id/packing-list', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
+    if (await isFeatureEnabled('packing_lists_v2')) {
+      res.json(await getPackingListV2(userId, req.params.id));
+      return;
+    }
     const list = await getTripPackingList(userId, req.params.id);
     res.json(list);
   } catch (err) {
@@ -374,8 +385,68 @@ router.get('/:id/packing-list', async (req, res) => {
 router.put('/:id/packing-list', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
+    if (await isFeatureEnabled('packing_lists_v2')) {
+      res.json(await replaceTripPackingListV2(userId, req.params.id, Array.isArray(req.body?.items) ? req.body.items : []));
+      return;
+    }
     const list = await replaceTripPackingList(userId, req.params.id, Array.isArray(req.body?.items) ? req.body.items : []);
     res.json(list);
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.post('/:id/packing-list/presets', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    res.json(await addTripPackingPresetV2(userId, req.params.id, String(req.body?.presetKey ?? '').trim()));
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.delete('/:id/packing-list/presets/:presetKey', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    res.json(await removeTripPackingPresetV2(userId, req.params.id, req.params.presetKey));
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.post('/:id/packing-list/items', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    res.json(await addTripPackingItemV2(userId, req.params.id, req.body ?? {}));
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.delete('/:id/packing-list/items/:itemId', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    res.json(await removeTripPackingItemV2(userId, req.params.id, req.params.itemId));
   } catch (err) {
     const message = (err as Error).message;
     res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });

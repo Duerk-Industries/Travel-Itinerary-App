@@ -40,6 +40,11 @@ import {
   PackingListItem,
   PackingListTraveler,
   TripPackingList,
+  PackingPreset,
+  PackingPresetPreference,
+  PackingListV2Trip,
+  PackingListV2DisplayGroup,
+  PackingListV2SourceKind,
   BillingCustomer,
   BillingNotification,
   BillingTrialUsage,
@@ -73,6 +78,7 @@ import path from 'path';
 import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
+import { normalizePackingLabel } from './utils/packingListNormalize';
 
 
 type PoolCtor = typeof Pool;
@@ -361,10 +367,10 @@ const mergeUserPackingListIntoTripWithRunner = async (p: QueryRunner, tripId: st
     if (existing.has(key)) continue;
     existing.add(key);
     await p.query(
-      `INSERT INTO trip_packing_list_items (id, trip_id, category, label, position, source_user_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (trip_id, category, label) DO NOTHING`,
-      [randomUUID(), tripId, normalizePackingText(item.category), normalizePackingText(item.label), nextPosition, userId]
+      `INSERT INTO trip_packing_list_items (id, trip_id, category, label, normalized_label, position, source_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT DO NOTHING`,
+      [randomUUID(), tripId, normalizePackingText(item.category), normalizePackingText(item.label), normalizePackingLabel(item.label), nextPosition, userId]
     );
     nextPosition += 1;
   }
@@ -678,8 +684,7 @@ export const initDb = async (): Promise<void> => {
       position INTEGER NOT NULL DEFAULT 0,
       source_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE (trip_id, category, label)
+      updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
   await p.query(`
@@ -8812,6 +8817,532 @@ export const setTripPackingItemPacked = async (
   } else {
     await p.query(`DELETE FROM trip_packing_item_checks WHERE item_id = $1 AND traveler_id = $2`, [itemId, travelerId]);
   }
+};
+
+// ---------------------------------------------------------------------------
+// Packing lists v2
+// ---------------------------------------------------------------------------
+
+type PackingPresetSyncInput = {
+  key: string;
+  label: string;
+  description: string;
+  gendered: boolean;
+  contentHash: string;
+  filename: string;
+  items: Array<{ category: string; label: string; normalizedLabel: string; position: number }>;
+};
+
+type PackingV2SourceItem = {
+  category: string;
+  label: string;
+  normalizedLabel: string;
+  position: number;
+};
+
+const packingPresetFromRow = (row: any, items: PackingListItem[] = []): PackingPreset => ({
+  id: row.id,
+  key: row.key,
+  label: row.label,
+  description: row.description ?? '',
+  gendered: Boolean(row.gendered),
+  contentHash: row.contentHash,
+  sourceFilename: row.sourceFilename,
+  isActive: row.isActive !== false,
+  items,
+});
+
+const packingPreferenceKeys = async (p: QueryRunner, userId: string): Promise<string[]> => {
+  const result = await p.query<{ presetKeys: unknown }>(
+    `SELECT preset_keys as "presetKeys" FROM user_packing_list_preferences WHERE user_id = $1`,
+    [userId]
+  );
+  const raw = result.rows[0]?.presetKeys;
+  const keys = Array.isArray(raw) ? raw.filter((key): key is string => typeof key === 'string') : [];
+  return Array.from(new Set(['general', ...keys]));
+};
+
+const packingActiveMembers = async (p: QueryRunner, tripId: string): Promise<PackingListTraveler[]> => {
+  const result = await p.query<PackingListTraveler>(
+    `SELECT gm.id,
+            gm.user_id as "userId",
+            COALESCE(NULLIF(TRIM(CONCAT(COALESCE(wu.first_name, gm.first_name, ''), ' ', COALESCE(wu.last_name, gm.last_name, ''))), ''),
+              gm.guest_name, u.email, gm.invite_email, 'Traveler') as name,
+            COALESCE(u.email, gm.invite_email) as email
+     FROM trips t
+     JOIN group_members gm ON gm.group_id = t.group_id
+     LEFT JOIN users u ON u.id = gm.user_id
+     LEFT JOIN web_users wu ON wu.id = gm.user_id
+     WHERE t.id = $1 AND gm.removed_at IS NULL
+     ORDER BY gm.created_at, name`,
+    [tripId]
+  );
+  return result.rows;
+};
+
+export const syncPackingPresetCatalogV2 = async (presets: PackingPresetSyncInput[]): Promise<PackingPreset[]> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const keys = presets.map((preset) => preset.key);
+    for (const preset of presets) {
+      const presetId = randomUUID();
+      const existing = await client.query<{ id: string }>(`SELECT id FROM preset_packing_lists WHERE key = $1`, [preset.key]);
+      const id = existing.rows[0]?.id ?? presetId;
+      await client.query(
+        `INSERT INTO preset_packing_lists (id, key, label, description, gendered, content_hash, source_filename, is_active, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW())
+         ON CONFLICT (key) DO UPDATE SET label = EXCLUDED.label, description = EXCLUDED.description,
+           gendered = EXCLUDED.gendered, content_hash = EXCLUDED.content_hash,
+           source_filename = EXCLUDED.source_filename, is_active = TRUE, updated_at = NOW()`,
+        [id, preset.key, preset.label, preset.description, preset.gendered, preset.contentHash, preset.filename]
+      );
+      await client.query(`DELETE FROM preset_packing_list_items WHERE preset_id = $1`, [id]);
+      for (const item of preset.items) {
+        await client.query(
+          `INSERT INTO preset_packing_list_items (id, preset_id, category, label, normalized_label, position)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [randomUUID(), id, item.category, item.label, item.normalizedLabel, item.position]
+        );
+      }
+    }
+    if (keys.length) {
+      await client.query(`UPDATE preset_packing_lists SET is_active = FALSE, updated_at = NOW() WHERE source_filename NOT LIKE 'admin:%' AND NOT (key = ANY($1::text[]))`, [keys]);
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  return listPackingPresetsV2(true);
+};
+
+export const listPackingPresetsV2 = async (includeInactive = false): Promise<PackingPreset[]> => {
+  const p = getPool();
+  const presets = await p.query<any>(
+    `SELECT id, key, label, description, gendered, content_hash as "contentHash",
+            source_filename as "sourceFilename", is_active as "isActive"
+     FROM preset_packing_lists ${includeInactive ? '' : 'WHERE is_active = TRUE'} ORDER BY CASE key WHEN 'general' THEN 0 WHEN 'women' THEN 1 WHEN 'men' THEN 2 ELSE 3 END, label`
+  );
+  const items = await p.query<PackingListItem & { presetId: string }>(
+    `SELECT id, preset_id as "presetId", category, label, position
+     FROM preset_packing_list_items ORDER BY preset_id, position, category, label`
+  );
+  const byPreset = new Map<string, PackingListItem[]>();
+  for (const item of items.rows) {
+    const list = byPreset.get(item.presetId) ?? [];
+    list.push(item);
+    byPreset.set(item.presetId, list);
+  }
+  return presets.rows.map((row: any) => packingPresetFromRow(row, byPreset.get(row.id) ?? []));
+};
+
+export const getUserPackingPreferencesV2 = async (userId: string): Promise<PackingPresetPreference> => {
+  const p = getPool();
+  return { userId, presetKeys: await packingPreferenceKeys(p, userId) };
+};
+
+export const replaceUserPackingPreferencesV2 = async (
+  userId: string,
+  presetKeysInput: string[],
+  personalItemsInput: Array<{ category?: unknown; label?: unknown }>
+): Promise<{ preferences: PackingPresetPreference; items: PackingListItem[] }> => {
+  const p = getPool();
+  const available = new Set((await listPackingPresetsV2()).map((preset) => preset.key));
+  const presetKeys = Array.from(new Set(['general', ...presetKeysInput.filter((key) => available.has(key))]));
+  const items = sanitizePackingItems(personalItemsInput);
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO user_packing_list_preferences (user_id, preset_keys, updated_at) VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET preset_keys = EXCLUDED.preset_keys, updated_at = NOW()`,
+      [userId, JSON.stringify(presetKeys)]
+    );
+    await client.query(`DELETE FROM user_packing_list_items WHERE user_id = $1`, [userId]);
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO user_packing_list_items (id, user_id, category, label, normalized_label, position)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [randomUUID(), userId, item.category, item.label, normalizePackingLabel(item.label), item.position]
+      );
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  return {
+    preferences: { userId, presetKeys },
+    items: await getUserPackingListV2(userId),
+  };
+};
+
+export const getUserPackingListV2 = async (userId: string): Promise<PackingListItem[]> => {
+  const p = getPool();
+  const preference = await p.query(`SELECT 1 FROM user_packing_list_preferences WHERE user_id = $1`, [userId]);
+  if (!preference.rowCount) return [];
+  const result = await p.query<PackingListItem>(
+    `SELECT id, category, label, position, created_at as "createdAt", updated_at as "updatedAt"
+     FROM user_packing_list_items WHERE user_id = $1 ORDER BY position, category, label`,
+    [userId]
+  );
+  return result.rows;
+};
+
+const sourcePriority = (kind: PackingListV2SourceKind, presetKey?: string | null): number => {
+  if (kind === 'profile_preset' && presetKey === 'general') return 0;
+  if (kind === 'profile_preset' && presetKey === 'women') return 1;
+  if (kind === 'profile_preset' && presetKey === 'men') return 2;
+  if (kind === 'trip_preset') return 3;
+  if (kind === 'trip_manual' || kind === 'legacy_manual') return 4;
+  return 5;
+};
+
+const rebuildPackingTripV2 = async (client: PoolClient, tripId: string): Promise<void> => {
+  const contributionRows = await client.query<any>(
+    `SELECT id, source_kind as "sourceKind", source_user_id as "sourceUserId", source_preset_key as "sourcePresetKey"
+     FROM trip_packing_contributions WHERE trip_id = $1 AND removed_at IS NULL`,
+    [tripId]
+  );
+  const oldItems = await client.query<any>(
+    `SELECT id, category, label, normalized_label as "normalizedLabel", position FROM trip_packing_list_items WHERE trip_id = $1`,
+    [tripId]
+  );
+  const oldSources = await client.query<any>(
+    `SELECT s.contribution_id as "contributionId", i.normalized_label as "normalizedLabel", i.category, i.label, i.position
+     FROM trip_packing_item_sources s JOIN trip_packing_list_items i ON i.id = s.trip_item_id WHERE i.trip_id = $1`,
+    [tripId]
+  );
+  const oldByContribution = new Map<string, PackingV2SourceItem[]>();
+  for (const source of oldSources.rows) {
+    const list = oldByContribution.get(source.contributionId) ?? [];
+    list.push({ category: source.category, label: source.label, normalizedLabel: source.normalizedLabel, position: source.position });
+    oldByContribution.set(source.contributionId, list);
+  }
+  const desiredByLabel = new Map<string, { item: PackingV2SourceItem; sourceIds: string[]; priority: number; winningSourceId: string }>();
+  for (const contribution of contributionRows.rows) {
+    let items: PackingV2SourceItem[] = [];
+    if (contribution.sourceKind === 'profile_preset' || contribution.sourceKind === 'trip_preset') {
+      const result = await client.query<any>(
+        `SELECT i.category, i.label, i.normalized_label as "normalizedLabel", i.position FROM preset_packing_list_items i
+         JOIN preset_packing_lists p ON p.id = i.preset_id WHERE p.key = $1 AND p.is_active = TRUE ORDER BY i.position`,
+        [contribution.sourcePresetKey]
+      );
+      items = result.rows;
+    } else if (contribution.sourceKind === 'profile_personal') {
+      const result = await client.query<any>(
+        `SELECT category, label, normalized_label as "normalizedLabel", position FROM user_packing_list_items WHERE user_id = $1 ORDER BY position`,
+        [contribution.sourceUserId]
+      );
+      items = result.rows;
+    } else {
+      items = oldByContribution.get(contribution.id) ?? [];
+    }
+    for (const item of items) {
+      const normalizedLabel = item.normalizedLabel || normalizePackingLabel(item.label);
+      if (!normalizedLabel) continue;
+      const priority = sourcePriority(contribution.sourceKind, contribution.sourcePresetKey);
+      const current = desiredByLabel.get(normalizedLabel);
+      if (!current || priority < current.priority) {
+        desiredByLabel.set(normalizedLabel, { item: { ...item, normalizedLabel }, sourceIds: current?.sourceIds ?? [], priority, winningSourceId: contribution.id });
+      }
+      const winning = desiredByLabel.get(normalizedLabel);
+      if (winning && !winning.sourceIds.includes(contribution.id)) winning.sourceIds.push(contribution.id);
+    }
+  }
+  const existingByLabel = new Map<string, any>(oldItems.rows.map((item) => [item.normalizedLabel || normalizePackingLabel(item.label), item]));
+  const desiredLabels = new Set(desiredByLabel.keys());
+  for (const existing of oldItems.rows) {
+    const normalized = existing.normalizedLabel || normalizePackingLabel(existing.label);
+    if (!desiredLabels.has(normalized)) await client.query(`DELETE FROM trip_packing_list_items WHERE id = $1`, [existing.id]);
+  }
+  await client.query(`DELETE FROM trip_packing_item_sources WHERE trip_item_id IN (SELECT id FROM trip_packing_list_items WHERE trip_id = $1)`, [tripId]);
+  let position = 0;
+  for (const [normalizedLabel, entry] of desiredByLabel) {
+    const existing = existingByLabel.get(normalizedLabel);
+    const itemId = existing?.id ?? randomUUID();
+    await client.query(
+      `INSERT INTO trip_packing_list_items (id, trip_id, category, label, normalized_label, position, source_category, source_position, winning_source_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $3, $7, $8)
+       ON CONFLICT (id) DO UPDATE SET category = EXCLUDED.category, label = EXCLUDED.label, normalized_label = EXCLUDED.normalized_label,
+         position = EXCLUDED.position, source_category = EXCLUDED.source_category, source_position = EXCLUDED.source_position,
+         winning_source_id = EXCLUDED.winning_source_id, updated_at = NOW()`,
+      [itemId, tripId, entry.item.category, entry.item.label, normalizedLabel, position, entry.item.position, entry.winningSourceId]
+    );
+    const sources = new Set(entry.sourceIds);
+    sources.add(entry.winningSourceId);
+    for (const contributionId of sources) {
+      await client.query(`INSERT INTO trip_packing_item_sources (id, trip_item_id, contribution_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [randomUUID(), itemId, contributionId]);
+    }
+    position += 1;
+  }
+};
+
+const ensureTripPackingV2Contributions = async (client: PoolClient, userId: string, tripId: string): Promise<PackingListTraveler[]> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
+  const members = await packingActiveMembers(client, tripId);
+  const activeUserIds = members.map((member) => member.userId).filter((id): id is string => Boolean(id));
+  for (const memberId of activeUserIds) {
+    const keys = await packingPreferenceKeys(client, memberId);
+    for (const key of keys) {
+      await client.query(
+        `INSERT INTO trip_packing_contributions (id, trip_id, source_kind, source_user_id, source_preset_key, contribution_key)
+         VALUES ($1, $2, 'profile_preset', $3, $4, $5)
+         ON CONFLICT (contribution_key) DO UPDATE SET removed_at = NULL`,
+        [randomUUID(), tripId, memberId, key, `${tripId}:profile_preset:${memberId}:${key}`]
+      );
+    }
+    await client.query(
+      `INSERT INTO trip_packing_contributions (id, trip_id, source_kind, source_user_id, contribution_key)
+       VALUES ($1, $2, 'profile_personal', $3, $4)
+       ON CONFLICT (contribution_key) DO UPDATE SET removed_at = NULL`,
+      [randomUUID(), tripId, memberId, `${tripId}:profile_personal:${memberId}`]
+    );
+    await client.query(
+      `UPDATE trip_packing_contributions SET removed_at = NOW()
+       WHERE trip_id = $1 AND source_user_id = $2 AND source_kind = 'profile_preset'
+         AND NOT (source_preset_key = ANY($3::text[])) AND removed_at IS NULL`,
+      [tripId, memberId, keys]
+    );
+  }
+  await client.query(
+    `UPDATE trip_packing_contributions SET removed_at = NOW()
+     WHERE trip_id = $1 AND source_kind IN ('profile_preset', 'profile_personal')
+       AND (source_user_id IS NULL OR NOT (source_user_id = ANY($2::uuid[]))) AND removed_at IS NULL`,
+    [tripId, activeUserIds]
+  );
+  return members;
+};
+
+export const getPackingListV2 = async (userId: string, tripId: string): Promise<PackingListV2Trip> => {
+  const p = getPool();
+  const client = await p.connect();
+  let travelers: PackingListTraveler[];
+  try {
+    await client.query('BEGIN');
+    travelers = await ensureTripPackingV2Contributions(client, userId, tripId);
+    // Link legacy rows once, preserving them as trip-owned content.
+    const legacy = await client.query<any>(`SELECT id, source_user_id as "sourceUserId" FROM trip_packing_list_items WHERE trip_id = $1 AND winning_source_id IS NULL`, [tripId]);
+    if (legacy.rowCount) {
+      const activeUserIds = new Set(travelers.map((traveler) => traveler.userId).filter((id): id is string => Boolean(id)));
+      const contributionIds = new Map<string, string>();
+      const ensureContribution = async (sourceUserId: string | null): Promise<string> => {
+        const key = sourceUserId ? `${tripId}:profile_personal:${sourceUserId}` : `${tripId}:legacy_manual`;
+        const existing = contributionIds.get(key);
+        if (existing) return existing;
+        const id = randomUUID();
+        await client.query(
+          `INSERT INTO trip_packing_contributions (id, trip_id, source_kind, source_user_id, contribution_key)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (contribution_key) DO NOTHING`,
+          [id, tripId, sourceUserId ? 'profile_personal' : 'legacy_manual', sourceUserId, key]
+        );
+        const row = await client.query<{ id: string }>(`SELECT id FROM trip_packing_contributions WHERE contribution_key = $1`, [key]);
+        contributionIds.set(key, row.rows[0].id);
+        return row.rows[0].id;
+      };
+      const contributionId = await ensureContribution(null);
+      await client.query(
+        `INSERT INTO trip_packing_contributions (id, trip_id, source_kind, contribution_key)
+         VALUES ($1, $2, 'legacy_manual', $3) ON CONFLICT (contribution_key) DO NOTHING`,
+        [contributionId, tripId, `${tripId}:legacy_manual`]
+      );
+      const row = await client.query<{ id: string }>(`SELECT id FROM trip_packing_contributions WHERE contribution_key = $1`, [`${tripId}:legacy_manual`]);
+      for (const item of legacy.rows) {
+        const sourceId = item.sourceUserId && activeUserIds.has(item.sourceUserId) ? await ensureContribution(item.sourceUserId) : row.rows[0].id;
+        await client.query(`INSERT INTO trip_packing_item_sources (id, trip_item_id, contribution_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [randomUUID(), item.id, sourceId]);
+      }
+    }
+    await rebuildPackingTripV2(client, tripId);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  const catalog = await listPackingPresetsV2();
+  const items = await p.query<any>(
+    `SELECT i.id, i.category, i.label, i.position, i.normalized_label as "normalizedLabel",
+            COALESCE(array_agg(DISTINCT c.source_user_id) FILTER (WHERE c.source_kind = 'profile_personal' AND c.source_user_id IS NOT NULL), '{}') as "personalOwnerIds",
+            COALESCE(array_agg(DISTINCT ch.traveler_id) FILTER (WHERE ch.packed = TRUE), '{}') as "packedBy"
+     FROM trip_packing_list_items i
+     LEFT JOIN trip_packing_item_sources s ON s.trip_item_id = i.id
+     LEFT JOIN trip_packing_contributions c ON c.id = s.contribution_id AND c.removed_at IS NULL
+     LEFT JOIN trip_packing_item_checks ch ON ch.item_id = i.id
+     WHERE i.trip_id = $1 GROUP BY i.id ORDER BY i.position`,
+    [tripId]
+  );
+  const sourceRows = await p.query<any>(
+    `SELECT s.contribution_id as "contributionId", i.id, i.category, i.label, i.position, i.normalized_label as "normalizedLabel"
+     FROM trip_packing_item_sources s JOIN trip_packing_list_items i ON i.id = s.trip_item_id
+     JOIN trip_packing_contributions c ON c.id = s.contribution_id AND c.removed_at IS NULL WHERE i.trip_id = $1`,
+    [tripId]
+  );
+  const contributions = await p.query<any>(`SELECT id, source_kind as "sourceKind", source_user_id as "sourceUserId", source_preset_key as "sourcePresetKey" FROM trip_packing_contributions WHERE trip_id = $1 AND removed_at IS NULL`, [tripId]);
+  const itemById = new Map(items.rows.map((item) => [item.id, item]));
+  const presetByKey = new Map(catalog.map((preset) => [preset.key, preset]));
+  const memberByUser = new Map(travelers.filter((member) => member.userId).map((member) => [member.userId as string, member]));
+  const inputGroups: any[] = [];
+  for (const contribution of contributions.rows) {
+    const linked = sourceRows.rows.filter((source) => source.contributionId === contribution.id);
+    if (!linked.length) continue;
+    const preset = contribution.sourcePresetKey ? presetByKey.get(contribution.sourcePresetKey) : null;
+    const member = contribution.sourceUserId ? memberByUser.get(contribution.sourceUserId) : null;
+    const kind = contribution.sourceKind === 'profile_personal' ? 'personal' : contribution.sourceKind === 'trip_manual' || contribution.sourceKind === 'legacy_manual' ? 'trip_manual' : 'preset';
+    inputGroups.push({
+      id: contribution.id,
+      key: contribution.sourcePresetKey ?? contribution.id,
+      label: preset?.label ?? (kind === 'trip_manual' ? 'Trip additions' : member?.name ?? 'Personal list'),
+      kind,
+      ownerMemberId: contribution.sourceUserId ?? null,
+      presetKey: contribution.sourcePresetKey ?? null,
+      items: linked.map((source) => ({ ...itemById.get(source.id), ...source, packedBy: itemById.get(source.id)?.packedBy ?? [] })),
+    });
+  }
+  const { buildPackingListDisplayGroups } = require('./utils/packingListDisplay') as typeof import('./utils/packingListDisplay');
+  const groups = buildPackingListDisplayGroups(inputGroups, userId) as unknown as PackingListV2DisplayGroup[];
+  return {
+    groups,
+    travelers,
+    presets: catalog,
+    currentTravelerId: travelers.find((traveler) => traveler.userId === userId)?.id ?? null,
+    items: groups.flatMap((group) => group.items.map((item) => ({ ...item, category: group.label }))),
+    tripPresetKeys: contributions.rows.filter((contribution) => contribution.sourceKind === 'trip_preset').map((contribution) => contribution.sourcePresetKey),
+  };
+};
+
+export const addTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
+  const p = getPool();
+  await ensureUserCanReadTrip(tripId, userId);
+  const preset = (await listPackingPresetsV2()).find((item) => item.key === presetKey && item.isActive);
+  if (!preset) throw new Error('Packing preset not found');
+  await p.query(
+    `INSERT INTO trip_packing_contributions (id, trip_id, source_kind, source_preset_key, contribution_key)
+     VALUES ($1, $2, 'trip_preset', $3, $4)
+     ON CONFLICT (contribution_key) DO UPDATE SET removed_at = NULL`,
+    [randomUUID(), tripId, presetKey, `${tripId}:trip_preset:${presetKey}`]
+  );
+  return getPackingListV2(userId, tripId);
+};
+
+export const removeTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
+  const p = getPool();
+  await ensureUserCanReadTrip(tripId, userId);
+  await p.query(`UPDATE trip_packing_contributions SET removed_at = NOW() WHERE trip_id = $1 AND source_kind = 'trip_preset' AND source_preset_key = $2`, [tripId, presetKey]);
+  return getPackingListV2(userId, tripId);
+};
+
+export const removePackingPresetV2 = async (presetKey: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE preset_packing_lists SET is_active = FALSE, updated_at = NOW() WHERE key = $1`, [presetKey]);
+};
+
+export const reactivatePackingPresetV2 = async (presetKey: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE preset_packing_lists SET is_active = TRUE, updated_at = NOW() WHERE key = $1`, [presetKey]);
+};
+
+export const updatePackingPresetV2 = async (presetKey: string, patch: { label?: string; description?: string; items?: Array<{ category: string; label: string }> }): Promise<PackingPreset | null> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const existing = await client.query<any>(`SELECT id, key, label, description, gendered, content_hash as "contentHash", source_filename as "sourceFilename", is_active as "isActive" FROM preset_packing_lists WHERE key = $1`, [presetKey]);
+    if (!existing.rowCount) {
+      await client.query('COMMIT');
+      return null;
+    }
+    await client.query(`UPDATE preset_packing_lists SET label = COALESCE($2, label), description = COALESCE($3, description), updated_at = NOW() WHERE key = $1`, [presetKey, patch.label ?? null, patch.description ?? null]);
+    if (patch.items) {
+      await client.query(`DELETE FROM preset_packing_list_items WHERE preset_id = $1`, [existing.rows[0].id]);
+      const seen = new Set<string>();
+      for (const item of patch.items) {
+        const normalizedLabel = normalizePackingLabel(item.label);
+        if (!item.category.trim() || !normalizedLabel || seen.has(normalizedLabel)) continue;
+        seen.add(normalizedLabel);
+        await client.query(`INSERT INTO preset_packing_list_items (id, preset_id, category, label, normalized_label, position) VALUES ($1, $2, $3, $4, $5, $6)`, [randomUUID(), existing.rows[0].id, item.category.trim(), item.label.trim(), normalizedLabel, seen.size - 1]);
+      }
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  return (await listPackingPresetsV2(true)).find((preset) => preset.key === presetKey) ?? null;
+};
+
+export const replaceTripPackingListV2 = async (
+  userId: string,
+  tripId: string,
+  itemsInput: Array<{ category?: unknown; label?: unknown }>
+): Promise<PackingListV2Trip> => {
+  const p = getPool();
+  await ensureUserCanReadTrip(tripId, userId);
+  const items = sanitizePackingItems(itemsInput);
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`UPDATE trip_packing_contributions SET removed_at = NOW() WHERE trip_id = $1 AND source_kind = 'trip_manual'`, [tripId]);
+    const contributionId = randomUUID();
+    await client.query(
+      `INSERT INTO trip_packing_contributions (id, trip_id, source_kind, contribution_key) VALUES ($1, $2, 'trip_manual', $3)`,
+      [contributionId, tripId, `${tripId}:trip_manual:${Date.now()}`]
+    );
+    // Keep a temporary canonical row for the rebuild to read as the manual source.
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO trip_packing_list_items (id, trip_id, category, label, normalized_label, position)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (trip_id, normalized_label) DO UPDATE SET category = EXCLUDED.category, label = EXCLUDED.label, position = EXCLUDED.position`,
+        [randomUUID(), tripId, item.category, item.label, normalizePackingLabel(item.label), item.position]
+      );
+    }
+    const current = await client.query<any>(`SELECT id, normalized_label FROM trip_packing_list_items WHERE trip_id = $1`, [tripId]);
+    for (const item of current.rows) {
+      if (items.some((candidate) => normalizePackingLabel(candidate.label) === item.normalized_label)) {
+        await client.query(`INSERT INTO trip_packing_item_sources (id, trip_item_id, contribution_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [randomUUID(), item.id, contributionId]);
+      }
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  return getPackingListV2(userId, tripId);
+};
+
+export const addTripPackingItemV2 = async (userId: string, tripId: string, itemInput: { category?: unknown; label?: unknown }): Promise<PackingListV2Trip> => {
+  const current = await getPackingListV2(userId, tripId);
+  const manual = current.groups.find((group) => group.kind === 'trip_manual')?.items ?? [];
+  return replaceTripPackingListV2(userId, tripId, [...manual, itemInput]);
+};
+
+export const removeTripPackingItemV2 = async (userId: string, tripId: string, itemId: string): Promise<PackingListV2Trip> => {
+  const current = await getPackingListV2(userId, tripId);
+  const manual = (current.groups.find((group) => group.kind === 'trip_manual')?.items ?? []).filter((item) => item.id !== itemId);
+  return replaceTripPackingListV2(userId, tripId, manual);
+};
+
+export const reconcileUserPackingListsV2 = async (userId: string): Promise<{ tripsReconciled: number }> => {
+  const p = getPool();
+  const trips = await p.query<{ id: string }>(
+    `SELECT DISTINCT t.id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id
+     WHERE gm.user_id = $1 AND gm.removed_at IS NULL`,
+    [userId]
+  );
+  for (const trip of trips.rows) await getPackingListV2(userId, trip.id);
+  return { tripsReconciled: trips.rows.length };
 };
 
 // Backwards-compatible export; call poolClient() when you need the Pool instance.

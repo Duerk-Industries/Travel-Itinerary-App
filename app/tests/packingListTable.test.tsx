@@ -153,4 +153,25 @@ describe('PackingListTable', () => {
     expect(printMock).toHaveBeenCalled();
     delete (globalThis as any).open;
   });
+
+  test('renders v2 groups and can add a trip preset', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        groups: [
+          { id: 'general', key: 'general', label: 'General', kind: 'preset', items: [{ id: 'item-1', label: 'Passport', category: 'Documents', position: 0, packedBy: [] }] },
+          { id: 'personal', key: 'personal', label: 'Alex\'s list', kind: 'personal', items: [{ id: 'item-2', label: 'Travel journal', category: 'Personal', position: 1, packedBy: [] }] },
+        ],
+        travelers: [{ id: 'traveler-1', name: 'Alex' }],
+        presets: [{ key: 'beach', label: 'Beach' }],
+        tripPresetKeys: [],
+      }),
+    } as any).mockResolvedValueOnce({ ok: true, json: async () => ({ groups: [{ id: 'beach', key: 'beach', label: 'Beach', kind: 'preset', items: [{ id: 'item-3', label: 'Sun hat', category: 'Beach', position: 0, packedBy: [] }] }], travelers: [{ id: 'traveler-1', name: 'Alex' }], presets: [{ key: 'beach', label: 'Beach' }], tripPresetKeys: ['beach'] }) } as any);
+
+    const { findByText, getByText, queryAllByText } = render(<PackingListTable backendUrl="http://localhost" headers={{ Authorization: 'Bearer token' }} tripId="trip-1" variant="trip" />);
+    await waitFor(() => expect(queryAllByText('General').length).toBeGreaterThan(0));
+    await waitFor(() => expect(queryAllByText("Alex's list").length).toBeGreaterThan(0));
+    fireEvent.press(getByText('+ Beach'));
+    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/trips/trip-1/packing-list/presets', expect.objectContaining({ method: 'POST' })));
+  });
 });

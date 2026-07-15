@@ -211,8 +211,8 @@ app.use(express.static(publicDir));
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
 import { assertSafeAuthSecretConfig } from './authConfig';
-import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
-import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
+import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole, listPackingPresetsV2 } from './db';
+import { ensureAdminBootstrap, getSeededTierForEmail, isFeatureEnabled } from './services/entitlementService';
 import { requireAdmin } from './middleware/requireAdmin';
 import {
   appendAuthCodeToRedirect,
@@ -370,6 +370,13 @@ app.use('/api/affiliate', getYourGuideRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
+app.get('/api/packing-list-presets', authenticate, async (_req, res) => {
+  if (!(await isFeatureEnabled('packing_lists_v2'))) {
+    res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+    return;
+  }
+  res.json({ presets: await listPackingPresetsV2() });
+});
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/billing', billingRoutes);
