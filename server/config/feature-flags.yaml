@@ -53,26 +53,26 @@ flags:
     enabled: true
     description: "Enable up/down vote reactions on itinerary detail rows"
   merchant_category_lookup:
-    enabled: false
+    enabled: true
     description: "Use Nominatim to look up merchant categories from receipt OCR vendor names"
   stripe_billing:
-    enabled: false
+    enabled: true
     description: "Enable Stripe billing integration (master switch for all billing features)"
   stripe_checkout:
-    enabled: false
+    enabled: true
     description: "Enable Stripe Checkout for new Premium subscription signups (web only for initial release)"
   stripe_customer_portal:
-    enabled: false
+    enabled: true
     description: "Enable Stripe Customer Portal for subscription management (cancellation, payment update, plan switch)"
   premium_trials:
     enabled: true
     description: "Enable Premium free trial offers, trial eligibility tracking, and trial-ending reminders"
   attractions_transfer_directions_api:
-    enabled: false
+    enabled: true
     description: "Use Google Directions/Distance Matrix API for inter-attraction transfer time instead of the haversine heuristic"
   getyourguide_activity_suggestions:
-    enabled: false
+    enabled: true
     description: "Enable optional GetYourGuide affiliate activity suggestions (requires verified partner configuration)"
   packing_lists_v2:
-    enabled: false
+    enabled: true
     description: "Enable preset, provenance-aware packing lists v2"
