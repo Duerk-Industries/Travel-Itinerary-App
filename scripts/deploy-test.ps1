@@ -16,9 +16,9 @@ Assert-RequiredVars @(
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (-not $ReleaseManifest) {
-  $buildArgs = @()
-  if ($DryRun) { $buildArgs += '-DryRun' }
-  $ReleaseManifest = (& (Join-Path $PSScriptRoot 'build-release.ps1') @buildArgs).Trim()
+  $buildParams = @{}
+  if ($DryRun) { $buildParams.DryRun = $true }
+  $ReleaseManifest = (& (Join-Path $PSScriptRoot 'build-release.ps1') @buildParams).Trim()
 }
 & node -e "const v=require('./scripts/lib/phase11-validators'); v.validateReleaseManifest(v.readJson(process.argv[1]));" $ReleaseManifest
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

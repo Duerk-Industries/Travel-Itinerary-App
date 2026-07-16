@@ -17,9 +17,9 @@ Assert-GitHubActor $DryRun.IsPresent
 
 Write-Warning "direct production deploy bypasses test cutover. Reason: $Reason"
 if (-not $ReleaseManifest) {
-  $buildArgs = @()
-  if ($DryRun) { $buildArgs += '-DryRun' }
-  $ReleaseManifest = (& (Join-Path $PSScriptRoot 'build-release.ps1') @buildArgs).Trim()
+  $buildParams = @{}
+  if ($DryRun) { $buildParams.DryRun = $true }
+  $ReleaseManifest = (& (Join-Path $PSScriptRoot 'build-release.ps1') @buildParams).Trim()
 }
 & node -e "const v=require('./scripts/lib/phase11-validators'); v.validateReleaseManifest(v.readJson(process.argv[1]));" $ReleaseManifest
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -46,11 +46,18 @@ if (-not $DryRun) {
 }
 
 $actor = if ($env:GITHUB_ACTOR) { $env:GITHUB_ACTOR } else { 'local' }
-Write-LogJson -FilePath (Join-Path $Script:RepoRoot "dist\release\direct-prod-deploy-$(Get-Date -Format 'yyyyMMddHHmmss').json") -Data ([ordered]@{
+$evidencePath = Join-Path $Script:RepoRoot "dist\release\direct-prod-deploy-$(Get-Date -Format 'yyyyMMddHHmmss').json"
+Write-LogJson -FilePath $evidencePath -Data ([ordered]@{
   operation = 'deploy-prod'
+  status = if ($DryRun) { 'dry-run' } else { 'completed' }
   reason = $Reason
   actor = $actor
   releaseManifest = $ReleaseManifest
   targetService = $env:PROD_SERVICE_NAME
 })
-Write-DeployAuditLog -Action 'DEPLOY_DIRECT_PROD' -Reason $Reason -ReleaseManifest $ReleaseManifest -Details @{ backendImageDigest = $backendDigest }
+if (-not $DryRun) {
+  Write-DeployAuditLog -Action 'DEPLOY_DIRECT_PROD' -Reason $Reason -ReleaseManifest $ReleaseManifest -Details @{ backendImageDigest = $backendDigest }
+} else {
+  Write-Host 'Dry run complete; no production changes or external audit writes were made.'
+}
+Write-Output $evidencePath
