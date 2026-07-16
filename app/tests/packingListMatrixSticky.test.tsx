@@ -46,7 +46,20 @@ describe('PackingListMatrix sticky header/column contract (web)', () => {
     const { getByTestId } = render(<PackingListMatrix items={items} travelers={travelers} colors={colors} />);
 
     const scrollContainer = getByTestId('packing-matrix-web-scroll');
+    // Must have a genuine bounded height with overflow on BOTH axes — a
+    // self-contained scrollport, same shape as the native four-pane
+    // implementation. overflow-x alone is not sufficient: per the CSS
+    // overflow spec, setting one axis to non-'visible' forces the other
+    // axis's computed value to 'auto' too, so the container becomes a
+    // vertical scroll candidate either way. Without a bounded height, that
+    // candidate never actually has anything to scroll, and `position:
+    // sticky` bound to a container that never scrolls is a permanent
+    // no-op — which is exactly the bug this guards against.
     expect(scrollContainer.props.style).toEqual(expect.objectContaining({ overflow: 'auto', position: 'relative' }));
+    expect(scrollContainer.props.style.maxHeight).toBeTruthy();
+    expect(getByTestId('packing-matrix-web-corner').props.style).toEqual(expect.objectContaining({ position: 'sticky', top: 0, left: 0, zIndex: 4 }));
+    expect(getByTestId('packing-matrix-web-header-traveler-1').props.style).toEqual(expect.objectContaining({ position: 'sticky', top: 0, zIndex: 3 }));
+    expect(getByTestId('packing-matrix-web-item-item-1').props.style).toEqual(expect.objectContaining({ position: 'sticky', left: 0, zIndex: 2 }));
 
     // Same check-cell testID contract as the native matrix, so
     // PackingListTable's toggle wiring doesn't need to branch on platform.

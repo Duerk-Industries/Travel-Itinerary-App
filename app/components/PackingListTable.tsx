@@ -3,6 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, use
 import HorizontalTableScroll from './HorizontalTableScroll';
 import PackingListMatrix from './PackingListMatrix';
 import { getAppTheme } from '../theme/theme';
+import { normalizePackingLabel } from '../utils/packingListNormalize';
 
 export type PackingItem = {
   id: string;
@@ -129,11 +130,32 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const isTrip = variant === 'trip';
 
   const orderedTravelers = useMemo(() => {
-    if (!isTrip) return travelers;
-    return [...travelers].sort((a, b) => {
+    const list = isTrip ? [...travelers].sort((a, b) => {
       if (a.id === currentTravelerId) return -1;
       if (b.id === currentTravelerId) return 1;
       return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+    }) : travelers;
+
+    // Detect duplicate first names for disambiguation
+    const firstNameCounts = new Map<string, number>();
+    list.forEach(t => {
+      const first = t.name.split(' ')[0].trim().toLowerCase();
+      if (first) firstNameCounts.set(first, (firstNameCounts.get(first) || 0) + 1);
+    });
+
+    return list.map(t => {
+      const parts = t.name.trim().split(/\s+/);
+      const first = parts[0] || '';
+      const hasMultiple = first ? (firstNameCounts.get(first.toLowerCase()) || 0) > 1 : false;
+
+      let displayName = t.name;
+      if (first && !hasMultiple) {
+        displayName = first;
+      } else if (!t.name.trim() && t.email) {
+        displayName = t.email.split('@')[0];
+      }
+
+      return { ...t, displayName };
     });
   }, [currentTravelerId, isTrip, travelers]);
 
@@ -145,10 +167,17 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     setTripPresetKeys(Array.isArray(data.tripPresetKeys) ? data.tripPresetKeys : []);
     setCurrentTravelerId(typeof data.currentTravelerId === 'string' ? data.currentTravelerId : null);
     const nextItems = hasGroups
-      ? data.groups.flatMap((group: any) => [
-          { id: `category-${group.id}`, category: group.label, label: group.label, position: 0, isCategory: true },
-          ...(group.items ?? []).map((item: PackingItem) => ({ ...item, category: group.label })),
-        ])
+      ? data.groups.flatMap((group: any) =>
+          // Group headings are rendered by groupedItems below. Keeping them
+          // out of the item collection prevents a heading from becoming a
+          // duplicate, checkable packing item.
+          (group.items ?? [])
+            // Older seeded data could contain the preset title as an item
+            // (for example, "General" in the General preset). It is a
+            // heading artifact, not something a traveler can pack.
+            .filter((item: PackingItem) => !(group.kind === 'preset' && normalizePackingLabel(item.label) === normalizePackingLabel(group.label)))
+            .map((item: PackingItem) => ({ ...item, category: group.label }))
+        )
       : (data.items ?? []).map((item: PackingItem, index: number) => ({ ...item, position: index }));
     setItems(nextItems);
     setDraftItems(hasGroups
@@ -359,7 +388,14 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
         </Pressable>
       ) : null}
       {v2 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={localStyles.presetActions}>
+        <ScrollView
+          horizontal
+          nestedScrollEnabled
+          showsHorizontalScrollIndicator
+          style={localStyles.presetScroll}
+          contentContainerStyle={localStyles.presetActions}
+          testID={`${variant}-packing-preset-scroll`}
+        >
           {presets.map((preset) => <Pressable key={preset.key} style={[localStyles.presetButton, { borderColor: theme.colors.border, backgroundColor: selectedPresetKeys.includes(preset.key) || tripPresetKeys.includes(preset.key) ? theme.colors.cta : theme.colors.surfaceMuted }]} onPress={() => void (isTrip && tripPresetKeys.includes(preset.key) ? removePreset(preset.key) : addPreset(preset.key))}><Text style={{ color: theme.colors.text }}>{isTrip ? tripPresetKeys.includes(preset.key) ? '− ' : '+ ' : selectedPresetKeys.includes(preset.key) ? '✓ ' : ''}{preset.label}</Text></Pressable>)}
         </ScrollView>
       ) : null}
@@ -369,7 +405,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
             <Text style={[localStyles.itemHeader, { color: theme.colors.textMuted }]}>Item</Text>
             {isTrip ? orderedTravelers.map((traveler) => (
               <Text key={traveler.id} style={[localStyles.travelerHeader, { color: theme.colors.textMuted }]} numberOfLines={1}>
-                {traveler.name}
+                {traveler.displayName}
               </Text>
             )) : null}
             {editMode ? <Text style={[localStyles.editHeader, { color: theme.colors.textMuted }]}>Order</Text> : null}
@@ -480,7 +516,11 @@ const localStyles = StyleSheet.create({
   orderButton: { minWidth: 28, minHeight: 28, alignItems: 'center', justifyContent: 'center' },
   orderText: { fontSize: 18, fontWeight: '700' },
   input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, minHeight: 36 },
-  presetActions: { gap: 8, paddingVertical: 2 },
+  // Constrain the horizontal viewport. Without an explicit width/flex
+  // constraint React Native Web can size this ScrollView to its children,
+  // leaving no overflow area to scroll.
+  presetScroll: { width: '100%', maxWidth: '100%', minWidth: 0, flexGrow: 0, flexShrink: 1, alignSelf: 'stretch' },
+  presetActions: { gap: 8, paddingVertical: 2, flexGrow: 0, flexShrink: 0, alignItems: 'center' },
   presetButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7 },
 });
 
