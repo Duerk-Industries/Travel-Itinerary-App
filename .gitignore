@@ -48,3 +48,4 @@ app/desktop.ini
 server/desktop.ini
 test_inputs/default_accounts.json
 server/__fixtures__/gold
+scripts/deploy.config
