@@ -33,7 +33,7 @@ if ($DryRun) {
   } finally { Pop-Location }
   Push-Location (Join-Path $Script:RepoRoot 'app')
   try {
-    & npm run export:web -- --output-dir $frontendDir
+    & npm run export:web -- "--output-dir=$frontendDir"
     if ($LASTEXITCODE -ne 0) { Fail 'npm run export:web failed' }
   } finally { Pop-Location }
 }

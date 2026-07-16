@@ -3,7 +3,10 @@ import { Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } f
 import { createPackingListScrollSync } from '../utils/packingListScrollSync';
 import { toWebStyle } from '../utils/webStyle';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+// Some consumers (including lightweight test doubles) do not expose
+// Dimensions. Keep the native matrix bounded in those environments while
+// using the actual viewport height whenever React Native provides it.
+const SCREEN_HEIGHT = Dimensions?.get?.('window')?.height ?? 800;
 const MATRIX_MAX_HEIGHT = Math.floor(SCREEN_HEIGHT * 0.7);
 
 type MatrixItem = {
@@ -70,8 +73,9 @@ const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, dis
         <View
           style={toWebStyle({ ...styles.itemHeader, backgroundColor: colors.backgroundAlt, borderColor: colors.border }, {
             position: 'sticky',
+            top: 0,
             left: 0,
-            zIndex: 11,
+            zIndex: 4,
           })}
           testID="packing-matrix-web-corner"
         >
@@ -81,7 +85,9 @@ const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, dis
           <View
             key={traveler.id}
             style={toWebStyle({ ...styles.travelerHeader, backgroundColor: colors.backgroundAlt, borderColor: colors.border }, {
-              position: 'relative',
+              position: 'sticky',
+              top: 0,
+              zIndex: 3,
             })}
             testID={`packing-matrix-web-header-${traveler.id}`}
           >
@@ -95,7 +101,7 @@ const PackingListMatrixWeb: React.FC<Props> = ({ items, travelers, onToggle, dis
             style={toWebStyle({ ...styles.itemCell, ...(item.isCategory ? styles.sectionCell : {}), borderColor: colors.border, backgroundColor: item.isCategory ? colors.backgroundAlt : colors.surface }, {
               position: 'sticky',
               left: 0,
-              zIndex: 5,
+              zIndex: 2,
             })}
             testID={`packing-matrix-web-item-${item.id}`}
           >

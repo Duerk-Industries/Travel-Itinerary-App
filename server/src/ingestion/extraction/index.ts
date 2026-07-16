@@ -577,7 +577,7 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
           stops: leg.stops,
           fareClass: leg.fareClass,
           cost: leg.legCost ?? (index === 0 ? totalCost : 0),
-          totalCost: leg.legCost ?? totalCost,
+          totalCost,
           currency,
           paid: totalCost > 0,
           guestName: travelers[0] ?? null,

@@ -90,11 +90,20 @@ const findText = (root: any, text: string) =>
   root.findAll((node: any) => node.type === 'Text' && node.props.children === text);
 
 describe('ChatPanel', () => {
+  let consoleWarnSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.useFakeTimers();
+    const originalWarn = console.warn.bind(console);
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((message?: unknown, ...args: unknown[]) => {
+      if (message !== '[chat] connect_error') {
+        originalWarn(message, ...args);
+      }
+    });
   });
 
   afterEach(() => {
+    consoleWarnSpy.mockRestore();
     jest.useRealTimers();
     jest.clearAllMocks();
   });

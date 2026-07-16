@@ -569,10 +569,10 @@ const parseAustrianFlightLegs = (text: string): AustrianFlightLeg[] => {
       arrivalDate: addDays(departureDate, pattern.arrivalDayOffset),
       departureLocation: pattern.departureLocation,
       departureAirportCode: pattern.departureAirportCode,
-      departureTime: normalizeSpace(match[3]) || null,
+      departureTime: normalizeOutputTime(match[3]),
       arrivalLocation: pattern.arrivalLocation,
       arrivalAirportCode: pattern.arrivalAirportCode,
-      arrivalTime: normalizeSpace(match[4]) || null,
+      arrivalTime: normalizeOutputTime(match[4]),
     });
   }
 
