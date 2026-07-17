@@ -722,7 +722,7 @@ The `BILLING_SCHEDULER_SECRET` you set in `server/.env` (Appendix B1) is already
 ```powershell
 # Replace with the value you put in server/.env
 $SchedulerSecretValue = 'the-same-value-you-set-in-env'
-$ApiDomain = 'https://duerk.org'
+$ApiDomain = 'https://wander-bunnies.com'
 $SchedulerRegion = 'us-east4' # Cloud Scheduler supports us-east4; it does not support us-east5.
 
 gcloud scheduler jobs create http billing-reconcile `

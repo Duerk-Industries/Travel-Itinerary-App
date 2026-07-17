@@ -696,8 +696,8 @@ type AiOpsSection =
      case, calling an `openAiOpsSection` that mirrors `openAdminSection`
      exactly.
    - Net result: a colleague can be sent
-     `https://duerk.org/admin/ai-ops/executive` directly, exactly as
-     `https://duerk.org/admin/billing` already works today — filtered
+     `https://wander-bunnies.com/admin/ai-ops/executive` directly, exactly as
+     `https://wander-bunnies.com/admin/billing` already works today — filtered
      state (point 4 above) is client-side UI state layered on top, not
      itself part of the shareable URL for this first pass, unless a
      follow-up wants query-string filter params too (a natural

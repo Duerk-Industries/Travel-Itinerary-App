@@ -25,7 +25,7 @@ describe('EAS build config', () => {
   });
 
   it('points preview and production at the hosted backend', () => {
-    expect(appEas.build?.preview?.env?.EXPO_PUBLIC_BACKEND_URL).toBe('https://duerk.org');
-    expect(appEas.build?.production?.env?.EXPO_PUBLIC_BACKEND_URL).toBe('https://duerk.org');
+    expect(appEas.build?.preview?.env?.EXPO_PUBLIC_BACKEND_URL).toBe('https://wander-bunnies.com');
+    expect(appEas.build?.production?.env?.EXPO_PUBLIC_BACKEND_URL).toBe('https://wander-bunnies.com');
   });
 });

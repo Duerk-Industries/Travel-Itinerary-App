@@ -23,7 +23,7 @@ writing this chapter):
 | Test environment's data | **Isolated, synthetic/fixture data** — its own database, never a copy of real user data |
 | What "cutover" does mechanically | **Code-only promotion** — production's database and public URL never change; cutover promotes validated code to the existing production service |
 | Old production after cutover | **Kept as an instant rollback net**, then torn down via a **separate, explicit, confirmed** step — never deleted automatically by the cutover script itself |
-| Production domain | **Custom domain already mapped** (`duerk.org`, via Firebase Hosting) |
+| Production domain | **Custom domain already mapped** (`wander-bunnies.com`, via Firebase Hosting) |
 | Build/promotion mechanism | **Build-once, promote-by-digest** (§2.1) — cutover deploys the exact image digest validated in test, not a fresh rebuild from source |
 | Test Firestore isolation | **Same GCP project, second named Firestore database** (§2.2) — `travel-itinerary-app-test-database`, mirroring how production already uses a named database |
 | Test AI vendor API keys | **Separate, low-budget keys** (§2.3) — isolates vendor-side spend, not just this platform's internal cost tracking |
@@ -134,7 +134,7 @@ Resolved owner decisions for the first implementation pass:
   push to `main`).
 - Frontend: Firebase Hosting, serving `dist/` (the Expo web export),
   with `firebase.json` rewriting `/api/**` and `/socket.io/**` to the
-  Cloud Run service above. Custom domain **`duerk.org`** is mapped at
+  Cloud Run service above. Custom domain **`wander-bunnies.com`** is mapped at
   the Hosting layer, not directly on Cloud Run — Cloud Run itself is
   never addressed by end users or native apps.
 - Database: Firestore, **named database `travel-itinerary-app-database`**
@@ -225,7 +225,7 @@ Connecting the DNS record itself is a one-time manual step, covered in
 
 Native iOS/Android builds (Expo/EAS) are out of scope for this test/
 cutover mechanism — they already have their own build-channel story via
-EAS and point at `https://duerk.org/api` by convention. Nothing in this
+EAS and point at `https://wander-bunnies.com/api` by convention. Nothing in this
 chapter changes that; a native dev build pointed at the test API URL
 during manual QA is possible but is a manual Expo config change, not
 something the scripts below automate. Flag if you want that automated
@@ -241,14 +241,14 @@ test API URL.
 | Cloud Run service | `travel-itinerary-app` | `travel-itinerary-app-test` |
 | Region | `us-east5` | `us-east5` (keep identical to production so performance characteristics are comparable) |
 | Firestore database | `travel-itinerary-app-database` | `travel-itinerary-app-test-database` (§2.2) |
-| Firebase Hosting site | default site, custom domain `duerk.org` | second Hosting site (`travel-itinerary-app-test`), mapped to subdomain **`test.duerk.org`** (§2.4) |
+| Firebase Hosting site | default site, custom domain `wander-bunnies.com` | second Hosting site (`travel-itinerary-app-test`), mapped to subdomain **`test.duerk.org`** (§2.4) |
 | AI capture bucket (Chapter 4 §10) | `gs://<PROD_AI_CAPTURE_BUCKET>/` | separate bucket or clearly separated prefix, **never** the same bucket as production |
 | Vendor API keys | production keys, production budgets | separate, low-budget keys (§2.3) |
 | Runtime service account | existing production runtime SA | a **new, separate** runtime SA scoped only to test's Firestore database, test bucket, and test secrets — extending the existing three-service-account pattern in `setup-iam-permissions.sh` with a fourth, test-scoped identity. A bug or compromise in the test environment must not carry production-reachable credentials. |
 | Deployer/CI identity | existing deployer SA (GitHub Actions) | can remain shared, since every script call explicitly names its target service/database — the deploy scripts, not the identity, are what should make prod-vs-test unambiguous |
 
 CSP note: `firebase.json`'s `Content-Security-Policy` header currently
-hardcodes `https://duerk.org` in several directives. Rather than
+hardcodes `https://wander-bunnies.com` in several directives. Rather than
 hand-maintaining a second static JSON file with `test.duerk.org`
 hardcoded in it (which would silently drift from config the moment
 `TEST_DOMAIN` ever changed), §4 generates the test Hosting config from
@@ -278,7 +278,7 @@ TEST_AI_CAPTURE_BUCKET=
 PROD_SERVICE_NAME=travel-itinerary-app
 PROD_REGION=us-east5
 PROD_HOSTING_SITE=travel-itinerary-app          # or "default"
-PROD_DOMAIN=duerk.org
+PROD_DOMAIN=wander-bunnies.com
 PROD_FIRESTORE_DATABASE_ID=travel-itinerary-app-database
 PROD_RUNTIME_SERVICE_ACCOUNT_EMAIL=
 PROD_AI_CAPTURE_BUCKET=
@@ -321,7 +321,7 @@ are one-time, not repeated per deploy:
 
 1. **DNS record for `test.duerk.org`** — add it at the domain registrar,
    the same way `DEPLOYMENT-GCP-FIREBASE.md` §8 already documents for
-   `duerk.org` itself (TXT record for ownership verification, then the
+   `wander-bunnies.com` itself (TXT record for ownership verification, then the
    A records Firebase Hosting provides for the new site).
 2. **Add the custom domain in the Firebase console** for the
    `travel-itinerary-app-test` Hosting site, pointing at

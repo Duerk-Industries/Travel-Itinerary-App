@@ -176,7 +176,7 @@ Setup steps:
 
 Current default forwarding address in code:
 
-- `travel.docs@duerk.org`
+- `travel.docs@wander-bunnies.com`
 
 If you set `INGESTION_FORWARDING_ADDRESS`, that value overrides the built-in default shown above.
 

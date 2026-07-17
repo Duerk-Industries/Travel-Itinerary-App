@@ -280,7 +280,7 @@ rendering one screen ("pick provider per feature"). `'ai-ops'` itself is
 | 10a.6 | `app/components/admin/aiOps/shared/` (new dir, created on demand) | Not created in this phase — extract shared primitives (summary card, trend chart, filter bar) the moment a *second* `AiOpsSection` component needs one, not before. |
 | 10a.7 | `app/tests/aiOpsDeepLinking.test.tsx` | Deep-link round-trip test: navigating to each `AiOpsSection` URL resolves `initialSection: 'ai-ops'` + the correct nested section; navigating within the app updates the URL to match, and back. |
 
-**Exit criteria:** every `AiOpsSection` value is reachable both by in-app click-through and by direct URL (`https://duerk.org/admin/ai-ops/executive` works exactly like `https://duerk.org/admin/billing` does today); the existing provider/model-pick behavior is preserved with zero regression inside the `'providers'` sub-section.
+**Exit criteria:** every `AiOpsSection` value is reachable both by in-app click-through and by direct URL (`https://wander-bunnies.com/admin/ai-ops/executive` works exactly like `https://wander-bunnies.com/admin/billing` does today); the existing provider/model-pick behavior is preserved with zero regression inside the `'providers'` sub-section.
 
 ### Phase 10b — Ingestion Parser Experimentation
 
@@ -385,7 +385,7 @@ real configuration (Phase 3–4).
 **Grounding (verified against the actual repo, not assumed):** backend
 is Cloud Run service `travel-itinerary-app` (region `us-east5`, deployed
 via `gcloud run deploy --source server`); frontend is Firebase Hosting
-serving `dist/`, custom domain `duerk.org`; database is Firestore, named
+serving `dist/`, custom domain `wander-bunnies.com`; database is Firestore, named
 database `travel-itinerary-app-database`; IAM already has three service
 accounts (deployer/Cloud Build/runtime) via `scripts/configure-gcp-iam.sh`.
 **Also verified: none of this repo's 5 existing GitHub Actions workflows

@@ -163,7 +163,7 @@ describe('app.config.ts', () => {
     it('never defaults to localhost inside an EAS build, even when NODE_ENV=development', () => {
       process.env.NODE_ENV = 'development';
       process.env.EAS_BUILD = 'true';
-      expect(loadBackendUrl()).toBe('https://duerk.org');
+      expect(loadBackendUrl()).toBe('https://wander-bunnies.com');
     });
 
     it('uses localhost only for local expo start dev (NODE_ENV=development, no EAS_BUILD)', () => {
@@ -173,7 +173,7 @@ describe('app.config.ts', () => {
 
     it('defaults to the hosted backend for a local production export', () => {
       process.env.NODE_ENV = 'production';
-      expect(loadBackendUrl()).toBe('https://duerk.org');
+      expect(loadBackendUrl()).toBe('https://wander-bunnies.com');
     });
 
     it('honors an explicit EXPO_PUBLIC_BACKEND_URL over the default', () => {

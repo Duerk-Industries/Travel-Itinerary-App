@@ -1,4 +1,4 @@
-# Travel Itinerary App — Deployment Runbook (duerk.org)
+# Travel Itinerary App — Deployment Runbook (wander-bunnies.com)
 
 Back to the project home: [README](README.md)
 
@@ -21,19 +21,19 @@ The application consists of a React/Expo frontend (for web and native mobile app
 
 ### How It All Connects
 
-The custom domain `duerk.org` is the single entry point for all users. Firebase Hosting and Cloud Run work together to route requests.
+The custom domain `wander-bunnies.com` is the single entry point for all users. Firebase Hosting and Cloud Run work together to route requests.
 
 **Web App Request Flow:**
-1.  A user visits `https://duerk.org`.
+1.  A user visits `https://wander-bunnies.com`.
 2.  **Firebase Hosting** receives the request and serves the static frontend assets (HTML, CSS, JavaScript) that make up the React web application.
-3.  The React app, now running in the user's browser, makes an API call to a path like `https://duerk.org/api/trips`.
+3.  The React app, now running in the user's browser, makes an API call to a path like `https://wander-bunnies.com/api/trips`.
 4.  **Firebase Hosting** intercepts this request. A **rewrite rule** in `firebase.json` matches the `/api/**` pattern and forwards the request to the **Cloud Run** backend service.
 5.  The **Cloud Run** service processes the request (e.g., queries the Firestore database) and returns a JSON response.
 
 **Native App (Expo) Request Flow:**
 1.  The native app is installed on a user's device.
-2.  The app's code is configured to make API calls directly to the production backend endpoint: `https://duerk.org/api`.
-3.  When the app needs data, it makes a standard HTTPS request to `https://duerk.org/api/trips`.
+2.  The app's code is configured to make API calls directly to the production backend endpoint: `https://wander-bunnies.com/api`.
+3.  When the app needs data, it makes a standard HTTPS request to `https://wander-bunnies.com/api/trips`.
 4.  Just like the web app, the request hits **Firebase Hosting**, which triggers the rewrite rule, forwarding the request to the **Cloud Run** backend.
 
 This setup ensures both the web and native apps use the same backend API, hosted under a single, consistent domain.
@@ -236,7 +236,7 @@ Use this list to validate configuration before you rely on automated deployments
 
 ## 8. Connecting a Custom Domain
 
-To connect your domain (e.g., `duerk.org`) to Firebase Hosting:
+To connect your domain (e.g., `wander-bunnies.com`) to Firebase Hosting:
 
 1.  **In the Firebase Console**, go to **Hosting** and click **"Add custom domain"**.
 2.  Enter your domain name. Firebase will provide you with a **TXT record** for verification and two **A records** (IP addresses).
@@ -256,11 +256,11 @@ After a deployment, perform these checks to ensure everything is working.
 *   **Test the API**: Use `curl` to hit an API endpoint. You should get a valid response, not a 5xx server error or a 404.
     ```bash
     # This endpoint should return a 401 Unauthorized error, which is correct.
-    curl -i https://duerk.org/api/web-auth/login
+    curl -i https://wander-bunnies.com/api/web-auth/login
     ```
-*   **Test the Web App**: Open `https://duerk.org` in your browser. The app should load, and you should be able to interact with it (e.g., log in, view trips). Check the browser's developer console for any errors.
+*   **Test the Web App**: Open `https://wander-bunnies.com` in your browser. The app should load, and you should be able to interact with it (e.g., log in, view trips). Check the browser's developer console for any errors.
 *   **Check Firestore**: Create or modify data using the app and verify that the changes appear in the **Firestore Console**.
-*   **Verify Native App Connectivity**: Open a development build of the native app or a new build from EAS. Ensure it can successfully fetch and update data from the `https://duerk.org/api` backend.
+*   **Verify Native App Connectivity**: Open a development build of the native app or a new build from EAS. Ensure it can successfully fetch and update data from the `https://wander-bunnies.com/api` backend.
 
 ---
 

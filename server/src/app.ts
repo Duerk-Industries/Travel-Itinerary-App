@@ -94,7 +94,7 @@ app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
 app.use('/api/billing/webhooks', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
 
 const isRunningLocally = isLocalEnv();
-const webUrl = getBackendUrl('https://duerk.org') || 'https://duerk.org';
+const webUrl = getBackendUrl('https://wander-bunnies.com') || 'https://wander-bunnies.com';
 const allowedOrigins = isRunningLocally
   ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
   : [webUrl];

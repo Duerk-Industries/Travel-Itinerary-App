@@ -3364,6 +3364,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             loginWithPassword={loginWithPassword}
             register={register}
             loginWithGoogle={loginWithGoogle}
+            backendUrl={backendUrl}
             styles={styles}
           />
         </ScrollView>

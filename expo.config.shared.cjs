@@ -150,7 +150,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
             process.env.REACT_NATIVE_APP_BACKEND_URL ??
             (process.env.NODE_ENV === 'development' && !isEasBuild
               ? 'http://localhost:4000'
-              : 'https://duerk.org'),
+              : 'https://wander-bunnies.com'),
       refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
       sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,
       premiumTrialsEnabled: String(process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED ?? 'true').toLowerCase() !== 'false',
