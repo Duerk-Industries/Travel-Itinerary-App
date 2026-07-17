@@ -9,6 +9,16 @@ import {
   getOrCreateAttractionDurationMetadata,
   getAttractionDurationMetadataBatch,
 } from '../src/services/attractionDurationEstimationService';
+import { clearWikipediaEnrichmentCacheForTests } from '../src/services/wikipediaGeocodingService';
+
+// getOrCreateAttractionDurationMetadata looks up descriptions via
+// fetchWikipediaEnrichment (a destination-qualified MediaWiki search), not the
+// exact-title REST summary endpoint fetchWikipediaSummary hits — so its mocked
+// axios responses below use the search API's { query: { pages: {...} } } shape.
+const mockWikipediaSearchResponse = (extract: string | null, title = 'Result') =>
+  extract
+    ? { data: { query: { pages: { '1': { pageid: 1, title, extract } } } } }
+    : { data: { query: { pages: {} } } };
 
 jest.mock('axios');
 jest.mock('../src/apis/usageLimiter', () => ({ reserveApiUsageOrThrow: jest.fn(async () => undefined) }));
@@ -35,6 +45,15 @@ describe('attraction duration heuristics', () => {
     expect(estimateAttractionDurationMinutes('Observation Deck Tower', 'Sights & Landmarks')).toBe(45);
   });
 
+  it('gives ski jump facilities more time than a bare lookout, since they are multi-feature sites', () => {
+    // Regression case: "Holmenkollen" (ski jump + ski museum + observation deck)
+    // was getting the generic 45-min Sights & Landmarks default.
+    expect(estimateAttractionDurationMinutes('Holmenkollen Ski Jump', 'Sights & Landmarks')).toBe(105);
+    expect(estimateAttractionDurationMinutes('Ski jump and observation deck', 'Sights & Landmarks')).toBe(105);
+    // A bare lookout/observation deck with no ski jump stays a quick 45-min stop.
+    expect(estimateAttractionDurationMinutes('City Observation Deck', 'Sights & Landmarks')).toBe(45);
+  });
+
   it('formats minutes as human duration strings', () => {
     expect(formatMinutesAsDuration(45)).toBe('45m');
     expect(formatMinutesAsDuration(120)).toBe('2h');
@@ -45,6 +64,7 @@ describe('attraction duration heuristics', () => {
     expect(inferRequiresPreOrderTickets('American Museum of Natural History', 'Ticketed Attraction')).toBe(true);
     expect(inferRequiresPreOrderTickets('Central Park', 'Outdoor Activity')).toBe(false);
     expect(inferRequiresPreOrderTickets('Sunset Walking Tour', 'Tour')).toBe(true);
+    expect(inferRequiresPreOrderTickets('Holmenkollen Ski Jump', 'Sights & Landmarks')).toBe(true);
   });
 });
 
@@ -92,16 +112,23 @@ describe('attraction duration metadata caching', () => {
     mockedDb.getAttractionDurationMetadata.mockReset();
     mockedDb.upsertAttractionDurationMetadata.mockReset();
     mockedAxios.get.mockReset();
-    mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
+    mockedAxios.get.mockResolvedValue(mockWikipediaSearchResponse(null));
+    // fetchWikipediaEnrichment caches by name+destination at module scope, so
+    // without clearing it here a name reused across tests (e.g. "American
+    // Museum of Natural History") would return a stale prior result instead
+    // of hitting the freshly-mocked axios response.
+    clearWikipediaEnrichmentCacheForTests();
   });
 
   it('computes and persists metadata on cache miss', async () => {
     mockedDb.getAttractionDurationMetadata.mockResolvedValue(null);
     mockedDb.upsertAttractionDurationMetadata.mockImplementation(async (entry) => ({ ...entry, id: 'attr-dur:test' }));
-    mockedAxios.get.mockResolvedValue({
-      status: 200,
-      data: { extract: 'The American Museum of Natural History is a natural history museum in Manhattan, New York City.' },
-    });
+    mockedAxios.get.mockResolvedValue(
+      mockWikipediaSearchResponse(
+        'The American Museum of Natural History is a natural history museum in Manhattan, New York City.',
+        'American Museum of Natural History'
+      )
+    );
 
     const result = await getOrCreateAttractionDurationMetadata({
       userId: 'user-1',
@@ -122,7 +149,7 @@ describe('attraction duration metadata caching', () => {
   it('leaves description null when no Wikipedia summary is available', async () => {
     mockedDb.getAttractionDurationMetadata.mockResolvedValue(null);
     mockedDb.upsertAttractionDurationMetadata.mockImplementation(async (entry) => ({ ...entry, id: 'attr-dur:test' }));
-    mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
+    mockedAxios.get.mockResolvedValue(mockWikipediaSearchResponse(null));
 
     const result = await getOrCreateAttractionDurationMetadata({
       userId: 'user-1',

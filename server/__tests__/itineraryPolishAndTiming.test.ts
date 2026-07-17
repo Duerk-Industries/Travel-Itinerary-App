@@ -4,6 +4,12 @@ import {
   buildTimingPreferenceNote,
   deriveDestinationTransferTiming,
   enforceMuseumHalfDayClear,
+  looksLikeSearchableAttractionName,
+  extractAttractionSearchPhrase,
+  rescopeDayTripCarRental,
+  getNotableHolidaysInRange,
+  buildHolidayAwarenessNote,
+  type ItineraryGeneratedCarRental,
 } from '../src/services/itineraryPromptPlanService';
 
 const entry = (name: string, tags: string[], overrides: Partial<Record<string, unknown>> = {}) => ({
@@ -154,8 +160,11 @@ describe('mapItems — mobility accessibility note', () => {
   });
 
   test('leaves the description blank instead of inventing itinerary boilerplate', () => {
+    // No catalog/Wikipedia description, no accessibility note, no pre-order flag,
+    // and no preference-fit match here — notes must stay empty rather than restate
+    // the (already-separate) duration field or invent filler prose.
     const items = mapItems(baseItinerary, WEIGHTS);
-    expect(items.activities[0].notes).toBe('Plan for about 2.5h here.');
+    expect(items.activities[0].notes).toBe('');
     expect(items.activities[0].notes).not.toContain('complements the planned pace');
   });
 
@@ -219,5 +228,212 @@ describe('buildTimingPreferenceNote', () => {
   test('neither flag set produces no note', () => {
     expect(buildTimingPreferenceNote({})).toBe('');
     expect(buildTimingPreferenceNote(undefined)).toBe('');
+  });
+});
+
+describe('looksLikeSearchableAttractionName — gates live Wikipedia description lookups', () => {
+  // Regression cases: a real trip where description enrichment attached a
+  // Canadian settlement, a WWII naval raid, and the 2011 Oslo terrorist
+  // attacks to unrelated filler activities purely on keyword overlap with
+  // "Norway"/"Oslo". None of these should ever reach the Wikipedia search.
+  test('rejects generic/transitional filler text with no specific place named', () => {
+    expect(looksLikeSearchableAttractionName('Explore the main historic district in Norway', 'Norway')).toBe(false);
+    expect(looksLikeSearchableAttractionName('Return to Oslo for a calm evening meal', 'Oslo')).toBe(false);
+    expect(looksLikeSearchableAttractionName('Departure from Oslo', 'Oslo')).toBe(false);
+    expect(
+      looksLikeSearchableAttractionName(
+        'Arrive in Oslo and settle into the city rhythm around the waterfront and central districts',
+        'Oslo'
+      )
+    ).toBe(false);
+  });
+
+  test('allows names with a strong attraction keyword when a real proper noun is also present', () => {
+    expect(looksLikeSearchableAttractionName('MUNCH museum in Bjørvika', 'Oslo')).toBe(true);
+    expect(looksLikeSearchableAttractionName('Astrup Fearnley Museum of Modern Art', 'Oslo')).toBe(true);
+  });
+
+  test('allows names with a specific proper noun beyond the destination and the first word', () => {
+    expect(looksLikeSearchableAttractionName('Self-guided morning in Vigeland Sculpture Park', 'Oslo')).toBe(true);
+    expect(looksLikeSearchableAttractionName('Short farewell stop at the Oslo Opera House exterior and harbor edge', 'Oslo')).toBe(true);
+    expect(looksLikeSearchableAttractionName('Explore Akershus Fortress grounds and the waterfront edges', 'Oslo')).toBe(true);
+  });
+
+  test('rejects a bare locality label with nothing specific beyond the destination name', () => {
+    expect(looksLikeSearchableAttractionName('Oslo', 'Oslo')).toBe(false);
+  });
+
+  test('rejects generic template text that mentions a strong attraction keyword but names no real place', () => {
+    // Regression case: a live replay generated "A major history or art museum
+    // in the base city", "Main city museum district or cultural quarter", and
+    // "Visit a major museum in Norway" — all contain "museum" (previously an
+    // unconditional keyword-shortcut to `true`) but name no actual place, and
+    // all three got a confidently-wrong live-search hit (a different city's
+    // page, a football league, a queen consort's biography).
+    expect(looksLikeSearchableAttractionName('A major history or art museum in the base city', 'Norway')).toBe(false);
+    expect(looksLikeSearchableAttractionName('Main city museum district or cultural quarter', 'Norway')).toBe(false);
+    expect(looksLikeSearchableAttractionName('Visit a major museum in Norway', 'Norway')).toBe(false);
+  });
+});
+
+describe('extractAttractionSearchPhrase — builds a tight Wikipedia search query instead of the full sentence', () => {
+  // Regression cases: even after looksLikeSearchableAttractionName correctly
+  // allowed these (they do name a real place), searching the FULL sentence
+  // let an unrelated but keyword-adjacent article win: a Norway history blurb,
+  // a King Harald V biography, the 2011 terrorist attacks, and a Bernadotte
+  // king biography, respectively.
+  test('extracts the day-trip destination instead of the whole sentence', () => {
+    expect(extractAttractionSearchPhrase('Train-based day trip to Drammen', 'Norway')).toBe('Drammen');
+  });
+
+  test('extracts a multi-word proper-noun run over a shorter later run', () => {
+    expect(extractAttractionSearchPhrase('Karl Johans gate and the University area', 'Norway')).toBe('Karl Johans');
+  });
+
+  test('extracts the base city over a sentence-initial verb via tie-break', () => {
+    expect(extractAttractionSearchPhrase('Arrive in Oslo and settle in near the central waterfront', 'Norway')).toBe('Oslo');
+    expect(extractAttractionSearchPhrase('Return to Oslo for a quiet final-night dinner', 'Norway')).toBe('Oslo');
+  });
+
+  test('extracts the longest run outright when one clearly dominates', () => {
+    expect(
+      extractAttractionSearchPhrase('Last-look free time around Oslo Central Station and the waterfront', 'Norway')
+    ).toBe('Oslo Central Station');
+  });
+
+  test('keeps a formal name intact across a bridging "of"', () => {
+    expect(
+      extractAttractionSearchPhrase('Norwegian Museum of Cultural History in Bygdøy', 'Norway')
+    ).toBe('Norwegian Museum of Cultural History');
+  });
+
+  test('preserves a run that genuinely starts at the first word when nothing else competes', () => {
+    expect(extractAttractionSearchPhrase('Oslo Opera House lobby and roof', 'Norway')).toBe('Oslo Opera House');
+  });
+
+  test('falls back to the original text when no capitalized content word is found', () => {
+    expect(extractAttractionSearchPhrase('a quiet evening walk', 'Norway')).toBe('a quiet evening walk');
+  });
+});
+
+describe('rescopeDayTripCarRental', () => {
+  // Regression case: a real 7-day Oslo trip recommended a full-week rental car
+  // (pickup day 1, dropoff last day) even though the traveler only ever left
+  // Oslo for one Lillehammer day trip — expensive/unnecessary advice for a
+  // city stay where driving/parking is a hassle.
+  const baseRental: ItineraryGeneratedCarRental = {
+    status: 'Needed',
+    pickupLocation: 'Oslo',
+    pickupDate: '2026-01-01',
+    dropoffLocation: 'Oslo',
+    dropoffDate: '2026-01-07',
+    reference: '',
+    vendor: '',
+    prepaid: '',
+    cost: '',
+    model: '',
+    notes: '',
+  };
+
+  const oslo = (dt: string, it: Array<[string, string, string]>) => ({ d: 1, dt, b: 'Oslo', it, me: [], sl: '', ln: [], cf: 'M' as const });
+
+  const itinerary = {
+    $: 'it1' as const, eh: 'OSL', xh: 'OSL', rc: null, a: [], cf: 'M' as const,
+    b: [{ l: 'Oslo', ci: '2026-01-01', co: '2026-01-07', dn: [] }],
+    x: [],
+    dy: [
+      oslo('2026-01-01', [['D', 'A', 'Munch Museum']]),
+      oslo('2026-01-02', [['D', 'A', 'Norsk Folkemuseum']]),
+      oslo('2026-01-05', [
+        ['D', 'O', 'Drive toward Lillehammer'],
+        ['D', 'A', 'Maihaugen'],
+      ]),
+      oslo('2026-01-06', [['D', 'A', 'National Museum']]),
+    ],
+  } as any;
+
+  const entryByName = new Map([
+    ['munch museum', entry('Munch Museum', ['culture'], { destinationKey: 'oslo' })],
+    ['maihaugen', entry('Maihaugen', ['culture'], { destinationKey: 'lillehammer' })],
+    ['national museum', entry('National Museum', ['culture'], { destinationKey: 'oslo' })],
+  ].map(([key, value]) => [key as string, value as any]));
+
+  test('leaves a full-trip rental (car=R) untouched', () => {
+    const result = rescopeDayTripCarRental(baseRental, itinerary, 'R', entryByName);
+    expect(result).toEqual(baseRental);
+  });
+
+  test('rescopes a day-trips-only rental (car=D) to the detected day-trip day', () => {
+    const result = rescopeDayTripCarRental(baseRental, itinerary, 'D', entryByName);
+    expect(result.pickupDate).toBe('2026-01-05');
+    expect(result.dropoffDate).toBe('2026-01-05');
+    // Only the dates change — location/notes/etc. are preserved.
+    expect(result.pickupLocation).toBe('Oslo');
+  });
+
+  test('falls back to the untouched day1/last-day dates when no day-trip day is detected', () => {
+    const noDayTripItinerary = {
+      ...itinerary,
+      dy: [
+        oslo('2026-01-01', [['D', 'A', 'Munch Museum']]),
+        oslo('2026-01-02', [['D', 'A', 'National Museum']]),
+      ],
+    };
+    const result = rescopeDayTripCarRental(baseRental, noDayTripItinerary, 'D', entryByName);
+    expect(result).toEqual(baseRental);
+  });
+
+  test('spans pickup/dropoff across multiple day-trip days', () => {
+    const twoDayTripItinerary = {
+      ...itinerary,
+      dy: [
+        oslo('2026-01-01', [['D', 'A', 'Munch Museum']]),
+        oslo('2026-01-04', [['D', 'O', 'Drive toward Lillehammer'], ['D', 'A', 'Maihaugen']]),
+        oslo('2026-01-05', [['D', 'A', 'Maihaugen']]),
+        oslo('2026-01-06', [['D', 'A', 'National Museum']]),
+      ],
+    };
+    const result = rescopeDayTripCarRental(baseRental, twoDayTripItinerary, 'D', entryByName);
+    expect(result.pickupDate).toBe('2026-01-04');
+    expect(result.dropoffDate).toBe('2026-01-05');
+  });
+});
+
+describe('getNotableHolidaysInRange / buildHolidayAwarenessNote', () => {
+  // Regression case: a real trip ran 2026-01-01..2026-01-07 (starting on New
+  // Year's Day) with no note anywhere that hours might be reduced.
+  test('detects New Year\'s Day within a trip range', () => {
+    expect(getNotableHolidaysInRange('2026-01-01', '2026-01-07')).toEqual(["New Year's Day (01/01)"]);
+  });
+
+  test('detects Christmas Day within a trip range', () => {
+    expect(getNotableHolidaysInRange('2026-12-20', '2026-12-27')).toEqual(['Christmas Day (12/25)']);
+  });
+
+  test('detects both holidays when a trip spans a year boundary', () => {
+    expect(getNotableHolidaysInRange('2026-12-24', '2027-01-02')).toEqual([
+      'Christmas Day (12/25)',
+      "New Year's Day (01/01)",
+    ]);
+  });
+
+  test('returns nothing for a trip that does not include a notable holiday', () => {
+    expect(getNotableHolidaysInRange('2026-06-01', '2026-06-10')).toEqual([]);
+  });
+
+  test('returns nothing for an invalid date range', () => {
+    expect(getNotableHolidaysInRange('not-a-date', '2026-01-07')).toEqual([]);
+    expect(getNotableHolidaysInRange('2026-01-07', '2026-01-01')).toEqual([]);
+  });
+
+  test('buildHolidayAwarenessNote produces a caution, not an asserted closure', () => {
+    const note = buildHolidayAwarenessNote('2026-01-01', '2026-01-07');
+    expect(note).toContain("New Year's Day");
+    expect(note).toContain('may have reduced hours or be closed');
+    expect(note).toContain('verify opening hours');
+  });
+
+  test('buildHolidayAwarenessNote is empty when no holiday falls in range', () => {
+    expect(buildHolidayAwarenessNote('2026-06-01', '2026-06-10')).toBe('');
   });
 });

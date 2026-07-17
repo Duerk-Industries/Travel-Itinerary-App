@@ -18,8 +18,11 @@ CHECKS (must fix):
 - it[] present for each day; enforce it<=5 and evening(t=E)<=2; drop extras.
 - sl matches base placeholders and base exists.
 - Remove duplicate activity text across the trip; each named activity should appear once.
-- Remove vague activity text with no location anchor (e.g., "nearby", "local park", "city center" alone). Replace with a specific plausible place/area label.
+- Remove vague activity text with no location anchor (e.g., "nearby", "local park", "city center" alone). Replace with a specific plausible place/area label. This includes filler that only restates the country/region-level destination with no real sub-area named (e.g., "explore the main historic district in <country>") — replace with a genuinely specific neighborhood/landmark, or drop to a plain logistics line if none is available.
 - Tours/day trips must include a specific anchor (museum/site/neighborhood/daytrip destination), not generic "guided tour" wording.
+- Location verification: for every specific named place, confirm it is plausibly located within the requested destination before keeping it. Place names are frequently shared by unrelated locations elsewhere in the world (e.g., "Norway House" is in Manitoba, Canada, not Norway; "Paris" exists in Texas). If a name is more strongly associated with a different country/region than the trip's destination, remove or replace it rather than keep it on the assumption that it matches by name alone.
+- Arrival/settling-in framing (e.g., "arrive in <city>", "settle into the city rhythm") must appear only on the day matching that base's ci (check-in) date. If it appears on any other day — a common chunking artifact where a later day of an already-established base is written as if it were an arrival — remove that framing and replace the item with a genuinely specific activity, or drop it if none is available.
+- Day-trip/base-city overlap: if a day's it[] includes a day trip or excursion naming a different town/area than the base (e.g., "toward Lillehammer" while the base is Oslo), remove any other item that day naming a specific attraction physically located back in the base city — a traveler cannot be in both places the same day without an explicit transfer accounting for it.
 - x[].m must be one of Flight, Train, Bus, Private, Ferry, Other. If not, rewrite to closest allowed value.
 - x transfers must not move from a specific locality to a broader parent label (city->state/country). Use specific peer locality names instead.
 - x transfers must not have same-place aliases as fr/to.

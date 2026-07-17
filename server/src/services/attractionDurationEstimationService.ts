@@ -5,6 +5,7 @@ import { logError } from '../logger';
 import type { ActivityType, AttractionDurationMetadata } from '../types';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { recordProviderRequestCost } from '../apis/providerBudgeting';
+import { fetchWikipediaEnrichment } from './wikipediaGeocodingService';
 
 export const ACTIVITY_TYPE_DURATION_MINUTES: Record<ActivityType, number> = {
   'Sights & Landmarks': 45,
@@ -28,6 +29,11 @@ export const ACTIVITY_TYPE_DURATION_MINUTES: Record<ActivityType, number> = {
 const NAME_DURATION_OVERRIDES: Array<{ pattern: RegExp; minutes: number }> = [
   { pattern: /museum/i, minutes: 150 },
   { pattern: /(gallery|aquarium|zoo)/i, minutes: 120 },
+  // Ski jump facilities (Holmenkollen, Lillehammer, Innsbruck, etc.) are
+  // typically a multi-feature site — jump tower, ski museum, and observation
+  // deck together — not a quick lookout stop; checked before the plain
+  // tower/observation-deck/lookout pattern below so it takes precedence.
+  { pattern: /\bski jump\b/i, minutes: 105 },
   { pattern: /\b(tower|observation deck|lookout)\b/i, minutes: 45 },
   { pattern: /\b(park|square|garden|plaza)\b/i, minutes: 90 },
   { pattern: /\b(tour|excursion)\b/i, minutes: 180 },
@@ -35,6 +41,7 @@ const NAME_DURATION_OVERRIDES: Array<{ pattern: RegExp; minutes: number }> = [
 
 const PRE_ORDER_NAME_PATTERNS: RegExp[] = [
   /museum/i,
+  /\bski jump\b/i,
   /\b(tower|observation deck|skydeck|lookout)\b/i,
   /\b(theater|theatre|show|concert)\b/i,
   /\baquarium|zoo\b/i,
@@ -123,6 +130,20 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   name: string;
   activityType: ActivityType;
   cachedWikipediaSummary?: string | null;
+  /** Set false for names that don't plausibly identify a specific place (see
+   * looksLikeSearchableAttractionName in itineraryPromptPlanService.ts) — a
+   * Wikipedia search against vague/transitional filler text ("Departure from
+   * Oslo", "Explore the main historic district in Norway") reliably returns a
+   * confident but unrelated match on loose keyword overlap (a Canadian
+   * settlement, a WWII raid, a terrorist attack have all surfaced this way).
+   * Duration/pre-order heuristics below don't depend on Wikipedia and still run. */
+  allowDescriptionLookup?: boolean;
+  /** Tighter search phrase to use instead of the full `name` sentence when
+   * querying Wikipedia (see extractAttractionSearchPhrase in
+   * itineraryPromptPlanService.ts) — the full sentence dilutes search relevance
+   * and can let an unrelated but keyword-adjacent article win. Falls back to
+   * `name` when not provided. */
+  wikipediaSearchTerm?: string;
 }): Promise<AttractionDurationMetadata> => {
   const refreshDays = Number(getApiCacheSetting('attractions', 'durationMetadataRefreshDays')) || 60;
   const existing = await getAttractionDurationMetadata(params.userId, params.destinationKey, params.name);
@@ -132,7 +153,18 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
 
   const estimatedDurationMinutes = estimateAttractionDurationMinutes(params.name, params.activityType);
   const requiresPreOrderTickets = inferRequiresPreOrderTickets(params.name, params.activityType);
-  const description = String(params.cachedWikipediaSummary ?? '').trim() || await fetchWikipediaSummary(params.name);
+  // Destination-qualified search (fetchWikipediaEnrichment) rather than an exact-title
+  // lookup (fetchWikipediaSummary): most generated activity names ("MUNCH museum",
+  // "Norwegian Folk Museum, Bygdøy") aren't verbatim Wikipedia article titles, so a
+  // direct title fetch 404s far more often than it should. Searching with the
+  // destination appended finds the right article even when the name isn't exact.
+  const cachedSummary = String(params.cachedWikipediaSummary ?? '').trim();
+  const allowDescriptionLookup = params.allowDescriptionLookup ?? true;
+  const searchTerm = String(params.wikipediaSearchTerm ?? '').trim() || params.name;
+  const description =
+    cachedSummary ||
+    (allowDescriptionLookup ? (await fetchWikipediaEnrichment(searchTerm, params.destinationDisplayName))?.summary : null) ||
+    null;
   const entry: AttractionDurationMetadata = {
     id: '',
     destinationKey: params.destinationKey,
@@ -161,10 +193,10 @@ export const getAttractionDurationMetadataBatch = async (params: {
   userId: string;
   destinationKey: string;
   destinationDisplayName: string;
-  entries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null }>;
+  entries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null; allowDescriptionLookup?: boolean; wikipediaSearchTerm?: string }>;
 }): Promise<Map<string, AttractionDurationMetadata>> => {
   const result = new Map<string, AttractionDurationMetadata>();
-  const dedupedEntries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null }> = [];
+  const dedupedEntries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null; allowDescriptionLookup?: boolean; wikipediaSearchTerm?: string }> = [];
   const seen = new Set<string>();
   for (const entry of params.entries) {
     const key = entry.name.trim().toLowerCase();
@@ -199,6 +231,8 @@ export const getAttractionDurationMetadataBatch = async (params: {
       name: entry.name,
       activityType: entry.activityType,
       cachedWikipediaSummary: entry.cachedWikipediaSummary,
+      allowDescriptionLookup: entry.allowDescriptionLookup,
+      wikipediaSearchTerm: entry.wikipediaSearchTerm,
     });
     result.set(key, metadata);
   }

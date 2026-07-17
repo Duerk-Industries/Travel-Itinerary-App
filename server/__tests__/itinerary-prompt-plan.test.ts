@@ -3,6 +3,7 @@
 import axios from 'axios';
 import { generateItineraryViaPromptPlan, buildDestinationClimatologyBlock, buildHomeTerminalLogisticsNote } from '../src/services/itineraryPromptPlanService';
 import { clearClimatologyCacheForTests } from '../src/services/climatologyDaylightService';
+import { clearWikipediaEnrichmentCacheForTests } from '../src/services/wikipediaGeocodingService';
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
 import { initDb } from '../src/db';
 import { seedEntitlementDefaults } from '../src/services/entitlementService';
@@ -101,6 +102,10 @@ describe('itinerary prompt plan service', () => {
     // default; tests that don't care about descriptions get a clean "no
     // article" response instead of relying on an unmocked call throwing.
     mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
+    // fetchWikipediaEnrichment caches by name+destination at module scope;
+    // without clearing it, a description mocked in one test could leak into
+    // (or shadow the mock in) another test that reuses the same attraction name.
+    clearWikipediaEnrichmentCacheForTests();
     mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockReset();
     mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
       shortlistByDestination: {},
@@ -247,7 +252,9 @@ describe('itinerary prompt plan service', () => {
     expect(result.generatedItems.activities.length).toBeGreaterThanOrEqual(2);
     expect(result.generatedItems.activities[0].status).toBe('Proposed');
     expect(result.generatedItems.activities[1].status).toBe('Proposed');
-    expect(result.generatedItems.activities[0].notes).toMatch(/Plan for about/i);
+    // Duration is already a separate structured field on the activity, so notes
+    // must not redundantly restate it in prose (see itineraryPromptPlanService.ts mapItems).
+    expect(result.generatedItems.activities[0].notes).not.toMatch(/Plan for about/i);
     expect(result.generatedItems.carRentals[0].status).toBe('Needed');
     // plan.md operational output targets: p0 <350, p1 <450,
     // p2 <600 per seven days, p3 <350. Rendering has no documented target,
@@ -1411,14 +1418,29 @@ describe('itinerary prompt plan service', () => {
       },
       promptBlock: 'Destination: Boston\n1. New England Aquarium',
     });
-    mockedAxios.get.mockImplementation(async (url: string) => {
-      if (String(url).includes('New%20England%20Aquarium')) {
+    // Duration-metadata description lookup goes through fetchWikipediaEnrichment
+    // (a destination-qualified MediaWiki search passed via `params.gsrsearch`),
+    // not the exact-title REST summary endpoint — so the mock keys off the
+    // search param rather than the request URL, and returns the search API's
+    // { query: { pages: {...} } } response shape.
+    mockedAxios.get.mockImplementation(async (_url: string, config?: any) => {
+      const search = String(config?.params?.gsrsearch ?? '');
+      if (search.includes('New England Aquarium')) {
         return {
-          status: 200,
-          data: { extract: 'The New England Aquarium is a public aquarium located in Boston, Massachusetts, known for its giant ocean tank.' },
+          data: {
+            query: {
+              pages: {
+                '1': {
+                  pageid: 1,
+                  title: 'New England Aquarium',
+                  extract: 'The New England Aquarium is a public aquarium located in Boston, Massachusetts, known for its giant ocean tank.',
+                },
+              },
+            },
+          },
         };
       }
-      return { status: 404, data: {} };
+      return { data: { query: { pages: {} } } };
     });
 
     const normStage = {
@@ -1513,7 +1535,141 @@ describe('itinerary prompt plan service', () => {
     const activity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'new england aquarium');
     expect(activity?.notes).toMatch(/giant ocean tank/i);
     expect(activity?.notes).not.toMatch(/it fits this day because/i);
-    expect(activity?.notes).toMatch(/plan for about/i);
+    // Duration is already a separate structured field on the activity, so notes
+    // must not redundantly restate it in prose.
+    expect(activity?.notes).not.toMatch(/plan for about/i);
+  });
+
+  it('does not live-search a bare-word catalog entry with no verified summary, even though it is in the catalog', async () => {
+    // Regression guard: catalog membership alone must not bypass the
+    // specificity gate. A single-word catalog entry (e.g. a real attraction
+    // like "SALT" that has no matching Wikipedia article) with no
+    // cachedWikipediaSummary is no safer than an uncatalogued name — it must
+    // not trigger a live Wikipedia search that could confidently return
+    // something unrelated. Multi-word catalog names (see the New England
+    // Aquarium test above) still get enriched normally.
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {
+        Boston: [
+          {
+            id: 'salt-test',
+            destinationKey: 'boston',
+            destinationDisplayName: 'Boston',
+            name: 'SALT',
+            rank: 1,
+            activityType: 'Spa/Wellness',
+            interestTags: ['relax'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 1,
+            budgetTier: 'paid',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      promptBlock: 'Destination: Boston\n1. SALT',
+    });
+    const searchedTerms: string[] = [];
+    mockedAxios.get.mockImplementation(async (_url: string, config?: any) => {
+      const search = String(config?.params?.gsrsearch ?? '');
+      searchedTerms.push(search);
+      return { data: { query: { pages: {} } } };
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-02',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  // Kept below the >=10 "fairness floor" threshold so this test's
+                  // assertion on `notes` isn't complicated by a legitimate
+                  // (non-Wikipedia) "why this fits" note also being attached.
+                  relax: 5,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] }],
+                x: [],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] }],
+      x: [],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'O', 'SALT']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston'],
+      days: 1,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-bare-word-catalog-entry',
+    });
+
+    expect(searchedTerms.some((term) => term.includes('SALT'))).toBe(false);
+    const activity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'salt');
+    expect(activity?.notes ?? '').not.toMatch(/\S/);
   });
 
   it('reassigns an attraction with no catalog match to the correct day when its cached description names a different destination', async () => {
@@ -1523,14 +1679,20 @@ describe('itinerary prompt plan service', () => {
       shortlistByDestination: {},
       promptBlock: 'none',
     });
-    mockedAxios.get.mockImplementation(async (url: string) => {
-      if (String(url).includes('Central%20Park')) {
+    mockedAxios.get.mockImplementation(async (_url: string, config?: any) => {
+      const search = String(config?.params?.gsrsearch ?? '');
+      if (search.includes('Central Park')) {
         return {
-          status: 200,
-          data: { extract: 'Central Park is an urban park in Manhattan, New York City.' },
+          data: {
+            query: {
+              pages: {
+                '1': { pageid: 1, title: 'Central Park', extract: 'Central Park is an urban park in Manhattan, New York City.' },
+              },
+            },
+          },
         };
       }
-      return { status: 404, data: {} };
+      return { data: { query: { pages: {} } } };
     });
 
     const normStage = {

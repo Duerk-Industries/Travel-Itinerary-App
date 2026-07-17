@@ -1152,6 +1152,108 @@ const isLikelyStandaloneLocalityLabel = (value: string): boolean => {
   return words.length > 0 && words.length <= 4;
 };
 
+const SPECIFICITY_STOPWORDS = new Set([
+  'the', 'a', 'an', 'of', 'in', 'at', 'and', 'or', 'to', 'for', 'on', 'near', 'from', 'with', 'around', 'through', 'toward', 'into',
+]);
+
+// Wikipedia's search API (used for description enrichment) will confidently
+// return SOME article for almost any query based on loose keyword overlap —
+// including for vague/transitional filler activity text that only contains
+// the destination's own name (e.g. "Explore the main historic district in
+// Norway", "Departure from Oslo"). That has surfaced completely unrelated
+// matches purely because they share a word with the destination: a Canadian
+// settlement called "Norway House", a WWII naval raid near Trondheim, even the
+// 2011 Oslo terrorist attacks. A generic attraction-type keyword ("museum",
+// "tour", "palace") is NOT by itself evidence of a specific place either —
+// "a major history or art museum in the base city" and "visit a major museum
+// in Norway" both contain "museum" with nothing specific behind it, and both
+// have surfaced unrelated live-search hits (a different city's Wikipedia page,
+// a football league, a queen consort's biography) this way. Only attempt the
+// lookup when the text has at least one capitalized, non-stopword,
+// non-destination word beyond the sentence's first token (which is generally
+// a verb like "Explore"/"Arrive"/"Return", never the place itself) — i.e. an
+// actual proper noun, not just a category word.
+export const looksLikeSearchableAttractionName = (name: string, destinationBase: string): boolean => {
+  const text = normalizeText(name);
+  if (!text) return false;
+  if (GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text))) return false;
+  if (EXTRA_GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text))) return false;
+
+  const destinationTokens = new Set(normalizeLocalityKey(destinationBase).split(' ').filter(Boolean));
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.some((word, index) => {
+    if (index === 0) return false;
+    if (!/^[A-ZÀ-ÞĀ-ſ]/.test(word)) return false;
+    const bare = word.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+    if (!bare || SPECIFICITY_STOPWORDS.has(bare) || destinationTokens.has(bare)) return false;
+    return true;
+  });
+};
+
+// Small set of lowercase connector words that commonly appear INSIDE a formal
+// proper name ("Museum of Cultural History", "Palace of Versailles") and
+// should not split an otherwise-contiguous run of capitalized words.
+const NAME_BRIDGE_WORDS = new Set(['of', 'de', 'du', 'la', 'der', 'van', 'von']);
+
+// Even once looksLikeSearchableAttractionName above says a lookup is worth
+// attempting, sending the FULL activity sentence as the Wikipedia search query
+// still dilutes relevance with filler verbs/nouns and the destination name,
+// letting an unrelated but keyword-adjacent article win (this is how "Train-based
+// day trip to Drammen" surfaced the 2011 terrorist attacks, and "Karl Johans gate
+// and the University area" surfaced a King Harald V biography). This extracts
+// just the most specific-looking contiguous phrase to use as the actual search
+// query instead of the whole sentence. It intentionally does NOT special-case
+// the sentence's first word the way the gate above does — a run genuinely
+// starting there (e.g. "Oslo Opera House lobby and roof") must stay intact — and
+// instead only deprioritizes a sentence-initial run as a tie-breaker when an
+// equally-long run exists elsewhere.
+export const extractAttractionSearchPhrase = (name: string, destinationBase: string): string => {
+  const text = normalizeText(name);
+  if (!text) return text;
+
+  const destinationTokens = new Set(normalizeLocalityKey(destinationBase).split(' ').filter(Boolean));
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return text;
+
+  const isContentWord = (word: string): boolean => {
+    if (!/^[A-ZÀ-ÞĀ-ſ]/.test(word)) return false;
+    const bare = word.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+    return !!bare && !SPECIFICITY_STOPWORDS.has(bare) && !destinationTokens.has(bare);
+  };
+
+  const runs: Array<{ start: number; words: string[] }> = [];
+  let current: { start: number; words: string[] } | null = null;
+  words.forEach((word, index) => {
+    if (isContentWord(word)) {
+      if (!current) current = { start: index, words: [] };
+      current.words.push(word);
+      return;
+    }
+    const bare = word.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+    const nextWord = words[index + 1];
+    if (current && NAME_BRIDGE_WORDS.has(bare) && nextWord && isContentWord(nextWord)) {
+      current.words.push(word);
+      return;
+    }
+    if (current) {
+      runs.push(current);
+      current = null;
+    }
+  });
+  if (current) runs.push(current);
+  if (!runs.length) return text;
+
+  runs.sort((a, b) => {
+    if (b.words.length !== a.words.length) return b.words.length - a.words.length;
+    const aInitial = a.start === 0 ? 1 : 0;
+    const bInitial = b.start === 0 ? 1 : 0;
+    if (aInitial !== bInitial) return aInitial - bInitial;
+    return a.start - b.start;
+  });
+
+  return runs[0].words.join(' ');
+};
+
 const buildShortlistPools = (
   shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
   requestedDestinations: string[]
@@ -1551,6 +1653,43 @@ export const buildDestinationClimatologyBlock = async (
     }
   }
   return lines.join('\n');
+};
+
+// Deliberately scoped to a small, near-universal list — not a full per-country
+// holiday-calendar integration, which is significantly larger scope (holidays
+// vary by country and would need a real data source). New Year's Day and
+// Christmas Day are observed with reduced hours in the vast majority of
+// countries this app generates itineraries for. This is a DETERMINISTIC date
+// computation, not an LLM guess: the date itself is a verifiable fact (unlike
+// asserting a specific attraction's actual closure/hours, which the prompts
+// elsewhere explicitly forbid inventing) — a real 7-day Oslo trip started on
+// New Year's Day with no note anywhere that hours might be reduced.
+const NOTABLE_HOLIDAYS: Array<{ month: number; day: number; name: string }> = [
+  { month: 1, day: 1, name: "New Year's Day" },
+  { month: 12, day: 25, name: 'Christmas Day' },
+];
+
+export const getNotableHolidaysInRange = (startDate: string, endDate: string): string[] => {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return [];
+  const matches: string[] = [];
+  for (let year = start.getUTCFullYear(); year <= end.getUTCFullYear(); year++) {
+    for (const holiday of NOTABLE_HOLIDAYS) {
+      const holidayDate = new Date(Date.UTC(year, holiday.month - 1, holiday.day));
+      if (holidayDate >= start && holidayDate <= end) {
+        const dateLabel = `${String(holiday.month).padStart(2, '0')}/${String(holiday.day).padStart(2, '0')}`;
+        matches.push(`${holiday.name} (${dateLabel})`);
+      }
+    }
+  }
+  return matches;
+};
+
+export const buildHolidayAwarenessNote = (startDate: string, endDate: string): string => {
+  const holidays = getNotableHolidaysInRange(startDate, endDate);
+  if (!holidays.length) return '';
+  return `Trip includes ${holidays.join(' and ')} — many attractions may have reduced hours or be closed; verify opening hours before finalizing plans.`;
 };
 
 /** Build a non-PII terminal-routing hint even when climatology is disabled. */
@@ -2231,6 +2370,20 @@ const attachAttractionMetadata = async (
         lat: entry?.lat ?? null,
         lon: entry?.lon ?? null,
         cachedWikipediaSummary: entry?.wikipediaSummary ?? null,
+        // Only a catalog entry that ALREADY carries a verified Wikipedia
+        // summary is exempt from the specificity gate below — that summary is
+        // used directly regardless of this flag (see getOrCreateAttractionDurationMetadata).
+        // A catalog row with no summary yet (e.g. the static seed CSV, which
+        // has no wikipedia_summary column, or a manually-curated attraction
+        // with no matching Wikipedia article) is no safer than an uncatalogued
+        // name and must pass the same check — otherwise a bare-word catalog
+        // entry like "SALT" or "Mathallen" would bypass the gate entirely and
+        // risk a live search confidently returning something unrelated.
+        allowDescriptionLookup: Boolean(entry?.wikipediaSummary) || looksLikeSearchableAttractionName(cleanText, destinationDisplayName),
+        // Used only to build a tighter Wikipedia search query than the full
+        // sentence (see extractAttractionSearchPhrase); the cache key and
+        // duration/pre-order heuristics still use the full `name` above.
+        wikipediaSearchTerm: extractAttractionSearchPhrase(cleanText, destinationDisplayName),
       };
     });
 
@@ -2240,7 +2393,13 @@ const attachAttractionMetadata = async (
           userId,
           destinationKey,
           destinationDisplayName,
-          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary }) => ({ name, activityType, cachedWikipediaSummary })),
+          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary, allowDescriptionLookup, wikipediaSearchTerm }) => ({
+            name,
+            activityType,
+            cachedWikipediaSummary,
+            allowDescriptionLookup,
+            wikipediaSearchTerm,
+          })),
         });
         for (const [key, metadata] of batch) {
           const catalogMetadata = durationMetadataByName.get(key);
@@ -2344,14 +2503,20 @@ export const mapItems = (
       const accessibilityNote = mobility === 'L'
         ? ' Check step-free access, seating, and route length with the venue before booking.'
         : '';
-      const notesWithDuration = [description, `Plan for about ${duration} here.`, accessibilityNote.trim()]
+      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
+      // Duration is already a separate structured field (rendered alongside the
+      // activity, e.g. "13:00, 2.5h") — restating it in prose here was pure
+      // redundancy, not added information. Built as filtered parts (rather than
+      // template-literal concatenation) so an activity with no description and
+      // no accessibility note doesn't end up with leading/doubled whitespace.
+      const notes = [
+        description,
+        accessibilityNote.trim(),
+        durationMetadata?.requiresPreOrderTickets ? 'Tickets may need to be pre-ordered.' : '',
+        fit ? `Why this fits your group: ${fit}` : '',
+      ]
         .filter(Boolean)
         .join(' ');
-      const bookingNotes = durationMetadata?.requiresPreOrderTickets
-        ? `${notesWithDuration} Tickets may need to be pre-ordered.`
-        : notesWithDuration;
-      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
-      const notes = fit ? `${bookingNotes} Why this fits your group: ${fit}` : bookingNotes;
       return {
         status: 'Proposed',
         activityType: closest,
@@ -2391,6 +2556,51 @@ export const mapItems = (
     : [];
 
   return { transfers, lodgings, activities, carRentals };
+};
+
+// mapItems above defaults a rental car's pickup/dropoff to day 1 / the last
+// day of the whole trip, regardless of car mode — reasonable for car='R'
+// (an explicit full-trip rental), but wasteful/wrong advice for car='D'
+// (day-trips-only): a traveler who only needs a car for one out-of-town leg
+// (e.g. a Lillehammer day trip from an Oslo stay) shouldn't be told to rent
+// for the entire city stay, where driving/parking is typically expensive and
+// unnecessary. There is no dedicated "day trip" field in the itinerary
+// schema, so this detects day-trip days deterministically by reusing the
+// same catalog destinationKey cross-referencing already used for destination-
+// consistency checks: a day whose activities match a catalog entry whose
+// destinationKey differs from the day's own base AND isn't one of the trip's
+// actual lodging bases is a day-trip day. Falls back to the untouched
+// day1/last-day dates when no day-trip day is detected (e.g. the day-trip
+// destination has no catalog coverage) or car mode isn't 'D' — never worse
+// than the previous whole-trip default.
+export const rescopeDayTripCarRental = (
+  carRental: ItineraryGeneratedCarRental,
+  itinerary: PromptItinerary,
+  carMode: PromptCarCode,
+  entryByName: Map<string, AttractionCatalogEntry>
+): ItineraryGeneratedCarRental => {
+  if (carMode !== 'D') return carRental;
+  const baseDestinationKeys = new Set(itinerary.b.map((base) => normalizeDestinationKey(base.l)));
+  const dayTripDates: string[] = [];
+  for (const day of itinerary.dy) {
+    const dayDestinationKey = normalizeDestinationKey(day.b);
+    const isDayTripDay = day.it.some(([, , text]) => {
+      const entry = entryByName.get(normalizeText(text).toLowerCase());
+      return Boolean(
+        entry?.destinationKey &&
+          entry.destinationKey !== dayDestinationKey &&
+          !baseDestinationKeys.has(entry.destinationKey)
+      );
+    });
+    if (isDayTripDay) dayTripDates.push(day.dt);
+  }
+  if (!dayTripDates.length) return carRental;
+  dayTripDates.sort();
+  return {
+    ...carRental,
+    pickupDate: dayTripDates[0],
+    dropoffDate: dayTripDates[dayTripDates.length - 1],
+  };
 };
 
 const buildDetails = (
@@ -2899,7 +3109,8 @@ const runGenerateItineraryViaPromptPlan = async (
     entryAirport: input.departureAirport,
     exitAirport: input.returnAirport ?? input.homeAirport ?? input.departureAirport,
   });
-  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${homeTerminalNote ? `\n${homeTerminalNote}` : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}`;
+  const holidayAwarenessNote = buildHolidayAwarenessNote(normalized.sd, normalized.ed);
+  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${homeTerminalNote ? `\n${homeTerminalNote}` : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}${holidayAwarenessNote ? `\n${holidayAwarenessNote}` : ''}`;
   const dayDependency = buildPromptFingerprint({
     pipeline: ITINERARY_PIPELINE_VERSION, p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
     attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
@@ -3255,6 +3466,9 @@ const runGenerateItineraryViaPromptPlan = async (
     whyFitsByName,
     normalized.mob,
     destinationTransferTimingByDate
+  );
+  items.carRentals = items.carRentals.map((rental) =>
+    rescopeDayTripCarRental(rental, finalItinerary, normalized.car, entryByName)
   );
   const getYourGuideCandidates = buildGetYourGuideItineraryCandidates({
     activities: items.activities,
