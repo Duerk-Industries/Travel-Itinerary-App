@@ -14,7 +14,7 @@ TEST_AI_CAPTURE_BUCKET=travel-itinerary-app-test-ai-captures
 
 PROD_SERVICE_NAME=travel-itinerary-app
 PROD_REGION=us-east5
-PROD_HOSTING_SITE=travel-itinerary-app
+PROD_HOSTING_SITE=travel-itinerary-app-483623
 PROD_DOMAIN=https://duerk.org
 PROD_FIRESTORE_DATABASE_ID=travel-itinerary-app-database
 PROD_RUNTIME_SERVICE_ACCOUNT=travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com

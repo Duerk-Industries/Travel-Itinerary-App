@@ -162,8 +162,10 @@ bash scripts/cutover-test-to-prod.sh \
   --test-evidence dist/release/release-test-evidence-release-manifest-<sha>.json
 ```
 
+GITHUB_ACTOR can be "Bryan" or "Tristan"
 **PowerShell:**
 ```powershell
+$env:GITHUB_ACTOR = "Bryan"
 .\scripts\cutover-test-to-prod.ps1 `
   -ReleaseManifest dist/release/release-manifest-<sha>.json `
   -TestEvidence dist/release/release-test-evidence-release-manifest-<sha>.json

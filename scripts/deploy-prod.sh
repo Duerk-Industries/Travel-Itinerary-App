@@ -20,7 +20,8 @@ done
 
 [[ "${#REASON}" -ge 8 ]] || fail "--reason is required for direct production deploy"
 load_deploy_config
-require_vars PROD_SERVICE_NAME PROD_REGION PROD_HOSTING_SITE PROD_DOMAIN PROD_FIRESTORE_DATABASE_ID PROD_RUNTIME_SERVICE_ACCOUNT PROD_AI_CAPTURE_BUCKET
+ensure_gcloud_project_id
+require_vars GCLOUD_PROJECT_ID PROD_SERVICE_NAME PROD_REGION PROD_HOSTING_SITE PROD_DOMAIN PROD_FIRESTORE_DATABASE_ID PROD_RUNTIME_SERVICE_ACCOUNT PROD_AI_CAPTURE_BUCKET
 DEPLOY_AUDIT_API_URL="${DEPLOY_AUDIT_API_URL:-${PROD_DOMAIN%/}/api/internal/deploy}"
 require_github_actor "$DRY_RUN"
 
@@ -30,7 +31,16 @@ if [[ -z "$MANIFEST" ]]; then
   if [[ "$DRY_RUN" == "1" ]]; then
     build_args+=(--dry-run)
   fi
-  MANIFEST="$(bash "$SCRIPT_DIR/build-release.sh" "${build_args[@]}")"
+  build_log="$(mktemp)"
+  if ! bash "$SCRIPT_DIR/build-release.sh" "${build_args[@]}" >"$build_log" 2>&1; then
+    cat "$build_log" >&2
+    rm -f "$build_log"
+    exit 1
+  fi
+  cat "$build_log"
+  MANIFEST="$(tail -n 1 "$build_log" | tr -d '\r')"
+  rm -f "$build_log"
+  [[ -f "$MANIFEST" ]] || fail "Release build did not return a valid manifest path: $MANIFEST"
 fi
 node -e "const v=require('./scripts/lib/phase11-validators'); v.validateReleaseManifest(v.readJson(process.argv[1]));" "$MANIFEST"
 BACKEND_DIGEST="$(json_get "$MANIFEST" backendImageDigest)"
@@ -38,6 +48,7 @@ MANIFEST_GIT_SHA="$(json_get "$MANIFEST" gitSha)"
 WORK_DIR="$REPO_ROOT/dist/deploy-prod"
 prepare_frontend_from_manifest "$MANIFEST" "$WORK_DIR/frontend"
 write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE" "$WORK_DIR/frontend" "$PROD_SERVICE_NAME" "$PROD_REGION" "$PROD_DOMAIN"
+SECRET_ARG="$(cloud_run_secret_arg)"
 
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$PROD_SERVICE_NAME" \
@@ -45,7 +56,9 @@ if [[ "$DRY_RUN" != "1" ]]; then
     --region "$PROD_REGION" \
     --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" \
     --update-labels "app-git-sha=$MANIFEST_GIT_SHA" \
-    --update-env-vars "WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET"
+    --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
+    --set-secrets "$SECRET_ARG" \
+    --remove-env-vars "$(cloud_run_secret_pairs | cut -d= -f1 | paste -sd, -)"
   firebase_deploy_hosting "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE"
   bash "$SCRIPT_DIR/smoke-test.sh" --base-url "$PROD_DOMAIN" --environment production-direct
 fi
