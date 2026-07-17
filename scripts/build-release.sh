@@ -33,7 +33,7 @@ if [[ "$DRY_RUN" == "1" ]]; then
   printf 'dry-run frontend %s\n' "$GIT_SHA" > "$FRONTEND_DIR/index.html"
 else
   (cd "$REPO_ROOT" && npm run validate:app && npm run validate:server)
-  (cd "$REPO_ROOT/app" && npm run export:web -- "--output-dir=$FRONTEND_DIR")
+  (cd "$REPO_ROOT/app" && RELEASE_WEB_BUILD=1 npm run export:web -- "--output-dir=$FRONTEND_DIR")
 fi
 
 # Served alongside the frontend so cutover-test-to-prod.sh can confirm the

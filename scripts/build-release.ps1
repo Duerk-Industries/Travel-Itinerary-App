@@ -33,9 +33,13 @@ if ($DryRun) {
   } finally { Pop-Location }
   Push-Location (Join-Path $Script:RepoRoot 'app')
   try {
+    $env:RELEASE_WEB_BUILD = '1'
     & npm run export:web -- "--output-dir=$frontendDir"
     if ($LASTEXITCODE -ne 0) { Fail 'npm run export:web failed' }
-  } finally { Pop-Location }
+  } finally {
+    Remove-Item Env:RELEASE_WEB_BUILD -ErrorAction SilentlyContinue
+    Pop-Location
+  }
 }
 
 # Served alongside the frontend so cutover-test-to-prod.ps1 can confirm the
