@@ -5,25 +5,27 @@ description: Specialized gear for underwater exploration.
 gendered: false
 ---
 
-## Personal Gear
+<!-- General is included separately. Do not repeat General items. -->
+
+## Diving Gear
 - Dive mask
 - Snorkel
-- Fins and booties
+- Dive fins and booties
 - Wetsuit or rash guard
 - Dive computer
 - Regulator (if owned)
 - BCD (if owned)
 
 ## Documentation & Safety
-- Certification card (PADI/NAUI/etc.)
-- Logbook
+- Certification card
+- Dive logbook
 - Surface marker buoy (SMB)
 - Whistle or signaling device
-- Dive insurance details (e.g., DAN)
+- Dive insurance details
 
-## Misc
+## Accessories & Care
 - Defog solution or baby shampoo
 - Dry bag
 - Underwater camera or housing
-- Spare O-rings and tools (Save-a-dive kit)
+- Save-a-dive kit
 - Reef-safe sunscreen

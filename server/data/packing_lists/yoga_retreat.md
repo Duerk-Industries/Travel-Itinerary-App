@@ -5,22 +5,24 @@ description: Comfort and mindful gear for retreats.
 gendered: false
 ---
 
+<!-- General is included separately. Do not repeat General items. -->
+
 ## Practice Gear
 - Travel yoga mat
-- Yoga towel (Grip/sweat)
+- Yoga towel
 - Yoga blocks (if not provided)
 - Yoga strap
 
-## Apparel
+## Clothing
 - Breathable yoga tops
-- High-quality leggings or yoga pants
+- Leggings or yoga pants
 - Comfortable headband or hair ties
-- Layers for savasana (Light sweater or shawl)
+- Savasana layer (light sweater or shawl)
 - Slip-on shoes
 
 ## Mindful Essentials
-- Journal and favorite pen
-- Mala beads or meditation cushion (if small)
+- Journal and pen
+- Mala beads or meditation cushion
 - Essential oil roller
-- Reusable water bottle (Insulated)
+- Insulated water bottle
 - Incense or small candle (where permitted)

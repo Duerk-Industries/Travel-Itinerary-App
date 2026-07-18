@@ -1,6 +1,6 @@
 ---
 key: backpacking
-label: Backpacking / Ultralight
+label: Backpacking & Ultralight
 description: Lightweight multi-day backcountry equipment.
 gendered: false
 ---
@@ -15,15 +15,15 @@ gendered: false
 - Inflatable pillow
 - Compression sacks
 
-## Camp & Water
+## Camp Kitchen & Water
 - Camp sandals
-- Titanium pot
+- Titanium cook pot
 - Backpacking stove
 - Water purification tablets
 - Bear canister where required
 - Collapsible camp sink
 
-## Repair & Clothing
+## Clothing & Repairs
 - Repair tape
 - Multi-tool
 - Paracord

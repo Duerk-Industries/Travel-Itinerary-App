@@ -5,9 +5,11 @@ description: Neutral tones and optics for the bush.
 gendered: false
 ---
 
-## Apparel (Neutral Colors)
+<!-- General is included separately. Do not repeat General items. -->
+
+## Clothing (Neutral Colors)
 - Safari hat with chin strap
-- Lightweight long-sleeve shirts (Khaki/Tan/Green)
+- Lightweight long-sleeve shirts
 - Convertible safari pants
 - Comfortable closed-toe shoes
 - Light fleece for early morning drives
@@ -20,8 +22,8 @@ gendered: false
 - Bean bag or window mount for camera stability
 
 ## Health & Protection
-- Insect repellent with DEET
-- Malarial prophylaxis (if prescribed)
+- Insect repellent
+- Malaria medication (if prescribed)
 - High-SPF sunscreen
 - Eye drops for dust
 - Personal first aid kit

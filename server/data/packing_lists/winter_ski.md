@@ -24,7 +24,7 @@ gendered: false
 - Boot dryers
 - Goggles case
 
-## Safety
+## Snow Safety
 - Avalanche beacon
 - Probe and shovel
 - Waterproof gear labels

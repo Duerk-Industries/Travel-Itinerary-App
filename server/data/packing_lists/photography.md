@@ -5,25 +5,27 @@ description: For professional and enthusiast photographers.
 gendered: false
 ---
 
+<!-- General is included separately. Do not repeat General items. -->
+
 ## Camera Body & Lenses
-- DSLR or Mirrorless camera body
+- DSLR or mirrorless camera body
 - Spare camera body
 - Wide-angle lens
-- Prime lens (e.g., 35mm or 50mm)
+- Prime lens (35mm or 50mm)
 - Telephoto lens
 - Lens caps
 - Body caps
 
-## Accessories
+## Camera Accessories
 - Camera bag or backpack
 - Tripod or monopod
 - Spare batteries
 - Battery charger
-- Memory cards (High speed)
+- High-speed memory cards
 - Memory card case
 - External hard drive for backups
-- Lens cleaning kit (Microfiber, blower, fluid)
-- Filters (Polarizer, ND, UV)
+- Lens cleaning kit
+- Filters (polarizer, ND, or UV)
 - Remote shutter release
 
 ## Lighting & Power

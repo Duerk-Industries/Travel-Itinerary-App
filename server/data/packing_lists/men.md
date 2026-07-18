@@ -8,16 +8,16 @@ gendered: true
 <!-- General is included separately; do not repeat General items. -->
 
 ## Clothing
-- Casual button-down shirts
-- Polo shirts
+- Casual button-down shirt
+- Polo shirt
 - Chinos
 - Swim trunks
 - Athletic shorts
 - Sport coat
 - Dress trousers
-- Base-layer undershirts
+- Base-layer undershirt
 
-## Grooming
+## Grooming & Beauty
 - Shaving razor
 - Shaving cream
 - Beard trimmer

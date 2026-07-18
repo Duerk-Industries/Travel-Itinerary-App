@@ -7,7 +7,7 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Attire
+## Formal Attire
 - Formal gown
 - Cocktail dress
 - Tuxedo
@@ -16,7 +16,7 @@ gendered: false
 - Bow tie
 - Pocket square
 
-## Accessories
+## Formal Accessories
 - Clutch bag
 - Statement jewelry
 - Hosiery

@@ -5,34 +5,37 @@ description: Gear for our smallest travelers.
 gendered: false
 ---
 
+<!-- General is included separately. Do not repeat General items. -->
+
 ## Diapering & Hygiene
-- Diapers (Calculated for duration + extra)
-- Travel wipes
+- Diapers
+- Baby wipes
 - Diaper disposal bags
-- Changing mat (Portable)
+- Changing pad
 - Baby wash and lotion
 - Diaper rash cream
 
 ## Feeding
-- Bottles and nipples
+- Bottles
 - Formula or breast pump supplies
-- Sippy cups
+- Spill-proof cups
 - Portable high chair / harness
 - Baby food and snacks
-- Bibs (Silicone or disposable)
+- Bibs
 - Bottle brush and travel-size dish soap
 
 ## Sleep & Gear
 - Portable crib or bassinet
 - Crib sheets
 - Favorite blanket or swaddle
-- Pacifiers (and spares)
+- Pacifiers
 - White noise machine
 - Baby monitor
 
-## Out and About
-- Travel stroller or carrier
-- Car seat (if not renting)
+## Out & About
+- Travel stroller
+- Baby carrier
+- Car seat
 - Diaper bag
 - Sunshade for stroller/car
 - Favorite small toys and books

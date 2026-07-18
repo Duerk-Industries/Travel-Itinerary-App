@@ -20,14 +20,14 @@ gendered: false
 - Fuel canister
 - Lighter
 - Cook pot
-- Camping mug
+- Camp mug
 - Spork
 - Food storage container
 - Biodegradable dish soap
 
 ## Campsite
 - Camp chair
-- Campsite reservation
+- Campsite reservation details
 - Camp towel
 - Lantern
 - Fire starter

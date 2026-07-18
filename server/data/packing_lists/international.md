@@ -7,22 +7,21 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Border Documents
-- Visa printouts
+## Documents & Entry
+- Visa documents
 - Passport photos
 - Vaccination certificate
 - International driving permit
 - Embassy contact details
 - Customs forms
 
-## Connectivity
-- Foreign-language phrasebook
+## Connectivity & Navigation
+- Language phrasebook
 - Offline translation app
 - eSIM activation details
 - Local transit instructions
-- Backup digital documents
 
-## Arrival Preparation
+## Arrival Details
 - Currency exchange plan
 - Document wallet
 - Luggage tags

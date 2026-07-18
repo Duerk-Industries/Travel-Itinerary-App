@@ -18,12 +18,12 @@ gendered: false
 ## Onboard Comfort
 - Seasickness bands
 - Pool cover-up
-- Formal-night outfit
+- Formal night outfit
 - Foldable laundry hamper
 - Binoculars
 
 ## Shore Excursions
-- Shore-excursion bag
+- Shore excursion bag
 - Water shoes
 - Waterproof document pouch
 - Compact travel umbrella

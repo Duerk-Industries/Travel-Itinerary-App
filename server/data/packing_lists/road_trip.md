@@ -7,13 +7,13 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Vehicle Documents & Safety
+## Vehicle & Roadside Safety
 - Vehicle registration
 - Car insurance card
 - Roadside emergency kit
 - Tire pressure gauge
 - Jumper cables
-- Charging inverter
+- 12-volt power inverter
 - Roadside flares
 
 ## Car Comfort
@@ -27,6 +27,6 @@ gendered: false
 ## Route & Entertainment
 - Paper road atlas
 - Travel games
-- Downloaded road-trip playlists
+- Downloaded road trip playlists
 - Fuel stop plan
 - Offline roadside assistance number

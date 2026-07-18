@@ -9,13 +9,13 @@ gendered: false
 
 ## Documents & Money
 - Passport
-- Government-issued photo ID
-- Copies of travel documents
+- Photo ID
+- Travel document copies
 - Travel insurance details
-- Itinerary and reservations
+- Itinerary and reservation details
 - Emergency contact details
 - Credit cards
-- Cash in local currency
+- Local currency
 
 ## Health & Toiletries
 - Prescription medications
@@ -48,7 +48,7 @@ gendered: false
 - Universal travel adapter
 - E-reader
 
-## Everyday Clothing & Comfort
+## Clothing & Comfort
 - Underwear
 - Socks
 - Sleepwear
@@ -58,5 +58,5 @@ gendered: false
 - Small day bag
 - Laundry bag
 - Earplugs
-- Eye mask
+- Sleep mask
 - Pen

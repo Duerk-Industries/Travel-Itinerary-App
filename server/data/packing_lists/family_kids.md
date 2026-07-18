@@ -17,7 +17,7 @@ gendered: false
 - Spill-proof cups
 
 ## Transport & Safety
-- Stroller
+- Travel stroller
 - Car seat
 - Baby carrier
 - Baby monitor

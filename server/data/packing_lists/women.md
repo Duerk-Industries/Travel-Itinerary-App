@@ -8,15 +8,15 @@ gendered: true
 <!-- General is included separately; do not repeat General items. -->
 
 ## Clothing
-- Blouses
+- Blouse
 - Maxi dress
 - Skirt
 - Leggings
-- Bras
+- Bra
 - Shapewear
 - Evening wrap
 
-## Grooming
+## Grooming & Beauty
 - Hair ties
 - Hairbrush
 - Hair styling product

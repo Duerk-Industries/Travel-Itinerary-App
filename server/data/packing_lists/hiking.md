@@ -10,7 +10,7 @@ gendered: false
 ## Clothing & Footwear
 - Trail shoes
 - Hiking boots
-- Moisture-wicking hiking tops
+- Moisture-wicking hiking shirt
 - Hiking pants
 - Rain shell
 - Fleece midlayer
@@ -23,7 +23,7 @@ gendered: false
 - Headlamp
 - Whistle
 - Blister pads
-- Bear spray where permitted
+- Bear spray (where permitted)
 - Emergency shelter
 
 ## Hydration & Food
@@ -32,7 +32,7 @@ gendered: false
 - Hydration bladder
 - Collapsible water container
 
-## Gear
+## Trail Gear
 - Trekking poles
 - Dry bags
 - Pack rain cover
