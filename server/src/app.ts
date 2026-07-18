@@ -95,9 +95,34 @@ app.use('/api/billing/webhooks', express.raw({ type: 'application/json' }), stri
 
 const isRunningLocally = isLocalEnv();
 const webUrl = getBackendUrl('https://wander-bunnies.com') || 'https://wander-bunnies.com';
-const allowedOrigins = isRunningLocally
-  ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
-  : [webUrl];
+
+const getAllowedOrigins = () => {
+  const origins = new Set<string | RegExp>();
+  if (isRunningLocally) {
+    origins.add(/^http:\/\/localhost(:\d+)?$/);
+    origins.add(/^http:\/\/127\.0\.0\.1(:\d+)?$/);
+  }
+
+  // Add primary webUrl
+  origins.add(webUrl);
+
+  // Add origins from allowlist if configured
+  const allowlist = getEnvValue('AUTH_REDIRECT_URI_ALLOWLIST') || '';
+  allowlist.split(/[;,]/).forEach(origin => {
+    const trimmed = origin.trim();
+    if (trimmed.startsWith('http')) {
+      try {
+        origins.add(new URL(trimmed).origin);
+      } catch {
+        // invalid URL in allowlist, skip
+      }
+    }
+  });
+
+  return Array.from(origins);
+};
+
+const allowedOrigins = getAllowedOrigins();
 
 app.use(cors({
   origin: (origin, callback) => {
