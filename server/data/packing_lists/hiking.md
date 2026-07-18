@@ -24,15 +24,13 @@ gendered: false
 - Whistle
 - Blister pads
 - Bear spray (where permitted)
-- Emergency shelter
 
 ## Food & Hydration
 - Trail snacks
-- Water filter
 - Hydration bladder
-- Collapsible water container
 
 ## Travel Gear & Accessories
+- Hiking backpack
 - Trekking poles
 - Dry bag
 - Pack rain cover

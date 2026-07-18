@@ -11,12 +11,11 @@ gendered: false
 - Comfortable, broken-in shoes or boots
 - Bandana or pashmina (for dust/sun)
 - Festival outfits and costumes
-- Lightweight rain poncho
+- Compact rain poncho
 
 ## Health & Toiletries
 - Electrolyte powder
 - Sunscreen spray and stick
-- Basic first-aid kit
 - Biodegradable glitter or face gems
 - Travel toilet paper pack
 

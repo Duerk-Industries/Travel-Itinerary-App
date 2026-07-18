@@ -14,7 +14,6 @@ gendered: false
 - Waterproof cabin pouch
 - Over-door organizer
 - Foldable laundry hamper
-- Binoculars
 - Shore excursion bag
 - Waterproof document pouch
 - Compact travel umbrella
@@ -23,6 +22,9 @@ gendered: false
 - Formal night outfit
 - Pool cover-up
 - Water shoes
+
+## Technology & Gadgets
+- Binoculars
 
 ## Health & Toiletries
 - Seasickness bands

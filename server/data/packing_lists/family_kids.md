@@ -11,6 +11,8 @@ gendered: false
 - Diapers
 - Baby wipes
 - Changing pad
+
+## Clothing & Footwear
 - Child sun hat
 
 ## Food & Hydration

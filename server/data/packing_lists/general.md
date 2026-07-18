@@ -54,7 +54,11 @@ gendered: false
 - Socks
 - Sleepwear
 - Comfortable walking shoes
+
+## Food & Hydration
 - Reusable water bottle
+
+## Travel Gear & Accessories
 - Sunglasses
 - Small day bag
 - Laundry bag
