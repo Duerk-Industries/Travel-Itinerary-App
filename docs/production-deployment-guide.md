@@ -332,3 +332,56 @@ npm --prefix app run typecheck
 
 Native iOS/Android artifacts are built through EAS workflows, not directly by
 these server/frontend cutover scripts.
+
+## Quick PowerShell Checklist: Test Then Production
+
+Run these commands from the repository root in PowerShell. Replace `Bryan`
+with `Tristan` if that is the authorized deployment actor. The test command
+builds the release and writes the manifest and test evidence under
+`dist\release`; the final command promotes that same tested manifest to
+production.
+
+```powershell
+Set-Location 'C:\Git\Tristan\Travel-Itinerary-App'
+$env:GITHUB_ACTOR = 'Bryan'
+
+# Optional: inspect the currently deployed test and production revisions.
+.\scripts\current-state.ps1
+
+# Deploy a new build to the isolated test environment and run its smoke tests.
+# Add -Reseed only when synthetic test data should be recreated.
+.\scripts\deploy-test.ps1
+
+# Find the evidence produced by the test deployment and derive its paired manifest.
+$evidence = Get-ChildItem -LiteralPath '.\dist\release' -Filter 'release-test-evidence-*.json' |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
+if (-not $evidence) { throw 'No test evidence file was found in dist\release.' }
+
+$testEvidence = $evidence.FullName
+$manifestName = $evidence.BaseName -replace '^release-test-evidence-', ''
+$releaseManifest = Join-Path $evidence.DirectoryName ($manifestName + '.json')
+if (-not (Test-Path -LiteralPath $releaseManifest)) {
+  throw "Paired release manifest was not found: $releaseManifest"
+}
+
+Write-Host "Release manifest: $releaseManifest"
+Write-Host "Test evidence:    $testEvidence"
+
+# Promote the exact release that passed test validation to production.
+.\scripts\cutover-test-to-prod.ps1 `
+  -ReleaseManifest $releaseManifest `
+  -TestEvidence $testEvidence
+
+# Optional: confirm the final Cloud Run state and deployed git SHA.
+.\scripts\current-state.ps1
+```
+
+For an emergency direct production deployment that intentionally bypasses
+test cutover, use this only with a specific reason:
+
+```powershell
+Set-Location 'C:\Git\Tristan\Travel-Itinerary-App'
+$env:GITHUB_ACTOR = 'Bryan'
+.\scripts\deploy-prod.ps1 -Reason 'Emergency production hotfix for <issue>'
+```
