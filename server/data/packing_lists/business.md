@@ -7,24 +7,25 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Professional Attire
+## Clothing & Footwear
 - Business suit
 - Dress shirt
 - Professional skirt
 - Blazer
-- Leather belt
 - Polished dress shoes
+- Leather belt
 
-## Meeting Essentials
+## Travel Gear & Accessories
 - Portfolio
 - Business cards
 - Name badge holder
 - Meeting notebook
 - Presentation clicker
 - Printed meeting agenda
-
-## Garment Care
 - Garment bag
 - Travel steamer
 - Collar stays
+
+## Health & Toiletries
 - Stain remover
+- Breath mints

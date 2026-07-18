@@ -15,17 +15,19 @@ gendered: false
 - Dive computer
 - Regulator (if owned)
 - BCD (if owned)
+- Surface marker buoy (SMB)
+- Save-a-dive kit
 
-## Documentation & Safety
+## Documents & Money
 - Certification card
 - Dive logbook
-- Surface marker buoy (SMB)
-- Whistle or signaling device
 - Dive insurance details
 
-## Accessories & Care
-- Defog solution or baby shampoo
+## Travel Gear & Accessories
 - Dry bag
 - Underwater camera or housing
-- Save-a-dive kit
+- Whistle or signaling device
+
+## Health & Toiletries
+- Defog solution or baby shampoo
 - Reef-safe sunscreen

@@ -5,27 +5,26 @@ description: Essentials for sun, sand, and humidity.
 gendered: false
 ---
 
-<!-- General is included separately. Do not repeat General items. -->
+<!-- General is included separately; do not repeat General items. -->
 
-## Beach Essentials
-- Reef-safe sunscreen
-- After-sun lotion
-- Dry bag
-- Snorkel mask
-- Swim fins
-- Beach towel
-- Waterproof phone pouch
-
-## Clothing & Accessories
+## Clothing & Footwear
+- Lightweight linen or cotton clothing
 - Sun hat (wide brim)
-- Polarized sunglasses
 - Beach sandals
 - Water shoes
 - Rash guard
-- Lightweight linen or cotton clothing
-- Insect repellent
 
-## Health & Hydration
+## Health & Toiletries
+- Reef-safe sunscreen
+- After-sun lotion
+- Insect repellent
+- Anti-itch cream for bug bites
 - Rehydration salts
 - Motion sickness medication
-- Anti-itch cream for bug bites
+
+## Travel Gear & Accessories
+- Beach towel
+- Waterproof phone pouch
+- Dry bag
+- Snorkel mask
+- Swim fins

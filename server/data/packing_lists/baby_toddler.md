@@ -7,7 +7,7 @@ gendered: false
 
 <!-- General is included separately. Do not repeat General items. -->
 
-## Diapering & Hygiene
+## Health & Toiletries
 - Diapers
 - Baby wipes
 - Diaper disposal bags
@@ -15,7 +15,7 @@ gendered: false
 - Baby wash and lotion
 - Diaper rash cream
 
-## Feeding
+## Food & Hydration
 - Bottles
 - Formula or breast pump supplies
 - Spill-proof cups
@@ -24,15 +24,13 @@ gendered: false
 - Bibs
 - Bottle brush and travel-size dish soap
 
-## Sleep & Gear
+## Travel Gear & Accessories
 - Portable crib or bassinet
 - Crib sheets
 - Favorite blanket or swaddle
 - Pacifiers
 - White noise machine
 - Baby monitor
-
-## Out & About
 - Travel stroller
 - Baby carrier
 - Car seat

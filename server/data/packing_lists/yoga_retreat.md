@@ -13,7 +13,7 @@ gendered: false
 - Yoga blocks (if not provided)
 - Yoga strap
 
-## Clothing
+## Clothing & Footwear
 - Breathable yoga tops
 - Leggings or yoga pants
 - Comfortable headband or hair ties
@@ -22,7 +22,7 @@ gendered: false
 
 ## Mindful Essentials
 - Journal and pen
-- Mala beads or meditation cushion
+- Meditation cushion
 - Essential oil roller
-- Insulated water bottle
-- Incense or small candle (where permitted)
+- Mala beads
+- Incense or small candle

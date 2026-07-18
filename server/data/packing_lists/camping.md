@@ -7,15 +7,20 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Shelter & Sleep
+## Travel Gear & Accessories
 - Tent
 - Tent footprint
 - Sleeping bag
 - Sleeping pad
 - Camping pillow
 - Tarp
+- Camp chair
+- Camp towel
+- Lantern
+- Fire starter
+- Tent mallet
 
-## Camp Kitchen
+## Food & Hydration
 - Camp stove
 - Fuel canister
 - Lighter
@@ -25,10 +30,5 @@ gendered: false
 - Food storage container
 - Biodegradable dish soap
 
-## Campsite
-- Camp chair
+## Documents & Money
 - Campsite reservation details
-- Camp towel
-- Lantern
-- Fire starter
-- Tent mallet

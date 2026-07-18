@@ -7,22 +7,21 @@ gendered: false
 
 <!-- General is included separately. Do not repeat General items. -->
 
-## Security & Organization
+## Travel Gear & Accessories
 - Combination padlock
 - Packing cubes
 - Luggage cable lock
+- Microfiber travel towel
+- Travel sheet or sleeping bag liner
 - Small daypack for valuables
 
-## Dorm Comfort
-- Microfiber travel towel
+## Health & Toiletries
 - Shower flip-flops
-- Earplugs (high NRR)
-- Portable reading light
-- Travel sheet or sleeping bag liner
-
-## Toiletries & Laundry
 - Hanging toiletry bag
 - Travel-size laundry detergent
+- Travel toilet paper pack
+
+## Technology & Gadgets
+- Portable reading light
 - Compact plug adapter
 - Multi-plug extension cord
-- Travel toilet paper pack

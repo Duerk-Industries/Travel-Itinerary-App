@@ -7,14 +7,18 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Swimwear & Footwear
+## Clothing & Footwear
 - Swimsuit
 - Cover-up or sarong
 - Rash guard
 - Beach sandals
 - Water shoes
 
-## Beach Essentials
+## Health & Toiletries
+- Reef-safe sunscreen
+- After-sun lotion
+
+## Travel Gear & Accessories
 - Beach tote
 - Beach towel
 - Snorkel mask
@@ -22,9 +26,6 @@ gendered: false
 - Sand-proof mat
 - Beach umbrella
 - Waterproof phone pouch
-- After-sun lotion
-
-## Water & Sand
 - Dry bag
 - Inflatable flotation aid
 - Mesh gear bag

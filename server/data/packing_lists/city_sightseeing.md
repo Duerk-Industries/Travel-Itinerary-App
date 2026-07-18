@@ -7,23 +7,25 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Access & Navigation
+## Documents & Money
 - Transit card
 - Museum passes
 - Museum reservation QR codes
 - Hotel key card
 - Local neighborhood map
 
-## Day Out
+## Travel Gear & Accessories
 - Anti-theft crossbody bag
-- Compact camera
-- Spare camera battery
 - Foldable tote
 - Comfortable evening shoes
 - Coin purse
-
-## Weather & Small Repairs
 - Compact rain poncho
+- Small sewing kit
+
+## Technology & Gadgets
+- Compact camera
+- Spare camera battery
+
+## Health & Toiletries
 - Blister pads
 - Stain remover
-- Small sewing kit

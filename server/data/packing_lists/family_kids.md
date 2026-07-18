@@ -7,25 +7,25 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Baby Care
+## Health & Toiletries
 - Diapers
 - Baby wipes
 - Changing pad
+- Child sun hat
+
+## Food & Hydration
 - Formula
 - Bottles
-- Pacifiers
 - Spill-proof cups
+- Kid snacks
 
-## Transport & Safety
+## Travel Gear & Accessories
 - Travel stroller
 - Car seat
 - Baby carrier
 - Baby monitor
 - Portable blackout shade
-
-## Comfort & Entertainment
 - Child-size headphones
 - Favorite comfort toy
-- Kid snacks
 - Travel activity kit
-- Child sun hat
+- Pacifiers

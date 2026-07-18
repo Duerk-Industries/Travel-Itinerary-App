@@ -7,24 +7,23 @@ gendered: false
 
 <!-- General is included separately. Do not repeat General items. -->
 
-## Survival Essentials
-- Hydration pack
-- High-fidelity earplugs
-- High-capacity power bank
-- Travel toilet paper pack
-- Portable fan or mister
-
-## Clothing & Expression
+## Clothing & Footwear
 - Comfortable, broken-in shoes or boots
 - Bandana or pashmina (for dust/sun)
-- Sunglasses and backup pair
 - Festival outfits and costumes
-- Biodegradable glitter or face gems
 - Lightweight rain poncho
 
-## Safety & Health
+## Health & Toiletries
 - Electrolyte powder
 - Sunscreen spray and stick
 - Basic first-aid kit
+- Biodegradable glitter or face gems
+- Travel toilet paper pack
+
+## Travel Gear & Accessories
+- Hydration pack
+- High-fidelity earplugs
+- High-capacity power bank
+- Portable fan or mister
 - Small flashlight or glow sticks
-- Totem or identifying flag (for finding friends)
+- Totem or identifying flag

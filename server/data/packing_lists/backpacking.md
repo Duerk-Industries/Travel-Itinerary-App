@@ -7,26 +7,27 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Pack & Sleep
+## Travel Gear & Accessories
 - Ultralight backpack
 - Pack liner
 - Trekking quilt
 - Foam sit pad
 - Inflatable pillow
 - Compression sacks
+- Repair tape
+- Multi-tool
+- Paracord
+- Spare cord locks
 
-## Camp Kitchen & Water
-- Camp sandals
+## Food & Hydration
 - Titanium cook pot
 - Backpacking stove
 - Water purification tablets
 - Bear canister where required
 - Collapsible camp sink
 
-## Clothing & Repairs
-- Repair tape
-- Multi-tool
-- Paracord
+## Clothing & Footwear
+- Camp sandals
 - Sun hoodie
 - Ultralight rain kilt
-- Spare cord locks
+- Moisture-wicking base layers

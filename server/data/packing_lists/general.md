@@ -30,6 +30,7 @@ gendered: false
 - Face moisturizer
 - Lip balm
 - Hand sanitizer
+- Sunscreen
 - Tissues
 - Wet wipes
 - Glasses
@@ -37,7 +38,7 @@ gendered: false
 - Contact lens case and solution
 - Personal hygiene products
 
-## Technology
+## Technology & Gadgets
 - Phone
 - Phone charging cable
 - Wall charger
@@ -48,7 +49,7 @@ gendered: false
 - Universal travel adapter
 - E-reader
 
-## Clothing & Comfort
+## Clothing & Footwear
 - Underwear
 - Socks
 - Sleepwear

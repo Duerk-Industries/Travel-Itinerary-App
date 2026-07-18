@@ -5,9 +5,9 @@ description: Neutral tones and optics for the bush.
 gendered: false
 ---
 
-<!-- General is included separately. Do not repeat General items. -->
+<!-- General is included separately; do not repeat General items. -->
 
-## Clothing (Neutral Colors)
+## Clothing & Footwear
 - Safari hat with chin strap
 - Lightweight long-sleeve shirts
 - Convertible safari pants
@@ -15,15 +15,13 @@ gendered: false
 - Light fleece for early morning drives
 - Bandana or scarf for dust
 
-## Optics & Tech
+## Technology & Gadgets
 - Binoculars (8x42 recommended)
 - Camera with telephoto lens (300mm+)
 - Extra memory cards and batteries
-- Bean bag or window mount for camera stability
+- Window mount for camera stability
 
-## Health & Protection
+## Health & Toiletries
 - Insect repellent
 - Malaria medication (if prescribed)
-- High-SPF sunscreen
 - Eye drops for dust
-- Personal first aid kit

@@ -5,27 +5,27 @@ description: Transport, feeding, health, and comfort items for pets.
 gendered: false
 ---
 
-<!-- General is included separately; do not repeat General items. -->
+<!-- General is included separately. Do not repeat General items. -->
 
-## Transport & Identification
+## Travel Gear & Accessories
 - Pet carrier
 - Leash
 - Harness
 - Identification tags
-- Veterinary records
-- Recent pet photo
+- Familiar blanket
+- Grooming brush
 
-## Food & Cleanup
+## Food & Hydration
 - Pet food
 - Collapsible bowl
+- Food storage container
+- Travel water dispenser
+
+## Health & Toiletries
+- Veterinary records
+- Recent pet photo
+- Pet medications
+- Calming aid
 - Waste bags
 - Portable litter tray
 - Litter scoop
-- Food storage container
-
-## Comfort & Health
-- Familiar blanket
-- Grooming brush
-- Pet medications
-- Calming aid
-- Travel water dispenser

@@ -26,13 +26,13 @@ gendered: false
 - Bear spray (where permitted)
 - Emergency shelter
 
-## Hydration & Food
+## Food & Hydration
 - Trail snacks
 - Water filter
 - Hydration bladder
 - Collapsible water container
 
-## Trail Gear
+## Travel Gear & Accessories
 - Trekking poles
-- Dry bags
+- Dry bag
 - Pack rain cover

@@ -7,26 +7,26 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Vehicle & Roadside Safety
+## Navigation & Safety
 - Vehicle registration
 - Car insurance card
 - Roadside emergency kit
 - Tire pressure gauge
 - Jumper cables
-- 12-volt power inverter
 - Roadside flares
+- Paper road atlas
+- Offline roadside assistance number
 
-## Car Comfort
+## Travel Gear & Accessories
 - Phone mount
 - Cooler
 - Car trash container
 - Reusable shopping bags
 - Travel blanket
 - Neck support pillow
+- 12-volt power inverter
 
-## Route & Entertainment
-- Paper road atlas
+## Entertainment
 - Travel games
 - Downloaded road trip playlists
 - Fuel stop plan
-- Offline roadside assistance number

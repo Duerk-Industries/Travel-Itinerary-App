@@ -7,24 +7,24 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Snow Clothing
+## Clothing & Footwear
 - Thermal base layers
 - Ski jacket
 - Snow pants
 - Neck gaiter
 - Insulated ski gloves
-- Hand warmers
 - Ski socks
+- Hand warmers
 
-## Ski Equipment
+## Travel Gear & Accessories
 - Ski goggles
 - Ski helmet
 - Ski poles
 - Lift-ticket holder
 - Boot dryers
 - Goggles case
+- Waterproof gear labels
 
-## Snow Safety
+## Navigation & Safety
 - Avalanche beacon
 - Probe and shovel
-- Waterproof gear labels

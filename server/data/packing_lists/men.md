@@ -7,7 +7,7 @@ gendered: true
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Clothing
+## Clothing & Footwear
 - Casual button-down shirt
 - Polo shirt
 - Chinos
@@ -17,14 +17,14 @@ gendered: true
 - Dress trousers
 - Base-layer undershirt
 
-## Grooming & Beauty
+## Health & Toiletries
 - Shaving razor
 - Shaving cream
 - Beard trimmer
 - Aftershave
 - Cologne
 
-## Accessories
+## Travel Gear & Accessories
 - Belt
 - Tie clip
 - Cufflinks
