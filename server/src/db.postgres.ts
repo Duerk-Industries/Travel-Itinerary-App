@@ -72,7 +72,7 @@ import {
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
-import { normalizeAirportDataset, searchBundledAirportDataset } from './services/airportCatalog';
+import { AIRPORT_SEARCH_RESULT_LIMIT, mergeAirportSearchResults, normalizeAirportDataset } from './services/airportCatalog';
 import fs from 'fs';
 import path from 'path';
 import { getReservedUsernames } from './config/authFlags';
@@ -6946,13 +6946,11 @@ export const searchFlightLocations = async (userId: string, query: string): Prom
         OR LOWER(a.city) LIKE $1
         OR LOWER(a.name) LIKE $1
      ORDER BY label
-     LIMIT 15`,
-    [like]
+     LIMIT $2`,
+    [like, AIRPORT_SEARCH_RESULT_LIMIT]
   );
   const dbResults = rows.map((r) => r.label).filter(Boolean);
-  if (dbResults.length >= 15) return dbResults;
-  const fallbackResults = searchBundledAirportDataset(query, 15);
-  return Array.from(new Set([...dbResults, ...fallbackResults])).slice(0, 15);
+  return mergeAirportSearchResults(dbResults, query);
 };
 
 const toLocationRecord = (row: any): LocationRecord => {

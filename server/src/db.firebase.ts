@@ -3898,14 +3898,12 @@ export const searchFlightLocations = async (_userId: string, query: string): Pro
     .catch(() => null);
   if (exactMatches && !exactMatches.empty) {
     const exactResults = exactMatches.docs.map((d) => d.data().label as string).filter(Boolean);
-    if (exactResults.length >= 15) return exactResults;
-    const fallbackResults = searchBundledAirportDataset(query, 15);
-    return Array.from(new Set([...exactResults, ...fallbackResults])).slice(0, 15);
+    return mergeAirportSearchResults(exactResults, query);
   }
 
   // Fallback for partial airport queries when Firestore only has exact search tokens.
   const airports = await db.collection('airports').get().catch(() => null);
-  if (!airports || airports.empty) return searchBundledAirportDataset(query, 15);
+  if (!airports || airports.empty) return searchBundledAirportDataset(query);
 
   const matches = airports.docs
     .map((doc) => doc.data() as any)
@@ -3922,12 +3920,10 @@ export const searchFlightLocations = async (_userId: string, query: string): Pro
       airport.name.includes(normalized)
     )
     .sort((left, right) => left.label.localeCompare(right.label))
-    .slice(0, 15)
     .map((airport) => airport.label)
     .filter(Boolean);
 
-  const fallbackResults = searchBundledAirportDataset(query, 15);
-  return Array.from(new Set([...matches, ...fallbackResults])).slice(0, 15);
+  return mergeAirportSearchResults(matches, query);
 };
 
 const toLocationRecord = (id: string, data: any): LocationRecord => ({
@@ -8112,7 +8108,7 @@ export const deactivateOldPricesForPlan = async (
   await batch.commit();
 };
 
-import { searchBundledAirportDataset } from './services/airportCatalog';
+import { mergeAirportSearchResults, searchBundledAirportDataset } from './services/airportCatalog';
 
 // ---------------------------------------------------------------------------
 // Packing lists v2 (Firestore provider)

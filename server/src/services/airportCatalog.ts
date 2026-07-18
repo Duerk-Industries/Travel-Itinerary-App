@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 export const AIRPORT_DATASET_URL = 'https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json';
+export const AIRPORT_SEARCH_RESULT_LIMIT = 25;
 
 export type AirportCatalogRecord = {
   iata_code: string;
@@ -96,7 +97,7 @@ export const loadBundledAirportDataset = (): AirportCatalogRecord[] => {
   return bundledAirportDatasetCache;
 };
 
-export const searchBundledAirportDataset = (query: string, limit = 15): string[] => {
+export const searchBundledAirportDataset = (query: string, limit = AIRPORT_SEARCH_RESULT_LIMIT): string[] => {
   const normalized = normalizeText(query).toLowerCase();
   if (!normalized) return [];
   return loadBundledAirportDataset()
@@ -116,6 +117,15 @@ export const searchBundledAirportDataset = (query: string, limit = 15): string[]
     .slice(0, limit)
     .map((airport) => airport.label);
 };
+
+export const mergeAirportSearchResults = (
+  primaryResults: string[],
+  query: string,
+  limit = AIRPORT_SEARCH_RESULT_LIMIT
+): string[] => Array.from(new Set([
+  ...searchBundledAirportDataset(query, limit),
+  ...primaryResults,
+])).slice(0, limit);
 
 /** Resolve a coarse airport anchor without geocoding an address or calling an API. */
 export const findBundledAirport = (query: string | null | undefined): AirportCatalogRecord | null => {
