@@ -6,6 +6,7 @@ import type { ActivityType, AttractionDurationMetadata } from '../types';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { recordProviderRequestCost } from '../apis/providerBudgeting';
 import { fetchWikipediaEnrichment } from './wikipediaGeocodingService';
+import { trimToSentences } from '../utils/sentenceTrim';
 
 export const ACTIVITY_TYPE_DURATION_MINUTES: Record<ActivityType, number> = {
   'Sights & Landmarks': 45,
@@ -82,15 +83,6 @@ const negativeCacheIsStale = (metadata: AttractionDurationMetadata | null): bool
 const WIKIPEDIA_SUMMARY_TIMEOUT_MS = 8000;
 const MAX_DESCRIPTION_SENTENCES = 2;
 
-const trimToSentences = (text: string, maxSentences: number): string => {
-  const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [text];
-  return sentences
-    .slice(0, maxSentences)
-    .map((sentence) => sentence.trim())
-    .join(' ')
-    .trim();
-};
-
 // Fetches a clean, real plain-text summary for an attraction from Wikipedia's
 // REST summary endpoint (distinct from the search-snippet/tagline text
 // already used for catalog discovery, which is too fragmentary to show
@@ -161,10 +153,18 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   const cachedSummary = String(params.cachedWikipediaSummary ?? '').trim();
   const allowDescriptionLookup = params.allowDescriptionLookup ?? true;
   const searchTerm = String(params.wikipediaSearchTerm ?? '').trim() || params.name;
-  const description =
-    cachedSummary ||
-    (allowDescriptionLookup ? (await fetchWikipediaEnrichment(searchTerm, params.destinationDisplayName))?.summary : null) ||
-    null;
+  const searchedDescription = allowDescriptionLookup
+    ? (await fetchWikipediaEnrichment(searchTerm, params.destinationDisplayName))?.summary
+    : null;
+  // Search is the preferred path because generated names are often not exact
+  // Wikipedia titles. For canonical attractions, however, search can miss or
+  // be temporarily unavailable even when the exact article exists. Use the
+  // REST summary endpoint as a verified, title-based fallback rather than
+  // silently dropping the attraction blurb.
+  const exactDescription = allowDescriptionLookup && !searchedDescription
+    ? await fetchWikipediaSummary(searchTerm)
+    : null;
+  const description = cachedSummary || searchedDescription || exactDescription || null;
   const entry: AttractionDurationMetadata = {
     id: '',
     destinationKey: params.destinationKey,

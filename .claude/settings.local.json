@@ -51,7 +51,8 @@
       "Bash(FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT_ID=travel-itinerary-app-483623 npx tsx scratch-repro.ts)",
       "Bash(FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT_ID=travel-itinerary-app-483623 npx tsx scratch-clear-cache.ts)",
       "Bash(rm -f \"c:/Users/trist/Git/Travel-Itinerary-App/server/scratch-clear-cache.ts\")",
-      "Bash(ITINERARY_PLAN_CACHE_ENABLED=0 npm run replay:itinerary -- --request ./logs/ai-replay/Norway.json --out ./logs/ai-replay/norway_final --models openai:gpt-5.4-mini --raw-capture)"
+      "Bash(ITINERARY_PLAN_CACHE_ENABLED=0 npm run replay:itinerary -- --request ./logs/ai-replay/Norway.json --out ./logs/ai-replay/norway_final --models openai:gpt-5.4-mini --raw-capture)",
+      "Bash(SHOW_TEST_LOGS=1 npx jest itinerary-prompt-plan -t \"maps short prompt output\")"
     ]
   }
 }

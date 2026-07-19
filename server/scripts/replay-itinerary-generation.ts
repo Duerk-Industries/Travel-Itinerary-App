@@ -212,6 +212,7 @@ export const apiRouteBodyToServiceRequest = (request: Record<string, unknown>): 
     : [];
   const country = String(request.country ?? '').trim();
   return {
+    userId: typeof request.userId === 'string' && request.userId.trim() ? request.userId.trim() : undefined,
     destinations: locations.length ? locations : country ? [country] : [],
     days: request.days,
     budgetMin: request.budgetMin,
@@ -235,6 +236,7 @@ export const apiRouteBodyToServiceRequest = (request: Record<string, unknown>): 
 // format mirroring the create-trip wizard's AI-generation fields, distinct
 // from the wire/internal shapes the other converters handle.
 export const wizardCliInputToServiceRequest = (input: Record<string, unknown>): Record<string, unknown> => ({
+  userId: typeof input.userId === 'string' && input.userId.trim() ? input.userId.trim() : undefined,
   destinations: Array.isArray(input.destinations)
     ? input.destinations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [],
