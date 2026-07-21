@@ -34,6 +34,7 @@ import internalDeployRoutes from './routes/internalDeployRoutes';
 import prometheusRoutes from './routes/prometheusRoutes';
 import staticMapRoutes from './routes/staticMapRoutes';
 import getYourGuideRoutes from './routes/getYourGuideRoutes';
+import { privacyPolicyHtml } from './legal/privacyPolicyHtml';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -184,6 +185,10 @@ const hasWebApp = fs.existsSync(webIndexPath);
 
 app.get('/login', (_req, res) => {
   res.sendFile(loginPath);
+});
+
+app.get('/privacy', (_req, res) => {
+  res.type('html').send(privacyPolicyHtml);
 });
 
 app.get('/api/diagnostics/google-client-id', (_req, res) => {
