@@ -8,14 +8,13 @@ gendered: false
 <!-- This baseline is included separately. Do not repeat these items in another preset. -->
 
 ## Documents & Money
-- Passport
 - Photo ID
 - Travel document copies
 - Travel insurance details
 - Itinerary and reservation details
 - Emergency contact details
 - Credit cards
-- Local currency
+- Cash
 
 ## Health & Toiletries
 - Prescription medications
@@ -47,13 +46,13 @@ gendered: false
 - Laptop
 - Laptop charger
 - Universal travel adapter
-- E-reader
 
 ## Clothing & Footwear
 - Underwear
 - Socks
 - Sleepwear
-- Comfortable walking shoes
+- Shoes
+- Hotel shoes
 
 ## Food & Hydration
 - Reusable water bottle
