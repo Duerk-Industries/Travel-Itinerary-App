@@ -244,6 +244,7 @@ providers:
     overall: 1000
     callers:
       PHOTOS_PICKER_OAUTH: 100
+      PHOTOS_PICKER_SESSION: 100
       PHOTOS_ALBUM_LIST: 200
       PHOTOS_MEDIA_FETCH: 500
 

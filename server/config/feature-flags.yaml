@@ -85,6 +85,15 @@ flags:
   trip_blog_google_photos_import:
     enabled: false
     description: "Phase 3 Google Photos album import and deep-linking"
+  trip_blog_apple_photos_import:
+    enabled: false
+    description: "Apple Photos import"
+  trip_blog_mobile_share_ios:
+    enabled: false
+    description: "iOS share extension upload"
+  trip_blog_mobile_share_android:
+    enabled: false
+    description: "Android share intent upload"
   trip_blog_public_sharing:
     enabled: false
     description: "Phase 4 public sharing, consent flow, and vanity URLs"

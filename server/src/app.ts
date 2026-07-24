@@ -36,6 +36,7 @@ import staticMapRoutes from './routes/staticMapRoutes';
 import getYourGuideRoutes from './routes/getYourGuideRoutes';
 import blogRoutes from './routes/blogRoutes';
 import blogStorageRoutes from './routes/blogStorageRoutes';
+import blogImportRoutes from './routes/blogImportRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -388,6 +389,7 @@ app.use('/api/flights', transferRoutes);
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/trips', blogRoutes);
+app.use('/api/trips', blogImportRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
