@@ -8,6 +8,10 @@ const child = spawn(process.execPath, [expoCli, 'export', '--platform', 'web', .
   env: {
     ...process.env,
     EXPO_NO_SENTRY_METRO: '1',
+    // Expo emits workspace-root-relative entry and lazy-module paths in this
+    // monorepo. Keep Metro's server root aligned during static web exports,
+    // just as the local web launcher does.
+    WANDERBUNNIES_WEB_DEV: '1',
   },
 });
 

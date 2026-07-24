@@ -177,9 +177,11 @@ describe('Metro config parity (root EAS config vs. app local config)', () => {
     }
   });
 
-  it('enables workspace-root serving from the local web launcher', () => {
-    const launcher = fs.readFileSync(path.join(appRoot, 'scripts', 'start-web.js'), 'utf8');
-    expect(launcher).toContain("WANDERBUNNIES_WEB_DEV: '1'");
+  it('enables workspace-root serving from both web launchers', () => {
+    for (const scriptName of ['start-web.js', 'export-web.js']) {
+      const launcher = fs.readFileSync(path.join(appRoot, 'scripts', scriptName), 'utf8');
+      expect(launcher).toContain("WANDERBUNNIES_WEB_DEV: '1'");
+    }
   });
 
   it('runtime app sources do not import Node core modules or shims directly', () => {
