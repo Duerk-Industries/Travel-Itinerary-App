@@ -38,6 +38,9 @@ export interface BlogTextItem {
   languageTag: string | null;
   createdAt: string;
   updatedAt: string;
+  sourceType?: 'itinerary_detail' | null;
+  sourceId?: string | null;
+  sourceDetached?: boolean;
 }
 
 export interface BlogDay {

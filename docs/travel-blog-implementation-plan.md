@@ -85,6 +85,7 @@ phase.
   provider (destination/date/timezone key, bounded TTL, stale fallback). Never call the provider on
   every blog render; the badge is optional and independently flaggable.
 - **Cursor Pagination**: Implement `?date=` and `?cursor=` filtering in the repository from Day 1.
+- **Itinerary source links**: Project day-level itinerary `note` and `place` entries into linked blog text items. Store a source snapshot and detached state; synchronize trip-page edits until the blog copy is edited or deleted, then preserve the blog copy independently. Source deletion detaches rather than deletes blog content. Cover Postgres, Firebase, and in-memory adapter parity.
   - Wire through `entitlementService.ts` (`assertCanUseFeature(userId, 'trip_blog', role)`), matching
     the existing route-handler → entitlement pattern used elsewhere (`EntitlementError` → 402).
 - Optimistic-locking `PATCH` with `If-Match`/`Idempotency-Key` (§5).

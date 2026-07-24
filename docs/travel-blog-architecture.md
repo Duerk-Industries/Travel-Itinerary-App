@@ -154,6 +154,24 @@ Recommended launch authoring fields:
   at launch (see section 4) — the separate **AI-Proposed Highlights (Pro)** auto-curation mode is a
   Phase 8+ feature behind `trip_blog_ai_highlights`, not part of this launch field.
 
+### Connected itinerary notes and locations
+
+Notes and location/place entries created for a trip day in the itinerary are projected into that
+day's private blog feed as linked text items. The projection stores the source type, source ID, and
+the last synchronized source snapshot in `blog_item_source_links`; it is not a second authoritative
+copy of the itinerary.
+
+- A trip-page edit updates the linked blog item while the link is still attached, including a day
+  move when the source day changes.
+- Editing the linked item in the blog, or deleting it from the blog, marks only the blog link as
+  detached. The itinerary note/location remains unchanged and future trip-page edits no longer
+  overwrite the blog copy.
+- Deleting the source itinerary item detaches the blog copy rather than silently deleting authored
+  blog content. The blog copy can then be edited or removed independently.
+- Synchronization is idempotent, source-snapshot based, account-member only, and must not run for
+  read-only followers or anonymous/public readers. Linked items retain normal versioning, audit,
+  audience, caching, export, and deletion behavior.
+
 Do not block the MVP on maps, reactions, or photo-book export.
 
 ### Modality extension contract

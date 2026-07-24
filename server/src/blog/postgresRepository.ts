@@ -83,7 +83,56 @@ const mapItem = (row: any): BlogTextItem => ({
   languageTag: row.language_tag == null ? null : String(row.language_tag),
   createdAt: new Date(row.created_at).toISOString(),
   updatedAt: new Date(row.updated_at).toISOString(),
+  sourceType: row.source_type == null ? null : String(row.source_type) as 'itinerary_detail',
+  sourceId: row.source_id == null ? null : String(row.source_id),
+  sourceDetached: Boolean(row.source_detached),
 });
+
+const sourceBody = (row: any): string => row.kind === 'note'
+  ? String(row.note_body ?? row.activity ?? '')
+  : `Location: ${String(row.activity ?? 'Location')}${row.note_body ? `\n${String(row.note_body)}` : ''}`;
+
+const sourceSnapshot = (row: any, body: string): string => JSON.stringify({ body, day: Number(row.day), activity: String(row.activity ?? ''), kind: String(row.kind ?? 'activity'), placeId: row.place_id == null ? null : String(row.place_id), noteBody: row.note_body == null ? null : String(row.note_body) });
+
+const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise<void> => {
+  const sources = await queryBlog<any>(
+    `SELECT d.id, d.day, d.activity, d.kind, d.place_id, d.note_body, t.start_date
+     FROM itinerary_details d JOIN itineraries i ON i.id = d.itinerary_id JOIN trips t ON t.id = i.trip_id
+     WHERE i.trip_id = $1 AND d.kind IN ('note', 'place') ORDER BY d.day ASC, d.position ASC, d.created_at ASC`,
+    [tripId]
+  );
+  const days = await queryBlog<{ id: string; local_date: string }>('SELECT id, local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [tripId]);
+  const sourceIds = new Set<string>();
+  for (const row of sources.rows) {
+    sourceIds.add(String(row.id));
+    const body = sourceBody(row);
+    if (!body.trim()) continue;
+    const snapshot = sourceSnapshot(row, body);
+    const day = days.rows[Math.max(0, Number(row.day) - 1)] ?? days.rows[0];
+    if (!day) continue;
+    const linked = await queryBlog<any>(`SELECT l.item_id, l.source_snapshot, l.detached, i.version FROM blog_item_source_links l JOIN blog_items i ON i.id = l.item_id WHERE l.source_type = 'itinerary_detail' AND l.source_id = $1 LIMIT 1`, [row.id]);
+    if (!linked.rows[0]) {
+      const itemId = randomUUID();
+      await queryBlog(`INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, planned_activity_ref) VALUES ($1, $2, $3, 'core.text', 1, 'public', $4, $5, $5, $6)`, [itemId, tripId, day.id, `${String(Date.now()).padStart(16, '0')}-${itemId}`, userId, row.id]);
+      await queryBlog('INSERT INTO blog_text_contents (item_id, body, language_tag) VALUES ($1, $2, NULL)', [itemId, body]);
+      await queryBlog(`INSERT INTO blog_item_versions (id, item_id, version, editor_user_id, change_kind, content_snapshot) VALUES ($1, $2, 1, $3, 'source_sync', $4::jsonb)`, [randomUUID(), itemId, userId, JSON.stringify({ body, sourceId: row.id })]);
+      await queryBlog(`INSERT INTO blog_item_source_links (item_id, source_type, source_id, source_snapshot) VALUES ($1, 'itinerary_detail', $2, $3::jsonb)`, [itemId, row.id, snapshot]);
+      await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+      continue;
+    }
+    if (linked.rows[0].detached) continue;
+    const previous = typeof linked.rows[0].source_snapshot === 'string' ? linked.rows[0].source_snapshot : JSON.stringify(linked.rows[0].source_snapshot ?? {});
+    if (previous === snapshot) continue;
+    const nextVersion = Number(linked.rows[0].version ?? 1) + 1;
+    await queryBlog('UPDATE blog_items SET blog_day_id = $2, version = $3, last_editor_user_id = $4, updated_at = NOW() WHERE id = $1', [linked.rows[0].item_id, day.id, nextVersion, userId]);
+    await queryBlog('UPDATE blog_text_contents SET body = $2 WHERE item_id = $1', [linked.rows[0].item_id, body]);
+    await queryBlog(`INSERT INTO blog_item_versions (id, item_id, version, editor_user_id, change_kind, content_snapshot) VALUES ($1, $2, $3, $4, 'source_sync', $5::jsonb)`, [randomUUID(), linked.rows[0].item_id, nextVersion, userId, JSON.stringify({ body, sourceId: row.id })]);
+    await queryBlog('UPDATE blog_item_source_links SET source_snapshot = $2::jsonb, updated_at = NOW() WHERE item_id = $1', [linked.rows[0].item_id, snapshot]);
+    await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+  }
+  const staleLinks = await queryBlog<{ item_id: string; source_id: string }>(`SELECT l.item_id, l.source_id FROM blog_item_source_links l JOIN blog_items i ON i.id = l.item_id WHERE i.trip_id = $1 AND l.source_type = 'itinerary_detail' AND l.detached = FALSE`, [tripId]);
+  for (const link of staleLinks.rows) if (!sourceIds.has(String(link.source_id))) await queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [link.item_id]);
+};
 
 export const getBlog = async (userId: string, tripId: string, options: { date?: string; cursor?: string; limit?: number } = {}): Promise<BlogDocument> => {
   const access = await ensureUserCanReadTrip(tripId, userId);
@@ -91,6 +140,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   const blogResult = await queryBlog<BlogRow>('SELECT * FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
   const blog = blogResult.rows[0];
   await ensureDays(tripId);
+  if (await ensureUserInTrip(tripId, userId)) await syncLinkedItineraryItems(tripId, userId);
 
   const limit = Math.min(100, Math.max(1, options.limit ?? 7));
   const dateFilter = options.date ? 'AND local_date = $2::date' : '';
@@ -109,12 +159,13 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   const dayIds = daysResult.rows.map(r => String(r.id));
   const placeholders = dayIds.map((_, i) => `$${i + 2}`).join(',');
   const itemsResult = dayIds.length ? await queryBlog<any>(
-    `SELECT i.*, t.body, t.language_tag, d.local_date
+    `SELECT i.*, t.body, t.language_tag, d.local_date, sl.source_type, sl.source_id, sl.detached AS source_detached
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      LEFT JOIN blog_text_contents t ON t.item_id = i.id
+     LEFT JOIN blog_item_source_links sl ON sl.item_id = i.id
      WHERE i.trip_id = $1 AND i.blog_day_id IN (${placeholders}) AND i.deleted_at IS NULL
-     ORDER BY d.local_date ASC, i.sort_key ASC, i.created_at ASC`,
+    ORDER BY d.local_date ASC, i.sort_key ASC, i.created_at ASC`,
     [tripId, ...dayIds]
   ) : { rows: [] };
   const activitiesResult = dayIds.length ? await queryBlog<any>(
@@ -256,6 +307,7 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
     [itemId, nextVersion, patch.audience ?? null, userId, patch.version]
   );
   if (!updated.rows[0]) return null;
+  await queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [itemId]);
   await queryBlog('UPDATE blog_text_contents SET body = $2, language_tag = $3 WHERE item_id = $1', [itemId, body, patch.languageTag ?? row.language_tag ?? null]);
   await queryBlog(
     `INSERT INTO blog_item_versions (id, item_id, version, editor_user_id, change_kind, content_snapshot)
@@ -277,6 +329,7 @@ export const deleteBlogItem = async (userId: string, itemId: string, version?: n
   if (!access) throw new Error('Not authorized to edit this trip');
   const updated = await queryBlog('UPDATE blog_items SET deleted_at = NOW(), version = version + 1, last_editor_user_id = $2, updated_at = NOW() WHERE id = $1 AND ($3::int IS NULL OR version = $3) AND deleted_at IS NULL', [itemId, userId, version ?? null]);
   if (!updated.rowCount) return false;
+  await queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [itemId]);
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [current.rows[0].trip_id]);
   return true;
 };

@@ -1089,6 +1089,7 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE itinerary_details ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW();`);
 
   // server/migrations/20260427_add_itinerary_detail_reactions.sql — auto-applied
   // by the runtime migration runner below. The table FKs to itinerary_details so
@@ -7884,8 +7885,8 @@ export const addItineraryDetail = async (
   const detailId = randomUUID();
   const kind: ItineraryDetailKind = detail.kind ?? 'activity';
   const { rows: inserted } = await p.query<ItineraryDetail & { kind: string; placeId: string | null; noteBody: string | null; position: number }>(
-    `INSERT INTO itinerary_details (id, itinerary_id, day, time, activity, cost, kind, place_id, note_body, position)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO itinerary_details (id, itinerary_id, day, time, activity, cost, kind, place_id, note_body, position, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
      RETURNING id,
                itinerary_id as "itineraryId",
                day,
@@ -8014,7 +8015,8 @@ export const updateItineraryDetail = async (
          cost = $4,
          place_id = COALESCE($5, place_id),
          note_body = COALESCE($6, note_body),
-         position = COALESCE($7, position)
+          position = COALESCE($7, position),
+          updated_at = NOW()
      WHERE id = $8
      RETURNING id,
                itinerary_id as "itineraryId",

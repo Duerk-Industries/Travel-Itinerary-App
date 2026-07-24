@@ -674,6 +674,7 @@ export interface ItineraryDetail {
   placeId?: string | null;
   noteBody?: string | null;
   position?: number;
+  updatedAt?: string | null;
   checklistItems?: ItineraryChecklistItem[];
 }
 

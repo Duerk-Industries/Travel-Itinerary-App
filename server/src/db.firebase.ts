@@ -5347,6 +5347,7 @@ export const addItineraryDetail = async (
     placeId: detail.placeId ?? null,
     noteBody: detail.noteBody ?? null,
     position: detail.position != null ? Math.round(detail.position) : 0,
+    updatedAt: nowIso(),
   };
   await db.collection('itinerary_details').doc(id).set(payload);
 
@@ -5414,7 +5415,7 @@ export const updateItineraryDetail = async (
   const itineraryId = (detail.data() as any).itineraryId;
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
   if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
-  await db.collection('itinerary_details').doc(detailId).update(updates);
+  await db.collection('itinerary_details').doc(detailId).update({ ...updates, updatedAt: nowIso() });
   const updated = await db.collection('itinerary_details').doc(detailId).get();
   const payload = updated.data() as ItineraryDetail;
   const tripId = String((itinerary.data() as any).tripId ?? '');

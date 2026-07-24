@@ -17,6 +17,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [addingDay, setAddingDay] = useState(null);
   const [newBody, setNewBody] = useState('');
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
   const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
@@ -141,6 +142,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     finally { setCreating(false); }
   };
 
+  const deleteItem = async (item) => {
+    if (readOnly) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${item.id}`, {
+        method: 'DELETE', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ version: item.version }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to remove blog item');
+      await load();
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to remove blog item'); }
+    finally { setDeleting(false); }
+  };
+
   if (!activeTripId) return <View style={styles.card}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
   if (loading) return <View style={styles.card}><ActivityIndicator /></View>;
   return (
@@ -182,12 +196,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </View>
             {(day.items || []).map((item) => (
               <View key={item.id} style={{ marginTop: 8 }}>
+                {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
                 <TextInput
                   multiline value={drafts[item.id] ?? item.body}
                   editable={!readOnly} onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
                   placeholder="What happened today?" placeholderTextColor={mutedColor} style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
                 />
-                {!readOnly ? <TouchableOpacity style={[styles.button, { marginTop: 6 }]} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity> : null}
+                {!readOnly ? (
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                    <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
+                  </View>
+                ) : null}
               </View>
             ))}
             {(day.activities || []).length > 0 ? (

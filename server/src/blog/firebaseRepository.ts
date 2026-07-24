@@ -44,7 +44,45 @@ const ensureDays = async (tripId: string): Promise<void> => {
 
 const mapItem = (doc: any): BlogTextItem => {
   const data = doc.data ? doc.data() : doc;
-  return { id: String(doc.id ?? data.id), tripId: String(data.tripId), blogDayId: String(data.blogDayId), localDate: String(data.localDate), kindKey: 'core.text', schemaVersion: Number(data.schemaVersion ?? 1), audience: data.audience ?? 'public', sortKey: String(data.sortKey), authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), body: String(data.body ?? ''), languageTag: data.languageTag ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt) };
+  return { id: String(doc.id ?? data.id), tripId: String(data.tripId), blogDayId: String(data.blogDayId), localDate: String(data.localDate), kindKey: 'core.text', schemaVersion: Number(data.schemaVersion ?? 1), audience: data.audience ?? 'public', sortKey: String(data.sortKey), authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), body: String(data.body ?? ''), languageTag: data.languageTag ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt), sourceType: data.sourceType ?? null, sourceId: data.sourceId ?? null, sourceDetached: Boolean(data.sourceDetached) };
+};
+
+const linkedSourceBody = (data: any): string => data.kind === 'note'
+  ? String(data.noteBody ?? data.activity ?? '')
+  : `Location: ${String(data.activity ?? 'Location')}${data.noteBody ? `\n${String(data.noteBody)}` : ''}`;
+
+const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise<void> => {
+  const db = getDb();
+  const itinerarySnap = await db.collection('itineraries').where('tripId', '==', tripId).get();
+  const daySnap = await db.collection('blog_days').where('tripId', '==', tripId).get();
+  const days = daySnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })).sort((a, b) => String(a.localDate).localeCompare(String(b.localDate)));
+  for (const itinerary of itinerarySnap.docs) {
+    const detailSnap = await db.collection('itinerary_details').where('itineraryId', '==', itinerary.id).get();
+    for (const detail of detailSnap.docs) {
+      const data = detail.data() as any;
+      if (data.kind !== 'note' && data.kind !== 'place') continue;
+      const body = linkedSourceBody(data); if (!body.trim()) continue;
+      const day = days[Math.max(0, Number(data.day ?? 1) - 1)] ?? days[0]; if (!day) continue;
+      const snapshot = { body, day: Number(data.day ?? 1), activity: String(data.activity ?? ''), kind: String(data.kind), placeId: data.placeId ?? null, noteBody: data.noteBody ?? null };
+      const linkRef = db.collection('blog_item_source_links').doc(`itinerary_detail_${detail.id}`);
+      const link = await linkRef.get();
+      if (!link.exists) {
+        const itemId = randomUUID(); const now = nowIso();
+        const item = { id: itemId, tripId, blogDayId: day.id, localDate: String(day.localDate), kindKey: 'core.text', schemaVersion: 1, audience: 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${itemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body, languageTag: null, sourceType: 'itinerary_detail', sourceId: detail.id, sourceDetached: false, createdAt: now, updatedAt: now, deletedAt: null };
+        await db.collection('blog_items').doc(itemId).set(item);
+        await linkRef.set({ itemId, sourceType: 'itinerary_detail', sourceId: detail.id, sourceSnapshot: snapshot, detached: false, createdAt: now, updatedAt: now });
+        await db.collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: now }, { merge: true });
+        continue;
+      }
+      const linkData = link.data() as any; if (linkData.detached) continue;
+      if (JSON.stringify(linkData.sourceSnapshot ?? {}) === JSON.stringify(snapshot)) continue;
+      const itemRef = db.collection('blog_items').doc(String(linkData.itemId)); const itemSnap = await itemRef.get(); if (!itemSnap.exists) continue;
+      const current = itemSnap.data() as any; const now = nowIso();
+      await itemRef.set({ body, blogDayId: day.id, localDate: String(day.localDate), version: Number(current.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: now }, { merge: true });
+      await linkRef.set({ sourceSnapshot: snapshot, updatedAt: now }, { merge: true });
+      await db.collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: now }, { merge: true });
+    }
+  }
 };
 
 export const getBlog = async (userId: string, tripId: string, options: { date?: string; cursor?: string; limit?: number } = {}): Promise<BlogDocument> => {
@@ -53,6 +91,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   const db = getDb();
   const blog = await ensureBlog(tripId);
   await ensureDays(tripId);
+  if (await ensureUserInTrip(tripId, userId)) await syncLinkedItineraryItems(tripId, userId);
 
   let query = db.collection('blog_days').where('tripId', '==', tripId);
   if (options.date) {
@@ -162,6 +201,7 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
   if (Number(row.version ?? 1) !== patch.version) return null;
   const update = { body: patch.body === undefined ? row.body : String(patch.body), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() };
   await ref.set(update, { merge: true });
+  await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
   await getDb().collection('trip_blogs').doc(String(row.tripId)).set({ contentRevision: (await ensureBlog(String(row.tripId))).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
   return mapItem({ id: itemId, data: () => ({ ...row, ...update }) });
 };
@@ -175,6 +215,7 @@ export const deleteBlogItem = async (userId: string, itemId: string, version?: n
   if (!access) throw new Error('Not authorized to edit this trip');
   if (version !== undefined && Number(row.version ?? 1) !== version) return false;
   await ref.set({ deletedAt: nowIso(), version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
+  await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
   return true;
 };
 
