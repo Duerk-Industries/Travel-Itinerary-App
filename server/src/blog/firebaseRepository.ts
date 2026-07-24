@@ -56,11 +56,13 @@ const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise
   const itinerarySnap = await db.collection('itineraries').where('tripId', '==', tripId).get();
   const daySnap = await db.collection('blog_days').where('tripId', '==', tripId).get();
   const days = daySnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })).sort((a, b) => String(a.localDate).localeCompare(String(b.localDate)));
+  const sourceIds = new Set<string>();
   for (const itinerary of itinerarySnap.docs) {
     const detailSnap = await db.collection('itinerary_details').where('itineraryId', '==', itinerary.id).get();
     for (const detail of detailSnap.docs) {
       const data = detail.data() as any;
       if (data.kind !== 'note' && data.kind !== 'place') continue;
+      sourceIds.add(detail.id);
       const body = linkedSourceBody(data); if (!body.trim()) continue;
       const day = days[Math.max(0, Number(data.day ?? 1) - 1)] ?? days[0]; if (!day) continue;
       const snapshot = { body, day: Number(data.day ?? 1), activity: String(data.activity ?? ''), kind: String(data.kind), placeId: data.placeId ?? null, noteBody: data.noteBody ?? null };
@@ -81,6 +83,15 @@ const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise
       await itemRef.set({ body, blogDayId: day.id, localDate: String(day.localDate), version: Number(current.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: now }, { merge: true });
       await linkRef.set({ sourceSnapshot: snapshot, updatedAt: now }, { merge: true });
       await db.collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: now }, { merge: true });
+    }
+  }
+  const linkedItems = await db.collection('blog_items').where('tripId', '==', tripId).where('sourceType', '==', 'itinerary_detail').get();
+  for (const item of linkedItems.docs) {
+    const data = item.data() as any;
+    if (data.sourceId && !sourceIds.has(String(data.sourceId)) && !data.sourceDetached) {
+      await item.ref.set({ sourceDetached: true, updatedAt: nowIso() }, { merge: true });
+      const linkRef = db.collection('blog_item_source_links').doc(`itinerary_detail_${data.sourceId}`);
+      await linkRef.set({ detached: true, updatedAt: nowIso() }, { merge: true });
     }
   }
 };
