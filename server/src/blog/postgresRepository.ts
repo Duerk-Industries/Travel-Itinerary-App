@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
-import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch } from './types';
+import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity } from './types';
 
 type BlogRow = {
   id: string;
@@ -47,8 +47,16 @@ const ensureDays = async (tripId: string): Promise<void> => {
     [tripId]
   );
   if (!trip.rows[0]) throw new Error('Trip not found');
-  const start = trip.rows[0].start_date ? formatDate(trip.rows[0].start_date) : formatDate(new Date());
-  const end = trip.rows[0].end_date ? formatDate(trip.rows[0].end_date) : start;
+  let start = trip.rows[0].start_date ? formatDate(trip.rows[0].start_date) : '';
+  let end = trip.rows[0].end_date ? formatDate(trip.rows[0].end_date) : '';
+  if (!start || !end) {
+    const activityDates = await queryBlog<{ date: string }>('SELECT date FROM tours WHERE trip_id = $1 AND date IS NOT NULL ORDER BY date ASC', [tripId]);
+    const dates = activityDates.rows.map((row) => formatDate(row.date));
+    if (!start && dates.length) start = dates[0];
+    if (!end && dates.length) end = dates[dates.length - 1];
+  }
+  start = start || formatDate(new Date());
+  end = end || start;
   const startDate = new Date(`${start}T00:00:00.000Z`);
   const endDate = new Date(`${end}T00:00:00.000Z`);
   for (let cursor = startDate; cursor <= endDate; cursor = new Date(cursor.getTime() + 86_400_000)) {
@@ -109,6 +117,18 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
      ORDER BY d.local_date ASC, i.sort_key ASC, i.created_at ASC`,
     [tripId, ...dayIds]
   ) : { rows: [] };
+  const activitiesResult = dayIds.length ? await queryBlog<any>(
+    `SELECT id, to_char(date, 'YYYY-MM-DD') AS local_date, name, activity_type, start_time, duration, status, start_location, notes
+     FROM tours WHERE trip_id = $1 AND date IS NOT NULL AND date >= $2::date AND date <= $3::date
+     ORDER BY date ASC, start_time ASC NULLS LAST, created_at ASC`,
+    [tripId, formatDate(daysResult.rows[0].local_date), formatDate(daysResult.rows[daysResult.rows.length - 1].local_date)]
+  ) : { rows: [] };
+  const activitiesByDate = new Map<string, BlogActivity[]>();
+  for (const row of activitiesResult.rows) {
+    const date = String(row.local_date);
+    const activity: BlogActivity = { id: String(row.id), name: String(row.name ?? 'Activity'), activityType: String(row.activity_type ?? 'Tour'), date, startTime: row.start_time == null ? null : String(row.start_time), duration: row.duration == null ? null : String(row.duration), status: row.status == null ? null : String(row.status), startLocation: row.start_location == null ? null : String(row.start_location), notes: row.notes == null ? null : String(row.notes) };
+    activitiesByDate.set(date, [...(activitiesByDate.get(date) ?? []), activity]);
+  }
 
   const byDay = new Map<string, BlogTextItem[]>();
   for (const row of itemsResult.rows) {
@@ -150,6 +170,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       headline: row.headline == null ? null : String(row.headline),
       summary: row.summary == null ? null : String(row.summary),
       items: byDay.get(String(row.id)) ?? [],
+      activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
         icon: dayWeather.icon,
         description: dayWeather.description,

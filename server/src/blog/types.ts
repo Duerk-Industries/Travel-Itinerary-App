@@ -47,11 +47,24 @@ export interface BlogDay {
   headline: string | null;
   summary: string | null;
   items: BlogTextItem[];
+  activities?: BlogActivity[];
   weather?: {
     icon: string;
     description: string;
     temperatureHighC: number | null;
   };
+}
+
+export interface BlogActivity {
+  id: string;
+  name: string;
+  activityType: string;
+  date: string;
+  startTime: string | null;
+  duration: string | null;
+  status: string | null;
+  startLocation: string | null;
+  notes: string | null;
 }
 
 export interface BlogDocument {

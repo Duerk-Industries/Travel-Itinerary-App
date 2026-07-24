@@ -4,7 +4,7 @@ import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, Touchable
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, readOnly = false }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -14,6 +14,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, readOnly = fal
   const [cursor, setCursor] = useState(null);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
   const [storagePlans, setStoragePlans] = useState<PlanInfo[]>([]);
+  const [addingDay, setAddingDay] = useState(null);
+  const [newBody, setNewBody] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
+  const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
+  const surfaceColor = theme?.colors?.surface ?? '#ffffff';
+  const inputColor = theme?.colors?.input ?? surfaceColor;
+  const borderColor = theme?.colors?.border ?? '#ccd4df';
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -115,18 +124,43 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, readOnly = fal
     finally { setSaving(false); }
   };
 
+  const createTextItem = async (dayDate) => {
+    const body = newBody.trim();
+    if (!body) return;
+    setCreating(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kindKey: 'core.text', dayDate, body }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to add blog item');
+      setNewBody('');
+      setAddingDay(null);
+      await load();
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to add blog item'); }
+    finally { setCreating(false); }
+  };
+
   if (!activeTripId) return <View style={styles.card}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
   if (loading) return <View style={styles.card}><ActivityIndicator /></View>;
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>{blog?.title || 'Trip Blog'}</Text>
-        <Text style={{ opacity: 0.7, marginBottom: 12 }}>A shared story for everyone on the trip.</Text>
+        <Text style={{ color: mutedColor, marginBottom: 12 }}>A shared story for everyone on the trip.</Text>
         {(blog?.days || []).map((day) => (
-          <View key={day.id} style={{ marginBottom: 24, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 16 }}>
+          <View key={day.id} style={{ marginBottom: 24, borderBottomWidth: 1, borderBottomColor: borderColor, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <Text style={styles.sectionTitle}>{day.localDate}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {!readOnly && (
+                  <TouchableOpacity
+                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8 }]}
+                    onPress={() => { setAddingDay(day.localDate); setNewBody(''); }}
+                  >
+                    <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Add note</Text>
+                  </TouchableOpacity>
+                )}
                 {!readOnly && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
@@ -151,12 +185,35 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, readOnly = fal
                 <TextInput
                   multiline value={drafts[item.id] ?? item.body}
                   editable={!readOnly} onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
-                  placeholder="What happened today?" style={{ minHeight: 90, borderWidth: 1, borderColor: '#ccd', borderRadius: 8, padding: 10, textAlignVertical: 'top' }}
+                  placeholder="What happened today?" placeholderTextColor={mutedColor} style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
                 />
                 {!readOnly ? <TouchableOpacity style={[styles.button, { marginTop: 6 }]} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity> : null}
               </View>
             ))}
-            {!readOnly && (day.items || []).length === 0 ? <Text style={{ opacity: 0.7 }}>No entry yet. Add one from the API or mobile composer.</Text> : null}
+            {(day.activities || []).length > 0 ? (
+              <View style={{ marginTop: 14 }}>
+                <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>
+                {(day.activities || []).map((activity) => (
+                  <View key={activity.id} style={{ borderLeftWidth: 3, borderLeftColor: theme?.colors?.link ?? '#0ea5e9', paddingLeft: 10, marginBottom: 8 }}>
+                    <Text style={{ color: textColor, fontWeight: '600' }}>{activity.name}</Text>
+                    <Text style={{ color: mutedColor }}>{activity.activityType}{activity.startTime ? ` · ${activity.startTime}` : ''}{activity.startLocation ? ` · ${activity.startLocation}` : ''}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {addingDay === day.localDate ? (
+              <View style={{ marginTop: 10 }}>
+                <TextInput
+                  multiline autoFocus value={newBody} onChangeText={setNewBody} placeholder="Write about this day…" placeholderTextColor={mutedColor}
+                  style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
+                />
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                  <TouchableOpacity style={styles.button} disabled={creating || !newBody.trim()} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => setAddingDay(null)}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
+            {!readOnly && (day.items || []).length === 0 && addingDay !== day.localDate ? <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text> : null}
           </View>
         ))}
         {cursor ? (
@@ -174,9 +231,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, readOnly = fal
 
       <Modal visible={showQuotaModal} transparent animationType="slide" onRequestClose={() => setShowQuotaModal(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 8 }}>Storage quota exceeded</Text>
-            <Text style={{ marginBottom: 20, opacity: 0.7 }}>You don't have enough storage to upload this photo. Upgrade your storage to continue.</Text>
+          <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
+            <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', marginBottom: 8 }}>Storage quota exceeded</Text>
+            <Text style={{ color: mutedColor, marginBottom: 20 }}>You don't have enough storage to upload this photo. Upgrade your storage to continue.</Text>
             {storagePlans.map(plan => (
               <TouchableOpacity
                 key={plan.planKey}
@@ -187,10 +244,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, readOnly = fal
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#e5e7eb', marginTop: 10 }]}
+              style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb', marginTop: 10 }]}
               onPress={() => setShowQuotaModal(false)}
             >
-              <Text style={[styles.buttonText, { color: '#374151' }]}>Cancel</Text>
+              <Text style={{ color: textColor }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -2760,7 +2760,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
           {activePage === 'blog'
             ? renderSharedPageScroll(
-                <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={activeTripId} styles={styles} readOnly={isFollowingMode} />
+                <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={activeTripId} styles={styles} theme={theme} readOnly={isFollowingMode} />
               )
             : null}
 

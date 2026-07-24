@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
-import { BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch } from './types';
+import { BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity } from './types';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -23,8 +23,16 @@ const ensureDays = async (tripId: string): Promise<void> => {
   const trip = await db.collection('trips').doc(tripId).get();
   if (!trip.exists) throw new Error('Trip not found');
   const data = trip.data() as any;
-  const start = data.startDate ? dateString(data.startDate) : dateString(new Date());
-  const end = data.endDate ? dateString(data.endDate) : start;
+  let start = data.startDate ? dateString(data.startDate) : '';
+  let end = data.endDate ? dateString(data.endDate) : '';
+  if (!start || !end) {
+    const activitySnap = await db.collection('tours').where('tripId', '==', tripId).get();
+    const dates = activitySnap.docs.map((doc) => (doc.data() as any).date ? dateString((doc.data() as any).date) : '').filter(Boolean).sort();
+    if (!start && dates.length) start = dates[0];
+    if (!end && dates.length) end = dates[dates.length - 1];
+  }
+  start = start || dateString(new Date());
+  end = end || start;
   const existing = await db.collection('blog_days').where('tripId', '==', tripId).get();
   const known = new Set(existing.docs.map((doc) => String((doc.data() as any).localDate)));
   for (let cursor = new Date(`${start}T00:00:00.000Z`); cursor <= new Date(`${end}T00:00:00.000Z`); cursor = new Date(cursor.getTime() + 86_400_000)) {
@@ -63,6 +71,15 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     })
     .map(mapItem)
     .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const activitySnap = await db.collection('tours').where('tripId', '==', tripId).get();
+  const activitiesByDate = new Map<string, BlogActivity[]>();
+  activitySnap.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    if (!data.date) return;
+    const date = dateString(data.date);
+    const activity: BlogActivity = { id: doc.id, name: String(data.name ?? 'Activity'), activityType: String(data.activityType ?? 'Tour'), date, startTime: data.startTime == null ? null : String(data.startTime), duration: data.duration == null ? null : String(data.duration), status: data.status == null ? null : String(data.status), startLocation: data.startLocation == null ? null : String(data.startLocation), notes: data.notes == null ? null : String(data.notes) };
+    activitiesByDate.set(date, [...(activitiesByDate.get(date) ?? []), activity]);
+  });
 
   // Weather Badge Integration
   const weatherRequests = daySnap.docs.map(doc => {
@@ -98,6 +115,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       headline: data.headline ?? null,
       summary: data.summary ?? null,
       items: items.filter((item) => item.blogDayId === doc.id),
+      activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
         icon: dayWeather.icon,
         description: dayWeather.description,
