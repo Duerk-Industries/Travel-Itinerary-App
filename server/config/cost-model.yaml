@@ -332,3 +332,13 @@ costSources:
         unitCostUsd: 0
       - metric: transcription_minutes
         unitCostUsd: 0
+
+  - id: trip_blog_video_processing
+    name: Trip blog bounded video processing
+    type: variable
+    api: tripBlogVideoProcessing
+    usageLevels:
+      - metric: processing_seconds
+        unitCostUsd: 0.000024
+      - metric: output_gb_month
+        unitCostUsd: 0.026

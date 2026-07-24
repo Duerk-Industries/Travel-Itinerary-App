@@ -8,6 +8,7 @@ import { BlogAudience } from '../blog/types';
 import { ensureUserInTrip } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
 
 const router = Router();
 router.use(authenticate);
@@ -196,6 +197,7 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
 router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
   try {
     await reserveApiUsageOrThrow({ provider: 'GCS', caller: 'BLOG_OBJECT_FINALIZE' });
+    if (req.body?.videoProbe) validateVideoEnvelope(req.body.videoProbe);
     const asset = await blogMediaRepository().completeUpload(userIdOf(req), req.params.assetId, Number(req.body?.physicalBytes), req.body?.checksum);
     res.status(200).json(asset);
   } catch (err) {
