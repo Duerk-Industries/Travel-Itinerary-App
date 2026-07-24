@@ -153,7 +153,7 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   const cachedSummary = String(params.cachedWikipediaSummary ?? '').trim();
   const allowDescriptionLookup = params.allowDescriptionLookup ?? true;
   const searchTerm = String(params.wikipediaSearchTerm ?? '').trim() || params.name;
-  const searchedDescription = allowDescriptionLookup
+  const searchedDescription = allowDescriptionLookup && !cachedSummary
     ? (await fetchWikipediaEnrichment(searchTerm, params.destinationDisplayName))?.summary
     : null;
   // Search is the preferred path because generated names are often not exact
@@ -161,7 +161,7 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   // be temporarily unavailable even when the exact article exists. Use the
   // REST summary endpoint as a verified, title-based fallback rather than
   // silently dropping the attraction blurb.
-  const exactDescription = allowDescriptionLookup && !searchedDescription
+  const exactDescription = allowDescriptionLookup && !cachedSummary && !searchedDescription
     ? await fetchWikipediaSummary(searchTerm)
     : null;
   const description = cachedSummary || searchedDescription || exactDescription || null;
