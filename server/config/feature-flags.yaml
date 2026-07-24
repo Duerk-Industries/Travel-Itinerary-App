@@ -130,3 +130,9 @@ flags:
   trip_blog_public_indexing:
     enabled: false
     description: "Phase 6 public sitemap and search indexing"
+  trip_blog_search:
+    enabled: false
+    description: "Visibility-aware private blog search"
+  trip_blog_structured_data:
+    enabled: false
+    description: "Schema.org public blog metadata"

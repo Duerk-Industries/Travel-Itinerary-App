@@ -42,6 +42,7 @@ import publicBlogRoutes from './routes/publicBlogRoutes';
 import blogIndexingRoutes from './routes/blogIndexingRoutes';
 import blogSitemapRoutes from './routes/blogSitemapRoutes';
 import blogSocialRoutes from './routes/blogSocialRoutes';
+import blogModalityRoutes from './routes/blogModalityRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -398,6 +399,7 @@ app.use('/api/trips', blogImportRoutes);
 app.use('/api/trips', blogPublicationRoutes);
 app.use('/api/trips', blogIndexingRoutes);
 app.use('/api/trips', blogSocialRoutes);
+app.use('/api/trips', blogModalityRoutes);
 app.use('/public/blog', publicBlogRoutes);
 app.use('/', blogSitemapRoutes);
 app.use('/api/itinerary', itineraryRoutes);

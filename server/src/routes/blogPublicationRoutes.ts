@@ -7,16 +7,19 @@ import { randomUUID } from 'crypto';
 
 const router = Router();
 const slug = (v: string) => v.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'trip';
-const eligibleAdults = async (tripId: string): Promise<string[]> => {
+const eligibleAdults = async (tripId: string): Promise<{ adults: string[]; missingBirthDate: number }> => {
   const result = await queryBlog<{ user_id: string }>(`SELECT DISTINCT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NOT NULL AND u.date_of_birth <= CURRENT_DATE - INTERVAL '16 years'`, [tripId]);
-  return result.rows.map((r) => String(r.user_id));
+  const missing = await queryBlog<{ count: string }>(`SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NULL`, [tripId]);
+  return { adults: result.rows.map((r) => String(r.user_id)), missingBirthDate: Number(missing.rows[0]?.count ?? 0) };
 };
 
 router.post('/:tripId/blog/publication/request', authenticate, async (req: any, res) => {
   try {
     if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return res.status(404).json({ error: 'Public sharing is not enabled' });
     const userId = String(req.user.userId); if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
-    const adults = (await eligibleAdults(req.params.tripId)).filter((id) => id !== userId);
+    const eligibility = await eligibleAdults(req.params.tripId);
+    if (eligibility.missingBirthDate > 0) return res.status(409).json({ error: 'Every account traveler must complete the date-of-birth profile before public consent can be requested', code: 'PROFILE_COMPLETION_REQUIRED' });
+    const adults = eligibility.adults.filter((id) => id !== userId);
     const prior = await queryBlog<{ epoch: number }>('SELECT COALESCE(MAX(epoch), 0) AS epoch FROM blog_publication_epochs WHERE trip_id = $1', [req.params.tripId]);
     const epoch = Number(prior.rows[0]?.epoch ?? 0) + 1; const epochId = randomUUID();
     await queryBlog(`INSERT INTO blog_publication_epochs (id, trip_id, epoch, state, requested_by, expires_at) VALUES ($1, $2, $3, 'pending_consent', $4, NOW() + INTERVAL '14 days')`, [epochId, req.params.tripId, epoch, userId]);
