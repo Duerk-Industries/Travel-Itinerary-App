@@ -293,6 +293,7 @@ export interface WebUser {
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;
+  dateOfBirth?: string | null;
 }
 
 export interface Flight {

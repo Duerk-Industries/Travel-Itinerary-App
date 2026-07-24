@@ -304,3 +304,31 @@ costSources:
     usageLevels:
       - metric: requests
         unitCostUsd: 0
+
+  - id: trip_blog_storage
+    name: Trip blog storage and media delivery
+    type: variable
+    api: tripBlogStorage
+    usageLevels:
+      - metric: stored_gb_month
+        unitCostUsd: 0.026
+      - metric: gcs_operations
+        unitCostUsd: 0.000004
+      - metric: cdn_egress_gb
+        unitCostUsd: 0.08
+      - metric: cloud_run_gib_seconds
+        unitCostUsd: 0.0000025
+
+  - id: trip_blog_providers
+    name: Trip blog external providers
+    type: variable
+    api: tripBlogProviders
+    usageLevels:
+      - metric: google_photos_requests
+        unitCostUsd: 0
+      - metric: meta_graph_requests
+        unitCostUsd: 0
+      - metric: translation_characters
+        unitCostUsd: 0
+      - metric: transcription_minutes
+        unitCostUsd: 0

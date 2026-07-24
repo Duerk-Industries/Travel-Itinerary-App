@@ -1319,7 +1319,8 @@ export const createWebUser = async (
   lastName: string,
   email: string,
   password: string,
-  usernameInput?: string
+  usernameInput?: string,
+  dateOfBirth?: string | null
 ): Promise<WebUser> => {
   const db = getDb();
   const normalizedEmail = normalizeEmail(email);
@@ -1352,6 +1353,7 @@ export const createWebUser = async (
       email: normalizedEmail,
       emailVerified: userData.emailVerified ?? false,
       username,
+      ...(dateOfBirth ? { dateOfBirth } : {}),
     });
     await upsertUserEmail(existingUser.id, normalizedEmail, {
       isPrimary: true,
@@ -1366,6 +1368,7 @@ export const createWebUser = async (
       firstName,
       lastName,
       emailVerified: Boolean(updatedUserData.emailVerified),
+      dateOfBirth: updatedUserData.dateOfBirth ?? dateOfBirth ?? null,
     };
   }
   const id = randomUUID();
@@ -1377,6 +1380,7 @@ export const createWebUser = async (
     username,
     provider: 'email',
     createdAt: nowIso(),
+    ...(dateOfBirth ? { dateOfBirth } : {}),
     firstName,
     lastName,
     emailVerified: false,
@@ -1391,7 +1395,7 @@ export const createWebUser = async (
     createdAt: nowIso(),
   });
   await upsertUserEmail(id, normalizedEmail, { isPrimary: true, isVerified: false, verifiedAt: null });
-  return { id, email: normalizedEmail, firstName, lastName, emailVerified: false };
+  return { id, email: normalizedEmail, firstName, lastName, emailVerified: false, dateOfBirth: dateOfBirth ?? null };
 };
 
 export const ensureWebPasswordAccountForOAuth = async (

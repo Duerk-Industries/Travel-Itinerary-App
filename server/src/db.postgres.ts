@@ -449,6 +449,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_internal_canary BOOLEAN NOT NULL DEFAULT FALSE;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_normalized ON users(username_normalized);`);
 
 
@@ -1885,7 +1886,8 @@ export const createWebUser = async (
   lastName: string,
   email: string,
   password: string,
-  usernameInput?: string
+  usernameInput?: string,
+  dateOfBirth?: string | null
 ): Promise<WebUser> => {
   const p = getPool();
   const normalizedEmail = normalizeEmail(email);
@@ -1922,9 +1924,10 @@ export const createWebUser = async (
            last_name = COALESCE($4, last_name),
            email = COALESCE($5, email),
            email_verified = COALESCE(email_verified, TRUE),
-           email_verified_at = CASE WHEN COALESCE(email_verified, TRUE) THEN COALESCE(email_verified_at, NOW()) ELSE email_verified_at END
+           email_verified_at = CASE WHEN COALESCE(email_verified, TRUE) THEN COALESCE(email_verified_at, NOW()) ELSE email_verified_at END,
+           date_of_birth = COALESCE(date_of_birth, $7::date)
        WHERE id = $6`,
-      [username, username, firstName, lastName, normalizedEmail, user.id]
+      [username, username, firstName, lastName, normalizedEmail, user.id, dateOfBirth ?? null]
     );
     await upsertUserEmail(p, user.id, normalizedEmail, {
       isPrimary: true,
@@ -1932,15 +1935,15 @@ export const createWebUser = async (
       verifiedAt: user.emailVerified ? new Date() : null,
     });
     await ensurePackingListForUserWithRunner(p, user.id);
-    return { id: user.id, email: normalizedEmail, firstName, lastName, emailVerified: user.emailVerified };
+    return { id: user.id, email: normalizedEmail, firstName, lastName, emailVerified: user.emailVerified, dateOfBirth: dateOfBirth ?? null };
   }
 
   const id = randomUUID();
   const username = await generateUniqueUsername(p, firstName, lastName, normalizedEmail, usernameInput);
   await p.query(
-    `INSERT INTO users (id, email, username, username_normalized, provider, email_verified)
-     VALUES ($1, $2, $3, $4, 'email', false)`,
-    [id, normalizedEmail, username, username]
+    `INSERT INTO users (id, email, username, username_normalized, provider, email_verified, date_of_birth)
+     VALUES ($1, $2, $3, $4, 'email', false, $5::date)`,
+    [id, normalizedEmail, username, username, dateOfBirth ?? null]
   );
 
   const salt = randomBytes(16).toString('hex');
@@ -1953,7 +1956,7 @@ export const createWebUser = async (
   await upsertUserEmail(p, id, normalizedEmail, { isPrimary: true, isVerified: false });
   await ensurePackingListForUserWithRunner(p, id);
 
-  return { id, email: normalizedEmail, firstName, lastName, emailVerified: false };
+  return { id, email: normalizedEmail, firstName, lastName, emailVerified: false, dateOfBirth: dateOfBirth ?? null };
 };
 
 export const ensureWebPasswordAccountForOAuth = async (

@@ -25,6 +25,7 @@ import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
 import { ensureAdminBootstrap, getSeededTierForEmail } from '../services/entitlementService';
 import { authLoginRateLimit } from '../services/httpRateLimitService';
+import { validateRegistrationAge } from '../services/registrationAgeGate';
 
 // Web auth routes for email/password login/registration.
 const router = Router();
@@ -40,7 +41,7 @@ router.get('/register', (req, res) => {
 });
 
 router.post('/register', async (req, res) => {
-  const { firstName, lastName, email, password, passwordConfirm } = req.body ?? {};
+  const { firstName, lastName, email, password, passwordConfirm, dateOfBirth } = req.body ?? {};
   const confirmValue = typeof passwordConfirm === 'string' ? passwordConfirm : password;
 
   if (isInvalid(firstName) || isInvalid(lastName) || isInvalid(email, 5) || isInvalid(password, 6)) {
@@ -53,8 +54,14 @@ router.post('/register', async (req, res) => {
     return;
   }
 
+  const age = validateRegistrationAge(dateOfBirth);
+  if ('error' in age) {
+    res.status(400).json({ error: age.error, code: 'AGE_GATE_REQUIRED' });
+    return;
+  }
+
   try {
-    const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim());
+    const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim(), undefined, age.dateOfBirth);
     await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
     if (user.emailVerified) {
       await ensureDefaultGroupForUser(user.id, user.email);

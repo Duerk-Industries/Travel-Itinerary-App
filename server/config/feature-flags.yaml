@@ -91,3 +91,33 @@ flags:
   trip_blog_social_posting:
     enabled: false
     description: "Phase 5 Instagram/Facebook cross-posting for blog days"
+  trip_blog_photo_uploads:
+    enabled: false
+    description: "Phase 2 private photo upload, normalization, and per-uploader quota"
+  trip_blog_audio:
+    enabled: false
+    description: "Phase 8 audio and narration modality"
+  trip_blog_translation:
+    enabled: false
+    description: "Phase 8 on-demand translation modality"
+  trip_blog_exports:
+    enabled: false
+    description: "Phase 8 asynchronous blog export"
+  trip_blog_item_audiences:
+    enabled: false
+    description: "Phase 8 per-item audience controls"
+  trip_blog_structured_cards:
+    enabled: false
+    description: "Phase 8 allowlisted itinerary structured cards"
+  trip_blog_galleries:
+    enabled: false
+    description: "Phase 8 gallery parent items"
+  trip_blog_panorama_media:
+    enabled: false
+    description: "Phase 8 panorama and 360 degree media"
+  trip_blog_ai_highlights:
+    enabled: false
+    description: "Phase 8 AI-proposed highlights"
+  trip_blog_public_indexing:
+    enabled: false
+    description: "Phase 6 public sitemap and search indexing"

@@ -254,6 +254,52 @@ providers:
     callers:
       BLOG_SAFESEARCH_MODERATION: 1000
 
+  GOOGLE_TIME_ZONE:
+    window: hour
+    windowHours: 24
+    overall: 500
+    callers:
+      LODGING_TIMEZONE_LOOKUP: 500
+
+  TRANSLATION:
+    window: month
+    windowHours: 720
+    overall: 1000000
+    callers:
+      BLOG_TRANSLATION: 1000000
+
+  TRANSCRIPTION:
+    window: month
+    windowHours: 720
+    overall: 1000
+    callers:
+      BLOG_AUDIO_TRANSCRIPTION: 1000
+
+  GCS:
+    window: day
+    windowHours: 24
+    overall: 10000
+    callers:
+      BLOG_UPLOAD_INIT: 1000
+      BLOG_OBJECT_FINALIZE: 5000
+      BLOG_RENDITION_READ: 4000
+
+  CLOUD_RUN_BLOG:
+    window: hour
+    windowHours: 1
+    overall: 500
+    callers:
+      BLOG_IMAGE_PROCESSING: 250
+      BLOG_VIDEO_PROCESSING: 100
+      BLOG_EXPORT_PROCESSING: 100
+
+  CDN_BLOG:
+    window: hour
+    windowHours: 1
+    overall: 100000
+    callers:
+      BLOG_PUBLIC_READ: 100000
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80
@@ -416,3 +462,10 @@ caching:
     videoMaxDurationSeconds: 60
     signedUrlTtlMs: 3600000
     cdnCacheTtlSeconds: 86400
+    maxUploadInitPerMinutePerAccount: 30
+    maxUploadBytesPerDay: 1073741824
+    maxProcessingJobsPerAccount: 4
+    publicReadsPerMinutePerIp: 120
+    importItemsPerRun: 100
+    translationCharactersPerMonth: 100000
+    exportJobsPerMonth: 4
