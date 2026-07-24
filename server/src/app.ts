@@ -39,6 +39,8 @@ import blogStorageRoutes from './routes/blogStorageRoutes';
 import blogImportRoutes from './routes/blogImportRoutes';
 import blogPublicationRoutes from './routes/blogPublicationRoutes';
 import publicBlogRoutes from './routes/publicBlogRoutes';
+import blogIndexingRoutes from './routes/blogIndexingRoutes';
+import blogSitemapRoutes from './routes/blogSitemapRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -393,7 +395,9 @@ app.use('/api/trips', tripRoutes);
 app.use('/api/trips', blogRoutes);
 app.use('/api/trips', blogImportRoutes);
 app.use('/api/trips', blogPublicationRoutes);
+app.use('/api/trips', blogIndexingRoutes);
 app.use('/public/blog', publicBlogRoutes);
+app.use('/', blogSitemapRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
