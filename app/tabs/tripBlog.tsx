@@ -1,6 +1,6 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 
@@ -47,14 +47,37 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
   };
 
+  // Web-only for now: opens the OS file picker via a throwaway DOM <input type="file">, since
+  // there's no cross-platform picker dependency (e.g. expo-image-picker) in this app yet. Native
+  // (iOS/Android) photo upload needs that dependency added separately — see the Alert below.
+  const pickWebImageFile = () => new Promise((resolve) => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') { resolve(null); return; }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png';
+    input.onchange = () => resolve(input.files && input.files[0] ? input.files[0] : null);
+    input.click();
+  });
+
   const handleUpload = async (dayDate) => {
     if (readOnly) return;
+    if (Platform.OS !== 'web') {
+      Alert.alert('Photo upload', 'Photo upload from the mobile app isn’t available yet — use the web app for now.');
+      return;
+    }
+    const file = await pickWebImageFile();
+    if (!file) return; // user cancelled the picker
+    const mimeType = file.type || 'image/jpeg';
+    if (!['image/jpeg', 'image/png'].includes(mimeType)) {
+      Alert.alert('Photo upload', 'Only JPEG or PNG photos are supported.');
+      return;
+    }
     setUploading(true);
     try {
       const idempotencyKey = createIdempotencyKey('up');
       const initRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/upload-init`, {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-        body: JSON.stringify({ dayDate, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024 * 1024 }), // Placeholder 1MB
+        body: JSON.stringify({ dayDate, mediaKind: 'photo', mimeType, byteSize: file.size }),
       });
 
       if (initRes.status === 413) {
@@ -65,18 +88,21 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       }
 
       if (!initRes.ok) throw new Error((await initRes.json().catch(() => ({}))).error || 'Upload failed');
-      const { asset } = await initRes.json();
+      const { asset, uploadUrl } = await initRes.json();
 
-      // In a real app, we would upload to GCS here.
-      // For this validation, we'll just complete the upload immediately.
+      if (uploadUrl) {
+        // Real signed URL: upload the actual selected file's bytes directly to storage.
+        const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': mimeType }, body: file });
+        if (!putRes.ok) throw new Error('Failed to upload the photo to storage');
+      }
+
       const completeRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${asset.id}/complete`, {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ physicalBytes: 1024 * 1024 }),
+        body: JSON.stringify({ physicalBytes: file.size }),
       });
-      if (!completeRes.ok) throw new Error('Failed to finalize upload');
+      if (!completeRes.ok) throw new Error((await completeRes.json().catch(() => ({}))).error || 'Failed to finalize upload');
 
       await load();
-      Alert.alert('Success', 'Photo uploaded to blog!');
     } catch (error) {
       Alert.alert('Upload', error.message || 'Unable to upload');
     } finally {
@@ -200,12 +226,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 {item.kindKey && item.kindKey.startsWith('media.') ? (
                   // Media items are not text: there's no blog_text_contents row backing them, so
                   // routing them through the text Save flow fails with a confusing version-conflict
-                  // error. Show status only, with Remove as the one supported action, until real
-                  // thumbnail rendering (primaryUrl/thumbnailUrl) is wired up server-side.
-                  <View style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
-                    <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'uploaded' : (item.state || 'processing')}</Text>
-                    {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
-                  </View>
+                  // error — Remove is the one supported action here.
+                  (item.thumbnailUrl || item.primaryUrl) ? (
+                    <View>
+                      <Image source={{ uri: item.thumbnailUrl || item.primaryUrl }} style={{ width: '100%', height: 200, borderRadius: 8, backgroundColor: inputColor }} resizeMode="cover" />
+                      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
+                    </View>
+                  ) : (
+                    <View style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
+                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
+                      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
+                    </View>
+                  )
                 ) : (
                   <TextInput
                     multiline value={drafts[item.id] ?? item.body}

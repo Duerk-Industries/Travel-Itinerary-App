@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { ensureUserInTrip, ensureUserCanReadTrip } from '../db.firebase';
 import { getUserTierKey } from '../services/entitlementService';
+import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { getDb } from '../db.firebase';
 
@@ -47,15 +48,24 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   if (!summary.entitlementActive || input.byteSize > summary.availableBytes) throw new Error('QUOTA_EXCEEDED');
   const db = getDb();
   const existing = await db.collection('blog_media_assets').where('sourceRef', '==', input.idempotencyKey).where('uploaderUserId', '==', userId).limit(1).get();
-  if (!existing.empty) { const doc = existing.docs[0]; return { asset: map(doc.data(), doc.id), uploadUrl: null, objectKey: String((doc.data() as any).objectKey ?? ''), expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: 'managed' }; }
+  if (!existing.empty) {
+    const doc = existing.docs[0];
+    const existingData = doc.data() as any;
+    const existingObjectKey = String(existingData.objectKey ?? '');
+    const stillUploading = ['uploading', 'quarantined'].includes(String(existingData.state));
+    const retryUploadUrl = stillUploading ? await createBlogUploadUrl(existingObjectKey, String(existingData.sourceMimeType ?? '')) : null;
+    return { asset: map(existingData, doc.id), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
+  }
   const assetId = randomUUID();
   const blogItemId = randomUUID();
-  const data = { tripId: input.tripId, blogItemId, dayDate: input.dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey: `trip-blog/${userId}/${assetId}/source`, sourceRef: input.idempotencyKey, isHighlight: false, createdAt: nowIso(), updatedAt: nowIso() };
+  const objectKey = `trip-blog/${userId}/${assetId}/source`;
+  const data = { tripId: input.tripId, blogItemId, dayDate: input.dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, createdAt: nowIso(), updatedAt: nowIso() };
   await db.collection('blog_media_assets').doc(assetId).set(data);
   await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: input.dayDate, kindKey: input.mediaKind === 'photo' ? 'media.photo' : 'media.video', schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });
   const accountRef = db.collection('blog_storage_accounts').doc(userId);
   await db.runTransaction(async (tx) => { const current = (await tx.get(accountRef)).data() as any; const available = Number(current?.includedBytes ?? 0) + Number(current?.purchasedBytes ?? 0) - Number(current?.visibleCommittedBytes ?? 0) - Number(current?.reservedBytes ?? 0); if (available < input.byteSize) throw new Error('QUOTA_EXCEEDED'); tx.set(accountRef, { reservedBytes: Number(current?.reservedBytes ?? 0) + input.byteSize, updatedAt: nowIso() }, { merge: true }); });
-  return { asset: map(data, assetId), uploadUrl: null, objectKey: data.objectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: 'managed' };
+  const uploadUrl = await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
+  return { asset: map(data, assetId), uploadUrl, objectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: uploadUrl ? 'gcs' : 'managed' };
 };
 
 export const completeUpload = async (userId: string, assetId: string, physicalBytes: number, checksum?: string): Promise<BlogMediaAsset> => {

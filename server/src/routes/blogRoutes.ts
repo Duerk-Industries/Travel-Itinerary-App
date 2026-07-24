@@ -9,6 +9,8 @@ import { ensureUserInTrip } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
+import { processMediaUpload } from '../services/blogMediaProcessingService';
+import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
 
 const router = Router();
 router.use(authenticate);
@@ -23,6 +25,21 @@ const tripBlogLimits = (): Record<string, any> => {
 
 const userIdOf = (req: any): string => String(req.user?.userId ?? '');
 const validAudience = (value: unknown): value is BlogAudience => value === 'travelers' || value === 'followers' || value === 'public';
+// Signed read URLs are short-lived and specific to a rendition object, so they're computed at
+// response time rather than stored — only ready assets have anything to render.
+const attachMediaUrls = async (assets: any[]): Promise<any[]> => Promise.all(assets.map(async (asset) => {
+  if (asset.state !== 'ready') return asset;
+  if (asset.mediaKind === 'video') {
+    const primaryUrl = await createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'primary.mp4'));
+    return { ...asset, primaryUrl };
+  }
+  const [primaryUrl, thumbnailUrl] = await Promise.all([
+    createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'primary.jpg')),
+    createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'thumb.jpg')),
+  ]);
+  return { ...asset, primaryUrl, thumbnailUrl };
+}));
+
 const errorResponse = (res: any, err: any): void => {
   const message = String(err?.message ?? 'Unable to process blog request');
   if (process.env.NODE_ENV !== 'production') console.error('[blog] request failed', message);
@@ -57,13 +74,14 @@ router.get('/:tripId/blog', async (req, res) => {
     };
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
-    for (const asset of media) {
-      const day = blog.days.find((candidate) => candidate.localDate === asset.dayDate);
-      // `id` must be the underlying blog_items row id (asset.blogItemId), not the media asset's
-      // own id — PATCH/DELETE /blog/items/:itemId operate on blog_items, so shipping the asset id
-      // as `id` makes every client action against a photo/video item target a row that doesn't
-      // exist there, silently failing (404/409) no matter what the client tries.
-      if (day) (day.items as any[]).push({ ...asset, id: asset.blogItemId, assetId: asset.id, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` });
+    // `id` must be the underlying blog_items row id (asset.blogItemId), not the media asset's own
+    // id — PATCH/DELETE /blog/items/:itemId operate on blog_items, so shipping the asset id as
+    // `id` makes every client action against a photo/video item target a row that doesn't exist
+    // there, silently failing (404/409) no matter what the client tries.
+    const mediaItems = await attachMediaUrls(media.map((asset) => ({ ...asset, id: asset.blogItemId, assetId: asset.id, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` })));
+    for (const item of mediaItems) {
+      const day = blog.days.find((candidate) => candidate.localDate === item.dayDate);
+      if (day) (day.items as any[]).push(item);
     }
     const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
     res.setHeader('ETag', etag);
@@ -215,8 +233,18 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
   try {
     await reserveApiUsageOrThrow({ provider: 'GCS', caller: 'BLOG_OBJECT_FINALIZE' });
     if (req.body?.videoProbe) validateVideoEnvelope(req.body.videoProbe);
-    const asset = await blogMediaRepository().completeUpload(userIdOf(req), req.params.assetId, Number(req.body?.physicalBytes), req.body?.checksum);
-    res.status(200).json(asset);
+    const userId = userIdOf(req);
+    const pending = await blogMediaRepository().getAssetForProcessing(req.params.assetId);
+    const reallyUploaded = pending && pending.uploaderUserId === userId && pending.objectKey ? await objectExists(pending.objectKey) : false;
+    // A real object landed in the bucket (the client PUT to the signed URL from upload-init): run
+    // the actual normalization/thumbnail pipeline and trust the real processed byte count instead
+    // of whatever the client claims. Otherwise (no GCS configured, so upload-init fell back to the
+    // simulated path) keep the old client-trusted behavior — there's no real file to process.
+    const asset = reallyUploaded
+      ? await processMediaUpload(userId, req.params.assetId)
+      : await blogMediaRepository().completeUpload(userId, req.params.assetId, Number(req.body?.physicalBytes), req.body?.checksum);
+    const [withUrls] = await attachMediaUrls([asset]);
+    res.status(200).json(withUrls);
   } catch (err) {
     errorResponse(res, err);
   }
@@ -226,7 +254,7 @@ router.get('/:tripId/blog/media', async (req, res) => {
   try {
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ media });
+    res.json({ media: await attachMediaUrls(media) });
   } catch (err) { errorResponse(res, err); }
 });
 

@@ -1,17 +1,14 @@
 import { blogMediaRepository } from '../blog/repository';
 import { logInfo, logError } from '../logger';
-import { Storage } from '@google-cloud/storage';
 import sharp from 'sharp';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { downloadBlogObject, uploadBlogObject, deleteBlogObject, blogRenditionKey } from './blogStorageClient';
+import { BlogMediaAsset } from '../blog/mediaTypes';
 
-const storage = new Storage();
-const QUARANTINE_BUCKET = process.env.BLOG_QUARANTINE_BUCKET || 'trip-blog-quarantine';
-const SERVING_BUCKET = process.env.BLOG_SERVING_BUCKET || 'trip-blog-serving';
-
-export const processMediaUpload = async (userId: string, assetId: string): Promise<void> => {
+export const processMediaUpload = async (userId: string, assetId: string): Promise<BlogMediaAsset> => {
   logInfo(`[blog-media] processing assetId=${assetId} for userId=${userId}`);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-media-'));
 
@@ -26,8 +23,8 @@ export const processMediaUpload = async (userId: string, assetId: string): Promi
     const objectKey = asset.objectKey || `trip-blog/${userId}/${assetId}/source`;
     const localOriginal = path.join(tempDir, 'original');
 
-    // 1. Download from quarantine
-    await storage.bucket(QUARANTINE_BUCKET).file(objectKey).download({ destination: localOriginal });
+    // 1. Download the original the client PUT to its signed upload URL.
+    await downloadBlogObject(objectKey, localOriginal);
 
     const stats = fs.statSync(localOriginal);
     logInfo(`[blog-media] downloaded original, size=${stats.size} bytes, mediaKind=${asset.mediaKind}`);
@@ -37,8 +34,7 @@ export const processMediaUpload = async (userId: string, assetId: string): Promi
       // 2a. Process video with ffmpeg, per the output profile in blogVideoProcessingService (H.264/AAC, 1080p/30fps).
       const localProcessed = path.join(tempDir, 'primary.mp4');
       await processVideo(localOriginal, localProcessed);
-      const processedKey = `trip-blog/${userId}/${assetId}/primary.mp4`;
-      await storage.bucket(SERVING_BUCKET).upload(localProcessed, { destination: processedKey, contentType: 'video/mp4' });
+      await uploadBlogObject(blogRenditionKey(userId, assetId, 'primary.mp4'), localProcessed, 'video/mp4');
       physicalBytes = fs.statSync(localProcessed).size;
     } else {
       // 2b. Process photo/panorama with sharp — normalize resolution and strip EXIF (sharp drops
@@ -58,22 +54,20 @@ export const processMediaUpload = async (userId: string, assetId: string): Promi
         .jpeg({ quality: 70 })
         .toFile(localThumbnail);
 
-      const processedKey = `trip-blog/${userId}/${assetId}/primary.jpg`;
-      const thumbKey = `trip-blog/${userId}/${assetId}/thumb.jpg`;
-
-      await storage.bucket(SERVING_BUCKET).upload(localProcessed, { destination: processedKey, contentType: 'image/jpeg' });
-      await storage.bucket(SERVING_BUCKET).upload(localThumbnail, { destination: thumbKey, contentType: 'image/jpeg' });
+      await uploadBlogObject(blogRenditionKey(userId, assetId, 'primary.jpg'), localProcessed, 'image/jpeg');
+      await uploadBlogObject(blogRenditionKey(userId, assetId, 'thumb.jpg'), localThumbnail, 'image/jpeg');
 
       physicalBytes = fs.statSync(localProcessed).size + fs.statSync(localThumbnail).size;
     }
 
     // 3. Finalize
-    await blogMediaRepository().completeUpload(userId, assetId, physicalBytes);
+    const finalized = await blogMediaRepository().completeUpload(userId, assetId, physicalBytes);
 
     // 4. Cleanup quarantine
-    await storage.bucket(QUARANTINE_BUCKET).file(objectKey).delete().catch(() => undefined);
+    await deleteBlogObject(objectKey);
 
     logInfo(`[blog-media] successfully processed assetId=${assetId}, billableBytes=${physicalBytes}`);
+    return finalized;
   } catch (err) {
     logError(`[blog-media] failed to process assetId=${assetId}`, err);
     throw err;

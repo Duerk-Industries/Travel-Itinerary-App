@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { ensureUserInTrip, ensureUserCanReadTrip } from '../db';
 import { queryBlog } from '../db.postgres';
 import { getUserTierKey } from '../services/entitlementService';
+import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 
 const tierConfig = (() => {
@@ -66,7 +67,12 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   const access = await ensureUserInTrip(input.tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');
   const existing = await queryBlog<any>('SELECT * FROM blog_media_assets WHERE source_ref = $1 AND uploader_user_id = $2 LIMIT 1', [input.idempotencyKey, userId]);
-  if (existing.rows[0]) return { asset: mapAsset(existing.rows[0]), uploadUrl: null, objectKey: String(existing.rows[0].object_key ?? ''), expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), storageMode: 'managed' };
+  if (existing.rows[0]) {
+    const existingObjectKey = String(existing.rows[0].object_key ?? '');
+    const stillUploading = ['uploading', 'quarantined'].includes(String(existing.rows[0].state));
+    const retryUploadUrl = stillUploading ? await createBlogUploadUrl(existingObjectKey, String(existing.rows[0].source_mime_type ?? '')) : null;
+    return { asset: mapAsset(existing.rows[0]), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
+  }
   const allowedMime = input.mediaKind === 'photo' ? ['image/jpeg', 'image/png'] : ['video/mp4', 'video/quicktime', 'video/webm'];
   if (!allowedMime.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
   const maxBytes = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : 1024 * 1024 * 1024;
@@ -108,7 +114,17 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
      FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
     [assetId]
   );
-  return { asset: mapAsset(row.rows[0]), uploadUrl: null, objectKey, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), storageMode: 'managed' };
+  const uploadUrl = await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
+  return {
+    asset: mapAsset(row.rows[0]),
+    uploadUrl,
+    objectKey,
+    expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+    // 'gcs' when a real signed PUT URL was issued (client uploads real bytes there); 'managed'
+    // only as a fallback when signing fails (e.g. no GCS credentials in this environment), in
+    // which case the client-reported byte count is trusted at /complete instead.
+    storageMode: uploadUrl ? 'gcs' : 'managed',
+  };
 };
 
 export const completeUpload = async (userId: string, assetId: string, physicalBytes: number, checksum?: string): Promise<BlogMediaAsset> => {
