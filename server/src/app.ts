@@ -35,6 +35,7 @@ import prometheusRoutes from './routes/prometheusRoutes';
 import staticMapRoutes from './routes/staticMapRoutes';
 import getYourGuideRoutes from './routes/getYourGuideRoutes';
 import blogRoutes from './routes/blogRoutes';
+import blogStorageRoutes from './routes/blogStorageRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -397,6 +398,7 @@ app.use('/api/affiliate', getYourGuideRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
+app.use('/api/account', blogStorageRoutes);
 app.get('/api/packing-list-presets', authenticate, async (_req, res) => {
   if (!(await isFeatureEnabled('packing_lists_v2'))) {
     res.status(404).json({ error: 'Packing lists v2 is not enabled' });

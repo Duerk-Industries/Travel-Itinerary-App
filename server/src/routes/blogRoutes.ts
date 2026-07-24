@@ -3,9 +3,11 @@ import { authenticate } from '../auth';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { getApiLimitsConfig } from '../config/apiLimits';
 import { getBlogItemDescriptor, listBlogItemDescriptors } from '../blog/registry';
-import { blogRepository } from '../blog/repository';
+import { blogMediaRepository, blogRepository } from '../blog/repository';
 import { BlogAudience } from '../blog/types';
 import { ensureUserInTrip } from '../db';
+import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 
 const router = Router();
 router.use(authenticate);
@@ -24,7 +26,7 @@ const errorResponse = (res: any, err: any): void => {
   const message = String(err?.message ?? 'Unable to process blog request');
   if (process.env.NODE_ENV !== 'production') console.error('[blog] request failed', message);
   if (/not authorized/i.test(message)) res.status(403).json({ error: message });
-  else if (/outside|too large|must be|required/i.test(message)) res.status(400).json({ error: message });
+  else if (/outside|too large|must be|required|unsupported|exceeds|bytes do not match/i.test(message)) res.status(400).json({ error: message });
   else res.status(500).json({ error: message });
 };
 
@@ -48,6 +50,11 @@ router.get('/:tripId/blog', async (req, res) => {
       return;
     }
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId);
+    const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
+    for (const asset of media) {
+      const day = blog.days.find((candidate) => candidate.localDate === asset.dayDate);
+      if (day) (day.items as any[]).push({ ...asset, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` });
+    }
     const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
     res.setHeader('ETag', etag);
     if (req.headers['if-none-match'] === etag) {
@@ -140,6 +147,75 @@ router.post('/:tripId/blog/items/reorder', async (req, res) => {
   } catch (err) {
     errorResponse(res, err);
   }
+});
+
+router.post('/:tripId/blog/media/upload-init', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_photo_uploads'))) {
+      res.status(404).json({ error: 'Photo uploads are not enabled' });
+      return;
+    }
+    const mediaKind = req.body?.mediaKind === 'video' ? 'video' : 'photo';
+    if (mediaKind === 'video') {
+      const tier = await getUserTierKey(userIdOf(req));
+      if (!['premium', 'pro'].includes(tier)) {
+        res.status(402).json({ error: 'Video uploads require Premium', code: 'PREMIUM_REQUIRED' });
+        return;
+      }
+      if (!(await isFeatureEnabled('trip_blog_video_uploads'))) {
+        res.status(404).json({ error: 'Video uploads are not enabled' });
+        return;
+      }
+    }
+    await assertCanUseFeature(userIdOf(req), 'trip_blog', (req as any).user.role);
+    await reserveApiUsageOrThrow({ provider: 'GCS', caller: 'BLOG_UPLOAD_INIT' });
+    const idempotencyKey = String(req.header('Idempotency-Key') ?? '').trim();
+    if (!idempotencyKey) {
+      res.status(400).json({ error: 'Idempotency-Key is required' });
+      return;
+    }
+    const result = await blogMediaRepository().initUpload(userIdOf(req), {
+      tripId: req.params.tripId,
+      dayDate: String(req.body?.dayDate ?? ''),
+      mediaKind,
+      mimeType: String(req.body?.mimeType ?? ''),
+      byteSize: Number(req.body?.byteSize),
+      capturedAt: req.body?.capturedAt ?? null,
+      caption: req.body?.caption ?? null,
+      altText: req.body?.altText ?? null,
+      idempotencyKey,
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    const message = String((err as any)?.message ?? 'Unable to initialize upload');
+    if (message === 'QUOTA_EXCEEDED') { res.status(413).json({ error: message, code: message }); return; }
+    errorResponse(res, err);
+  }
+});
+
+router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
+  try {
+    await reserveApiUsageOrThrow({ provider: 'GCS', caller: 'BLOG_OBJECT_FINALIZE' });
+    const asset = await blogMediaRepository().completeUpload(userIdOf(req), req.params.assetId, Number(req.body?.physicalBytes), req.body?.checksum);
+    res.status(200).json(asset);
+  } catch (err) {
+    errorResponse(res, err);
+  }
+});
+
+router.get('/:tripId/blog/media', async (req, res) => {
+  try {
+    const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ media });
+  } catch (err) { errorResponse(res, err); }
+});
+
+router.post('/:tripId/blog/items/:itemId/highlight', async (req, res) => {
+  try {
+    await blogMediaRepository().setHighlight(userIdOf(req), req.params.itemId, req.body?.highlighted !== false);
+    res.status(204).end();
+  } catch (err) { errorResponse(res, err); }
 });
 
 export default router;
