@@ -15,7 +15,9 @@
     "build:ios:local": "npx --yes eas-cli@20.2.0 build --platform ios --profile production --local",
     "submit:ios": "npx --yes eas-cli@20.2.0 submit --platform ios --profile production",
     "export:web": "node ./scripts/export-web.js",
-    "web": "node ./scripts/start-web.js"
+    "web": "node ./scripts/start-web.js",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "overrides": {
     "glob": "13.0.5",

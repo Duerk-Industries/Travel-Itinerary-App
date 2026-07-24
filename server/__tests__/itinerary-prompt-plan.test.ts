@@ -3,6 +3,7 @@
 import axios from 'axios';
 import { generateItineraryViaPromptPlan, buildDestinationClimatologyBlock, buildHomeTerminalLogisticsNote } from '../src/services/itineraryPromptPlanService';
 import { clearClimatologyCacheForTests } from '../src/services/climatologyDaylightService';
+import { clearWikipediaEnrichmentCacheForTests } from '../src/services/wikipediaGeocodingService';
 import * as attractionsCatalogService from '../src/services/attractionsCatalogService';
 import { initDb } from '../src/db';
 import { seedEntitlementDefaults } from '../src/services/entitlementService';
@@ -101,6 +102,10 @@ describe('itinerary prompt plan service', () => {
     // default; tests that don't care about descriptions get a clean "no
     // article" response instead of relying on an unmocked call throwing.
     mockedAxios.get.mockResolvedValue({ status: 404, data: {} });
+    // fetchWikipediaEnrichment caches by name+destination at module scope;
+    // without clearing it, a description mocked in one test could leak into
+    // (or shadow the mock in) another test that reuses the same attraction name.
+    clearWikipediaEnrichmentCacheForTests();
     mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockReset();
     mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
       shortlistByDestination: {},
@@ -170,9 +175,29 @@ describe('itinerary prompt plan service', () => {
                   dy: [
                     {
                       d: 1,
+                      dt: '2026-08-01',
+                      b: 'California',
+                      it: [['M', 'O', 'Arrival check-in stroll'], ['E', 'O', 'Easy local dinner']],
+                      me: ['BQ', 'LC', 'DL'],
+                      sl: "Lodging at 'California'",
+                      ln: [],
+                      cf: 'M',
+                    },
+                    {
+                      d: 2,
                       dt: '2026-08-02',
                       b: 'California',
-                      it: [['M', 'A', 'Major landmark entry'], ['D', 'R', 'Timed gallery slot']],
+                      it: [['M', 'A', 'Major landmark entry'], ['D', 'R', 'Timed gallery slot'], ['E', 'O', 'Evening waterfront walk']],
+                      me: ['BQ', 'LC', 'DL'],
+                      sl: "Lodging at 'California'",
+                      ln: [],
+                      cf: 'M',
+                    },
+                    {
+                      d: 3,
+                      dt: '2026-08-03',
+                      b: 'California',
+                      it: [['M', 'O', 'Farewell coastal walk'], ['D', 'O', 'Last-day local lunch'], ['E', 'O', 'Final evening stroll']],
                       me: ['BQ', 'LC', 'DL'],
                       sl: "Lodging at 'California'",
                       ln: [],
@@ -187,12 +212,21 @@ describe('itinerary prompt plan service', () => {
           ],
         },
       })
-      // Note: no separate p3-validate mock here. The p2 output above is already
-      // mechanically clean (correct meal codes, <=5 items/day, no evening overflow,
-      // no verified closures), so with `skipValidatorWhenClean` (api-limits.yaml
-      // itineraryPlan, default on per Phase 4A) the LLM p3 validator call is skipped
-      // and the deterministic mechanical result is used directly. The next mocked
-      // call is therefore p4 (render), not p3.
+      // Day 3 (2026-08-03) is the departure day for a home-airport trip (see
+      // sanitizeRoute's deterministic return-transfer injection): its 3 items
+      // exceed the departure logistics cap (1), so the mechanical pass truncates
+      // it — a real structural change, so `skipValidatorWhenClean` no longer
+      // applies and the LLM p3 validator call fires. Echo the same content back
+      // unchanged (zero usage, doesn't affect the tokenUsage assertion below).
+      .mockResolvedValueOnce({
+        data: { choices: [{ message: { content: '{}' } }] },
+      })
+      // Whichever day(s) are still below THIN_DAY_MIN_ITEMS after the mechanical
+      // pass (departure-capped days are exempt; a plain thin mid-trip day is
+      // not) get the single Phase 4B repair call — no-op content, zero usage.
+      .mockResolvedValueOnce({
+        data: { choices: [{ message: { content: '{}' } }] },
+      })
       .mockResolvedValueOnce({
         data: {
           usage: { prompt_tokens: 260, completion_tokens: 700 },
@@ -247,7 +281,12 @@ describe('itinerary prompt plan service', () => {
     expect(result.generatedItems.activities.length).toBeGreaterThanOrEqual(2);
     expect(result.generatedItems.activities[0].status).toBe('Proposed');
     expect(result.generatedItems.activities[1].status).toBe('Proposed');
-    expect(result.generatedItems.activities[0].notes).toMatch(/Plan for about/i);
+    // Duration is already a separate structured field on the activity, so notes
+    // must not redundantly restate it in prose (see itineraryPromptPlanService.ts mapItems).
+    expect(result.generatedItems.activities[0].notes).not.toMatch(/Plan for about/i);
+    // Every generated activity should retain a useful blurb even when no
+    // verified catalog description is available.
+    expect(result.generatedItems.activities[0].notes).toBeTruthy();
     expect(result.generatedItems.carRentals[0].status).toBe('Needed');
     // plan.md operational output targets: p0 <350, p1 <450,
     // p2 <600 per seven days, p3 <350. Rendering has no documented target,
@@ -490,7 +529,7 @@ describe('itinerary prompt plan service', () => {
     expect(result.generatedItems.lodgings.length).toBeGreaterThan(0);
   });
 
-  it('removes activities on arrival/departure days and transfer days over 4 hours', async () => {
+  it('caps arrival/departure day activity counts and surfaces arrival/departure logistics notes', async () => {
     mockedAxios.post
       .mockResolvedValueOnce({
         data: {
@@ -611,11 +650,19 @@ describe('itinerary prompt plan service', () => {
       tripIdSeed: 'trip-seed-blocked-days',
     });
 
-    expect(result.generatedItems.activities).toHaveLength(1);
-    expect(result.generatedItems.activities[0].name).toBe('City tour');
-    expect(result.itinerary.dy[0].ln.join(' ')).toContain('Travel day: no activities scheduled');
+    // With departureAirport set, sanitizeRoute now deterministically injects a
+    // BOS <-> Mexico City transfer for the arrival/departure days (see "fills
+    // in the missing return-home transfer"), so they're no longer treated as
+    // fully-unknown terminal-only days (maxActivities 0) — each gets a light
+    // cap of 1 activity instead, which the single item already on each day
+    // fits within, so nothing is stripped from days 1 or 3 anymore, and each
+    // gets a reserved-time note for the now-known home-airport transfer.
+    expect(result.generatedItems.activities.map((a) => a.name).sort()).toEqual(
+      ['City tour', 'Evening walk', 'Museum'].sort()
+    );
+    expect(result.itinerary.dy[0].ln.join(' ')).toContain('BOS → Mexico City');
+    expect(result.itinerary.dy[2].ln.join(' ')).toContain('Mexico City → BOS');
     expect(result.itinerary.dy[1].ln.join(' ')).not.toContain('Travel day: no activities scheduled');
-    expect(result.itinerary.dy[2].ln.join(' ')).toContain('Travel day: no activities scheduled');
   });
 
   it('canonicalizes alias localities and removes duplicate activities across days', async () => {
@@ -1136,6 +1183,121 @@ describe('itinerary prompt plan service', () => {
     expect(itineraryActivities).toContain('louvre museum');
   });
 
+  it('fills in the missing return-home transfer when the model only routes between trip bases', async () => {
+    // Regression case: a real Boston/New York trip with departureAirport/
+    // returnAirport = CLE never got a CLE-bound leg in x[] at all — the
+    // route prompt only instructs the model to create transfers "between
+    // bases", nothing tells it to add the actual home-airport legs. The
+    // traveler's return flight home was simply absent from the itinerary.
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: { Boston: [], 'New York': [] },
+      promptBlock: 'none',
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-08-16',
+                ed: '2026-08-19',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15, adventure: 10, culture: 20, food: 15, nightlife: 10,
+                  relax: 10, photography: 10, authentic_local: 5, iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    // The model only routes Boston -> New York, never CLE -> Boston or New York -> CLE.
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'CLE',
+                xh: 'CLE',
+                b: [
+                  { l: 'Boston', ci: '2026-08-16', co: '2026-08-18', dn: [] },
+                  { l: 'New York', ci: '2026-08-18', co: '2026-08-19', dn: [] },
+                ],
+                x: [{ dt: '2026-08-18', m: 'Train', fr: 'Boston', to: 'New York' }],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'CLE',
+      xh: 'CLE',
+      b: [
+        { l: 'Boston', ci: '2026-08-16', co: '2026-08-18', dn: [] },
+        { l: 'New York', ci: '2026-08-18', co: '2026-08-19', dn: [] },
+      ],
+      x: [{ dt: '2026-08-18', m: 'Train', fr: 'Boston', to: 'New York' }],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-08-16', b: 'Boston', it: [['D', 'O', 'Freedom Trail walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-08-17', b: 'Boston', it: [['D', 'O', 'Boston Common stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 3, dt: '2026-08-18', b: 'New York', it: [['D', 'O', 'Times Square visit']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York'", ln: [], cf: 'M' },
+        { d: 4, dt: '2026-08-19', b: 'New York', it: [['D', 'O', 'Central Park walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston', 'New York'],
+      days: 4,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      departureAirport: 'CLE',
+      returnAirport: 'CLE',
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-home-transfer',
+    });
+
+    const transfers = result.generatedItems.transfers;
+    expect(transfers).toHaveLength(3);
+    const arrival = transfers.find((t) => t.departureLocation === 'CLE');
+    const departure = transfers.find((t) => t.arrivalLocation === 'CLE');
+    expect(arrival).toBeDefined();
+    expect(arrival?.arrivalLocation).toBe('Boston');
+    expect(arrival?.departureDate).toBe('2026-08-16');
+    expect(departure).toBeDefined();
+    expect(departure?.departureLocation).toBe('New York');
+    expect(departure?.departureDate).toBe('2026-08-19');
+  });
+
   it('reassigns an attraction scheduled on the wrong destination day to the day matching its catalog destination', async () => {
     mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
       shortlistByDestination: {
@@ -1264,6 +1426,118 @@ describe('itinerary prompt plan service', () => {
 
     expect(bostonActivities).not.toContain('american museum of natural history');
     expect(newYorkActivities).toContain('american museum of natural history');
+  });
+
+  it('overrides a day\'s own mislabeled base with the deterministic check-in/check-out window instead of trusting the model', async () => {
+    // Regression case: a real 11-day Boston/New York trip's actual last day
+    // (equal to New York's own checkout date) came back from the model with
+    // day.b = "Boston" and a Boston-only attraction, even though the date is
+    // well inside the New York stay per route.b. The date-range match used to
+    // fall back to route.b[0] (the FIRST city) whenever a date matched no
+    // window at all — which is exactly what happens for a base's own trailing
+    // checkout date under an exclusive `< co` comparison. sanitizeItinerary no
+    // longer trusts the model's day.b at all; it always uses the
+    // deterministic date-window base.
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: { Boston: [], 'New York': [] },
+      promptBlock: 'none',
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-04',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15, adventure: 10, culture: 20, food: 15, nightlife: 10,
+                  relax: 10, photography: 10, authentic_local: 5, iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [
+                  { l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] },
+                  { l: 'New York', ci: '2026-09-03', co: '2026-09-04', dn: [] },
+                ],
+                x: [{ dt: '2026-09-03', m: 'Train', fr: 'Boston', to: 'New York' }],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    // Day 4 (2026-09-04) is New York's own checkout date, equal to the trip's
+    // end date — but the model mislabels it "Boston" with a Boston-only item.
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [
+        { l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] },
+        { l: 'New York', ci: '2026-09-03', co: '2026-09-04', dn: [] },
+      ],
+      x: [{ dt: '2026-09-03', m: 'Train', fr: 'Boston', to: 'New York' }],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'O', 'Freedom Trail walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-09-02', b: 'Boston', it: [['D', 'O', 'Boston Common stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 3, dt: '2026-09-03', b: 'New York', it: [['D', 'O', 'Times Square visit']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'New York'", ln: [], cf: 'M' },
+        { d: 4, dt: '2026-09-04', b: 'Boston', it: [['D', 'A', 'John F. Kennedy Presidential Library and Museum']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston', 'New York'],
+      days: 4,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-trailing-day-base',
+    });
+
+    const lastDay = result.itinerary.dy.find((day) => day.dt === '2026-09-04');
+    expect(lastDay?.b).toBe('New York');
+    const lastDayActivity = result.generatedItems.activities.find((a) => a.date === '2026-09-04');
+    expect(lastDayActivity?.startLocation).toBe('New York');
   });
 
   it('populates a heuristic duration and pre-order-ticket note for a matched catalog attraction', async () => {
@@ -1411,14 +1685,29 @@ describe('itinerary prompt plan service', () => {
       },
       promptBlock: 'Destination: Boston\n1. New England Aquarium',
     });
-    mockedAxios.get.mockImplementation(async (url: string) => {
-      if (String(url).includes('New%20England%20Aquarium')) {
+    // Duration-metadata description lookup goes through fetchWikipediaEnrichment
+    // (a destination-qualified MediaWiki search passed via `params.gsrsearch`),
+    // not the exact-title REST summary endpoint — so the mock keys off the
+    // search param rather than the request URL, and returns the search API's
+    // { query: { pages: {...} } } response shape.
+    mockedAxios.get.mockImplementation(async (_url: string, config?: any) => {
+      const search = String(config?.params?.gsrsearch ?? '');
+      if (search.includes('New England Aquarium')) {
         return {
-          status: 200,
-          data: { extract: 'The New England Aquarium is a public aquarium located in Boston, Massachusetts, known for its giant ocean tank.' },
+          data: {
+            query: {
+              pages: {
+                '1': {
+                  pageid: 1,
+                  title: 'New England Aquarium',
+                  extract: 'The New England Aquarium is a public aquarium located in Boston, Massachusetts, known for its giant ocean tank.',
+                },
+              },
+            },
+          },
         };
       }
-      return { status: 404, data: {} };
+      return { data: { query: { pages: {} } } };
     });
 
     const normStage = {
@@ -1513,7 +1802,143 @@ describe('itinerary prompt plan service', () => {
     const activity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'new england aquarium');
     expect(activity?.notes).toMatch(/giant ocean tank/i);
     expect(activity?.notes).not.toMatch(/it fits this day because/i);
-    expect(activity?.notes).toMatch(/plan for about/i);
+    // Duration is already a separate structured field on the activity, so notes
+    // must not redundantly restate it in prose.
+    expect(activity?.notes).not.toMatch(/plan for about/i);
+  });
+
+  it('does not live-search a bare-word catalog entry with no verified summary, even though it is in the catalog', async () => {
+    // Regression guard: catalog membership alone must not bypass the
+    // specificity gate. A single-word catalog entry (e.g. a real attraction
+    // like "SALT" that has no matching Wikipedia article) with no
+    // cachedWikipediaSummary is no safer than an uncatalogued name — it must
+    // not trigger a live Wikipedia search that could confidently return
+    // something unrelated. Multi-word catalog names (see the New England
+    // Aquarium test above) still get enriched normally.
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {
+        Boston: [
+          {
+            id: 'salt-test',
+            destinationKey: 'boston',
+            destinationDisplayName: 'Boston',
+            name: 'SALT',
+            rank: 1,
+            activityType: 'Spa/Wellness',
+            interestTags: ['relax'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 1,
+            budgetTier: 'paid',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      promptBlock: 'Destination: Boston\n1. SALT',
+    });
+    const searchedTerms: string[] = [];
+    mockedAxios.get.mockImplementation(async (_url: string, config?: any) => {
+      const search = String(config?.params?.gsrsearch ?? '');
+      searchedTerms.push(search);
+      return { data: { query: { pages: {} } } };
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1',
+                sd: '2026-09-01',
+                ed: '2026-09-02',
+                p: 'B',
+                c: 'M',
+                mob: 'M',
+                car: 'P',
+                is: 'mixed',
+                w: {
+                  outdoors: 15,
+                  adventure: 10,
+                  culture: 20,
+                  food: 15,
+                  nightlife: 10,
+                  // Kept below the >=10 "fairness floor" threshold so this test's
+                  // assertion on `notes` isn't complicated by a legitimate
+                  // (non-Wikipedia) "why this fits" note also being attached.
+                  relax: 5,
+                  photography: 10,
+                  authentic_local: 5,
+                  iconic_landmarks: 5,
+                },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1',
+                eh: 'BOS',
+                xh: 'BOS',
+                b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] }],
+                x: [],
+                rc: null,
+                w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1',
+      eh: 'BOS',
+      xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-03', dn: [] }],
+      x: [],
+      rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'O', 'SALT']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+      ],
+      a: [],
+      cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston'],
+      days: 1,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-bare-word-catalog-entry',
+    });
+
+    expect(searchedTerms.some((term) => term.includes('SALT'))).toBe(false);
+    const activity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'salt');
+    // No verified description was found (live search was correctly withheld),
+    // so notes must not contain fabricated/boilerplate description text.
+    expect(activity?.notes ?? '').not.toMatch(/no verified attraction description/i);
   });
 
   it('reassigns an attraction with no catalog match to the correct day when its cached description names a different destination', async () => {
@@ -1523,14 +1948,20 @@ describe('itinerary prompt plan service', () => {
       shortlistByDestination: {},
       promptBlock: 'none',
     });
-    mockedAxios.get.mockImplementation(async (url: string) => {
-      if (String(url).includes('Central%20Park')) {
+    mockedAxios.get.mockImplementation(async (_url: string, config?: any) => {
+      const search = String(config?.params?.gsrsearch ?? '');
+      if (search.includes('Central Park')) {
         return {
-          status: 200,
-          data: { extract: 'Central Park is an urban park in Manhattan, New York City.' },
+          data: {
+            query: {
+              pages: {
+                '1': { pageid: 1, title: 'Central Park', extract: 'Central Park is an urban park in Manhattan, New York City.' },
+              },
+            },
+          },
         };
       }
-      return { status: 404, data: {} };
+      return { data: { query: { pages: {} } } };
     });
 
     const normStage = {
@@ -1813,12 +2244,38 @@ describe('itinerary prompt plan service', () => {
       rc: null,
       dy: [
         {
+          d: 1,
+          dt: '2026-09-01',
+          b: 'Boston',
+          it: [
+            ['M', 'O', 'Boston Common walk'],
+            ['E', 'O', 'Waterfront dinner'],
+          ],
+          me: ['BQ', 'LC', 'DL'],
+          sl: "Lodging at 'Boston'",
+          ln: [],
+          cf: 'M',
+        },
+        {
           d: 2,
           dt: '2026-09-02',
           b: 'Boston',
           it: [
             ['D', 'A', 'Museum of Fine Arts'],
             ['D', 'A', 'Isabella Stewart Gardner Museum'],
+          ],
+          me: ['BQ', 'LC', 'DL'],
+          sl: "Lodging at 'Boston'",
+          ln: [],
+          cf: 'M',
+        },
+        {
+          d: 3,
+          dt: '2026-09-03',
+          b: 'Boston',
+          it: [
+            ['M', 'O', 'Beacon Hill walk'],
+            ['E', 'O', 'Farewell dinner'],
           ],
           me: ['BQ', 'LC', 'DL'],
           sl: "Lodging at 'Boston'",
@@ -2140,7 +2597,7 @@ describe('itinerary prompt plan service', () => {
     const norm = { $: 'norm1', sd: '2026-11-01', ed: '2026-11-02', p: 'B', c: 'M', mob: 'M', car: 'P', w: { outdoors: 10, adventure: 5, culture: 40, food: 10, nightlife: 5, relax: 10, photography: 5, authentic_local: 10, iconic_landmarks: 5 }, a: [], is: 'mixed' };
     const route = { $: 'r1', eh: 'BOS', xh: 'BOS', b: [{ l: 'Cacheville', ci: '2026-11-01', co: '2026-11-03', dn: [] }], x: [], rc: null, w: norm.w, a: [] };
     const itinerary = { $: 'it1', ...route, dy: [
-      { d: 1, dt: '2026-11-01', b: 'Cacheville', it: [['M', 'O', 'Flexible activity block']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Cacheville'", ln: [], cf: 'H' },
+      { d: 1, dt: '2026-11-01', b: 'Cacheville', it: [['M', 'O', 'Flexible activity block'], ['E', 'O', 'Evening arrival stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Cacheville'", ln: [], cf: 'H' },
       { d: 2, dt: '2026-11-02', b: 'Cacheville', it: [['M', 'O', 'Central Park Walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Cacheville'", ln: [], cf: 'H' },
     ], cf: 'H' };
     mockedAxios.post

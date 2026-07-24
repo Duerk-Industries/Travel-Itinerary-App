@@ -43,6 +43,7 @@ import { scheduleDayItems, scheduleAdjacentDaySwaps } from './daySchedulingServi
 import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
 import { buildArrivalDepartureFacts, renderLogisticsFactBlock, type LogisticsFact } from './arrivalDepartureRulesService';
+import { trimToSentences } from '../utils/sentenceTrim';
 import {
   ITINERARY_STRUCTURE_VALIDATOR_VERSION,
   validateAndRepairItineraryStructure,
@@ -552,6 +553,25 @@ const addDays = (isoDate: string, days: number): string => {
   return toIso(base);
 };
 
+// Resolves which route.b base a date belongs to. A base's checkout date is
+// exclusive of its own stay window (`date < b.co`) so the NEXT base's
+// check-in day correctly claims that date — but that means the trip's
+// actual last day (equal to the last base's own checkout date) matches NO
+// window at all under a plain `.find`. Falling back to route.b[0] for that
+// case silently mislabels the trip's final day(s) with the FIRST city
+// instead of the last one (a real Boston/New York trip labeled its last day,
+// well inside the New York stay, as "Boston" and populated it with a
+// Boston-only attraction as a result). Falling back to the base with the
+// latest check-in date on/before the given date fixes this for the trailing
+// edge while leaving every date inside a real window unaffected.
+const resolveBaseForDate = (date: string, route: PromptRoute): string => {
+  const exact = route.b.find((b) => date >= b.ci && date < b.co);
+  if (exact) return exact.l;
+  const onOrAfterCheckIn = route.b.filter((b) => date >= b.ci);
+  if (onOrAfterCheckIn.length) return onOrAfterCheckIn[onOrAfterCheckIn.length - 1].l;
+  return route.b[0]?.l ?? 'Base';
+};
+
 const normalizeText = (value: unknown): string => String(value ?? '').trim();
 
 const normalizeLocalityKey = (value: string): string =>
@@ -1033,6 +1053,36 @@ const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRo
     .filter((transfer: PromptTransfer) => transfer.fr && transfer.to)
     .filter((transfer: PromptTransfer) => normalizeLocalityKey(transfer.fr) !== normalizeLocalityKey(transfer.to));
 
+  // p1_route.md only instructs the model to create transfers "between bases"
+  // — nothing tells it to add the actual legs to/from the traveler's home
+  // airport (req.s/req.e), even though eh/xh correctly record the hub code.
+  // In practice the model includes them only sometimes; when it doesn't, the
+  // return flight home goes missing from x[] entirely, and downstream logic
+  // that reserves terminal/transfer time around the first and last day
+  // (buildArrivalDepartureFacts) has nothing to key off of. Deterministically
+  // fill in whichever leg is absent rather than leaving it to chance.
+  const firstBase = compactBases[0];
+  const lastBase = compactBases[compactBases.length - 1];
+  const homeAirport = req.s?.trim();
+  const returnAirport = req.e?.trim();
+  // dt uses start/end (norm.sd/norm.ed), not firstBase.ci/lastBase.co: a base's
+  // co is inconsistently either the trip's actual last day or the day after it
+  // depending on what the model returned, but buildArrivalDepartureFacts looks
+  // up the departure leg by exact equality with normalized.ed, so this transfer
+  // must match that same authoritative date to actually be found.
+  if (homeAirport && normalizeLocalityKey(homeAirport) !== normalizeLocalityKey(firstBase.l)) {
+    const hasArrivalLeg = transfers.some((t) => normalizeLocalityKey(t.fr) === normalizeLocalityKey(homeAirport));
+    if (!hasArrivalLeg) {
+      transfers.unshift({ dt: start, m: 'Flight', fr: homeAirport, to: firstBase.l });
+    }
+  }
+  if (returnAirport && normalizeLocalityKey(returnAirport) !== normalizeLocalityKey(lastBase.l)) {
+    const hasDepartureLeg = transfers.some((t) => normalizeLocalityKey(t.to) === normalizeLocalityKey(returnAirport));
+    if (!hasDepartureLeg) {
+      transfers.push({ dt: end, m: 'Flight', fr: lastBase.l, to: returnAirport });
+    }
+  }
+
   const weightsRaw = (raw as any)?.w ?? norm.w;
   const weights = normalizeWeights(coerceToInterestWeights(weightsRaw));
 
@@ -1059,7 +1109,7 @@ const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm, r
   const dayCount = diffDaysInclusive(norm.sd, norm.ed);
   const fallbackDays: PromptDay[] = Array.from({ length: dayCount }, (_, idx) => {
     const date = addDays(norm.sd, idx);
-    const base = route.b.find((b) => date >= b.ci && date < b.co)?.l ?? route.b[0]?.l ?? 'Base';
+    const base = resolveBaseForDate(date, route);
     return {
       d: idx + 1,
       dt: date,
@@ -1080,15 +1130,21 @@ const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm, r
   const seenActivityKeys = new Set<string>();
   const days: PromptDay[] = daysRaw.map((day: any, idx: number) => {
     const date = isIsoDate(day?.dt) ? String(day.dt) : addDays(norm.sd, idx);
-    const defaultBaseRaw = route.b.find((b) => date >= b.ci && date < b.co)?.l ?? route.b[0]?.l ?? 'Base';
+    const defaultBaseRaw = resolveBaseForDate(date, route);
     const defaultBase = strictCanonicalizeToRequestedLocality(defaultBaseRaw, req.d);
     const itemsRaw = Array.isArray(day?.it) ? day.it : [];
     const items = itemsRaw
       .map((item: any): [PromptDayTimeCode, PromptActivityCode, string] => {
         const time = (['M', 'D', 'E'] as const).includes(item?.[0]) ? item[0] : 'D';
         const code = (['A', 'R', 'T', 'O', 'E'] as const).includes(item?.[1]) ? item[1] : 'O';
-        const baseForDay = strictCanonicalizeToRequestedLocality(String(day?.b ?? '').trim() || defaultBase, req.d);
-        const normalized = sanitizeActivityText(String(item?.[2] ?? ''), { base: baseForDay, activityCode: code });
+        // defaultBase (not day?.b) — the check-in/check-out windows in route.b
+        // are already deterministic ground truth for which city a given date
+        // belongs to, so there's nothing to gain by trusting the model's own
+        // per-day `b` field, and real generations have shown it occasionally
+        // mislabeling a day's base outright (e.g. a Boston/New York trip's
+        // last day, well inside the New York lodging window, labeled "Boston"
+        // and populated with a Boston-only attraction as a result).
+        const normalized = sanitizeActivityText(String(item?.[2] ?? ''), { base: defaultBase, activityCode: code });
         return [time, normalized.activityCode, normalized.text];
       })
       .filter((item: [PromptDayTimeCode, PromptActivityCode, string]) => {
@@ -1103,7 +1159,7 @@ const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm, r
     return {
       d: Number.isFinite(Number(day?.d)) ? Math.max(1, Math.round(Number(day.d))) : idx + 1,
       dt: date,
-      b: strictCanonicalizeToRequestedLocality(String(day?.b ?? '').trim() || defaultBase, req.d),
+      b: defaultBase,
       it: items.length ? items : [['D', 'O', `Flexible exploration in ${defaultBase}`]],
       me: ['BQ', 'LC', 'DL'],
       sl: String(day?.sl ?? '').trim() || `Lodging at '${defaultBase}'`,
@@ -1150,6 +1206,118 @@ const isLikelyStandaloneLocalityLabel = (value: string): boolean => {
   const unwrapped = text.replace(/\([^)]*\)/g, ' ').trim();
   const words = normalizeLocalityKey(unwrapped).split(' ').filter(Boolean);
   return words.length > 0 && words.length <= 4;
+};
+
+const SPECIFICITY_STOPWORDS = new Set([
+  'the', 'a', 'an', 'of', 'in', 'at', 'and', 'or', 'to', 'for', 'on', 'near', 'from', 'with', 'around', 'through', 'toward', 'into',
+]);
+
+// Wikipedia's search API (used for description enrichment) will confidently
+// return SOME article for almost any query based on loose keyword overlap —
+// including for vague/transitional filler activity text that only contains
+// the destination's own name (e.g. "Explore the main historic district in
+// Norway", "Departure from Oslo"). That has surfaced completely unrelated
+// matches purely because they share a word with the destination: a Canadian
+// settlement called "Norway House", a WWII naval raid near Trondheim, even the
+// 2011 Oslo terrorist attacks. A generic attraction-type keyword ("museum",
+// "tour", "palace") is NOT by itself evidence of a specific place either —
+// "a major history or art museum in the base city" and "visit a major museum
+// in Norway" both contain "museum" with nothing specific behind it, and both
+// have surfaced unrelated live-search hits (a different city's Wikipedia page,
+// a football league, a queen consort's biography) this way. Only attempt the
+// lookup when the text has at least one capitalized, non-stopword,
+// non-destination word beyond the sentence's first token (which is generally
+// a verb like "Explore"/"Arrive"/"Return", never the place itself) — i.e. an
+// actual proper noun, not just a category word.
+export const looksLikeSearchableAttractionName = (name: string, destinationBase: string): boolean => {
+  const text = normalizeText(name);
+  if (!text) return false;
+  if (GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text))) return false;
+  if (EXTRA_GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text))) return false;
+
+  const destinationTokens = new Set(normalizeLocalityKey(destinationBase).split(' ').filter(Boolean));
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.some((word, index) => {
+    if (index === 0) return false;
+    if (!/^[A-ZÀ-ÞĀ-ſ]/.test(word)) return false;
+    const bare = word.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+    if (!bare || SPECIFICITY_STOPWORDS.has(bare) || destinationTokens.has(bare)) return false;
+    return true;
+  });
+};
+
+// Small set of lowercase connector words that commonly appear INSIDE a formal
+// proper name ("Museum of Cultural History", "Palace of Versailles") and
+// should not split an otherwise-contiguous run of capitalized words.
+const NAME_BRIDGE_WORDS = new Set(['of', 'de', 'du', 'la', 'der', 'van', 'von']);
+
+// Even once looksLikeSearchableAttractionName above says a lookup is worth
+// attempting, sending the FULL activity sentence as the Wikipedia search query
+// still dilutes relevance with filler verbs/nouns and the destination name,
+// letting an unrelated but keyword-adjacent article win (this is how "Train-based
+// day trip to Drammen" surfaced the 2011 terrorist attacks, and "Karl Johans gate
+// and the University area" surfaced a King Harald V biography). This extracts
+// just the most specific-looking contiguous phrase to use as the actual search
+// query instead of the whole sentence. It intentionally does NOT special-case
+// the sentence's first word the way the gate above does — a run genuinely
+// starting there (e.g. "Oslo Opera House lobby and roof") must stay intact — and
+// instead only deprioritizes a sentence-initial run as a tie-breaker when an
+// equally-long run exists elsewhere.
+export const extractAttractionSearchPhrase = (name: string, destinationBase: string): string => {
+  const text = normalizeText(name);
+  if (!text) return text;
+
+  const destinationTokens = new Set(normalizeLocalityKey(destinationBase).split(' ').filter(Boolean));
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return text;
+
+  const isContentWord = (word: string): boolean => {
+    if (!/^[A-ZÀ-ÞĀ-ſ]/.test(word)) return false;
+    const bare = word.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+    return !!bare && !SPECIFICITY_STOPWORDS.has(bare) && !destinationTokens.has(bare);
+  };
+
+  // A word that starts with a digit ("11", "9/11", "42nd") never starts with
+  // a capital letter, so isContentWord always rejects it — that broke the
+  // proper-noun run for names like "National September 11 Memorial & Museum"
+  // right before the specific part of the name, leaving "National September"
+  // as the search query and pulling up the generic New York City article
+  // instead of the memorial's own. Bridged the same way as NAME_BRIDGE_WORDS
+  // below: only extends an in-progress run into a following content word,
+  // never starts one on its own.
+  const isNumericToken = (word: string): boolean => /^\p{N}/u.test(word.replace(/[^\p{L}\p{N}]/gu, ''));
+
+  const runs: Array<{ start: number; words: string[] }> = [];
+  let current: { start: number; words: string[] } | null = null;
+  words.forEach((word, index) => {
+    if (isContentWord(word)) {
+      if (!current) current = { start: index, words: [] };
+      current.words.push(word);
+      return;
+    }
+    const bare = word.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+    const nextWord = words[index + 1];
+    if (current && (NAME_BRIDGE_WORDS.has(bare) || isNumericToken(word)) && nextWord && isContentWord(nextWord)) {
+      current.words.push(word);
+      return;
+    }
+    if (current) {
+      runs.push(current);
+      current = null;
+    }
+  });
+  if (current) runs.push(current);
+  if (!runs.length) return text;
+
+  runs.sort((a, b) => {
+    if (b.words.length !== a.words.length) return b.words.length - a.words.length;
+    const aInitial = a.start === 0 ? 1 : 0;
+    const bInitial = b.start === 0 ? 1 : 0;
+    if (aInitial !== bInitial) return aInitial - bInitial;
+    return a.start - b.start;
+  });
+
+  return runs[0].words.join(' ');
 };
 
 const buildShortlistPools = (
@@ -1551,6 +1719,43 @@ export const buildDestinationClimatologyBlock = async (
     }
   }
   return lines.join('\n');
+};
+
+// Deliberately scoped to a small, near-universal list — not a full per-country
+// holiday-calendar integration, which is significantly larger scope (holidays
+// vary by country and would need a real data source). New Year's Day and
+// Christmas Day are observed with reduced hours in the vast majority of
+// countries this app generates itineraries for. This is a DETERMINISTIC date
+// computation, not an LLM guess: the date itself is a verifiable fact (unlike
+// asserting a specific attraction's actual closure/hours, which the prompts
+// elsewhere explicitly forbid inventing) — a real 7-day Oslo trip started on
+// New Year's Day with no note anywhere that hours might be reduced.
+const NOTABLE_HOLIDAYS: Array<{ month: number; day: number; name: string }> = [
+  { month: 1, day: 1, name: "New Year's Day" },
+  { month: 12, day: 25, name: 'Christmas Day' },
+];
+
+export const getNotableHolidaysInRange = (startDate: string, endDate: string): string[] => {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return [];
+  const matches: string[] = [];
+  for (let year = start.getUTCFullYear(); year <= end.getUTCFullYear(); year++) {
+    for (const holiday of NOTABLE_HOLIDAYS) {
+      const holidayDate = new Date(Date.UTC(year, holiday.month - 1, holiday.day));
+      if (holidayDate >= start && holidayDate <= end) {
+        const dateLabel = `${String(holiday.month).padStart(2, '0')}/${String(holiday.day).padStart(2, '0')}`;
+        matches.push(`${holiday.name} (${dateLabel})`);
+      }
+    }
+  }
+  return matches;
+};
+
+export const buildHolidayAwarenessNote = (startDate: string, endDate: string): string => {
+  const holidays = getNotableHolidaysInRange(startDate, endDate);
+  if (!holidays.length) return '';
+  return `Trip includes ${holidays.join(' and ')} — many attractions may have reduced hours or be closed; verify opening hours before finalizing plans.`;
 };
 
 /** Build a non-PII terminal-routing hint even when climatology is disabled. */
@@ -1960,14 +2165,24 @@ export type DestinationTransferTiming = {
   minutes: number;
 };
 
+// Matches the departureTime/arrivalTime placeholders mapItems renders for a
+// transfer with no modeled duration (09:00-11:00) — used only as an internal
+// scheduling buffer so the activity clock can't be invented into overlapping
+// it; not itself shown to the user as a claimed flight/train duration.
+const DEFAULT_TRANSFER_HOURS_WHEN_UNKNOWN = 2;
+
 /** Converts route-level transfer durations (hours in the compact prompt schema)
- * into a per-day reserve used by the activity clock. Unknown/zero durations are
- * intentionally omitted rather than inventing travel time. */
+ * into a per-day reserve used by the activity clock. A missing/zero duration
+ * (the model didn't invent a specific travel time, per the anti-hallucination
+ * rule) still reserves a conservative default rather than reserving nothing —
+ * otherwise the day's first activity can be scheduled to start before the
+ * transfer itself has even landed (see mapItems' hardcoded transfer window). */
 export const deriveDestinationTransferTiming = (itinerary: PromptItinerary): Map<string, DestinationTransferTiming> => {
   const timing = new Map<string, DestinationTransferTiming>();
   for (const transfer of itinerary.x ?? []) {
-    const modeledHours = Number(transfer.td);
-    if (!transfer.dt || !Number.isFinite(modeledHours) || modeledHours <= 0) continue;
+    if (!transfer.dt) continue;
+    const rawHours = Number(transfer.td);
+    const modeledHours = Number.isFinite(rawHours) && rawHours > 0 ? rawHours : DEFAULT_TRANSFER_HOURS_WHEN_UNKNOWN;
     const minutes = Math.max(1, Math.round(modeledHours * 60)) + INTER_DESTINATION_TRANSFER_BUFFER_MINUTES;
     const existing = timing.get(transfer.dt);
     // Multiple route legs on one date are sequential in the compact route
@@ -1990,6 +2205,16 @@ const minutesToTimeString = (minutes: number): string => {
   const mins = wrapped % 60;
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
+
+// A lunch/brunch-named item stacked after another same-slot ('D') item
+// inherits that item's full duration before it even starts — a 2.5h museum
+// visit at 13:00 pushed "Lunch at a historic pub" to 15:45, technically
+// correct sequencing but a nonsensical lunch time. Scheduling meal-named
+// items first within their time-of-day slot lets them land on the slot's
+// natural anchor (13:00 for D) instead of drifting late by pure bad luck of
+// array order.
+const MEAL_NAME_PATTERN = /\b(lunch|brunch)\b/i;
+const PREFERRED_LUNCH_START_MINUTES = 12 * 60; // noon — centered in a normal 11am-1pm lunch window
 
 // Sequences same-day items sharing a time-of-day code (morning/day/evening)
 // so back-to-back attractions don't collide on the same clock time — each
@@ -2018,7 +2243,23 @@ const computeDayItemSchedule = (
       clockByTimeCode[code] = Math.max(clockByTimeCode[code], transferReadyAt);
     }
   }
-  return day.it.map(([timeCode, activityCode, text]) => {
+
+  // Compute in "meal-first within its own slot" order, but keep every other
+  // relative ordering (including across different time-of-day slots) exactly
+  // as given — a plain sort with a same-slot-only comparator is stable for
+  // everything it doesn't explicitly reorder.
+  const schedulingOrder = day.it
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      if (a.item[0] !== b.item[0]) return 0;
+      const aMeal = MEAL_NAME_PATTERN.test(a.item[2]) ? 0 : 1;
+      const bMeal = MEAL_NAME_PATTERN.test(b.item[2]) ? 0 : 1;
+      return aMeal - bMeal;
+    });
+
+  const resultsByIndex = new Array<{ startTime: string; durationMinutes: number }>(day.it.length);
+  for (const { item, index } of schedulingOrder) {
+    const [timeCode, activityCode, text] = item;
     const normalizedText = normalizeText(text).toLowerCase();
     const durationMetadata = durationMetadataByName?.get(normalizedText);
     const durationMinutes =
@@ -2027,11 +2268,23 @@ const computeDayItemSchedule = (
         text,
         pickActivityTypeForPreferences(text, ACTIVITY_CODE_TO_LONG[activityCode], preferenceWeights)
       );
-    const startMinutes = clockByTimeCode[timeCode] ?? clockByTimeCode.D;
+    const naturalStartMinutes = clockByTimeCode[timeCode] ?? clockByTimeCode.D;
+    // The 'D' slot's generic daytime anchor (13:00) sits right at the edge of
+    // a normal 11am-1pm lunch window. When nothing has pushed the slot later
+    // than that baseline (e.g. no arrival-day transfer buffer — a meal item
+    // is always scheduled first within its slot, so at this point the slot's
+    // clock is either still exactly at that baseline or genuinely delayed by
+    // a real constraint), prefer noon instead; a genuine later constraint is
+    // still respected rather than overridden.
+    const startMinutes =
+      timeCode === 'D' && MEAL_NAME_PATTERN.test(text) && naturalStartMinutes <= timeStringToMinutes('13:00')
+        ? PREFERRED_LUNCH_START_MINUTES
+        : naturalStartMinutes;
     const gapMinutes = transferMinutesByFromName.get(normalizedText) ?? ITEM_GAP_MINUTES;
     clockByTimeCode[timeCode] = startMinutes + durationMinutes + gapMinutes;
-    return { startTime: minutesToTimeString(startMinutes), durationMinutes };
-  });
+    resultsByIndex[index] = { startTime: minutesToTimeString(startMinutes), durationMinutes };
+  }
+  return resultsByIndex;
 };
 
 const ALL_ACTIVITY_TYPES: ActivityType[] = [
@@ -2175,8 +2428,7 @@ const attachAttractionMetadata = async (
       .replace(/\s+/g, ' ')
       .trim();
     if (!raw || /^top\s+(museum|attraction|activity)$/i.test(raw)) return null;
-    const sentences = raw.match(/[^.!?]+[.!?]+/g) ?? [raw];
-    return sentences.slice(0, 2).map((sentence) => sentence.trim()).join(' ').trim() || null;
+    return trimToSentences(raw, 2) || null;
   };
 
   // Seed from already-fetched catalog data for every caller, including preview
@@ -2231,6 +2483,20 @@ const attachAttractionMetadata = async (
         lat: entry?.lat ?? null,
         lon: entry?.lon ?? null,
         cachedWikipediaSummary: entry?.wikipediaSummary ?? null,
+        // Only a catalog entry that ALREADY carries a verified Wikipedia
+        // summary is exempt from the specificity gate below — that summary is
+        // used directly regardless of this flag (see getOrCreateAttractionDurationMetadata).
+        // A catalog row with no summary yet (e.g. the static seed CSV, which
+        // has no wikipedia_summary column, or a manually-curated attraction
+        // with no matching Wikipedia article) is no safer than an uncatalogued
+        // name and must pass the same check — otherwise a bare-word catalog
+        // entry like "SALT" or "Mathallen" would bypass the gate entirely and
+        // risk a live search confidently returning something unrelated.
+        allowDescriptionLookup: Boolean(entry?.wikipediaSummary) || looksLikeSearchableAttractionName(cleanText, destinationDisplayName),
+        // Used only to build a tighter Wikipedia search query than the full
+        // sentence (see extractAttractionSearchPhrase); the cache key and
+        // duration/pre-order heuristics still use the full `name` above.
+        wikipediaSearchTerm: extractAttractionSearchPhrase(cleanText, destinationDisplayName),
       };
     });
 
@@ -2240,7 +2506,13 @@ const attachAttractionMetadata = async (
           userId,
           destinationKey,
           destinationDisplayName,
-          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary }) => ({ name, activityType, cachedWikipediaSummary })),
+          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary, allowDescriptionLookup, wikipediaSearchTerm }) => ({
+            name,
+            activityType,
+            cachedWikipediaSummary,
+            allowDescriptionLookup,
+            wikipediaSearchTerm,
+          })),
         });
         for (const [key, metadata] of batch) {
           const catalogMetadata = durationMetadataByName.get(key);
@@ -2344,14 +2616,20 @@ export const mapItems = (
       const accessibilityNote = mobility === 'L'
         ? ' Check step-free access, seating, and route length with the venue before booking.'
         : '';
-      const notesWithDuration = [description, `Plan for about ${duration} here.`, accessibilityNote.trim()]
+      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
+      // Duration is already a separate structured field (rendered alongside the
+      // activity, e.g. "13:00, 2.5h") — restating it in prose here was pure
+      // redundancy, not added information. Built as filtered parts (rather than
+      // template-literal concatenation) so an activity with no description and
+      // no accessibility note doesn't end up with leading/doubled whitespace.
+      const notes = [
+        description,
+        accessibilityNote.trim(),
+        durationMetadata?.requiresPreOrderTickets ? 'Tickets may need to be pre-ordered.' : '',
+        fit ? `Why this fits your group: ${fit}` : '',
+      ]
         .filter(Boolean)
         .join(' ');
-      const bookingNotes = durationMetadata?.requiresPreOrderTickets
-        ? `${notesWithDuration} Tickets may need to be pre-ordered.`
-        : notesWithDuration;
-      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
-      const notes = fit ? `${bookingNotes} Why this fits your group: ${fit}` : bookingNotes;
       return {
         status: 'Proposed',
         activityType: closest,
@@ -2391,6 +2669,51 @@ export const mapItems = (
     : [];
 
   return { transfers, lodgings, activities, carRentals };
+};
+
+// mapItems above defaults a rental car's pickup/dropoff to day 1 / the last
+// day of the whole trip, regardless of car mode — reasonable for car='R'
+// (an explicit full-trip rental), but wasteful/wrong advice for car='D'
+// (day-trips-only): a traveler who only needs a car for one out-of-town leg
+// (e.g. a Lillehammer day trip from an Oslo stay) shouldn't be told to rent
+// for the entire city stay, where driving/parking is typically expensive and
+// unnecessary. There is no dedicated "day trip" field in the itinerary
+// schema, so this detects day-trip days deterministically by reusing the
+// same catalog destinationKey cross-referencing already used for destination-
+// consistency checks: a day whose activities match a catalog entry whose
+// destinationKey differs from the day's own base AND isn't one of the trip's
+// actual lodging bases is a day-trip day. Falls back to the untouched
+// day1/last-day dates when no day-trip day is detected (e.g. the day-trip
+// destination has no catalog coverage) or car mode isn't 'D' — never worse
+// than the previous whole-trip default.
+export const rescopeDayTripCarRental = (
+  carRental: ItineraryGeneratedCarRental,
+  itinerary: PromptItinerary,
+  carMode: PromptCarCode,
+  entryByName: Map<string, AttractionCatalogEntry>
+): ItineraryGeneratedCarRental => {
+  if (carMode !== 'D') return carRental;
+  const baseDestinationKeys = new Set(itinerary.b.map((base) => normalizeDestinationKey(base.l)));
+  const dayTripDates: string[] = [];
+  for (const day of itinerary.dy) {
+    const dayDestinationKey = normalizeDestinationKey(day.b);
+    const isDayTripDay = day.it.some(([, , text]) => {
+      const entry = entryByName.get(normalizeText(text).toLowerCase());
+      return Boolean(
+        entry?.destinationKey &&
+          entry.destinationKey !== dayDestinationKey &&
+          !baseDestinationKeys.has(entry.destinationKey)
+      );
+    });
+    if (isDayTripDay) dayTripDates.push(day.dt);
+  }
+  if (!dayTripDates.length) return carRental;
+  dayTripDates.sort();
+  return {
+    ...carRental,
+    pickupDate: dayTripDates[0],
+    dropoffDate: dayTripDates[dayTripDates.length - 1],
+  };
 };
 
 const buildDetails = (
@@ -2899,7 +3222,8 @@ const runGenerateItineraryViaPromptPlan = async (
     entryAirport: input.departureAirport,
     exitAirport: input.returnAirport ?? input.homeAirport ?? input.departureAirport,
   });
-  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${homeTerminalNote ? `\n${homeTerminalNote}` : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}`;
+  const holidayAwarenessNote = buildHolidayAwarenessNote(normalized.sd, normalized.ed);
+  const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${homeTerminalNote ? `\n${homeTerminalNote}` : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}${holidayAwarenessNote ? `\n${holidayAwarenessNote}` : ''}`;
   const dayDependency = buildPromptFingerprint({
     pipeline: ITINERARY_PIPELINE_VERSION, p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
     attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
@@ -2992,9 +3316,10 @@ const runGenerateItineraryViaPromptPlan = async (
       narrativeContinuityContext = `The previous chunk ended on Day ${lastDay.d} at ${lastDay.b} with: ${items}. The group is satisfied and ready for the next phase of the trip.`;
     }
   }
-  const dayItinerary = shouldChunkP2
+  const mergedDayItinerary = shouldChunkP2
     ? mergeChunkedItineraries(dayItineraries, route)
     : (dayItineraries[0] ?? sanitizeItinerary({}, route, normalized, promptRequest));
+  const dayItinerary = ensureFullDateCoverage(mergedDayItinerary, normalized.sd, normalized.ed, route);
   const mechanicallyValidated = validateAndRepairItineraryStructure({ itinerary: dayItinerary, logisticsFacts });
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS} days=${dayItinerary.dy.length} transfers=${dayItinerary.x.length}`
@@ -3065,7 +3390,7 @@ const runGenerateItineraryViaPromptPlan = async (
     polishItineraryFinalPass(scheduledItinerary, shortlistByDestination, attractionPodsByDestination),
     new Set(logisticsFacts.filter((fact) => fact.maxActivities === 0).map((fact) => fact.date))
   );
-  const { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
+  let { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
     normalized,
     shortlistByDestination,
@@ -3092,12 +3417,11 @@ const runGenerateItineraryViaPromptPlan = async (
   const dayFillEnabled = Number(getApiCacheSetting('itineraryPlan', 'dayFillEnabled')) !== 0;
   if (dayFillEnabled) {
     // arrivalDepartureRulesService/itineraryStructureValidator already truncated any date with
-    // maxActivities === 0 (terminal-only arrival/departure day) down to zero items for a hard
-    // logistics reason — that's an intentional empty day, not a "thin" one. Neither deterministic
-    // fill nor the repair call below may re-populate it.
-    const zeroActivityDayDates = new Set(
-      logisticsFacts.filter((fact) => fact.maxActivities === 0).map((fact) => fact.date)
-    );
+    // maxActivities below THIN_DAY_MIN_ITEMS (not just the fully-terminal 0 case, but also e.g. a
+    // non-heavy arrival/departure day capped at 1) down to that cap for a hard logistics reason —
+    // that's an intentionally light day, not a "thin" one to be topped up. Neither deterministic
+    // fill nor the repair call below may re-populate it past its own cap.
+    const zeroActivityDayDates = lightDayDatesFromLogisticsFacts(logisticsFacts, THIN_DAY_MIN_ITEMS);
     const deterministicFill = fillThinDaysDeterministically({
       itinerary: finalItinerary,
       mustSees: normalizedMustSee,
@@ -3165,6 +3489,25 @@ const runGenerateItineraryViaPromptPlan = async (
       }
     }
   }
+
+  finalItinerary = rebalanceItineraryPacing(finalItinerary, {
+    minItemsPerDay: THIN_DAY_MIN_ITEMS,
+    maxItemsPerDay: MAX_ITEMS_PER_DAY,
+    zeroActivityDayDates: lightDayDatesFromLogisticsFacts(logisticsFacts, THIN_DAY_MIN_ITEMS),
+  });
+
+  // Day-fill/repair and pacing passes can add or rename activities after the
+  // initial enrichment pass. Refresh metadata against the final activity list
+  // so mapItems cannot lose verified descriptions for those activities.
+  const finalMetadata = await attachAttractionMetadata(
+    finalItinerary,
+    normalized,
+    shortlistByDestination,
+    input.userId,
+    input.groupTraits.length
+  );
+  durationMetadataByName = finalMetadata.durationMetadataByName;
+  transferNotesByDay = finalMetadata.transferNotesByDay;
 
   for (const day of finalItinerary.dy) {
     const destinationTransfer = destinationTransferTimingByDate.get(day.dt);
@@ -3255,6 +3598,9 @@ const runGenerateItineraryViaPromptPlan = async (
     whyFitsByName,
     normalized.mob,
     destinationTransferTimingByDate
+  );
+  items.carRentals = items.carRentals.map((rental) =>
+    rescopeDayTripCarRental(rental, finalItinerary, normalized.car, entryByName)
   );
   const getYourGuideCandidates = buildGetYourGuideItineraryCandidates({
     activities: items.activities,
@@ -3396,4 +3742,102 @@ const mergeChunkedItineraries = (chunks: PromptItinerary[], route: PromptRoute):
     b: route.b,
     x: route.x,
   } as PromptItinerary;
+};
+
+// The model sometimes silently skips a date within a chunk's requested range —
+// a 3-day chunk comes back with only 2 `dy[]` entries — and nothing else in the
+// pipeline notices: fillThinDaysDeterministically only inspects days that
+// already exist, so a date with zero entries doesn't just render as "thin", it
+// vanishes from the itinerary entirely (no day header at all). This guarantees
+// every date in [sd, ed] has a bare (possibly empty) day entry so the rest of
+// the pipeline — thin-day fill, pacing rebalance, rendering — treats it like
+// any other day instead of silently dropping it.
+export const ensureFullDateCoverage = (itinerary: PromptItinerary, sd: string, ed: string, route: PromptRoute): PromptItinerary => {
+  const existingDates = new Set(itinerary.dy.map((day) => day.dt));
+  const totalDays = diffDaysInclusive(sd, ed);
+  const days = [...itinerary.dy];
+  for (let idx = 0; idx < totalDays; idx++) {
+    const date = addDays(sd, idx);
+    if (existingDates.has(date)) continue;
+    const base = resolveBaseForDate(date, route);
+    days.push({
+      d: idx + 1,
+      dt: date,
+      b: base,
+      it: [],
+      me: ['BQ', 'LC', 'DL'],
+      sl: `Lodging at '${base}'`,
+      ln: [],
+      cf: 'M',
+    });
+  }
+  days.sort((a, b) => a.dt.localeCompare(b.dt));
+  days.forEach((day, index) => { day.d = index + 1; });
+  return { ...itinerary, dy: days };
+};
+
+// Dates whose logistics-fact cap sits at or below the fill/rebalance minimum
+// are "protected" from having activities added — not just the fully-terminal
+// maxActivities===0 case, but any real constraint (e.g. maxActivities:1 for a
+// non-heavy arrival/departure day) meant to deliberately keep that day light.
+// Treating only the zero case as protected let deterministic fill and the LLM
+// repair call try to top up an arrival/departure day that
+// itineraryStructureValidator had already, correctly, capped at 1 item.
+const lightDayDatesFromLogisticsFacts = (logisticsFacts: LogisticsFact[], threshold: number): Set<string> =>
+  new Set((logisticsFacts ?? []).filter((fact) => fact.maxActivities < threshold).map((fact) => fact.date));
+
+// Deterministic pacing pass: after thin-day fill has raised light days using
+// real must-see/pod data, this moves any remaining "spare" items from
+// overloaded days to still-light days so item counts don't swing between a
+// packed 5-item day and a near-empty one. Only redistributes items already in
+// the itinerary (never invents content) and only within the same base city —
+// an activity never moves to a day in a different destination. Zero-activity
+// (terminal-only arrival/departure) days are never touched in either
+// direction.
+export const rebalanceItineraryPacing = (
+  itinerary: PromptItinerary,
+  options: {
+    minItemsPerDay?: number;
+    maxItemsPerDay?: number;
+    zeroActivityDayDates?: ReadonlySet<string> | readonly string[];
+  } = {}
+): PromptItinerary => {
+  const minItems = Math.max(1, options.minItemsPerDay ?? THIN_DAY_MIN_ITEMS);
+  const maxItems = Math.max(minItems, options.maxItemsPerDay ?? MAX_ITEMS_PER_DAY);
+  const blocked = options.zeroActivityDayDates instanceof Set
+    ? options.zeroActivityDayDates
+    : new Set(options.zeroActivityDayDates ?? []);
+
+  const output = JSON.parse(JSON.stringify(itinerary)) as PromptItinerary;
+  const groups = new Map<string, PromptDay[]>();
+  for (const day of output.dy) {
+    if (blocked.has(day.dt)) continue;
+    const key = normalizeDestinationKey(day.b);
+    const bucket = groups.get(key) ?? [];
+    bucket.push(day);
+    groups.set(key, bucket);
+  }
+
+  for (const days of groups.values()) {
+    if (days.length < 2) continue;
+    const totalItems = days.reduce((sum, day) => sum + day.it.length, 0);
+    const target = Math.min(maxItems, Math.max(minItems, Math.round(totalItems / days.length)));
+
+    // Repeatedly hand the fullest day's last (most-recently-scheduled) item to
+    // the lightest day, while a meaningfully imbalanced pair remains. The
+    // guard bounds the loop even if some edge case stops it converging.
+    let guard = days.length * maxItems;
+    while (guard-- > 0) {
+      const fullest = days.reduce((best, day) => (day.it.length > best.it.length ? day : best), days[0]);
+      const lightest = days.reduce((best, day) => (day.it.length < best.it.length ? day : best), days[0]);
+      if (fullest === lightest) break;
+      if (fullest.it.length <= target || fullest.it.length <= lightest.it.length + 1) break;
+      if (lightest.it.length >= target || lightest.it.length >= maxItems) break;
+      const moved = fullest.it.pop();
+      if (!moved) break;
+      lightest.it.push(moved);
+    }
+  }
+
+  return output;
 };
