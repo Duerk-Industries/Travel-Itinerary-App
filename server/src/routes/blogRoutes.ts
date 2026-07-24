@@ -129,6 +129,10 @@ router.patch('/:tripId/blog/items/:itemId', async (req, res) => {
 
 router.delete('/:tripId/blog/items/:itemId', async (req, res) => {
   try {
+    if (!(await isFeatureEnabled('trip_blog'))) {
+      res.status(404).json({ error: 'Trip blog is not enabled' });
+      return;
+    }
     const version = req.body?.version === undefined ? undefined : Number(req.body.version);
     const deleted = await blogRepository().deleteBlogItem(userIdOf(req), req.params.itemId, version);
     if (!deleted) {
@@ -143,6 +147,10 @@ router.delete('/:tripId/blog/items/:itemId', async (req, res) => {
 
 router.post('/:tripId/blog/items/reorder', async (req, res) => {
   try {
+    if (!(await isFeatureEnabled('trip_blog'))) {
+      res.status(404).json({ error: 'Trip blog is not enabled' });
+      return;
+    }
     const ids = Array.isArray(req.body?.itemIds) ? req.body.itemIds.map((value: unknown) => String(value)).filter(Boolean) : [];
     if (ids.length > 200) {
       res.status(400).json({ error: 'Too many items to reorder in one request' });

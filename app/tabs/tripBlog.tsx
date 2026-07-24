@@ -16,7 +16,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, readOnly = fal
   const [storagePlans, setStoragePlans] = useState<PlanInfo[]>([]);
 
   const load = async (nextCursor = null) => {
-    // ... existing load logic
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: String(limit) });
+      if (nextCursor) params.set('cursor', nextCursor);
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog?${params.toString()}`, { headers });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to load the trip blog');
+      const data = await response.json();
+      const days = Array.isArray(data.days) ? data.days : [];
+      setBlog((current) => {
+        if (!nextCursor || !current) return data;
+        return { ...data, days: [...current.days, ...days] };
+      });
+      const lastDay = days[days.length - 1];
+      setCursor(days.length >= limit && lastDay ? lastDay.localDate : null);
+    } catch (error) {
+      Alert.alert('Trip blog', error.message || 'Unable to load the trip blog');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpload = async (dayDate) => {

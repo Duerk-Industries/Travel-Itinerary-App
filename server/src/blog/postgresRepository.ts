@@ -20,13 +20,24 @@ const formatDate = (value: unknown): string => new Date(String(value)).toISOStri
 const ensureBlog = async (tripId: string): Promise<BlogRow> => {
   const existing = await queryBlog<BlogRow>('SELECT * FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
   if (existing.rows[0]) return existing.rows[0];
-  const created = await queryBlog<BlogRow>(
-    `INSERT INTO trip_blogs (trip_id, title)
-     SELECT $1, COALESCE(NULLIF(name, ''), 'Trip Blog') FROM trips WHERE id = $1
-     RETURNING *`,
-    [tripId]
-  );
-  if (created.rows[0]) return created.rows[0];
+  // Deliberately not `INSERT ... SELECT ... FROM trips`, and an explicit client-generated id
+  // rather than the trip_blogs.id DEFAULT uuid_generate_v4(): the pg-mem test adapter's DEFAULT
+  // UUID generator can repeat a value already used by an earlier row in this table within one
+  // test run, producing a spurious primary-key collision a real Postgres server would not hit.
+  const trip = await queryBlog<{ name: string | null }>('SELECT name FROM trips WHERE id = $1', [tripId]);
+  if (!trip.rows[0]) throw new Error('Trip not found');
+  const title = trip.rows[0].name?.trim() || 'Trip Blog';
+  try {
+    const created = await queryBlog<BlogRow>(
+      `INSERT INTO trip_blogs (id, trip_id, title) VALUES ($1, $2, $3) RETURNING *`,
+      [randomUUID(), tripId, title]
+    );
+    if (created.rows[0]) return created.rows[0];
+  } catch {
+    // Lost the race to a concurrent creator.
+  }
+  const retry = await queryBlog<BlogRow>('SELECT * FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
+  if (retry.rows[0]) return retry.rows[0];
   throw new Error('Trip not found');
 };
 
@@ -98,10 +109,6 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
      ORDER BY d.local_date ASC, i.sort_key ASC, i.created_at ASC`,
     [tripId, ...dayIds]
   ) : { rows: [] };
-
-  if (process.env.NODE_ENV === 'test') {
-    console.log(`DEBUG_POSTGRES_REPOS dayIds=${JSON.stringify(dayIds)} itemsCount=${itemsResult.rows.length}`);
-  }
 
   const byDay = new Map<string, BlogTextItem[]>();
   for (const row of itemsResult.rows) {

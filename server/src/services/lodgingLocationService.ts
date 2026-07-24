@@ -1,6 +1,6 @@
 import { getApiCacheSetting } from '../config/apiLimits';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
-import { recordProviderRequestCost } from '../providerBudgeting';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 import { logError, logInfo } from '../logger';
 import { getDbAdapter } from '../db.providers';
 

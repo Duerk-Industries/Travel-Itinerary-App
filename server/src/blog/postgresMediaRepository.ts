@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { ensureUserInTrip } from '../db';
+import { ensureUserInTrip, ensureUserCanReadTrip } from '../db';
 import { queryBlog } from '../db.postgres';
 import { getUserTierKey } from '../services/entitlementService';
 import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
@@ -65,7 +65,7 @@ const ensureMediaDays = async (tripId: string): Promise<void> => {
 export const initUpload = async (userId: string, input: BlogUploadInitInput): Promise<BlogUploadInitResult> => {
   const access = await ensureUserInTrip(input.tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');
-  const existing = await queryBlog<any>('SELECT * FROM blog_media_assets WHERE source_ref = $1 LIMIT 1', [input.idempotencyKey]);
+  const existing = await queryBlog<any>('SELECT * FROM blog_media_assets WHERE source_ref = $1 AND uploader_user_id = $2 LIMIT 1', [input.idempotencyKey, userId]);
   if (existing.rows[0]) return { asset: mapAsset(existing.rows[0]), uploadUrl: null, objectKey: String(existing.rows[0].object_key ?? ''), expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), storageMode: 'managed' };
   const allowedMime = input.mediaKind === 'photo' ? ['image/jpeg', 'image/png'] : ['video/mp4', 'video/quicktime', 'video/webm'];
   if (!allowedMime.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
@@ -127,8 +127,17 @@ export const completeUpload = async (userId: string, assetId: string, physicalBy
   return mapAsset(updated.rows[0]);
 };
 
+// Internal worker lookup only (called from internalBlogWorkerRoutes.ts, which is already gated by a
+// shared-secret check) — the media processing pipeline needs to know mediaKind to pick the
+// image (sharp) vs video (ffmpeg) branch instead of assuming every upload is a photo.
+export const getAssetForProcessing = async (assetId: string): Promise<{ id: string; uploaderUserId: string; mediaKind: string; objectKey: string } | null> => {
+  const row = await queryBlog<any>('SELECT id, uploader_user_id, media_kind_key, object_key FROM blog_media_assets WHERE id = $1', [assetId]);
+  if (!row.rows[0]) return null;
+  return { id: String(row.rows[0].id), uploaderUserId: String(row.rows[0].uploader_user_id), mediaKind: String(row.rows[0].media_kind_key), objectKey: String(row.rows[0].object_key ?? '') };
+};
+
 export const listMedia = async (userId: string, tripId: string): Promise<BlogMediaAsset[]> => {
-  const access = await ensureUserInTrip(tripId, userId);
+  const access = await ensureUserCanReadTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to view this trip');
   const rows = await queryBlog<any>(
     `SELECT a.*, i.id AS blog_item_id, d.local_date, FALSE AS is_highlight

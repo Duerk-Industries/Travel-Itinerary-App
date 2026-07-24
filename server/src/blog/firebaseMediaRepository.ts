@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { ensureUserInTrip } from '../db.firebase';
+import { ensureUserInTrip, ensureUserCanReadTrip } from '../db.firebase';
 import { getUserTierKey } from '../services/entitlementService';
 import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { getDb } from '../db.firebase';
@@ -23,7 +23,7 @@ const ensureAccount = async (userId: string): Promise<any> => {
     return base;
   }
 
-  const data = snapshot.data();
+  const data: any = snapshot.data() ?? {};
   if (process.env.NODE_ENV !== 'test' && data.includedBytes !== targetIncluded) {
     await ref.set({ includedBytes: targetIncluded, updatedAt: nowIso() }, { merge: true });
     return { ...data, includedBytes: targetIncluded };
@@ -46,7 +46,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   const summary = await getStorageSummary(userId);
   if (!summary.entitlementActive || input.byteSize > summary.availableBytes) throw new Error('QUOTA_EXCEEDED');
   const db = getDb();
-  const existing = await db.collection('blog_media_assets').where('sourceRef', '==', input.idempotencyKey).limit(1).get();
+  const existing = await db.collection('blog_media_assets').where('sourceRef', '==', input.idempotencyKey).where('uploaderUserId', '==', userId).limit(1).get();
   if (!existing.empty) { const doc = existing.docs[0]; return { asset: map(doc.data(), doc.id), uploadUrl: null, objectKey: String((doc.data() as any).objectKey ?? ''), expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: 'managed' }; }
   const assetId = randomUUID();
   const blogItemId = randomUUID();
@@ -87,7 +87,15 @@ export const completeUpload = async (userId: string, assetId: string, physicalBy
   return map(result, assetId);
 };
 
-export const listMedia = async (userId: string, tripId: string): Promise<BlogMediaAsset[]> => { if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to view this trip'); const snap = await getDb().collection('blog_media_assets').where('tripId', '==', tripId).get(); return snap.docs.map((doc) => map(doc.data(), doc.id)).filter((asset) => asset.state !== 'deleted'); };
+// Internal worker lookup only — see postgresMediaRepository.getAssetForProcessing for why this exists.
+export const getAssetForProcessing = async (assetId: string): Promise<{ id: string; uploaderUserId: string; mediaKind: string; objectKey: string } | null> => {
+  const snap = await getDb().collection('blog_media_assets').doc(assetId).get();
+  if (!snap.exists) return null;
+  const data = snap.data() as any;
+  return { id: assetId, uploaderUserId: String(data.uploaderUserId), mediaKind: String(data.mediaKind), objectKey: String(data.objectKey ?? '') };
+};
+
+export const listMedia = async (userId: string, tripId: string): Promise<BlogMediaAsset[]> => { if (!(await ensureUserCanReadTrip(tripId, userId))) throw new Error('Not authorized to view this trip'); const snap = await getDb().collection('blog_media_assets').where('tripId', '==', tripId).get(); return snap.docs.map((doc) => map(doc.data(), doc.id)).filter((asset) => asset.state !== 'deleted'); };
 export const setHighlight = async (userId: string, itemId: string, highlighted: boolean): Promise<void> => { const snap = await getDb().collection('blog_items').doc(itemId).get(); if (!snap.exists) throw new Error('Blog item not found'); const row = snap.data() as any; if (!(await ensureUserInTrip(String(row.tripId), userId))) throw new Error('Not authorized'); const assets = await getDb().collection('blog_media_assets').where('blogItemId', '==', itemId).get(); await Promise.all(assets.docs.map((doc) => doc.ref.set({ isHighlight: highlighted, updatedAt: nowIso() }, { merge: true }))); };
 export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new Date()): Promise<number> => {
   const summary = await getStorageSummary(userId);

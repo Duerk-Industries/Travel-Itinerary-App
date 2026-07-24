@@ -32,6 +32,10 @@ import {
   getStripePortalConfigurationId,
   getStripePremiumMonthlyPriceId,
   getStripePremiumAnnualPriceId,
+  getStripeStorage20gbPriceId,
+  getStripeStorage100gbPriceId,
+  getStripeStorage200gbPriceId,
+  getStripeStorage2tbPriceId,
   isStripeBillingEnabled,
 } from '../config/stripeBilling';
 import { PREMIUM_TRIALS_FEATURE_FLAG } from '../config/premiumTrials';

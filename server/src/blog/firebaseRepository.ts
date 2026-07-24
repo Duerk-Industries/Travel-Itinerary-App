@@ -57,8 +57,11 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
 
   const itemSnap = await db.collection('blog_items').where('tripId', '==', tripId).get();
   const items = itemSnap.docs
+    .filter((doc) => {
+      const data = doc.data() as any;
+      return data.deletedAt == null && data.kindKey === 'core.text';
+    })
     .map(mapItem)
-    .filter(item => (item as any).deletedAt === null)
     .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
   // Weather Badge Integration
