@@ -289,6 +289,15 @@ function getPool(): Pool {
   return pool;
 }
 
+// Narrow query escape hatch for feature-specific repositories. Keeping this
+// small and server-only avoids leaking the pool into route handlers while
+// allowing independently versioned domains such as the trip blog to use the
+// same transaction and adapter lifecycle.
+export const queryBlog = async <T extends import('pg').QueryResultRow = any>(sql: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number }> => {
+  const result = await getPool().query<T>(sql, params as any);
+  return { rows: result.rows, rowCount: result.rowCount ?? 0 };
+};
+
 export const closePool = async (): Promise<void> => {
   if (pool) {
     await pool.end();
