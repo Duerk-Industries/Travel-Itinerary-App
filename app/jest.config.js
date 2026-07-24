@@ -26,6 +26,7 @@ module.exports = {
     '^react-native-safe-area-context$': '<rootDir>/tests/__mocks__/react-native-safe-area-context.ts',
     '^socket\\.io-client$': '<rootDir>/tests/__mocks__/socket.io-client.ts',
     '^@expo/metro-runtime$': '<rootDir>/tests/__mocks__/@expo/metro-runtime.ts',
+    '^expo-image-picker$': '<rootDir>/tests/__mocks__/expo-image-picker.ts',
   },
 
   // A setup file that runs before each test.

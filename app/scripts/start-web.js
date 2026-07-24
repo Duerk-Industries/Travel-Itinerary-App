@@ -31,6 +31,10 @@ const child = spawn(fullCmd, {
   env: {
     ...process.env,
     EXPO_NO_SENTRY_METRO: '1',
+    // Expo generates workspace-root-relative entry and lazy-module URLs for
+    // monorepos. Tell app/metro.config.js to serve those URLs from the same
+    // root while leaving native Gradle bundling rooted at app/.
+    WANDERBUNNIES_WEB_DEV: '1',
   },
   shell: true,
 });
