@@ -237,6 +237,8 @@ providers:
     overall: 50
     callers:
       SOCIAL_CROSS_POST: 50
+      SOCIAL_POST_PREVIEW: 100
+      SOCIAL_POST_ENQUEUE: 50
 
   GOOGLE_PHOTOS:
     window: hour
