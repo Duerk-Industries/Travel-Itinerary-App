@@ -59,7 +59,11 @@ router.get('/:tripId/blog', async (req, res) => {
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     for (const asset of media) {
       const day = blog.days.find((candidate) => candidate.localDate === asset.dayDate);
-      if (day) (day.items as any[]).push({ ...asset, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` });
+      // `id` must be the underlying blog_items row id (asset.blogItemId), not the media asset's
+      // own id — PATCH/DELETE /blog/items/:itemId operate on blog_items, so shipping the asset id
+      // as `id` makes every client action against a photo/video item target a row that doesn't
+      // exist there, silently failing (404/409) no matter what the client tries.
+      if (day) (day.items as any[]).push({ ...asset, id: asset.blogItemId, assetId: asset.id, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` });
     }
     const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
     res.setHeader('ETag', etag);

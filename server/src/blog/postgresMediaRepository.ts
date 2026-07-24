@@ -142,7 +142,7 @@ export const listMedia = async (userId: string, tripId: string): Promise<BlogMed
   const rows = await queryBlog<any>(
     `SELECT a.*, i.id AS blog_item_id, d.local_date, FALSE AS is_highlight
      FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id
-     WHERE a.trip_id = $1 AND a.state <> 'deleted' ORDER BY d.local_date ASC, i.sort_key ASC`,
+     WHERE a.trip_id = $1 AND a.state <> 'deleted' AND i.deleted_at IS NULL ORDER BY d.local_date ASC, i.sort_key ASC`,
     [tripId]
   );
   return rows.rows.map(mapAsset);

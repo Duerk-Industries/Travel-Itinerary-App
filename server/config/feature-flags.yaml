@@ -71,37 +71,37 @@ flags:
     enabled: true
     description: "Use Google Directions/Distance Matrix API for inter-attraction transfer time instead of the haversine heuristic"
   getyourguide_activity_suggestions:
-    enabled: false
+    enabled: true
     description: "Enable optional GetYourGuide affiliate activity suggestions (requires verified partner configuration)"
   packing_lists_v2:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"
   trip_blog:
-    enabled: false
+    enabled: true
     description: "Phase 1 joint trip blog (text + photo), private only"
   trip_blog_video_uploads:
-    enabled: false
+    enabled: true
     description: "Phase 2 video upload and transcoding pipeline"
   trip_blog_google_photos_import:
-    enabled: false
+    enabled: true
     description: "Phase 3 Google Photos album import and deep-linking"
   trip_blog_apple_photos_import:
-    enabled: false
+    enabled: true
     description: "Apple Photos import"
   trip_blog_mobile_share_ios:
-    enabled: false
+    enabled: true
     description: "iOS share extension upload"
   trip_blog_mobile_share_android:
-    enabled: false
+    enabled: true
     description: "Android share intent upload"
   trip_blog_public_sharing:
-    enabled: false
+    enabled: true
     description: "Phase 4 public sharing, consent flow, and vanity URLs"
   trip_blog_social_posting:
-    enabled: false
+    enabled: true
     description: "Phase 5 Instagram/Facebook cross-posting for blog days"
   trip_blog_photo_uploads:
-    enabled: false
+    enabled: true
     description: "Phase 2 private photo upload, normalization, and per-uploader quota"
   trip_blog_audio:
     enabled: false
@@ -134,5 +134,5 @@ flags:
     enabled: false
     description: "Visibility-aware private blog search"
   trip_blog_structured_data:
-    enabled: false
+    enabled: true
     description: "Schema.org public blog metadata"

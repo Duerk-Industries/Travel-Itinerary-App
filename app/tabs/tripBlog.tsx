@@ -197,14 +197,27 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             {(day.items || []).map((item) => (
               <View key={item.id} style={{ marginTop: 8 }}>
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
-                <TextInput
-                  multiline value={drafts[item.id] ?? item.body}
-                  editable={!readOnly} onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
-                  placeholder="What happened today?" placeholderTextColor={mutedColor} style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
-                />
+                {item.kindKey && item.kindKey.startsWith('media.') ? (
+                  // Media items are not text: there's no blog_text_contents row backing them, so
+                  // routing them through the text Save flow fails with a confusing version-conflict
+                  // error. Show status only, with Remove as the one supported action, until real
+                  // thumbnail rendering (primaryUrl/thumbnailUrl) is wired up server-side.
+                  <View style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
+                    <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'uploaded' : (item.state || 'processing')}</Text>
+                    {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
+                  </View>
+                ) : (
+                  <TextInput
+                    multiline value={drafts[item.id] ?? item.body}
+                    editable={!readOnly} onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
+                    placeholder="What happened today?" placeholderTextColor={mutedColor} style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
+                  />
+                )}
                 {!readOnly ? (
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                    <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
+                    {item.kindKey && item.kindKey.startsWith('media.') ? null : (
+                      <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
+                    )}
                     <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
                   </View>
                 ) : null}

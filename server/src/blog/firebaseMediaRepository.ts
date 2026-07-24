@@ -95,7 +95,22 @@ export const getAssetForProcessing = async (assetId: string): Promise<{ id: stri
   return { id: assetId, uploaderUserId: String(data.uploaderUserId), mediaKind: String(data.mediaKind), objectKey: String(data.objectKey ?? '') };
 };
 
-export const listMedia = async (userId: string, tripId: string): Promise<BlogMediaAsset[]> => { if (!(await ensureUserCanReadTrip(tripId, userId))) throw new Error('Not authorized to view this trip'); const snap = await getDb().collection('blog_media_assets').where('tripId', '==', tripId).get(); return snap.docs.map((doc) => map(doc.data(), doc.id)).filter((asset) => asset.state !== 'deleted'); };
+export const listMedia = async (userId: string, tripId: string): Promise<BlogMediaAsset[]> => {
+  if (!(await ensureUserCanReadTrip(tripId, userId))) throw new Error('Not authorized to view this trip');
+  const db = getDb();
+  const snap = await db.collection('blog_media_assets').where('tripId', '==', tripId).get();
+  const assets = snap.docs.map((doc) => map(doc.data(), doc.id)).filter((asset) => asset.state !== 'deleted');
+  // Exclude assets whose underlying blog_items row was soft-deleted (e.g. via "Remove" in the UI)
+  // — without this check a "deleted" photo/video reappears on the next load, since deleting only
+  // ever touches blog_items, not blog_media_assets.
+  const itemIds = Array.from(new Set(assets.map((asset) => asset.blogItemId).filter(Boolean)));
+  const deletedItemIds = new Set<string>();
+  await Promise.all(itemIds.map(async (itemId) => {
+    const itemSnap = await db.collection('blog_items').doc(itemId).get();
+    if (itemSnap.exists && (itemSnap.data() as any)?.deletedAt != null) deletedItemIds.add(itemId);
+  }));
+  return assets.filter((asset) => !deletedItemIds.has(asset.blogItemId));
+};
 export const setHighlight = async (userId: string, itemId: string, highlighted: boolean): Promise<void> => { const snap = await getDb().collection('blog_items').doc(itemId).get(); if (!snap.exists) throw new Error('Blog item not found'); const row = snap.data() as any; if (!(await ensureUserInTrip(String(row.tripId), userId))) throw new Error('Not authorized'); const assets = await getDb().collection('blog_media_assets').where('blogItemId', '==', itemId).get(); await Promise.all(assets.docs.map((doc) => doc.ref.set({ isHighlight: highlighted, updatedAt: nowIso() }, { merge: true }))); };
 export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new Date()): Promise<number> => {
   const summary = await getStorageSummary(userId);
