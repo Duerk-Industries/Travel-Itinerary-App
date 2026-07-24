@@ -1,14 +1,25 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+
+const SUPPORTED_MIME_TYPES = ['image/jpeg', 'image/png'];
+
+const guessMimeTypeFromName = (name) => {
+  const lower = String(name ?? '').toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  return null;
+};
 
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [limit, setLimit] = useState(7);
   const [cursor, setCursor] = useState(null);
@@ -47,66 +58,111 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
   };
 
-  // Web-only for now: opens the OS file picker via a throwaway DOM <input type="file">, since
-  // there's no cross-platform picker dependency (e.g. expo-image-picker) in this app yet. Native
-  // (iOS/Android) photo upload needs that dependency added separately — see the Alert below.
-  const pickWebImageFile = () => new Promise((resolve) => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') { resolve(null); return; }
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png';
-    input.onchange = () => resolve(input.files && input.files[0] ? input.files[0] : null);
-    input.click();
-  });
+  // Opens the OS file picker (web) or the phone's photo library (native), both configured for
+  // multi-select. Returns a normalized array of { blob, mimeType, size, name } regardless of
+  // platform so the upload loop below doesn't need to know which one ran.
+  const pickImageFiles = async () => {
+    if (Platform.OS === 'web') {
+      if (typeof document === 'undefined') return [];
+      const files = await new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png';
+        input.multiple = true;
+        input.onchange = () => resolve(input.files ? Array.from(input.files) : []);
+        input.click();
+      });
+      return files.map((file) => ({ blob: file, mimeType: file.type || guessMimeTypeFromName(file.name), size: file.size, name: file.name }));
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Photo library access needed', 'Allow photo library access in Settings to add photos to this trip blog.');
+      return [];
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets?.length) return [];
+    return Promise.all(result.assets.map(async (asset) => {
+      const mimeType = asset.mimeType || guessMimeTypeFromName(asset.fileName);
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? 'photo' };
+    }));
+  };
+
+  const uploadOneFile = async (dayDate, pickedFile) => {
+    const idempotencyKey = createIdempotencyKey('up');
+    const initRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/upload-init`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ dayDate, mediaKind: 'photo', mimeType: pickedFile.mimeType, byteSize: pickedFile.size }),
+    });
+
+    if (initRes.status === 413) {
+      const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
+      setStoragePlans(plans.filter(p => p.planKey.startsWith('storage_')));
+      setShowQuotaModal(true);
+      return 'quota_exceeded';
+    }
+    if (!initRes.ok) throw new Error((await initRes.json().catch(() => ({}))).error || 'Upload failed');
+    const { asset, uploadUrl } = await initRes.json();
+
+    if (uploadUrl) {
+      // Real signed URL: upload the actual selected file's bytes directly to storage.
+      const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': pickedFile.mimeType }, body: pickedFile.blob });
+      if (!putRes.ok) throw new Error('Failed to upload the photo to storage');
+    }
+
+    const completeRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${asset.id}/complete`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ physicalBytes: pickedFile.size }),
+    });
+    if (!completeRes.ok) throw new Error((await completeRes.json().catch(() => ({}))).error || 'Failed to finalize upload');
+    return 'ok';
+  };
 
   const handleUpload = async (dayDate) => {
     if (readOnly) return;
-    if (Platform.OS !== 'web') {
-      Alert.alert('Photo upload', 'Photo upload from the mobile app isn’t available yet — use the web app for now.');
-      return;
-    }
-    const file = await pickWebImageFile();
-    if (!file) return; // user cancelled the picker
-    const mimeType = file.type || 'image/jpeg';
-    if (!['image/jpeg', 'image/png'].includes(mimeType)) {
+    const picked = await pickImageFiles();
+    if (!picked.length) return; // user cancelled the picker
+
+    const supported = picked.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType));
+    const unsupportedCount = picked.length - supported.length;
+    if (!supported.length) {
       Alert.alert('Photo upload', 'Only JPEG or PNG photos are supported.');
       return;
     }
+
     setUploading(true);
+    let succeeded = 0;
+    let failed = 0;
+    let quotaBlocked = false;
     try {
-      const idempotencyKey = createIdempotencyKey('up');
-      const initRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/upload-init`, {
-        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-        body: JSON.stringify({ dayDate, mediaKind: 'photo', mimeType, byteSize: file.size }),
-      });
-
-      if (initRes.status === 413) {
-        const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
-        setStoragePlans(plans.filter(p => p.planKey.startsWith('storage_')));
-        setShowQuotaModal(true);
-        return;
+      for (let index = 0; index < supported.length; index += 1) {
+        if (quotaBlocked) break; // no point continuing once storage is full
+        setUploadProgress({ current: index + 1, total: supported.length });
+        try {
+          const outcome = await uploadOneFile(dayDate, supported[index]);
+          if (outcome === 'quota_exceeded') { quotaBlocked = true; break; }
+          succeeded += 1;
+        } catch (error) {
+          failed += 1;
+        }
       }
-
-      if (!initRes.ok) throw new Error((await initRes.json().catch(() => ({}))).error || 'Upload failed');
-      const { asset, uploadUrl } = await initRes.json();
-
-      if (uploadUrl) {
-        // Real signed URL: upload the actual selected file's bytes directly to storage.
-        const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': mimeType }, body: file });
-        if (!putRes.ok) throw new Error('Failed to upload the photo to storage');
-      }
-
-      const completeRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${asset.id}/complete`, {
-        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ physicalBytes: file.size }),
-      });
-      if (!completeRes.ok) throw new Error((await completeRes.json().catch(() => ({}))).error || 'Failed to finalize upload');
-
       await load();
-    } catch (error) {
-      Alert.alert('Upload', error.message || 'Unable to upload');
+      if (!quotaBlocked && (failed > 0 || unsupportedCount > 0)) {
+        const parts = [];
+        if (succeeded > 0) parts.push(`${succeeded} uploaded`);
+        if (failed > 0) parts.push(`${failed} failed`);
+        if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
+        Alert.alert('Photo upload', parts.join(', '));
+      }
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -207,7 +263,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     onPress={() => handleUpload(day.localDate)}
                     disabled={uploading}
                   >
-                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? '...' : '+ Photo'}</Text>
+                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo'}</Text>
                   </TouchableOpacity>
                 )}
                 {day.weather ? (

@@ -121,6 +121,12 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
     plugins: [
       'expo-web-browser',
       [
+        'expo-image-picker',
+        {
+          photosPermission: 'WanderBunnies needs access to your photos so you can add them to a trip blog.',
+        },
+      ],
+      [
         sentryExpoPlugin,
         {
           organization: process.env.SENTRY_ORG,
