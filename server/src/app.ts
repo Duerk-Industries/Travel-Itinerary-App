@@ -44,6 +44,7 @@ import blogIndexingRoutes from './routes/blogIndexingRoutes';
 import blogSitemapRoutes from './routes/blogSitemapRoutes';
 import blogSocialRoutes from './routes/blogSocialRoutes';
 import blogModalityRoutes from './routes/blogModalityRoutes';
+import { privacyPolicyHtml } from './legal/privacyPolicyHtml';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -219,6 +220,10 @@ const hasWebApp = fs.existsSync(webIndexPath);
 
 app.get('/login', (_req, res) => {
   res.sendFile(loginPath);
+});
+
+app.get('/privacy', (_req, res) => {
+  res.type('html').send(privacyPolicyHtml);
 });
 
 app.get('/api/diagnostics/google-client-id', (_req, res) => {
