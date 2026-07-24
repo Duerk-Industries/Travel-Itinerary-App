@@ -76,3 +76,18 @@ flags:
   packing_lists_v2:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"
+  trip_blog:
+    enabled: false
+    description: "Phase 1 joint trip blog (text + photo), private only"
+  trip_blog_video_uploads:
+    enabled: false
+    description: "Phase 2 video upload and transcoding pipeline"
+  trip_blog_google_photos_import:
+    enabled: false
+    description: "Phase 3 Google Photos album import and deep-linking"
+  trip_blog_public_sharing:
+    enabled: false
+    description: "Phase 4 public sharing, consent flow, and vanity URLs"
+  trip_blog_social_posting:
+    enabled: false
+    description: "Phase 5 Instagram/Facebook cross-posting for blog days"

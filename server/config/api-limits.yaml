@@ -230,6 +230,30 @@ providers:
       GETYOURGUIDE_ITINERARY_ACTIVITY_SUGGESTION: 1
       GETYOURGUIDE_ACTIVITY_TAB_LOOKUP: 1
 
+  # Trip Blog Integrations
+  META_GRAPH:
+    window: day
+    windowHours: 24
+    overall: 50
+    callers:
+      SOCIAL_CROSS_POST: 50
+
+  GOOGLE_PHOTOS:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      PHOTOS_PICKER_OAUTH: 100
+      PHOTOS_ALBUM_LIST: 200
+      PHOTOS_MEDIA_FETCH: 500
+
+  CLOUD_VISION:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      BLOG_SAFESEARCH_MODERATION: 1000
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80
@@ -290,6 +314,9 @@ requestPricing:
   FRANKFURTER: 0
   OPEN_METEO: 0
   GETYOURGUIDE: 0
+  META_GRAPH: 0
+  GOOGLE_PHOTOS: 0
+  CLOUD_VISION: 0.0015 # $1.50 per 1000 images
 
 caching:
   attractions:
@@ -383,3 +410,9 @@ caching:
   weather:
     geocodeCacheTtlMinutes: 1440
     forecastCacheTtlMinutes: 60
+  tripBlog:
+    maxTextBlocksPerDay: 10
+    maxMediaItemsPerDay: 50
+    videoMaxDurationSeconds: 60
+    signedUrlTtlMs: 3600000
+    cdnCacheTtlSeconds: 86400
