@@ -48,3 +48,19 @@ ON CONFLICT (plan_key) DO NOTHING;
 INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
 VALUES ('00000000-0000-4000-8000-000000000002', 'premium_annual', 3500, 'usd', 'year', 14, 14)
 ON CONFLICT (plan_key) DO NOTHING;
+
+INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
+VALUES ('00000000-0000-4000-8000-000000000101', 'storage_20gb', 199, 'usd', 'month', 0, 14)
+ON CONFLICT (plan_key) DO NOTHING;
+
+INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
+VALUES ('00000000-0000-4000-8000-000000000102', 'storage_100gb', 299, 'usd', 'month', 0, 14)
+ON CONFLICT (plan_key) DO NOTHING;
+
+INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
+VALUES ('00000000-0000-4000-8000-000000000103', 'storage_200gb', 499, 'usd', 'month', 0, 14)
+ON CONFLICT (plan_key) DO NOTHING;
+
+INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
+VALUES ('00000000-0000-4000-8000-000000000104', 'storage_2tb', 999, 'usd', 'month', 0, 14)
+ON CONFLICT (plan_key) DO NOTHING;

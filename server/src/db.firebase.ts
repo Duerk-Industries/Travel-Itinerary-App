@@ -4512,6 +4512,13 @@ export const insertLodging = async (lodging: {
   image_url?: string;
 }): Promise<Lodging> => {
   const db = getDb();
+
+  const placeId = lodging.place_id || lodging.placeId;
+  if (placeId) {
+    const { ensureLodgingLocation } = require('./services/lodgingLocationService');
+    await ensureLodgingLocation(placeId, lodging.name, lodging.address);
+  }
+
   const id = randomUUID();
   const payload: Lodging = {
     id,
@@ -4556,6 +4563,13 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   if (!tripId) return null;
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) return null;
+
+  const placeId = updates.place_id || (updates as any).placeId;
+  if (placeId) {
+    const { ensureLodgingLocation } = require('./services/lodgingLocationService');
+    await ensureLodgingLocation(placeId, updates.name || data.name, updates.address || data.address);
+  }
+
   const updatePayload = stripUndefined(updates);
   if (Object.keys(updatePayload).length > 0) {
     await db.collection('lodgings').doc(lodgingId).update(updatePayload);
@@ -8360,8 +8374,19 @@ export const removeTripPackingItemV2 = async (userId: string, tripId: string, it
   return replaceTripPackingListV2(userId, tripId, manual);
 };
 
-export const reconcileUserPackingListsV2 = async (userId: string): Promise<{ tripsReconciled: number }> => {
-  const tripIds = await listReadableTripIdsForUser(userId);
-  for (const tripId of tripIds) await getPackingListV2(userId, tripId);
-  return { tripsReconciled: tripIds.length };
+export const getLodgingLocation = async (placeId: string): Promise<any | null> => {
+  const doc = await getDb().collection('lodging_locations').doc(placeId).get();
+  return doc.exists ? { place_id: doc.id, ...doc.data() } : null;
+};
+
+export const upsertLodgingLocation = async (location: any): Promise<void> => {
+  await getDb().collection('lodging_locations').doc(location.placeId).set({
+    name: location.name,
+    address: location.address || null,
+    phone_number: location.phoneNumber || null,
+    iana_timezone: location.ianaTimezone || null,
+    latitude: location.latitude || null,
+    longitude: location.longitude || null,
+    updatedAt: nowIso(),
+  }, { merge: true });
 };

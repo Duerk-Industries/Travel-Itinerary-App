@@ -118,6 +118,10 @@ export const resolvePlanKeyForPriceId = async (
 ): Promise<BillingPlanKey> => {
   if (stripePriceId === getStripePremiumMonthlyPriceId()) return 'premium_monthly';
   if (stripePriceId === getStripePremiumAnnualPriceId()) return 'premium_annual';
+  if (stripePriceId === getStripeStorage20gbPriceId()) return 'storage_20gb';
+  if (stripePriceId === getStripeStorage100gbPriceId()) return 'storage_100gb';
+  if (stripePriceId === getStripeStorage200gbPriceId()) return 'storage_200gb';
+  if (stripePriceId === getStripeStorage2tbPriceId()) return 'storage_2tb';
 
   const configs = await listBillingPlanConfigs();
   const configured = configs.find((config) => config.activeStripePriceId === stripePriceId);
@@ -170,18 +174,22 @@ export const createCheckoutSession = async (params: {
     throw new Error(`Unsupported plan key: ${planKey}`);
   }
 
-  // Prevent duplicate active subscriptions.
-  // Note: there is a small TOCTOU window where two concurrent requests with different
-  // idempotency keys could both pass this check before either checkout session completes.
-  // The webhook-based upsert is idempotent, so the worst outcome is two Stripe sessions
-  // being created; only the first webhook to land will activate a subscription.
+  // Prevent duplicate active subscriptions for the same plan group.
   const existing = await listActiveBillingSubscriptionsForUser(userId);
-  const alreadyActive = existing.some((subscription) => isSubscriptionPremiumEligible(subscription));
+  const isStoragePlan = planKey.startsWith('storage_');
+  const alreadyActive = existing.some((subscription) => {
+    if (isStoragePlan) {
+      return subscription.planKey === planKey;
+    }
+    return isSubscriptionPremiumEligible(subscription) && !subscription.planKey.startsWith('storage_');
+  });
   if (alreadyActive) {
     incrementMetric('billing.checkout_blocked_already_subscribed');
     return {
       alreadySubscribed: true,
-      message: 'You already have an active Premium subscription. Use Manage Subscription to make changes.',
+      message: isStoragePlan
+        ? `You already have an active ${planKey} add-on.`
+        : 'You already have an active Premium subscription. Use Manage Subscription to make changes.',
     };
   }
 

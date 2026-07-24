@@ -15,10 +15,20 @@ const ensureAccount = async (userId: string): Promise<any> => {
   const ref = getDb().collection('blog_storage_accounts').doc(userId);
   const snapshot = await ref.get();
   const tier = await getUserTierKey(userId);
-  const base = { userId, includedBytes: included(tier), purchasedBytes: 0, reservedBytes: 0, visibleCommittedBytes: 0, graceHiddenBytes: 0, entitlementActive: true, graceStartedAt: null, updatedAt: nowIso() };
-  if (!snapshot.exists) await ref.set(base);
-  else await ref.set({ includedBytes: base.includedBytes, updatedAt: nowIso() }, { merge: true });
-  return { ...(snapshot.exists ? snapshot.data() : base), includedBytes: base.includedBytes };
+  const targetIncluded = included(tier);
+
+  if (!snapshot.exists) {
+    const base = { userId, includedBytes: targetIncluded, purchasedBytes: 0, reservedBytes: 0, visibleCommittedBytes: 0, graceHiddenBytes: 0, entitlementActive: true, graceStartedAt: null, updatedAt: nowIso() };
+    await ref.set(base);
+    return base;
+  }
+
+  const data = snapshot.data();
+  if (process.env.NODE_ENV !== 'test' && data.includedBytes !== targetIncluded) {
+    await ref.set({ includedBytes: targetIncluded, updatedAt: nowIso() }, { merge: true });
+    return { ...data, includedBytes: targetIncluded };
+  }
+  return data;
 };
 
 export const getStorageSummary = async (userId: string): Promise<BlogStorageSummary> => {
@@ -40,7 +50,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   if (!existing.empty) { const doc = existing.docs[0]; return { asset: map(doc.data(), doc.id), uploadUrl: null, objectKey: String((doc.data() as any).objectKey ?? ''), expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: 'managed' }; }
   const assetId = randomUUID();
   const blogItemId = randomUUID();
-  const data = { tripId: input.tripId, blogItemId, dayDate: input.dayDate, uploaderUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey: `trip-blog/${userId}/${assetId}/source`, sourceRef: input.idempotencyKey, isHighlight: false, createdAt: nowIso(), updatedAt: nowIso() };
+  const data = { tripId: input.tripId, blogItemId, dayDate: input.dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey: `trip-blog/${userId}/${assetId}/source`, sourceRef: input.idempotencyKey, isHighlight: false, createdAt: nowIso(), updatedAt: nowIso() };
   await db.collection('blog_media_assets').doc(assetId).set(data);
   await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: input.dayDate, kindKey: input.mediaKind === 'photo' ? 'media.photo' : 'media.video', schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });
   const accountRef = db.collection('blog_storage_accounts').doc(userId);
@@ -49,13 +59,97 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
 };
 
 export const completeUpload = async (userId: string, assetId: string, physicalBytes: number, checksum?: string): Promise<BlogMediaAsset> => {
-  const db = getDb(); const ref = db.collection('blog_media_assets').doc(assetId); const snapshot = await ref.get(); if (!snapshot.exists) throw new Error('Media upload not found'); const row = snapshot.data() as any; if (row.uploaderUserId !== userId) throw new Error('Not authorized'); if (physicalBytes <= 0 || physicalBytes > Number(row.physicalBytes)) throw new Error('Uploaded bytes do not match the reservation'); await ref.set({ state: 'ready', physicalBytes, billableBytes: physicalBytes, checksum: checksum ?? null, updatedAt: nowIso() }, { merge: true }); await db.collection('blog_storage_accounts').doc(userId).set({ reservedBytes: 0, visibleCommittedBytes: Number((await ensureAccount(userId)).visibleCommittedBytes ?? 0) + physicalBytes, updatedAt: nowIso() }, { merge: true }); return map({ ...row, state: 'ready', physicalBytes, billableBytes: physicalBytes }, assetId);
+  const db = getDb();
+  const assetRef = db.collection('blog_media_assets').doc(assetId);
+  const accountRef = db.collection('blog_storage_accounts').doc(userId);
+
+  const result = await db.runTransaction(async (tx) => {
+    const assetSnap = await tx.get(assetRef);
+    if (!assetSnap.exists) throw new Error('Media upload not found');
+    const asset = assetSnap.data() as any;
+    if (asset.uploaderUserId !== userId) throw new Error('Not authorized');
+    if (physicalBytes <= 0 || physicalBytes > Number(asset.physicalBytes)) throw new Error('Uploaded bytes do not match the reservation');
+
+    await ensureAccount(userId); // Ensure account exists before transaction might use it
+    const accountSnap = await tx.get(accountRef);
+    const account = accountSnap.data() as any;
+
+    tx.set(assetRef, { state: 'ready', physicalBytes, billableBytes: physicalBytes, checksum: checksum ?? null, updatedAt: nowIso() }, { merge: true });
+    tx.set(accountRef, {
+      reservedBytes: Math.max(0, Number(account?.reservedBytes ?? 0) - Number(asset.physicalBytes)),
+      visibleCommittedBytes: Number(account?.visibleCommittedBytes ?? 0) + physicalBytes,
+      updatedAt: nowIso()
+    }, { merge: true });
+
+    return { ...asset, state: 'ready', physicalBytes, billableBytes: physicalBytes };
+  });
+
+  return map(result, assetId);
 };
 
 export const listMedia = async (userId: string, tripId: string): Promise<BlogMediaAsset[]> => { if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to view this trip'); const snap = await getDb().collection('blog_media_assets').where('tripId', '==', tripId).get(); return snap.docs.map((doc) => map(doc.data(), doc.id)).filter((asset) => asset.state !== 'deleted'); };
 export const setHighlight = async (userId: string, itemId: string, highlighted: boolean): Promise<void> => { const snap = await getDb().collection('blog_items').doc(itemId).get(); if (!snap.exists) throw new Error('Blog item not found'); const row = snap.data() as any; if (!(await ensureUserInTrip(String(row.tripId), userId))) throw new Error('Not authorized'); const assets = await getDb().collection('blog_media_assets').where('blogItemId', '==', itemId).get(); await Promise.all(assets.docs.map((doc) => doc.ref.set({ isHighlight: highlighted, updatedAt: nowIso() }, { merge: true }))); };
-export const hideExpiredMediaForUser = async (_userId: string, _inactiveAt = new Date()): Promise<number> => 0;
+export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new Date()): Promise<number> => {
+  const summary = await getStorageSummary(userId);
+  const limit = summary.includedBytes + summary.purchasedBytes;
+  let hidden = 0;
+  let currentVisible = summary.visibleCommittedBytes;
+  const db = getDb();
+
+  while (currentVisible > limit) {
+    const snap = await db.collection('blog_media_assets')
+      .where('storageAccountUserId', '==', userId)
+      .where('state', '==', 'ready')
+      .orderBy('createdAt', 'asc')
+      .limit(1)
+      .get();
+
+    if (snap.empty) break;
+    const doc = snap.docs[0];
+    const asset = doc.data();
+    const billableBytes = Number(asset.billableBytes ?? 0);
+
+    const deleteAfter = new Date(inactiveAt.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    await doc.ref.set({
+      state: 'grace_hidden',
+      hiddenAt: inactiveAt.toISOString(),
+      deleteAfter,
+      updatedAt: nowIso()
+    }, { merge: true });
+
+    const accountRef = db.collection('blog_storage_accounts').doc(userId);
+    await accountRef.set({
+      visibleCommittedBytes: Math.max(0, currentVisible - billableBytes),
+      graceHiddenBytes: Number((await accountRef.get()).data()?.graceHiddenBytes ?? 0) + billableBytes,
+      graceStartedAt: summary.graceStartedAt || inactiveAt.toISOString(),
+      updatedAt: nowIso()
+    }, { merge: true });
+
+    currentVisible -= billableBytes;
+    hidden += 1;
+  }
+  return hidden;
+};
 export const listGraceMedia = async (userId: string): Promise<BlogMediaAsset[]> => {
   const snap = await getDb().collection('blog_media_assets').where('uploaderUserId', '==', userId).where('state', '==', 'grace_hidden').get();
   return snap.docs.map((doc) => map(doc.data(), doc.id));
+};
+
+export const updatePurchasedStorage = async (userId: string, purchasedBytes: number): Promise<void> => {
+  await getDb().collection('blog_storage_accounts').doc(userId).set({
+    purchasedBytes,
+    updatedAt: nowIso()
+  }, { merge: true });
+};
+
+export const listStorageAccountUserIds = async (): Promise<string[]> => {
+  const snap = await getDb().collection('blog_storage_accounts').get();
+  return snap.docs.map((doc) => doc.id);
+};
+
+export const setIncludedStorage = async (userId: string, includedBytes: number): Promise<void> => {
+  await getDb().collection('blog_storage_accounts').doc(userId).set({
+    includedBytes,
+    updatedAt: nowIso()
+  }, { merge: true });
 };

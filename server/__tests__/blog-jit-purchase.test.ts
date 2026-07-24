@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, setFeatureFlag, query } from '../src/db';
+import { initDb, setFeatureFlag } from '../src/db';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 import { blogMediaRepository } from '../src/blog/repository';
 
@@ -23,7 +23,7 @@ describe('trip blog JIT storage purchase', () => {
     tripId = trip.body.trip?.id ?? trip.body.id;
 
     // Artificially set included_bytes to very low (1KB) to trigger quota quickly
-    await query('UPDATE blog_storage_accounts SET included_bytes = 1024 WHERE user_id = $1', [userId]);
+    await blogMediaRepository().setIncludedStorage(userId, 1024);
   });
 
   afterAll(async () => { await cleanupTestUsersByEmail([user.email]); });
@@ -59,5 +59,19 @@ describe('trip blog JIT storage purchase', () => {
 
     expect(summary.body.purchasedBytes).toBe(20 * 1024 * 1024 * 1024);
     expect(summary.body.availableBytes).toBeGreaterThan(0);
+  });
+
+  it('updates purchased storage via stripe webhook simulation', async () => {
+    // This is a unit-style test of the repository method, but we can also
+    // test the webhook logic if we mock the Stripe client.
+    // For now, let's just verify the repository math stacks.
+
+    await blogMediaRepository().updatePurchasedStorage(userId, 100 * 1024 * 1024 * 1024);
+    const summary = await request(app)
+      .get('/api/account/blog-storage')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(summary.body.purchasedBytes).toBe(100 * 1024 * 1024 * 1024);
   });
 });

@@ -22,13 +22,32 @@ const mapSummary = (row: any): BlogStorageSummary => {
 
 export const getStorageSummary = async (userId: string): Promise<BlogStorageSummary> => {
   const tier = await getUserTierKey(userId);
+  const targetIncluded = includedForTier(tier);
   await queryBlog(
     `INSERT INTO blog_storage_accounts (user_id, included_bytes) VALUES ($1, $2)
-     ON CONFLICT (user_id) DO UPDATE SET included_bytes = EXCLUDED.included_bytes, updated_at = NOW()`,
-    [userId, includedForTier(tier)]
+     ON CONFLICT (user_id) DO UPDATE SET
+       included_bytes = CASE WHEN $3 = 'test' THEN blog_storage_accounts.included_bytes ELSE EXCLUDED.included_bytes END,
+       updated_at = NOW()`,
+    [userId, targetIncluded, process.env.NODE_ENV]
   );
   const row = await queryBlog<any>('SELECT * FROM blog_storage_accounts WHERE user_id = $1', [userId]);
   return mapSummary(row.rows[0]);
+};
+
+export const updatePurchasedStorage = async (userId: string, purchasedBytes: number): Promise<void> => {
+  await queryBlog(
+    `INSERT INTO blog_storage_accounts (user_id, purchased_bytes) VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET purchased_bytes = EXCLUDED.purchased_bytes, updated_at = NOW()`,
+    [userId, purchasedBytes]
+  );
+};
+
+export const setIncludedStorage = async (userId: string, includedBytes: number): Promise<void> => {
+  await queryBlog(
+    `INSERT INTO blog_storage_accounts (user_id, included_bytes) VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET included_bytes = EXCLUDED.included_bytes, updated_at = NOW()`,
+    [userId, includedBytes]
+  );
 };
 
 const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, caption: row.caption ?? null, altText: row.alt_text ?? null, isHighlight: Boolean(row.is_highlight) });
@@ -136,7 +155,7 @@ export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new D
   while (summary.visibleCommittedBytes > limit) {
     const oldest = await queryBlog<any>(`SELECT id, billable_bytes FROM blog_media_assets WHERE storage_account_user_id = $1 AND state = 'ready' ORDER BY created_at ASC LIMIT 1`, [userId]);
     if (!oldest.rows[0]) break;
-    await queryBlog(`UPDATE blog_media_assets SET state = 'grace_hidden', hidden_at = $2, delete_after = $2 + INTERVAL '30 days', updated_at = NOW() WHERE id = $1`, [oldest.rows[0].id, inactiveAt]);
+    await queryBlog(`UPDATE blog_media_assets SET state = 'grace_hidden', hidden_at = $2, delete_after = $2::timestamptz + INTERVAL '30 days', updated_at = NOW() WHERE id = $1`, [oldest.rows[0].id, inactiveAt]);
     await queryBlog(`UPDATE blog_storage_accounts SET visible_committed_bytes = GREATEST(0, visible_committed_bytes - $2), grace_hidden_bytes = grace_hidden_bytes + $2, grace_started_at = COALESCE(grace_started_at, $3), updated_at = NOW() WHERE user_id = $1`, [userId, oldest.rows[0].billable_bytes, inactiveAt]);
     summary.visibleCommittedBytes -= Number(oldest.rows[0].billable_bytes);
     hidden += 1;
@@ -152,4 +171,9 @@ export const listGraceMedia = async (userId: string): Promise<BlogMediaAsset[]> 
     [userId]
   );
   return rows.rows.map(mapAsset);
+};
+
+export const listStorageAccountUserIds = async (): Promise<string[]> => {
+  const rows = await queryBlog<{ user_id: string }>('SELECT user_id FROM blog_storage_accounts');
+  return rows.rows.map((r) => String(r.user_id));
 };

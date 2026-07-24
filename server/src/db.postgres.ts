@@ -4247,6 +4247,12 @@ export const insertLodging = async (lodging: {
 }): Promise<Lodging> => {
   const p = getPool();
   const id = randomUUID();
+
+  if (lodging.place_id) {
+    const { ensureLodgingLocation } = require('./services/lodgingLocationService');
+    await ensureLodgingLocation(lodging.place_id, lodging.name, lodging.address);
+  }
+
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
@@ -4345,6 +4351,11 @@ export const updateLodging = async (
 ): Promise<Lodging | null> => {
   const p = getPool();
   const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+
+  if (updates.place_id) {
+    const { ensureLodgingLocation } = require('./services/lodgingLocationService');
+    await ensureLodgingLocation(updates.place_id, updates.name || '', updates.address);
+  }
 
   const baseParams = [
     lodgingId,
@@ -12219,5 +12230,28 @@ export const deactivateOldPricesForPlan = async (
      SET active_for_new_checkout = FALSE, retired_at = NOW()
      WHERE plan_key = $1 AND stripe_price_id != $2 AND active_for_new_checkout = TRUE`,
     [planKey, keepActivePriceId],
+  );
+};
+
+export const getLodgingLocation = async (placeId: string): Promise<any | null> => {
+  const p = getPool();
+  const { rows } = await p.query('SELECT * FROM lodging_locations WHERE place_id = $1 LIMIT 1', [placeId]);
+  return rows[0] || null;
+};
+
+export const upsertLodgingLocation = async (location: any): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO lodging_locations (place_id, name, address, phone_number, iana_timezone, latitude, longitude, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+     ON CONFLICT (place_id) DO UPDATE SET
+       name = EXCLUDED.name,
+       address = EXCLUDED.address,
+       phone_number = EXCLUDED.phone_number,
+       iana_timezone = EXCLUDED.iana_timezone,
+       latitude = EXCLUDED.latitude,
+       longitude = EXCLUDED.longitude,
+       updated_at = NOW()`,
+    [location.placeId, location.name, location.address, location.phoneNumber, location.ianaTimezone, location.latitude, location.longitude]
   );
 };

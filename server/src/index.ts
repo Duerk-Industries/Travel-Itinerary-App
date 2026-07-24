@@ -19,6 +19,7 @@ import { startRetentionScheduler } from './services/retentionService';
 import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
 import { startBillingReconciliationScheduler } from './billing/subscriptionReconciliationService';
+import { startBlogStorageReconciliationScheduler } from './services/blogStorageReconciliationService';
 import { installShutdownHandlers } from './shutdown';
 import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './config/stripeBilling';
 import { getBillingPlanConfig } from './db';
@@ -126,6 +127,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   startIngestionMetricsScheduler();
   startFailedRetryScheduler();
   startBillingReconciliationScheduler();
+  startBlogStorageReconciliationScheduler();
   if (process.env.NODE_ENV !== 'test') {
     startScheduledAggregation();
   }

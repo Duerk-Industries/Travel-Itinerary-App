@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
+import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch } from './types';
 
 const nowIso = () => new Date().toISOString();
@@ -38,19 +39,70 @@ const mapItem = (doc: any): BlogTextItem => {
   return { id: String(doc.id ?? data.id), tripId: String(data.tripId), blogDayId: String(data.blogDayId), localDate: String(data.localDate), kindKey: 'core.text', schemaVersion: Number(data.schemaVersion ?? 1), audience: data.audience ?? 'public', sortKey: String(data.sortKey), authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), body: String(data.body ?? ''), languageTag: data.languageTag ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt) };
 };
 
-export const getBlog = async (userId: string, tripId: string): Promise<BlogDocument> => {
+export const getBlog = async (userId: string, tripId: string, options: { date?: string; cursor?: string; limit?: number } = {}): Promise<BlogDocument> => {
   const access = await ensureUserCanReadTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to view this trip');
   const db = getDb();
   const blog = await ensureBlog(tripId);
   await ensureDays(tripId);
-  const daySnap = await db.collection('blog_days').where('tripId', '==', tripId).get();
-  const itemSnap = await db.collection('blog_items').where('tripId', '==', tripId).where('deletedAt', '==', null).get();
-  const items = itemSnap.docs.map(mapItem).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+  let query = db.collection('blog_days').where('tripId', '==', tripId);
+  if (options.date) {
+    query = query.where('localDate', '==', options.date);
+  } else if (options.cursor) {
+    query = query.where('localDate', '>', options.cursor);
+  }
+  const limit = Math.min(100, Math.max(1, options.limit ?? 7));
+  const daySnap = await query.orderBy('localDate', 'asc').limit(limit).get();
+
+  const itemSnap = await db.collection('blog_items').where('tripId', '==', tripId).get();
+  const items = itemSnap.docs
+    .map(mapItem)
+    .filter(item => (item as any).deletedAt === null)
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+  // Weather Badge Integration
+  const weatherRequests = daySnap.docs.map(doc => {
+    const data = doc.data() as any;
+    return {
+      date: String(data.localDate),
+      location: data.headline || data.summary || 'Destination'
+    };
+  }).filter(r => r.location !== 'Destination');
+
+  if (weatherRequests.length < daySnap.docs.length) {
+    const tripSnap = await db.collection('trips').doc(tripId).get();
+    const fallbackLocation = String((tripSnap.data() as any)?.name ?? 'Destination');
+    daySnap.docs.forEach(doc => {
+      const date = String((doc.data() as any).localDate);
+      if (!weatherRequests.find(w => w.date === date)) {
+        weatherRequests.push({ date, location: fallbackLocation });
+      }
+    });
+  }
+
+  const { weather } = await fetchOverviewWeather(weatherRequests).catch(() => ({ weather: [] }));
+  const weatherByDate = new Map(weather.map(w => [w.date, w]));
+
   const days: BlogDay[] = daySnap.docs.map((doc) => {
     const data = doc.data() as any;
-    return { id: doc.id, tripId, localDate: String(data.localDate), headline: data.headline ?? null, summary: data.summary ?? null, items: items.filter((item) => item.blogDayId === doc.id) };
+    const date = String(data.localDate);
+    const dayWeather = weatherByDate.get(date);
+    return {
+      id: doc.id,
+      tripId,
+      localDate: date,
+      headline: data.headline ?? null,
+      summary: data.summary ?? null,
+      items: items.filter((item) => item.blogDayId === doc.id),
+      weather: dayWeather ? {
+        icon: dayWeather.icon,
+        description: dayWeather.description,
+        temperatureHighC: dayWeather.temperatureHighC
+      } : undefined
+    };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
+
   return { id: blog.id, tripId, title: blog.title ?? '', subtitle: blog.subtitle ?? null, introduction: blog.introduction ?? null, contentRevision: Number(blog.contentRevision ?? 0), visibilityState: blog.visibilityState ?? 'private', visibilityEpoch: Number(blog.visibilityEpoch ?? 0), days };
 };
 

@@ -1,6 +1,12 @@
 import { Platform, Linking } from 'react-native';
 
-export type BillingPlanKey = 'premium_monthly' | 'premium_annual';
+export type BillingPlanKey =
+  | 'premium_monthly'
+  | 'premium_annual'
+  | 'storage_20gb'
+  | 'storage_100gb'
+  | 'storage_200gb'
+  | 'storage_2tb';
 
 export interface BillingStatusResponse {
   effectiveTier: string;

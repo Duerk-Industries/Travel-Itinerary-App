@@ -50,7 +50,12 @@ router.get('/:tripId/blog', async (req, res) => {
       res.status(404).json({ error: 'Trip blog is not enabled' });
       return;
     }
-    const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId);
+    const options = {
+      date: typeof req.query.date === 'string' ? req.query.date : undefined,
+      cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
+      limit: req.query.limit ? Number(req.query.limit) : undefined,
+    };
+    const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     for (const asset of media) {
       const day = blog.days.find((candidate) => candidate.localDate === asset.dayDate);

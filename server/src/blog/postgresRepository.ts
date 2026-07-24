@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog } from '../db.postgres';
+import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch } from './types';
 
 type BlogRow = {
@@ -65,26 +66,43 @@ const mapItem = (row: any): BlogTextItem => ({
   updatedAt: new Date(row.updated_at).toISOString(),
 });
 
-export const getBlog = async (userId: string, tripId: string): Promise<BlogDocument> => {
+export const getBlog = async (userId: string, tripId: string, options: { date?: string; cursor?: string; limit?: number } = {}): Promise<BlogDocument> => {
   const access = await ensureUserCanReadTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to view this trip');
   const blogResult = await queryBlog<BlogRow>('SELECT * FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
   const blog = blogResult.rows[0];
   await ensureDays(tripId);
+
+  const limit = Math.min(100, Math.max(1, options.limit ?? 7));
+  const dateFilter = options.date ? 'AND local_date = $2::date' : '';
+  const cursorFilter = options.cursor ? 'AND local_date > $2::date' : '';
+  const filterParams = [tripId];
+  if (options.date) filterParams.push(options.date);
+  else if (options.cursor) filterParams.push(options.cursor);
+
   const daysResult = await queryBlog<any>(
     `SELECT id, trip_id, local_date, headline, summary
-     FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC`,
-    [tripId]
+     FROM blog_days WHERE trip_id = $1 ${dateFilter} ${cursorFilter}
+     ORDER BY local_date ASC LIMIT $${filterParams.length + 1}`,
+    [...filterParams, limit]
   );
-  const itemsResult = await queryBlog<any>(
+
+  const dayIds = daysResult.rows.map(r => String(r.id));
+  const placeholders = dayIds.map((_, i) => `$${i + 2}`).join(',');
+  const itemsResult = dayIds.length ? await queryBlog<any>(
     `SELECT i.*, t.body, t.language_tag, d.local_date
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      LEFT JOIN blog_text_contents t ON t.item_id = i.id
-     WHERE i.trip_id = $1 AND i.deleted_at IS NULL
+     WHERE i.trip_id = $1 AND i.blog_day_id IN (${placeholders}) AND i.deleted_at IS NULL
      ORDER BY d.local_date ASC, i.sort_key ASC, i.created_at ASC`,
-    [tripId]
-  );
+    [tripId, ...dayIds]
+  ) : { rows: [] };
+
+  if (process.env.NODE_ENV === 'test') {
+    console.log(`DEBUG_POSTGRES_REPOS dayIds=${JSON.stringify(dayIds)} itemsCount=${itemsResult.rows.length}`);
+  }
+
   const byDay = new Map<string, BlogTextItem[]>();
   for (const row of itemsResult.rows) {
     if (row.kind_key !== 'core.text') continue;
@@ -93,14 +111,46 @@ export const getBlog = async (userId: string, tripId: string): Promise<BlogDocum
     list.push(mapItem(row));
     byDay.set(key, list);
   }
-  const days: BlogDay[] = daysResult.rows.map((row) => ({
-    id: String(row.id),
-    tripId: String(row.trip_id),
-    localDate: formatDate(row.local_date),
-    headline: row.headline == null ? null : String(row.headline),
-    summary: row.summary == null ? null : String(row.summary),
-    items: byDay.get(String(row.id)) ?? [],
-  }));
+
+  // Weather Badge Integration
+  const weatherRequests = daysResult.rows.map(r => ({
+    date: formatDate(r.local_date),
+    location: r.headline || r.summary || 'Destination' // Fallback to a generic location
+  })).filter(r => r.location !== 'Destination');
+
+  // Attempt to get a real location from the trip if headlines are missing
+  if (weatherRequests.length < daysResult.rows.length) {
+    const tripLocation = await queryBlog<{ name: string }>('SELECT name FROM trips WHERE id = $1', [tripId]);
+    const fallbackLocation = tripLocation.rows[0]?.name || 'Destination';
+    daysResult.rows.forEach(r => {
+      const date = formatDate(r.local_date);
+      if (!weatherRequests.find(w => w.date === date)) {
+        weatherRequests.push({ date, location: fallbackLocation });
+      }
+    });
+  }
+
+  const { weather } = await fetchOverviewWeather(weatherRequests).catch(() => ({ weather: [] }));
+  const weatherByDate = new Map(weather.map(w => [w.date, w]));
+
+  const days: BlogDay[] = daysResult.rows.map((row) => {
+    const date = formatDate(row.local_date);
+    const dayWeather = weatherByDate.get(date);
+    return {
+      id: String(row.id),
+      tripId: String(row.trip_id),
+      localDate: date,
+      headline: row.headline == null ? null : String(row.headline),
+      summary: row.summary == null ? null : String(row.summary),
+      items: byDay.get(String(row.id)) ?? [],
+      weather: dayWeather ? {
+        icon: dayWeather.icon,
+        description: dayWeather.description,
+        temperatureHighC: dayWeather.temperatureHighC
+      } : undefined
+    };
+  });
+
   return {
     id: blog ? String(blog.id) : '',
     tripId,

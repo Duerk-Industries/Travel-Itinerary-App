@@ -47,6 +47,11 @@ export interface BlogDay {
   headline: string | null;
   summary: string | null;
   items: BlogTextItem[];
+  weather?: {
+    icon: string;
+    description: string;
+    temperatureHighC: number | null;
+  };
 }
 
 export interface BlogDocument {

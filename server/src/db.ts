@@ -417,6 +417,13 @@ export const removeFamilyRelationship = async (...args: Parameters<ReturnType<ty
   adapter().removeFamilyRelationship(...args);
 export const updateFamilyProfile = async (...args: Parameters<ReturnType<typeof adapter>['updateFamilyProfile']>) =>
   adapter().updateFamilyProfile(...args);
+
+export const getLodgingLocation = async (placeId: string): Promise<any | null> =>
+  adapter().getLodgingLocation(placeId);
+
+export const upsertLodgingLocation = async (location: any): Promise<void> =>
+  adapter().upsertLodgingLocation(location);
+
 export const poolClient = (): Pool => adapter().poolClient();
 export const getPool = (): Pool => adapter().poolClient();
 
