@@ -27,4 +27,14 @@ describe('Phase 11 workflow dispatch wiring', () => {
       expect(source).toMatch(/environment:\s*production/);
     }
   });
+
+  it('deploys the API from its Node 20 Dockerfile without unsupported runtime flags', () => {
+    const workflow = fs.readFileSync(path.join(root, '.github/workflows/deploy-api.yml'), 'utf8');
+    const dockerfile = fs.readFileSync(path.join(root, 'server/Dockerfile'), 'utf8');
+
+    expect(workflow).toContain('gcloud run deploy travel-itinerary-app');
+    expect(workflow).toContain('--source .');
+    expect(workflow).not.toContain('--runtime');
+    expect(dockerfile).toMatch(/^FROM node:20-/m);
+  });
 });
