@@ -1,5 +1,5 @@
 ---
-key: first_aid_kit
+key: first_aid
 label: First Aid Kit
 description: Items for packing first aid and medicines.
 gendered: false
@@ -10,7 +10,6 @@ gendered: false
 ## Health & Toiletries
 - Allergy medicine
 - Pain reliever
-- Prescription medications
 - Band-aids
 - Neosporene
 - Aloe for sunburn
