@@ -127,6 +127,38 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "blog_days",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tripId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "localDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "blog_media_assets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "storageAccountUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
