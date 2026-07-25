@@ -64,6 +64,11 @@ describe('Phase 11 PowerShell script parity', () => {
       const powershell = fs.readFileSync(path.join(root, 'scripts', `${name}.ps1`), 'utf8');
       expect(bash).toContain('--session-affinity');
       expect(powershell).toContain('--session-affinity');
+      // Socket.IO presence/chat state is held in-process (see presenceManager.ts) with no
+      // Redis adapter, so a second Cloud Run instance would strand existing polling sessions
+      // (Engine.IO "unknown sid" 400s) even with session affinity best-effort routing.
+      expect(bash).toContain('--max-instances 1');
+      expect(powershell).toContain('--max-instances 1');
       if (name !== 'cutover-test-to-prod') {
         expect(bash).toContain('--to-latest');
         expect(powershell).toContain('--to-latest');

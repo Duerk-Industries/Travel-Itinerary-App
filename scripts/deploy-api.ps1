@@ -277,7 +277,7 @@ if ($secretMap.Count -gt 0) {
   foreach ($key in @($secretMap.Keys)) { Write-Host "  $key -> $($secretMap[$key])" }
 }
 
-$cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region, '--session-affinity')
+$cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region, '--session-affinity', '--max-instances', '1')
 $cmd += @('--memory', $Memory)
 if ($envArg) { $cmd += @('--update-env-vars', $envArg) }
 if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }

@@ -44,6 +44,7 @@ jobs:
             --source . \
             --region us-east5 \
             --session-affinity \
+            --max-instances 1 \
             --allow-unauthenticated \
             --service-account "travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com" \
             --project "$GCLOUD_PROJECT_ID"

@@ -55,6 +55,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
     --image "$BACKEND_DIGEST" \
     --region "$PROD_REGION" \
     --session-affinity \
+    --max-instances 1 \
     --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" \
     --update-labels "app-git-sha=$MANIFEST_GIT_SHA" \
     --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
