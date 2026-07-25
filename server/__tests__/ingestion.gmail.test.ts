@@ -1,9 +1,14 @@
 /// <reference types="jest" />
 /// <reference types="node" />
+const originalRunLocal = process.env.RUN_LOCAL;
+const originalKService = process.env.K_SERVICE;
+
 const setMemoryEnv = () => {
   process.env.DB_PROVIDER = 'memory';
   process.env.USE_IN_MEMORY_DB = '1';
   process.env.DATABASE_URL = 'pg-mem://localhost/test';
+  process.env.RUN_LOCAL = '1';
+  delete process.env.K_SERVICE;
   process.env.GOOGLE_CLIENT_ID = 'gmail-client-id';
   process.env.GOOGLE_CLIENT_SECRET = 'gmail-client-secret';
   process.env.WEB_URL = 'http://localhost:8081';
@@ -36,6 +41,13 @@ describe('ingestion Gmail routes', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    if (originalRunLocal === undefined) delete process.env.RUN_LOCAL;
+    else process.env.RUN_LOCAL = originalRunLocal;
+    if (originalKService === undefined) delete process.env.K_SERVICE;
+    else process.env.K_SERVICE = originalKService;
   });
 
   it('creates a Gmail connect URL and completes callback token storage', async () => {

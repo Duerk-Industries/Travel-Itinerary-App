@@ -129,6 +129,8 @@ export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new D
   let currentVisible = summary.visibleCommittedBytes;
   const db = getDb();
 
+  logInfo(`[blog-storage] hideExpiredMediaForUser userId=${userId} visible=${currentVisible} limit=${limit}`);
+
   while (currentVisible > limit) {
     const snap = await db.collection('blog_media_assets')
       .where('storageAccountUserId', '==', userId)
@@ -136,6 +138,8 @@ export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new D
       .orderBy('createdAt', 'asc')
       .limit(1)
       .get();
+
+    logInfo(`[blog-storage] hideExpiredMediaForUser snap.size=${snap.size}`);
 
     if (snap.empty) break;
     const doc = snap.docs[0];

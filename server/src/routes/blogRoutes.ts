@@ -73,6 +73,9 @@ router.get('/:tripId/blog', async (req, res) => {
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     };
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
+    if (process.env.NODE_ENV === 'test') {
+      console.log('DEBUG_BLOG_JSON', JSON.stringify(blog, null, 2));
+    }
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     // `id` must be the underlying blog_items row id (asset.blogItemId), not the media asset's own
     // id — PATCH/DELETE /blog/items/:itemId operate on blog_items, so shipping the asset id as
