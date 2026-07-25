@@ -26,6 +26,3 @@ gendered: true
 
 ## Travel Gear & Accessories
 - Belt
-- Tie clip
-- Cufflinks
-- Pocket square

@@ -15,7 +15,7 @@ gendered: false
 - Jumper cables
 - Roadside flares
 - Paper road atlas
-- Offline roadside assistance number
+- Roadside assistance number
 
 ## Travel Gear & Accessories
 - Phone mount
@@ -24,9 +24,8 @@ gendered: false
 - Reusable shopping bags
 - Travel blanket
 - Neck support pillow
-- 12-volt power inverter
+- 12-volt power adapter
 
 ## Entertainment
 - Travel games
 - Downloaded road trip playlists
-- Fuel stop plan

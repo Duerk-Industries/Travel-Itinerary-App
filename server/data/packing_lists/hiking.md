@@ -34,3 +34,4 @@ gendered: false
 - Trekking poles
 - Dry bag
 - Pack rain cover
+- Insect repellent

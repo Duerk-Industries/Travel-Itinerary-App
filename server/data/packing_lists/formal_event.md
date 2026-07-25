@@ -8,12 +8,11 @@ gendered: false
 <!-- General is included separately; do not repeat General items. -->
 
 ## Clothing & Footwear
-- Formal gown
 - Cocktail dress
-- Tuxedo
+- Tuxedo/Suit
 - Evening shirt
 - Formal dress shoes
-- Bow tie
+- Tie
 - Pocket square
 - Hosiery
 - Evening wrap
