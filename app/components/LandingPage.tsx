@@ -30,11 +30,11 @@ const SAMPLE_DAYS: SampleDay[] = [
 // one-line tagline — a stated requirement for Google OAuth consent-screen
 // homepage review.
 const FEATURES: string[] = [
-  'Build a shared day-by-day itinerary with flights, lodging, activities, and car rentals',
-  'Split and track shared expenses in a running cost ledger',
-  'Generate AI-assisted itinerary suggestions from your destinations and dates',
-  'Chat and see who else in your group is online, in real time',
-  'Keep packing lists and trip notes in one place everyone can edit',
+  'Collaborative Planning: Build a shared day-by-day itinerary with flights, lodging, activities, and car rentals that everyone in your group can see and edit.',
+  'Shared Expenses: Split and track shared costs in a running ledger with automated total calculations for each traveler.',
+  'AI Itinerary Generation: Generate intelligent itinerary suggestions based on your destinations and dates using state-of-the-art AI models.',
+  'Real-time Collaboration: Chat with your group and see presence indicators to know who is online and planning with you.',
+  'Packing & Notes: Manage shared packing lists and trip-wide notes to keep all your travel details in one central location.',
 ];
 
 /**
@@ -85,18 +85,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
             maxWidth: 560,
           }}
         >
-          WanderBunnies is a collaborative trip planner: your group tracks flights, lodging, activities, and shared
-          costs in one itinerary everyone can see and edit together.
+          WanderBunnies is a professional-grade collaborative trip planner. We help groups organize itineraries,
+          track transportation and lodging, and manage shared costs in one unified platform.
         </Text>
-
-        <View style={{ alignSelf: 'stretch', marginTop: spacing.lg, gap: 6 }}>
-          {FEATURES.map((feature) => (
-            <View key={feature} style={{ flexDirection: 'row', gap: 8 }}>
-              <Text style={{ color: colors.link, fontSize: typography.body }}>{'•'}</Text>
-              <Text style={{ color: colors.text, fontSize: typography.small, flex: 1 }}>{feature}</Text>
-            </View>
-          ))}
-        </View>
 
         <View
           style={{
@@ -120,7 +111,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
             }}
           >
             <Text style={{ color: '#0B1726', fontWeight: typography.weightBold, fontSize: typography.body }}>
-              Create account
+              Get Started
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -142,6 +133,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
             </Text>
           </TouchableOpacity>
         </View>
+
+        <View style={{ alignSelf: 'stretch', marginTop: spacing.xxl, gap: 16 }}>
+          <Text style={{ fontSize: typography.h3, fontWeight: typography.weightBold, color: colors.text }}>
+            Core Functionality
+          </Text>
+          {FEATURES.map((feature) => (
+            <View key={feature} style={{ flexDirection: 'row', gap: 12, backgroundColor: colors.surfaceMuted, padding: 12, borderRadius: 8 }}>
+              <Text style={{ color: colors.link, fontSize: typography.h3 }}>{'✓'}</Text>
+              <Text style={{ color: colors.text, fontSize: typography.small, flex: 1, lineHeight: 20 }}>{feature}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       <View style={{ width: '100%', maxWidth: 720, marginTop: spacing.xxl }}>
@@ -153,7 +156,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
             marginBottom: spacing.sm,
           }}
         >
-          What a shared itinerary looks like
+          Visual Itinerary Preview
         </Text>
         <View style={{ gap: spacing.md }}>
           {SAMPLE_DAYS.map((day) => (
@@ -200,7 +203,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
             marginTop: spacing.sm,
           }}
         >
-          Sample itinerary shown for preview — sign in to build your own.
+          This is a sample itinerary preview. Log in to create your own custom trip plan.
         </Text>
       </View>
 
@@ -209,11 +212,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
           width: '100%',
           maxWidth: 720,
           marginTop: spacing.xxl,
-          padding: spacing.lg,
+          padding: spacing.xl,
           borderRadius: 12,
-          backgroundColor: colors.surfaceMuted,
+          backgroundColor: '#eff6ff',
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: '#bfdbfe',
         }}
         testID="landing-data-use"
       >
@@ -221,61 +224,62 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
           style={{
             fontSize: typography.h3,
             fontWeight: typography.weightBold,
-            color: colors.text,
-            marginBottom: spacing.sm,
+            color: '#1e3a8a',
+            marginBottom: spacing.md,
           }}
         >
-          Why we ask for your info
+          Google Data Usage & Transparency
         </Text>
-        <Text style={{ fontSize: typography.small, color: colors.textMuted, marginBottom: 6 }}>
-          Creating an account (with an email/password or Google Sign-In) only requests your name and email address —
-          we use it to identify you to your travel group and secure your account. We never post on your behalf.
+        <Text style={{ fontSize: typography.small, color: '#1e40af', marginBottom: 12, lineHeight: 20 }}>
+          WanderBunnies uses Google User Data to enhance your trip planning experience. We prioritize transparency and security:
         </Text>
-        <Text style={{ fontSize: typography.small, color: colors.textMuted, marginBottom: 6 }}>
-          Everything else — trip dates, flights, lodging, activities, and costs — is information you or your group
-          choose to add once you're signed in. Optional features, like importing itinerary details from Gmail,
-          request additional permission separately and only when you turn them on.
-        </Text>
-        <Text style={{ fontSize: typography.small, color: colors.textMuted }}>
-          We don't sell your data. Full details are in our{' '}
-          <Text
-            onPress={() => openLegal('privacy.html')}
-            style={{ color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
-          >
-            Privacy Policy
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: typography.small, color: '#1e40af', lineHeight: 20 }}>
+            <Text style={{ fontWeight: typography.weightBold }}>• Identity:</Text> When you sign in with Google, we request your name and email address to create your account, identify you to your travel group, and secure your personal data.
           </Text>
-          .
-        </Text>
+          <Text style={{ fontSize: typography.small, color: '#1e40af', lineHeight: 20 }}>
+            <Text style={{ fontWeight: typography.weightBold }}>• Gmail Integration (Optional):</Text> If you choose to enable the Gmail import feature, WanderBunnies requests read-only access to your emails to specifically identify travel confirmations (flights, hotels, activities). This data is used only to automatically populate your itinerary.
+          </Text>
+          <Text style={{ fontSize: typography.small, color: '#1e40af', lineHeight: 20 }}>
+            <Text style={{ fontWeight: typography.weightBold }}>• Privacy:</Text> We do not use Google data for advertising, we do not sell your information to third parties, and we only access the data you explicitly authorize.
+          </Text>
+        </View>
+        <View style={{ marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: '#bfdbfe' }}>
+          <Text style={{ fontSize: typography.small, color: '#1e40af' }}>
+            For more information, please read our{' '}
+            <Text
+              onPress={() => openLegal('privacy.html')}
+              style={{ color: '#2563eb', fontWeight: typography.weightBold, textDecorationLine: 'underline' }}
+            >
+              Privacy Policy
+            </Text>.
+          </Text>
+        </View>
       </View>
 
-      <View style={{ marginTop: spacing.xl, alignItems: 'center' }}>
-        <View style={{ flexDirection: 'row', gap: 4 }}>
+      <View style={{ marginTop: spacing.xxl, alignItems: 'center', width: '100%' }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
           <TouchableOpacity onPress={() => openLegal('privacy.html')} testID="landing-privacy-link">
-            <Text
-              style={{
-                fontSize: typography.caption,
-                color: colors.link,
-                fontWeight: typography.weightSemibold,
-                textDecorationLine: 'underline',
-              }}
-            >
+            <Text style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}>
               Privacy Policy
             </Text>
           </TouchableOpacity>
-          <Text style={{ fontSize: typography.caption, color: colors.textMuted }}>·</Text>
+          <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
           <TouchableOpacity onPress={() => openLegal('terms.html')} testID="landing-terms-link">
-            <Text
-              style={{
-                fontSize: typography.caption,
-                color: colors.link,
-                fontWeight: typography.weightSemibold,
-                textDecorationLine: 'underline',
-              }}
-            >
+            <Text style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}>
               Terms of Service
             </Text>
           </TouchableOpacity>
+          <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
+          <TouchableOpacity onPress={() => openLegal('cookies.html')}>
+            <Text style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}>
+              Cookie Policy
+            </Text>
+          </TouchableOpacity>
         </View>
+        <Text style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg }}>
+          &copy; 2026 WanderBunnies Travel · Owned and Operated by Bryan Duerk
+        </Text>
       </View>
     </ScrollView>
   );
