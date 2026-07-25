@@ -34,6 +34,7 @@ describe('Phase 11 workflow dispatch wiring', () => {
 
     expect(workflow).toContain('gcloud run deploy travel-itinerary-app');
     expect(workflow).toContain('--source .');
+    expect(workflow).toContain('--session-affinity');
     expect(workflow).not.toContain('--runtime');
     expect(dockerfile).toMatch(/^FROM node:20-/m);
   });

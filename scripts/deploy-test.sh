@@ -62,6 +62,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$TEST_SERVICE_NAME" \
     --image "$BACKEND_DIGEST" \
     --region "$TEST_REGION" \
+    --session-affinity \
     --service-account "$TEST_RUNTIME_SERVICE_ACCOUNT" \
     --update-labels "app-git-sha=$(json_get "$MANIFEST" gitSha)" \
     --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$TEST_DOMAIN,FIRESTORE_DATABASE_ID=$TEST_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$TEST_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \

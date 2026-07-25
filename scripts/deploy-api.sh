@@ -317,6 +317,7 @@ fi
 gcloud run deploy "$SERVICE_NAME" \
   --source "$SOURCE_DIR" \
   --region "$REGION" \
+  --session-affinity \
   ${env_arg:+--update-env-vars "$env_arg"} \
   ${secrets_arg:+--set-secrets "$secrets_arg"} \
   ${secret_keys_arg:+--remove-env-vars "$secret_keys_arg"} \

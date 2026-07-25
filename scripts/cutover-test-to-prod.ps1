@@ -67,7 +67,7 @@ $canaryTripId = $null
 # (Chapter 16 §6) -- cleanup must not depend on the cutover having gone well.
 try {
   if (-not $DryRun) {
-    & gcloud run deploy $env:PROD_SERVICE_NAME --image $backendDigest --region $env:PROD_REGION --no-traffic --tag candidate `
+    & gcloud run deploy $env:PROD_SERVICE_NAME --image $backendDigest --region $env:PROD_REGION --no-traffic --tag candidate --session-affinity `
       --service-account $env:PROD_RUNTIME_SERVICE_ACCOUNT --update-labels "app-git-sha=$manifestGitSha" `
       --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:PROD_DOMAIN),FIRESTORE_DATABASE_ID=$($env:PROD_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:PROD_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `
       --set-secrets $secretDeploy.Argument `

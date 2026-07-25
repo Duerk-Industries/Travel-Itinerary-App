@@ -14,6 +14,59 @@ const guessMimeTypeFromName = (name) => {
   return null;
 };
 
+export const resolveMediaAspectRatio = (width, height) => {
+  const numericWidth = Number(width);
+  const numericHeight = Number(height);
+  if (!Number.isFinite(numericWidth) || !Number.isFinite(numericHeight) || numericWidth <= 0 || numericHeight <= 0) {
+    return null;
+  }
+  return numericWidth / numericHeight;
+};
+
+export const BlogMediaPreview = ({ item, backgroundColor }) => {
+  const [aspectRatio, setAspectRatio] = useState(null);
+  const mediaUrl = item.primaryUrl || item.thumbnailUrl;
+
+  useEffect(() => {
+    setAspectRatio(null);
+  }, [mediaUrl]);
+
+  if (item.kindKey === 'media.video' && Platform.OS === 'web') {
+    return React.createElement('video', {
+      src: mediaUrl,
+      controls: true,
+      playsInline: true,
+      preload: 'metadata',
+      style: {
+        display: 'block',
+        width: '100%',
+        height: 'auto',
+        maxWidth: '100%',
+        borderRadius: 8,
+        backgroundColor,
+      },
+    });
+  }
+
+  return (
+    <Image
+      source={{ uri: mediaUrl }}
+      style={{
+        width: '100%',
+        ...(aspectRatio ? { aspectRatio } : { height: 200 }),
+        borderRadius: 8,
+        backgroundColor,
+      }}
+      resizeMode="contain"
+      onLoad={(event) => {
+        const source = event?.nativeEvent?.source;
+        const nextAspectRatio = resolveMediaAspectRatio(source?.width, source?.height);
+        if (nextAspectRatio) setAspectRatio(nextAspectRatio);
+      }}
+    />
+  );
+};
+
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -285,7 +338,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                   // error — Remove is the one supported action here.
                   (item.thumbnailUrl || item.primaryUrl) ? (
                     <View>
-                      <Image source={{ uri: item.thumbnailUrl || item.primaryUrl }} style={{ width: '100%', height: 200, borderRadius: 8, backgroundColor: inputColor }} resizeMode="cover" />
+                      <BlogMediaPreview item={item} backgroundColor={inputColor} />
                       {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
                     </View>
                   ) : (

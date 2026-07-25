@@ -58,6 +58,7 @@ if (-not $DryRun) {
   & gcloud run deploy $env:TEST_SERVICE_NAME `
     --image $backendDigest `
     --region $env:TEST_REGION `
+    --session-affinity `
     --service-account $env:TEST_RUNTIME_SERVICE_ACCOUNT `
     --update-labels "app-git-sha=$manifestGitSha" `
     --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:TEST_DOMAIN),FIRESTORE_DATABASE_ID=$($env:TEST_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:TEST_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `

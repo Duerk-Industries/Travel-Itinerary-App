@@ -43,6 +43,7 @@ jobs:
           gcloud run deploy travel-itinerary-app \
             --source . \
             --region us-east5 \
+            --session-affinity \
             --allow-unauthenticated \
             --service-account "travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com" \
             --project "$GCLOUD_PROJECT_ID"
