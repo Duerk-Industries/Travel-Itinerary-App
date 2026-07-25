@@ -84,6 +84,7 @@ import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
+import LandingPage from './components/LandingPage';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
@@ -614,6 +615,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setAuthMode,
     setAuthForm,
   } = useAuthForm();
+  const [showAuthForm, setShowAuthForm] = useState(false);
   const {
     accountProfile,
     mapApp,
@@ -3352,7 +3354,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             : null}
 
         </View>
-      ) : (
+      ) : showAuthForm ? (
         <ScrollView
           style={styles.signedOutScroll}
           contentContainerStyle={[styles.signedOutScrollContent, iosSafariContentInsetStyle]}
@@ -3360,6 +3362,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           contentInsetAdjustmentBehavior="automatic"
         >
+          <TouchableOpacity
+            onPress={() => setShowAuthForm(false)}
+            accessibilityRole="button"
+            testID="auth-form-back-to-landing"
+            style={{ alignSelf: 'flex-start', marginTop: 24 }}
+          >
+            <Text style={{ color: theme.colors.link, fontWeight: theme.typography.weightSemibold }}>
+              {'← Back'}
+            </Text>
+          </TouchableOpacity>
           <AuthForm
             authMode={authMode}
             setAuthMode={setAuthMode}
@@ -3377,6 +3389,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             styles={styles}
           />
         </ScrollView>
+      ) : (
+        <LandingPage
+          theme={theme}
+          logoSource={TOP_BANNER_ICON}
+          backendUrl={backendUrl}
+          onLogin={() => {
+            setAuthMode('login');
+            setShowAuthForm(true);
+          }}
+          onCreateAccount={() => {
+            setAuthMode('register');
+            setShowAuthForm(true);
+          }}
+        />
       )}
       {userToken && requirePasswordSetup ? (
         <View style={styles.wizardOverlay}>
