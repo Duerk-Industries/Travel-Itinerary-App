@@ -1,0 +1,68 @@
+{
+  "displayName": "Cost Optimization & API Tracker",
+  "gridLayout": {
+    "columns": "2",
+    "widgets": [
+      {
+        "title": "Secret Manager: Access Requests (Cost Driver)",
+        "xyChart": {
+          "dataSets": [{
+            "plotType": "LINE",
+            "targetAxis": "Y1",
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"secretmanager.googleapis.com/secret/access_request_count\"",
+                "aggregation": { "perSeriesAligner": "ALIGN_RATE" }
+              }
+            }
+          }]
+        }
+      },
+      {
+        "title": "Network Egress (Bytes Sent)",
+        "xyChart": {
+          "dataSets": [{
+            "plotType": "STACKED_BAR",
+            "targetAxis": "Y1",
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"compute.googleapis.com/instance/network/sent_bytes_count\"",
+                "aggregation": { "perSeriesAligner": "ALIGN_RATE" }
+              }
+            }
+          }]
+        }
+      },
+      {
+        "title": "Google Maps & Places API Usage",
+        "xyChart": {
+          "dataSets": [{
+            "plotType": "LINE",
+            "targetAxis": "Y1",
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"serviceruntime.googleapis.com/api/request_count\"",
+                "aggregation": { "perSeriesAligner": "ALIGN_RATE" }
+              }
+            }
+          }]
+        }
+      },
+      {
+        "title": "Cloud Run Instance Count",
+        "xyChart": {
+          "dataSets": [{
+            "plotType": "LINE",
+            "targetAxis": "Y1",
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"run.googleapis.com/container/instance_count\" resource.labels.service_name=\"travel-itinerary-app\"",
+                "aggregation": { "perSeriesAligner": "ALIGN_MEAN" }
+              }
+            }
+          }]
+        }
+      }
+    ]
+  }
+}

@@ -71,6 +71,34 @@ export const deleteBlogObject = async (objectKey: string): Promise<void> => {
   await getStorage().bucket(BUCKET_NAME).file(objectKey).delete().catch(() => undefined);
 };
 
+/**
+ * Sets the CORS configuration for the blog bucket to allow direct uploads from the browser.
+ * Equivalent to: gsutil cors set <file> gs://<bucket>
+ */
+export const setBucketCors = async (origins: string[] = ['*']): Promise<void> => {
+  try {
+    await getStorage().bucket(BUCKET_NAME).setCorsConfiguration([
+      {
+        maxAgeSeconds: 3600,
+        method: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+        origin: origins,
+        responseHeader: [
+          'Content-Type',
+          'Authorization',
+          'Content-Length',
+          'User-Agent',
+          'x-goog-resumable',
+          'Idempotency-Key',
+        ],
+      },
+    ]);
+    console.log(`[blog-storage] CORS configuration updated for bucket: ${BUCKET_NAME}`);
+  } catch (err) {
+    logError(`[blog-storage] failed to set CORS for bucket: ${BUCKET_NAME}`, err);
+    throw err;
+  }
+};
+
 /** Deterministic rendition key layout, shared by the processing worker and the read-URL lookups so the two never drift apart. */
 export const blogRenditionKey = (uploaderUserId: string, assetId: string, rendition: 'primary.jpg' | 'thumb.jpg' | 'primary.mp4'): string =>
   `trip-blog/${uploaderUserId}/${assetId}/${rendition}`;

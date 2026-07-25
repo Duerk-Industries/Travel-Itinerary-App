@@ -67,6 +67,10 @@ jest.restoreAllMocks = () => {
 };
 
 process.env.NODE_ENV = process.env.NODE_ENV ?? 'test';
+// CORS allows localhost origins only when isLocalEnv() is true. On a dev machine that's
+// satisfied by server/.local_env, but CI has no such file, so requests from the
+// http://localhost:8081 origin used in tests would otherwise fail CORS with a 500.
+process.env.RUN_LOCAL = process.env.RUN_LOCAL ?? '1';
 if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.trim() === 'development-secret') {
   process.env.AUTH_SECRET = 'jest-auth-secret';
 }
