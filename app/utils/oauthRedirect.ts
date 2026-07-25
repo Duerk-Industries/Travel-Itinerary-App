@@ -29,13 +29,24 @@ export const buildWebOAuthRedirectUrl = ({
     return `${stripTrailingSlash(currentOrigin)}${path}`;
   }
 
-  if (
-    backend &&
-    backend.protocol === 'https:' &&
-    current.protocol === 'https:' &&
-    !isLoopbackHostname(current.hostname) &&
-    backend.origin !== current.origin
-  ) {
+  // Local development: always stay on the current origin (e.g. localhost:8081).
+  if (isLoopbackHostname(current.hostname)) {
+    return `${current.origin}${path}`;
+  }
+
+  // Production/Staging:
+  // If the current origin is a secure HTTPS host, we prefer it over forcing
+  // a redirect to the canonical backend origin. This allows the app to be
+  // hosted on multiple domains (e.g. wander-bunnies.com and duerk.org)
+  // while preserving the user's active domain.
+  if (current.protocol === 'https:') {
+    return `${current.origin}${path}`;
+  }
+
+  // Fallback: if we are on a non-secure origin (rare in production) but have
+  // a valid secure backend origin, we use the backend origin as a safe
+  // canonical return path.
+  if (backend && backend.protocol === 'https:') {
     return `${backend.origin}${path}`;
   }
 

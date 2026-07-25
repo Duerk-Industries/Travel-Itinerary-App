@@ -117,6 +117,7 @@ import type { GroupInvite, PendingTripShareInvite } from './types/invites';
 import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
+import TripBlogTab from './tabs/tripBlog';
 const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
@@ -179,6 +180,7 @@ const formatMemberName = (member: GroupMemberOption): string => {
 type Page =
   | 'home'
   | 'overview'
+  | 'blog'
   | 'flights'
   | 'lodging'
   | 'packing'
@@ -2541,6 +2543,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
       'overview',
+      'blog',
       'flights',
       'lodging',
       'packing',
@@ -2752,6 +2755,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
                 />
+              )
+            : null}
+
+          {activePage === 'blog'
+            ? renderSharedPageScroll(
+                <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={activeTripId} styles={styles} theme={theme} readOnly={isFollowingMode} />
               )
             : null}
 
@@ -3364,6 +3373,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             loginWithPassword={loginWithPassword}
             register={register}
             loginWithGoogle={loginWithGoogle}
+            backendUrl={backendUrl}
             styles={styles}
           />
         </ScrollView>

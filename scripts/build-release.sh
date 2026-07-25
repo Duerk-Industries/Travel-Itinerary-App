@@ -33,7 +33,10 @@ if [[ "$DRY_RUN" == "1" ]]; then
   printf 'dry-run frontend %s\n' "$GIT_SHA" > "$FRONTEND_DIR/index.html"
 else
   (cd "$REPO_ROOT" && npm run validate:app && npm run validate:server)
-  (cd "$REPO_ROOT/app" && npm run export:web -- --output-dir "$FRONTEND_DIR")
+  # --clear bypasses Metro's bundler cache -- see build-release.ps1 for why
+  # this is required (a stale cached bundle from before RELEASE_WEB_BUILD
+  # existed silently kept baking in the old backend URL across releases).
+  (cd "$REPO_ROOT/app" && RELEASE_WEB_BUILD=1 npm run export:web -- "--output-dir=$FRONTEND_DIR" --clear)
 fi
 
 # Served alongside the frontend so cutover-test-to-prod.sh can confirm the

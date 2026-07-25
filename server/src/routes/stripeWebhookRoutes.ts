@@ -22,10 +22,12 @@ import {
 } from '../db';
 import { mapStripeSubscriptionToUpsert, normalizeBillingTrialEmail, resolvePlanKeyForPriceId } from '../billing/billingService';
 import { reconcileUserTierFromBillingById } from '../billing/subscriptionEntitlementService';
+import { blogMediaRepository } from '../blog/repository';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { BillingPlanKey } from '../types';
+import { getStorageAddonBytesMapping } from '../config/stripeBilling';
 import { scheduleNextBillingGraceExpiry } from '../billing/subscriptionReconciliationService';
 import { sendBillingTrialEndingEmailBestEffort } from '../mailer';
 
@@ -103,7 +105,18 @@ const handleSubscriptionSnapshot = async (
     stripeEventId,
   });
 
-  logInfo(`[billing][webhook] Subscription snapshot applied sub=${subscriptionId} status=${sub.status} userId=${userId}`);
+  // Calculate and apply storage add-ons
+  const storageMapping = getStorageAddonBytesMapping();
+  let purchasedBytes = 0;
+  for (const item of sub.items.data) {
+    const bytes = storageMapping[item.price.id];
+    if (bytes) {
+      purchasedBytes += bytes * (item.quantity ?? 1);
+    }
+  }
+  await blogMediaRepository().updatePurchasedStorage(userId, purchasedBytes);
+
+  logInfo(`[billing][webhook] Subscription snapshot applied sub=${subscriptionId} status=${sub.status} userId=${userId} purchasedBytes=${purchasedBytes}`);
 };
 
 const handleCheckoutSessionCompleted = async (

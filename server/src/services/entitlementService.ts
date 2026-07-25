@@ -168,7 +168,9 @@ export const isFeatureEnabled = async (key: string): Promise<boolean> => {
     return cached.enabled;
   }
   const flag = await getFeatureFlag(key);
-  const enabled = flag?.enabled ?? true;
+  // v2 packing lists are an explicit rollout flag; an absent row must not
+  // accidentally expose the new write semantics on an older deployment.
+  const enabled = flag?.enabled ?? (key === 'packing_lists_v2' ? false : true);
   flagCache.set(key, { enabled, expiresAt: Date.now() + FLAG_CACHE_TTL_MS });
   return enabled;
 };

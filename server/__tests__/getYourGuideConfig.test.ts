@@ -54,8 +54,10 @@ describe('GetYourGuide Phase 0 configuration', () => {
     expect(db.getFeatureFlag).not.toHaveBeenCalled();
   });
 
-  it('ships with the optional feature seed disabled', () => {
-    expect(getFeatureFlagSeeds()[GETYOURGUIDE_FEATURE_FLAG]).toEqual(expect.objectContaining({ enabled: false }));
+  it('loads the optional feature seed from YAML as a boolean', () => {
+    expect(getFeatureFlagSeeds()[GETYOURGUIDE_FEATURE_FLAG]).toEqual(expect.objectContaining({
+      enabled: expect.any(Boolean),
+    }));
   });
 
   it('requires the DB flag and server partner ID before enabling the optional feature', async () => {

@@ -5,24 +5,24 @@ description: Productivity essentials for remote work.
 gendered: false
 ---
 
-## Office Setup
-- Laptop stand (Collapsible)
+<!-- General is included separately. Do not repeat General items. -->
+
+## Technology & Gadgets
+- Collapsible laptop stand
 - Bluetooth keyboard
 - Portable mouse
 - Portable monitor
 - Noise-canceling headphones
 - Webcam cover
-
-## Connectivity & Power
-- Power bank (Laptop capable)
-- Universal travel adapter
 - Multi-port USB charger
 - Ethernet cable and adapter
-- Cable organizer / tech pouch
+- Tech pouch
 - Spare charging cables
 - Local SIM card or eSIM details
 
-## Misc
+## Travel Gear & Accessories
 - Notebook and pen
-- Blue light glasses
-- Travel insurance covering tech gear
+- Blue-light glasses
+
+## Documents & Money
+- Travel insurance details for tech gear

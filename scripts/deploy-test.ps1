@@ -8,17 +8,27 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'lib\deploy-common.ps1')
 Import-DeployConfig
+Ensure-GcloudProjectId
 Assert-RequiredVars @(
-  'TEST_SERVICE_NAME', 'TEST_REGION', 'TEST_HOSTING_SITE', 'TEST_DOMAIN', 'TEST_FIRESTORE_DATABASE_ID',
+  'GCLOUD_PROJECT_ID', 'TEST_SERVICE_NAME', 'TEST_REGION', 'TEST_HOSTING_SITE', 'TEST_DOMAIN', 'TEST_FIRESTORE_DATABASE_ID',
   'TEST_RUNTIME_SERVICE_ACCOUNT', 'TEST_AI_CAPTURE_BUCKET', 'PROD_FIRESTORE_DATABASE_ID', 'PROD_AI_CAPTURE_BUCKET'
 )
 & node -e "const v=require('./scripts/lib/phase11-validators'); v.assertEnvironmentIsolation(process.env);"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (-not $ReleaseManifest) {
-  $buildArgs = @()
-  if ($DryRun) { $buildArgs += '-DryRun' }
-  $ReleaseManifest = (& (Join-Path $PSScriptRoot 'build-release.ps1') @buildArgs).Trim()
+  $buildParams = @{}
+  if ($DryRun) { $buildParams.DryRun = $true }
+  $buildOutput = [System.Collections.Generic.List[string]]::new()
+  & (Join-Path $PSScriptRoot 'build-release.ps1') @buildParams | ForEach-Object {
+    Write-Host $_
+    [void]$buildOutput.Add([string]$_)
+  }
+  $ReleaseManifest = $buildOutput | Where-Object { $_ -match 'release-manifest-[^\\/:]+\.json$' } | Select-Object -Last 1
+  if (-not $ReleaseManifest -or -not (Test-Path -LiteralPath $ReleaseManifest)) {
+    Fail 'Release build did not return a valid manifest path'
+  }
+  $ReleaseManifest = $ReleaseManifest.Trim()
 }
 & node -e "const v=require('./scripts/lib/phase11-validators'); v.validateReleaseManifest(v.readJson(process.argv[1]));" $ReleaseManifest
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -42,6 +52,7 @@ $workDir = Join-Path $Script:RepoRoot 'dist\deploy-test'
 Expand-FrontendFromManifest $ReleaseManifest (Join-Path $workDir 'frontend')
 $hostingConfig = Join-Path $workDir 'firebase.hosting.generated.json'
 New-HostingConfig -OutputFile $hostingConfig -Site $env:TEST_HOSTING_SITE -PublicDir (Join-Path $workDir 'frontend') -ServiceName $env:TEST_SERVICE_NAME -Region $env:TEST_REGION -DomainUrl $env:TEST_DOMAIN
+$secretDeploy = Get-CloudRunSecretDeployArgs
 
 if (-not $DryRun) {
   & gcloud run deploy $env:TEST_SERVICE_NAME `
@@ -49,7 +60,9 @@ if (-not $DryRun) {
     --region $env:TEST_REGION `
     --service-account $env:TEST_RUNTIME_SERVICE_ACCOUNT `
     --update-labels "app-git-sha=$manifestGitSha" `
-    --update-env-vars "WEB_URL=$($env:TEST_DOMAIN),FIRESTORE_DATABASE_ID=$($env:TEST_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:TEST_AI_CAPTURE_BUCKET)"
+    --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:TEST_DOMAIN),FIRESTORE_DATABASE_ID=$($env:TEST_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:TEST_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `
+    --set-secrets $secretDeploy.Argument `
+    --remove-env-vars $secretDeploy.Keys
   if ($LASTEXITCODE -ne 0) { Fail 'gcloud run deploy failed for test service' }
 
   $env:FIRESTORE_DATABASE_ID = $env:TEST_FIRESTORE_DATABASE_ID
@@ -58,10 +71,26 @@ if (-not $DryRun) {
 
   if ($Reseed) {
     Push-Location $Script:RepoRoot
+    $previousSeedEnv = @{
+      ALLOW_REMOTE_TEST_ACCOUNT_SEED = $env:ALLOW_REMOTE_TEST_ACCOUNT_SEED
+      DB_PROVIDER = $env:DB_PROVIDER
+      FIRESTORE_DATABASE_ID = $env:FIRESTORE_DATABASE_ID
+      FIRESTORE_EMULATOR_HOST = $env:FIRESTORE_EMULATOR_HOST
+      FIRESTORE_EMULATOR_HOST_PATH = $env:FIRESTORE_EMULATOR_HOST_PATH
+    }
     try {
-      & npm run accounts:seed
-      if ($LASTEXITCODE -ne 0) { Fail 'npm run accounts:seed failed' }
+      $env:ALLOW_REMOTE_TEST_ACCOUNT_SEED = '1'
+      $env:DB_PROVIDER = 'firebase'
+      $env:FIRESTORE_DATABASE_ID = $env:TEST_FIRESTORE_DATABASE_ID
+      Remove-Item Env:FIRESTORE_EMULATOR_HOST -ErrorAction SilentlyContinue
+      Remove-Item Env:FIRESTORE_EMULATOR_HOST_PATH -ErrorAction SilentlyContinue
+      & npm run accounts:seed:remote
+      if ($LASTEXITCODE -ne 0) { Fail 'npm run accounts:seed:remote failed' }
     } finally { Pop-Location }
+    foreach ($entry in $previousSeedEnv.GetEnumerator()) {
+      if ($null -eq $entry.Value) { Remove-Item "Env:$($entry.Key)" -ErrorAction SilentlyContinue }
+      else { Set-Item "Env:$($entry.Key)" $entry.Value }
+    }
   }
 
   Invoke-FirebaseHostingDeploy -ConfigFile $hostingConfig -Site $env:TEST_HOSTING_SITE

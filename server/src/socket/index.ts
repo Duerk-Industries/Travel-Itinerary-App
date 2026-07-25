@@ -12,10 +12,10 @@ import { registerChatHandlers } from './chatHandler';
 let io: Server | null = null;
 
 export const createSocketServer = (httpServer: HttpServer): Server => {
-  // Default matches app.ts's HTTP CORS default ('https://duerk.org'), not a
+  // Default matches app.ts's HTTP CORS default ('https://wander-bunnies.com'), not a
   // localhost fallback — a wrong default would silently reject every WebSocket
   // handshake in production while HTTP API calls continued to work.
-  const webUrl = getBackendUrl('https://duerk.org') ?? 'https://duerk.org';
+  const webUrl = getBackendUrl('https://wander-bunnies.com') ?? 'https://wander-bunnies.com';
   const corsOrigins = isLocalEnv()
     ? [
         'http://localhost:3000',

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="WanderBunnies Cookie and Device Storage Notice">
+    <title>Cookie Notice - WanderBunnies</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 40px 20px; background-color: #f9fafb; }
+        h1 { color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+        h2 { color: #1f2937; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background-color: #f3f4f6; }
+        .footer { margin-top: 50px; font-size: 0.9em; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Cookie Notice</h1>
+    <p>Last Updated: July 17, 2026</p>
+
+    <p>This notice explains how Bryan Duerk, doing business as WanderBunnies, uses browser local storage, mobile application storage, cookies, and similar device technologies when you use the Service.</p>
+
+    <h2>1. Technologies we use</h2>
+    <p>Cookies are small data files stored by a browser. Browser local storage and mobile AsyncStorage also save information on your device, but are technically different from cookies. WanderBunnies currently relies primarily on local storage or AsyncStorage for session continuity, preferences, and pending app activity. Enabled security or diagnostics providers may use their own cookies or similar identifiers.</p>
+
+    <h2>2. Storage inventory</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Technology or key</th>
+                <th>Purpose</th>
+                <th>Typical duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>stp.session</code> and <code>stp.session.token</code></td>
+                <td>Strictly necessary authentication, account context, and session continuity.</td>
+                <td>Normally up to 12 hours, until logout, or until the stored session is invalidated.</td>
+            </tr>
+            <tr>
+                <td><code>stp.session.lastTripByEmail</code></td>
+                <td>Remembers the last active trip for an account.</td>
+                <td>Until removed by the user, account cleanup, or clearing application storage.</td>
+            </tr>
+            <tr>
+                <td><code>stp.session.asyncItinerary</code></td>
+                <td>Preserves the status of pending or recently completed AI itinerary activity across refreshes.</td>
+                <td>Until the activity is cleared, account cleanup, or clearing application storage.</td>
+            </tr>
+            <tr>
+                <td>Preference, follow-code, and pending-write storage</td>
+                <td>Remembers display choices, followed trips, pending invitations, and offline or pending changes needed for requested functionality.</td>
+                <td>Until the associated choice or activity is removed or application storage is cleared.</td>
+            </tr>
+            <tr>
+                <td>Firebase App Check and Google reCAPTCHA, if enabled</td>
+                <td>Helps confirm that requests come from the genuine application and prevent abuse.</td>
+                <td>Determined by Google and the active security configuration.</td>
+            </tr>
+            <tr>
+                <td>Sentry diagnostics, if enabled</td>
+                <td>Collects error and limited performance telemetry to diagnose crashes and reliability problems.</td>
+                <td>According to the configured retention period and Sentry account settings.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Legal basis and choices</h2>
+    <p>We use storage that is strictly necessary to provide a feature you request, authenticate you, secure the Service, or preserve essential application state. Where applicable law requires consent for optional diagnostics, analytics, or another non-essential technology, we will request consent before enabling it and provide a way to withdraw that consent as easily as it was given.</p>
+    <p>You can clear website data through your browser and mobile application storage through your device settings. Clearing necessary session storage will sign you out and may remove preferences or pending activity. Browser controls may also block provider cookies, although doing so may interfere with authentication or security features.</p>
+    <p>WanderBunnies does not currently use advertising cookies. We will update this notice and provide any required consent choices before introducing advertising or cross-site tracking technologies.</p>
+
+    <h2>4. Contact and related notices</h2>
+    <p>Questions may be sent to <a href="mailto:bryan.duerk@gmail.com">bryan.duerk@gmail.com</a>. See the <a href="/privacy.html">Privacy Notice</a> for information about personal-data processing and your rights.</p>
+    <p><a href="/terms.html">Consumer Terms</a> · <a href="/withdrawal.html">Withdrawal Form</a> · <a href="/content-moderation.html">Content Moderation Procedure</a></p>
+
+    <div class="footer">
+        &copy; 2026 WanderBunnies. Operator and legal ownership: Bryan Duerk.
+    </div>
+</body>
+</html>

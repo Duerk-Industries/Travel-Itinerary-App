@@ -18,6 +18,13 @@ const BACKEND_ONLY_SECRET_KEYS = [
   'FIREBASE_PRIVATE_KEY',
 ] as const;
 
+// Cache for secrets fetched via SDK to avoid redundant API calls and costs.
+const secretCache = new Map<string, { value: string; expires: number }>();
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Singleton client to avoid re-instantiation overhead.
+let smClient: SecretManagerServiceClient | null = null;
+
 async function getSecretFromLocalFile(secretName: string): Promise<string | undefined> {
   if (!fs.existsSync(secretsFilePath)) {
     return undefined;
@@ -37,16 +44,25 @@ async function getSecretFromLocalFile(secretName: string): Promise<string | unde
 }
 
 async function getSecretFromGoogleSecretManager(secretName: string): Promise<string | undefined> {
-  const client = new SecretManagerServiceClient();
+  // Check in-memory cache first
+  const cached = secretCache.get(secretName);
+  if (cached && cached.expires > Date.now()) {
+    return cached.value;
+  }
+
+  smClient ??= new SecretManagerServiceClient();
   const projectId = getEnvValue('GCLOUD_PROJECT_ID', { required: true });
 
   try {
-    const [version] = await client.accessSecretVersion({
+    const [version] = await smClient.accessSecretVersion({
       name: `projects/${projectId}/secrets/${secretName}/versions/latest`,
     });
 
     if (version.payload?.data) {
-      return version.payload.data.toString();
+      const value = version.payload.data.toString();
+      // Update cache
+      secretCache.set(secretName, { value, expires: Date.now() + CACHE_TTL_MS });
+      return value;
     }
   } catch (error) {
     console.error(`Failed to access secret ${secretName} from Secret Manager:`, error);
@@ -58,18 +74,28 @@ async function getSecretFromGoogleSecretManager(secretName: string): Promise<str
 
 /**
  * Gets a secret value from the appropriate source based on the environment.
- * In a local environment, it reads from the `server/.secrets` file.
- * In a GCP environment, it fetches the secret from Google Secret Manager.
+ *
+ * Order of operations:
+ * 1. Read from process.env (mapped secrets in Cloud Run).
+ * 2. Read from local .secrets file (dev mode).
+ * 3. Fetch from Google Secret Manager with 1-hour caching.
  *
  * @param secretName The name of the secret to retrieve.
  * @returns The secret value, or undefined if not found.
  */
 export async function getSecret(secretName: string): Promise<string | undefined> {
+  // Priority 1: Mapped environment variables (Most cost-effective in Cloud Run)
+  if (process.env[secretName]) {
+    return process.env[secretName];
+  }
+
+  // Priority 2: Local development file
   if (isLocalEnv()) {
     return getSecretFromLocalFile(secretName);
-  } else {
-    return getSecretFromGoogleSecretManager(secretName);
   }
+
+  // Priority 3: Remote Secret Manager (Fallback with caching)
+  return getSecretFromGoogleSecretManager(secretName);
 }
 
 /**

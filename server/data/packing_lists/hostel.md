@@ -5,23 +5,23 @@ description: Survival and comfort gear for shared dorms.
 gendered: false
 ---
 
-## Security & Organization
-- Padlock for lockers (Combination preferred)
+<!-- General is included separately. Do not repeat General items. -->
+
+## Travel Gear & Accessories
+- Combination padlock
 - Packing cubes
-- Cable lock for luggage
+- Luggage cable lock
+- Microfiber travel towel
+- Travel sheet or sleeping bag liner
 - Small daypack for valuables
 
-## Dorm Comfort
-- Microfiber travel towel
-- Flip flops for communal showers
-- Earplugs (high NRR)
-- Eye mask
-- Portable reading light
-- Travel sheet or sleeping bag liner
-
-## Toiletries & Misc
+## Health & Toiletries
+- Shower flip-flops
 - Hanging toiletry bag
-- Laundry detergent (travel size)
-- Universal travel adapter
+- Travel-size laundry detergent
+- Travel toilet paper pack
+
+## Technology & Gadgets
+- Portable reading light
+- Compact plug adapter
 - Multi-plug extension cord
-- Tissues / Toilet paper roll

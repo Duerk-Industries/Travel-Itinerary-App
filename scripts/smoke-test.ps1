@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$healthUrl = "$($BaseUrl.TrimEnd('/'))/api/health"
+$healthUrl = "$($BaseUrl.TrimEnd('/'))/api/healthz"
 try {
   $response = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -Method Get
   $status = $response.StatusCode

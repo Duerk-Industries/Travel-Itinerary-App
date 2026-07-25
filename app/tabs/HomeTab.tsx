@@ -152,6 +152,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
 
   const navItems = [
     { key: 'overview', label: 'Overview', icon: '🧭' },
+    { key: 'blog', label: 'Trip Blog', icon: '📖' },
     { key: 'flights', label: 'Transfers', icon: '✈️' },
     { key: 'lodging', label: 'Lodging', icon: '🏨' },
     { key: 'packing', label: 'Packing', icon: '✓' },

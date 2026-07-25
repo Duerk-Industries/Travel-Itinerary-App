@@ -13,8 +13,9 @@ $ErrorActionPreference = 'Stop'
 if (-not $ReleaseManifest) { Fail '-ReleaseManifest is required' }
 if (-not $TestEvidence) { Fail '-TestEvidence is required' }
 Import-DeployConfig
+Ensure-GcloudProjectId
 Assert-RequiredVars @(
-  'TEST_SERVICE_NAME', 'TEST_REGION', 'TEST_DOMAIN', 'PROD_SERVICE_NAME', 'PROD_REGION', 'PROD_HOSTING_SITE',
+  'GCLOUD_PROJECT_ID', 'TEST_SERVICE_NAME', 'TEST_REGION', 'TEST_DOMAIN', 'PROD_SERVICE_NAME', 'PROD_REGION', 'PROD_HOSTING_SITE',
   'PROD_DOMAIN', 'PROD_RUNTIME_SERVICE_ACCOUNT', 'PROD_FIRESTORE_DATABASE_ID', 'PROD_AI_CAPTURE_BUCKET'
 )
 if (-not $env:DEPLOY_AUDIT_API_URL) { $env:DEPLOY_AUDIT_API_URL = "$($env:PROD_DOMAIN.TrimEnd('/'))/api/internal/deploy" }
@@ -57,6 +58,7 @@ $workDir = Join-Path $Script:RepoRoot 'dist\cutover-prod'
 Expand-FrontendFromManifest $ReleaseManifest (Join-Path $workDir 'frontend')
 $hostingConfig = Join-Path $workDir 'firebase.hosting.generated.json'
 New-HostingConfig -OutputFile $hostingConfig -Site $env:PROD_HOSTING_SITE -PublicDir (Join-Path $workDir 'frontend') -ServiceName $env:PROD_SERVICE_NAME -Region $env:PROD_REGION -DomainUrl $env:PROD_DOMAIN
+$secretDeploy = Get-CloudRunSecretDeployArgs
 
 $canaryTripId = $null
 
@@ -66,7 +68,10 @@ $canaryTripId = $null
 try {
   if (-not $DryRun) {
     & gcloud run deploy $env:PROD_SERVICE_NAME --image $backendDigest --region $env:PROD_REGION --no-traffic --tag candidate `
-      --service-account $env:PROD_RUNTIME_SERVICE_ACCOUNT --update-labels "app-git-sha=$manifestGitSha"
+      --service-account $env:PROD_RUNTIME_SERVICE_ACCOUNT --update-labels "app-git-sha=$manifestGitSha" `
+      --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:PROD_DOMAIN),FIRESTORE_DATABASE_ID=$($env:PROD_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:PROD_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `
+      --set-secrets $secretDeploy.Argument `
+      --remove-env-vars $secretDeploy.Keys
     if ($LASTEXITCODE -ne 0) { Fail 'Failed to deploy candidate revision' }
 
     $candidateUrl = Get-TaggedRevisionUrl -Service $env:PROD_SERVICE_NAME -Region $env:PROD_REGION -Tag 'candidate'

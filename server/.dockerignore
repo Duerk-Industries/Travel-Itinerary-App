@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+__tests__
+*.test.ts
+.env
+.env.*
+.secrets
+.local_env
+*.log
+config/*service-account*.json
+config/*private-key*.json

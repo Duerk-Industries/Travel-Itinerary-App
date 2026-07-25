@@ -139,9 +139,10 @@ export type FlightCreateDraft = {
 };
 
 export const filterAirportOptionLabels = (options: string[], query: string): string[] => {
+  const airportSuggestionLimit = 20;
   const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return options.slice(0, 15);
-  return options.filter((opt) => opt.toLowerCase().includes(normalizedQuery));
+  if (!normalizedQuery) return options.slice(0, airportSuggestionLimit);
+  return options.filter((opt) => opt.toLowerCase().includes(normalizedQuery)).slice(0, airportSuggestionLimit);
 };
 
 const isValidTime = (value: string): boolean => {
@@ -495,6 +496,8 @@ type Airport = {
   iata_code?: string;
 };
 
+const AIRPORT_SUGGESTION_LIMIT = 20;
+
 const fallbackAirports: Airport[] = [
   { name: 'John F. Kennedy International', city: 'New York', country: 'USA', iata_code: 'JFK' },
   { name: 'Los Angeles International', city: 'Los Angeles', country: 'USA', iata_code: 'LAX' },
@@ -678,7 +681,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         const target = `${a.name ?? ''} ${a.city ?? ''} ${a.iata_code ?? ''}`.toLowerCase();
         return target.includes(q);
       })
-      .slice(0, 8);
+      .slice(0, AIRPORT_SUGGESTION_LIMIT);
   };
 
   const parseAirportLabel = (label: string): Airport => {
@@ -692,15 +695,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     const q = query.trim().toLowerCase();
     if (!q) {
       if (airportOptions.length) {
-        return airportOptions.map(parseAirportLabel).slice(0, 15);
+        return airportOptions.map(parseAirportLabel).slice(0, AIRPORT_SUGGESTION_LIMIT);
       }
-      if (airports.length) return airports.slice(0, 15);
+      if (airports.length) return airports.slice(0, AIRPORT_SUGGESTION_LIMIT);
       return fallbackAirports;
     }
     if (airportOptions.length) {
       const parsed = filterAirportOptionLabels(airportOptions, query).map(parseAirportLabel);
       const filtered = parsed.filter((a) => `${a.name ?? ''} ${a.city ?? ''} ${a.iata_code ?? ''}`.toLowerCase().includes(q));
-      return (filtered.length ? filtered : parsed).slice(0, 8);
+      return (filtered.length ? filtered : parsed).slice(0, AIRPORT_SUGGESTION_LIMIT);
     }
     return filterAirports(query);
   };
@@ -874,7 +877,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         const remote = await fetchAirportLabels(query);
         if (!remote.length) return;
         if (airportTargetRef.current !== target || airportQueryRef.current !== query.trim()) return;
-        setAirportSuggestions(remote.map(parseAirportLabel).slice(0, 8));
+        setAirportSuggestions(remote.map(parseAirportLabel).slice(0, AIRPORT_SUGGESTION_LIMIT));
       })();
     }
     let nextAnchor = { x: 16, y: 120, width: 260, height: 40 };

@@ -120,7 +120,7 @@ export const sendVerificationEmail = async (to: string, token: string): Promise<
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
   }
-  const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
+  const rawWebUrl = String(getBackendUrl('https://wander-bunnies.com') ?? 'https://wander-bunnies.com').trim();
   const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
   const link = `${webUrl}/confirm?token=${encodeURIComponent(token)}`;
   const subject = 'Confirm your Shared Trip Planner account';
@@ -156,7 +156,7 @@ export const sendVerificationEmailBestEffort = async (
     if (!transporter) {
       throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
     }
-    const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
+    const rawWebUrl = String(getBackendUrl('https://wander-bunnies.com') ?? 'https://wander-bunnies.com').trim();
     const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
     const path = options.path ?? '/confirm';
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -181,7 +181,7 @@ export const sendTripInviteEmail = async (to: string, tripName: string, inviterE
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
   }
-  const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
+  const rawWebUrl = String(getBackendUrl('https://wander-bunnies.com') ?? 'https://wander-bunnies.com').trim();
   const link = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
   const subject = inviterEmail
     ? `${inviterEmail} added you to a trip: ${tripName}`
@@ -219,7 +219,7 @@ export const sendBillingTrialEndingEmail = async (
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
   }
-  const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
+  const rawWebUrl = String(getBackendUrl('https://wander-bunnies.com') ?? 'https://wander-bunnies.com').trim();
   const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
   const trialEndLabel = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const subject = 'Your WanderBunnies Premium trial ends soon';

@@ -44,10 +44,10 @@ describe('canary safe mode', () => {
   });
 
   it('isCanaryRecipientEmail resolves the recipient by email and reports true only for the configured canary account', async () => {
-    mockedGetEnvValue.mockReturnValue('canary@internal.duerk.org');
+    mockedGetEnvValue.mockReturnValue('canary@internal.wander-bunnies.com');
 
-    mockedFindUserByEmail.mockResolvedValueOnce({ id: 'canary-1', email: 'canary@internal.duerk.org', provider: 'email', role: 'user', is_internal_canary: true } as any);
-    await expect(isCanaryRecipientEmail('canary@internal.duerk.org', 'sendTripInviteEmail')).resolves.toBe(true);
+    mockedFindUserByEmail.mockResolvedValueOnce({ id: 'canary-1', email: 'canary@internal.wander-bunnies.com', provider: 'email', role: 'user', is_internal_canary: true } as any);
+    await expect(isCanaryRecipientEmail('canary@internal.wander-bunnies.com', 'sendTripInviteEmail')).resolves.toBe(true);
 
     // Not the configured canary address -- must not even hit the DB.
     mockedFindUserByEmail.mockClear();
@@ -62,7 +62,7 @@ describe('canary safe mode', () => {
   });
 
   it('isCanaryUserId defers to the DB-backed canary flag by userId once a canary account is configured', async () => {
-    mockedGetEnvValue.mockReturnValue('canary@internal.duerk.org');
+    mockedGetEnvValue.mockReturnValue('canary@internal.wander-bunnies.com');
 
     mockedIsInternalCanaryAccount.mockResolvedValueOnce(true);
     await expect(isCanaryUserId('canary-1', 'createCheckoutSession')).resolves.toBe(true);

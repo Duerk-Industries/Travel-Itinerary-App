@@ -33,9 +33,18 @@ if ($DryRun) {
   } finally { Pop-Location }
   Push-Location (Join-Path $Script:RepoRoot 'app')
   try {
-    & npm run export:web -- --output-dir $frontendDir
+    $env:RELEASE_WEB_BUILD = '1'
+    # --clear bypasses Metro's bundler cache. Without it, a cache entry from a
+    # build made before RELEASE_WEB_BUILD existed (or with a different env)
+    # can be reused verbatim -- Metro's cache key isn't sensitive to env vars
+    # like EXPO_PUBLIC_BACKEND_URL, so a stale bake-in can silently persist
+    # across releases even though the source and config are correct.
+    & npm run export:web -- "--output-dir=$frontendDir" --clear
     if ($LASTEXITCODE -ne 0) { Fail 'npm run export:web failed' }
-  } finally { Pop-Location }
+  } finally {
+    Remove-Item Env:RELEASE_WEB_BUILD -ErrorAction SilentlyContinue
+    Pop-Location
+  }
 }
 
 # Served alongside the frontend so cutover-test-to-prod.ps1 can confirm the

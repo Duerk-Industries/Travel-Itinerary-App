@@ -37,6 +37,20 @@ const loadEnv = (appDir) => {
       process.env.EXPO_PUBLIC_BACKEND_URL = fallback;
     }
   }
+
+  // The phase-11 release pipeline builds one static web artifact and
+  // promotes it unmodified from test to production (build-release.ps1/.sh),
+  // so it must resolve the backend via same-origin `/api/**` (routed by
+  // each environment's own Firebase Hosting rewrite) rather than a URL
+  // baked in at build time. Local dev's app/.env sets
+  // EXPO_PUBLIC_BACKEND_URL for convenience (e.g. pointing at prod data
+  // while running `expo start --web` locally) and loads with
+  // `override: true`, so it would otherwise clobber same-origin
+  // resolution in every release build. RELEASE_WEB_BUILD is set only by
+  // the release scripts to suppress that for this build.
+  if (process.env.RELEASE_WEB_BUILD === '1') {
+    delete process.env.EXPO_PUBLIC_BACKEND_URL;
+  }
 };
 
 const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
@@ -107,6 +121,12 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
     plugins: [
       'expo-web-browser',
       [
+        'expo-image-picker',
+        {
+          photosPermission: 'WanderBunnies needs access to your photos so you can add them to a trip blog.',
+        },
+      ],
+      [
         sentryExpoPlugin,
         {
           organization: process.env.SENTRY_ORG,
@@ -116,16 +136,27 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       ],
     ],
     extra: {
+      // A web release build (RELEASE_WEB_BUILD=1, set only by
+      // build-release.ps1/.sh) must promote one artifact unmodified from
+      // test to production, so it leaves backendUrl unset here rather than
+      // defaulting to prod -- app/utils/backendUrl.ts already falls back to
+      // same-origin (`window.location.origin`) in the browser when no
+      // backend URL is configured, and each environment's own Firebase
+      // Hosting rewrite routes `/api/**` to that environment's backend.
+      // Native builds have no browser origin to fall back to, so they keep
+      // defaulting to prod.
       backendUrl:
-        process.env.EXPO_PUBLIC_BACKEND_URL ??
-        process.env.BACKEND_URL ??
-        process.env.WEB_URL ??
-        process.env.API_BASE_URL ??
-        process.env.REACT_APP_BACKEND_URL ??
-        process.env.REACT_NATIVE_APP_BACKEND_URL ??
-        (process.env.NODE_ENV === 'development' && !isEasBuild
-          ? 'http://localhost:4000'
-          : 'https://duerk.org'),
+        process.env.RELEASE_WEB_BUILD === '1'
+          ? undefined
+          : process.env.EXPO_PUBLIC_BACKEND_URL ??
+            process.env.BACKEND_URL ??
+            process.env.WEB_URL ??
+            process.env.API_BASE_URL ??
+            process.env.REACT_APP_BACKEND_URL ??
+            process.env.REACT_NATIVE_APP_BACKEND_URL ??
+            (process.env.NODE_ENV === 'development' && !isEasBuild
+              ? 'http://localhost:4000'
+              : 'https://wander-bunnies.com'),
       refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
       sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,
       premiumTrialsEnabled: String(process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED ?? 'true').toLowerCase() !== 'false',

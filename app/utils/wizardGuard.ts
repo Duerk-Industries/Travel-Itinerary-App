@@ -1,6 +1,7 @@
 export type PageKey =
   | 'home'
   | 'overview'
+  | 'blog'
   | 'flights'
   | 'lodging'
   | 'packing'

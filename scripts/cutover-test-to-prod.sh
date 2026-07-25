@@ -23,7 +23,8 @@ done
 [[ -n "$MANIFEST" ]] || fail "--release-manifest is required"
 [[ -n "$EVIDENCE" ]] || fail "--test-evidence is required"
 load_deploy_config
-require_vars TEST_SERVICE_NAME TEST_REGION TEST_DOMAIN PROD_SERVICE_NAME PROD_REGION PROD_HOSTING_SITE PROD_DOMAIN PROD_RUNTIME_SERVICE_ACCOUNT PROD_FIRESTORE_DATABASE_ID PROD_AI_CAPTURE_BUCKET
+ensure_gcloud_project_id
+require_vars GCLOUD_PROJECT_ID TEST_SERVICE_NAME TEST_REGION TEST_DOMAIN PROD_SERVICE_NAME PROD_REGION PROD_HOSTING_SITE PROD_DOMAIN PROD_RUNTIME_SERVICE_ACCOUNT PROD_FIRESTORE_DATABASE_ID PROD_AI_CAPTURE_BUCKET
 DEPLOY_AUDIT_API_URL="${DEPLOY_AUDIT_API_URL:-${PROD_DOMAIN%/}/api/internal/deploy}"
 require_github_actor "$DRY_RUN"
 node -e "const v=require('./scripts/lib/phase11-validators'); const m=v.readJson(process.argv[1]); const e=v.readJson(process.argv[2]); v.validateReleaseManifest(m); v.validateTestEvidence(m,e);" "$MANIFEST" "$EVIDENCE"
@@ -54,6 +55,7 @@ LIVE_CONFIG_FINGERPRINT="$(node -e "const v=require('./scripts/lib/phase11-valid
 WORK_DIR="$REPO_ROOT/dist/cutover-prod"
 prepare_frontend_from_manifest "$MANIFEST" "$WORK_DIR/frontend"
 write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE" "$WORK_DIR/frontend" "$PROD_SERVICE_NAME" "$PROD_REGION" "$PROD_DOMAIN"
+SECRET_ARG="$(cloud_run_secret_arg)"
 
 CANARY_TRIP_ID=""
 cleanup_canary() {
@@ -72,7 +74,10 @@ trap cleanup_canary EXIT
 
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$PROD_SERVICE_NAME" --image "$BACKEND_DIGEST" --region "$PROD_REGION" --no-traffic --tag candidate \
-    --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" --update-labels "app-git-sha=$MANIFEST_GIT_SHA"
+    --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" --update-labels "app-git-sha=$MANIFEST_GIT_SHA" \
+    --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
+    --set-secrets "$SECRET_ARG" \
+    --remove-env-vars "$(cloud_run_secret_pairs | cut -d= -f1 | paste -sd, -)"
 
   CANDIDATE_URL="$(tagged_revision_url "$PROD_SERVICE_NAME" "$PROD_REGION" candidate)" || fail "Cutover refused: could not resolve the candidate revision's tagged URL."
 

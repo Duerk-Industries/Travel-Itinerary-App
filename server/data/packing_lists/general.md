@@ -8,14 +8,13 @@ gendered: false
 <!-- This baseline is included separately. Do not repeat these items in another preset. -->
 
 ## Documents & Money
-- Passport
-- Government-issued photo ID
-- Copies of travel documents
+- Photo ID
+- Travel document copies
 - Travel insurance details
-- Itinerary and reservations
+- Itinerary and reservation details
 - Emergency contact details
 - Credit cards
-- Cash in local currency
+- Cash
 
 ## Health & Toiletries
 - Prescription medications
@@ -30,6 +29,7 @@ gendered: false
 - Face moisturizer
 - Lip balm
 - Hand sanitizer
+- Sunscreen
 - Tissues
 - Wet wipes
 - Glasses
@@ -37,7 +37,7 @@ gendered: false
 - Contact lens case and solution
 - Personal hygiene products
 
-## Technology
+## Technology & Gadgets
 - Phone
 - Phone charging cable
 - Wall charger
@@ -46,17 +46,21 @@ gendered: false
 - Laptop
 - Laptop charger
 - Universal travel adapter
-- E-reader
 
-## Everyday Clothing & Comfort
+## Clothing & Footwear
 - Underwear
 - Socks
 - Sleepwear
-- Comfortable walking shoes
+- Shoes
+- Hotel shoes
+
+## Food & Hydration
 - Reusable water bottle
+
+## Travel Gear & Accessories
 - Sunglasses
 - Small day bag
 - Laundry bag
 - Earplugs
-- Eye mask
+- Sleep mask
 - Pen

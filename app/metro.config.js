@@ -37,6 +37,9 @@ const existingEnhanceMiddleware = config.server?.enhanceMiddleware;
 
 config.server = {
   ...(config.server || {}),
+  ...(process.env.WANDERBUNNIES_WEB_DEV === '1'
+    ? { unstable_serverRoot: workspaceRoot }
+    : {}),
   enhanceMiddleware: (middleware) => {
     const baseMiddleware = existingEnhanceMiddleware
       ? existingEnhanceMiddleware(middleware)

@@ -1,0 +1,27 @@
+{
+  "_notes": "Defaults for the proposed trip-blog feature (docs/travel-blog-architecture.md). Engineering placeholders using typical-website-practice figures, pending finance/legal ratification before launch — not yet wired into any running code. Byte values use 1024-based (GiB/TiB) units.",
+  "tiers": {
+    "free": {
+      "includedBytes": 2147483648,
+      "includedLabel": "2 GB"
+    },
+    "premium": {
+      "includedBytes": 26843545600,
+      "includedLabel": "25 GB"
+    },
+    "pro": {
+      "includedBytes": 107374182400,
+      "includedLabel": "100 GB"
+    }
+  },
+  "adminStorageCeilingBytes": 536870912000,
+  "adminStorageCeilingLabel": "500 GB",
+  "adminCeilingNote": "Hard platform ceiling for admin-selected tiers (see open question 3 in docs/travel-blog-architecture.md). Admins may self-select any tier up to this ceiling without Stripe checkout, via an audited action; they never exceed it.",
+  "addOnBlocks": [
+    { "id": "block_20gb", "bytes": 21474836480, "label": "20 GB", "monthlyPriceUsd": 1.99 },
+    { "id": "block_100gb", "bytes": 107374182400, "label": "100 GB", "monthlyPriceUsd": 2.99 },
+    { "id": "block_200gb", "bytes": 214748364800, "label": "200 GB", "monthlyPriceUsd": 4.99 },
+    { "id": "block_2tb", "bytes": 2199023255552, "label": "2 TB", "monthlyPriceUsd": 9.99 }
+  ],
+  "addOnNote": "Tiered per-block pricing (improving per-GB rate at higher blocks), mirroring Google One rather than flat per-GB metering. Stacks additively on top of the account's tier-included bytes."
+}

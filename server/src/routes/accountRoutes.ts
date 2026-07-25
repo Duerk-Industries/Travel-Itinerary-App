@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
-import { getUserRole, writeAuditLog } from '../db';
+import { getUserRole, writeAuditLog, getUserPackingListV2, getUserPackingPreferencesV2, listPackingPresetsV2, replaceUserPackingPreferencesV2, reconcileUserPackingListsV2 } from '../db';
+import { isFeatureEnabled } from '../services/entitlementService';
 import {
   deleteWebUserAndCleanup,
   acceptFamilyRelationship,
@@ -101,8 +102,47 @@ router.get('/', async (req, res) => {
 router.get('/packing-list', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
+    if (await isFeatureEnabled('packing_lists_v2')) {
+      const [preferences, items, presets] = await Promise.all([
+        getUserPackingPreferencesV2(userId),
+        getUserPackingListV2(userId),
+        listPackingPresetsV2(),
+      ]);
+      res.json({ items, preferences, presets });
+      return;
+    }
     const items = await getUserPackingList(userId);
     res.json({ items });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get('/packing-list-presets', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    const [preferences, presets] = await Promise.all([getUserPackingPreferencesV2(userId), listPackingPresetsV2()]);
+    res.json({ preferences, presets });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.put('/packing-list-presets', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    const items = await getUserPackingListV2(userId);
+    const result = await replaceUserPackingPreferencesV2(userId, Array.isArray(req.body?.presetKeys) ? req.body.presetKeys : [], items);
+    const reconciliation = await reconcileUserPackingListsV2(userId);
+    res.json({ ...result, reconciliation });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -111,6 +151,16 @@ router.get('/packing-list', async (req, res) => {
 router.put('/packing-list', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
+    if (await isFeatureEnabled('packing_lists_v2')) {
+      const result = await replaceUserPackingPreferencesV2(
+        userId,
+        Array.isArray(req.body?.preferences?.presetKeys) ? req.body.preferences.presetKeys : Array.isArray(req.body?.presetKeys) ? req.body.presetKeys : ['general'],
+        Array.isArray(req.body?.items) ? req.body.items : [],
+      );
+      const reconciliation = await reconcileUserPackingListsV2(userId);
+      res.json({ ...result, reconciliation });
+      return;
+    }
     const items = await replaceUserPackingList(userId, Array.isArray(req.body?.items) ? req.body.items : []);
     res.json({ items });
   } catch (err) {

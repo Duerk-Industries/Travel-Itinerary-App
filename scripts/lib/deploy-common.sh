@@ -34,6 +34,55 @@ require_vars() {
   fi
 }
 
+ensure_gcloud_project_id() {
+  if [[ -n "${GCLOUD_PROJECT_ID:-}" ]]; then return 0; fi
+  GCLOUD_PROJECT_ID="$(gcloud config get-value project 2>/dev/null || true)"
+  [[ -n "$GCLOUD_PROJECT_ID" && "$GCLOUD_PROJECT_ID" != "(unset)" ]] || fail "GCLOUD_PROJECT_ID is not set and gcloud has no active project."
+  export GCLOUD_PROJECT_ID
+}
+
+cloud_run_secret_pairs() {
+  local secrets_file="${SECRETS_FILE:-$REPO_ROOT/server/.secrets}"
+  [[ -f "$secrets_file" ]] || return 0
+  awk '
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*$/ { next }
+    {
+      line=$0
+      sub(/^[[:space:]]*export[[:space:]]+/, "", line)
+      if (line !~ /^[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=/) next
+      split(line, parts, "=")
+      key=parts[1]
+      gsub(/[[:space:]]/, "", key)
+      if (key == "GCLOUD_PROJECT" || key == "GOOGLE_CLOUD_PROJECT" || key == "GCLOUD_PROJECT_ID" || key == "GCLOUD_PROJECT_NUMBER" || key == "DEPLOYER_SERVICE_ACCOUNT_EMAIL" || key == "RUNTIME_SERVICE_ACCOUNT_EMAIL" || key == "CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL" || key == "GOOGLE_APPLICATION_CREDENTIALS") next
+      value=substr(line, index(line, "=")+1)
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      if (value ~ /^".*"$/ || value ~ /^'"'"'.*'"'"'$/) value=substr(value, 2, length(value)-2)
+      if (value == "") value=key ":latest"
+      else if (value !~ /:/) value=value ":latest"
+      print key "=" value
+    }
+  ' "$secrets_file"
+}
+
+cloud_run_secret_arg() {
+  local pairs=()
+  mapfile -t pairs < <(cloud_run_secret_pairs)
+  [[ "${#pairs[@]}" -gt 0 ]] || fail "Cloud Run deploy requires an AUTH_SECRET Secret Manager mapping. Add AUTH_SECRET to server/.secrets (for example, AUTH_SECRET=AUTH_SECRET:latest)."
+  local has_auth=0 pair delimiter joined
+  for pair in "${pairs[@]}"; do
+    [[ "$pair" == AUTH_SECRET=* ]] && has_auth=1
+  done
+  [[ "$has_auth" == "1" ]] || fail "Cloud Run deploy requires an AUTH_SECRET Secret Manager mapping. Add AUTH_SECRET to server/.secrets (for example, AUTH_SECRET=AUTH_SECRET:latest)."
+  joined="${pairs[*]}"
+  for delimiter in '@' '~' '#' '|' '!'; do
+    [[ "$joined" != *"$delimiter"* ]] && printf '^%s^%s' "$delimiter" "$(IFS="$delimiter"; echo "${pairs[*]}")" && return
+  done
+  delimiter="$(node -e 'process.stdout.write(require("crypto").randomBytes(8).toString("hex"))')"
+  printf '^%s^%s' "$delimiter" "$(IFS="$delimiter"; echo "${pairs[*]}")"
+}
+
 sha256_file() {
   local file="$1"
   if command -v sha256sum >/dev/null 2>&1; then

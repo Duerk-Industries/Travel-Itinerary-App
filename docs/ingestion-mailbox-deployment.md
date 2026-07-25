@@ -4,7 +4,7 @@ For the full post-deploy Cloud Run, Mailgun, Gmail OAuth, and env-var checklist,
 
 ## Default address
 
-The launch mailbox address is `travel.docs@duerk.org`.
+The launch mailbox address is `travel.docs@wander-bunnies.com`.
 
 User-facing settings may display the current forwarding address and forwarding instructions, but changing the underlying destination is an admin-managed infrastructure change. It may require DNS, provider, and deployment updates.
 
@@ -57,7 +57,7 @@ SES becomes more attractive. At larger volume, per-message economics and AWS-nat
 ### Mailgun launch path
 
 1. Verify the receiving domain and DNS in Mailgun.
-2. Create the forwarding address alias for `travel.docs@duerk.org`.
+2. Create the forwarding address alias for `travel.docs@wander-bunnies.com`.
 3. Create a route that matches the launch alias.
 4. Forward matching messages to the ingestion webhook endpoint at `/api/ingestion/webhooks/mailgun`.
 5. Set `MAILGUN_WEBHOOK_SIGNING_KEY` in the server environment.

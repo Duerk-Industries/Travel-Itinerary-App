@@ -30,6 +30,7 @@ import type {
   AttractionShortlistBlob,
   InterestTag,
 } from '../types';
+import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
 
 type DiscoveryCandidate = {
   name: string;
@@ -416,15 +417,11 @@ const discoverTopAttractions = async (
 };
 
 const resolveCsvFilePath = (): string => {
-  const configured = getEnvValue('ATTRACTIONS_CSV_LOCAL_PATH');
-  if (configured) return path.resolve(configured);
-  return path.resolve(__dirname, '../../data/attractions_catalog.csv');
+  return resolveRuntimeDataPath('attractions_catalog.csv', getEnvValue('ATTRACTIONS_CSV_LOCAL_PATH'));
 };
 
 const resolveDestinationsCsvPath = (): string => {
-  const configured = getEnvValue('DESTINATIONS_CSV_LOCAL_PATH');
-  if (configured) return path.resolve(configured);
-  return path.resolve(__dirname, '../../data/destinations.csv');
+  return resolveRuntimeDataPath('destinations.csv', getEnvValue('DESTINATIONS_CSV_LOCAL_PATH'));
 };
 
 const loadDestinationGeoMap = (): Map<string, DestinationGeo> => {
