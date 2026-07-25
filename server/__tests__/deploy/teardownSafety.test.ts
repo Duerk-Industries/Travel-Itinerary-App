@@ -89,7 +89,7 @@ exit 1
         `export PATH=${shellQuote(toBashPath(workDir))}":$PATH"`,
         `export DEPLOY_CONFIG_FILE=${shellQuote(toBashPath(deployConfigPath))}`,
         'export GITHUB_ACTOR=Bryan',
-        `${shellQuote(toBashPath(path.join(root, 'scripts/teardown-old-production.sh')))} --confirm yes-delete`,
+        `bash ${shellQuote(toBashPath(path.join(root, 'scripts/teardown-old-production.sh')))} --confirm yes-delete`,
       ].join('; '),
     ], {
       cwd: root,
