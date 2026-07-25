@@ -326,6 +326,14 @@ if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }
 
+# A prior --no-traffic canary deploy pins traffic away from LATEST until it is
+# explicitly restored; a subsequent gcloud run deploy does not undo that.
+& gcloud run services update-traffic $ServiceName --region $Region --to-latest
+if ($LASTEXITCODE -ne 0) {
+  Write-Error "API deployed, but routing traffic to the latest revision failed with gcloud exit code $LASTEXITCODE."
+  exit $LASTEXITCODE
+}
+
 if ($envKeys.Count -gt 0) {
   $allowClearSecretsFallback = $secretMap.Count -eq 0
   if (-not (Invoke-LegacySecretCleanup -ServiceName $ServiceName -Region $Region -EnvKeys $envKeys -Memory $Memory -AllowClearSecretsFallback $allowClearSecretsFallback -PhaseLabel 'Removing post-deploy')) {

@@ -64,6 +64,10 @@ describe('Phase 11 PowerShell script parity', () => {
       const powershell = fs.readFileSync(path.join(root, 'scripts', `${name}.ps1`), 'utf8');
       expect(bash).toContain('--session-affinity');
       expect(powershell).toContain('--session-affinity');
+      if (name !== 'cutover-test-to-prod') {
+        expect(bash).toContain('--to-latest');
+        expect(powershell).toContain('--to-latest');
+      }
     },
   );
 

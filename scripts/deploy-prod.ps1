@@ -53,6 +53,8 @@ if (-not $DryRun) {
     --set-secrets $secretDeploy.Argument `
     --remove-env-vars $secretDeploy.Keys
   if ($LASTEXITCODE -ne 0) { Fail 'gcloud run deploy failed for production service' }
+  & gcloud run services update-traffic $env:PROD_SERVICE_NAME --region $env:PROD_REGION --to-latest
+  if ($LASTEXITCODE -ne 0) { Fail 'Failed to route production traffic to the latest revision' }
 
   Invoke-FirebaseHostingDeploy -ConfigFile $hostingConfig -Site $env:PROD_HOSTING_SITE
   & (Join-Path $PSScriptRoot 'smoke-test.ps1') -BaseUrl $env:PROD_DOMAIN -Environment 'production-direct'

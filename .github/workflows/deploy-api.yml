@@ -47,5 +47,9 @@ jobs:
             --allow-unauthenticated \
             --service-account "travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com" \
             --project "$GCLOUD_PROJECT_ID"
+          gcloud run services update-traffic travel-itinerary-app \
+            --region us-east5 \
+            --to-latest \
+            --project "$GCLOUD_PROJECT_ID"
         env:
           GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}

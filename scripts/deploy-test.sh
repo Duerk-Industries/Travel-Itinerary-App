@@ -68,6 +68,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
     --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$TEST_DOMAIN,FIRESTORE_DATABASE_ID=$TEST_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$TEST_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
     --set-secrets "$SECRET_ARG" \
     --remove-env-vars "$(cloud_run_secret_pairs | cut -d= -f1 | paste -sd, -)"
+  gcloud run services update-traffic "$TEST_SERVICE_NAME" --region "$TEST_REGION" --to-latest
   FIRESTORE_DATABASE_ID="$TEST_FIRESTORE_DATABASE_ID" bash "$SCRIPT_DIR/deploy-firestore-indexes.sh"
   if [[ "$RESEED" == "1" ]]; then
     (cd "$REPO_ROOT" && \

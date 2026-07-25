@@ -323,6 +323,12 @@ gcloud run deploy "$SERVICE_NAME" \
   ${secret_keys_arg:+--remove-env-vars "$secret_keys_arg"} \
   ${remove_env_arg:+--remove-env-vars "$remove_env_arg"}
 
+# A prior canary deploy with --no-traffic pins the service away from LATEST
+# until this is explicitly restored; gcloud run deploy alone does not undo it.
+gcloud run services update-traffic "$SERVICE_NAME" \
+  --region "$REGION" \
+  --to-latest
+
 if [[ -n "$remove_secrets_arg" ]]; then
   allow_clear_fallback=0
   if [[ "${#secret_map[@]}" -eq 0 ]]; then
