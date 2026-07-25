@@ -40,13 +40,9 @@ describe('socket URL resolution', () => {
     expect(resolveSocketServerUrl()).toBe('http://localhost:4000');
   });
 
-  it('connects via polling first on web, upgrading to websocket opportunistically', () => {
-    // socket.io does not reliably fall back to polling when a websocket-first
-    // connection fails outright (a documented upstream limitation), so polling
-    // must be the first-listed transport for the connection to be reliable
-    // wherever the initial websocket handshake gets rejected upstream.
+  it('uses polling only on web because Firebase Hosting rejects websocket upgrades', () => {
     Platform.OS = 'web';
-    expect(resolveSocketTransports()).toEqual(['polling', 'websocket']);
+    expect(resolveSocketTransports()).toEqual(['polling']);
   });
 
   it('also connects via polling first on native, for the same reason', () => {

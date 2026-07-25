@@ -152,7 +152,7 @@ function New-HostingConfig([string]$OutputFile, [string]$Site, [string]$PublicDi
   $csp = @(
     "default-src 'self' https://$host_"
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://www.google.com"
-    "connect-src 'self' https://www.gstatic.com https://www.google.com https://$host_ wss://$host_ https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com"
+    "connect-src 'self' https://www.gstatic.com https://www.google.com https://$host_ wss://$host_ https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com https://storage.googleapis.com"
     "img-src 'self' https://$host_ https://images.unsplash.com data: blob: https://www.gstatic.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com https://storage.googleapis.com https://places.googleapis.com"
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
     "font-src 'self' https://fonts.gstatic.com"

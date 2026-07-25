@@ -34,19 +34,11 @@ export const resolveSocketServerUrl = (): string =>
   });
 
 export const resolveSocketTransports = (): Array<'polling' | 'websocket'> =>
-  // Polling MUST be listed first. Confirmed via production Cloud Run logs:
-  // every `GET /socket.io/?transport=websocket` handshake gets HTTP 400
-  // (the Firebase Hosting → Cloud Run rewrite doesn't preserve the upgrade),
-  // and — per socket.io's own documented behavior — `['websocket', 'polling']`
-  // does NOT reliably fall back to polling when the initial websocket attempt
-  // fails; the client just retries websocket forever via its reconnection
-  // loop (see socketio/socket.io#2751, #5122, #3998). Polling-first avoids
-  // that failure mode entirely: the connection establishes over HTTP
-  // long-polling (which Firebase Hosting proxies fine), and Engine.IO then
-  // opportunistically tries to upgrade to websocket — an upgrade failure is
-  // handled gracefully and does not drop the connection, unlike an initial
-  // connection failure.
-  ['polling', 'websocket'];
+  // Firebase Hosting proxies HTTP long-polling to Cloud Run but does not
+  // preserve the browser's WebSocket upgrade. Listing websocket on web makes
+  // Engine.IO attempt an upgrade that Firefox reports as a refused connection,
+  // even though the established polling session remains healthy.
+  Platform.OS === 'web' ? ['polling'] : ['polling', 'websocket'];
 
 // ---------------------------------------------------------------------------
 // Singleton
