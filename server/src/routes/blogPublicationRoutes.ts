@@ -71,6 +71,32 @@ const eligibleAdults = async (tripId: string): Promise<{ adults: string[]; missi
   return { adults: result.rows.map((r) => String(r.user_id)), missingBirthDate: Number(missing.rows[0]?.count ?? 0) };
 };
 
+router.get('/:tripId/blog/publication/status', authenticate, async (req: any, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return res.status(404).json({ error: 'Public sharing is not enabled' });
+    const userId = String(req.user.userId);
+    if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
+    const latest = await queryBlog<any>(
+      'SELECT id, epoch, state, requested_by, expires_at FROM blog_publication_epochs WHERE trip_id = $1 ORDER BY epoch DESC LIMIT 1',
+      [req.params.tripId]
+    );
+    if (!latest.rows[0]) return res.json({ epoch: null, state: 'private', userDecision: null, pendingCount: 0 });
+    const epoch = latest.rows[0];
+    const [consent, pending] = await Promise.all([
+      queryBlog<{ decision: string }>('SELECT decision FROM blog_publication_consents WHERE epoch_id = $1 AND user_id = $2', [epoch.id, userId]),
+      queryBlog<{ count: string }>("SELECT COUNT(*) AS count FROM blog_publication_consents WHERE epoch_id = $1 AND decision = 'pending'", [epoch.id]),
+    ]);
+    res.json({
+      epoch: Number(epoch.epoch),
+      state: epoch.state,
+      requestedBy: String(epoch.requested_by),
+      expiresAt: epoch.expires_at,
+      userDecision: consent.rows[0]?.decision ?? null,
+      pendingCount: Number(pending.rows[0]?.count ?? 0),
+    });
+  } catch (err) { res.status(400).json({ error: (err as Error).message }); }
+});
+
 router.post('/:tripId/blog/publication/request', authenticate, async (req: any, res) => {
   try {
     if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return res.status(404).json({ error: 'Public sharing is not enabled' });

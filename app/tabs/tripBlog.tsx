@@ -82,6 +82,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [newBody, setNewBody] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [publication, setPublication] = useState(null);
+  const [publicationBusy, setPublicationBusy] = useState(false);
+  const [publicationNotice, setPublicationNotice] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const canEdit = !readOnly && editMode;
 
   const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
   const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
@@ -96,6 +101,16 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       : 'https://wander-bunnies.com';
     return `${origin.replace(/\/$/, '')}/${publicPath.replace(/^\//, '')}`;
   }, [blog?.publicPath]);
+  const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
+    if (editMode) return day;
+    return {
+      ...day,
+      // The private editor response can contain traveler/follower-only items. The default
+      // preview mirrors the public endpoint and only displays public-audience content.
+      items: (day.items || []).filter((item) => !item.audience || item.audience === 'public'),
+      activities: [],
+    };
+  }), [blog?.days, editMode]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -117,6 +132,99 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPublicationStatus = async () => {
+    if (!activeTripId) return;
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/status`, { headers });
+      if (response.status === 404) {
+        setPublication(null);
+        return;
+      }
+      if (!response.ok) return;
+      setPublication(await response.json());
+    } catch {
+      // Publication controls are supplementary; keep the blog usable if status is unavailable.
+    }
+  };
+
+  const refreshBlogAndPublication = async () => {
+    await Promise.all([load(), loadPublicationStatus()]);
+  };
+
+  const requestPublication = async () => {
+    if (!activeTripId || !canEdit || publicationBusy) return;
+    setPublicationBusy(true);
+    setPublicationNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/request`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to publish this blog');
+      setPublicationNotice(data.state === 'public'
+        ? 'Your blog is now public.'
+        : 'Publication requested. Other adult travelers must approve before it becomes public.');
+      await refreshBlogAndPublication();
+    } catch (error) {
+      setPublicationNotice(error.message || 'Unable to publish this blog');
+    } finally {
+      setPublicationBusy(false);
+    }
+  };
+
+  const respondToPublication = async (decision) => {
+    if (!activeTripId || !canEdit || !publication?.epoch || publicationBusy) return;
+    setPublicationBusy(true);
+    setPublicationNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/${publication.epoch}/consent`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to update publication consent');
+      setPublicationNotice(decision === 'approved' ? 'Consent recorded.' : 'Publication declined.');
+      await refreshBlogAndPublication();
+    } catch (error) {
+      setPublicationNotice(error.message || 'Unable to update publication consent');
+    } finally {
+      setPublicationBusy(false);
+    }
+  };
+
+  const revokePublication = async () => {
+    if (!activeTripId || !canEdit || publicationBusy) return;
+    setPublicationBusy(true);
+    setPublicationNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/revoke`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to make this blog private');
+      setPublicationNotice('Your blog is private again.');
+      await refreshBlogAndPublication();
+    } catch (error) {
+      setPublicationNotice(error.message || 'Unable to make this blog private');
+    } finally {
+      setPublicationBusy(false);
+    }
+  };
+
+  const toggleEditMode = () => {
+    setEditMode((current) => {
+      if (current) {
+        setAddingDay(null);
+        setNewBody('');
+        setDrafts({});
+      }
+      return !current;
+    });
   };
 
   // Opens the OS file picker (web) or the phone's photo library (native), both configured for
@@ -186,7 +294,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
 
   const handleUpload = async (dayDate) => {
-    if (readOnly) return;
+    if (!canEdit) return;
     const picked = await pickImageFiles();
     if (!picked.length) return; // user cancelled the picker
 
@@ -245,7 +353,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   useEffect(() => {
     setDrafts({});
     setCursor(null);
-    void load();
+    setEditMode(false);
+    setAddingDay(null);
+    setPublicationNotice('');
+    void refreshBlogAndPublication();
   }, [activeTripId]);
 
   const loadMore = () => {
@@ -255,6 +366,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
 
   const save = async (item) => {
+    if (!canEdit) return;
     setSaving(true);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${item.id}`, {
@@ -269,6 +381,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
 
   const createTextItem = async (dayDate) => {
+    if (!canEdit) return;
     const body = newBody.trim();
     if (!body) return;
     setCreating(true);
@@ -286,7 +399,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
 
   const deleteItem = async (item) => {
-    if (readOnly) return;
+    if (!canEdit) return;
     setDeleting(true);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${item.id}`, {
@@ -300,11 +413,22 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
 
   if (!activeTripId) return <View style={styles.card}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
   if (loading) return <View style={styles.card}><ActivityIndicator /></View>;
+  const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
+  const hasPendingConsent = publicationState === 'pending_consent' && publication?.userDecision === 'pending';
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
       <View style={styles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <Text style={[styles.sectionTitle, { flex: 1 }]}>{blog?.title || 'Trip Blog'}</Text>
+          {!readOnly ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={toggleEditMode}
+              style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : undefined }]}
+            >
+              <Text style={editMode ? { color: textColor } : styles.buttonText}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+            </TouchableOpacity>
+          ) : null}
           {publicPageUrl ? (
             <TouchableOpacity
               accessibilityRole="link"
@@ -315,13 +439,44 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </TouchableOpacity>
           ) : null}
         </View>
-        <Text style={{ color: mutedColor, marginBottom: 12 }}>A shared story for everyone on the trip.</Text>
-        {(blog?.days || []).map((day) => (
+        <Text style={{ color: mutedColor, marginBottom: 12 }}>{editMode ? 'Editing mode — changes are saved to the trip blog.' : 'Public preview — only content intended for public sharing is shown.'}</Text>
+        {canEdit ? (
+          <View style={{ marginBottom: 16, padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <Text style={{ color: textColor, fontWeight: '700' }}>
+                Visibility: {publicationState === 'public' ? 'Public' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Private'}
+              </Text>
+              {publicationState === 'public' ? (
+                <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={revokePublication}>
+                  <Text style={{ color: textColor }}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
+                </TouchableOpacity>
+              ) : hasPendingConsent ? (
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={() => respondToPublication('approved')}>
+                    <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Approve'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={() => respondToPublication('declined')}>
+                    <Text style={{ color: textColor }}>Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : publicationState === 'pending_consent' ? (
+                <Text style={{ color: mutedColor }}>Waiting for other adult travelers</Text>
+              ) : (
+                <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={requestPublication}>
+                  <Text style={styles.buttonText}>{publicationBusy ? 'Requesting…' : 'Make public'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {publicationNotice ? <Text style={{ color: mutedColor, marginTop: 8 }}>{publicationNotice}</Text> : null}
+            {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
+          </View>
+        ) : null}
+        {visibleDays.map((day) => (
           <View key={day.id} style={{ marginBottom: 24, borderBottomWidth: 1, borderBottomColor: borderColor, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <Text style={styles.sectionTitle}>{day.localDate}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {!readOnly && (
+                {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8 }]}
                     onPress={() => { setAddingDay(day.localDate); setNewBody(''); }}
@@ -329,7 +484,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Add note</Text>
                   </TouchableOpacity>
                 )}
-                {!readOnly && (
+                {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
                     onPress={() => handleUpload(day.localDate)}
@@ -366,14 +521,16 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                       {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
                     </View>
                   )
-                ) : (
+                ) : canEdit ? (
                   <TextInput
                     multiline value={drafts[item.id] ?? item.body}
-                    editable={!readOnly} onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
+                    editable onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
                     placeholder="What happened today?" placeholderTextColor={mutedColor} style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
                   />
+                ) : (
+                  <Text style={{ color: textColor, lineHeight: 22, paddingVertical: 8 }}>{item.body || ''}</Text>
                 )}
-                {!readOnly ? (
+                {canEdit ? (
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                     {item.kindKey && item.kindKey.startsWith('media.') ? null : (
                       <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
@@ -383,7 +540,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 ) : null}
               </View>
             ))}
-            {(day.activities || []).length > 0 ? (
+            {canEdit && (day.activities || []).length > 0 ? (
               <View style={{ marginTop: 14 }}>
                 <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>
                 {(day.activities || []).map((activity) => (
@@ -394,7 +551,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 ))}
               </View>
             ) : null}
-            {addingDay === day.localDate ? (
+            {canEdit && addingDay === day.localDate ? (
               <View style={{ marginTop: 10 }}>
                 <TextInput
                   multiline autoFocus value={newBody} onChangeText={setNewBody} placeholder="Write about this day…" placeholderTextColor={mutedColor}
@@ -406,7 +563,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 </View>
               </View>
             ) : null}
-            {!readOnly && (day.items || []).length === 0 && addingDay !== day.localDate ? <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text> : null}
+            {canEdit && (day.items || []).length === 0 && addingDay !== day.localDate ? <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text> : null}
           </View>
         ))}
         {cursor ? (
