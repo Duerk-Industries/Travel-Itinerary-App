@@ -65,52 +65,59 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <ScrollView
-      style={{ flex: 1, width: '100%' }}
+      style={{ flex: 1, width: '100%', backgroundColor: colors.background }}
       contentContainerStyle={{ alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl }}
       testID="landing-page"
     >
-      <View style={{ width: '100%', maxWidth: 720, alignItems: 'center', marginTop: spacing.xl }}>
+      {/* 1. PRIMARY BRAND IDENTIFICATION - Must match GCP App Name exactly */}
+      <View style={{ width: '100%', maxWidth: 800, alignItems: 'center', marginTop: spacing.xl }}>
         <Image
           source={logoSource}
-          style={{ width: 72, height: 72, marginBottom: spacing.md }}
-          accessibilityLabel="WanderBunnies logo"
+          style={{ width: 80, height: 80, marginBottom: spacing.sm }}
+          accessibilityLabel="WanderBunnies Logo"
         />
         <Text
           style={{
-            fontSize: typography.h1,
+            fontSize: typography.display,
             fontWeight: typography.weightBold,
             color: colors.text,
             textAlign: 'center',
+            marginBottom: 4,
           }}
         >
           WanderBunnies
         </Text>
         <Text
           style={{
-            fontSize: typography.h3,
+            fontSize: typography.h2,
+            fontWeight: typography.weightMedium,
             color: colors.textMuted,
             textAlign: 'center',
-            marginBottom: spacing.md,
+            marginBottom: spacing.lg,
           }}
         >
-          Plan trips together, without the group-chat chaos
+          Collaborative Itinerary & Expense Management
         </Text>
-        <Text
-          style={{
-            fontSize: typography.body,
-            color: colors.textMuted,
-            textAlign: 'center',
-            marginTop: spacing.sm,
-            maxWidth: 560,
-          }}
-        >
-          WanderBunnies is a professional-grade collaborative trip planner. We help groups organize itineraries,
-          track transportation and lodging, and manage shared costs in one unified platform.
-        </Text>
+
+        {/* 2. FUNCTIONAL PURPOSE STATEMENT - Describes mechanical operation for reviewers */}
+        <View style={{ backgroundColor: colors.surface, padding: 20, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl }}>
+          <Text
+            style={{
+              fontSize: typography.body,
+              color: colors.text,
+              textAlign: 'center',
+              lineHeight: 24,
+            }}
+          >
+            WanderBunnies is a unified travel platform designed for groups. It allows users to build synchronized
+            itineraries, track shared transportation and lodging, and manage a multi-currency expense ledger.
+            The application integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text> to provide
+            secure authentication and optional automated travel document ingestion.
+          </Text>
+        </View>
 
         <View
           style={{
-            marginTop: spacing.xl,
             width: '100%',
             maxWidth: 420,
             gap: spacing.md,
@@ -132,7 +139,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               }}
             >
               <Text style={{ color: '#0B1726', fontWeight: typography.weightBold, fontSize: typography.body }}>
-                Get Started
+                Create Account
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -150,7 +157,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               }}
             >
               <Text style={{ color: colors.text, fontWeight: typography.weightBold, fontSize: typography.body }}>
-                Log in
+                Log In
               </Text>
             </TouchableOpacity>
           </View>
@@ -158,18 +165,82 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
         <View style={{ alignSelf: 'stretch', marginTop: spacing.xxl, gap: 16 }}>
           <Text style={{ fontSize: typography.h3, fontWeight: typography.weightBold, color: colors.text }}>
-            Core Functionality
+            Core Application Features
           </Text>
           {FEATURES.map((feature) => (
-            <View key={feature} style={{ flexDirection: 'row', gap: 12, backgroundColor: colors.surfaceMuted, padding: 12, borderRadius: 8 }}>
-              <Text style={{ color: colors.link, fontSize: typography.h3 }}>{'✓'}</Text>
+            <View key={feature} style={{ flexDirection: 'row', gap: 12, backgroundColor: colors.surface, padding: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ color: colors.link, fontSize: typography.h3, fontWeight: 'bold' }}>{'✓'}</Text>
               <Text style={{ color: colors.text, fontSize: typography.small, flex: 1, lineHeight: 20 }}>{feature}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      <View style={{ width: '100%', maxWidth: 720, marginTop: spacing.xxl }}>
+      {/* 3. TRANSPARENCY SECTION - Explicitly links app features to Google Scopes */}
+      <View
+        style={{
+          width: '100%',
+          maxWidth: 800,
+          marginTop: spacing.xxl,
+          padding: spacing.xl,
+          borderRadius: 12,
+          backgroundColor: '#f0f7ff',
+          borderWidth: 1,
+          borderColor: '#bae6fd',
+        }}
+        testID="landing-data-use"
+      >
+        <Text
+          style={{
+            fontSize: typography.h3,
+            fontWeight: typography.weightBold,
+            color: '#0369a1',
+            marginBottom: spacing.md,
+            textAlign: 'center',
+          }}
+        >
+          Google User Data Disclosure
+        </Text>
+        <Text style={{ fontSize: typography.small, color: '#0c4a6e', marginBottom: 16, lineHeight: 22 }}>
+          WanderBunnies requests specific permissions from your Google Account to provide its core functionality.
+          We adhere to the <Text style={{ fontWeight: 'bold', textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://developers.google.com/terms/api-services-user-data-policy')}>Google API Services User Data Policy</Text>, including Limited Use requirements.
+        </Text>
+
+        <View style={{ gap: 12 }}>
+          <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: typography.small, color: '#0c4a6e', lineHeight: 20 }}>
+              <Text style={{ fontWeight: 'bold', color: '#0369a1' }}>Google Identity:</Text> We use your Google profile (name and email) to uniquely identify you within your travel groups and to provide a secure, password-less sign-in experience.
+            </Text>
+          </View>
+
+          <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: typography.small, color: '#0c4a6e', lineHeight: 20 }}>
+              <Text style={{ fontWeight: 'bold', color: '#0369a1' }}>Gmail API (Optional):</Text> If you enable the "Email Import" feature, the app requests read-only access to your inbox. WanderBunnies filters for and processes only travel-related confirmation emails (e.g., flight and hotel bookings) to automatically populate your trip itinerary.
+            </Text>
+          </View>
+
+          <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: typography.small, color: '#0c4a6e', lineHeight: 20 }}>
+              <Text style={{ fontWeight: 'bold', color: '#0369a1' }}>Data Privacy:</Text> Your Google data is used exclusively for the features you authorize. We do not sell your data, use it for advertising, or allow any third-party access except as required to provide the service.
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: '#bae6fd' }}>
+          <Text style={{ fontSize: typography.small, color: '#0369a1', textAlign: 'center' }}>
+            Full details are available in our{' '}
+            <Text
+              accessibilityRole="link"
+              onPress={() => openLegal('privacy.html')}
+              style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}
+            >
+              Privacy Policy
+            </Text>.
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ width: '100%', maxWidth: 800, marginTop: spacing.xxl }}>
         <Text
           style={{
             fontSize: typography.h3,
@@ -229,58 +300,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
         </Text>
       </View>
 
-      <View
-        style={{
-          width: '100%',
-          maxWidth: 720,
-          marginTop: spacing.xxl,
-          padding: spacing.xl,
-          borderRadius: 12,
-          backgroundColor: '#eff6ff',
-          borderWidth: 1,
-          borderColor: '#bfdbfe',
-        }}
-        testID="landing-data-use"
-      >
-        <Text
-          style={{
-            fontSize: typography.h3,
-            fontWeight: typography.weightBold,
-            color: '#1e3a8a',
-            marginBottom: spacing.md,
-          }}
-        >
-          Google Data Usage & Transparency
-        </Text>
-        <Text style={{ fontSize: typography.small, color: '#1e40af', marginBottom: 12, lineHeight: 20 }}>
-          WanderBunnies uses Google User Data to enhance your trip planning experience. We prioritize transparency and security:
-        </Text>
-        <View style={{ gap: 10 }}>
-          <Text style={{ fontSize: typography.small, color: '#1e40af', lineHeight: 20 }}>
-            <Text style={{ fontWeight: typography.weightBold }}>• Identity:</Text> When you sign in with Google, we request your name and email address to create your account, identify you to your travel group, and secure your personal data.
-          </Text>
-          <Text style={{ fontSize: typography.small, color: '#1e40af', lineHeight: 20 }}>
-            <Text style={{ fontWeight: typography.weightBold }}>• Gmail Integration (Optional):</Text> If you choose to enable the Gmail import feature, WanderBunnies requests read-only access to your emails to specifically identify travel confirmations (flights, hotels, activities). This data is used only to automatically populate your itinerary.
-          </Text>
-          <Text style={{ fontSize: typography.small, color: '#1e40af', lineHeight: 20 }}>
-            <Text style={{ fontWeight: typography.weightBold }}>• Privacy:</Text> We do not use Google data for advertising, we do not sell your information to third parties, and we only access the data you explicitly authorize.
-          </Text>
-        </View>
-        <View style={{ marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: '#bfdbfe' }}>
-          <Text style={{ fontSize: typography.small, color: '#1e40af' }}>
-            For more information, please read our{' '}
-            <Text
-              accessibilityRole="link"
-              onPress={() => openLegal('privacy.html')}
-              style={{ color: '#2563eb', fontWeight: typography.weightBold, textDecorationLine: 'underline' }}
-            >
-              Privacy Policy
-            </Text>.
-          </Text>
-        </View>
-      </View>
-
-      <View style={{ marginTop: spacing.xxl, alignItems: 'center', width: '100%' }}>
+      <View style={{ marginTop: spacing.xxl, alignItems: 'center', width: '100%', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.xl }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
           <Text
             accessibilityRole="link"
@@ -308,8 +328,10 @@ const LandingPage: React.FC<LandingPageProps> = ({
             Cookie Policy
           </Text>
         </View>
-        <Text style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg }}>
-          &copy; 2026 WanderBunnies Travel · Owned and Operated by Bryan Duerk
+
+        {/* 4. CONTROLLER IDENTIFICATION - Aligns with Privacy Policy data controller */}
+        <Text style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg, textAlign: 'center' }}>
+          &copy; 2026 WanderBunnies · Developed and Operated by Bryan Duerk
         </Text>
       </View>
     </ScrollView>
