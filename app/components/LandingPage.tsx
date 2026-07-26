@@ -72,6 +72,24 @@ const PublicLink: React.FC<PublicLinkProps> = ({ href, children, onPress, testID
   );
 };
 
+type SemanticHeadingProps = {
+  level: 1 | 2;
+  children: React.ReactNode;
+  style?: React.ComponentProps<typeof Text>['style'];
+};
+
+/** Emit real heading elements on web while keeping native output as Text. */
+const SemanticHeading: React.FC<SemanticHeadingProps> = ({ level, children, style }) => {
+  if (Platform.OS === 'web') {
+    return React.createElement(level === 1 ? 'h1' : 'h2', { style }, children);
+  }
+  return (
+    <Text accessibilityRole="header" style={style}>
+      {children}
+    </Text>
+  );
+};
+
 /**
  * Public landing page shown before login. Gives new visitors a sense of what
  * the itinerary Overview looks like (a static sample, not live data), fully
@@ -109,7 +127,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
           style={{ width: 80, height: 80, marginBottom: spacing.sm }}
           accessibilityLabel="WanderBunnies Logo"
         />
-        <Text
+        <SemanticHeading
+          level={1}
           style={{
             fontSize: typography.display,
             fontWeight: typography.weightBold,
@@ -119,7 +138,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           }}
         >
           WanderBunnies
-        </Text>
+        </SemanticHeading>
         <Text
           style={{
             fontSize: typography.h2,
@@ -144,7 +163,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           >
             WanderBunnies is a collaborative trip-planning app that helps friends, families and travel groups create
             shared itineraries, organize flights and lodging, track expenses, maintain packing lists and optionally
-            import travel confirmations from Gmail. The application integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text>
+            import travel confirmations from Gmail. The application integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text>{' '}
             to provide secure authentication and optional automated travel document ingestion.
           </Text>
         </View>
@@ -197,9 +216,9 @@ const LandingPage: React.FC<LandingPageProps> = ({
         </View>
 
         <View style={{ alignSelf: 'stretch', marginTop: spacing.xxl, gap: 16 }}>
-          <Text style={{ fontSize: typography.h3, fontWeight: typography.weightBold, color: colors.text }}>
+          <SemanticHeading level={2} style={{ fontSize: typography.h3, fontWeight: typography.weightBold, color: colors.text }}>
             Core Application Features
-          </Text>
+          </SemanticHeading>
           {FEATURES.map((feature) => (
             <View key={feature} style={{ flexDirection: 'row', gap: 12, backgroundColor: colors.surface, padding: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
               <Text style={{ color: colors.link, fontSize: typography.h3, fontWeight: 'bold' }}>{'✓'}</Text>
@@ -223,7 +242,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
         }}
         testID="landing-data-use"
       >
-        <Text
+        <SemanticHeading
+          level={2}
           style={{
             fontSize: typography.h3,
             fontWeight: typography.weightBold,
@@ -233,7 +253,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           }}
         >
           Google User Data Disclosure
-        </Text>
+        </SemanticHeading>
         <Text style={{ fontSize: typography.small, color: '#0c4a6e', marginBottom: 16, lineHeight: 22 }}>
           WanderBunnies requests specific permissions from your Google Account to provide its core functionality.
           We adhere to the{' '}
@@ -281,7 +301,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </View>
 
       <View style={{ width: '100%', maxWidth: 800, marginTop: spacing.xxl }}>
-        <Text
+        <SemanticHeading
+          level={2}
           style={{
             fontSize: typography.h3,
             fontWeight: typography.weightBold,
@@ -290,7 +311,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           }}
         >
           Visual Itinerary Preview
-        </Text>
+        </SemanticHeading>
         <View style={{ gap: spacing.md }}>
           {SAMPLE_DAYS.map((day) => (
             <View

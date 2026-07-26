@@ -14,7 +14,8 @@ describe('web branding assets', () => {
     expect(html).toContain('<title>WanderBunnies | Collaborative Trip Planner</title>');
     expect(html).toContain('<meta property="og:url" content="https://wander-bunnies.com/" />');
     expect(html).toContain('<link rel="canonical" href="https://wander-bunnies.com/" />');
-    expect(html).toContain('<h1 style="font-size:36px;line-height:1.2;margin:0 0 12px">WanderBunnies</h1>');
+    expect(html).toContain('<h1>WanderBunnies</h1>');
+    expect(html).toContain('<h2>Google account integration</h2>');
     expect(html).toContain('<a href="https://wander-bunnies.com/privacy.html"');
     expect(html).toContain('rel="icon"');
     expect(html).toContain('href="/favicon.ico"');

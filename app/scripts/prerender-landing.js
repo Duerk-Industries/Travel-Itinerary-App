@@ -26,9 +26,8 @@ const landingHtml = `
   <section style="background: #fff; padding: 24px; border-radius: 12px; border: 1px solid #E6ECEF; margin-bottom: 40px; line-height: 1.6;">
     <p>
       WanderBunnies is a collaborative trip-planning app that helps friends, families and travel groups create
-      shared itineraries, organize flights and lodging, track expenses, maintain packing lists and optionally
-      import travel confirmations from Gmail. The application integrates with <strong>Google APIs</strong>
-      to provide secure authentication and optional automated travel document ingestion.
+      shared itineraries, organize flights and lodging, track expenses, maintain packing lists and record travel
+      confirmations in one place.
     </p>
   </section>
 
@@ -73,6 +72,35 @@ const landingHtml = `
 </div>
 `;
 
+const noscriptHtml = `
+<noscript id="static-app-noscript">
+  <main>
+    <h1>WanderBunnies</h1>
+
+    <p>
+      WanderBunnies is a collaborative trip-planning application that helps
+      friends, families and travel groups create shared itineraries, organize
+      flights and lodging, track expenses, maintain packing lists and
+      optionally import travel confirmations from Gmail.
+    </p>
+
+    <h2>Google account integration</h2>
+
+    <p>
+      Google Sign-In is used to authenticate your account. Optional Gmail
+      access is used to identify travel confirmations and add itinerary
+      details when you enable the Email Import feature.
+    </p>
+
+    <p>
+      <a href="https://wander-bunnies.com/privacy.html">Privacy Policy</a>
+      ·
+      <a href="https://wander-bunnies.com/terms.html">Terms of Service</a>
+    </p>
+  </main>
+</noscript>
+`;
+
 let html = fs.readFileSync(indexPath, 'utf8');
 
 // 1. Inject canonical link
@@ -83,7 +111,7 @@ if (!html.includes('rel="canonical"')) {
 // 2. Inject static landing content into root div
 // This content will be shown until React hydraties and clears it.
 // This is perfectly valid and satisfies the "ordinary static HTML" requirement.
-html = html.replace('<div id="root"></div>', `<div id="root">${landingHtml}</div>`);
+html = html.replace('<div id="root"></div>', `<div id="root">${landingHtml}</div>${noscriptHtml}`);
 
 fs.writeFileSync(indexPath, html);
 console.log('Prerender content successfully injected into index.html');

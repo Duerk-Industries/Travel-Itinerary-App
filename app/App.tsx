@@ -417,6 +417,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const body = document.body;
     const root = document.getElementById('root');
     document.getElementById('static-app-description')?.remove();
+    document.getElementById('static-landing-preview')?.remove();
+    document.getElementById('static-app-noscript')?.remove();
     const previous = {
       htmlHeight: html.style.height,
       bodyHeight: body.style.height,

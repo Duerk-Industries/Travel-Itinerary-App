@@ -9,7 +9,7 @@ const PRIVACY_URL = 'https://wander-bunnies.com/privacy.html';
 const TERMS_URL = 'https://wander-bunnies.com/terms.html';
 const BROWSER_TITLE = 'WanderBunnies | Collaborative Trip Planner';
 const APP_DESCRIPTION =
-  'WanderBunnies is a professional-grade collaborative trip-planning platform for shared itineraries, lodging, transportation, activities and expenses. It integrates with Google APIs for secure authentication and travel document ingestion.';
+  'WanderBunnies is a collaborative trip-planning application that helps friends, families and travel groups create shared itineraries, organize flights and lodging, track expenses, maintain packing lists and optionally import travel confirmations from Gmail.';
 
 const STATIC_PUBLIC_SECTION = `
       <div id="static-landing-preview" style="background:#f8fafc;color:#111827;padding:40px 20px;font-family:sans-serif;line-height:1.6;max-width:800px;margin:0 auto;text-align:center;">
@@ -22,8 +22,6 @@ const STATIC_PUBLIC_SECTION = `
           <p>
             WanderBunnies is a unified travel platform designed for groups. It allows users to build synchronized
             itineraries, track shared transportation and lodging, and manage a multi-currency expense ledger.
-            The application integrates with <strong>Google APIs</strong> to provide
-            secure authentication and optional automated travel document ingestion.
           </p>
         </section>
 
@@ -67,6 +65,34 @@ const STATIC_PUBLIC_SECTION = `
         </footer>
       </div>`;
 
+const NOSCRIPT_PUBLIC_SECTION = `
+    <noscript id="static-app-noscript">
+      <main>
+        <h1>WanderBunnies</h1>
+
+        <p>
+          WanderBunnies is a collaborative trip-planning application that helps
+          friends, families and travel groups create shared itineraries, organize
+          flights and lodging, track expenses, maintain packing lists and
+          optionally import travel confirmations from Gmail.
+        </p>
+
+        <h2>Google account integration</h2>
+
+        <p>
+          Google Sign-In is used to authenticate your account. Optional Gmail
+          access is used to identify travel confirmations and add itinerary
+          details when you enable the Email Import feature.
+        </p>
+
+        <p>
+          <a href="https://wander-bunnies.com/privacy.html">Privacy Policy</a>
+          ·
+          <a href="https://wander-bunnies.com/terms.html">Terms of Service</a>
+        </p>
+      </main>
+    </noscript>`;
+
 const getOutputDirectory = (args) => {
   const outputDirFlag = args.find((arg) => arg.startsWith('--output-dir='));
   if (outputDirFlag) return path.resolve(process.cwd(), outputDirFlag.slice('--output-dir='.length));
@@ -108,7 +134,7 @@ const addPublicMetadata = (args) => {
     html = html.replace('</head>', '    <link rel="canonical" href="https://wander-bunnies.com/" />\n  </head>');
   }
 
-  const staticSection = STATIC_PUBLIC_SECTION;
+  const staticSection = `${STATIC_PUBLIC_SECTION}\n${NOSCRIPT_PUBLIC_SECTION}`;
   // Inject the static landing content into the root div so it's there as "ordinary static HTML".
   // This content will be shown until React hydrates and clears it.
   // This satisfies Google's "ordinary static or server-rendered HTML" requirement.
