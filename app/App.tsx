@@ -74,6 +74,7 @@ import {
   saveLastActiveTripIdAsync,
   saveSessionAsync,
 } from './utils/session';
+
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDeniedModal from './components/PermissionDeniedModal';
@@ -128,6 +129,8 @@ import { connectSocket, disconnectSocket } from './utils/socket';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
+
+const WEB_DOCUMENT_TITLE = 'WanderBunnies – Collaborative Trip Planner';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -3614,7 +3617,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linking}
+      documentTitle={{
+        enabled: Platform.OS === 'web',
+        formatter: () => WEB_DOCUMENT_TITLE,
+      }}
+    >
       <RootStack.Navigator>
         <RootStack.Screen name="Main" options={{ headerShown: false }}>
           {() => mainWorkspace}

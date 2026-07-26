@@ -1,0 +1,74 @@
+- generic [ref=e9]:
+  - generic [ref=e11]:
+    - generic "WanderBunnies logo" [ref=e12]
+    - generic [ref=e14]: WanderBunnies
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic "WanderBunnies logo" [ref=e18]
+      - generic [ref=e20]: WanderBunnies
+      - generic [ref=e21]: Plan trips together, without the group-chat chaos
+      - generic [ref=e22]: WanderBunnies is a professional-grade collaborative trip planner. We help groups organize itineraries, track transportation and lodging, and manage shared costs in one unified platform.
+      - generic [ref=e23]:
+        - button "Sign in with Google" [ref=e24] [cursor=pointer]
+        - generic [ref=e32]:
+          - button "Get Started" [ref=e33] [cursor=pointer]
+          - button "Log in" [ref=e35] [cursor=pointer]
+      - generic [ref=e37]:
+        - generic [ref=e38]: Core Functionality
+        - generic [ref=e39]:
+          - generic [ref=e40]: ✓
+          - generic [ref=e41]: "Collaborative Planning: Build a shared day-by-day itinerary with flights, lodging, activities, and car rentals that everyone in your group can see and edit."
+        - generic [ref=e42]:
+          - generic [ref=e43]: ✓
+          - generic [ref=e44]: "Shared Expenses: Split and track shared costs in a running ledger with automated total calculations for each traveler."
+        - generic [ref=e45]:
+          - generic [ref=e46]: ✓
+          - generic [ref=e47]: "AI Itinerary Generation: Generate intelligent itinerary suggestions based on your destinations and dates using state-of-the-art AI models."
+        - generic [ref=e48]:
+          - generic [ref=e49]: ✓
+          - generic [ref=e50]: "Real-time Collaboration: Chat with your group and see presence indicators to know who is online and planning with you."
+        - generic [ref=e51]:
+          - generic [ref=e52]: ✓
+          - generic [ref=e53]: "Packing & Notes: Manage shared packing lists and trip-wide notes to keep all your travel details in one central location."
+    - generic [ref=e54]:
+      - generic [ref=e55]: Visual Itinerary Preview
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: DAY 1
+          - generic [ref=e60]:
+            - generic [ref=e61]: Arrive in Seattle
+            - generic [ref=e62]: Pike Place Market · check in to hotel
+        - generic [ref=e63]:
+          - generic [ref=e64]: DAY 2
+          - generic [ref=e66]:
+            - generic [ref=e67]: Olympic National Park
+            - generic [ref=e68]: Hurricane Ridge · Sol Duc Falls Trail
+        - generic [ref=e69]:
+          - generic [ref=e70]: DAY 3
+          - generic [ref=e72]:
+            - generic [ref=e73]: Hoh Rainforest
+            - generic [ref=e74]: Ruby Beach · sunset drive back
+      - generic [ref=e75]: This is a sample itinerary preview. Log in to create your own custom trip plan.
+    - generic [ref=e76]:
+      - generic [ref=e77]: Google Data Usage & Transparency
+      - generic [ref=e78]: "WanderBunnies uses Google User Data to enhance your trip planning experience. We prioritize transparency and security:"
+      - generic [ref=e79]:
+        - generic [ref=e80]: "• Identity: When you sign in with Google, we request your name and email address to create your account, identify you to your travel group, and secure your personal data."
+        - generic [ref=e81]: "• Gmail Integration (Optional): If you choose to enable the Gmail import feature, WanderBunnies requests read-only access to your emails to specifically identify travel confirmations (flights, hotels, activities). This data is used only to automatically populate your itinerary."
+        - generic [ref=e82]: "• Privacy: We do not use Google data for advertising, we do not sell your information to third parties, and we only access the data you explicitly authorize."
+      - generic [ref=e84]:
+        - text: For more information, please read our
+        - link "Privacy Policy" [ref=e85] [cursor=pointer]:
+          - /url: /privacy.html
+        - text: .
+    - generic [ref=e86]:
+      - generic [ref=e87]:
+        - link "Privacy Policy" [ref=e88] [cursor=pointer]:
+          - /url: /privacy.html
+        - generic [ref=e89]: ·
+        - link "Terms of Service" [ref=e90] [cursor=pointer]:
+          - /url: /terms.html
+        - generic [ref=e91]: ·
+        - link "Cookie Policy" [ref=e92] [cursor=pointer]:
+          - /url: /cookies.html
+      - generic [ref=e93]: © 2026 WanderBunnies Travel · Owned and Operated by Bryan Duerk
