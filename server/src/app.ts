@@ -1,4 +1,4 @@
-console.log('Backend starting... Travel Itinerary App v1.0.0');
+console.log('Backend starting... WanderBunnies v1.0.0');
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';

@@ -1,4 +1,4 @@
-# Travel Itinerary App — CLAUDE.md
+# WanderBunnies — CLAUDE.md
 
 ## Project Overview
 

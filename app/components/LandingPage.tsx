@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
+import GoogleSignInButton from './GoogleSignInButton';
 
 export type LandingPageProps = {
   theme: AppTheme;
@@ -9,6 +10,7 @@ export type LandingPageProps = {
   backendUrl?: string;
   onLogin: () => void;
   onCreateAccount: () => void;
+  onLoginWithGoogle: () => void;
 };
 
 type SampleDay = {
@@ -46,7 +48,14 @@ const FEATURES: string[] = [
  * Google" control itself lives inside AuthForm/GoogleSignInButton — kept
  * separate so this page never has to reproduce Google's branded button.
  */
-const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl, onLogin, onCreateAccount }) => {
+const LandingPage: React.FC<LandingPageProps> = ({
+  theme,
+  logoSource,
+  backendUrl,
+  onLogin,
+  onCreateAccount,
+  onLoginWithGoogle,
+}) => {
   const { colors, typography, spacing } = theme;
 
   const openLegal = (path: string) => {
@@ -74,6 +83,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
             textAlign: 'center',
           }}
         >
+          WanderBunnies
+        </Text>
+        <Text
+          style={{
+            fontSize: typography.h3,
+            color: colors.textMuted,
+            textAlign: 'center',
+            marginBottom: spacing.md,
+          }}
+        >
           Plan trips together, without the group-chat chaos
         </Text>
         <Text
@@ -91,47 +110,50 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
 
         <View
           style={{
-            flexDirection: 'row',
-            gap: spacing.md,
             marginTop: spacing.xl,
             width: '100%',
             maxWidth: 420,
+            gap: spacing.md,
           }}
         >
-          <TouchableOpacity
-            onPress={onCreateAccount}
-            accessibilityRole="button"
-            testID="landing-create-account"
-            style={{
-              flex: 1,
-              backgroundColor: colors.cta,
-              paddingVertical: spacing.md,
-              borderRadius: 8,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ color: '#0B1726', fontWeight: typography.weightBold, fontSize: typography.body }}>
-              Get Started
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={onLogin}
-            accessibilityRole="button"
-            testID="landing-login"
-            style={{
-              flex: 1,
-              backgroundColor: colors.surfaceMuted,
-              borderWidth: 1,
-              borderColor: colors.border,
-              paddingVertical: spacing.md,
-              borderRadius: 8,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ color: colors.text, fontWeight: typography.weightBold, fontSize: typography.body }}>
-              Log in
-            </Text>
-          </TouchableOpacity>
+          <GoogleSignInButton onPress={onLoginWithGoogle} testID="landing-google-signin" />
+
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <TouchableOpacity
+              onPress={onCreateAccount}
+              accessibilityRole="button"
+              testID="landing-create-account"
+              style={{
+                flex: 1,
+                backgroundColor: colors.cta,
+                paddingVertical: spacing.md,
+                borderRadius: 8,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#0B1726', fontWeight: typography.weightBold, fontSize: typography.body }}>
+                Get Started
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onLogin}
+              accessibilityRole="button"
+              testID="landing-login"
+              style={{
+                flex: 1,
+                backgroundColor: colors.surfaceMuted,
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingVertical: spacing.md,
+                borderRadius: 8,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.text, fontWeight: typography.weightBold, fontSize: typography.body }}>
+                Log in
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={{ alignSelf: 'stretch', marginTop: spacing.xxl, gap: 16 }}>
@@ -248,6 +270,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
           <Text style={{ fontSize: typography.small, color: '#1e40af' }}>
             For more information, please read our{' '}
             <Text
+              href="/privacy.html"
+              accessibilityRole="link"
               onPress={() => openLegal('privacy.html')}
               style={{ color: '#2563eb', fontWeight: typography.weightBold, textDecorationLine: 'underline' }}
             >
@@ -259,23 +283,34 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, logoSource, backendUrl
 
       <View style={{ marginTop: spacing.xxl, alignItems: 'center', width: '100%' }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
-          <TouchableOpacity onPress={() => openLegal('privacy.html')} testID="landing-privacy-link">
-            <Text style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}>
-              Privacy Policy
-            </Text>
-          </TouchableOpacity>
+          <Text
+            href="/privacy.html"
+            accessibilityRole="link"
+            onPress={() => openLegal('privacy.html')}
+            testID="landing-privacy-link"
+            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+          >
+            Privacy Policy
+          </Text>
           <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
-          <TouchableOpacity onPress={() => openLegal('terms.html')} testID="landing-terms-link">
-            <Text style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}>
-              Terms of Service
-            </Text>
-          </TouchableOpacity>
+          <Text
+            href="/terms.html"
+            accessibilityRole="link"
+            onPress={() => openLegal('terms.html')}
+            testID="landing-terms-link"
+            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+          >
+            Terms of Service
+          </Text>
           <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
-          <TouchableOpacity onPress={() => openLegal('cookies.html')}>
-            <Text style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}>
-              Cookie Policy
-            </Text>
-          </TouchableOpacity>
+          <Text
+            href="/cookies.html"
+            accessibilityRole="link"
+            onPress={() => openLegal('cookies.html')}
+            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+          >
+            Cookie Policy
+          </Text>
         </View>
         <Text style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg }}>
           &copy; 2026 WanderBunnies Travel · Owned and Operated by Bryan Duerk

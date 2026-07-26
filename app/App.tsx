@@ -3402,6 +3402,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             setAuthMode('register');
             setShowAuthForm(true);
           }}
+          onLoginWithGoogle={loginWithGoogle}
         />
       )}
       {userToken && requirePasswordSetup ? (
