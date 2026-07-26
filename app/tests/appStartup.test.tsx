@@ -76,8 +76,8 @@ describe('App startup', () => {
   });
 
   it('renders the signed-out native shell without crashing', () => {
-    const { getByText } = render(<App />);
-    expect(getByText('WanderBunnies')).toBeTruthy();
+    const { getAllByText } = render(<App />);
+    expect(getAllByText('WanderBunnies').length).toBeGreaterThan(0);
   });
 
   it('uses Expo Linking to build the native Google OAuth redirect URL', async () => {

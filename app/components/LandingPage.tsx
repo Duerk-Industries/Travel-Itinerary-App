@@ -270,7 +270,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
           <Text style={{ fontSize: typography.small, color: '#1e40af' }}>
             For more information, please read our{' '}
             <Text
-              href="/privacy.html"
               accessibilityRole="link"
               onPress={() => openLegal('privacy.html')}
               style={{ color: '#2563eb', fontWeight: typography.weightBold, textDecorationLine: 'underline' }}
@@ -284,7 +283,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
       <View style={{ marginTop: spacing.xxl, alignItems: 'center', width: '100%' }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
           <Text
-            href="/privacy.html"
             accessibilityRole="link"
             onPress={() => openLegal('privacy.html')}
             testID="landing-privacy-link"
@@ -294,7 +292,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
           </Text>
           <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
           <Text
-            href="/terms.html"
             accessibilityRole="link"
             onPress={() => openLegal('terms.html')}
             testID="landing-terms-link"
@@ -304,7 +301,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
           </Text>
           <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
           <Text
-            href="/cookies.html"
             accessibilityRole="link"
             onPress={() => openLegal('cookies.html')}
             style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
