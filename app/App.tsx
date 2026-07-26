@@ -130,7 +130,7 @@ import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
-const WEB_DOCUMENT_TITLE = 'WanderBunnies – Collaborative Trip Planner';
+const WEB_DOCUMENT_TITLE = 'WanderBunnies | Collaborative Trip Planner';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -416,6 +416,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const html = document.documentElement;
     const body = document.body;
     const root = document.getElementById('root');
+    document.getElementById('static-app-description')?.remove();
     const previous = {
       htmlHeight: html.style.height,
       bodyHeight: body.style.height,

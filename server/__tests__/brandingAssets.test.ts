@@ -11,7 +11,11 @@ describe('web branding assets', () => {
 
   webExportTest('index.html uses WanderBunnies title and favicon links', () => {
     const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
-    expect(html).toContain('<title>WanderBunnies – Collaborative Trip Planner</title>');
+    expect(html).toContain('<title>WanderBunnies | Collaborative Trip Planner</title>');
+    expect(html).toContain('<meta property="og:url" content="https://wander-bunnies.com/" />');
+    expect(html).toContain('<link rel="canonical" href="https://wander-bunnies.com/" />');
+    expect(html).toContain('<h1 style="font-size:36px;line-height:1.2;margin:0 0 12px">WanderBunnies</h1>');
+    expect(html).toContain('<a href="https://wander-bunnies.com/privacy.html"');
     expect(html).toContain('rel="icon"');
     expect(html).toContain('href="/favicon.ico"');
   });

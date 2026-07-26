@@ -39,6 +39,39 @@ const FEATURES: string[] = [
   'Packing & Notes: Manage shared packing lists and trip-wide notes to keep all your travel details in one central location.',
 ];
 
+const PUBLIC_PRIVACY_URL = 'https://wander-bunnies.com/privacy.html';
+const PUBLIC_TERMS_URL = 'https://wander-bunnies.com/terms.html';
+const PUBLIC_COOKIES_URL = 'https://wander-bunnies.com/cookies.html';
+
+type PublicLinkProps = {
+  href: string;
+  children: React.ReactNode;
+  onPress?: () => void;
+  testID?: string;
+  style?: React.ComponentProps<typeof Text>['style'];
+};
+
+/**
+ * React Native Web supports href on Text and renders it as a real anchor, but
+ * the React Native type definition does not include that web-only prop.
+ * Keeping the cast here gives crawlers a real URL while preserving native
+ * Linking behavior on iOS and Android.
+ */
+const PublicLink: React.FC<PublicLinkProps> = ({ href, children, onPress, testID, style }) => {
+  const LinkText = Text as unknown as React.ComponentType<any>;
+  return (
+    <LinkText
+      href={Platform.OS === 'web' ? href : undefined}
+      accessibilityRole="link"
+      onPress={Platform.OS === 'web' ? undefined : onPress}
+      testID={testID}
+      style={style}
+    >
+      {children}
+    </LinkText>
+  );
+};
+
 /**
  * Public landing page shown before login. Gives new visitors a sense of what
  * the itinerary Overview looks like (a static sample, not live data), fully
@@ -109,10 +142,10 @@ const LandingPage: React.FC<LandingPageProps> = ({
               lineHeight: 24,
             }}
           >
-            WanderBunnies is a unified travel platform designed for groups. It allows users to build synchronized
-            itineraries, track shared transportation and lodging, and manage a multi-currency expense ledger.
-            The application integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text> to provide
-            secure authentication and optional automated travel document ingestion.
+            WanderBunnies is a collaborative trip-planning app that helps friends, families and travel groups create
+            shared itineraries, organize flights and lodging, track expenses, maintain packing lists and optionally
+            import travel confirmations from Gmail. The application integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text>
+            to provide secure authentication and optional automated travel document ingestion.
           </Text>
         </View>
 
@@ -203,7 +236,14 @@ const LandingPage: React.FC<LandingPageProps> = ({
         </Text>
         <Text style={{ fontSize: typography.small, color: '#0c4a6e', marginBottom: 16, lineHeight: 22 }}>
           WanderBunnies requests specific permissions from your Google Account to provide its core functionality.
-          We adhere to the <Text style={{ fontWeight: 'bold', textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://developers.google.com/terms/api-services-user-data-policy')}>Google API Services User Data Policy</Text>, including Limited Use requirements.
+          We adhere to the{' '}
+          <PublicLink
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            onPress={() => Linking.openURL('https://developers.google.com/terms/api-services-user-data-policy')}
+            style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}
+          >
+            Google API Services User Data Policy
+          </PublicLink>, including Limited Use requirements.
         </Text>
 
         <View style={{ gap: 12 }}>
@@ -229,13 +269,13 @@ const LandingPage: React.FC<LandingPageProps> = ({
         <View style={{ marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: '#bae6fd' }}>
           <Text style={{ fontSize: typography.small, color: '#0369a1', textAlign: 'center' }}>
             Full details are available in our{' '}
-            <Text
-              accessibilityRole="link"
+            <PublicLink
+              href={PUBLIC_PRIVACY_URL}
               onPress={() => openLegal('privacy.html')}
               style={{ fontWeight: 'bold', textDecorationLine: 'underline' }}
             >
               Privacy Policy
-            </Text>.
+            </PublicLink>.
           </Text>
         </View>
       </View>
@@ -302,36 +342,36 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
       <View style={{ marginTop: spacing.xxl, alignItems: 'center', width: '100%', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.xl }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
-          <Text
-            accessibilityRole="link"
+          <PublicLink
+            href={PUBLIC_PRIVACY_URL}
             onPress={() => openLegal('privacy.html')}
             testID="landing-privacy-link"
             style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
           >
             Privacy Policy
-          </Text>
+          </PublicLink>
           <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
-          <Text
-            accessibilityRole="link"
+          <PublicLink
+            href={PUBLIC_TERMS_URL}
             onPress={() => openLegal('terms.html')}
             testID="landing-terms-link"
             style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
           >
             Terms of Service
-          </Text>
+          </PublicLink>
           <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
-          <Text
-            accessibilityRole="link"
+          <PublicLink
+            href={PUBLIC_COOKIES_URL}
             onPress={() => openLegal('cookies.html')}
             style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
           >
             Cookie Policy
-          </Text>
+          </PublicLink>
         </View>
 
         {/* 4. CONTROLLER IDENTIFICATION - Aligns with Privacy Policy data controller */}
         <Text style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg, textAlign: 'center' }}>
-          &copy; 2026 WanderBunnies · Developed and Operated by Bryan Duerk
+          &copy; 2026 WanderBunnies · Owned and operated by Bryan Duerk
         </Text>
       </View>
     </ScrollView>
