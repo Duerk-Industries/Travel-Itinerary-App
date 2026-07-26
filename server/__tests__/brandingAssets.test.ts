@@ -11,7 +11,7 @@ describe('web branding assets', () => {
 
   webExportTest('index.html uses WanderBunnies title and favicon links', () => {
     const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
-    expect(html).toContain('<title>WanderBunnies</title>');
+    expect(html).toContain('<title>WanderBunnies – Collaborative Trip Planner</title>');
     expect(html).toContain('rel="icon"');
     expect(html).toContain('href="/favicon.ico"');
   });

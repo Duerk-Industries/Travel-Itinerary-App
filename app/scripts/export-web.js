@@ -4,6 +4,7 @@ const path = require('path');
 
 const expoCli = path.join(path.dirname(require.resolve('expo/package.json')), 'bin', 'cli');
 
+const BROWSER_TITLE = 'WanderBunnies – Collaborative Trip Planner';
 const APP_DESCRIPTION =
   'WanderBunnies is a collaborative trip planner for organizing shared itineraries, transportation, lodging, activities, and expenses.';
 
@@ -43,11 +44,13 @@ const addPublicMetadata = (args) => {
 
   let html = fs.readFileSync(indexPath, 'utf8');
 
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${BROWSER_TITLE}</title>`);
+
   if (!/<meta\s+name=["']description["']/i.test(html)) {
     const metadata = [
       `<meta name="description" content="${APP_DESCRIPTION}" />`,
       '<meta name="application-name" content="WanderBunnies" />',
-      '<meta property="og:title" content="WanderBunnies" />',
+      `<meta property="og:title" content="${BROWSER_TITLE}" />`,
       `<meta property="og:description" content="${APP_DESCRIPTION}" />`,
       '<meta property="og:type" content="website" />',
     ].join('\n    ');
