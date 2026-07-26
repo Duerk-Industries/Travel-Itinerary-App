@@ -11,6 +11,7 @@ import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
 import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
+import { queryBlog } from '../db.postgres';
 
 const router = Router();
 router.use(authenticate);
@@ -83,6 +84,19 @@ router.get('/:tripId/blog', async (req, res) => {
       const day = blog.days.find((candidate) => candidate.localDate === item.dayDate);
       if (day) (day.items as any[]).push(item);
     }
+    // Return the canonical public path only after publication has completed. The alias is
+    // generated during the publication/consent flow, so deriving it from the display name in
+    // the client could produce a link that does not resolve.
+    let publicPath: string | null = null;
+    if (blog.visibilityState === 'public') {
+      const alias = await queryBlog<{ username_slug: string; trip_slug: string }>(
+        'SELECT username_slug, trip_slug FROM blog_public_aliases WHERE trip_id = $1 AND canonical = TRUE ORDER BY created_at DESC LIMIT 1',
+        [req.params.tripId]
+      );
+      if (alias.rows[0]) {
+        publicPath = `/${alias.rows[0].username_slug}/${alias.rows[0].trip_slug}`;
+      }
+    }
     const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
     res.setHeader('ETag', etag);
     if (req.headers['if-none-match'] === etag) {
@@ -90,7 +104,7 @@ router.get('/:tripId/blog', async (req, res) => {
       return;
     }
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json(blog);
+    res.json({ ...blog, publicPath });
   } catch (err) {
     errorResponse(res, err);
   }

@@ -88,6 +88,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const surfaceColor = theme?.colors?.surface ?? '#ffffff';
   const inputColor = theme?.colors?.input ?? surfaceColor;
   const borderColor = theme?.colors?.border ?? '#ccd4df';
+  const publicPageUrl = useMemo(() => {
+    const publicPath = typeof blog?.publicPath === 'string' ? blog.publicPath.trim() : '';
+    if (!publicPath) return null;
+    const origin = Platform.OS === 'web' && typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'https://wander-bunnies.com';
+    return `${origin.replace(/\/$/, '')}/${publicPath.replace(/^\//, '')}`;
+  }, [blog?.publicPath]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -295,7 +303,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>{blog?.title || 'Trip Blog'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <Text style={[styles.sectionTitle, { flex: 1 }]}>{blog?.title || 'Trip Blog'}</Text>
+          {publicPageUrl ? (
+            <TouchableOpacity
+              accessibilityRole="link"
+              onPress={() => { void Linking.openURL(publicPageUrl).catch(() => {}); }}
+              style={{ paddingVertical: 6, paddingHorizontal: 8 }}
+            >
+              <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>View public page ↗</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
         <Text style={{ color: mutedColor, marginBottom: 12 }}>A shared story for everyone on the trip.</Text>
         {(blog?.days || []).map((day) => (
           <View key={day.id} style={{ marginBottom: 24, borderBottomWidth: 1, borderBottomColor: borderColor, paddingBottom: 16 }}>
