@@ -135,7 +135,7 @@ const getAllowedOrigins = () => {
 
 const allowedOrigins = getAllowedOrigins();
 
-app.use(cors({
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) {
       // Allow requests with no origin, like mobile apps or curl requests.
@@ -156,7 +156,19 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent'],
   exposedHeaders: ['X-Request-Id'],
-}));
+};
+
+// Apple sends its response_mode=form_post callback with Origin:
+// https://appleid.apple.com. This is a top-level browser form submission, not
+// an API read, so it does not need CORS headers; bypass CORS only for this
+// exact callback/origin pair rather than allowing Apple globally.
+app.use((req, res, next) => {
+  if (req.path === '/api/auth/apple/callback' && req.header('Origin') === 'https://appleid.apple.com') {
+    next();
+    return;
+  }
+  cors(corsOptions)(req, res, next);
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

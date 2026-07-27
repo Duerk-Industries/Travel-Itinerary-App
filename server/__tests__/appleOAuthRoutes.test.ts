@@ -111,6 +111,7 @@ describe('Apple OAuth routes', () => {
 
     const response = await request(app)
       .post('/api/auth/apple/callback')
+      .set('Origin', 'https://appleid.apple.com')
       .set('Cookie', cookie ?? '')
       .type('form')
       .send({ error: 'access_denied', state: location.searchParams.get('state') })
