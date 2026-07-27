@@ -3,7 +3,12 @@ import * as firebaseAdapter from './db.firebase';
 import { logInfo } from './logger';
 
 export type DbProvider = 'postgres' | 'memory' | 'dynamodb' | 'firebase';
-export type DatabaseAdapter = typeof postgresAdapter;
+// queryBlog/setPoolFactory are postgres-internal escape hatches for the trip-blog
+// repository (see db.postgres.ts) — not part of the cross-provider contract, so
+// they're excluded here. Every other member must line up exactly across adapters;
+// keeping this a real structural type (rather than `as unknown as`) means a
+// mismatched or missing export in db.firebase.ts fails `tsc`, not just at runtime.
+export type DatabaseAdapter = Omit<typeof postgresAdapter, 'queryBlog' | 'setPoolFactory'>;
 
 let cachedAdapter: DatabaseAdapter | null = null;
 let cachedProvider: DbProvider | null = null;
@@ -18,7 +23,7 @@ const buildMemoryAdapter = (): DatabaseAdapter => {
   // Lazy-load to avoid requiring pg-mem in production builds.
   try {
     const { createMemoryAdapter } = require('./db.memory') as typeof import('./db.memory');
-    return createMemoryAdapter() as unknown as DatabaseAdapter;
+    return createMemoryAdapter();
   } catch (err: any) {
     if (err && err.code === 'MODULE_NOT_FOUND' && String(err.message).includes('pg-mem')) {
       throw new Error(
@@ -73,7 +78,7 @@ const makeAdapter = (provider: DbProvider): DatabaseAdapter => {
     case 'dynamodb':
       return buildNotImplementedAdapter('dynamodb');
     case 'firebase':
-      return firebaseAdapter as unknown as DatabaseAdapter;
+      return firebaseAdapter;
     default:
       // Type narrowing above should make this impossible.
       throw new Error(`Unknown database provider: ${String(provider)}`);

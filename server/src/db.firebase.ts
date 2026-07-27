@@ -68,6 +68,7 @@ import {
   ItineraryGenerationMetrics,
   ItineraryComparison,
 } from './types';
+import type { AccountEmail } from './db.postgres';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
@@ -1556,10 +1557,16 @@ export const markUserEmailVerified = async (userId: string): Promise<void> => {
   }
 };
 
-export const listUserEmails = async (userId: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+export const listUserEmails = async (userId: string): Promise<AccountEmail[]> => {
   const stored = await listStoredUserEmails(userId);
   if (stored.length) {
-    return stored.map(({ email, isPrimary, isVerified }) => ({ email, isPrimary, isVerified }));
+    return stored.map(({ email, isPrimary, isVerified, verifiedAt, createdAt }) => ({
+      email,
+      isPrimary,
+      isVerified,
+      verifiedAt: verifiedAt ?? null,
+      createdAt: createdAt ?? null,
+    }));
   }
   const db = getDb();
   const userDoc = await db.collection('users').doc(userId).get();
@@ -1567,11 +1574,13 @@ export const listUserEmails = async (userId: string): Promise<Array<{ email: str
   const email = String((userDoc.data() as any).email ?? '').trim().toLowerCase();
   if (!email) return [];
   const isVerified = Boolean((userDoc.data() as any).emailVerified ?? true);
-  await upsertUserEmail(userId, email, { isPrimary: true, isVerified, verifiedAt: isVerified ? nowIso() : null });
-  return [{ email, isPrimary: true, isVerified }];
+  const verifiedAt = isVerified ? nowIso() : null;
+  const createdAt = nowIso();
+  await upsertUserEmail(userId, email, { isPrimary: true, isVerified, verifiedAt });
+  return [{ email, isPrimary: true, isVerified, verifiedAt, createdAt }];
 };
 
-export const addUserEmail = async (userId: string, email: string): Promise<{ email: string; isPrimary: boolean; isVerified: boolean }> => {
+export const addUserEmail = async (userId: string, email: string): Promise<AccountEmail> => {
   const normalizedEmail = normalizeEmail(email);
   const existing = await getUserEmailDocRef(normalizedEmail).get();
   if (existing.exists && String((existing.data() as any).userId ?? '') !== userId) {
@@ -1580,7 +1589,14 @@ export const addUserEmail = async (userId: string, email: string): Promise<{ ema
     throw err;
   }
   await upsertUserEmail(userId, normalizedEmail, { isPrimary: false, isVerified: false, verifiedAt: null });
-  return { email: normalizedEmail, isPrimary: false, isVerified: false };
+  const saved = (await getUserEmailDocRef(normalizedEmail).get()).data() as any;
+  return {
+    email: normalizedEmail,
+    isPrimary: Boolean(saved?.isPrimary),
+    isVerified: Boolean(saved?.isVerified),
+    verifiedAt: saved?.verifiedAt ?? null,
+    createdAt: saved?.createdAt ?? null,
+  };
 };
 
 export const createUserEmailVerification = async (
@@ -1647,7 +1663,7 @@ export const markAccountEmailVerified = async (userId: string, _email: string): 
   }, { merge: true });
 };
 
-export const setPrimaryUserEmail = async (userId: string, email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+export const setPrimaryUserEmail = async (userId: string, email: string): Promise<AccountEmail[]> => {
   const normalizedEmail = normalizeEmail(email);
   const emailDoc = await getUserEmailDocRef(normalizedEmail).get();
   const data = emailDoc.exists ? (emailDoc.data() as any) : null;
@@ -1666,7 +1682,7 @@ export const setPrimaryUserEmail = async (userId: string, email: string): Promis
   return listUserEmails(userId);
 };
 
-export const removeUserEmail = async (userId: string, email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+export const removeUserEmail = async (userId: string, email: string): Promise<AccountEmail[]> => {
   const normalizedEmail = normalizeEmail(email);
   const emailDoc = await getUserEmailDocRef(normalizedEmail).get();
   const data = emailDoc.exists ? (emailDoc.data() as any) : null;
@@ -1736,7 +1752,18 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
 
 export const updateWebUserProfile = async (
   userId: string,
-  payload: Partial<WebUser & { age?: number; gender?: string }>
+  payload: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    homeAddress?: string;
+    preferredAirport?: string;
+    mapPreference?: string;
+    appearancePreference?: string;
+    temperatureUnit?: string;
+    age?: number;
+    gender?: string;
+  }
 ): Promise<WebUser> => {
   const db = getDb();
   const doc = await db.collection('web_users').doc(userId).get();
@@ -1925,6 +1952,7 @@ export const listGroupMembers = async (
 ): Promise<
   Array<{
     id: string;
+    groupId?: string;
     userId?: string | null;
     guestName?: string;
     email?: string;
@@ -1934,6 +1962,8 @@ export const listGroupMembers = async (
     isGroupOwner?: boolean;
     status?: string;
     removedAt?: string | null;
+    addedBy?: string | null;
+    createdAt?: string | null;
   }>
 > => {
   const db = getDb();
@@ -2023,6 +2053,7 @@ export const listGroupMembers = async (
     const email = data.inviteEmail ?? profile?.email ?? userRecord?.email ?? inviteProfile?.email ?? data.email;
     const result = {
       id: doc.id,
+      groupId: data.groupId ?? groupId,
       userId: resolvedUserId,
       guestName: data.guestName ?? null,
       email,
@@ -2033,6 +2064,8 @@ export const listGroupMembers = async (
       isGroupOwner: Boolean(resolvedUserId && groupOwnerId && resolvedUserId === groupOwnerId),
       status: data.userId ? 'active' : data.inviteEmail ? 'pending' : 'active',
       removedAt: data.removedAt ?? null,
+      addedBy: data.addedBy ?? null,
+      createdAt: data.createdAt ?? null,
     };
     return result;
   });
@@ -2070,14 +2103,24 @@ export const listGroupMembers = async (
   return [...members, ...invites];
 };
 
-export const listGroupsForUser = async (userId: string): Promise<Group[]> => {
+export const listGroupsForUser = async (
+  userId: string,
+  sort: 'created' | 'name' = 'created'
+): Promise<Array<Group & { members: GroupMember[]; invites: { id: string; inviteeEmail: string; status: string }[] }>> => {
   const db = getDb();
   const groupIds = await listReadableGroupIdsForUser(userId);
   if (!groupIds.length) return [];
   const groupsSnap = await db.collection('groups').where(FieldPath.documentId(), 'in', groupIds).get();
   const groups = await Promise.all(groupsSnap.docs.map(async (g) => {
     const data = g.data() as any;
-    const members = await listGroupMembers(g.id, userId).catch(() => []);
+    const rawMembers = await listGroupMembers(g.id, userId).catch(() => []);
+    const members: GroupMember[] = rawMembers.map((m) => ({
+      ...m,
+      groupId: m.groupId ?? g.id,
+      userId: m.userId ?? undefined,
+      addedBy: m.addedBy ?? '',
+      createdAt: m.createdAt ?? '',
+    }));
     const invitesSnap = await db.collection('group_invites').where('groupId', '==', g.id).where('status', '==', 'pending').get();
     return {
       id: g.id,
@@ -2091,7 +2134,11 @@ export const listGroupsForUser = async (userId: string): Promise<Group[]> => {
       }),
     };
   }));
-  groups.sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+  if (sort === 'name') {
+    groups.sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')));
+  } else {
+    groups.sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+  }
   return groups;
 };
 
@@ -2363,7 +2410,7 @@ export const createTrip = async (
   userId: string,
   groupId: string,
   name: string,
-  details: Partial<Trip>
+  details: Partial<Trip> = {}
 ): Promise<Trip> => {
   const db = getDb();
   const allowed = await ensureMembership(groupId, userId);
@@ -2405,10 +2452,10 @@ export const updateTripDetails = async (
   userId: string,
   tripId: string,
   updates: Partial<Trip>
-): Promise<Trip | null> => {
+): Promise<Trip> => {
   const db = getDb();
   const tripDoc = await db.collection('trips').doc(tripId).get();
-  if (!tripDoc.exists) return null;
+  if (!tripDoc.exists) throw new Error('Trip not found');
   const data = tripDoc.data() as any;
   const allowed = await ensureMembership(data.groupId, userId);
   if (!allowed) throw new Error('Not authorized to update trip');
@@ -2617,7 +2664,7 @@ export const updateTripGroup = async (
 export const createGroupWithMembers = async (
   ownerId: string,
   groupName: string,
-  memberEmails: string[]
+  members: Array<{ email?: string; guestName?: string }>
 ): Promise<{ groupId: string; invites: { id: string; email: string }[] }> => {
   const db = getDb();
   const groupId = randomUUID();
@@ -2627,8 +2674,19 @@ export const createGroupWithMembers = async (
     .doc(randomUUID())
     .set({ groupId, userId: ownerId, addedBy: ownerId, createdAt: nowIso(), removedAt: null });
   const invites: { id: string; email: string }[] = [];
-  for (const email of memberEmails) {
-    const normalized = normalizeEmail(email);
+  for (const member of members) {
+    const guestName = member.guestName?.trim();
+    if (guestName) {
+      await db.collection('group_members').doc(randomUUID()).set({
+        groupId,
+        guestName,
+        addedBy: ownerId,
+        createdAt: nowIso(),
+        removedAt: null,
+      });
+      continue;
+    }
+    const normalized = member.email ? normalizeEmail(member.email) : '';
     if (!normalized) continue;
     const user = await findUserByEmail(normalized);
     const inviteId = randomUUID();
@@ -2671,7 +2729,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   const group = await createGroupWithMembers(
     payload.ownerId,
     `Trip: ${payload.tripName} Group`,
-    payload.members.map((m) => m.email || '').filter(Boolean)
+    payload.members
   );
   const trip = await createTrip(payload.ownerId, group.groupId, payload.tripName, {
     description: payload.description ?? null,
@@ -3796,13 +3854,13 @@ export const deleteFlight = async (flightId: string, userId: string): Promise<vo
   await db.collection('flights').doc(flightId).delete();
 };
 
-export const updateFlight = async (flightId: string, userId: string, updates: Partial<Flight>): Promise<Flight | null> => {
+export const updateFlight = async (flightId: string, userId: string, updates: Partial<Flight>): Promise<Flight> => {
   const db = getDb();
   const doc = await db.collection('flights').doc(flightId).get();
-  if (!doc.exists) return null;
+  if (!doc.exists) throw new Error('Flight not found');
   const data = doc.data() as any;
   const tripId = (updates as any).tripId ?? (updates as any).trip_id ?? data.tripId ?? data.trip_id;
-  if (!tripId) return null;
+  if (!tripId) throw new Error('Flight not found');
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) throw new Error('Not authorized to update');
   const updatePayload = stripUndefined(updates);
@@ -4496,6 +4554,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
 export const insertLodging = async (lodging: {
   userId: string;
   tripId: string;
+  status?: string;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -4508,7 +4567,7 @@ export const insertLodging = async (lodging: {
   placeId?: string;
   paid_by?: string[];
   traveler_ids?: string[];
-  imageUrl?: string;
+  imageUrl?: string | null;
   image_url?: string;
 }): Promise<Lodging> => {
   const db = getDb();
@@ -4524,7 +4583,7 @@ export const insertLodging = async (lodging: {
     id,
     user_id: lodging.userId,
     trip_id: lodging.tripId,
-    status: normalizeItineraryStatus((lodging as any).status),
+    status: normalizeItineraryStatus(lodging.status),
     name: lodging.name,
     check_in_date: lodging.checkInDate,
     check_out_date: lodging.checkOutDate,
@@ -5104,10 +5163,10 @@ export const createTrait = async (userId: string, name: string, level?: number, 
   return payload;
 };
 
-export const updateTrait = async (userId: string, traitId: string, updates: Partial<Trait>): Promise<Trait | null> => {
+export const updateTrait = async (userId: string, traitId: string, updates: Partial<Trait>): Promise<Trait> => {
   const db = getDb();
   const doc = await db.collection('traits').doc(traitId).get();
-  if (!doc.exists) return null;
+  if (!doc.exists) throw new Error('Trait not found');
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
   await db.collection('traits').doc(traitId).update(updates);
   const updated = await db.collection('traits').doc(traitId).get();
@@ -5170,10 +5229,34 @@ export const searchUsersByEmail = async (query: string): Promise<User[]> => {
     .map((entry) => entry.user);
 };
 
-export const listTraitsForGroupTrip = async (userId: string, tripId: string) => {
+export const listTraitsForGroupTrip = async (
+  userId: string,
+  tripId: string
+): Promise<Array<{ userId: string; name: string; traits: string[] }>> => {
+  const db = getDb();
+  const tripDoc = await db.collection('trips').doc(tripId).get();
+  if (!tripDoc.exists) throw new Error('Trip not found');
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) throw new Error('Not authorized for this trip');
-  return listTraits(userId);
+  const groupId = (tripDoc.data() as any).groupId;
+  const members = await listGroupMembers(groupId, userId);
+  const memberUserIds = Array.from(
+    new Set(members.map((m) => m.userId).filter((id): id is string => typeof id === 'string' && id.length > 0))
+  );
+  const traitsByUser = new Map<string, string[]>();
+  await Promise.all(
+    memberUserIds.map(async (id) => {
+      const traits = await listTraits(id);
+      traitsByUser.set(id, traits.map((t) => t.name));
+    })
+  );
+  return members
+    .filter((m) => typeof m.userId === 'string' && m.userId.length > 0)
+    .map((m) => ({
+      userId: m.userId as string,
+      name: m.firstName?.trim() || m.email || 'Traveler',
+      traits: traitsByUser.get(m.userId as string) ?? [],
+    }));
 };
 
 export const getUserDemographics = async (userId: string) => {
@@ -5223,7 +5306,7 @@ export const createItineraryRecord = async (
   const dupeQuery = await db
     .collection('itineraries')
     .where('tripId', '==', tripId)
-    .where('destination', '==', normalizedDestination)
+    .where('destinationLower', '==', normalizedDestination)
     .where('days', '==', roundedDays)
     .where('budget', '==', budgetValue)
     .limit(1)
@@ -5248,7 +5331,11 @@ export const createItineraryRecord = async (
     createdAt: nowIso(),
     userId,
   };
-  await db.collection('itineraries').doc(id).set(payload);
+  // destinationLower is a Firestore-only field enabling case-insensitive dupe
+  // detection (Firestore has no LOWER()-equivalent query operator, unlike the
+  // postgres adapter's `LOWER(destination) = LOWER($2)`); not part of the
+  // Itinerary type since callers never read it back.
+  await db.collection('itineraries').doc(id).set({ ...payload, destinationLower: normalizedDestination });
 
   return { ...payload, tripName };
 };
@@ -5256,23 +5343,55 @@ export const createItineraryRecord = async (
 export const deleteItineraryRecord = async (userId: string, itineraryId: string): Promise<void> => {
   const db = getDb();
   const doc = await db.collection('itineraries').doc(itineraryId).get();
-  if (!doc.exists) return;
-  if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
+  if (!doc.exists) throw new Error('Itinerary not found');
+  const tripId = (doc.data() as any).tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to delete this itinerary');
   await db.collection('itineraries').doc(itineraryId).delete();
 };
 
 export const updateItineraryRecord = async (
   userId: string,
   itineraryId: string,
-  data: Partial<Itinerary>
-): Promise<Itinerary | null> => {
+  destination: string,
+  days: number,
+  budget?: number | null
+): Promise<Itinerary & { tripName: string }> => {
   const db = getDb();
   const doc = await db.collection('itineraries').doc(itineraryId).get();
-  if (!doc.exists) return null;
-  if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
-  await db.collection('itineraries').doc(itineraryId).update({ ...data, updatedAt: nowIso() });
+  if (!doc.exists) throw new Error('Itinerary not found');
+  const tripId = (doc.data() as any).tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+
+  const normalizedDestination = destination.trim().toLowerCase();
+  const roundedDays = Math.max(1, Math.round(days));
+  const budgetValue = budget ?? null;
+
+  const dupeQuery = await db
+    .collection('itineraries')
+    .where('tripId', '==', tripId)
+    .where('destinationLower', '==', normalizedDestination)
+    .where('days', '==', roundedDays)
+    .where('budget', '==', budgetValue)
+    .get();
+  if (dupeQuery.docs.some((d) => d.id !== itineraryId)) {
+    const err = new Error('Itinerary already exists for this trip');
+    (err as any).code = 'ITINERARY_EXISTS';
+    throw err;
+  }
+
+  await db.collection('itineraries').doc(itineraryId).update({
+    destination: destination.trim(),
+    destinationLower: normalizedDestination,
+    days: roundedDays,
+    budget: budgetValue,
+    updatedAt: nowIso(),
+  });
   const updated = await db.collection('itineraries').doc(itineraryId).get();
-  return updated.data() as Itinerary;
+  const trip = await db.collection('trips').doc(tripId).get();
+  const tripName = trip.exists ? (trip.data() as Trip).name : '';
+  return { ...(updated.data() as Itinerary), tripName };
 };
 
 export const listItineraryDetails = async (userId: string, itineraryId: string): Promise<ItineraryDetail[]> => {
@@ -5386,12 +5505,14 @@ export const addItineraryDetail = async (
 export const deleteItineraryDetail = async (userId: string, detailId: string): Promise<void> => {
   const db = getDb();
   const detail = await db.collection('itinerary_details').doc(detailId).get();
-  if (!detail.exists) return;
+  if (!detail.exists) throw new Error('Itinerary detail not found');
   const detailData = detail.data() as any;
   const itineraryId = detailData.itineraryId;
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
-  if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
+  if (!itinerary.exists) throw new Error('Itinerary detail not found');
   const tripId = String((itinerary.data() as any).tripId ?? '');
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
   await db.collection('itinerary_details').doc(detailId).delete();
   if (tripId) {
     await writeActivity(tripId, userId, 'ITINERARY_ITEM_DELETED', 'Itinerary item removed', detailData.activity ?? '', {
@@ -5408,17 +5529,19 @@ export const updateItineraryDetail = async (
   detailId: string,
   userId: string,
   updates: Partial<ItineraryDetail>
-): Promise<ItineraryDetail | null> => {
+): Promise<ItineraryDetail> => {
   const db = getDb();
   const detail = await db.collection('itinerary_details').doc(detailId).get();
-  if (!detail.exists) return null;
+  if (!detail.exists) throw new Error('Itinerary detail not found');
   const itineraryId = (detail.data() as any).itineraryId;
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
-  if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
+  if (!itinerary.exists) throw new Error('Itinerary detail not found');
+  const tripId = String((itinerary.data() as any).tripId ?? '');
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
   await db.collection('itinerary_details').doc(detailId).update({ ...updates, updatedAt: nowIso() });
   const updated = await db.collection('itinerary_details').doc(detailId).get();
   const payload = updated.data() as ItineraryDetail;
-  const tripId = String((itinerary.data() as any).tripId ?? '');
   if (tripId) {
     await writeActivity(tripId, userId, 'ITINERARY_ITEM_UPDATED', 'Itinerary item updated', payload.activity ?? '', {
       itineraryId,
@@ -5659,7 +5782,7 @@ export const listFamilyRelationships = async (userId: string) => {
         firstName: webUser.firstName ?? user.firstName ?? null,
         middleName: webUser.middleName ?? user.middleName ?? null,
         lastName: webUser.lastName ?? user.lastName ?? null,
-        provider: provider || null,
+        provider,
       },
       createdAt: data.createdAt ?? nowIso(),
     };
@@ -5675,7 +5798,7 @@ export const createFellowTraveler = async (ownerId: string, firstName: string, l
   const id = randomUUID();
   const payload = { ownerId, firstName, lastName, email: String(email ?? '').trim().toLowerCase() || null, createdAt: nowIso() };
   await getDb().collection('fellow_travelers').doc(id).set(payload);
-  return payload;
+  return id;
 };
 
 export const updateFellowTraveler = async (
@@ -5766,7 +5889,7 @@ export const createFamilyRelationship = async (
     user = { id, email, provider: 'family', role: 'user' };
   }
   const id = randomUUID();
-  const status = rawEmail && user.provider !== 'family' ? 'pending' : 'accepted';
+  const status: 'pending' | 'accepted' = rawEmail && user.provider !== 'family' ? 'pending' : 'accepted';
   await getDb().collection('family_relationships').doc(id).set({
     requesterId,
     relativeId: user.id,
@@ -5783,7 +5906,7 @@ export const createFamilyRelationship = async (
       createdAt: nowIso(),
     });
   }
-  return { id, requesterId, relativeId: user.id, relationship, status };
+  return { id, status, relativeId: user.id, needsAcceptance: status === 'pending' };
 };
 
 export const acceptFamilyRelationship = async (userId: string, relationshipId: string) => {
