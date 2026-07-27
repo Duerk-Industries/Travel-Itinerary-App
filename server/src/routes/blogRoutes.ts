@@ -5,13 +5,14 @@ import { getApiLimitsConfig } from '../config/apiLimits';
 import { getBlogItemDescriptor, listBlogItemDescriptors } from '../blog/registry';
 import { blogMediaRepository, blogRepository } from '../blog/repository';
 import { BlogAudience } from '../blog/types';
-import { ensureUserInTrip } from '../db';
+import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
 import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
 import { queryBlog } from '../db.postgres';
+import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 
 const router = Router();
 router.use(authenticate);
@@ -89,12 +90,14 @@ router.get('/:tripId/blog', async (req, res) => {
     // the client could produce a link that does not resolve.
     let publicPath: string | null = null;
     if (blog.visibilityState === 'public') {
-      const alias = await queryBlog<{ username_slug: string; trip_slug: string }>(
-        'SELECT username_slug, trip_slug FROM blog_public_aliases WHERE trip_id = $1 AND canonical = TRUE ORDER BY created_at DESC LIMIT 1',
-        [req.params.tripId]
-      );
-      if (alias.rows[0]) {
-        publicPath = `/${alias.rows[0].username_slug}/${alias.rows[0].trip_slug}`;
+      if (getCurrentDbProvider() === 'firebase') {
+        publicPath = await getCanonicalPublicPathFirebase(req.params.tripId);
+      } else {
+        const alias = await queryBlog<{ username_slug: string; trip_slug: string }>(
+          'SELECT username_slug, trip_slug FROM blog_public_aliases WHERE trip_id = $1 AND canonical = TRUE ORDER BY created_at DESC LIMIT 1',
+          [req.params.tripId]
+        );
+        if (alias.rows[0]) publicPath = `/${alias.rows[0].username_slug}/${alias.rows[0].trip_slug}`;
       }
     }
     const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
