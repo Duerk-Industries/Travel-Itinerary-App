@@ -11,6 +11,9 @@ dist
 server/.env
 server/.local_env
 server/.secrets
+keystores
+*.jks
+*.keystore
 server/logs
 server/public/_expo
 server/node_modules
@@ -21,6 +24,8 @@ test_inputs/raw
 app/.expo
 app/android/.idea
 app/android/local.properties
+app/android/.kotlin
+app/android/app/.cxx
 app/node_modules
 app/logs
 logs
