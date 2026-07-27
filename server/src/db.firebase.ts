@@ -68,7 +68,7 @@ import {
   ItineraryGenerationMetrics,
   ItineraryComparison,
 } from './types';
-import type { AccountEmail } from './db.postgres';
+import type { AccountEmail, AppleProfile } from './db.postgres';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
@@ -6152,6 +6152,72 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     await upsertUserEmail(newUserId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
 
     return { id: newUserId, email: normalizedEmail, provider: 'google', role: 'user' };
+};
+
+export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User> => {
+    const db = getDb();
+    const { appleId, firstName, lastName } = profile;
+    const normalizedEmail = profile.email ? normalizeEmail(profile.email) : undefined;
+
+    const existing = await db.collection('users').where('appleId', '==', appleId).limit(1).get();
+    if (!existing.empty) {
+        const doc = existing.docs[0];
+        const currentData = doc.data() as any;
+        if (normalizedEmail) {
+            const updateData = {
+                email: normalizedEmail,
+                firstName: firstName ?? currentData.firstName,
+                lastName: lastName ?? currentData.lastName,
+                emailVerified: true,
+                emailVerifiedAt: nowIso(),
+            };
+            await doc.ref.update(updateData);
+            await upsertUserEmail(doc.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
+        }
+        const updatedDoc = await doc.ref.get();
+        const data = updatedDoc.data() as User;
+        return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+    }
+
+    if (!normalizedEmail) {
+        throw new Error('Apple sign-in did not return an email for a new user');
+    }
+
+    const existingByEmail = await findUserByEmailDoc(normalizedEmail);
+    if (existingByEmail) {
+        const doc = db.collection('users').doc(existingByEmail.id);
+        const currentData = existingByEmail.data as any;
+        const updateData = {
+            appleId,
+            firstName: firstName ?? currentData.firstName,
+            lastName: lastName ?? currentData.lastName,
+            emailVerified: true,
+            emailVerifiedAt: nowIso(),
+            username: currentData.username ?? await generateUniqueUsername(firstName ?? '', lastName ?? '', normalizedEmail, undefined, existingByEmail.id),
+        };
+        await doc.set(updateData, { merge: true });
+        await upsertUserEmail(existingByEmail.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
+        const updatedDoc = await doc.get();
+        const data = updatedDoc.data() as User;
+        return { id: existingByEmail.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+    }
+
+    const newUserId = randomUUID();
+    const username = await generateUniqueUsername(firstName ?? '', lastName ?? '', normalizedEmail);
+    await db.collection('users').doc(newUserId).set({
+        email: normalizedEmail,
+        username,
+        provider: 'apple',
+        appleId,
+        firstName,
+        lastName,
+        emailVerified: true,
+        emailVerifiedAt: nowIso(),
+        createdAt: nowIso(),
+    });
+    await upsertUserEmail(newUserId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
+
+    return { id: newUserId, email: normalizedEmail, provider: 'apple', role: 'user' };
 };
 
 // ---- Entitlement system functions ----

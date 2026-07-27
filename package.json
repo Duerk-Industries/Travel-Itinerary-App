@@ -121,6 +121,7 @@
     "docling-sdk": "^2.0.4",
     "dotenv": "^16.6.1",
     "expo": "~54.0.36",
+    "expo-apple-authentication": "~8.0.8",
     "expo-web-browser": "~15.0.11",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",
