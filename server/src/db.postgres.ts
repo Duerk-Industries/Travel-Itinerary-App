@@ -9434,14 +9434,19 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
 export interface AppleProfile {
   appleId: string;
   email?: string;
+  emailVerified: boolean;
   firstName?: string;
   lastName?: string;
 }
 
 export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User> => {
     const p = getPool();
-    const { appleId, firstName, lastName } = profile;
+    const { appleId, firstName, lastName, emailVerified } = profile;
     const email = profile.email ? normalizeEmail(profile.email) : undefined;
+
+    if (email && !emailVerified) {
+        throw new Error('Apple sign-in email is not verified');
+    }
 
     const existing = await p.query<User>(`SELECT * FROM users WHERE apple_id = $1`, [appleId]);
     if (existing.rows.length) {

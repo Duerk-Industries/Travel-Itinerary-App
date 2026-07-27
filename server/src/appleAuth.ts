@@ -16,6 +16,7 @@ export interface AppleIdTokenClaims {
   email?: string;
   email_verified?: boolean | string;
   is_private_email?: boolean | string;
+  nonce?: string;
 }
 
 export const isAppleOAuthConfigured = (): boolean =>
@@ -23,7 +24,8 @@ export const isAppleOAuthConfigured = (): boolean =>
     getEnvValue('APPLE_CLIENT_ID') &&
       getEnvValue('APPLE_TEAM_ID') &&
       getEnvValue('APPLE_KEY_ID') &&
-      getEnvValue('APPLE_PRIVATE_KEY')
+      getEnvValue('APPLE_PRIVATE_KEY') &&
+      getEnvValue('APPLE_CALLBACK_URL')
   );
 
 // server/.env stores the key as raw base64 DER (dotenv can't hold real
@@ -109,17 +111,21 @@ export const exchangeAppleAuthorizationCode = async (code: string): Promise<{ id
   }
 };
 
-export const verifyAppleIdToken = async (idToken: string): Promise<AppleIdTokenClaims> => {
+export const verifyAppleIdToken = async (idToken: string, expectedNonce?: string): Promise<AppleIdTokenClaims> => {
   const clientId = getEnvValue('APPLE_CLIENT_ID');
   const decoded = jwt.decode(idToken, { complete: true }) as { header?: { kid?: string } } | null;
   const kid = decoded?.header?.kid;
   if (!kid) throw new Error('Apple id_token missing kid header');
   const publicKey = await fetchApplePublicKey(kid);
-  return jwt.verify(idToken, publicKey, {
+  const claims = jwt.verify(idToken, publicKey, {
     algorithms: ['RS256'],
     issuer: APPLE_ISSUER,
     audience: clientId,
   }) as AppleIdTokenClaims;
+  if (!claims || !claims.sub || (expectedNonce && claims.nonce !== expectedNonce)) {
+    throw new Error('Apple id_token nonce validation failed');
+  }
+  return claims;
 };
 
 export interface AppleAuthorizePayload {

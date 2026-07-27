@@ -6156,8 +6156,12 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
 
 export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User> => {
     const db = getDb();
-    const { appleId, firstName, lastName } = profile;
+    const { appleId, firstName, lastName, emailVerified } = profile;
     const normalizedEmail = profile.email ? normalizeEmail(profile.email) : undefined;
+
+    if (normalizedEmail && !emailVerified) {
+        throw new Error('Apple sign-in email is not verified');
+    }
 
     const existing = await db.collection('users').where('appleId', '==', appleId).limit(1).get();
     if (!existing.empty) {
