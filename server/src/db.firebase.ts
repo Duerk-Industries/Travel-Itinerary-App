@@ -8257,6 +8257,29 @@ export const replaceUserPackingPreferencesV2 = async (
   return { preferences: { userId, presetKeys }, items: await getUserPackingListV2(userId) };
 };
 
+/**
+ * Rebuild the derived packing-list view for every trip the user can currently
+ * read. The Firebase implementation derives the view on demand in
+ * getPackingListV2, so reconciliation consists of resolving each active
+ * projected trip access entry just like the PostgreSQL adapter does.
+ */
+export const reconcileUserPackingListsV2 = async (userId: string): Promise<{ tripsReconciled: number }> => {
+  const accessSnap = await getDb().collection('trip_access').where('userId', '==', userId).get();
+  const tripIds = Array.from(new Set(
+    accessSnap.docs
+      .map((doc) => doc.data() as any)
+      .filter((data) => data.status === 'active' && data.canRead === true)
+      .map((data) => String(data.tripId ?? '').trim())
+      .filter((tripId) => tripId.length > 0)
+  ));
+
+  for (const tripId of tripIds) {
+    await getPackingListV2(userId, tripId);
+  }
+
+  return { tripsReconciled: tripIds.length };
+};
+
 export const getPackingListV2 = async (userId: string, tripId: string): Promise<PackingListV2Trip> => {
   const access = await ensureUserCanReadTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to view this trip');
