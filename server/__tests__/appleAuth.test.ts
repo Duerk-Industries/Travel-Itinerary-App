@@ -79,6 +79,27 @@ describe('findOrCreateAppleUser', () => {
       emailVerified: false,
     })).rejects.toThrow(/not verified/i);
   });
+
+  it('still logs in a returning user matched by apple_id even if email_verified comes back false', async () => {
+    const { findOrCreateAppleUser } = require('../src/db') as typeof import('../src/db');
+    const first = await findOrCreateAppleUser({
+      appleId: 'apple-sub-returning',
+      email: 'returning@example.com',
+      emailVerified: true,
+      firstName: 'Katherine',
+      lastName: 'Johnson',
+    });
+
+    // Identity is already proven by the matching apple_id (signed sub claim),
+    // so an unverified-email claim on a later login must not lock the user out.
+    const second = await findOrCreateAppleUser({
+      appleId: 'apple-sub-returning',
+      email: 'returning@example.com',
+      emailVerified: false,
+    });
+
+    expect(second.id).toBe(first.id);
+  });
 });
 
 describe('appleAuth helpers', () => {

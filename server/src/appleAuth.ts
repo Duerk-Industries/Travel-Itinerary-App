@@ -122,18 +122,14 @@ export const verifyAppleIdToken = async (idToken: string, expectedNonce?: string
     issuer: APPLE_ISSUER,
     audience: clientId,
   }) as AppleIdTokenClaims;
-  if (!claims || !claims.sub || (expectedNonce && claims.nonce !== expectedNonce)) {
+  if (!claims || !claims.sub) {
+    throw new Error('Apple id_token missing sub claim');
+  }
+  if (expectedNonce && claims.nonce !== expectedNonce) {
     throw new Error('Apple id_token nonce validation failed');
   }
   return claims;
 };
-
-export interface AppleAuthorizePayload {
-  code: string;
-  state?: string;
-  /** JSON string of { name?: { firstName, lastName }, email }, sent by Apple on first authorization only. */
-  user?: string;
-}
 
 export const parseAppleUserPayload = (
   raw: string | undefined

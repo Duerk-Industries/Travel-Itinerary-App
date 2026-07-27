@@ -9452,14 +9452,15 @@ export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User
     const { appleId, firstName, lastName, emailVerified } = profile;
     const email = profile.email ? normalizeEmail(profile.email) : undefined;
 
-    if (email && !emailVerified) {
-        throw new Error('Apple sign-in email is not verified');
-    }
-
+    // A matching apple_id already proves identity via the signed id_token's `sub`
+    // claim, independent of email_verified — so a returning user must still be
+    // able to log in even if Apple ever reports an unverified email on this
+    // login. The verified-email requirement below only guards the paths that
+    // use email as the identity signal: linking-by-email and new-account creation.
     const existing = await p.query<User>(`SELECT * FROM users WHERE apple_id = $1`, [appleId]);
     if (existing.rows.length) {
         const user = existing.rows[0];
-        if (email) {
+        if (email && emailVerified) {
             await p.query(
                 `UPDATE users SET email = $1, first_name = COALESCE($2, first_name), last_name = COALESCE($3, last_name), email_verified = true, email_verified_at = NOW() WHERE id = $4`,
                 [email, firstName, lastName, user.id]
@@ -9467,7 +9468,11 @@ export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User
             await upsertUserEmail(p, user.id, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
         }
         await ensurePackingListForUserWithRunner(p, user.id);
-        return email ? { ...user, email, firstName: firstName ?? user.firstName, lastName: lastName ?? user.lastName } : user;
+        return email && emailVerified ? { ...user, email, firstName: firstName ?? user.firstName, lastName: lastName ?? user.lastName } : user;
+    }
+
+    if (email && !emailVerified) {
+        throw new Error('Apple sign-in email is not verified');
     }
 
     if (!email) {

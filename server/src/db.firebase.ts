@@ -6184,15 +6184,16 @@ export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User
     const { appleId, firstName, lastName, emailVerified } = profile;
     const normalizedEmail = profile.email ? normalizeEmail(profile.email) : undefined;
 
-    if (normalizedEmail && !emailVerified) {
-        throw new Error('Apple sign-in email is not verified');
-    }
-
+    // A matching apple_id already proves identity via the signed id_token's `sub`
+    // claim, independent of email_verified — so a returning user must still be
+    // able to log in even if Apple ever reports an unverified email on this
+    // login. The verified-email requirement below only guards the paths that
+    // use email as the identity signal: linking-by-email and new-account creation.
     const existing = await db.collection('users').where('apple_id', '==', appleId).limit(1).get();
     if (!existing.empty) {
         const doc = existing.docs[0];
         const currentData = doc.data() as any;
-        if (normalizedEmail) {
+        if (normalizedEmail && emailVerified) {
             const updateData = {
                 email: normalizedEmail,
                 firstName: firstName ?? currentData.firstName,
@@ -6206,6 +6207,10 @@ export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User
         const updatedDoc = await doc.ref.get();
         const data = updatedDoc.data() as User;
         return { ...data, id: doc.id };
+    }
+
+    if (normalizedEmail && !emailVerified) {
+        throw new Error('Apple sign-in email is not verified');
     }
 
     if (!normalizedEmail) {
