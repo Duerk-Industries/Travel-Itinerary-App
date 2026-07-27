@@ -342,3 +342,65 @@ export const reorderBlogItems = async (userId: string, tripId: string, itemIds: 
   }
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
 };
+
+export const getPublicPath = async (tripId: string): Promise<string | null> => {
+  const alias = await queryBlog<{ username_slug: string; trip_slug: string }>(
+    'SELECT username_slug, trip_slug FROM blog_public_aliases WHERE trip_id = $1 AND canonical = TRUE ORDER BY created_at DESC LIMIT 1',
+    [tripId]
+  );
+  if (alias.rows[0]) return `/${alias.rows[0].username_slug}/${alias.rows[0].trip_slug}`;
+  return null;
+};
+
+export const isBlogPublic = async (tripId: string): Promise<boolean> => {
+  const publicEpoch = await queryBlog(
+    "SELECT 1 FROM trip_blogs b JOIN blog_publication_epochs e ON e.trip_id = b.trip_id AND e.state = 'public' WHERE b.trip_id = $1",
+    [tripId]
+  );
+  return Boolean(publicEpoch.rows[0]);
+};
+
+export const createModalityItem = async (
+  userId: string,
+  tripId: string,
+  kindKey: string,
+  schemaVersion: number,
+  audience: string,
+  payload: any,
+  dayDate: string
+): Promise<{ itemId: string; payload: any }> => {
+  const day = await queryBlog<any>(
+    'SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date LIMIT 1',
+    [tripId, dayDate]
+  );
+  if (!day.rows[0]) throw new Error('The selected day is outside the trip range');
+
+  const itemId = randomUUID();
+  await queryBlog(
+    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)`,
+    [itemId, tripId, day.rows[0].id, kindKey, schemaVersion, audience, `${Date.now()}-${itemId}`, userId]
+  );
+
+  const cleanPayload = payload && typeof payload === 'object' ? payload : {};
+  await queryBlog('INSERT INTO blog_item_payloads (item_id, payload) VALUES ($1, $2::jsonb)', [
+    itemId,
+    JSON.stringify(cleanPayload),
+  ]);
+
+  return { itemId, payload: cleanPayload };
+};
+
+export const searchBlog = async (tripId: string, query: string): Promise<any[]> => {
+  const q = `%${query.slice(0, 100)}%`;
+  const result = await queryBlog<any>(
+    `SELECT i.id, d.local_date, t.body
+     FROM blog_items i
+     JOIN blog_days d ON d.id = i.blog_day_id
+     JOIN blog_text_contents t ON t.item_id = i.id
+     WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND t.body ILIKE $2
+     ORDER BY d.local_date LIMIT 50`,
+    [tripId, q]
+  );
+  return result.rows;
+};
