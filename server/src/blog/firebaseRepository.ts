@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity } from './types';
+import { getCanonicalPublicPathFirebase } from './firebasePublicationRepository';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -236,4 +237,60 @@ export const reorderBlogItems = async (userId: string, tripId: string, itemIds: 
   const batch = getDb().batch();
   itemIds.forEach((itemId, index) => batch.update(getDb().collection('blog_items').doc(itemId), { sortKey: String(index).padStart(12, '0'), lastEditorUserId: userId, updatedAt: nowIso() }));
   await batch.commit();
+};
+
+export const getPublicPath = async (tripId: string): Promise<string | null> => {
+  return getCanonicalPublicPathFirebase(tripId);
+};
+
+export const isBlogPublic = async (tripId: string): Promise<boolean> => {
+  const snapshots = await getDb().collection('blog_publication_epochs').where('tripId', '==', tripId).get();
+  return snapshots.docs.some((doc) => (doc.data() as any).state === 'public');
+};
+
+export const createModalityItem = async (
+  userId: string,
+  tripId: string,
+  kindKey: string,
+  schemaVersion: number,
+  audience: string,
+  payload: any,
+  dayDate: string
+): Promise<{ itemId: string; payload: any }> => {
+  const day = await getDay(tripId, dayDate);
+  const itemId = randomUUID();
+  const cleanPayload = payload && typeof payload === 'object' ? payload : {};
+  const data = {
+    id: itemId,
+    tripId,
+    blogDayId: day.id,
+    localDate: day.localDate,
+    kindKey,
+    schemaVersion,
+    audience: audience || 'public',
+    sortKey: `${Date.now()}-${itemId}`,
+    authorUserId: userId,
+    lastEditorUserId: userId,
+    version: 1,
+    payload: cleanPayload,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    deletedAt: null,
+  };
+  await getDb().collection('blog_items').doc(itemId).set(data);
+  return { itemId, payload: cleanPayload };
+};
+
+export const searchBlog = async (tripId: string, query: string): Promise<any[]> => {
+  const q = query.toLowerCase();
+  const snapshots = await getDb().collection('blog_items').where('tripId', '==', tripId).get();
+  // Simple in-memory search for parity with ILIKE
+  return snapshots.docs
+    .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
+    .filter((item) => {
+      if (item.deletedAt != null || item.kindKey !== 'core.text') return false;
+      return String(item.body ?? '').toLowerCase().includes(q);
+    })
+    .map((item) => ({ id: item.id, local_date: item.localDate, body: item.body }))
+    .slice(0, 50);
 };

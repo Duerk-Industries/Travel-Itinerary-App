@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { authenticate } from '../auth';
 import { isFeatureEnabled } from '../services/entitlementService';
-import { ensureUserInTrip } from '../db';
+import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { queryBlog } from '../db.postgres';
 import { randomUUID } from 'crypto';
+import { consentPublicationFirebase, getPublicationStatusFirebase, requestPublicationFirebase, revokePublicationFirebase } from '../blog/firebasePublicationRepository';
 
 const router = Router();
 const slug = (v: string) => v.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'trip';
@@ -71,10 +72,38 @@ const eligibleAdults = async (tripId: string): Promise<{ adults: string[]; missi
   return { adults: result.rows.map((r) => String(r.user_id)), missingBirthDate: Number(missing.rows[0]?.count ?? 0) };
 };
 
+router.get('/:tripId/blog/publication/status', authenticate, async (req: any, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return res.status(404).json({ error: 'Public sharing is not enabled' });
+    const userId = String(req.user.userId);
+    if (getCurrentDbProvider() === 'firebase') return res.json(await getPublicationStatusFirebase(req.params.tripId, userId));
+    if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
+    const latest = await queryBlog<any>(
+      'SELECT id, epoch, state, requested_by, expires_at FROM blog_publication_epochs WHERE trip_id = $1 ORDER BY epoch DESC LIMIT 1',
+      [req.params.tripId]
+    );
+    if (!latest.rows[0]) return res.json({ epoch: null, state: 'private', userDecision: null, pendingCount: 0 });
+    const epoch = latest.rows[0];
+    const [consent, pending] = await Promise.all([
+      queryBlog<{ decision: string }>('SELECT decision FROM blog_publication_consents WHERE epoch_id = $1 AND user_id = $2', [epoch.id, userId]),
+      queryBlog<{ count: string }>("SELECT COUNT(*) AS count FROM blog_publication_consents WHERE epoch_id = $1 AND decision = 'pending'", [epoch.id]),
+    ]);
+    res.json({
+      epoch: Number(epoch.epoch),
+      state: epoch.state,
+      requestedBy: String(epoch.requested_by),
+      expiresAt: epoch.expires_at,
+      userDecision: consent.rows[0]?.decision ?? null,
+      pendingCount: Number(pending.rows[0]?.count ?? 0),
+    });
+  } catch (err) { res.status(400).json({ error: (err as Error).message }); }
+});
+
 router.post('/:tripId/blog/publication/request', authenticate, async (req: any, res) => {
   try {
     if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return res.status(404).json({ error: 'Public sharing is not enabled' });
     const userId = String(req.user.userId); if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
+    if (getCurrentDbProvider() === 'firebase') return res.status(201).json(await requestPublicationFirebase(req.params.tripId, userId));
     const eligibility = await eligibleAdults(req.params.tripId);
     if (eligibility.missingBirthDate > 0) return res.status(409).json({ error: 'Every account traveler must complete the date-of-birth profile before public consent can be requested', code: 'PROFILE_COMPLETION_REQUIRED' });
     const adults = eligibility.adults.filter((id) => id !== userId);
@@ -92,7 +121,10 @@ router.post('/:tripId/blog/publication/request', authenticate, async (req: any, 
     const identity = await queryBlog<{ username: string; trip_name: string }>('SELECT u.username, t.name AS trip_name FROM users u JOIN trips t ON t.id = $2 WHERE u.id = $1', [userId, req.params.tripId]);
     if (identity.rows[0]) await upsertPublicAlias(req.params.tripId, userId, slug(identity.rows[0].username), slug(identity.rows[0].trip_name), true, 'force');
     res.status(201).json({ epoch, state: adults.length ? 'pending_consent' : 'public', pendingCount: adults.length });
-  } catch (err) { res.status(400).json({ error: (err as Error).message }); }
+  } catch (err) {
+    const error = err as any;
+    res.status(error?.code === 'PROFILE_COMPLETION_REQUIRED' ? 409 : 400).json({ error: error?.message ?? 'Unable to request publication', ...(error?.code ? { code: error.code } : {}) });
+  }
 });
 
 router.post('/:tripId/blog/publication/:epoch/consent', authenticate, async (req: any, res) => {
@@ -100,6 +132,10 @@ router.post('/:tripId/blog/publication/:epoch/consent', authenticate, async (req
     const userId = String(req.user.userId); if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
     const decision = req.body?.decision === 'approved' ? 'approved' : req.body?.decision === 'declined' ? 'declined' : '';
     if (!decision) return res.status(400).json({ error: 'decision must be approved or declined' });
+    if (getCurrentDbProvider() === 'firebase') {
+      await consentPublicationFirebase(req.params.tripId, Number(req.params.epoch), userId, decision);
+      return res.status(204).end();
+    }
     const epoch = await queryBlog<any>('SELECT * FROM blog_publication_epochs WHERE trip_id = $1 AND epoch = $2', [req.params.tripId, Number(req.params.epoch)]); if (!epoch.rows[0]) return res.status(404).json({ error: 'Publication request not found' });
     await queryBlog('UPDATE blog_publication_consents SET decision = $3, decided_at = NOW() WHERE epoch_id = $1 AND user_id = $2', [epoch.rows[0].id, userId, decision]);
     if (decision === 'approved') {
@@ -123,6 +159,10 @@ router.post('/:tripId/blog/publication/:epoch/consent', authenticate, async (req
 router.post('/:tripId/blog/publication/revoke', authenticate, async (req: any, res) => {
   try {
     const userId = String(req.user.userId); if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
+    if (getCurrentDbProvider() === 'firebase') {
+      await revokePublicationFirebase(req.params.tripId, userId);
+      return res.status(204).end();
+    }
     const revoked = await queryBlog<{ epoch: number }>(`UPDATE blog_publication_epochs SET state = 'revoked', revoked_by = $2, updated_at = NOW() WHERE trip_id = $1 AND state = 'public' RETURNING epoch`, [req.params.tripId, userId]);
     if (revoked.rows[0]) await syncBlogVisibility(req.params.tripId, Number(revoked.rows[0].epoch), 'revoked');
     res.status(204).end();

@@ -54,11 +54,14 @@ if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$PROD_SERVICE_NAME" \
     --image "$BACKEND_DIGEST" \
     --region "$PROD_REGION" \
+    --session-affinity \
+    --max-instances 1 \
     --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" \
     --update-labels "app-git-sha=$MANIFEST_GIT_SHA" \
     --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
     --set-secrets "$SECRET_ARG" \
     --remove-env-vars "$(cloud_run_secret_pairs | cut -d= -f1 | paste -sd, -)"
+  gcloud run services update-traffic "$PROD_SERVICE_NAME" --region "$PROD_REGION" --to-latest
   firebase_deploy_hosting "$WORK_DIR/firebase.hosting.generated.json" "$PROD_HOSTING_SITE"
   bash "$SCRIPT_DIR/smoke-test.sh" --base-url "$PROD_DOMAIN" --environment production-direct
 fi

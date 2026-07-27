@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { authenticate } from '../auth';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ensureUserInTrip } from '../db';
-import { queryBlog } from '../db.postgres';
+import { blogRepository } from '../blog/repository';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 
 const router = Router();
@@ -22,8 +22,7 @@ router.post('/:tripId/blog/social/:provider/preview', async (req: any, res) => {
   const provider = providerOf(req.params.provider); if (!provider) return res.status(400).json({ error: 'Unsupported provider' });
   if (!(await ensureUserInTrip(req.params.tripId, String(req.user.userId)))) return res.status(403).json({ error: 'Not authorized' });
   await reserveApiUsageOrThrow({ provider: 'META_GRAPH', caller: 'SOCIAL_POST_PREVIEW' });
-  const publicDay = await queryBlog(`SELECT 1 FROM trip_blogs b JOIN blog_publication_epochs e ON e.trip_id = b.trip_id AND e.state = 'public' WHERE b.trip_id = $1`, [req.params.tripId]);
-  if (!publicDay.rows[0]) return res.status(409).json({ error: 'The trip blog must be public before social posting' });
+  if (!(await blogRepository().isBlogPublic(req.params.tripId))) return res.status(409).json({ error: 'The trip blog must be public before social posting' });
   res.json({ provider, dayDate: String(req.body?.dayDate ?? ''), preview: { caption: String(req.body?.caption ?? '').slice(0, 2200), mediaCount: Math.min(10, Number(req.body?.mediaCount ?? 0)) } });
 });
 
@@ -32,8 +31,7 @@ router.post('/:tripId/blog/social/:provider/enqueue', async (req: any, res) => {
   const provider = providerOf(req.params.provider); if (!provider) return res.status(400).json({ error: 'Unsupported provider' });
   if (!(await ensureUserInTrip(req.params.tripId, String(req.user.userId)))) return res.status(403).json({ error: 'Not authorized' });
   await reserveApiUsageOrThrow({ provider: 'META_GRAPH', caller: 'SOCIAL_POST_ENQUEUE' });
-  const publicDay = await queryBlog(`SELECT 1 FROM trip_blogs b JOIN blog_publication_epochs e ON e.trip_id = b.trip_id AND e.state = 'public' WHERE b.trip_id = $1`, [req.params.tripId]);
-  if (!publicDay.rows[0]) return res.status(409).json({ error: 'The trip blog must be public before social posting' });
+  if (!(await blogRepository().isBlogPublic(req.params.tripId))) return res.status(409).json({ error: 'The trip blog must be public before social posting' });
   const idempotencyKey = String(req.header('Idempotency-Key') ?? '').trim(); if (!idempotencyKey) return res.status(400).json({ error: 'Idempotency-Key is required' });
   res.status(202).json({ jobId: randomUUID(), provider, state: 'queued', idempotencyKey });
 });

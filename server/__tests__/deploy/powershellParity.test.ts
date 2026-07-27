@@ -57,6 +57,25 @@ describe('Phase 11 PowerShell script parity', () => {
     expect(cutover).toContain('phase11-validators');
   });
 
+  it.each(['deploy-test', 'deploy-prod', 'cutover-test-to-prod'])(
+    '%s enables Cloud Run session affinity in both shell implementations',
+    (name) => {
+      const bash = fs.readFileSync(path.join(root, 'scripts', `${name}.sh`), 'utf8');
+      const powershell = fs.readFileSync(path.join(root, 'scripts', `${name}.ps1`), 'utf8');
+      expect(bash).toContain('--session-affinity');
+      expect(powershell).toContain('--session-affinity');
+      // Socket.IO presence/chat state is held in-process (see presenceManager.ts) with no
+      // Redis adapter, so a second Cloud Run instance would strand existing polling sessions
+      // (Engine.IO "unknown sid" 400s) even with session affinity best-effort routing.
+      expect(bash).toContain('--max-instances 1');
+      expect(powershell).toContain('--max-instances 1');
+      if (name !== 'cutover-test-to-prod') {
+        expect(bash).toContain('--to-latest');
+        expect(powershell).toContain('--to-latest');
+      }
+    },
+  );
+
   it.each([
     ['build-release', ['deploy-marker.json', 'frontendSha256', 'configFingerprint'], ['deploy-marker.json', 'frontendSha256', 'configFingerprint']],
     ['deploy-test', ['Config fingerprint drift', 'firebase.hosting.generated.json', 'firebase_deploy_hosting'], ['Config fingerprint drift', 'firebase.hosting.generated.json', 'Invoke-FirebaseHostingDeploy']],

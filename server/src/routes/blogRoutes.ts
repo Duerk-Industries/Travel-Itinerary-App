@@ -5,12 +5,14 @@ import { getApiLimitsConfig } from '../config/apiLimits';
 import { getBlogItemDescriptor, listBlogItemDescriptors } from '../blog/registry';
 import { blogMediaRepository, blogRepository } from '../blog/repository';
 import { BlogAudience } from '../blog/types';
-import { ensureUserInTrip } from '../db';
+import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
 import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
+import { queryBlog } from '../db.postgres';
+import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 
 const router = Router();
 router.use(authenticate);
@@ -83,6 +85,12 @@ router.get('/:tripId/blog', async (req, res) => {
       const day = blog.days.find((candidate) => candidate.localDate === item.dayDate);
       if (day) (day.items as any[]).push(item);
     }
+    // Return the canonical public path only after publication has completed. The alias is
+    // generated during the publication/consent flow, so deriving it from the display name in
+    // the client could produce a link that does not resolve.
+    const publicPath = blog.visibilityState === 'public'
+      ? await blogRepository().getPublicPath(req.params.tripId)
+      : null;
     const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
     res.setHeader('ETag', etag);
     if (req.headers['if-none-match'] === etag) {
@@ -90,7 +98,7 @@ router.get('/:tripId/blog', async (req, res) => {
       return;
     }
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json(blog);
+    res.json({ ...blog, publicPath });
   } catch (err) {
     errorResponse(res, err);
   }

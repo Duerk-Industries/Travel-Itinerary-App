@@ -1,0 +1,23 @@
+- generic [ref=e9]:
+  - generic [ref=e11]:
+    - generic "WanderBunnies logo" [ref=e12]:
+      - img "WanderBunnies logo" [ref=e77]
+    - generic [ref=e14]: WanderBunnies
+  - generic [ref=e80]:
+    - button "← Back" [ref=e81] [cursor=pointer]
+    - generic [ref=e83]:
+      - generic [ref=e84]:
+        - button "Switch to Login form" [ref=e85] [cursor=pointer]:
+          - generic [ref=e86]: Login
+        - button "Switch to Create account form" [ref=e87] [cursor=pointer]:
+          - generic [ref=e88]: Create
+      - textbox "Email or Username" [ref=e89]
+      - textbox "Password" [ref=e90]
+      - button "Login" [ref=e91] [cursor=pointer]
+      - button "Sign in with Google" [ref=e94] [cursor=pointer]
+      - generic [ref=e102]:
+        - generic [ref=e103]: By continuing, you agree to our
+        - generic [ref=e104]:
+          - generic [ref=e105] [cursor=pointer]: Terms of Service
+          - generic [ref=e107]: and
+          - generic [ref=e108] [cursor=pointer]: Privacy Policy

@@ -76,12 +76,13 @@ describe('App startup', () => {
   });
 
   it('renders the signed-out native shell without crashing', () => {
-    const { getByText } = render(<App />);
-    expect(getByText('WanderBunnies')).toBeTruthy();
+    const { getAllByText } = render(<App />);
+    expect(getAllByText('WanderBunnies').length).toBeGreaterThan(0);
   });
 
   it('uses Expo Linking to build the native Google OAuth redirect URL', async () => {
     const { getByTestId } = render(<App />);
+    fireEvent.press(getByTestId('landing-login'));
     fireEvent.press(getByTestId('auth-form-google'));
 
     await waitFor(() => {
@@ -114,6 +115,7 @@ describe('App startup', () => {
     const originalBuffer = (globalThis as any).Buffer;
     try {
       (globalThis as any).Buffer = undefined;
+      fireEvent.press(getByTestId('landing-login'));
       fireEvent.press(getByTestId('auth-form-google'));
 
       await waitFor(() => {
@@ -148,6 +150,7 @@ describe('App startup', () => {
     } as any);
 
     const { getByPlaceholderText, getByTestId, queryByTestId } = render(<App />);
+    fireEvent.press(getByTestId('landing-login'));
     fireEvent.changeText(getByPlaceholderText('Email or Username'), 'existing@example.com');
     fireEvent.changeText(getByPlaceholderText('Password'), 'Password1!');
     fireEvent.press(getByTestId('auth-form-submit'));
@@ -178,6 +181,7 @@ describe('App startup', () => {
 
     const { getByTestId, getByPlaceholderText, findByTestId, getByText } = render(<App />);
 
+    fireEvent.press(getByTestId('landing-create-account'));
     fireEvent.press(getByTestId('auth-form-mode-register'));
     fireEvent.changeText(getByPlaceholderText('First name'), 'New');
     fireEvent.changeText(getByPlaceholderText('Last name'), 'Traveler');
@@ -249,6 +253,7 @@ describe('App startup', () => {
 
     const { getByTestId, getByPlaceholderText, findByTestId, findByText, queryByTestId } = render(<App />);
 
+    fireEvent.press(getByTestId('landing-create-account'));
     fireEvent.press(getByTestId('auth-form-mode-register'));
     fireEvent.changeText(getByPlaceholderText('First name'), 'Plan');
     fireEvent.changeText(getByPlaceholderText('Last name'), 'Compare');
@@ -295,6 +300,7 @@ describe('App startup', () => {
 
     const { getByTestId, getByPlaceholderText, queryByTestId } = render(<App />);
 
+    fireEvent.press(getByTestId('landing-create-account'));
     fireEvent.press(getByTestId('auth-form-mode-register'));
     fireEvent.changeText(getByPlaceholderText('First name'), 'Flag');
     fireEvent.changeText(getByPlaceholderText('Last name'), 'Off');

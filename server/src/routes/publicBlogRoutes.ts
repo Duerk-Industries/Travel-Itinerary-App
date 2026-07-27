@@ -1,8 +1,17 @@
 import { Router } from 'express';
 import { queryBlog } from '../db.postgres';
+import { getCurrentDbProvider } from '../db';
+import { getPublicBlogFirebase } from '../blog/firebasePublicationRepository';
 
 const router = Router();
 router.get('/:username/:tripSlug', async (req, res) => {
+  if (getCurrentDbProvider() === 'firebase') {
+    const blog = await getPublicBlogFirebase(String(req.params.username), String(req.params.tripSlug));
+    if (!blog) return res.status(404).json({ error: 'Public blog not found' });
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.setHeader('X-Robots-Tag', blog.indexingEnabled ? 'index,follow' : 'noindex');
+    return res.json(blog);
+  }
   const alias = await queryBlog<any>(`SELECT a.trip_id, a.username_slug, a.trip_slug, b.title, b.subtitle, b.introduction, b.content_revision, b.visibility_epoch, b.indexing_enabled FROM blog_public_aliases a JOIN trip_blogs b ON b.trip_id = a.trip_id JOIN blog_publication_epochs e ON e.trip_id = a.trip_id AND e.state = 'public' WHERE a.username_slug = $1 AND a.trip_slug = $2 AND (a.redirect_until IS NULL OR a.redirect_until > NOW()::timestamp) ORDER BY a.canonical DESC LIMIT 1`, [String(req.params.username).toLowerCase(), String(req.params.tripSlug).toLowerCase()]);
   if (!alias.rows[0]) return res.status(404).json({ error: 'Public blog not found' });
   const days = await queryBlog<any>('SELECT id, local_date, headline, summary FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [alias.rows[0].trip_id]);

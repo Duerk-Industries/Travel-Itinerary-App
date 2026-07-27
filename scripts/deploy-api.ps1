@@ -277,7 +277,7 @@ if ($secretMap.Count -gt 0) {
   foreach ($key in @($secretMap.Keys)) { Write-Host "  $key -> $($secretMap[$key])" }
 }
 
-$cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region)
+$cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region, '--session-affinity', '--max-instances', '1')
 $cmd += @('--memory', $Memory)
 if ($envArg) { $cmd += @('--update-env-vars', $envArg) }
 if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }
@@ -323,6 +323,14 @@ if (-not $SkipFirestoreIndexes) {
 
 if ($LASTEXITCODE -ne 0) {
   Write-Error "API deployment failed with gcloud exit code $LASTEXITCODE."
+  exit $LASTEXITCODE
+}
+
+# A prior --no-traffic canary deploy pins traffic away from LATEST until it is
+# explicitly restored; a subsequent gcloud run deploy does not undo that.
+& gcloud run services update-traffic $ServiceName --region $Region --to-latest
+if ($LASTEXITCODE -ne 0) {
+  Write-Error "API deployed, but routing traffic to the latest revision failed with gcloud exit code $LASTEXITCODE."
   exit $LASTEXITCODE
 }
 

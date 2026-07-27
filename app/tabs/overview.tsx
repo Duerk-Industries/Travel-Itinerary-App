@@ -1974,17 +1974,31 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       .filter(Boolean)
       .join(', ');
 
+  // Priority mirrors the day title rule: activities beat the transfer, which
+  // beats lodging, so a lodging stay no longer masks a day that has activities
+  // (or at least a transfer) happening on it.
   const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
     if (!info) return tripLocationLabel || 'Trip Day';
+    const tour = info.tours[0];
+    if (tour) return tour.startLocation || tour.name || tripLocationLabel || 'Trip Day';
     const flight = info.flights[0];
     if (flight) return flight.departure_location || flight.departure_airport_code || tripLocationLabel || 'Trip Day';
     const lodging = info.lodgings[0];
     if (lodging) return lodging.name || tripLocationLabel || 'Trip Day';
-    const tour = info.tours[0];
-    if (tour) return tour.startLocation || tour.name || tripLocationLabel || 'Trip Day';
     const rental = info.rentals[0];
     if (rental) return rental.pickupLocation || rental.vendor || tripLocationLabel || 'Trip Day';
     return tripLocationLabel || 'Trip Day';
+  };
+
+  // startLocation and summary can end up describing the same activity (e.g. a
+  // day with only a tour and no flight/lodging) — collapse them instead of
+  // showing the same text twice, joined by " - ".
+  const buildHeroTitle = (startLocation: string, summary: string) => {
+    const parts = [startLocation, summary].filter(Boolean);
+    if (parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()) {
+      return parts[0];
+    }
+    return parts.join(' - ');
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
@@ -2129,7 +2143,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (selectedDay && activeDayCard && activeDayInfo) {
         const startLocation = buildDayStartLocation(activeDayInfo);
         const summary = buildDaySummary(activeDayInfo);
-        const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
+        const heroTitle = buildHeroTitle(startLocation, summary);
         const narrativeLines = buildDayNarrative(activeDayInfo);
         const flightsForDay = activeDayInfo.flights;
         const activityTimeKey = (tour: Tour) => {
@@ -2544,7 +2558,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               const info = dayDataByDate.get(card.date);
               const startLocation = buildDayStartLocation(info);
               const summary = buildDaySummary(info);
-              const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
+              const heroTitle = buildHeroTitle(startLocation, summary);
               return (
                 <View key={card.date}>
                   {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`)}

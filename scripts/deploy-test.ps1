@@ -58,12 +58,16 @@ if (-not $DryRun) {
   & gcloud run deploy $env:TEST_SERVICE_NAME `
     --image $backendDigest `
     --region $env:TEST_REGION `
+    --session-affinity `
+    --max-instances 1 `
     --service-account $env:TEST_RUNTIME_SERVICE_ACCOUNT `
     --update-labels "app-git-sha=$manifestGitSha" `
     --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:TEST_DOMAIN),FIRESTORE_DATABASE_ID=$($env:TEST_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:TEST_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `
     --set-secrets $secretDeploy.Argument `
     --remove-env-vars $secretDeploy.Keys
   if ($LASTEXITCODE -ne 0) { Fail 'gcloud run deploy failed for test service' }
+  & gcloud run services update-traffic $env:TEST_SERVICE_NAME --region $env:TEST_REGION --to-latest
+  if ($LASTEXITCODE -ne 0) { Fail 'Failed to route test traffic to the latest revision' }
 
   $env:FIRESTORE_DATABASE_ID = $env:TEST_FIRESTORE_DATABASE_ID
   & (Join-Path $PSScriptRoot 'deploy-firestore-indexes.ps1')

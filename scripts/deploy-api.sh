@@ -317,10 +317,18 @@ fi
 gcloud run deploy "$SERVICE_NAME" \
   --source "$SOURCE_DIR" \
   --region "$REGION" \
+  --session-affinity \
+  --max-instances 1 \
   ${env_arg:+--update-env-vars "$env_arg"} \
   ${secrets_arg:+--set-secrets "$secrets_arg"} \
   ${secret_keys_arg:+--remove-env-vars "$secret_keys_arg"} \
   ${remove_env_arg:+--remove-env-vars "$remove_env_arg"}
+
+# A prior canary deploy with --no-traffic pins the service away from LATEST
+# until this is explicitly restored; gcloud run deploy alone does not undo it.
+gcloud run services update-traffic "$SERVICE_NAME" \
+  --region "$REGION" \
+  --to-latest
 
 if [[ -n "$remove_secrets_arg" ]]; then
   allow_clear_fallback=0

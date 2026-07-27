@@ -12,7 +12,6 @@ gendered: false
 - Travel document copies
 - Travel insurance details
 - Itinerary and reservation details
-- Emergency contact details
 - Credit cards
 - Cash
 
@@ -27,6 +26,7 @@ gendered: false
 - Conditioner
 - Body wash
 - Face moisturizer
+- Hand lotion
 - Lip balm
 - Hand sanitizer
 - Sunscreen
@@ -34,8 +34,10 @@ gendered: false
 - Wet wipes
 - Glasses
 - Contact lenses
+- Extra contacts
 - Contact lens case and solution
 - Personal hygiene products
+- Nail clippers
 
 ## Technology & Gadgets
 - Phone
@@ -52,10 +54,15 @@ gendered: false
 - Socks
 - Sleepwear
 - Shoes
-- Hotel shoes
+- Hotel slippers
+
+## Outerwear
+- Rain jacket
+- Fleece
 
 ## Food & Hydration
 - Reusable water bottle
+- Vitamins
 
 ## Travel Gear & Accessories
 - Sunglasses

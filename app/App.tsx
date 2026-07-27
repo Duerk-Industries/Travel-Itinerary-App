@@ -74,6 +74,7 @@ import {
   saveLastActiveTripIdAsync,
   saveSessionAsync,
 } from './utils/session';
+
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDeniedModal from './components/PermissionDeniedModal';
@@ -84,6 +85,7 @@ import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
+import LandingPage from './components/LandingPage';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
@@ -127,6 +129,8 @@ import { connectSocket, disconnectSocket } from './utils/socket';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
+
+const WEB_DOCUMENT_TITLE = 'WanderBunnies | Collaborative Trip Planner';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -412,6 +416,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const html = document.documentElement;
     const body = document.body;
     const root = document.getElementById('root');
+    document.getElementById('static-app-description')?.remove();
+    document.getElementById('static-landing-preview')?.remove();
+    document.getElementById('static-app-noscript')?.remove();
     const previous = {
       htmlHeight: html.style.height,
       bodyHeight: body.style.height,
@@ -614,6 +621,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setAuthMode,
     setAuthForm,
   } = useAuthForm();
+  const [showAuthForm, setShowAuthForm] = useState(false);
   const {
     accountProfile,
     mapApp,
@@ -3352,7 +3360,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             : null}
 
         </View>
-      ) : (
+      ) : showAuthForm ? (
         <ScrollView
           style={styles.signedOutScroll}
           contentContainerStyle={[styles.signedOutScrollContent, iosSafariContentInsetStyle]}
@@ -3360,6 +3368,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           contentInsetAdjustmentBehavior="automatic"
         >
+          <TouchableOpacity
+            onPress={() => setShowAuthForm(false)}
+            accessibilityRole="button"
+            testID="auth-form-back-to-landing"
+            style={{ alignSelf: 'flex-start', marginTop: 24 }}
+          >
+            <Text style={{ color: theme.colors.link, fontWeight: theme.typography.weightSemibold }}>
+              {'← Back'}
+            </Text>
+          </TouchableOpacity>
           <AuthForm
             authMode={authMode}
             setAuthMode={setAuthMode}
@@ -3377,6 +3395,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             styles={styles}
           />
         </ScrollView>
+      ) : (
+        <LandingPage
+          theme={theme}
+          logoSource={TOP_BANNER_ICON}
+          backendUrl={backendUrl}
+          onLogin={() => {
+            setAuthMode('login');
+            setShowAuthForm(true);
+          }}
+          onCreateAccount={() => {
+            setAuthMode('register');
+            setShowAuthForm(true);
+          }}
+          onLoginWithGoogle={loginWithGoogle}
+        />
       )}
       {userToken && requirePasswordSetup ? (
         <View style={styles.wizardOverlay}>
@@ -3587,7 +3620,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linking}
+      documentTitle={{
+        enabled: Platform.OS === 'web',
+        formatter: () => WEB_DOCUMENT_TITLE,
+      }}
+    >
       <RootStack.Navigator>
         <RootStack.Screen name="Main" options={{ headerShown: false }}>
           {() => mainWorkspace}

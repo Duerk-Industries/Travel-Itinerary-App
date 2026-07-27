@@ -1,6 +1,7 @@
 import React from 'react';
 import { Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AuthFormFields, AuthMode } from '../hooks/useAuthForm';
+import GoogleSignInButton from './GoogleSignInButton';
 
 export type AuthFormProps = {
   /** Which form to render — Login (minimal fields) vs Create (full fields). */
@@ -165,15 +166,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
     >
       <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
     </TouchableOpacity>
-    <TouchableOpacity
-      style={[styles.button, { marginTop: 12, backgroundColor: '#4285F4' }]}
-      onPress={loginWithGoogle}
-      accessibilityRole="button"
-      accessibilityLabel="Sign in with Google"
-      testID="auth-form-google"
-    >
-      <Text style={styles.buttonText}>Sign in with Google</Text>
-    </TouchableOpacity>
+    <View style={{ marginTop: 12 }}>
+      <GoogleSignInButton onPress={loginWithGoogle} testID="auth-form-google" />
+    </View>
 
     <View style={{ marginTop: 24, alignItems: 'center', opacity: 0.7 }}>
       <Text style={{ fontSize: 12, color: '#6B7280', textAlign: 'center' }}>

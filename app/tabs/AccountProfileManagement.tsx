@@ -301,6 +301,34 @@ const AccountProfileManagement = ({
     setAccountMessage('Profile updated');
   };
 
+  const handleAddressSave = async () => {
+    const homeAddress = formatHomeAddress(addressForm);
+    // Update the visible profile immediately, then persist the address independently of the
+    // broader profile form. Previously “Save Address” only changed local state, so the next
+    // account refresh replaced it with the old server value.
+    setAccountProfile((prev) => ({ ...prev, homeAddress }));
+    setShowAddressEditor(false);
+    if (!userToken) return;
+
+    try {
+      const response = await fetch(`${backendUrl}/api/account/profile`, {
+        method: 'PATCH',
+        headers: jsonHeaders,
+        body: JSON.stringify({ homeAddress }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        Alert.alert(data.error || 'Unable to save home address');
+        return;
+      }
+      const savedAddress = data.user?.homeAddress ?? homeAddress;
+      setAccountProfile((prev) => ({ ...prev, homeAddress: savedAddress }));
+      setAccountMessage('Address updated');
+    } catch (error) {
+      Alert.alert((error as Error)?.message || 'Unable to save home address');
+    }
+  };
+
   const handlePasswordChange = async () => {
     if (!userToken) return;
     if (passwordForm.newPassword !== passwordForm.newPasswordConfirm) {
@@ -749,10 +777,7 @@ const AccountProfileManagement = ({
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, { flex: 1 }]}
-                  onPress={() => {
-                    setAccountProfile((prev) => ({ ...prev, homeAddress: formatHomeAddress(addressForm) }));
-                    setShowAddressEditor(false);
-                  }}
+                  onPress={handleAddressSave}
                 >
                   <Text style={styles.buttonText}>Save Address</Text>
                 </TouchableOpacity>

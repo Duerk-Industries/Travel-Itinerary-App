@@ -74,6 +74,8 @@ trap cleanup_canary EXIT
 
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$PROD_SERVICE_NAME" --image "$BACKEND_DIGEST" --region "$PROD_REGION" --no-traffic --tag candidate \
+    --session-affinity \
+    --max-instances 1 \
     --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" --update-labels "app-git-sha=$MANIFEST_GIT_SHA" \
     --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$PROD_DOMAIN,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
     --set-secrets "$SECRET_ARG" \

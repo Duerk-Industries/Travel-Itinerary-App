@@ -20,11 +20,20 @@ gendered: true
 - Hair ties
 - Hairbrush
 - Hair styling product
-- Makeup
+- Foundation
+- Lipstick
+- Eye shadow/pencil
+- Other Makeup
 - Makeup remover
 - Nail file
+- Cotton balls / Q-Tips
+- Tweezers
+- Shower caps
 
 ## Travel Gear & Accessories
 - Hosiery
 - Fashion scarf
 - Compact jewelry case
+- Earings
+- Jewelry
+- Hair claws / scrunchies
