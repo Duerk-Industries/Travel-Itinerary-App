@@ -7,16 +7,16 @@ gendered: true
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Clothing
-- Blouses
+## Clothing & Footwear
+- Blouse
 - Maxi dress
 - Skirt
 - Leggings
-- Bras
+- Bra
 - Shapewear
 - Evening wrap
 
-## Grooming
+## Health & Toiletries
 - Hair ties
 - Hairbrush
 - Hair styling product
@@ -24,7 +24,7 @@ gendered: true
 - Makeup remover
 - Nail file
 
-## Accessories
+## Travel Gear & Accessories
 - Hosiery
 - Fashion scarf
 - Compact jewelry case

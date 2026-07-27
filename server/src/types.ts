@@ -252,6 +252,8 @@ export type AuditAction =
   | 'AI_RECOMMENDATION_DISMISSED'
   | 'ADMIN_SETTING_UPDATED'
   | 'PACKING_DEFAULTS_UPDATED'
+  | 'PACKING_PRESET_UPLOADED'
+  | 'PACKING_PRESET_REMOVED'
   | 'API_LIMITS_UPDATED'
   | 'API_CACHING_CONFIG_UPDATED'
   | 'COST_ESTIMATOR_CONFIG_UPDATED'
@@ -291,6 +293,7 @@ export interface WebUser {
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;
+  dateOfBirth?: string | null;
 }
 
 export interface Flight {
@@ -395,6 +398,58 @@ export interface PackingListTraveler {
 export interface TripPackingList extends PackingListItem {
   packedBy: string[];
 }
+
+export type PackingPreset = {
+  id: string;
+  key: string;
+  label: string;
+  description: string;
+  gendered: boolean;
+  contentHash: string;
+  sourceFilename: string;
+  isActive: boolean;
+  items: PackingListItem[];
+};
+
+export type PackingPresetPreference = {
+  userId: string;
+  presetKeys: string[];
+  updatedAt?: string | null;
+};
+
+export type PackingListV2SourceKind =
+  | 'profile_preset'
+  | 'profile_personal'
+  | 'trip_preset'
+  | 'trip_manual'
+  | 'legacy_manual';
+
+export type PackingListV2Contribution = {
+  id: string;
+  tripId: string;
+  sourceKind: PackingListV2SourceKind;
+  sourceUserId?: string | null;
+  sourcePresetKey?: string | null;
+  contributionKey: string;
+  removedAt?: string | null;
+};
+
+export type PackingListV2DisplayGroup = {
+  id: string;
+  label: string;
+  kind: 'preset' | 'trip_manual' | 'multiple_travelers' | 'personal';
+  ownerId?: string | null;
+  items: Array<PackingListItem & { normalizedLabel?: string; packedBy?: string[]; personalOwnerIds?: string[] }>;
+};
+
+export type PackingListV2Trip = {
+  groups: PackingListV2DisplayGroup[];
+  travelers: PackingListTraveler[];
+  presets: PackingPreset[];
+  currentTravelerId?: string | null;
+  items?: Array<PackingListItem & { packedBy?: string[] }>;
+  tripPresetKeys?: string[];
+};
 
 export interface LocationRecord {
   id: string;
@@ -619,6 +674,7 @@ export interface ItineraryDetail {
   placeId?: string | null;
   noteBody?: string | null;
   position?: number;
+  updatedAt?: string | null;
   checklistItems?: ItineraryChecklistItem[];
 }
 
@@ -931,7 +987,7 @@ export type BillingSubscriptionStatus =
   | 'paused'
   | 'canceled';
 
-export type BillingPlanKey = 'premium_monthly' | 'premium_annual';
+export type BillingPlanKey = 'premium_monthly' | 'premium_annual' | 'storage_20gb' | 'storage_100gb' | 'storage_200gb' | 'storage_2tb';
 
 export type BillingSubscriptionScope = 'individual' | 'family';
 

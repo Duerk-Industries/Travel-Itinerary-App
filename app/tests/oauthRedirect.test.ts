@@ -12,10 +12,19 @@ describe('buildWebOAuthRedirectUrl', () => {
     ).toBe('https://duerk.org/login');
   });
 
-  it('uses the canonical backend origin when the browser is on a non-canonical HTTPS host', () => {
+  it('uses the current HTTPS origin even if it differs from the backend origin', () => {
     expect(
       buildWebOAuthRedirectUrl({
-        currentOrigin: 'https://www.duerk.org',
+        currentOrigin: 'https://wander-bunnies.com',
+        backendUrl: 'https://duerk.org',
+      })
+    ).toBe('https://wander-bunnies.com/login');
+  });
+
+  it('uses the backend origin as a safe fallback when the current origin is not HTTPS', () => {
+    expect(
+      buildWebOAuthRedirectUrl({
+        currentOrigin: 'http://insecure-site.com',
         backendUrl: 'https://duerk.org',
       })
     ).toBe('https://duerk.org/login');

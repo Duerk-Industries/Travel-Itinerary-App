@@ -1,29 +1,28 @@
 ---
 key: festival
 label: Music Festival
-description: Survival and expression gear for mult-day events.
+description: Survival and expression gear for multi-day events.
 gendered: false
 ---
 
-## Survival Essentials
-- Hydration pack (e.g., CamelBak)
-- High-fidelity earplugs (e.g., Eargasm)
-- Power bank (High capacity)
-- Wet wipes and hand sanitizer
-- Tissues / Toilet paper travel pack
-- Portable fan or mister
+<!-- General is included separately. Do not repeat General items. -->
 
-## Apparel & Expression
+## Clothing & Footwear
 - Comfortable, broken-in shoes or boots
 - Bandana or pashmina (for dust/sun)
-- Sunglasses (and a cheap backup pair)
 - Festival outfits and costumes
-- Biodegradable glitter or face gems
-- Rain poncho (Disposable or light)
+- Compact rain poncho
 
-## Safety & Health
-- Electrolyte powder (e.g., Liquid I.V.)
-- Sunscreen (Spray and stick)
-- Basic first aid (Band-aids, ibuprofen)
+## Health & Toiletries
+- Electrolyte powder
+- Sunscreen spray and stick
+- Biodegradable glitter or face gems
+- Travel toilet paper pack
+
+## Travel Gear & Accessories
+- Hydration pack
+- High-fidelity earplugs
+- High-capacity power bank
+- Portable fan or mister
 - Small flashlight or glow sticks
-- Totem or identifying flag (for finding friends)
+- Totem or identifying flag

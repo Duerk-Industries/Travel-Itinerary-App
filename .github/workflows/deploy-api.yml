@@ -44,7 +44,6 @@ jobs:
             --source . \
             --region us-east5 \
             --allow-unauthenticated \
-            --runtime nodejs20 \
             --service-account "travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com" \
             --project "$GCLOUD_PROJECT_ID"
         env:

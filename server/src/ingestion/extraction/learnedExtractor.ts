@@ -480,6 +480,7 @@ type DirectCandidateParams = {
   confidenceScore: number;
   startDateTimeUtcOverride?: string | null;
   endDateTimeUtcOverride?: string | null;
+  rawDatetimeStringOverride?: string | null;
   travelerNamesOverride?: string[];
 };
 
@@ -499,6 +500,7 @@ const directCandidateResult = async (
     confidenceScore: params.confidenceScore,
     startDateTimeUtcOverride: params.startDateTimeUtcOverride,
     endDateTimeUtcOverride: params.endDateTimeUtcOverride,
+    rawDatetimeStringOverride: params.rawDatetimeStringOverride,
     travelerNamesOverride: params.travelerNamesOverride,
   });
   return {
@@ -518,6 +520,163 @@ type AustrianFlightLeg = {
   arrivalLocation: string;
   arrivalAirportCode: string;
   arrivalTime: string | null;
+};
+
+type SwissFlightLeg = {
+  departureDate: string;
+  departureTime: string;
+  arrivalDate: string;
+  arrivalTime: string;
+  departureAirportCode: string;
+  arrivalAirportCode: string;
+  flightNumber: string;
+  airline: string;
+  departureLocation: string;
+  arrivalLocation: string;
+};
+
+const SWISS_AIRPORT_CITIES: Record<string, string> = {
+  BOS: 'Boston',
+  ZRH: 'Zurich',
+  VCE: 'Venice',
+};
+
+const parseSwissDateOnly = (value: string): string | null => {
+  const match = value.match(/^(\d{2})\.(\d{2})\.(20\d{2})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const parsed = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12, 0, 0));
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+};
+
+const extractSwissTravelerNames = (text: string): string[] => {
+  const passengerBlock = text.match(/\bPassengers\s+([\s\S]{1,500}?)(?=\s+Baggage\b|$)/i)?.[1] ?? '';
+  const passengerNames = Array.from(passengerBlock.matchAll(/\b(?:Mr|Mrs|Ms|Miss)\.?\s+([A-Z][a-z]+(?:(?!\s+Adult\b)\s+[A-Z][a-z]+){1,2})(?=\s+(?:Adult|Mr|Mrs|Ms|Miss)\b|$)/g))
+    .map((match) => normalizeSpace(match[1]));
+  if (passengerNames.length) return Array.from(new Set(passengerNames)).slice(0, 8);
+  return extractCommonTravelerNames(text);
+};
+
+const parseSwissFlightLegs = (text: string): SwissFlightLeg[] => {
+  const itinerary = text.match(/\bItinerary details\b([\s\S]*?)(?=\bAll times are local times\b)/i)?.[1] ?? '';
+  if (!itinerary) return [];
+
+  const dateTimes = Array.from(itinerary.matchAll(/\b(\d{2}\.\d{2}\.20\d{2})\s*-\s*(\d{2}:\d{2})\b/g))
+    .map((match) => ({ date: parseSwissDateOnly(match[1]), time: match[2], index: match.index ?? 0 }))
+    .filter((value): value is { date: string; time: string; index: number } => Boolean(value.date));
+  const operatedFlights = Array.from(itinerary.matchAll(/\b([A-Z]{2}\d{2,4})\s+Operated by:\s*([^\r\n]+)/gi))
+    .map((match) => ({ flightNumber: match[1].toUpperCase(), airline: normalizeSpace(match[2]), index: match.index ?? 0 }));
+  const routes = Array.from(text.matchAll(/\b\d+_([A-Z]{3})-([A-Z]{3})\.ics\b/gi))
+    .map((match) => ({ departureAirportCode: match[1].toUpperCase(), arrivalAirportCode: match[2].toUpperCase() }));
+
+  if (dateTimes.length < operatedFlights.length * 2 || operatedFlights.length === 0 || routes.length < operatedFlights.length) return [];
+
+  return operatedFlights.map((flight, index) => {
+    const departure = dateTimes[index * 2];
+    const arrival = dateTimes[index * 2 + 1];
+    const route = routes[index];
+    const airline = normalizeSpace(flight.airline.replace(/\s+(?:Airbus|Boeing|ATR|Embraer|Bombardier)\b[\s\S]*$/i, ''));
+    return {
+      departureDate: departure.date,
+      departureTime: departure.time,
+      arrivalDate: arrival.date,
+      arrivalTime: arrival.time,
+      departureAirportCode: route.departureAirportCode,
+      arrivalAirportCode: route.arrivalAirportCode,
+      flightNumber: flight.flightNumber,
+      airline,
+      departureLocation: SWISS_AIRPORT_CITIES[route.departureAirportCode] ?? route.departureAirportCode,
+      arrivalLocation: SWISS_AIRPORT_CITIES[route.arrivalAirportCode] ?? route.arrivalAirportCode,
+    };
+  });
+};
+
+const extractSwissResult = async (
+  doc: NormalizedDocument,
+  config: ExtractionConfig
+): Promise<ExtractionResult> => {
+  const text = doc.normalizedText;
+  const travelers = extractSwissTravelerNames(text);
+  const confirmationNumber = text.match(/\b(?:Booking code|Booking reference):\s*([A-Z0-9]{5,})\b/i)?.[1]?.toUpperCase() ?? null;
+  const totalMatch = text.match(/\bFinal price\s+(USD|EUR|GBP|US\$|\$|€|£)\s*([0-9,.]+)\b/i);
+  const totalCost = totalMatch ? Number(totalMatch[2].replace(/,/g, '')) : null;
+  const currency = totalMatch
+    ? (/USD|US\$|\$/i.test(totalMatch[1]) ? 'USD' : /EUR|€/i.test(totalMatch[1]) ? 'EUR' : 'GBP')
+    : null;
+  const duration = text.match(/\bDuration:\s*([0-9]+h\s*[0-9]+m)\b/i)?.[1] ?? null;
+  const providerVendor = text.match(/\bOn behalf of:\s*([^\r\n]+)/i)?.[1]?.trim()
+    ?? ( /\bSWISS\b/i.test(text) ? 'SWISS' : null );
+  const legs = parseSwissFlightLegs(text);
+
+  if (!legs.length) {
+    const guestName = travelers[0] ?? null;
+    const result = await directCandidateResult(doc, config, {
+      itemType: 'flight',
+      providerVendor,
+      confirmationNumber,
+      travelerNamesOverride: travelers.length ? travelers : undefined,
+      confidenceScore: 0.84,
+      startDateTimeUtcOverride: null,
+      endDateTimeUtcOverride: null,
+      rawDatetimeStringOverride: null,
+      extractedFields: {
+        providerVendor,
+        airline: 'SWISS',
+        confirmationNumber,
+        guestName,
+        travelers,
+      },
+    });
+    return result;
+  }
+
+  const { createCandidateExported } = require('./index');
+  const parsedItems = await Promise.all(legs.map(async (leg, index) => {
+    const extractedFields = normalizeExtractedFields({
+      providerVendor,
+      airline: leg.airline,
+      departureAirportCode: leg.departureAirportCode,
+      arrivalAirportCode: leg.arrivalAirportCode,
+      departureLocation: leg.departureLocation,
+      arrivalLocation: leg.arrivalLocation,
+      departureDate: leg.departureDate,
+      departureTime: leg.departureTime,
+      arrivalDate: leg.arrivalDate,
+      arrivalTime: leg.arrivalTime,
+      flightNumber: leg.flightNumber,
+      confirmationNumber,
+      duration,
+      cost: index === 0 ? totalCost : 0,
+      totalCost,
+      currency,
+      paid: typeof totalCost === 'number' && totalCost > 0,
+      guestName: travelers[0] ?? null,
+      travelers,
+      travelerCount: travelers.length,
+    }, text, 'flight');
+    // Keep the compact airline flight number used by the Swiss booking and LLM outputs.
+    extractedFields.flightNumber = leg.flightNumber;
+    return createCandidateExported({
+      itemType: 'flight',
+      doc,
+      providerVendor,
+      confirmationNumber,
+      extractedFields,
+      confidenceScore: 0.96,
+      startDateTimeUtcOverride: dateOnlyToIsoMidday(leg.departureDate),
+      endDateTimeUtcOverride: dateOnlyToIsoMidday(leg.arrivalDate),
+      rawDatetimeStringOverride: `${leg.departureDate} ${leg.departureTime}`,
+      travelerNamesOverride: travelers.length ? travelers : undefined,
+      departureCodeOverride: leg.departureAirportCode,
+      arrivalCodeOverride: leg.arrivalAirportCode,
+    });
+  }));
+
+  return {
+    parsedItems,
+    usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'source_specific', modelName: null, estimatedCostUsd: 0 },
+    metadata: { logicVersion: config.logicVersion, extractedAt: new Date().toISOString(), strategyName: 'SourceSpecificExtractor' },
+  };
 };
 
 const extractAustrianTravelerNames = (text: string): string[] => {
@@ -569,10 +728,10 @@ const parseAustrianFlightLegs = (text: string): AustrianFlightLeg[] => {
       arrivalDate: addDays(departureDate, pattern.arrivalDayOffset),
       departureLocation: pattern.departureLocation,
       departureAirportCode: pattern.departureAirportCode,
-      departureTime: normalizeSpace(match[3]) || null,
+      departureTime: normalizeOutputTime(match[3]),
       arrivalLocation: pattern.arrivalLocation,
       arrivalAirportCode: pattern.arrivalAirportCode,
-      arrivalTime: normalizeSpace(match[4]) || null,
+      arrivalTime: normalizeOutputTime(match[4]),
     });
   }
 
@@ -615,6 +774,10 @@ const extractBuiltInSourceResult = async (
                     ? 'ferry_bus_transfer'
                     : itemType)
         : itemType;
+
+  if (sourceKey === 'swiss' && effectiveItemType === 'flight') {
+    return extractSwissResult(doc, config);
+  }
 
   if (sourceKey === 'viator' && effectiveItemType === 'tour_activity') {
     const { amount, currency } = parseCurrencyAmount(text);

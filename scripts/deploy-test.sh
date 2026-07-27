@@ -18,7 +18,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 load_deploy_config
-require_vars TEST_SERVICE_NAME TEST_REGION TEST_HOSTING_SITE TEST_DOMAIN TEST_FIRESTORE_DATABASE_ID TEST_RUNTIME_SERVICE_ACCOUNT TEST_AI_CAPTURE_BUCKET PROD_FIRESTORE_DATABASE_ID PROD_AI_CAPTURE_BUCKET
+ensure_gcloud_project_id
+require_vars GCLOUD_PROJECT_ID TEST_SERVICE_NAME TEST_REGION TEST_HOSTING_SITE TEST_DOMAIN TEST_FIRESTORE_DATABASE_ID TEST_RUNTIME_SERVICE_ACCOUNT TEST_AI_CAPTURE_BUCKET PROD_FIRESTORE_DATABASE_ID PROD_AI_CAPTURE_BUCKET
 node -e "const v=require('./scripts/lib/phase11-validators'); v.assertEnvironmentIsolation(process.env);"
 
 if [[ -z "$MANIFEST" ]]; then
@@ -26,7 +27,16 @@ if [[ -z "$MANIFEST" ]]; then
   if [[ "$DRY_RUN" == "1" ]]; then
     build_args+=(--dry-run)
   fi
-  MANIFEST="$(bash "$SCRIPT_DIR/build-release.sh" "${build_args[@]}")"
+  build_log="$(mktemp)"
+  if ! bash "$SCRIPT_DIR/build-release.sh" "${build_args[@]}" >"$build_log" 2>&1; then
+    cat "$build_log" >&2
+    rm -f "$build_log"
+    exit 1
+  fi
+  cat "$build_log"
+  MANIFEST="$(tail -n 1 "$build_log" | tr -d '\r')"
+  rm -f "$build_log"
+  [[ -f "$MANIFEST" ]] || fail "Release build did not return a valid manifest path: $MANIFEST"
 fi
 node -e "const v=require('./scripts/lib/phase11-validators'); v.validateReleaseManifest(v.readJson(process.argv[1]));" "$MANIFEST"
 
@@ -46,6 +56,7 @@ fi
 WORK_DIR="$REPO_ROOT/dist/deploy-test"
 prepare_frontend_from_manifest "$MANIFEST" "$WORK_DIR/frontend"
 write_hosting_config "$WORK_DIR/firebase.hosting.generated.json" "$TEST_HOSTING_SITE" "$WORK_DIR/frontend" "$TEST_SERVICE_NAME" "$TEST_REGION" "$TEST_DOMAIN"
+SECRET_ARG="$(cloud_run_secret_arg)"
 
 if [[ "$DRY_RUN" != "1" ]]; then
   gcloud run deploy "$TEST_SERVICE_NAME" \
@@ -53,10 +64,18 @@ if [[ "$DRY_RUN" != "1" ]]; then
     --region "$TEST_REGION" \
     --service-account "$TEST_RUNTIME_SERVICE_ACCOUNT" \
     --update-labels "app-git-sha=$(json_get "$MANIFEST" gitSha)" \
-    --update-env-vars "WEB_URL=$TEST_DOMAIN,FIRESTORE_DATABASE_ID=$TEST_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$TEST_AI_CAPTURE_BUCKET"
+    --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$TEST_DOMAIN,FIRESTORE_DATABASE_ID=$TEST_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$TEST_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
+    --set-secrets "$SECRET_ARG" \
+    --remove-env-vars "$(cloud_run_secret_pairs | cut -d= -f1 | paste -sd, -)"
   FIRESTORE_DATABASE_ID="$TEST_FIRESTORE_DATABASE_ID" bash "$SCRIPT_DIR/deploy-firestore-indexes.sh"
   if [[ "$RESEED" == "1" ]]; then
-    (cd "$REPO_ROOT" && npm run accounts:seed)
+    (cd "$REPO_ROOT" && \
+      ALLOW_REMOTE_TEST_ACCOUNT_SEED=1 \
+      DB_PROVIDER=firebase \
+      FIRESTORE_DATABASE_ID="$TEST_FIRESTORE_DATABASE_ID" \
+      FIRESTORE_EMULATOR_HOST= \
+      FIRESTORE_EMULATOR_HOST_PATH= \
+      npm run accounts:seed:remote)
   fi
   firebase_deploy_hosting "$WORK_DIR/firebase.hosting.generated.json" "$TEST_HOSTING_SITE"
   bash "$SCRIPT_DIR/smoke-test.sh" --base-url "$TEST_DOMAIN" --environment test

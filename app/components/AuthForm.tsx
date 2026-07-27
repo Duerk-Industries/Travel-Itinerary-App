@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AuthFormFields, AuthMode } from '../hooks/useAuthForm';
 
 export type AuthFormProps = {
@@ -20,6 +20,8 @@ export type AuthFormProps = {
   loginWithPassword: () => void | Promise<void>;
   register: () => void | Promise<void>;
   loginWithGoogle: () => void | Promise<void>;
+  /** API base URL for resolving static legal docs. */
+  backendUrl?: string;
   /** Full `styles` object from the parent App.tsx — the form consumes a fixed set. */
   styles: Record<string, any>;
 };
@@ -45,10 +47,17 @@ const AuthForm: React.FC<AuthFormProps> = ({
   loginWithPassword,
   register,
   loginWithGoogle,
+  backendUrl,
   styles,
-}) => (
-  <View style={styles.auth} testID="auth-form">
-    <View style={styles.toggleRow}>
+}) => {
+  const openLegal = (path: string) => {
+    const baseUrl = Platform.OS === 'web' ? window.location.origin : (backendUrl || '').replace(/\/api$/, '');
+    void Linking.openURL(`${baseUrl}/${path}`);
+  };
+
+  return (
+    <View style={styles.auth} testID="auth-form">
+      <View style={styles.toggleRow}>
       <TouchableOpacity
         style={[styles.toggleButton, authMode === 'login' && styles.toggleActive]}
         onPress={() => setAuthMode('login')}
@@ -165,7 +174,23 @@ const AuthForm: React.FC<AuthFormProps> = ({
     >
       <Text style={styles.buttonText}>Sign in with Google</Text>
     </TouchableOpacity>
+
+    <View style={{ marginTop: 24, alignItems: 'center', opacity: 0.7 }}>
+      <Text style={{ fontSize: 12, color: '#6B7280', textAlign: 'center' }}>
+        By continuing, you agree to our
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+        <TouchableOpacity onPress={() => openLegal('terms.html')}>
+          <Text style={{ fontSize: 12, color: '#3B82F6', fontWeight: '600', textDecorationLine: 'underline' }}>Terms of Service</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 12, color: '#6B7280' }}>and</Text>
+        <TouchableOpacity onPress={() => openLegal('privacy.html')}>
+          <Text style={{ fontSize: 12, color: '#3B82F6', fontWeight: '600', textDecorationLine: 'underline' }}>Privacy Policy</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   </View>
 );
+};
 
 export default AuthForm;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, Linking } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
 import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
 import { type TemperatureUnit, normalizeTemperatureUnit } from '../utils/temperatureUnit';
@@ -7,6 +7,7 @@ import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
 import PackingListTable from '../components/PackingListTable';
+import PackingPresetSelector from '../components/PackingPresetSelector';
 import PremiumSubscriptionPanel from '../components/PremiumSubscriptionPanel';
 import { useBillingStatus } from '../hooks/useBillingStatus';
 import { fetchBillingPlans, type PlanInfo } from '../utils/billing';
@@ -323,6 +324,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
           <Text style={styles.buttonText}>Open List</Text>
         </Pressable>
       </View>
+      <PackingPresetSelector backendUrl={backendUrl} headers={headers} jsonHeaders={jsonHeaders} theme={theme} />
       {showPackingList ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setShowPackingList(false)}>
           <View style={[localStyles.modalOverlay, { backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.68)' : 'rgba(17,24,39,0.35)' }]} testID="account-packing-list-modal">
@@ -368,6 +370,25 @@ const AccountTab: React.FC<AccountTabProps> = ({
         fetchTraitProfile={fetchTraitProfile}
         styles={styles}
       />
+      <View style={[localStyles.legalSection, { borderTopColor: theme.colors.border }]}>
+        <Text style={[localStyles.legalTitle, { color: theme.colors.textMuted }]}>Legal</Text>
+        <View style={localStyles.legalLinks}>
+          <Pressable onPress={() => {
+            const baseUrl = Platform.OS === 'web' ? window.location.origin : backendUrl.replace(/\/api$/, '');
+            void Linking.openURL(`${baseUrl}/privacy.html`);
+          }}>
+            <Text style={[localStyles.legalLink, { color: theme.colors.link }]}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={{ color: theme.colors.textMuted }}> • </Text>
+          <Pressable onPress={() => {
+            const baseUrl = Platform.OS === 'web' ? window.location.origin : backendUrl.replace(/\/api$/, '');
+            void Linking.openURL(`${baseUrl}/terms.html`);
+          }}>
+            <Text style={[localStyles.legalLink, { color: theme.colors.link }]}>Terms of Service</Text>
+          </Pressable>
+        </View>
+        <Text style={[localStyles.copyright, { color: theme.colors.textMuted }]}>&copy; 2026 WanderBunnies Travel</Text>
+      </View>
     </View>
   );
 };
@@ -386,6 +407,11 @@ const localStyles = StyleSheet.create({
   closeText: { fontSize: 18, fontWeight: '700' },
   modalBody: { maxHeight: 680 },
   modalBodyContent: { paddingBottom: 8 },
+  legalSection: { marginTop: 24, paddingVertical: 20, borderTopWidth: 1, alignItems: 'center', gap: 8 },
+  legalTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  legalLinks: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legalLink: { fontSize: 14, fontWeight: '600' },
+  copyright: { fontSize: 12, marginTop: 4 },
 });
 
 export default AccountTab;

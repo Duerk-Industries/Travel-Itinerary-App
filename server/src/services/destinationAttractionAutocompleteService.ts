@@ -1,8 +1,8 @@
 import fs from 'fs';
-import path from 'path';
 import { getEnvValue } from '../env';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { parseCsvLine } from './destinationsAttractionsCsv';
+import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
 
 export type DestinationLocationOption = {
   id: string;
@@ -88,15 +88,11 @@ const slugify = (value: unknown): string =>
     .replace(/^-|-$/g, '');
 
 const resolveDestinationsCsvPath = (): string => {
-  const configured = getEnvValue('DESTINATIONS_CSV_LOCAL_PATH');
-  if (configured) return path.resolve(configured);
-  return path.resolve(__dirname, '../../data/destinations.csv');
+  return resolveRuntimeDataPath('destinations.csv', getEnvValue('DESTINATIONS_CSV_LOCAL_PATH'));
 };
 
 const resolveAttractionsCsvPath = (): string => {
-  const configured = getEnvValue('ATTRACTIONS_CSV_LOCAL_PATH');
-  if (configured) return path.resolve(configured);
-  return path.resolve(__dirname, '../../data/attractions_catalog.csv');
+  return resolveRuntimeDataPath('attractions_catalog.csv', getEnvValue('ATTRACTIONS_CSV_LOCAL_PATH'));
 };
 
 const datasetTtlMs = (): number => {

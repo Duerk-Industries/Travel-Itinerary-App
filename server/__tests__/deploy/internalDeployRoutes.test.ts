@@ -41,7 +41,7 @@ const buildApp = () => {
 
 const envValues: Record<string, string> = {
   DEPLOY_WORKER_SHARED_SECRET: 'test-shared-secret',
-  CANARY_ACCOUNT_EMAIL: 'canary@internal.duerk.org',
+  CANARY_ACCOUNT_EMAIL: 'canary@internal.wander-bunnies.com',
 };
 
 describe('internal deploy routes', () => {
@@ -69,7 +69,7 @@ describe('internal deploy routes', () => {
   });
 
   it('canary-smoke-write creates a trip owned by the canary account and returns its ID', async () => {
-    mockedFindUserByEmail.mockResolvedValue({ id: 'canary-1', email: 'canary@internal.duerk.org', provider: 'email', role: 'user', is_internal_canary: true } as any);
+    mockedFindUserByEmail.mockResolvedValue({ id: 'canary-1', email: 'canary@internal.wander-bunnies.com', provider: 'email', role: 'user', is_internal_canary: true } as any);
     mockedListGroupsForUser.mockResolvedValue([{ id: 'group-1' } as any]);
     mockedCreateTrip.mockResolvedValue({ id: 'trip-123' } as any);
 
@@ -81,12 +81,12 @@ describe('internal deploy routes', () => {
       .expect(201);
 
     expect(res.body.tripId).toBe('trip-123');
-    expect(ensureDefaultGroupForUser).toHaveBeenCalledWith('canary-1', 'canary@internal.duerk.org');
+    expect(ensureDefaultGroupForUser).toHaveBeenCalledWith('canary-1', 'canary@internal.wander-bunnies.com');
     expect(mockedCreateTrip).toHaveBeenCalledWith('canary-1', 'group-1', expect.stringContaining('abc1234'), expect.any(Object));
   });
 
   it('canary-smoke-write refuses when the resolved user is not actually flagged as canary (misconfiguration guard)', async () => {
-    mockedFindUserByEmail.mockResolvedValue({ id: 'someone-else', email: 'canary@internal.duerk.org', provider: 'email', role: 'user', is_internal_canary: false } as any);
+    mockedFindUserByEmail.mockResolvedValue({ id: 'someone-else', email: 'canary@internal.wander-bunnies.com', provider: 'email', role: 'user', is_internal_canary: false } as any);
 
     const app = buildApp();
     await request(app)
@@ -97,7 +97,7 @@ describe('internal deploy routes', () => {
   });
 
   it('canary-smoke-cleanup deletes every provided tripId under the canary account and reports counts', async () => {
-    mockedFindUserByEmail.mockResolvedValue({ id: 'canary-1', email: 'canary@internal.duerk.org', provider: 'email', role: 'user', is_internal_canary: true } as any);
+    mockedFindUserByEmail.mockResolvedValue({ id: 'canary-1', email: 'canary@internal.wander-bunnies.com', provider: 'email', role: 'user', is_internal_canary: true } as any);
     mockedDeleteTrip.mockResolvedValueOnce(undefined as any).mockRejectedValueOnce(new Error('boom'));
 
     const app = buildApp();

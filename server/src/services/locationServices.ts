@@ -1,11 +1,11 @@
 import fs from 'fs';
-import path from 'path';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getEnvValue } from '../env';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { logError, logInfo } from '../logger';
 import { parseCsvLine } from './destinationsAttractionsCsv';
+import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
 
 export type LocationOption = {
   id: string;
@@ -345,21 +345,18 @@ const loadDatasetFromStorage = async (): Promise<LocationDataset> => {
 };
 
 const resolveCountryStateCsvPath = (): string => {
-  const configured = getEnvValue('LOCATION_COUNTRY_STATE_CSV_LOCAL_PATH');
-  if (configured) return path.resolve(configured);
-  return path.resolve(__dirname, '../../data/locations/countries_and_regions.csv');
+  return resolveRuntimeDataPath(
+    'locations/countries_and_regions.csv',
+    getEnvValue('LOCATION_COUNTRY_STATE_CSV_LOCAL_PATH')
+  );
 };
 
 const resolveCitiesCsvPath = (): string => {
-  const configured = getEnvValue('LOCATION_CITY_CSV_LOCAL_PATH');
-  if (configured) return path.resolve(configured);
-  return path.resolve(__dirname, '../../data/locations/cities.csv');
+  return resolveRuntimeDataPath('locations/cities.csv', getEnvValue('LOCATION_CITY_CSV_LOCAL_PATH'));
 };
 
 const resolveDestinationsCsvPath = (): string => {
-  const configured = getEnvValue('DESTINATIONS_CSV_LOCAL_PATH');
-  if (configured) return path.resolve(configured);
-  return path.resolve(__dirname, '../../data/destinations.csv');
+  return resolveRuntimeDataPath('destinations.csv', getEnvValue('DESTINATIONS_CSV_LOCAL_PATH'));
 };
 
 const normalizeCsvText = (value: unknown): string =>

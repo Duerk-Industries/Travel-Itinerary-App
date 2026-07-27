@@ -230,6 +230,79 @@ providers:
       GETYOURGUIDE_ITINERARY_ACTIVITY_SUGGESTION: 1
       GETYOURGUIDE_ACTIVITY_TAB_LOOKUP: 1
 
+  # Trip Blog Integrations
+  META_GRAPH:
+    window: day
+    windowHours: 24
+    overall: 50
+    callers:
+      SOCIAL_CROSS_POST: 50
+      SOCIAL_POST_PREVIEW: 100
+      SOCIAL_POST_ENQUEUE: 50
+
+  GOOGLE_PHOTOS:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      PHOTOS_PICKER_OAUTH: 100
+      PHOTOS_PICKER_SESSION: 100
+      PHOTOS_ALBUM_LIST: 200
+      PHOTOS_MEDIA_FETCH: 500
+
+  CLOUD_VISION:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      BLOG_SAFESEARCH_MODERATION: 1000
+
+  GOOGLE_TIME_ZONE:
+    window: hour
+    windowHours: 24
+    overall: 500
+    callers:
+      LODGING_TIMEZONE_LOOKUP: 500
+
+  TRANSLATION:
+    window: month
+    windowHours: 720
+    overall: 1000000
+    callers:
+      BLOG_TRANSLATION: 1000000
+
+  TRANSCRIPTION:
+    window: month
+    windowHours: 720
+    overall: 1000
+    callers:
+      BLOG_AUDIO_TRANSCRIPTION: 1000
+
+  GCS:
+    window: day
+    windowHours: 24
+    overall: 10000
+    callers:
+      BLOG_UPLOAD_INIT: 1000
+      BLOG_OBJECT_FINALIZE: 5000
+      BLOG_RENDITION_READ: 4000
+
+  CLOUD_RUN_BLOG:
+    window: hour
+    windowHours: 1
+    overall: 500
+    callers:
+      BLOG_IMAGE_PROCESSING: 250
+      BLOG_VIDEO_PROCESSING: 100
+      BLOG_EXPORT_PROCESSING: 100
+
+  CDN_BLOG:
+    window: hour
+    windowHours: 1
+    overall: 100000
+    callers:
+      BLOG_PUBLIC_READ: 100000
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80
@@ -290,6 +363,9 @@ requestPricing:
   FRANKFURTER: 0
   OPEN_METEO: 0
   GETYOURGUIDE: 0
+  META_GRAPH: 0
+  GOOGLE_PHOTOS: 0
+  CLOUD_VISION: 0.0015 # $1.50 per 1000 images
 
 caching:
   attractions:
@@ -383,3 +459,16 @@ caching:
   weather:
     geocodeCacheTtlMinutes: 1440
     forecastCacheTtlMinutes: 60
+  tripBlog:
+    maxTextBlocksPerDay: 10
+    maxMediaItemsPerDay: 50
+    videoMaxDurationSeconds: 60
+    signedUrlTtlMs: 3600000
+    cdnCacheTtlSeconds: 86400
+    maxUploadInitPerMinutePerAccount: 30
+    maxUploadBytesPerDay: 1073741824
+    maxProcessingJobsPerAccount: 4
+    publicReadsPerMinutePerIp: 120
+    importItemsPerRun: 100
+    translationCharactersPerMonth: 100000
+    exportJobsPerMonth: 4

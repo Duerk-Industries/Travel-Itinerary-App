@@ -14,8 +14,8 @@ TEST_AI_CAPTURE_BUCKET=travel-itinerary-app-test-ai-captures
 
 PROD_SERVICE_NAME=travel-itinerary-app
 PROD_REGION=us-east5
-PROD_HOSTING_SITE=travel-itinerary-app
-PROD_DOMAIN=https://duerk.org
+PROD_HOSTING_SITE=travel-itinerary-app-483623
+PROD_DOMAIN=https://wander-bunnies.com
 PROD_FIRESTORE_DATABASE_ID=travel-itinerary-app-database
 PROD_RUNTIME_SERVICE_ACCOUNT=travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com
 PROD_AI_CAPTURE_BUCKET=travel-itinerary-app-ai-captures
@@ -35,4 +35,4 @@ DEPLOY_AUDIT_API_URL=
 # Email of the permanent internal canary account (Chapter 16 §6). Must match
 # the server's CANARY_ACCOUNT_EMAIL env var so the server bootstraps the
 # same account these scripts write against.
-CANARY_ACCOUNT_EMAIL=canary@internal.duerk.org
+CANARY_ACCOUNT_EMAIL=canary@internal.wander-bunnies.com

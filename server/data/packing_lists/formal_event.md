@@ -7,7 +7,7 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Attire
+## Clothing & Footwear
 - Formal gown
 - Cocktail dress
 - Tuxedo
@@ -15,17 +15,20 @@ gendered: false
 - Formal dress shoes
 - Bow tie
 - Pocket square
+- Hosiery
+- Evening wrap
 
-## Accessories
+## Travel Gear & Accessories
 - Clutch bag
 - Statement jewelry
-- Hosiery
 - Dress watch
 - Hair accessories
+- Compact jewelry case
+- Garment bag
+- Travel steamer
 
-## Finishing Kit
+## Health & Toiletries
 - Fashion tape
 - Safety pins
-- Garment steamer
 - Shoe polish
 - Heel protectors

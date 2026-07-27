@@ -7,23 +7,25 @@ gendered: false
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Embarkation & Cabin
+## Travel Gear & Accessories
 - Cruise card holder
 - Lanyard
 - Magnetic cabin hooks
-- Wrinkle release spray
 - Waterproof cabin pouch
 - Over-door organizer
-
-## Onboard Comfort
-- Seasickness bands
-- Pool cover-up
-- Formal-night outfit
 - Foldable laundry hamper
-- Binoculars
-
-## Shore Excursions
-- Shore-excursion bag
-- Water shoes
+- Shore excursion bag
 - Waterproof document pouch
 - Compact travel umbrella
+
+## Clothing & Footwear
+- Formal night outfit
+- Pool cover-up
+- Water shoes
+
+## Technology & Gadgets
+- Binoculars
+
+## Health & Toiletries
+- Seasickness bands
+- Wrinkle release spray

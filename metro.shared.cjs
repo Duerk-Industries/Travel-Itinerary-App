@@ -78,6 +78,20 @@ const createSharedMetroConfig = ({
   const config = getDefaultConfig(projectRoot);
   const { resolver } = config;
 
+  // getDefaultConfig() auto-detects the Yarn/npm workspace and points
+  // server.unstable_serverRoot at the monorepo root instead of projectRoot.
+  // That's harmless for `expo start` (module resolution goes through
+  // resolver.nodeModulesPaths/watchFolders, not server.root), but it breaks
+  // local Android release builds on Windows: the React Native Gradle
+  // plugin's cliPath() converts --entry-file to a path relative to `root`
+  // (app/) instead of absolute (an absolute-vs-relative branch that only
+  // exists on Windows — macOS/Linux always pass absolute paths), and Metro
+  // then resolves that relative path against server.unstable_serverRoot.
+  // When the two roots disagree, entry-file resolution fails with
+  // "Unable to resolve module ./AppEntry.js". Forcing serverRoot back to
+  // projectRoot keeps both sides consistent.
+  config.server = { ...config.server, unstable_serverRoot: projectRoot };
+
   const customResolveRequest = (context, moduleName, platform) => {
     if (
       platform !== 'web' &&

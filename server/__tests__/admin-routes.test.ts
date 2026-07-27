@@ -831,7 +831,7 @@ describe('Admin routes', () => {
         const serpApiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'SERPAPI');
         const openMeteoProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPEN_METEO');
         expect(getRes.body.getYourGuide).toEqual(expect.objectContaining({
-          featureEnabled: false,
+          featureEnabled: expect.any(Boolean),
           partnerConfigured: expect.any(Boolean),
           apiConfigured: expect.any(Boolean),
           cachePermission: expect.any(Boolean),

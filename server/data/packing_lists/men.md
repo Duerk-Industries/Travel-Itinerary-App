@@ -7,24 +7,24 @@ gendered: true
 
 <!-- General is included separately; do not repeat General items. -->
 
-## Clothing
-- Casual button-down shirts
-- Polo shirts
+## Clothing & Footwear
+- Casual button-down shirt
+- Polo shirt
 - Chinos
 - Swim trunks
 - Athletic shorts
 - Sport coat
 - Dress trousers
-- Base-layer undershirts
+- Base-layer undershirt
 
-## Grooming
+## Health & Toiletries
 - Shaving razor
 - Shaving cream
 - Beard trimmer
 - Aftershave
 - Cologne
 
-## Accessories
+## Travel Gear & Accessories
 - Belt
 - Tie clip
 - Cufflinks

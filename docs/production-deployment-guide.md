@@ -26,8 +26,14 @@ swap `bash scripts/x.sh --flag value` for `.\scripts\x.ps1 -Flag value`
 
 1. Create the real deployment config:
 
+   **Bash:**
    ```bash
    cp scripts/deploy.config.example scripts/deploy.config
+   ```
+
+   **PowerShell:**
+   ```powershell
+   copy scripts\deploy.config.example scripts\deploy.config
    ```
 
 2. Fill in every value in `scripts/deploy.config`.
@@ -69,28 +75,36 @@ swap `bash scripts/x.sh --flag value` for `.\scripts\x.ps1 -Flag value`
 Dry runs validate script wiring and manifest/evidence handling without touching
 GCP or Firebase:
 
+**Bash:**
 ```bash
 DEPLOY_CONFIG_FILE=scripts/deploy.config.example \
   bash scripts/build-release.sh --dry-run --output-dir dist/phase11-dryrun
-```
 
-```bash
-DEPLOY_CONFIG_FILE=scripts/deploy.config.example \
-  bash scripts/deploy-test.sh --dry-run \
+bash scripts/deploy-test.sh --dry-run \
   --release-manifest dist/phase11-dryrun/release-manifest-<sha>.json
-```
 
-```bash
-DEPLOY_CONFIG_FILE=scripts/deploy.config.example \
-  bash scripts/cutover-test-to-prod.sh --dry-run \
+bash scripts/cutover-test-to-prod.sh --dry-run \
   --release-manifest dist/phase11-dryrun/release-manifest-<sha>.json \
   --test-evidence dist/release/release-test-evidence-release-manifest-<sha>.json
+
+bash scripts/deploy-prod.sh --dry-run \
+  --reason "Emergency config-only validation"
 ```
 
-```bash
-DEPLOY_CONFIG_FILE=scripts/deploy.config.example \
-  bash scripts/deploy-prod.sh --dry-run \
-  --reason "Emergency config-only validation"
+**PowerShell:**
+```powershell
+$env:DEPLOY_CONFIG_FILE="scripts/deploy.config.example"
+.\scripts\build-release.ps1 -DryRun -OutputDir dist/phase11-dryrun
+
+.\scripts\deploy-test.ps1 -DryRun `
+  -ReleaseManifest dist/phase11-dryrun/release-manifest-<sha>.json
+
+.\scripts\cutover-test-to-prod.ps1 -DryRun `
+  -ReleaseManifest dist/phase11-dryrun/release-manifest-<sha>.json `
+  -TestEvidence dist/release/release-test-evidence-release-manifest-<sha>.json
+
+.\scripts\deploy-prod.ps1 -DryRun `
+  -Reason "Emergency config-only validation"
 ```
 
 ## Deploy to Test
@@ -104,8 +118,14 @@ Inputs:
 
 Equivalent script:
 
+**Bash:**
 ```bash
 bash scripts/deploy-test.sh --reseed
+```
+
+**PowerShell:**
+```powershell
+.\scripts\deploy-test.ps1 -Reseed
 ```
 
 What the script does:
@@ -135,10 +155,20 @@ Inputs:
 
 Equivalent script:
 
+**Bash:**
 ```bash
 bash scripts/cutover-test-to-prod.sh \
   --release-manifest dist/release/release-manifest-<sha>.json \
   --test-evidence dist/release/release-test-evidence-release-manifest-<sha>.json
+```
+
+GITHUB_ACTOR can be "Bryan" or "Tristan"
+**PowerShell:**
+```powershell
+$env:GITHUB_ACTOR = "Bryan"
+.\scripts\cutover-test-to-prod.ps1 `
+  -ReleaseManifest dist/release/release-manifest-<sha>.json `
+  -TestEvidence dist/release/release-test-evidence-release-manifest-<sha>.json
 ```
 
 What the script does before touching production:
@@ -186,9 +216,16 @@ Inputs:
 
 Equivalent script:
 
+**Bash:**
 ```bash
 bash scripts/deploy-prod.sh \
   --reason "Emergency production hotfix for <issue>"
+```
+
+**PowerShell:**
+```powershell
+.\scripts\deploy-prod.ps1 `
+  -Reason "Emergency production hotfix for <issue>"
 ```
 
 The script requires:
@@ -213,10 +250,18 @@ Inputs:
 
 Equivalent script:
 
+**Bash:**
 ```bash
 bash scripts/rollback.sh \
   --release-manifest dist/release/release-manifest-<sha>.json \
   --revision travel-itinerary-app-00042-abc
+```
+
+**PowerShell:**
+```powershell
+.\scripts\rollback.ps1 `
+  -ReleaseManifest dist/release/release-manifest-<sha>.json `
+  -Revision travel-itinerary-app-00042-abc
 ```
 
 Rollback never calls bare Firebase Hosting rollback. It deploys the frontend
@@ -237,8 +282,14 @@ Input:
 
 Equivalent script:
 
+**Bash:**
 ```bash
 bash scripts/teardown-old-production.sh --confirm yes-delete
+```
+
+**PowerShell:**
+```powershell
+.\scripts\teardown-old-production.ps1 -Confirm yes-delete
 ```
 
 The script refuses to run without typed confirmation, skips revisions that
@@ -250,8 +301,14 @@ the retention window are deleted.
 
 Use this before and after deploy operations:
 
+**Bash:**
 ```bash
 bash scripts/current-state.sh
+```
+
+**PowerShell:**
+```powershell
+.\scripts\current-state.ps1
 ```
 
 It prints current Cloud Run state for test and production, including the
@@ -275,3 +332,56 @@ npm --prefix app run typecheck
 
 Native iOS/Android artifacts are built through EAS workflows, not directly by
 these server/frontend cutover scripts.
+
+## Quick PowerShell Checklist: Test Then Production
+
+Run these commands from the repository root in PowerShell. Replace `Bryan`
+with `Tristan` if that is the authorized deployment actor. The test command
+builds the release and writes the manifest and test evidence under
+`dist\release`; the final command promotes that same tested manifest to
+production.
+
+```powershell
+Set-Location 'C:\Git\Tristan\Travel-Itinerary-App'
+$env:GITHUB_ACTOR = 'Bryan'
+
+# Optional: inspect the currently deployed test and production revisions.
+.\scripts\current-state.ps1
+
+# Deploy a new build to the isolated test environment and run its smoke tests.
+# Add -Reseed only when synthetic test data should be recreated.
+.\scripts\deploy-test.ps1
+
+# Find the evidence produced by the test deployment and derive its paired manifest.
+$evidence = Get-ChildItem -LiteralPath '.\dist\release' -Filter 'release-test-evidence-*.json' |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
+if (-not $evidence) { throw 'No test evidence file was found in dist\release.' }
+
+$testEvidence = $evidence.FullName
+$manifestName = $evidence.BaseName -replace '^release-test-evidence-', ''
+$releaseManifest = Join-Path $evidence.DirectoryName ($manifestName + '.json')
+if (-not (Test-Path -LiteralPath $releaseManifest)) {
+  throw "Paired release manifest was not found: $releaseManifest"
+}
+
+Write-Host "Release manifest: $releaseManifest"
+Write-Host "Test evidence:    $testEvidence"
+
+# Promote the exact release that passed test validation to production.
+.\scripts\cutover-test-to-prod.ps1 `
+  -ReleaseManifest $releaseManifest `
+  -TestEvidence $testEvidence
+
+# Optional: confirm the final Cloud Run state and deployed git SHA.
+.\scripts\current-state.ps1
+```
+
+For an emergency direct production deployment that intentionally bypasses
+test cutover, use this only with a specific reason:
+
+```powershell
+Set-Location 'C:\Git\Tristan\Travel-Itinerary-App'
+$env:GITHUB_ACTOR = 'Bryan'
+.\scripts\deploy-prod.ps1 -Reason 'Emergency production hotfix for <issue>'
+```

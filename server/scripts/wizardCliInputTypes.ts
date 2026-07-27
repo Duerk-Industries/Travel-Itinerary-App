@@ -34,6 +34,18 @@ export interface WizardCliInput {
   /** Used only for output file naming; NOT sent to AI generation. */
   tripName: string;
 
+  /**
+   * Optional. Without a userId, generation runs in the same anonymous/preview
+   * mode the live app uses for logged-out users: the attraction catalog
+   * shortlist and the per-attraction Wikipedia description enrichment are
+   * both skipped entirely (see itineraryPromptPlanService.ts's `if (userId)`
+   * gates), so every activity note comes back with no description. Set this
+   * to any non-empty string (no real user record is required — duration
+   * metadata is cached globally by destination+name, not per-user) to
+   * exercise the real enrichment path and see actual attraction blurbs.
+   */
+  userId?: string;
+
   destinations: string[];
   mustSeeAttractions?: WizardCliMustSeeAttraction[];
 

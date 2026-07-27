@@ -69,7 +69,7 @@ exit 1
             `export PATH=${shellQuote(toBashPath(workDir))}":$PATH"`,
             `export DEPLOY_CONFIG_FILE=${shellQuote(toBashPath(deployConfigPath))}`,
             'export GITHUB_ACTOR=Bryan',
-            `${shellQuote(toBashPath(path.join(root, 'scripts/rollback.sh')))} --release-manifest ${shellQuote(toBashPath(manifestPath))} --revision svc-00042-mismatched`,
+            `bash ${shellQuote(toBashPath(path.join(root, 'scripts/rollback.sh')))} --release-manifest ${shellQuote(toBashPath(manifestPath))} --revision svc-00042-mismatched`,
           ].join('; '),
         ],
         {

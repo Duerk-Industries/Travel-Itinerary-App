@@ -15,7 +15,7 @@ done
 [[ -n "$BASE_URL" ]] || { echo "ERROR: --base-url is required" >&2; exit 1; }
 [[ -n "$ENVIRONMENT" ]] || { echo "ERROR: --environment is required" >&2; exit 1; }
 
-HEALTH_URL="${BASE_URL%/}/api/health"
+HEALTH_URL="${BASE_URL%/}/api/healthz"
 STATUS="$(curl -sS -o /dev/null -w '%{http_code}' "$HEALTH_URL")"
 [[ "$STATUS" == "200" ]] || { echo "ERROR: health check failed at $HEALTH_URL status=$STATUS" >&2; exit 1; }
 

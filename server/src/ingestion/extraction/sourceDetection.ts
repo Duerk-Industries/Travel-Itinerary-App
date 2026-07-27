@@ -39,6 +39,11 @@ const SOURCE_SIGNATURES: SourceSignature[] = [
   { sourceKey: 'united_airlines', patterns: [/united\.com/i, /united airlines/i] },
   { sourceKey: 'delta', patterns: [/delta\.com/i, /delta air lines/i] },
   { sourceKey: 'austrian_airlines', patterns: [/austrian airlines|operated by:\s*austrian|austrian air/i] },
+  {
+    sourceKey: 'swiss',
+    patterns: [/\bswiss\b/i, /booking code:|operated by:|e-ticket/i],
+    requireAll: true,
+  },
   { sourceKey: 'american_airlines', patterns: [/aa\.com/i, /american airlines/i] },
   { sourceKey: 'southwest', patterns: [/southwest\.com/i, /southwest airlines/i] },
   { sourceKey: 'reserve_with_google', patterns: [/reserve with google/i, /reserve-noreply@google\.com/i] },
@@ -101,6 +106,7 @@ export const detectItemType = (text: string): string => {
   const hasFlightRouteSignal =
     /\b(depart(?:ure|ing)|arriv(?:al|ing))\b/.test(lower)
     && /\b(airport|airline|flight|terminal|gate|operated by|record locator)\b/.test(lower);
+  const hasSwissFlightSignal = /\bitinerary details\b/i.test(text) && /\boperated by:\s*/i.test(text);
   const hasRailSignal = /\b(train|rail|high speed rail|rail ticket|station\b|thsr|hsr\b)\b/.test(lower);
   const hasPrivateTransferSignal =
     /\b(one-way transfer|private transfer|pickup details|pick-up and drop-off|drop-off|pickup location|pickup at|driver(?:'s)? info|vehicle\b|thanks for riding|uberx)\b/.test(lower);
@@ -126,10 +132,11 @@ export const detectItemType = (text: string): string => {
   }
   if (hasCarRentalSignal) return 'car_rental';
   if (hasPrivateTransferSignal) return 'ferry_bus_transfer';
+  if (hasSwissFlightSignal) return 'flight';
   if (hasHotelSignal && !hasActivitySignal && !hasPrivateTransferSignal && !hasRailSignal) {
     return 'hotel';
   }
-  if (hasStrongFlightSignal || hasFlightRouteSignal) {
+  if (hasStrongFlightSignal || hasFlightRouteSignal || hasSwissFlightSignal) {
     if (/\b(ferry|bus transfer|coach)\b/.test(lower)) return 'ferry_bus_transfer';
     return 'flight';
   }

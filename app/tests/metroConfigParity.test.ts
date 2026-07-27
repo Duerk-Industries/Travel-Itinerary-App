@@ -162,6 +162,28 @@ describe('Metro config parity (root EAS config vs. app local config)', () => {
     expect(watchesWorkspaceRoot).toBe(false);
   });
 
+  it('roots local web serving at the workspace so Expo entry and lazy-module URLs resolve', () => {
+    const previous = process.env.WANDERBUNNIES_WEB_DEV;
+    try {
+      process.env.WANDERBUNNIES_WEB_DEV = '1';
+      const webConfig: any = loadConfig('app/metro.config.js');
+      expect(path.resolve(webConfig.server.unstable_serverRoot)).toBe(workspaceRoot);
+    } finally {
+      if (previous == null) {
+        delete process.env.WANDERBUNNIES_WEB_DEV;
+      } else {
+        process.env.WANDERBUNNIES_WEB_DEV = previous;
+      }
+    }
+  });
+
+  it('enables workspace-root serving from both web launchers', () => {
+    for (const scriptName of ['start-web.js', 'export-web.js']) {
+      const launcher = fs.readFileSync(path.join(appRoot, 'scripts', scriptName), 'utf8');
+      expect(launcher).toContain("WANDERBUNNIES_WEB_DEV: '1'");
+    }
+  });
+
   it('runtime app sources do not import Node core modules or shims directly', () => {
     const runtimeEntries = [
       'App.tsx',

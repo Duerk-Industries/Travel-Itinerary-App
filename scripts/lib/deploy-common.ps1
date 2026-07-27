@@ -37,6 +37,70 @@ function Assert-RequiredVars([string[]]$Names) {
   }
 }
 
+function Ensure-GcloudProjectId() {
+  if (-not [string]::IsNullOrWhiteSpace($env:GCLOUD_PROJECT_ID)) { return }
+  $activeProject = (& gcloud config get-value project 2>$null | Select-Object -Last 1).ToString().Trim()
+  if ($activeProject -and $activeProject -ne '(unset)') {
+    $env:GCLOUD_PROJECT_ID = $activeProject
+  }
+}
+
+function Get-CloudRunSecretMappings([string]$SecretsFile = '') {
+  if (-not $SecretsFile) {
+    if ($env:SECRETS_FILE) {
+      $SecretsFile = $env:SECRETS_FILE
+    } else {
+      $SecretsFile = Join-Path $Script:RepoRoot 'server\.secrets'
+    }
+  }
+  if (-not (Test-Path -LiteralPath $SecretsFile)) { return @() }
+
+  $ignoredKeys = @(
+    'GCLOUD_PROJECT', 'GOOGLE_CLOUD_PROJECT', 'GCLOUD_PROJECT_ID', 'GCLOUD_PROJECT_NUMBER',
+    'DEPLOYER_SERVICE_ACCOUNT_EMAIL', 'RUNTIME_SERVICE_ACCOUNT_EMAIL',
+    'CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL', 'GOOGLE_APPLICATION_CREDENTIALS'
+  )
+  $pairs = @()
+  foreach ($raw in Get-Content -LiteralPath $SecretsFile) {
+    $line = $raw.Trim()
+    if (-not $line -or $line.StartsWith('#')) { continue }
+    if ($line.StartsWith('export ')) { $line = $line.Substring(7).Trim() }
+    if ($line -notmatch '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') { continue }
+    $key = $Matches[1]
+    if ($ignoredKeys -contains $key) { continue }
+    $reference = $Matches[2].Trim()
+    if (($reference.StartsWith('"') -and $reference.EndsWith('"')) -or ($reference.StartsWith("'") -and $reference.EndsWith("'"))) {
+      $reference = $reference.Substring(1, $reference.Length - 2)
+    }
+    if (-not $reference) { $reference = "${key}:latest" }
+    elseif ($reference -notmatch ':') { $reference = "${reference}:latest" }
+    $pairs += "${key}=${reference}"
+  }
+  return $pairs
+}
+
+function Get-GcloudDictArg([string[]]$Pairs) {
+  if ($Pairs.Count -eq 0) { return '' }
+  $joined = $Pairs -join ''
+  foreach ($delimiter in @('@', '~', '#', '|', '!')) {
+    if ($joined.IndexOf($delimiter) -lt 0) { return "^${delimiter}^" + ($Pairs -join $delimiter) }
+  }
+  $delimiter = [guid]::NewGuid().ToString('N')
+  return "^${delimiter}^" + ($Pairs -join $delimiter)
+}
+
+function Get-CloudRunSecretDeployArgs([string]$SecretsFile = '') {
+  $mappings = @(Get-CloudRunSecretMappings $SecretsFile)
+  if (-not ($mappings | Where-Object { $_ -match '^AUTH_SECRET=' })) {
+    Fail "Cloud Run deploy requires an AUTH_SECRET Secret Manager mapping. Add AUTH_SECRET to server/.secrets (for example, AUTH_SECRET=AUTH_SECRET:latest)."
+  }
+  return [pscustomobject]@{
+    Mappings = $mappings
+    Argument = Get-GcloudDictArg $mappings
+    Keys = (($mappings | ForEach-Object { ($_ -split '=', 2)[0] }) -join ',')
+  }
+}
+
 function Get-Sha256File([string]$FilePath) {
   return (Get-FileHash -LiteralPath $FilePath -Algorithm SHA256).Hash.ToLowerInvariant()
 }

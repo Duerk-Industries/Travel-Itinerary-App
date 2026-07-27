@@ -52,6 +52,26 @@ const requireLocalSeedAllowed = () => {
   }
 };
 
+const requireRemoteSeedAllowed = () => {
+  if (process.env.ALLOW_REMOTE_TEST_ACCOUNT_SEED !== '1') {
+    throw new Error('ALLOW_REMOTE_TEST_ACCOUNT_SEED must be set to 1 to seed a remote test database.');
+  }
+  if (String(process.env.DB_PROVIDER ?? '').toLowerCase() !== 'firebase') {
+    throw new Error('Remote test account seeding requires DB_PROVIDER=firebase.');
+  }
+  if (!process.env.GCLOUD_PROJECT_ID) {
+    throw new Error('Remote test account seeding requires GCLOUD_PROJECT_ID.');
+  }
+  if (!process.env.FIRESTORE_DATABASE_ID) {
+    throw new Error('Remote test account seeding requires FIRESTORE_DATABASE_ID.');
+  }
+  // A remote seed must use ADC against the configured project/database even
+  // when the caller is a developer machine that has local emulator settings.
+  delete process.env.FIRESTORE_EMULATOR_HOST;
+  delete process.env.FIRESTORE_EMULATOR_HOST_PATH;
+  delete process.env.ALLOW_TEST_ACCOUNT_SEED;
+};
+
 const loadAccounts = (filePath: string): AccountInput[] => {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Accounts file not found: ${filePath}`);
@@ -156,8 +176,9 @@ const repairExistingAccount = async (account: AccountInput): Promise<void> => {
   }
 };
 
-export const runCreateTestAccounts = async () => {
-  requireLocalSeedAllowed();
+export const runCreateTestAccounts = async (options: { remote?: boolean } = {}) => {
+  if (options.remote) requireRemoteSeedAllowed();
+  else requireLocalSeedAllowed();
   process.env.FIREBASE_INIT_BACKFILL_PACKING ??= '0';
   const accountsPath = path.resolve(__dirname, '../test_inputs/default_accounts.json');
   const accounts = loadAccounts(accountsPath);

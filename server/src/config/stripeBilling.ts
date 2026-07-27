@@ -73,17 +73,54 @@ export const getStripePremiumMonthlyPriceId = (): string | undefined =>
 export const getStripePremiumAnnualPriceId = (): string | undefined =>
   getEnvValue('STRIPE_PREMIUM_ANNUAL_PRICE_ID');
 
-export const SUPPORTED_PLAN_KEYS: BillingPlanKey[] = ['premium_monthly', 'premium_annual'];
+export const getStripeStorage20gbPriceId = (): string | undefined =>
+  getEnvValue('STRIPE_STORAGE_20GB_PRICE_ID');
+
+export const getStripeStorage100gbPriceId = (): string | undefined =>
+  getEnvValue('STRIPE_STORAGE_100GB_PRICE_ID');
+
+export const getStripeStorage200gbPriceId = (): string | undefined =>
+  getEnvValue('STRIPE_STORAGE_200GB_PRICE_ID');
+
+export const getStripeStorage2tbPriceId = (): string | undefined =>
+  getEnvValue('STRIPE_STORAGE_2TB_PRICE_ID');
+
+export const getStorageAddonBytesMapping = (): Record<string, number> => {
+  const mapping: Record<string, number> = {};
+  const p20 = getStripeStorage20gbPriceId();
+  if (p20) mapping[p20] = 20 * 1024 ** 3;
+  const p100 = getStripeStorage100gbPriceId();
+  if (p100) mapping[p100] = 100 * 1024 ** 3;
+  const p200 = getStripeStorage200gbPriceId();
+  if (p200) mapping[p200] = 200 * 1024 ** 3;
+  const p2t = getStripeStorage2tbPriceId();
+  if (p2t) mapping[p2t] = 2 * 1024 ** 4;
+  return mapping;
+};
+
+export const SUPPORTED_PLAN_KEYS: BillingPlanKey[] = [
+  'premium_monthly',
+  'premium_annual',
+  'storage_20gb',
+  'storage_100gb',
+  'storage_200gb',
+  'storage_2tb',
+];
 
 export const resolvePriceId = (planKey: BillingPlanKey): string => {
-  const priceId =
-    planKey === 'premium_monthly'
-      ? getStripePremiumMonthlyPriceId()
-      : getStripePremiumAnnualPriceId();
+  let priceId: string | undefined;
+  switch (planKey) {
+    case 'premium_monthly': priceId = getStripePremiumMonthlyPriceId(); break;
+    case 'premium_annual':  priceId = getStripePremiumAnnualPriceId();  break;
+    case 'storage_20gb':    priceId = getStripeStorage20gbPriceId();    break;
+    case 'storage_100gb':   priceId = getStripeStorage100gbPriceId();   break;
+    case 'storage_200gb':   priceId = getStripeStorage200gbPriceId();   break;
+    case 'storage_2tb':     priceId = getStripeStorage2tbPriceId();     break;
+  }
   if (!priceId) {
     throw new Error(
       `[stripe] No active Price ID configured for plan: ${planKey}. ` +
-        `Set STRIPE_PREMIUM_MONTHLY_PRICE_ID or STRIPE_PREMIUM_ANNUAL_PRICE_ID.`,
+        `Check your environment variables.`,
     );
   }
   return priceId;

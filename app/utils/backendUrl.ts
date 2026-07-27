@@ -110,5 +110,5 @@ export const resolveBackendUrl = ({
     }
   }
 
-  return normalizeBackendUrl(configuredBackend ?? 'https://duerk.org', 'https');
+  return normalizeBackendUrl(configuredBackend ?? 'https://wander-bunnies.com', 'https');
 };

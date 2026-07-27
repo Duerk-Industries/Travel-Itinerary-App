@@ -85,7 +85,7 @@ These are hardcoded in [app/eas.json](../app/eas.json) for both `preview` and `p
 
 | Variable | Value |
 |---|---|
-| `EXPO_PUBLIC_BACKEND_URL` | `https://duerk.org` |
+| `EXPO_PUBLIC_BACKEND_URL` | `https://wander-bunnies.com` |
 | `EXPO_PUBLIC_SENTRY_DSN` | Sentry ingest URL |
 | `SENTRY_ALLOW_FAILURE` | `true` |
 
@@ -218,7 +218,7 @@ Then deploy the server (Cloud Run, Docker, etc.) — the SPA is served from `ser
 ## 8. Post-deploy verification checklist
 
 - [ ] Open the app (web or device) and complete a full login flow.
-- [ ] Create a test trip to confirm backend connectivity to `https://duerk.org`.
+- [ ] Create a test trip to confirm backend connectivity to `https://wander-bunnies.com`.
 - [ ] Check Sentry project for any new error spikes after rollout.
 - [ ] Confirm build number incremented correctly in the App Store / Play Console.
 - [ ] Smoke-test any features changed in this release.
@@ -234,5 +234,5 @@ Then deploy the server (Cloud Run, Docker, etc.) — the SPA is served from `ser
 | iOS bundle identifier | `com.duerkindustries.travelitineraryplanner` |
 | Android package | `com.duerkindustries.travelitineraryplanner` |
 | Expo slug | `travel-itinerary-planner` |
-| Production backend | `https://duerk.org` |
+| Production backend | `https://wander-bunnies.com` |
 | EAS CLI version pinned to | `20.2.0` |

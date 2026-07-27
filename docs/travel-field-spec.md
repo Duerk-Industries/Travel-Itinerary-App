@@ -32,7 +32,7 @@ These three item types share the same field shape in `server/src/types.ts` (`Fli
 | Field | Required | Typically present | Format | Notes |
 |---|---|---|---|---|
 | `carrier` | Yes | — | Free text | Airline/rail/bus operator name. No format standard; presence-only. |
-| `flightNumber` | Yes (flight only) | Yes | `^[A-Z0-9]{2}\d{1,4}$` | Airline designator + digits. N/A for bus/ferry; `typicallyPresent: false` for rail (train numbers vary widely, often not validated). |
+| `flightNumber` | Yes (flight only) | Yes | `^[A-Z0-9]{2}\s?\d{1,4}$` | Airline designator + optional display space + digits. N/A for bus/ferry; `typicallyPresent: false` for rail (train numbers vary widely, often not validated). |
 | `bookingReference` (flight) | No | Yes | `^[A-Z0-9]{6}$` | PNR. This is the field your original "6-letter code" almost certainly meant — corrected to alphanumeric, not letters-only. |
 | `bookingReference` (rail / ferry_bus_transfer) | No | Yes (rail) / No (ferry_bus_transfer) | `^[A-Z0-9]{4,24}$` | **Not** validated as a PNR — rail and ground-transfer bookings are frequently OTA-intermediated (Klook, GetYourGuide), and the OTA's own reference (e.g. `PBB670152`, `GYGLMR82GZRZ`) isn't a real IATA PNR. PNR format only makes sense for an actual airline booking. |
 | `departureAirportCode` / `arrivalAirportCode` / `layoverLocationCode` | Yes (flight only) | Yes | `^[A-Z]{3}$` | IATA. Skip for rail/bus/ferry — use `departureLocation`/`arrivalLocation` free text instead. |

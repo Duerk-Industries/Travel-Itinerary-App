@@ -60,6 +60,23 @@ export interface JobQueue {
 class InProcessJobQueue implements JobQueue {
   async enqueue(jobId: string): Promise<void> {
     logInfo(`[ingestion][queue] dispatching in-process job=${jobId}`);
+
+    // Jest resets the module graph and replaces the in-memory database between
+    // test files. Keeping test jobs behind a detached timer lets a job from an
+    // earlier request resume against the next test's repository, which makes
+    // otherwise-correct ingestion assertions intermittently time out. Test
+    // jobs retain the same error-isolated behavior as production, but finish
+    // before the enqueue call returns so no work crosses a test boundary.
+    if (process.env.NODE_ENV === 'test') {
+      try {
+        const { processImportJob } = require('../orchestrator') as typeof import('../orchestrator');
+        await processImportJob(jobId);
+      } catch (error) {
+        logError(`[ingestion] in-process worker failed job=${jobId}`, error);
+      }
+      return;
+    }
+
     setTimeout(() => {
       void Promise.resolve()
         .then(() => require('../orchestrator') as typeof import('../orchestrator'))

@@ -14,6 +14,8 @@ const user = {
 };
 
 describe('auth route rate limits', () => {
+  let nowSpy: jest.SpyInstance<number, []>;
+
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.DB_PROVIDER = 'memory';
@@ -26,6 +28,8 @@ describe('auth route rate limits', () => {
   });
 
   beforeEach(async () => {
+    // Keep both requests in each assertion in the same fixed rate-limit window.
+    nowSpy = jest.spyOn(Date, 'now').mockReturnValue(TS);
     process.env.AUTH_LOGIN_RATE_LIMIT_MAX = '1';
     process.env.AUTH_LOGIN_RATE_LIMIT_WINDOW_MS = '60000';
     process.env.AUTH_PASSWORD_RATE_LIMIT_MAX = '1';
@@ -34,6 +38,7 @@ describe('auth route rate limits', () => {
   });
 
   afterEach(async () => {
+    nowSpy.mockRestore();
     delete process.env.AUTH_LOGIN_RATE_LIMIT_MAX;
     delete process.env.AUTH_LOGIN_RATE_LIMIT_WINDOW_MS;
     delete process.env.AUTH_PASSWORD_RATE_LIMIT_MAX;

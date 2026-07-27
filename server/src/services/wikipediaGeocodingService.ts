@@ -2,6 +2,7 @@ import axios from 'axios';
 import { logError } from '../logger';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { recordProviderRequestCost } from '../apis/providerBudgeting';
+import { trimToSentences } from '../utils/sentenceTrim';
 
 export type WikipediaEnrichment = {
   canonicalTitle: string;
@@ -27,8 +28,7 @@ const finiteCoordinate = (value: unknown, min: number, max: number): number | nu
 const trimSummary = (value: unknown): string | null => {
   const text = String(value ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   if (!text || /may refer to|disambiguation/i.test(text)) return null;
-  const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [text];
-  return sentences.slice(0, 2).map((sentence) => sentence.trim()).join(' ').trim();
+  return trimToSentences(text, 2);
 };
 
 export const parseWikipediaEnrichment = (payload: any): WikipediaEnrichment | null => {

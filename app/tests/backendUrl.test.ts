@@ -65,7 +65,7 @@ describe('resolveBackendUrl', () => {
         nodeEnv: 'development',
         platformOs: 'ios',
       })
-    ).toBe('https://duerk.org');
+    ).toBe('https://wander-bunnies.com');
   });
 
   it('uses the configured production backend when the browser is on the deployed host', () => {
