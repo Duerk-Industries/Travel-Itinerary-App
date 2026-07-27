@@ -2064,7 +2064,15 @@ export const verifyWebUserCredentials = async (
 
 export const getUserById = async (userId: string): Promise<User | null> => {
   const p = getPool();
-  const { rows } = await p.query<User>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
+  const { rows } = await p.query<User>(
+    `SELECT id, email, username, username_normalized as "username_normalized",
+            provider, google_id as "google_id", apple_id as "apple_id",
+            picture, first_name as "firstName", last_name as "lastName",
+            email_verified as "emailVerified", email_verified_at as "emailVerifiedAt",
+            role, is_internal_canary as "is_internal_canary"
+     FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
   return rows[0] ?? null;
 };
 

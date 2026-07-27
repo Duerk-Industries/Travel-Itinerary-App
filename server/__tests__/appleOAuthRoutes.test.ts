@@ -17,7 +17,12 @@ describe('Apple OAuth routes', () => {
   let tempDir = '';
   let app: typeof import('../src/app').app;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    process.env.DB_PROVIDER = 'memory';
+    process.env.USE_IN_MEMORY_DB = '1';
+    process.env.DATABASE_URL = 'pg-mem://localhost/test';
+    delete process.env.FIRESTORE_EMULATOR_HOST;
+
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'apple-oauth-routes-'));
     const flagsPath = path.join(tempDir, 'auth-flags.yaml');
     fs.writeFileSync(flagsPath, 'flags:\n  appleOAuthEnabled: true\n', 'utf8');
@@ -28,7 +33,9 @@ describe('Apple OAuth routes', () => {
     process.env.APPLE_PRIVATE_KEY = 'not-used-by-route-tests';
     process.env.APPLE_CALLBACK_URL = 'https://example.com/api/auth/apple/callback';
     jest.resetModules();
-    app = require('../src/app').app;
+    const serverApp = require('../src/app');
+    app = serverApp.app;
+    await require('../src/db').initDb();
   });
 
   afterAll(() => {
@@ -111,5 +118,56 @@ describe('Apple OAuth routes', () => {
 
     expect(String(response.headers.location)).toContain('travelitineraryplanner://login');
     expect(String(response.headers.location)).toContain('auth_error=apple_callback_failed');
+  });
+
+  it('completes a successful login flow and redirects with an exchange code', async () => {
+    // 1. Initiate authorization to get a nonce and cookie
+    const authReq = await request(app)
+      .get('/api/auth/apple')
+      .query({ redirect_uri: 'travelitineraryplanner://login' })
+      .expect(302);
+
+    const location = new URL(String(authReq.headers.location));
+    const state = String(location.searchParams.get('state'));
+    const nonce = String(location.searchParams.get('nonce'));
+    const cookie = authReq.headers['set-cookie']?.[0] ?? '';
+
+    // 2. Mock external Apple calls
+    const appleAuth = require('../src/appleAuth');
+    jest.spyOn(appleAuth, 'exchangeAppleAuthorizationCode').mockResolvedValue({ idToken: 'fake-id-token' });
+    jest.spyOn(appleAuth, 'verifyAppleIdToken').mockResolvedValue({
+      sub: 'apple-user-id-123',
+      email: 'success@example.com',
+      email_verified: true,
+    });
+
+    // 3. Simulate Apple callback POST
+    const callbackRes = await request(app)
+      .post('/api/auth/apple/callback')
+      .set('Cookie', cookie)
+      .type('form')
+      .send({
+        code: 'valid-code',
+        state,
+        user: JSON.stringify({ name: { firstName: 'Apple', lastName: 'User' } }),
+      })
+      .expect(302);
+
+    // 4. Verify redirect contains auth_code
+    const redirectUrl = new URL(String(callbackRes.headers.location));
+    expect(redirectUrl.protocol).toBe('travelitineraryplanner:');
+    expect(redirectUrl.searchParams.get('auth_code')).toBeTruthy();
+
+    // 5. Verify the code can be exchanged for a token
+    const exchangeRes = await request(app)
+      .post('/api/auth/exchange')
+      .send({ code: redirectUrl.searchParams.get('auth_code') })
+      .expect(200);
+
+    expect(exchangeRes.body.token).toBeTruthy();
+    const { verifyToken } = require('../src/auth');
+    const decoded = verifyToken(exchangeRes.body.token);
+    expect(decoded.email).toBe('success@example.com');
+    expect(decoded.provider).toBe('apple');
   });
 });

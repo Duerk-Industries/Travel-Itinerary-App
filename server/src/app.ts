@@ -435,12 +435,12 @@ const setAppleOAuthNonceCookie = (res: express.Response, nonce: string): void =>
     sameSite: isLocalEnv() ? 'lax' : 'none',
     secure: !isLocalEnv(),
     maxAge: 10 * 60 * 1000,
-    path: '/api/auth/apple',
+    path: '/',
   });
 };
 
 const clearAppleOAuthNonceCookie = (res: express.Response): void => {
-  res.clearCookie(APPLE_OAUTH_NONCE_COOKIE, { path: '/api/auth/apple' });
+  res.clearCookie(APPLE_OAUTH_NONCE_COOKIE, { path: '/' });
 };
 
 app.get('/api/auth/apple', (req, res) => {
