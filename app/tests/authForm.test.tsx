@@ -41,6 +41,7 @@ const buildProps = (overrides: Partial<React.ComponentProps<typeof AuthForm>> = 
   const loginWithPassword = jest.fn();
   const register = jest.fn();
   const loginWithGoogle = jest.fn();
+  const loginWithApple = jest.fn();
   return {
     authMode: 'login' as AuthMode,
     setAuthMode,
@@ -54,6 +55,8 @@ const buildProps = (overrides: Partial<React.ComponentProps<typeof AuthForm>> = 
     loginWithPassword,
     register,
     loginWithGoogle,
+    loginWithApple,
+    appleOAuthEnabled: false,
     styles,
     ...overrides,
     mocks: {
@@ -64,6 +67,7 @@ const buildProps = (overrides: Partial<React.ComponentProps<typeof AuthForm>> = 
       loginWithPassword,
       register,
       loginWithGoogle,
+      loginWithApple,
     },
   };
 };
@@ -110,6 +114,18 @@ describe('AuthForm', () => {
     const { getByTestId } = render(<AuthForm {...props} />);
     fireEvent.press(getByTestId('auth-form-google'));
     expect(props.mocks.loginWithGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows Apple sign-in only when enabled and invokes it when pressed', () => {
+    const props = buildProps({ appleOAuthEnabled: true });
+    const { getByTestId } = render(<AuthForm {...props} />);
+    fireEvent.press(getByTestId('auth-form-apple'));
+    expect(props.mocks.loginWithApple).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides Apple sign-in when the backend feature flag is disabled', () => {
+    const { queryByTestId } = render(<AuthForm {...buildProps({ appleOAuthEnabled: false })} />);
+    expect(queryByTestId('auth-form-apple')).toBeNull();
   });
 
   it('mode toggle buttons call setAuthMode with the chosen mode', () => {

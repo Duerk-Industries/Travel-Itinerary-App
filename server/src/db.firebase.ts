@@ -68,7 +68,7 @@ import {
   ItineraryGenerationMetrics,
   ItineraryComparison,
 } from './types';
-import type { AccountEmail } from './db.postgres';
+import type { AccountEmail, AppleProfile } from './db.postgres';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
@@ -538,7 +538,8 @@ const findUserByEmailDoc = async (email: string): Promise<{ id: string; data: an
   const snapshot = await getDb().collection('users').where('email', '==', normalized).limit(1).get();
   if (snapshot.empty) return null;
   const doc = snapshot.docs[0];
-  return { id: doc.id, data: doc.data() as any };
+  const mapped = mapUserDoc(doc);
+  return mapped ? { id: mapped.id, data: mapped } : null;
 };
 
 const getDayKey = (iso: string): string => String(iso ?? '').slice(0, 10);
@@ -1462,11 +1463,29 @@ export const verifyWebUserCredentials = async (
   return { id: doc.id, email: data.email, firstName: data.firstName, lastName: data.lastName, emailVerified: userData.emailVerified };
 };
 
+const mapUserDoc = (doc: FirebaseFirestore.DocumentSnapshot): User | null => {
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  // Combine all possible field name variants (camel/snake) into a consistent User object.
+  // This handles parity with Postgres (snake) and legacy Firebase (camel) implementations.
+  return {
+    ...data,
+    id: doc.id,
+    firstName: data.firstName ?? data.first_name,
+    lastName: data.lastName ?? data.last_name,
+    emailVerified: data.emailVerified ?? data.email_verified,
+    emailVerifiedAt: data.emailVerifiedAt ?? data.email_verified_at,
+    apple_id: data.apple_id ?? data.appleId,
+    google_id: data.google_id ?? data.googleId,
+    username: data.username,
+    username_normalized: data.username_normalized ?? data.usernameNormalized,
+    role: (data.role ?? 'user') as UserRole,
+  };
+};
+
 export const getUserById = async (userId: string): Promise<User | null> => {
   const doc = await getDb().collection('users').doc(userId).get();
-  if (!doc.exists) return null;
-  const data = doc.data() as User;
-  return { ...data, id: doc.id };
+  return mapUserDoc(doc);
 };
 
 export const recordWebUserLogin = async (userId: string): Promise<{ firstLogin: boolean }> => {
@@ -6095,7 +6114,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     }
     const normalizedEmail = normalizeEmail(email);
 
-    const existing = await db.collection('users').where('googleId', '==', id).limit(1).get();
+    const existing = await db.collection('users').where('google_id', '==', id).limit(1).get();
     if (!existing.empty) {
         const doc = existing.docs[0];
         const currentData = doc.data() as any;
@@ -6107,51 +6126,137 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
             emailVerified: true,
             emailVerifiedAt: nowIso(),
             username: currentData.username ?? await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail, undefined, doc.id),
+            username_normalized: normalizeUsername(currentData.username ?? await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail, undefined, doc.id)),
         };
         await doc.ref.update(updateData);
         await upsertUserEmail(doc.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
         const updatedDoc = await doc.ref.get();
         const data = updatedDoc.data() as User;
-        return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+        return { ...data, id: doc.id };
     }
 
     const existingByEmail = await findUserByEmailDoc(normalizedEmail);
     if (existingByEmail) {
         const doc = db.collection('users').doc(existingByEmail.id);
         const currentData = existingByEmail.data as any;
+        const username = currentData.username ?? await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail, undefined, existingByEmail.id);
         const updateData = {
-            googleId: id,
+            google_id: id,
             picture: photos?.[0]?.value,
             firstName: name?.givenName,
             lastName: name?.familyName,
             emailVerified: true,
             emailVerifiedAt: nowIso(),
-            username: currentData.username ?? await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail, undefined, existingByEmail.id),
+            username,
+            username_normalized: normalizeUsername(username),
         };
         await doc.set(updateData, { merge: true });
         await upsertUserEmail(existingByEmail.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
         const updatedDoc = await doc.get();
         const data = updatedDoc.data() as User;
-        return { id: existingByEmail.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+        return { ...data, id: existingByEmail.id };
     }
 
     const newUserId = randomUUID();
     const username = await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail);
-    await db.collection('users').doc(newUserId).set({
+    const newUser = {
         email: normalizedEmail,
         username,
+        username_normalized: normalizeUsername(username),
         provider: 'google',
-        googleId: id,
+        google_id: id,
         picture: photos?.[0]?.value,
         firstName: name?.givenName,
         lastName: name?.familyName,
         emailVerified: true,
         emailVerifiedAt: nowIso(),
+        role: 'user',
         createdAt: nowIso(),
-    });
+    };
+    await db.collection('users').doc(newUserId).set(newUser);
     await upsertUserEmail(newUserId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
 
-    return { id: newUserId, email: normalizedEmail, provider: 'google', role: 'user' };
+    return { ...newUser, id: newUserId } as User;
+};
+
+export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User> => {
+    const db = getDb();
+    const { appleId, firstName, lastName, emailVerified } = profile;
+    const normalizedEmail = profile.email ? normalizeEmail(profile.email) : undefined;
+
+    // A matching apple_id already proves identity via the signed id_token's `sub`
+    // claim, independent of email_verified — so a returning user must still be
+    // able to log in even if Apple ever reports an unverified email on this
+    // login. The verified-email requirement below only guards the paths that
+    // use email as the identity signal: linking-by-email and new-account creation.
+    const existing = await db.collection('users').where('apple_id', '==', appleId).limit(1).get();
+    if (!existing.empty) {
+        const doc = existing.docs[0];
+        const currentData = doc.data() as any;
+        if (normalizedEmail && emailVerified) {
+            const updateData = {
+                email: normalizedEmail,
+                firstName: firstName ?? currentData.firstName,
+                lastName: lastName ?? currentData.lastName,
+                emailVerified: true,
+                emailVerifiedAt: nowIso(),
+            };
+            await doc.ref.update(updateData);
+            await upsertUserEmail(doc.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
+        }
+        const updatedDoc = await doc.ref.get();
+        const data = updatedDoc.data() as User;
+        return { ...data, id: doc.id };
+    }
+
+    if (normalizedEmail && !emailVerified) {
+        throw new Error('Apple sign-in email is not verified');
+    }
+
+    if (!normalizedEmail) {
+        throw new Error('Apple sign-in did not return an email for a new user');
+    }
+
+    const existingByEmail = await findUserByEmailDoc(normalizedEmail);
+    if (existingByEmail) {
+        const doc = db.collection('users').doc(existingByEmail.id);
+        const currentData = existingByEmail.data as any;
+        const username = currentData.username ?? await generateUniqueUsername(firstName ?? '', lastName ?? '', normalizedEmail, undefined, existingByEmail.id);
+        const updateData = {
+            apple_id: appleId,
+            firstName: firstName ?? currentData.firstName,
+            lastName: lastName ?? currentData.lastName,
+            emailVerified: true,
+            emailVerifiedAt: nowIso(),
+            username,
+            username_normalized: normalizeUsername(username),
+        };
+        await doc.set(updateData, { merge: true });
+        await upsertUserEmail(existingByEmail.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
+        const updatedDoc = await doc.get();
+        const data = updatedDoc.data() as User;
+        return { ...data, id: existingByEmail.id };
+    }
+
+    const newUserId = randomUUID();
+    const username = await generateUniqueUsername(firstName ?? '', lastName ?? '', normalizedEmail);
+    const newUser = {
+        email: normalizedEmail,
+        username,
+        username_normalized: normalizeUsername(username),
+        provider: 'apple',
+        apple_id: appleId,
+        firstName,
+        lastName,
+        emailVerified: true,
+        emailVerifiedAt: nowIso(),
+        role: 'user',
+        createdAt: nowIso(),
+    };
+    await db.collection('users').doc(newUserId).set(newUser);
+    await upsertUserEmail(newUserId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
+
+    return { ...newUser, id: newUserId } as User;
 };
 
 // ---- Entitlement system functions ----

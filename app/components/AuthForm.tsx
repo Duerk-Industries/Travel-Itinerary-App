@@ -2,6 +2,7 @@ import React from 'react';
 import { Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AuthFormFields, AuthMode } from '../hooks/useAuthForm';
 import GoogleSignInButton from './GoogleSignInButton';
+import AppleSignInButton from './AppleSignInButton';
 
 export type AuthFormProps = {
   /** Which form to render — Login (minimal fields) vs Create (full fields). */
@@ -21,6 +22,9 @@ export type AuthFormProps = {
   loginWithPassword: () => void | Promise<void>;
   register: () => void | Promise<void>;
   loginWithGoogle: () => void | Promise<void>;
+  loginWithApple?: () => void | Promise<void>;
+  /** Hides the Apple button when the backend hasn't enabled the appleOAuthEnabled flag. */
+  appleOAuthEnabled?: boolean;
   /** API base URL for resolving static legal docs. */
   backendUrl?: string;
   /** Full `styles` object from the parent App.tsx — the form consumes a fixed set. */
@@ -48,6 +52,8 @@ const AuthForm: React.FC<AuthFormProps> = ({
   loginWithPassword,
   register,
   loginWithGoogle,
+  loginWithApple,
+  appleOAuthEnabled,
   backendUrl,
   styles,
 }) => {
@@ -169,6 +175,11 @@ const AuthForm: React.FC<AuthFormProps> = ({
     <View style={{ marginTop: 12 }}>
       <GoogleSignInButton onPress={loginWithGoogle} testID="auth-form-google" />
     </View>
+    {loginWithApple && appleOAuthEnabled ? (
+      <View style={{ marginTop: 8 }}>
+        <AppleSignInButton onPress={loginWithApple} testID="auth-form-apple" />
+      </View>
+    ) : null}
 
     <View style={{ marginTop: 24, alignItems: 'center', opacity: 0.7 }}>
       <Text style={{ fontSize: 12, color: '#6B7280', textAlign: 'center' }}>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 import GoogleSignInButton from './GoogleSignInButton';
+import AppleSignInButton from './AppleSignInButton';
 
 export type LandingPageProps = {
   theme: AppTheme;
@@ -11,6 +12,9 @@ export type LandingPageProps = {
   onLogin: () => void;
   onCreateAccount: () => void;
   onLoginWithGoogle: () => void;
+  onLoginWithApple?: () => void;
+  /** Hides the Apple button when the backend hasn't enabled the appleOAuthEnabled flag. */
+  appleOAuthEnabled?: boolean;
 };
 
 type SampleDay = {
@@ -106,6 +110,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
   onLogin,
   onCreateAccount,
   onLoginWithGoogle,
+  onLoginWithApple,
+  appleOAuthEnabled,
 }) => {
   const { colors, typography, spacing } = theme;
 
@@ -176,6 +182,9 @@ const LandingPage: React.FC<LandingPageProps> = ({
           }}
         >
           <GoogleSignInButton onPress={onLoginWithGoogle} testID="landing-google-signin" />
+          {onLoginWithApple && appleOAuthEnabled ? (
+            <AppleSignInButton onPress={onLoginWithApple} testID="landing-apple-signin" />
+          ) : null}
 
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
             <TouchableOpacity

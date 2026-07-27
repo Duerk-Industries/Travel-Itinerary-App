@@ -135,7 +135,7 @@ const getAllowedOrigins = () => {
 
 const allowedOrigins = getAllowedOrigins();
 
-app.use(cors({
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) {
       // Allow requests with no origin, like mobile apps or curl requests.
@@ -156,7 +156,19 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent'],
   exposedHeaders: ['X-Request-Id'],
-}));
+};
+
+// Apple sends its response_mode=form_post callback with Origin:
+// https://appleid.apple.com. This is a top-level browser form submission, not
+// an API read, so it does not need CORS headers; bypass CORS only for this
+// exact callback/origin pair rather than allowing Apple globally.
+app.use((req, res, next) => {
+  if (req.path === '/api/auth/apple/callback' && req.header('Origin') === 'https://appleid.apple.com') {
+    next();
+    return;
+  }
+  cors(corsOptions)(req, res, next);
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -236,6 +248,15 @@ app.get('/api/diagnostics/google-client-id', (_req, res) => {
   });
 });
 
+app.get('/api/diagnostics/apple-client-id', (_req, res) => {
+  const clientId = getEnvValue('APPLE_CLIENT_ID') || '';
+  const trimmed = clientId.trim();
+  res.json({
+    configured: isAppleOAuthConfigured() && getAuthFlag('appleOAuthEnabled'),
+    last6: trimmed ? trimmed.slice(-6) : null,
+  });
+});
+
 app.get('/api/healthz', (_req, res) => {
   res.status(200).json({ ok: true });
 });
@@ -249,10 +270,17 @@ if (!hasWebApp) {
 app.use(express.static(publicDir));
 
 import passport from 'passport';
-import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
+import { initPassport, createToken, createOAuthNonce, createOAuthState, decodeOAuthState, authenticate } from './auth';
 import { assertSafeAuthSecretConfig } from './authConfig';
-import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole, listPackingPresetsV2 } from './db';
+import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, findOrCreateAppleUser, getUserRole, listPackingPresetsV2 } from './db';
 import { ensureAdminBootstrap, getSeededTierForEmail, isFeatureEnabled } from './services/entitlementService';
+import { getAuthFlag } from './config/authFlags';
+import {
+  exchangeAppleAuthorizationCode,
+  isAppleOAuthConfigured,
+  parseAppleUserPayload,
+  verifyAppleIdToken,
+} from './appleAuth';
 import { requireAdmin } from './middleware/requireAdmin';
 import {
   appendAuthCodeToRedirect,
@@ -277,7 +305,13 @@ app.use(canarySafeMode);
 const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
 
 const redirectToLoginWithError = (req: express.Request, res: express.Response, webUrl: string, code: string) => {
-  const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
+  const rawState =
+    typeof req.query.state === 'string'
+      ? req.query.state
+      : typeof req.body?.state === 'string'
+        ? req.body.state
+        : undefined;
+  const state = rawState ? decodeOAuthState(rawState) : null;
   let redirectUri = state?.redirectUri;
   if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
     redirectUri = undefined;
@@ -390,6 +424,140 @@ app.get(
     })(req, res, next);
   }
 );
+
+const appleOAuthConfigured = () => isAppleOAuthConfigured() && getAuthFlag('appleOAuthEnabled');
+const APPLE_OAUTH_NONCE_COOKIE = 'apple_oauth_nonce';
+
+const getRequestCookie = (req: express.Request, name: string): string | undefined => {
+  const header = req.headers.cookie;
+  if (!header) return undefined;
+  const prefix = `${name}=`;
+  const value = header.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix));
+  if (!value) return undefined;
+  try {
+    return decodeURIComponent(value.slice(prefix.length));
+  } catch {
+    return undefined;
+  }
+};
+
+const setAppleOAuthNonceCookie = (res: express.Response, nonce: string): void => {
+  res.cookie(APPLE_OAUTH_NONCE_COOKIE, nonce, {
+    httpOnly: true,
+    sameSite: isLocalEnv() ? 'lax' : 'none',
+    secure: !isLocalEnv(),
+    maxAge: 10 * 60 * 1000,
+    path: '/',
+  });
+};
+
+const clearAppleOAuthNonceCookie = (res: express.Response): void => {
+  res.clearCookie(APPLE_OAUTH_NONCE_COOKIE, { path: '/' });
+};
+
+app.get('/api/auth/apple', (req, res) => {
+  if (!appleOAuthConfigured()) {
+    res.status(503).json({ error: 'Apple OAuth is not configured on the server.' });
+    return;
+  }
+  const rawRedirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
+  const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
+  if (error) {
+    res.status(400).json({ error });
+    return;
+  }
+  const nonce = createOAuthNonce();
+  const state = createOAuthState({ redirectUri, nonce });
+  setAppleOAuthNonceCookie(res, nonce);
+  const authorizeUrl = new URL('https://appleid.apple.com/auth/authorize');
+  authorizeUrl.searchParams.set('response_type', 'code');
+  authorizeUrl.searchParams.set('response_mode', 'form_post');
+  authorizeUrl.searchParams.set('client_id', getEnvValue('APPLE_CLIENT_ID') || '');
+  authorizeUrl.searchParams.set('redirect_uri', getEnvValue('APPLE_CALLBACK_URL') || '');
+  authorizeUrl.searchParams.set('scope', 'name email');
+  authorizeUrl.searchParams.set('nonce', nonce);
+  authorizeUrl.searchParams.set('state', state);
+  res.redirect(authorizeUrl.toString());
+});
+
+// Apple uses response_mode=form_post, so the callback arrives as a POST with a
+// form-encoded body (code, state, and — first authorization only — user).
+app.post('/api/auth/apple/callback', async (req, res) => {
+  if (!appleOAuthConfigured()) {
+    res.status(503).json({ error: 'Apple OAuth is not configured on the server.' });
+    return;
+  }
+  const code = typeof req.body?.code === 'string' ? req.body.code : undefined;
+  const stateRaw = typeof req.body?.state === 'string' ? req.body.state : undefined;
+  const state = stateRaw ? decodeOAuthState(stateRaw) : null;
+  const cookieNonce = getRequestCookie(req, APPLE_OAUTH_NONCE_COOKIE);
+  if (!stateRaw || !state || !cookieNonce || cookieNonce !== state.nonce) {
+    logError('[auth] Apple OAuth callback missing or invalid state');
+    clearAppleOAuthNonceCookie(res);
+    redirectToLoginWithError(req, res, webUrl, 'apple_callback_failed');
+    return;
+  }
+  let redirectUri = state?.redirectUri;
+  if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+    redirectUri = undefined;
+  }
+
+  if (req.body?.error) {
+    logError('[auth] Apple OAuth callback returned an error', { error: req.body.error });
+    clearAppleOAuthNonceCookie(res);
+    redirectToLoginWithError(req, res, webUrl, 'apple_callback_failed');
+    return;
+  }
+  if (!code) {
+    logError('[auth] Apple OAuth callback missing code');
+    clearAppleOAuthNonceCookie(res);
+    redirectToLoginWithError(req, res, webUrl, 'apple_callback_failed');
+    return;
+  }
+
+  try {
+    const { idToken } = await exchangeAppleAuthorizationCode(code);
+    const claims = await verifyAppleIdToken(idToken, state.nonce);
+    const emailVerified = claims.email_verified === true || claims.email_verified === 'true';
+    const { firstName, lastName } = parseAppleUserPayload(
+      typeof req.body?.user === 'string' ? req.body.user : undefined
+    );
+    const user = await findOrCreateAppleUser({
+      appleId: claims.sub,
+      email: claims.email,
+      emailVerified,
+      firstName,
+      lastName,
+    });
+
+    await ensureDefaultGroupForUser(user.id, user.email);
+    await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
+    const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
+      user.id,
+      user.email,
+      user.firstName,
+      user.lastName
+    );
+    await ensureAdminBootstrap(user.id, user.email);
+    const role = await getUserRole(user.id);
+    const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
+    const authCode = createRedirectTokenExchangeCode({ token, requirePasswordSetup: requiresPasswordSetup });
+    clearAppleOAuthNonceCookie(res);
+    if (redirectUri) {
+      const next = new URL(appendAuthCodeToRedirect(redirectUri, authCode));
+      res.redirect(next.toString());
+      return;
+    }
+    res.redirect(`/login?auth_code=${encodeURIComponent(authCode)}`);
+  } catch (callbackErr: any) {
+    clearAppleOAuthNonceCookie(res);
+    logError('[auth] Apple OAuth post-login setup failed', {
+      name: callbackErr?.name,
+      message: callbackErr?.message,
+    });
+    redirectToLoginWithError(req, res, webUrl, 'apple_post_login_failed');
+  }
+});
 
 app.use('/api/auth', authRoutes);
 // Alias web-auth routes under /api/auth to keep legacy tests and clients working.

@@ -450,6 +450,7 @@ export const initDb = async (): Promise<void> => {
     );
   `);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_id TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS picture TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username_normalized TEXT;`);
@@ -2063,7 +2064,15 @@ export const verifyWebUserCredentials = async (
 
 export const getUserById = async (userId: string): Promise<User | null> => {
   const p = getPool();
-  const { rows } = await p.query<User>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
+  const { rows } = await p.query<User>(
+    `SELECT id, email, username, username_normalized as "username_normalized",
+            provider, google_id as "google_id", apple_id as "apple_id",
+            picture, first_name as "firstName", last_name as "lastName",
+            email_verified as "emailVerified", email_verified_at as "emailVerifiedAt",
+            role, is_internal_canary as "is_internal_canary"
+     FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
   return rows[0] ?? null;
 };
 
@@ -9428,6 +9437,78 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     await ensurePackingListForUserWithRunner(p, newUserId);
 
     return { id: newUserId, email, provider: 'google', emailVerified: true, role: 'user' };
+};
+
+export interface AppleProfile {
+  appleId: string;
+  email?: string;
+  emailVerified: boolean;
+  firstName?: string;
+  lastName?: string;
+}
+
+export const findOrCreateAppleUser = async (profile: AppleProfile): Promise<User> => {
+    const p = getPool();
+    const { appleId, firstName, lastName, emailVerified } = profile;
+    const email = profile.email ? normalizeEmail(profile.email) : undefined;
+
+    // A matching apple_id already proves identity via the signed id_token's `sub`
+    // claim, independent of email_verified — so a returning user must still be
+    // able to log in even if Apple ever reports an unverified email on this
+    // login. The verified-email requirement below only guards the paths that
+    // use email as the identity signal: linking-by-email and new-account creation.
+    const existing = await p.query<User>(`SELECT * FROM users WHERE apple_id = $1`, [appleId]);
+    if (existing.rows.length) {
+        const user = existing.rows[0];
+        if (email && emailVerified) {
+            await p.query(
+                `UPDATE users SET email = $1, first_name = COALESCE($2, first_name), last_name = COALESCE($3, last_name), email_verified = true, email_verified_at = NOW() WHERE id = $4`,
+                [email, firstName, lastName, user.id]
+            );
+            await upsertUserEmail(p, user.id, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+        }
+        await ensurePackingListForUserWithRunner(p, user.id);
+        return email && emailVerified ? { ...user, email, firstName: firstName ?? user.firstName, lastName: lastName ?? user.lastName } : user;
+    }
+
+    if (email && !emailVerified) {
+        throw new Error('Apple sign-in email is not verified');
+    }
+
+    if (!email) {
+        throw new Error('Apple sign-in did not return an email for a new user');
+    }
+
+    const existingByEmail = await p.query<User>(
+      `SELECT u.*
+       FROM users u
+       JOIN user_emails ue ON ue.user_id = u.id
+       WHERE ue.email_normalized = $1
+       LIMIT 1`,
+      [email]
+    );
+    if (existingByEmail.rows.length) {
+        const user = existingByEmail.rows[0];
+        await p.query(
+            `UPDATE users SET apple_id = $1, first_name = COALESCE($2, first_name), last_name = COALESCE($3, last_name), email_verified = true, email_verified_at = NOW() WHERE id = $4`,
+            [appleId, firstName, lastName, user.id]
+        );
+        await upsertUserEmail(p, user.id, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+        await ensurePackingListForUserWithRunner(p, user.id);
+        return user;
+    }
+
+    const newUserId = randomUUID();
+    const username = await generateUniqueUsername(p, firstName ?? '', lastName ?? '', email);
+    await p.query(
+        `INSERT INTO users (id, email, username, username_normalized, provider, apple_id, first_name, last_name, email_verified, email_verified_at)
+         VALUES ($1, $2, $3, $4, 'apple', $5, $6, $7, true, NOW())`,
+        [newUserId, email, username, username, appleId, firstName, lastName]
+    );
+    await upsertUserEmail(p, newUserId, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+    await ensurePackingListForUserWithRunner(p, newUserId);
+
+    return { id: newUserId, email, provider: 'apple', emailVerified: true, role: 'user' };
 };
 
 export const deleteAllUsers = async (userIds: string[]): Promise<void> => {

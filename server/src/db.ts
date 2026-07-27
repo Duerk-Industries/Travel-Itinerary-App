@@ -33,6 +33,8 @@ export const findOrCreateUser = async (...args: Parameters<ReturnType<typeof ada
   adapter().findOrCreateUser(...args);
 export const findOrCreateGoogleUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateGoogleUser']>) =>
     adapter().findOrCreateGoogleUser(...args);
+export const findOrCreateAppleUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateAppleUser']>) =>
+    adapter().findOrCreateAppleUser(...args);
 export const ensureDefaultGroupForUser = async (...args: Parameters<ReturnType<typeof adapter>['ensureDefaultGroupForUser']>) =>
   adapter().ensureDefaultGroupForUser(...args);
 export const findUserByEmail = async (email: string): Promise<User | null> => adapter().findUserByEmail(email);

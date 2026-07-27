@@ -26,6 +26,7 @@ export interface User {
   username?: string;
   provider: 'google' | 'apple' | 'email' | 'family';
   google_id?: string;
+  apple_id?: string;
   picture?: string;
   firstName?: string;
   lastName?: string;

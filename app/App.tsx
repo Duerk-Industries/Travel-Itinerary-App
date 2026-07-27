@@ -622,6 +622,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setAuthForm,
   } = useAuthForm();
   const [showAuthForm, setShowAuthForm] = useState(false);
+  const [appleOAuthEnabled, setAppleOAuthEnabled] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${backendUrl}/api/auth/features`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setAppleOAuthEnabled(Boolean(data.appleOAuthEnabled));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl]);
   const {
     accountProfile,
     mapApp,
@@ -1360,6 +1373,40 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch (err) {
       console.log('Auth session failed', err);
       setAuthErrorMessage((err as Error)?.message || 'Google sign-in could not be completed. Please try again.');
+    }
+  };
+
+  const loginWithApple = async () => {
+    setAuthErrorMessage(null);
+    const redirectUrl = buildLoginRedirectUrl();
+    const authUrl = `${backendUrl}/api/auth/apple?redirect_uri=${encodeURIComponent(redirectUrl)}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.assign(authUrl);
+      return;
+    }
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      if (result.type === 'success' && result.url) {
+        const { token, authCode, authError, requirePasswordSetup } = extractTokenFromUrl(result.url);
+        if (token) {
+          handleAuthSuccess(token, undefined, { requirePasswordSetup });
+          return;
+        }
+        if (authCode) {
+          await exchangeAuthCode(authCode);
+          return;
+        }
+        if (authError) {
+          setAuthErrorMessage(mapAuthErrorToMessage(authError));
+          return;
+        }
+        setAuthErrorMessage('Apple sign-in returned without login credentials. Please try again.');
+      } else if (result.type !== 'cancel' && result.type !== 'dismiss') {
+        setAuthErrorMessage('Apple sign-in could not be completed. Please try again.');
+      }
+    } catch (err) {
+      console.log('Auth session failed', err);
+      setAuthErrorMessage((err as Error)?.message || 'Apple sign-in could not be completed. Please try again.');
     }
   };
 
@@ -3391,6 +3438,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             loginWithPassword={loginWithPassword}
             register={register}
             loginWithGoogle={loginWithGoogle}
+            loginWithApple={loginWithApple}
+            appleOAuthEnabled={appleOAuthEnabled}
             backendUrl={backendUrl}
             styles={styles}
           />
@@ -3409,6 +3458,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             setShowAuthForm(true);
           }}
           onLoginWithGoogle={loginWithGoogle}
+          onLoginWithApple={loginWithApple}
+          appleOAuthEnabled={appleOAuthEnabled}
         />
       )}
       {userToken && requirePasswordSetup ? (

@@ -75,8 +75,10 @@ type OAuthStatePayload = {
 const OAUTH_STATE_ISSUER = 'travel-itinerary-app';
 const OAUTH_STATE_TTL = '10m';
 
-export const createOAuthState = (payload: { redirectUri?: string }): string => {
-  const nonce = crypto.randomBytes(16).toString('hex');
+export const createOAuthNonce = (): string => crypto.randomBytes(16).toString('hex');
+
+export const createOAuthState = (payload: { redirectUri?: string; nonce?: string }): string => {
+  const nonce = payload.nonce || createOAuthNonce();
   const state: OAuthStatePayload = {
     redirectUri: payload.redirectUri,
     nonce,
@@ -84,10 +86,13 @@ export const createOAuthState = (payload: { redirectUri?: string }): string => {
   return jwt.sign(state, getAuthSecret(), { expiresIn: OAUTH_STATE_TTL, issuer: OAUTH_STATE_ISSUER });
 };
 
-export const decodeOAuthState = (state: string): { redirectUri?: string } | null => {
+export const decodeOAuthState = (state: string): { redirectUri?: string; nonce: string } | null => {
   try {
     const decoded = jwt.verify(state, getAuthSecret(), { issuer: OAUTH_STATE_ISSUER }) as OAuthStatePayload;
-    return { redirectUri: decoded.redirectUri };
+    if (!decoded || typeof decoded.nonce !== 'string' || decoded.nonce.length < 16) {
+      return null;
+    }
+    return { redirectUri: decoded.redirectUri, nonce: decoded.nonce };
   } catch {
     return null;
   }
