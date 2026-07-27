@@ -75,4 +75,31 @@ describe('findOrCreateAppleUser (Firebase)', () => {
 
     expect(second.id).toBe(first.id);
   });
+
+  it('rejects unverified email for a new Firestore account', async () => {
+    const { findOrCreateAppleUser } = require('../src/db') as typeof import('../src/db');
+    await expect(findOrCreateAppleUser({
+      appleId: `apple-unverified-fs-${Date.now()}`,
+      email: `unverified-fs-${Date.now()}@example.com`,
+      emailVerified: false,
+    })).rejects.toThrow(/not verified/i);
+  });
+
+  it('allows a returning Firestore user matched by apple_id when email_verified is false', async () => {
+    const { findOrCreateAppleUser } = require('../src/db') as typeof import('../src/db');
+    const appleId = `apple-returning-unverified-fs-${Date.now()}`;
+    const first = await findOrCreateAppleUser({
+      appleId,
+      email: `returning-unverified-fs-${Date.now()}@example.com`,
+      emailVerified: true,
+    });
+
+    const second = await findOrCreateAppleUser({
+      appleId,
+      email: first.email,
+      emailVerified: false,
+    });
+
+    expect(second.id).toBe(first.id);
+  });
 });

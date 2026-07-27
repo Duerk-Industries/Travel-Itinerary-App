@@ -153,6 +153,8 @@ describe('Apple OAuth routes', () => {
       })
       .expect(302);
 
+    expect(appleAuth.verifyAppleIdToken).toHaveBeenCalledWith('fake-id-token', nonce);
+
     // 4. Verify redirect contains auth_code
     const redirectUrl = new URL(String(callbackRes.headers.location));
     expect(redirectUrl.protocol).toBe('travelitineraryplanner:');
@@ -169,5 +171,40 @@ describe('Apple OAuth routes', () => {
     const decoded = verifyToken(exchangeRes.body.token);
     expect(decoded.email).toBe('success@example.com');
     expect(decoded.provider).toBe('apple');
+  });
+
+  it('allows an existing Apple-linked user to return when email_verified is false', async () => {
+    const { findOrCreateAppleUser } = require('../src/db') as typeof import('../src/db');
+    await findOrCreateAppleUser({
+      appleId: 'apple-returning-route-user',
+      email: 'returning-route@example.com',
+      emailVerified: true,
+      firstName: 'Returning',
+      lastName: 'Traveler',
+    });
+
+    const authReq = await request(app)
+      .get('/api/auth/apple')
+      .query({ redirect_uri: 'travelitineraryplanner://login' })
+      .expect(302);
+    const location = new URL(String(authReq.headers.location));
+    const cookie = authReq.headers['set-cookie']?.[0] ?? '';
+    const appleAuth = require('../src/appleAuth');
+    jest.spyOn(appleAuth, 'exchangeAppleAuthorizationCode').mockResolvedValue({ idToken: 'returning-id-token' });
+    jest.spyOn(appleAuth, 'verifyAppleIdToken').mockResolvedValue({
+      sub: 'apple-returning-route-user',
+      email: 'returning-route@example.com',
+      email_verified: false,
+    });
+
+    const callbackRes = await request(app)
+      .post('/api/auth/apple/callback')
+      .set('Cookie', cookie)
+      .type('form')
+      .send({ code: 'returning-code', state: location.searchParams.get('state') })
+      .expect(302);
+
+    expect(String(callbackRes.headers.location)).toContain('travelitineraryplanner://login');
+    expect(String(callbackRes.headers.location)).toContain('auth_code=');
   });
 });

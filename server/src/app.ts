@@ -507,9 +507,6 @@ app.post('/api/auth/apple/callback', async (req, res) => {
     const { idToken } = await exchangeAppleAuthorizationCode(code);
     const claims = await verifyAppleIdToken(idToken, state.nonce);
     const emailVerified = claims.email_verified === true || claims.email_verified === 'true';
-    if (claims.email && !emailVerified) {
-      throw new Error('Apple sign-in email is not verified');
-    }
     const { firstName, lastName } = parseAppleUserPayload(
       typeof req.body?.user === 'string' ? req.body.user : undefined
     );
