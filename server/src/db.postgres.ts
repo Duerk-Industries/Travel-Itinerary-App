@@ -4268,7 +4268,7 @@ export const insertLodging = async (lodging: {
       INSERT INTO lodgings (
         id, user_id, trip_id, status, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      VALUES ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -4303,7 +4303,7 @@ export const insertLodging = async (lodging: {
       lodging.place_id ?? null,
       JSON.stringify(lodging.paid_by ?? []),
       JSON.stringify(lodging.traveler_ids ?? []),
-      lodging.imageUrl ?? null,
+      lodging.imageUrl ?? '',
     ]
   );
   const row = rows[0] as any;
@@ -4912,16 +4912,18 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
 
 export const deleteCarRental = async (id: string, userId: string): Promise<void> => {
   const p = getPool();
+  // Avoid DELETE ... USING and any subquery correlated to the DELETE target
+  // — pg-mem's parser (used for the memory DB adapter/tests) supports
+  // neither; a non-correlated `trip_id IN (...)` subquery works identically
+  // on real Postgres.
   await p.query(
     `
-      DELETE FROM car_rentals c
-      USING trips t
-      WHERE c.id = $1
-        AND c.trip_id = t.id
-        AND EXISTS (
-          SELECT 1 FROM group_members gm
-          WHERE gm.group_id = t.group_id
-            AND gm.user_id = $2
+      DELETE FROM car_rentals
+      WHERE id = $1
+        AND trip_id IN (
+          SELECT t.id FROM trips t
+          JOIN group_members gm ON gm.group_id = t.group_id
+          WHERE gm.user_id = $2
             AND gm.removed_at IS NULL
         )
     `,

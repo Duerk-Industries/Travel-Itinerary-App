@@ -85,7 +85,7 @@ router.post('/', async (req, res) => {
     checkInDate: checkInDate || new Date().toISOString().slice(0, 10),
     checkOutDate: checkOutDate || checkInDate || new Date().toISOString().slice(0, 10),
     rooms: Number(dto.rooms) || 1,
-    refundBy: dto.refundBy ?? null,
+    refundBy: dto.refundBy || null,
     totalCost: Number(dto.totalCost) || 0,
     costPerNight: Number(dto.costPerNight) || 0,
     address: addressVal,

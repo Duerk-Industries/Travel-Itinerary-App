@@ -114,7 +114,7 @@ export async function loginAsUser(page: Page, credentials: UserCredentials): Pro
     window.localStorage.setItem('stp.session.token', payload.token);
   }, session);
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
-  await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 15_000 });
 }
 
 /**
@@ -156,9 +156,7 @@ export async function createTripViaWizard(
 ): Promise<string> {
   const tripName = options.tripName ?? `E2E Trip ${Date.now()}`;
 
-  await page.getByTestId('home-nav-trips').click();
-  await expect(page.getByText('Open Wizard')).toBeVisible();
-  await page.getByText('Open Wizard').click();
+  await page.getByTestId('home-create-trip-button').click();
   await expect(page.getByText('Create Trip Wizard')).toBeVisible();
 
   // Step 1: Trip Details
@@ -167,40 +165,60 @@ export async function createTripViaWizard(
   await page.waitForLoadState('networkidle');
   await page.getByText('Next').click();
 
-  // Step 2: Dates
+  // Step 2: Dates — web renders native <input type="date"> fields, not a
+  // calendar grid of clickable day numbers.
   await expect(page.getByText('Dates', { exact: true })).toBeVisible();
   await page.getByText("I know which dates I'm going").click();
-  await expect(page.getByText('15', { exact: true }).first()).toBeVisible();
-  await page.getByText('15', { exact: true }).first().click();
-  await page.getByText('17', { exact: true }).first().click();
+  const toIsoDate = (d: Date) => d.toISOString().slice(0, 10);
+  const startDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const endDate = new Date(startDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+  await expect(page.getByTitle('Start date')).toBeVisible();
+  await page.getByTitle('Start date').fill(toIsoDate(startDate));
+  await page.getByTitle('End date').fill(toIsoDate(endDate));
   await page.waitForLoadState('networkidle');
   await page.getByText('Next').click();
 
   // Step 3: Participants
-  await expect(page.getByText('Add Participants')).toBeVisible();
+  await expect(page.getByText('Participants', { exact: true })).toBeVisible();
   if (options.participantEmail) {
-    await page.getByPlaceholder('Participant Name').fill('Invited Friend');
-    await page.getByPlaceholder('Participant Email').fill(options.participantEmail);
+    await page.getByPlaceholder('First name').fill('Invited');
+    await page.getByPlaceholder('Last name').fill('Friend');
+    await page.getByPlaceholder('Email (optional)').fill(options.participantEmail);
     await page.waitForLoadState('networkidle');
-    await page.getByText('Add').click();
+    await page.getByText('Add Participant').click();
     await expect(page.getByText(`Invited Friend (${options.participantEmail})`)).toBeVisible();
   }
   await page.waitForLoadState('networkidle');
   await page.getByText('Next').click();
 
-  // Steps 4–8: skip Flights, Lodging, Itinerary, Activities, Notes
-  for (const label of ['Add Flights', 'Add Lodging', 'Itinerary', 'Activities', 'Notes']) {
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  // Steps 4–8 (Itinerary, Flight Details, Accommodation Details, Activities,
+  // Rental Cars): click through without asserting exact order/labels, since
+  // that sequence has changed before and is not what this helper is testing.
+  // The Itinerary step gates "Next" behind an explicit Yes/No AI-generation
+  // choice — pick "No" to skip it and keep this helper fast and API-key-free.
+  const reviewHeading = page.getByText('Review & Confirm', { exact: true });
+  for (let i = 0; i < 8 && !(await reviewHeading.isVisible().catch(() => false)); i += 1) {
     await page.waitForLoadState('networkidle');
-    await page.getByText('Next').click();
+    const skipAiItinerary = page.getByText('No', { exact: true });
+    if (await skipAiItinerary.isVisible().catch(() => false)) {
+      await skipAiItinerary.click();
+      await page.waitForTimeout(200);
+    }
+    await page.getByText('Next', { exact: true }).click();
+    await page.waitForTimeout(300);
   }
 
-  // Step 9: Review & Finish
-  await expect(page.getByText('Review and Finish')).toBeVisible();
+  // Step 9: Review & Confirm
+  await expect(reviewHeading).toBeVisible();
   await expect(page.getByText(tripName)).toBeVisible();
   await page.waitForLoadState('networkidle');
-  await page.getByText('Finish').click();
-  await expect(page.getByText(`Active Trip: ${tripName}`)).toBeVisible();
+  await page.getByText('Create Trip', { exact: true }).click();
+  // Wizard closes and lands directly on the new trip's Overview page (not
+  // the Home tab) — the home nav grid/hero card aren't present there until
+  // navigating back via the "⌂" home button.
+  await expect(page.getByText(tripName)).toBeVisible({ timeout: 10_000 });
+  await page.getByText('⌂', { exact: true }).click();
+  await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 10_000 });
 
   return tripName;
 }

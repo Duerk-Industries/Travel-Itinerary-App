@@ -13,8 +13,7 @@ test.describe('Full Trip Creation Wizard', () => {
   });
 
   test('wizard requires trip name before advancing from step 1', async ({ page }) => {
-    await page.getByTestId('home-nav-trips').click();
-    await page.getByText('Open Wizard').click();
+    await page.getByTestId('home-create-trip-button').click();
     await expect(page.getByText('Create Trip Wizard')).toBeVisible();
 
     // Do NOT fill Trip Name — click Next immediately
@@ -30,8 +29,7 @@ test.describe('Full Trip Creation Wizard', () => {
   test('back-navigation preserves step-1 data', async ({ page }) => {
     const tripName = `Back Nav Test ${Date.now()}`;
 
-    await page.getByTestId('home-nav-trips').click();
-    await page.getByText('Open Wizard').click();
+    await page.getByTestId('home-create-trip-button').click();
 
     await page.getByPlaceholder('Trip Name').fill(tripName);
     await page.getByPlaceholder('Destination').fill('Paris');
@@ -48,8 +46,7 @@ test.describe('Full Trip Creation Wizard', () => {
   });
 
   test('step 3 adds a participant and shows them in the list', async ({ page }) => {
-    await page.getByTestId('home-nav-trips').click();
-    await page.getByText('Open Wizard').click();
+    await page.getByTestId('home-create-trip-button').click();
 
     // Step 1
     await page.getByPlaceholder('Trip Name').fill(`Participant Test ${Date.now()}`);
@@ -57,26 +54,28 @@ test.describe('Full Trip Creation Wizard', () => {
     await page.waitForLoadState('networkidle');
     await page.getByText('Next').click();
 
-    // Step 2 — select dates
+    // Step 2 — select dates (native <input type="date"> fields on web)
     await page.getByText("I know which dates I'm going").click();
-    await expect(page.getByText('15', { exact: true }).first()).toBeVisible();
-    await page.getByText('15', { exact: true }).first().click();
-    await page.getByText('17', { exact: true }).first().click();
+    await expect(page.getByTitle('Start date')).toBeVisible();
+    const startDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+    await page.getByTitle('Start date').fill(startDate.toISOString().slice(0, 10));
+    await page.getByTitle('End date').fill(endDate.toISOString().slice(0, 10));
     await page.waitForLoadState('networkidle');
     await page.getByText('Next').click();
 
     // Step 3
-    await expect(page.getByText('Add Participants')).toBeVisible();
-    await page.getByPlaceholder('Participant Name').fill('Jane Doe');
-    await page.getByPlaceholder('Participant Email').fill('jane@example.com');
+    await expect(page.getByText('Participants', { exact: true })).toBeVisible();
+    await page.getByPlaceholder('First name').fill('Jane');
+    await page.getByPlaceholder('Last name').fill('Doe');
+    await page.getByPlaceholder('Email (optional)').fill('jane@example.com');
     await page.waitForLoadState('networkidle');
-    await page.getByText('Add').click();
+    await page.getByText('Add Participant').click();
     await expect(page.getByText('Jane Doe (jane@example.com)')).toBeVisible();
   });
 
   test('wizard step-advance is within performance threshold', async ({ page }) => {
-    await page.getByTestId('home-nav-trips').click();
-    await page.getByText('Open Wizard').click();
+    await page.getByTestId('home-create-trip-button').click();
 
     await page.getByPlaceholder('Trip Name').fill(`Perf Test ${Date.now()}`);
     await page.getByPlaceholder('Destination').fill('Tokyo');
@@ -93,8 +92,7 @@ test.describe('Full Trip Creation Wizard', () => {
   test('month-range dates create trip without exact dates', async ({ page }) => {
     const tripName = `Month Range ${Date.now()}`;
 
-    await page.getByTestId('home-nav-trips').click();
-    await page.getByText('Open Wizard').click();
+    await page.getByTestId('home-create-trip-button').click();
 
     await page.getByPlaceholder('Trip Name').fill(tripName);
     await page.getByPlaceholder('Destination').fill('Barcelona');
@@ -111,18 +109,26 @@ test.describe('Full Trip Creation Wizard', () => {
     await page.waitForLoadState('networkidle');
     await page.getByText('Next').click();
 
-    // Proceed through remaining steps
-    for (const label of ['Add Participants', 'Add Flights', 'Add Lodging', 'Itinerary', 'Activities', 'Notes']) {
-      const heading = page.getByText(label, { exact: true });
-      if (await heading.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await page.waitForLoadState('networkidle');
-        await page.getByText('Next').click();
+    // Proceed through remaining steps (Participants, Itinerary, Flight
+    // Details, Accommodation Details, Activities, Rental Cars) without
+    // asserting exact order/labels — not what this test is checking.
+    const reviewHeading = page.getByText('Review & Confirm', { exact: true });
+    for (let i = 0; i < 8 && !(await reviewHeading.isVisible().catch(() => false)); i += 1) {
+      await page.waitForLoadState('networkidle');
+      // Itinerary gates "Next" behind an explicit Yes/No AI-generation choice.
+      const skipAiItinerary = page.getByText('No', { exact: true });
+      if (await skipAiItinerary.isVisible().catch(() => false)) {
+        await skipAiItinerary.click();
+        await page.waitForTimeout(200);
       }
+      await page.getByText('Next', { exact: true }).click();
+      await page.waitForTimeout(300);
     }
 
-    await expect(page.getByText('Review and Finish')).toBeVisible();
+    await expect(reviewHeading).toBeVisible();
     await page.waitForLoadState('networkidle');
-    await page.getByText('Finish').click();
-    await expect(page.getByText(`Active Trip: ${tripName}`)).toBeVisible();
+    await page.getByText('Create Trip', { exact: true }).click();
+    // Wizard closes and lands directly on the new trip's Overview page.
+    await expect(page.getByText(tripName)).toBeVisible({ timeout: 10_000 });
   });
 });

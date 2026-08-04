@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsNewUser } from './test-utils';
+import { loginAsNewUser } from './fixtures';
 
 const apiBaseUrl = process.env.API_BASE_URL ?? 'http://127.0.0.1:4000';
 
@@ -24,7 +24,7 @@ test.describe('Create Trip Destination Autocomplete', () => {
       }
     });
 
-    await page.getByTestId('home-nav-create-trip').click();
+    await page.getByTestId('home-create-trip-button').click();
     await page.waitForTimeout(3000);
 
     const wizardVisible = await page.getByText('Create Trip Wizard').isVisible();
