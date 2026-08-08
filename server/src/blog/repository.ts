@@ -10,6 +10,7 @@ export interface BlogRepository {
   createBlogTextItem: typeof postgres.createBlogTextItem;
   updateBlogTextItem: typeof postgres.updateBlogTextItem;
   deleteBlogItem: typeof postgres.deleteBlogItem;
+  setDayCover: typeof postgres.setDayCover;
   reorderBlogItems: typeof postgres.reorderBlogItems;
   getPublicPath: (tripId: string) => Promise<string | null>;
   isBlogPublic: (tripId: string) => Promise<boolean>;

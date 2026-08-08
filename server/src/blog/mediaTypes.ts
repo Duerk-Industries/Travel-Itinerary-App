@@ -26,6 +26,7 @@ export interface BlogMediaAsset {
   capturedAt: string | null;
   caption: string | null;
   altText: string | null;
+  createdAt?: string;
   primaryUrl?: string | null;
   thumbnailUrl?: string | null;
   isHighlight?: boolean;

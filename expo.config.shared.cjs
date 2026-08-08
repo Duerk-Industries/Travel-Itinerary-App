@@ -120,6 +120,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
     },
     plugins: [
       'expo-web-browser',
+      'expo-video',
       [
         'expo-image-picker',
         {

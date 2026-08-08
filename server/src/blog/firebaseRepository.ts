@@ -165,6 +165,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       localDate: date,
       headline: data.headline ?? null,
       summary: data.summary ?? null,
+      coverAssetId: data.coverAssetId ?? null,
       items: items.filter((item) => item.blogDayId === doc.id),
       activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
@@ -229,6 +230,24 @@ export const deleteBlogItem = async (userId: string, itemId: string, version?: n
   await ref.set({ deletedAt: nowIso(), version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
   await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
   return true;
+};
+
+export const setDayCover = async (userId: string, tripId: string, dayDate: string, assetId: string | null): Promise<void> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const day = await getDay(tripId, dayDate);
+  if (assetId) {
+    // Unlike Postgres, a Firestore blog_media_assets doc already carries its own tripId/dayDate
+    // (see blogItemId/dayDate on the doc written by initUpload in firebaseMediaRepository.ts), so
+    // this is a direct doc check rather than a join through blog_item_assets/blog_items.
+    const snapshot = await getDb().collection('blog_media_assets').doc(assetId).get();
+    const data = snapshot.exists ? (snapshot.data() as any) : null;
+    if (!data || String(data.tripId) !== tripId || String(data.dayDate) !== dayDate || data.state !== 'ready') {
+      throw new Error('That photo or video must belong to this day and be ready before it can be set as the cover');
+    }
+  }
+  await getDb().collection('blog_days').doc(day.id).set({ coverAssetId: assetId, coverSetByUserId: userId, coverSetAt: nowIso(), updatedAt: nowIso() }, { merge: true });
+  await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
 };
 
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {

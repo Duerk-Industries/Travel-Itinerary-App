@@ -56,6 +56,16 @@ export interface BlogDay {
     description: string;
     temperatureHighC: number | null;
   };
+  // `coverAssetId` is the raw blog_media_assets id a traveler explicitly picked (or null),
+  // as returned straight from the repository layer. The route resolves it (plus that day's
+  // merged media items, not visible to the repository at this stage) into `coverItemId`/
+  // `coverIsExplicit` before the response goes out — see GET /:tripId/blog in blogRoutes.ts.
+  // A cover can point at an asset that's since been hidden/deleted; ON DELETE SET NULL on the
+  // column handles a hard delete, but a grace-hidden asset is still a row, just absent from
+  // `items`, so the route must re-verify presence rather than trusting this id blindly.
+  coverAssetId?: string | null;
+  coverItemId?: string | null;
+  coverIsExplicit?: boolean;
 }
 
 export interface BlogActivity {

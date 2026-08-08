@@ -81,9 +81,32 @@ router.get('/:tripId/blog', async (req, res) => {
     // `id` makes every client action against a photo/video item target a row that doesn't exist
     // there, silently failing (404/409) no matter what the client tries.
     const mediaItems = await attachMediaUrls(media.map((asset) => ({ ...asset, id: asset.blogItemId, assetId: asset.id, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` })));
+    const mediaByDay = new Map<string, any[]>();
     for (const item of mediaItems) {
       const day = blog.days.find((candidate) => candidate.localDate === item.dayDate);
-      if (day) (day.items as any[]).push(item);
+      if (!day) continue;
+      (day.items as any[]).push(item);
+      mediaByDay.set(day.localDate, [...(mediaByDay.get(day.localDate) ?? []), item]);
+    }
+    // Resolve each day's cover: prefer the traveler's explicit pick (if that asset is still
+    // present — a hidden/deleted asset silently falls through to the fallback below, same as an
+    // unset cover) else the most-recently-uploaded media item for that day, so a day with photos
+    // always has *something* to show as its default even before anyone picks one.
+    for (const day of blog.days) {
+      const dayMedia = mediaByDay.get(day.localDate) ?? [];
+      const explicit = (day as any).coverAssetId ? dayMedia.find((item) => item.assetId === (day as any).coverAssetId) : null;
+      if (explicit) {
+        (day as any).coverItemId = explicit.id;
+        (day as any).coverIsExplicit = true;
+      } else if (dayMedia.length) {
+        const mostRecent = [...dayMedia].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())[0];
+        (day as any).coverItemId = mostRecent.id;
+        (day as any).coverIsExplicit = false;
+      } else {
+        (day as any).coverItemId = null;
+        (day as any).coverIsExplicit = false;
+      }
+      delete (day as any).coverAssetId;
     }
     // Return the canonical public path only after publication has completed. The alias is
     // generated during the publication/consent flow, so deriving it from the display name in
@@ -169,6 +192,20 @@ router.delete('/:tripId/blog/items/:itemId', async (req, res) => {
       res.status(409).json({ error: 'The blog item changed or was already deleted' });
       return;
     }
+    res.status(204).end();
+  } catch (err) {
+    errorResponse(res, err);
+  }
+});
+
+router.post('/:tripId/blog/days/:dayDate/cover', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog'))) {
+      res.status(404).json({ error: 'Trip blog is not enabled' });
+      return;
+    }
+    const assetId = req.body?.assetId == null ? null : String(req.body.assetId);
+    await blogRepository().setDayCover(userIdOf(req), req.params.tripId, req.params.dayDate, assetId);
     res.status(204).end();
   } catch (err) {
     errorResponse(res, err);

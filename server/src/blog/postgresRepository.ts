@@ -137,8 +137,14 @@ const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise
 export const getBlog = async (userId: string, tripId: string, options: { date?: string; cursor?: string; limit?: number } = {}): Promise<BlogDocument> => {
   const access = await ensureUserCanReadTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to view this trip');
-  const blogResult = await queryBlog<BlogRow>('SELECT * FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
-  const blog = blogResult.rows[0];
+  // Pre-existing gap: `ensureBlog` (below) lazily creates the trip_blogs row, but this function
+  // used to read it with a plain SELECT and never called ensureBlog — so on Postgres/pg-mem (the
+  // memory/test adapter runs this same module) a trip's first-ever GET /blog left no trip_blogs
+  // row behind, `content_revision`/`visibilityEpoch` silently stayed pinned at the `?? 0` default
+  // forever, and the ETag never changed no matter how many mutations happened. The Firebase
+  // repository's getBlog already calls ensureBlog (line ~104 of firebaseRepository.ts); this
+  // brings Postgres in line with it.
+  const blog = await ensureBlog(tripId);
   await ensureDays(tripId);
   if (await ensureUserInTrip(tripId, userId)) await syncLinkedItineraryItems(tripId, userId);
 
@@ -150,7 +156,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   else if (options.cursor) filterParams.push(options.cursor);
 
   const daysResult = await queryBlog<any>(
-    `SELECT id, trip_id, local_date, headline, summary
+    `SELECT id, trip_id, local_date, headline, summary, cover_asset_id
      FROM blog_days WHERE trip_id = $1 ${dateFilter} ${cursorFilter}
      ORDER BY local_date ASC LIMIT $${filterParams.length + 1}`,
     [...filterParams, limit]
@@ -220,6 +226,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       localDate: date,
       headline: row.headline == null ? null : String(row.headline),
       summary: row.summary == null ? null : String(row.summary),
+      coverAssetId: row.cover_asset_id == null ? null : String(row.cover_asset_id),
       items: byDay.get(String(row.id)) ?? [],
       activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
@@ -332,6 +339,29 @@ export const deleteBlogItem = async (userId: string, itemId: string, version?: n
   await queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [itemId]);
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [current.rows[0].trip_id]);
   return true;
+};
+
+export const setDayCover = async (userId: string, tripId: string, dayDate: string, assetId: string | null): Promise<void> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const dayId = await getDayId(tripId, dayDate);
+  if (assetId) {
+    // Plain JOIN, not NOT EXISTS/ANY(uuid[]) — pg-mem (the memory/test adapter) can't run either.
+    const match = await queryBlog<{ id: string }>(
+      `SELECT a.id FROM blog_media_assets a
+       JOIN blog_item_assets ia ON ia.asset_id = a.id
+       JOIN blog_items i ON i.id = ia.item_id
+       WHERE a.id = $1 AND a.trip_id = $2 AND a.state = 'ready' AND i.blog_day_id = $3
+       LIMIT 1`,
+      [assetId, tripId, dayId]
+    );
+    if (!match.rows[0]) throw new Error('That photo or video must belong to this day and be ready before it can be set as the cover');
+  }
+  await queryBlog(
+    'UPDATE blog_days SET cover_asset_id = $2, cover_set_by_user_id = $3, cover_set_at = NOW(), updated_at = NOW() WHERE id = $1',
+    [dayId, assetId, userId]
+  );
+  await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
 };
 
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {
