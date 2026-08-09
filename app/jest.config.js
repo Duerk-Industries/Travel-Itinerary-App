@@ -29,6 +29,7 @@ module.exports = {
     '^@expo/metro-runtime$': '<rootDir>/tests/__mocks__/@expo/metro-runtime.ts',
     '^expo-image-picker$': '<rootDir>/tests/__mocks__/expo-image-picker.ts',
     '^expo-video$': '<rootDir>/tests/__mocks__/expo-video.ts',
+    '^expo-share-intent$': '<rootDir>/tests/__mocks__/expo-share-intent.ts',
   },
 
   // A setup file that runs before each test.

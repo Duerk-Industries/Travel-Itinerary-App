@@ -7,31 +7,21 @@ import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
+import {
+  SUPPORTED_MIME_TYPES,
+  SUPPORTED_PHOTO_MIME_TYPES,
+  SUPPORTED_VIDEO_MIME_TYPES,
+  isVideoMimeType,
+  guessMimeTypeFromName,
+  uploadBlogFiles,
+} from '../utils/blogUpload';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
-// consumer imports these two names from this file; the actual implementation now lives in
-// app/components/BlogMediaPreview.tsx so the new gallery/lightbox components (which also need it)
-// don't have to import back into a tab file (that would be a tabs<->components circular import).
-export { BlogMediaPreview, resolveMediaAspectRatio };
-
-// Mirrors the server's accepted mime types (server/src/blog/postgresMediaRepository.ts /
-// firebaseMediaRepository.ts `allowedMime` lists) so an obviously-unsupported file is filtered out
-// client-side before an upload attempt, rather than only after a round trip to the server.
-const SUPPORTED_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png'];
-const SUPPORTED_VIDEO_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
-const SUPPORTED_MIME_TYPES = [...SUPPORTED_PHOTO_MIME_TYPES, ...SUPPORTED_VIDEO_MIME_TYPES];
-export const isVideoMimeType = (mimeType) => SUPPORTED_VIDEO_MIME_TYPES.includes(mimeType);
-export { SUPPORTED_MIME_TYPES, SUPPORTED_PHOTO_MIME_TYPES, SUPPORTED_VIDEO_MIME_TYPES };
-
-export const guessMimeTypeFromName = (name) => {
-  const lower = String(name ?? '').toLowerCase();
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-  if (lower.endsWith('.mp4')) return 'video/mp4';
-  if (lower.endsWith('.mov')) return 'video/quicktime';
-  if (lower.endsWith('.webm')) return 'video/webm';
-  return null;
-};
+// consumer imports these names from this file; the actual implementations now live in
+// app/components/BlogMediaPreview.tsx and app/utils/blogUpload.ts (the latter shared with the
+// share-intent "send to" upload flow — app/utils/incomingShare.ts — so neither tab file nor
+// share-intent code duplicates upload logic).
+export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTypeFromName, SUPPORTED_MIME_TYPES };
 
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
@@ -233,42 +223,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }));
   };
 
-  const uploadOneFile = async (dayDate, pickedFile) => {
-    const mediaKind = isVideoMimeType(pickedFile.mimeType) ? 'video' : 'photo';
-    const idempotencyKey = createIdempotencyKey('up');
-    const initRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/upload-init`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-      body: JSON.stringify({ dayDate, mediaKind, mimeType: pickedFile.mimeType, byteSize: pickedFile.size }),
-    });
-
-    if (initRes.status === 413) {
-      const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
-      setStoragePlans(plans.filter(p => p.planKey.startsWith('storage_')));
-      setShowQuotaModal(true);
-      return 'quota_exceeded';
-    }
-    if (initRes.status === 402) {
-      // e.g. video upload attempted without Premium — distinct from a generic failure so the
-      // batch summary can tell the traveler *why* specific files were skipped.
-      return 'entitlement_required';
-    }
-    if (!initRes.ok) throw new Error((await initRes.json().catch(() => ({}))).error || 'Upload failed');
-    const { asset, uploadUrl } = await initRes.json();
-
-    if (uploadUrl) {
-      // Real signed URL: upload the actual selected file's bytes directly to storage.
-      const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': pickedFile.mimeType }, body: pickedFile.blob });
-      if (!putRes.ok) throw new Error(`Failed to upload the ${mediaKind} to storage`);
-    }
-
-    const completeRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${asset.id}/complete`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ physicalBytes: pickedFile.size }),
-    });
-    if (!completeRes.ok) throw new Error((await completeRes.json().catch(() => ({}))).error || 'Failed to finalize upload');
-    return 'ok';
-  };
-
   const handleUpload = async (dayDate) => {
     if (!canEdit) return;
     const picked = await pickMediaFiles();
@@ -282,29 +236,24 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
 
     setUploading(true);
-    let succeeded = 0;
-    let failed = 0;
-    let entitlementSkipped = 0;
-    let quotaBlocked = false;
     try {
-      for (let index = 0; index < supported.length; index += 1) {
-        if (quotaBlocked) break; // no point continuing once storage is full
-        setUploadProgress({ current: index + 1, total: supported.length });
-        try {
-          const outcome = await uploadOneFile(dayDate, supported[index]);
-          if (outcome === 'quota_exceeded') { quotaBlocked = true; break; }
-          if (outcome === 'entitlement_required') { entitlementSkipped += 1; continue; }
-          succeeded += 1;
-        } catch (error) {
-          failed += 1;
-        }
+      const result = await uploadBlogFiles(
+        { backendUrl, headers, tripId: activeTripId },
+        dayDate,
+        supported,
+        { onProgress: (current, total) => setUploadProgress({ current, total }) }
+      );
+      if (result.quotaBlocked) {
+        const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
+        setStoragePlans(plans.filter(p => p.planKey.startsWith('storage_')));
+        setShowQuotaModal(true);
       }
       await load();
-      if (!quotaBlocked && (failed > 0 || unsupportedCount > 0 || entitlementSkipped > 0)) {
+      if (!result.quotaBlocked && (result.failed > 0 || unsupportedCount > 0 || result.entitlementSkipped > 0)) {
         const parts = [];
-        if (succeeded > 0) parts.push(`${succeeded} uploaded`);
-        if (failed > 0) parts.push(`${failed} failed`);
-        if (entitlementSkipped > 0) parts.push(`${entitlementSkipped} skipped (video requires Premium)`);
+        if (result.succeeded > 0) parts.push(`${result.succeeded} uploaded`);
+        if (result.failed > 0) parts.push(`${result.failed} failed`);
+        if (result.entitlementSkipped > 0) parts.push(`${result.entitlementSkipped} skipped (video requires Premium)`);
         if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
         Alert.alert('Upload', parts.join(', '));
       }

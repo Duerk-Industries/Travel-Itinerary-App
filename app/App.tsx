@@ -46,6 +46,7 @@ import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import ShareTripModal from './components/ShareTripModal';
+import IncomingShareModal from './components/IncomingShareModal';
 import AccountTab, { fetchAccountProfile } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
@@ -3538,6 +3539,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           trip={activeTrip}
           styles={styles}
           onClose={() => setShareTripModalOpen(false)}
+        />
+      ) : null}
+      {userToken ? (
+        <IncomingShareModal
+          backendUrl={backendUrl}
+          headers={headers}
+          trips={trips}
+          activeTripId={activeTripId}
+          styles={styles}
+          theme={theme}
         />
       ) : null}
       {userToken && isTripWizardOpen ? (

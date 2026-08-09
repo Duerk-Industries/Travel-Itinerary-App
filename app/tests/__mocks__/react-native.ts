@@ -29,6 +29,9 @@ export const Linking = {
   addEventListener: jest.fn(() => ({ remove: jest.fn() })),
   openURL: jest.fn(async () => undefined),
 };
+export const Alert = {
+  alert: jest.fn(),
+};
 export const StyleSheet = {
   create: <T extends Record<string, any>>(styles: T) => styles,
   flatten: (style: any) => style,
@@ -61,6 +64,7 @@ export default {
   AsyncStorage,
   AppState,
   Linking,
+  Alert,
   StyleSheet,
   useWindowDimensions,
   useColorScheme,
