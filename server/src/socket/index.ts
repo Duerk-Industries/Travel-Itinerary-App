@@ -16,14 +16,10 @@ export const createSocketServer = (httpServer: HttpServer): Server => {
   // localhost fallback — a wrong default would silently reject every WebSocket
   // handshake in production while HTTP API calls continued to work.
   const webUrl = getBackendUrl('https://wander-bunnies.com') ?? 'https://wander-bunnies.com';
-  const corsOrigins = isLocalEnv()
-    ? [
-        'http://localhost:3000',
-        'http://localhost:4000',
-        'http://localhost:8081',
-        'http://localhost:19006',
-        webUrl,
-      ]
+  // Mirrors app.ts's HTTP CORS allowlist: any localhost/127.0.0.1 port in local
+  // dev, since Expo web can bind to different ports (8081, 4173, 19006, ...).
+  const corsOrigins: (string | RegExp)[] = isLocalEnv()
+    ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/, webUrl]
     : [webUrl];
 
   io = new Server(httpServer, {

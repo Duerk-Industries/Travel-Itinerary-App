@@ -47,16 +47,17 @@ test.describe('Performance Thresholds', () => {
     await loginAsNewUser(page);
     const tripName = await createTripViaWizard(page);
 
-    // Navigate away so we can measure the trip-select journey
-    await page.getByTestId('home-nav-trips').click();
+    // Open the trip-picker modal so we can measure the trip-select journey
+    await page.getByTestId('home-hero-card').click();
     await page.waitForLoadState('networkidle');
 
     const elapsed = await measureMs(async () => {
       // Click the trip row to make it active again (may already be active)
       const tripRow = page.getByText(tripName).first();
       if (await tripRow.isVisible()) await tripRow.click();
-      await expect(page.getByText(`Active Trip: ${tripName}`))
-        .toBeVisible({ timeout: THRESHOLDS.tripLoad });
+      // Selecting a trip closes the picker modal.
+      await expect(page.getByTestId('home-trip-modal'))
+        .not.toBeVisible({ timeout: THRESHOLDS.tripLoad });
     });
 
     expect(elapsed, `Trip load took ${elapsed}ms — budget ${THRESHOLDS.tripLoad}ms`)
@@ -100,8 +101,7 @@ test.describe('Performance Thresholds', () => {
 
   test('wizard step advance is under budget', async ({ page }) => {
     await loginAsNewUser(page);
-    await page.getByTestId('home-nav-trips').click();
-    await page.getByText('Open Wizard').click();
+    await page.getByTestId('home-create-trip-button').click();
     await expect(page.getByText('Create Trip Wizard')).toBeVisible();
 
     await page.getByPlaceholder('Trip Name').fill(`Perf Wizard ${Date.now()}`);

@@ -58,7 +58,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm --prefix server run dev',
-      url: 'http://127.0.0.1:4000',
+      url: 'http://127.0.0.1:4000/api/healthz',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
       env: serverEnv,

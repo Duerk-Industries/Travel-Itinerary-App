@@ -197,6 +197,9 @@ router.post('/', async (req, res) => {
     res.status(400).json({ error: 'Payers must be trip members' });
     return;
   }
+  // Number(cost) ?? 0 does not default missing cost to 0 — Number(undefined)
+  // is NaN, and NaN ?? 0 stays NaN since ?? only falls back on null/undefined.
+  const normalizedCost = Number.isFinite(Number(cost)) ? Number(cost) : 0;
   const flight = await insertFlight({
     userId,
     tripId,
@@ -215,7 +218,7 @@ router.post('/', async (req, res) => {
     layoverDuration,
     arrivalDate: arrivalDate || departureDate || new Date().toISOString().slice(0, 10),
     arrivalTime: arrivalTime || '00:00',
-    cost: Number(cost) ?? 0,
+    cost: normalizedCost,
     carrier: normalizedCarrier,
     flightNumber: normalizedFlightNumber,
     bookingReference: normalizedBookingReference,
@@ -228,7 +231,7 @@ router.post('/', async (req, res) => {
       groupId: tripGroup.groupId,
       expenseDate: departureDate || new Date().toISOString().slice(0, 10),
       category: 'Flights',
-      amount: Number(cost) ?? 0,
+      amount: normalizedCost,
       currency: undefined,
       payerIds: normalizedPaidBy,
       forIds: normalizedPassengerIds.length ? normalizedPassengerIds : normalizedPaidBy,

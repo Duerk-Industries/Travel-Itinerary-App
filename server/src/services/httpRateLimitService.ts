@@ -1,6 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { createHash } from 'crypto';
 import { atomicIncrementApiUsageIfUnderLimit } from '../db';
+import { isLocalEnv } from '../env';
 
 const PROVIDER = 'HTTP_RATE_LIMIT';
 
@@ -10,8 +11,11 @@ const parsePositiveInt = (value: string | undefined, fallback: number): number =
   return Math.floor(parsed);
 };
 
+// Jest sets NODE_ENV=test; Playwright/local dev signal via E2E_MODE or
+// isLocalEnv() instead (see env.ts) — both must bypass production limits or
+// a handful of parallel e2e workers trips real rate limiting within seconds.
 const testSafeDefault = (productionDefault: number): number =>
-  process.env.NODE_ENV === 'test' ? 100_000 : productionDefault;
+  process.env.NODE_ENV === 'test' || isLocalEnv() ? 100_000 : productionDefault;
 
 export class HttpRateLimitExceededError extends Error {
   public readonly limit: number;

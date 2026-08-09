@@ -60,32 +60,19 @@ const blurFocus = async (page: Page): Promise<void> => {
 };
 
 test.describe('Keyboard-only trip wizard', () => {
-  test('can open the Trips tab via keyboard and advance the wizard to step 2', async ({ page }) => {
+  test('can open the Create Trip wizard via keyboard and advance it to step 2', async ({ page }) => {
     // Programmatic login (not under test here — see keyboard-auth-flow.test.ts).
     await loginAsNewUser(page);
-    await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 15_000 });
 
-    // Tab to Trips → activate with Enter.
+    // Tab to the "+ Create Trip" button → activate with Enter.
     await blurFocus(page);
-    const tabsToTrips = await tabUntilFocused(
+    const tabsToCreateTrip = await tabUntilFocused(
       page,
-      (d) => d.testId === 'home-nav-trips',
-      'home-nav-trips',
+      (d) => d.testId === 'home-create-trip-button',
+      'home-create-trip-button',
     );
-    expect(tabsToTrips).toBeLessThan(MAX_TAB_PRESSES);
-    await page.keyboard.press('Enter');
-
-    // "Open Wizard" is rendered as a TouchableOpacity; match it by accessible
-    // text. Tab to it and press Enter.
-    await blurFocus(page);
-    const tabsToWizard = await tabUntilFocused(
-      page,
-      (d) =>
-        (d.role === 'button' || d.tag === 'button') &&
-        (d.text === 'Open Wizard' || d.ariaLabel === 'Open Wizard'),
-      'Open Wizard button',
-    );
-    expect(tabsToWizard).toBeLessThan(MAX_TAB_PRESSES);
+    expect(tabsToCreateTrip).toBeLessThan(MAX_TAB_PRESSES);
     await page.keyboard.press('Enter');
 
     // The wizard's first step (Trip Details) should render.

@@ -27,7 +27,10 @@ export const loadEnv = (options: LoadEnvOptions = {}) => {
 
     const loadedEnvPaths: string[] = [];
     const shouldOverride =
-        !process.env.JEST_WORKER_ID && !process.env.K_SERVICE && !process.env.CLOUD_RUN_JOB;
+        !process.env.JEST_WORKER_ID &&
+        !process.env.K_SERVICE &&
+        !process.env.CLOUD_RUN_JOB &&
+        !process.env.E2E_MODE;
 
     for (const envPath of envPaths) {
         if (fs.existsSync(envPath)) {

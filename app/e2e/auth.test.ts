@@ -43,14 +43,14 @@ test.describe('Authentication', () => {
     ).toBeVisible({ timeout: 5000 });
 
     // Must NOT have navigated to the home screen
-    await expect(page.getByTestId('home-nav-trips')).not.toBeVisible();
+    await expect(page.getByTestId('home-nav-overview')).not.toBeVisible();
   });
 
   test('session persists across a page reload', async ({ page }) => {
     await loginAsNewUser(page);
     await page.reload({ waitUntil: 'domcontentloaded' });
     // Home screen must still be visible without re-login
-    await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 10_000 });
   });
 
   test('logout clears session and returns to login screen', async ({ page }) => {
@@ -61,6 +61,6 @@ test.describe('Authentication', () => {
 
     // After logout the login form must be visible
     await expect(page.getByPlaceholder('Email')).toBeVisible({ timeout: 8000 });
-    await expect(page.getByTestId('home-nav-trips')).not.toBeVisible();
+    await expect(page.getByTestId('home-nav-overview')).not.toBeVisible();
   });
 });

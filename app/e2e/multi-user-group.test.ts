@@ -90,8 +90,10 @@ test.describe('Multi-User Group Invitation', () => {
     // Modal should close
     await expect(userBPage.getByTestId('invite-modal')).not.toBeVisible({ timeout: 5000 });
 
-    // The trip should now appear as the active trip for User B
-    await expect(userBPage.getByText(/Active Trip:/i)).toBeVisible({ timeout: 8000 });
+    // The trip should now appear as the active trip for User B — the home
+    // hero card falls back to "Select a trip" only when no trip is active.
+    await expect(userBPage.getByTestId('home-hero-card')).toBeVisible({ timeout: 8000 });
+    await expect(userBPage.getByText('Select a trip')).not.toBeVisible();
 
     await ownerCtx.close();
     await userBCtx.close();
@@ -121,9 +123,10 @@ test.describe('Multi-User Group Invitation', () => {
     // Modal should close
     await expect(userBPage.getByTestId('invite-modal')).not.toBeVisible({ timeout: 5000 });
 
-    // User B should NOT have the trip as active
-    const tripVisible = await userBPage.getByText(/Active Trip:/i).isVisible({ timeout: 3000 }).catch(() => false);
-    expect(tripVisible).toBeFalsy();
+    // User B should NOT have the trip as active — hero card falls back to
+    // "Select a trip" when there is no active trip.
+    await expect(userBPage.getByTestId('home-hero-card')).toBeVisible({ timeout: 5000 });
+    await expect(userBPage.getByText('Select a trip')).toBeVisible();
 
     await ownerCtx.close();
     await userBCtx.close();
@@ -151,7 +154,12 @@ test.describe('Multi-User Group Invitation', () => {
 
     // User B reloads — trip should still be active (session persists)
     await userBPage.reload({ waitUntil: 'domcontentloaded' });
-    await expect(userBPage.getByText(`Active Trip: ${tripName}`)).toBeVisible({ timeout: 10_000 });
+    await expect(userBPage.getByTestId('home-hero-card')).toBeVisible({ timeout: 10_000 });
+    await expect(userBPage.getByText('Select a trip')).not.toBeVisible();
+
+    // The trip's data should be visible via the picker modal.
+    await userBPage.getByTestId('home-hero-card').click();
+    await expect(userBPage.getByText(tripName)).toBeVisible({ timeout: 5000 });
 
     await ownerCtx.close();
     await userBCtx.close();

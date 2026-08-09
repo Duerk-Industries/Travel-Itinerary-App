@@ -106,10 +106,10 @@ test.describe('Keyboard-only accessibility', () => {
     await page.keyboard.press('Enter');
 
     // Post-auth landing must be reachable without any pointer event.
-    await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 15_000 });
   });
 
-  test('after login, can Tab to the Trips nav and activate it via keyboard', async ({ page }) => {
+  test('after login, can Tab to the Overview nav and activate it via keyboard', async ({ page }) => {
     // Programmatic login (not under test) so we arrive at home deterministically;
     // focus here is on post-auth keyboard navigation.
     const credentials = await registerUser(page.request);
@@ -134,21 +134,18 @@ test.describe('Keyboard-only accessibility', () => {
       window.localStorage.setItem('stp.session.token', token);
     }, String(data.token));
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
-    await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 15_000 });
 
     await blurFocus(page);
     const tabs = await tabUntilFocused(
       page,
-      (d) => d.testId === 'home-nav-trips',
-      'home-nav-trips',
+      (d) => d.testId === 'home-nav-overview',
+      'home-nav-overview',
     );
     expect(tabs).toBeLessThan(MAX_TAB_PRESSES);
     await page.keyboard.press('Enter');
 
-    // Trips tab renders a "Your Trips" heading or an "Open Wizard" button —
-    // either is sufficient proof the Enter press dispatched.
-    await expect(
-      page.getByText(/open wizard/i).or(page.getByText(/your trips/i)).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    // Overview tab renders an "Overview" section heading once activated.
+    await expect(page.getByText('Overview', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
   });
 });
