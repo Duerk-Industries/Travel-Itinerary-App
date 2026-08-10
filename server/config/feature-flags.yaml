@@ -136,3 +136,24 @@ flags:
   trip_blog_structured_data:
     enabled: true
     description: "Schema.org public blog metadata"
+  expense_import_plaid:
+    enabled: false
+    description: "Master switch for Plaid bank-link and transaction import"
+  expense_import_plaid_link:
+    enabled: false
+    description: "Allow users to connect new bank accounts via Plaid Link"
+  expense_import_plaid_sync:
+    enabled: false
+    description: "Allow background and manual transaction synchronization"
+  expense_import_plaid_review_queue:
+    enabled: false
+    description: "Show transaction review queue in the UI"
+  expense_import_plaid_assignment:
+    enabled: false
+    description: "Allow assigning transaction candidates to trip expenses"
+  expense_import_plaid_webhooks:
+    enabled: false
+    description: "Process real-time transaction and revocation webhooks from Plaid"
+  expense_import_plaid_auto_category:
+    enabled: false
+    description: "Suggest expense categories based on Plaid's categorization"

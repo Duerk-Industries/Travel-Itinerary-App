@@ -85,6 +85,21 @@ usagePerUser:
       firestore_writes: 90
       storage_gb_month: 0.02
       egress_gb: 0.05
+    plaidTransactions:
+      connected_item_months: 0
+      link_token_creates: 0
+      public_token_exchanges: 0
+      sync_calls: 0
+      webhook_deliveries: 0
+    plaidGoogleCloud:
+      function_invocations: 0
+      firestore_reads: 0
+      firestore_writes: 0
+      firestore_deletes: 0
+      secret_manager_accesses: 0
+      kms_encryptions: 0
+      kms_decryptions: 0
+      retained_transaction_docs: 0
   Premium:
     # Premium has unlimited AI itinerary generations in current tier config.
     # This model assumes a production planning average of 20 generations/month
@@ -143,6 +158,21 @@ usagePerUser:
       firestore_writes: 350
       storage_gb_month: 0.08
       egress_gb: 0.2
+    plaidTransactions:
+      connected_item_months: 1
+      link_token_creates: 1
+      public_token_exchanges: 1
+      sync_calls: 10
+      webhook_deliveries: 10
+    plaidGoogleCloud:
+      function_invocations: 15
+      firestore_reads: 100
+      firestore_writes: 60
+      firestore_deletes: 40
+      secret_manager_accesses: 1
+      kms_encryptions: 1
+      kms_decryptions: 10
+      retained_transaction_docs: 250
 
 costSources:
   - id: google_cloud_baseline
@@ -342,3 +372,21 @@ costSources:
         unitCostUsd: 0.000024
       - metric: output_gb_month
         unitCostUsd: 0.026
+
+  - id: plaid_transactions_subscription
+    name: Plaid Transactions per connected account
+    type: variable
+    api: plaidTransactions
+    usageLevels:
+      - metric: connected_item_months
+        unitCostUsd: 0.00 # replace from signed Plaid agreement before launch
+  - id: plaid_google_cloud_usage
+    name: Plaid Google Cloud usage
+    type: variable
+    api: plaidGoogleCloud
+    usageLevels:
+      - { metric: function_invocations, unitCostUsd: 0.40, perUnits: 1000000 }
+      - { metric: firestore_reads, unitCostUsd: 0.06, perUnits: 100000 }
+      - { metric: firestore_writes, unitCostUsd: 0.18, perUnits: 100000 }
+      - { metric: firestore_deletes, unitCostUsd: 0.18, perUnits: 100000 }
+      - { metric: retained_transaction_docs, unitCostUsd: 0.026 }

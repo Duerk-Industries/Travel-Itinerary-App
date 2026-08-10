@@ -2849,6 +2849,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'expenses'
             ? renderSharedPageScroll(
                 <DailyExpensesTab
+                  theme={theme}
                   backendUrl={backendUrl}
                   headers={headers}
                   jsonHeaders={jsonHeaders}

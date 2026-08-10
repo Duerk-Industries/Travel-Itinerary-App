@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
+import PlaidLinkButton from '../components/PlaidLinkButton';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
@@ -96,6 +98,7 @@ const temperatureUnitOptions: Array<{ key: TemperatureUnit; label: string }> = [
 ];
 
 interface AccountProfileManagementProps {
+  theme: AppTheme;
   backendUrl: string;
   userToken: string | null;
   activePage: string;
@@ -118,6 +121,7 @@ interface AccountProfileManagementProps {
 }
 
 const AccountProfileManagement = ({
+  theme,
   backendUrl,
   userToken,
   activePage,
@@ -688,6 +692,21 @@ const AccountProfileManagement = ({
           </View>
         </>
       )}
+
+      <View style={styles.divider} />
+      <Text style={styles.modalLabel}>Financial Connections</Text>
+      <Text style={styles.helperText}>
+        Connect your bank or credit card accounts to securely import recent transactions as trip expenses.
+      </Text>
+      <PlaidLinkButton
+        theme={theme}
+        backendUrl={backendUrl}
+        jsonHeaders={jsonHeaders}
+        onSuccess={(itemId) => {
+          Alert.alert('Connected', 'Your bank account has been connected. Recent transactions will be available to import in the expenses tab.');
+        }}
+        style={{ marginTop: spacing.sm }}
+      />
 
       <View style={styles.divider} />
       <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>

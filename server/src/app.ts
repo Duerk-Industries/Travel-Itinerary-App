@@ -37,6 +37,7 @@ import staticMapRoutes from './routes/staticMapRoutes';
 import getYourGuideRoutes from './routes/getYourGuideRoutes';
 import blogRoutes from './routes/blogRoutes';
 import blogStorageRoutes from './routes/blogStorageRoutes';
+import plaidIntegrationRoutes from './routes/plaidIntegrationRoutes';
 import blogImportRoutes from './routes/blogImportRoutes';
 import blogPublicationRoutes from './routes/blogPublicationRoutes';
 import publicBlogRoutes from './routes/publicBlogRoutes';
@@ -587,6 +588,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/account', blogStorageRoutes);
+app.use('/api/plaid', plaidIntegrationRoutes);
 app.get('/api/packing-list-presets', authenticate, async (_req, res) => {
   if (!(await isFeatureEnabled('packing_lists_v2'))) {
     res.status(404).json({ error: 'Packing lists v2 is not enabled' });
