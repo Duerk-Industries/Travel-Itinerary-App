@@ -121,6 +121,26 @@ function Get-DisplayEnvPair([string]$Pair) {
   return "$key=<redacted>"
 }
 
+# gcloud's --update-env-vars/--set-secrets flags are KEY=VALUE dicts. Their
+# default item delimiter is a comma, so values such as ZAI_MODELS=a,b,c must
+# use a custom delimiter. Backslash-escaping the comma does not work reliably
+# when the argument is passed through PowerShell.
+function Get-SafeGcloudDelimiter([string[]]$Pairs) {
+  $joined = ($Pairs -join '')
+  foreach ($candidate in @('@', '~', '#', '|', '!')) {
+    if ($joined.IndexOf($candidate) -lt 0) { return $candidate }
+  }
+  return [guid]::NewGuid().ToString('N')
+}
+
+function Join-GcloudDictArg([string[]]$Pairs) {
+  if ($Pairs.Count -eq 0) { return '' }
+  $delimiter = Get-SafeGcloudDelimiter $Pairs
+  # This argument is passed as an array element to gcloud.cmd; a single custom
+  # delimiter marker is what the installed Windows gcloud parser accepts here.
+  return "^$delimiter^" + ($Pairs -join $delimiter)
+}
+
 if (-not $EnvFile) {
   if (Test-Path -LiteralPath 'server/.env') {
     $EnvFile = 'server/.env'
@@ -167,8 +187,7 @@ foreach ($pair in (Parse-DotEnv $EnvFile)) {
   if ($pair.Key -in @('GCLOUD_PROJECT_ID', 'GOOGLE_CLOUD_PROJECT')) {
     $projectId = $pair.Value
   }
-  $value = $pair.Value -replace ',', '\,'
-  $envPairs += "$($pair.Key)=$value"
+  $envPairs += "$($pair.Key)=$($pair.Value)"
 }
 
 if ($sawGoogleApplicationCredentials) {
@@ -215,7 +234,7 @@ if ($secretMap.Count -gt 0) {
     $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
   }
 }
-$envArg = ($envPairs -join ',')
+$envArg = Join-GcloudDictArg $envPairs
 if ($envPairs.Count -eq 0) {
   Write-Error "No env vars parsed from $EnvFile after filtering .secrets-managed keys."
   exit 1
@@ -234,6 +253,8 @@ if ($secretMap.Count -gt 0) {
     }
     $secretPairs += ('{0}={1}' -f $key, $value)
   }
+  # Secret Manager references contain no commas, and --set-secrets on the
+  # installed Windows SDK should receive its normal comma-separated form.
   $secretsArg = ($secretPairs -join ',')
 }
 
