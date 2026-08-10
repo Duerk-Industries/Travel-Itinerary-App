@@ -250,6 +250,29 @@ users/{uid}/plaidUsageCounters/{windowKey}
   -- see §8. windowKey e.g. "SYNC:2026-08-09".
   count: number
   limit: number
+
+plaidItemDirectory/{itemLookupHash}
+  uid: string
+  itemId: string
+  updatedAt: Timestamp
+  -- opaque routing metadata only; never credentials, amounts, merchants, or categories.
+
+users/{uid}/plaidSyncJobs/{jobId}
+  itemId: string
+  kind: 'initial_sync' | 'webhook_sync' | 'manual_sync' | 'deletion'
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  cursor: string | null
+  attempts: number
+  nextAttemptAt: Timestamp
+  createdAt: Timestamp
+
+users/{uid}/plaidWebhookEvents/{eventKey}
+  itemId: string
+  webhookType: string
+  webhookCode: string
+  status: 'claimed' | 'processed' | 'failed'
+  receivedAt: Timestamp
+  expiresAt: Timestamp
 ```
 
 The module deliberately does **not** store `tripId`, `expenseId`, or other WanderBunnies fields.
@@ -258,19 +281,24 @@ assignment succeeds. A reusable consumer can use the same field for an invoice, 
 or another domain record. Merchant address, logo URL, website, account mask, and raw Plaid response
 blobs are not stored in v1; data minimization is part of the schema contract.
 
-**Per-user isolation is structural, not just rule-enforced:** every document lives under
+**Per-user isolation is structural, not just rule-enforced:** all financial documents live under
 `users/{uid}/...`, so a Firestore security rule as simple as
-`allow read: if request.auth.uid == uid;` is sufficient and provably correct — no cross-collection
-query or ACL-projection-document trick is needed (contrast with this repo's existing
-group/trip membership model in `docs/security/firestore-membership-acl-design.md`, which needed
-that complexity precisely because *those* documents aren't already user-scoped by path). Client
-writes are denied by rule entirely; every mutation goes through a callable function, matching
-this repo's existing "server is the source of truth for mutations" principle.
+`allow read: if request.auth.uid == uid;` is sufficient and provably correct. The only exception
+is the server-only `plaidItemDirectory`, which contains opaque routing metadata and no financial
+data; client reads and writes to it are denied. Client writes to all module collections are denied
+by rule entirely; every mutation goes through a callable or durable Functions job, matching this
+repo's existing "server is the source of truth for mutations" principle.
 
 The review queue uses a composite index for `removed == false`, `consumerLink == null`, and
 `date desc`, with a maximum page size of 50 and Firestore cursor pagination. It never uses offset
 pagination or an unbounded collection read. A sync writes only the normalized fields above, uses
 BulkWriter/batches, and records the exact read/write/delete counts for the usage meter.
+
+The webhook handler resolves `item_id` through the hashed `plaidItemDirectory` document rather
+than scanning a collection group. That keeps webhook latency and read cost bounded while leaving
+financial data under the per-user path. The directory is server-only, contains no financial data,
+and is deleted with the Item. A queue document is the durable hand-off from webhook receipt to
+sync/deletion processing; a detached Promise is not an acceptable queue.
 
 ```text
 match /users/{uid}/plaidItems/{itemId} {
@@ -281,6 +309,15 @@ match /users/{uid}/plaidTransactions/{transactionId} {
   allow read: if request.auth != null && request.auth.uid == uid;
   allow write: if false;
 }
+match /plaidItemDirectory/{itemLookupHash} {
+  allow read, write: if false;
+}
+match /users/{uid}/plaidSyncJobs/{jobId} {
+  allow read, write: if false;
+}
+match /users/{uid}/plaidWebhookEvents/{eventKey} {
+  allow read, write: if false;
+}
 ```
 
 ---
@@ -288,7 +325,8 @@ match /users/{uid}/plaidTransactions/{transactionId} {
 ## 6. Webhooks: transaction-sync and deletion
 
 Plaid sends one webhook shape (`webhook_type` + `webhook_code`) to a single HTTP function,
-`plaidWebhook`, which verifies the signature (§10) and dispatches:
+`plaidWebhook`, which verifies the signature (§10), claims a short-retention event document, uses
+the bounded Item directory lookup, and durably enqueues work before returning `200`:
 
 | `webhook_type` | `webhook_code` | Action |
 |---|---|---|
@@ -403,6 +441,12 @@ additional counters, not replacements for the aggregate limit.
       PLAID_TRANSACTION_WRITE: 10000
       PLAID_TRANSACTION_DELETE: 3000
       PLAID_USAGE_COUNTER_WRITE: 3000
+      PLAID_ITEM_DIRECTORY_READ: 2000
+      PLAID_WEBHOOK_EVENT_WRITE: 2000
+      PLAID_SYNC_JOB_WRITE: 2000
+      PLAID_REVIEW_QUEUE_READ: 10000
+      PLAID_EXPENSE_ASSIGNMENT_READ: 5000
+      PLAID_EXPENSE_ASSIGNMENT_WRITE: 3000
 
   GCP_PLAID:
     window: day
@@ -415,9 +459,12 @@ additional counters, not replacements for the aggregate limit.
 ```
 
 The module's config validator must reject missing/zero limits for safety-sensitive calls and fail
-closed if a caller key is absent. The WanderBunnies adapter reserves the same operation names via
-the normal limiter before its Express-side assignment/read path; it does not create a parallel
-unmetered Plaid route.
+closed if a caller key is absent. Functions must load these values from the versioned standard
+configuration (or a generated, checksum-verified artifact); hard-coded numeric arguments in a
+handler are prohibited. The WanderBunnies adapter reserves the same operation names via the
+normal limiter before its Express-side assignment/read path; it does not create a parallel
+unmetered Plaid route. Directory lookup, webhook-event claim, queue write, review query, and
+assignment read/write all reserve storage operations before the Firestore side effect.
 
 **Caps that matter operationally, not just as a config exercise:**
 
@@ -474,10 +521,10 @@ Planned `cost-model.yaml` shape (values are illustrative and remain editable ass
 usagePerUser:
   Basic:
     plaidTransactions: { connected_item_months: 0, link_token_creates: 0, public_token_exchanges: 0, sync_calls: 0, webhook_deliveries: 0 }
-    plaidGoogleCloud: { function_invocations: 0, firestore_reads: 0, firestore_writes: 0, firestore_deletes: 0, secret_manager_accesses: 0, kms_encryptions: 0, kms_decryptions: 0, retained_transaction_docs: 0 }
+    plaidGoogleCloud: { function_invocations: 0, firestore_reads: 0, firestore_writes: 0, firestore_deletes: 0, secret_manager_accesses: 0, kms_encryptions: 0, kms_decryptions: 0, retained_transaction_docs: 0, directory_reads: 0, webhook_event_writes: 0, sync_job_writes: 0, review_queue_reads: 0, assignment_reads: 0, assignment_writes: 0 }
   Premium:
     plaidTransactions: { connected_item_months: 1, link_token_creates: 1, public_token_exchanges: 1, sync_calls: 10, webhook_deliveries: 10 }
-    plaidGoogleCloud: { function_invocations: 15, firestore_reads: 100, firestore_writes: 60, firestore_deletes: 40, secret_manager_accesses: 1, kms_encryptions: 1, kms_decryptions: 10, retained_transaction_docs: 250 }
+    plaidGoogleCloud: { function_invocations: 15, firestore_reads: 100, firestore_writes: 60, firestore_deletes: 40, secret_manager_accesses: 1, kms_encryptions: 1, kms_decryptions: 10, retained_transaction_docs: 250, directory_reads: 10, webhook_event_writes: 10, sync_job_writes: 10, review_queue_reads: 10, assignment_reads: 10, assignment_writes: 10 }
 
 costSources:
   - id: plaid_transactions_subscription
@@ -495,10 +542,15 @@ costSources:
       - { metric: firestore_writes, unitCostUsd: 0.18, perUnits: 100000 }
       - { metric: firestore_deletes, unitCostUsd: 0.18, perUnits: 100000 }
       - { metric: retained_transaction_docs, unitCostUsd: 0.026 }
+      - { metric: secret_manager_accesses, unitCostUsd: 0.00 } # replace with current regional price
+      - { metric: kms_encryptions, unitCostUsd: 0.00 } # replace with current KMS operation price
+      - { metric: kms_decryptions, unitCostUsd: 0.00 } # replace with current KMS operation price
 ```
 
-The zero subscription placeholder is a launch blocker, not an accepted production estimate: it
-must be replaced and reviewed by finance before the master flag can be enabled.
+The zero subscription, Secret Manager, and KMS placeholders are launch-review assumptions, not
+evidence that those services are free. They must be replaced with finance/security-reviewed prices
+before the master flag can be enabled. The metrics remain separate so pricing changes or a
+key-rotation/decryption regression are visible without changing application code.
 
 ---
 
@@ -646,6 +698,22 @@ non-Sandbox Plaid environment is enabled; the text below is a starting draft, no
 
 ## 14. Rollout and maintainability
 
+The current worktree scaffolding is not itself a production approval. Before any production flag
+is enabled, the implementation must close these explicit gates:
+
+- replace hard-coded limiter values and direct Firestore reads with the standard, config-backed
+  reservation path;
+- enforce the master flag plus the relevant sub-flag inside every callable, HTTP webhook, review,
+  and assignment handler; missing financial flags must fail closed;
+- replace fire-and-forget initial/webhook sync calls with the durable bounded queue described in
+  §§5–6, and use the Item directory instead of a collection-group scan;
+- use Cloud KMS envelope encryption and rotation procedures rather than a Secret Manager value
+  acting as an application-managed encryption key;
+- make Expense assignment idempotent across the Express database and Firestore link update, with
+  a compensating retry state for a partial failure; and
+- add the emulator, Sandbox, concurrency, deletion, and cost/limit tests listed in §11 before
+  exposing the native Link button to an internal cohort.
+
 1. **Module scaffold** (`packages/plaid-transactions/`) with the pure/testable pieces first
    (categoryMapping, usageLimiter, webhookVerification, syncCoordinator, deletionService) — no
    live Plaid calls yet.
@@ -675,7 +743,7 @@ non-Sandbox Plaid environment is enabled; the text below is a starting draft, no
 - `server/config/api-limits.yaml` (new `PLAID`/`FIRESTORE_PLAID`/`GCP_PLAID` provider blocks)
 - `server/config/cost-model.yaml` (new Plaid API, Firebase usage, storage, and signed-price assumptions)
 - `server/config/feature-flags.yaml` and `docs/feature-flags.md` (new `expense_import_plaid*` flags)
-- `app/public/privacy.html` + `docs/legal/privacy-policy.md` (new §15)
+- `app/public/privacy.html` + `docs/legal/privacy-policy.md` (feature-specific financial-account disclosure)
 - `app/utils/firebaseAppCheck.ts` and native app configuration (production App Check prerequisite)
 - `server/src/types.ts` — no change needed; `Expense.sourceType`/`sourceId` already support this
 - `app/tabs/dailyExpenses.tsx` / `app/tabs/ledger.tsx` — new "Import expenses" entry point

@@ -100,6 +100,12 @@ usagePerUser:
       kms_encryptions: 0
       kms_decryptions: 0
       retained_transaction_docs: 0
+      directory_reads: 0
+      webhook_event_writes: 0
+      sync_job_writes: 0
+      review_queue_reads: 0
+      assignment_reads: 0
+      assignment_writes: 0
   Premium:
     # Premium has unlimited AI itinerary generations in current tier config.
     # This model assumes a production planning average of 20 generations/month
@@ -173,6 +179,12 @@ usagePerUser:
       kms_encryptions: 1
       kms_decryptions: 10
       retained_transaction_docs: 250
+      directory_reads: 10
+      webhook_event_writes: 10
+      sync_job_writes: 10
+      review_queue_reads: 10
+      assignment_reads: 10
+      assignment_writes: 10
 
 costSources:
   - id: google_cloud_baseline
@@ -390,3 +402,6 @@ costSources:
       - { metric: firestore_writes, unitCostUsd: 0.18, perUnits: 100000 }
       - { metric: firestore_deletes, unitCostUsd: 0.18, perUnits: 100000 }
       - { metric: retained_transaction_docs, unitCostUsd: 0.026 }
+      - { metric: secret_manager_accesses, unitCostUsd: 0.00 } # replace with current regional price
+      - { metric: kms_encryptions, unitCostUsd: 0.00 } # replace with current KMS operation price
+      - { metric: kms_decryptions, unitCostUsd: 0.00 } # replace with current KMS operation price
