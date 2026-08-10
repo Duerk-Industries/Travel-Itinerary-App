@@ -93,6 +93,11 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
         supportsTablet: true,
         bundleIdentifier: 'com.duerkindustries.travelitineraryplanner',
         buildNumber: '1',
+        // Keeps the "Sign In with Apple" capability enabled on the bundle
+        // ID. Without this, EAS's capability sync assumes the app doesn't
+        // use it and tries to turn APPLE_ID_AUTH OFF on an app record that
+        // already depends on it, which Apple's API rejects.
+        usesAppleSignIn: true,
         infoPlist: {
           ITSAppUsesNonExemptEncryption: false,
           NSAppTransportSecurity: {

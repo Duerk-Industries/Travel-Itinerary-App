@@ -47,6 +47,7 @@
     "@sentry/react-native": "~7.2.0",
     "caniuse-lite": "^1.0.30001770",
     "expo": "~54.0.34",
+    "expo-apple-authentication": "~8.0.8",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.10",
     "expo-file-system": "~19.0.23",
