@@ -57,7 +57,7 @@ router.get('/:tripId/blog/capabilities', async (req, res) => {
     const kinds = await Promise.all(descriptors.map(async (descriptor) => ({ ...descriptor, enabled: master && await isFeatureEnabled(descriptor.featureFlag) })));
     const limits = tripBlogLimits();
     const writable = Boolean(await ensureUserInTrip(req.params.tripId, userIdOf(req)));
-    res.json({ enabled: master, writable, kinds, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300) } });
+    res.json({ enabled: master, writable, kinds, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300), maxAssetsPerGallery: Number(limits.maxAssetsPerGallery ?? 30) } });
   } catch (err) {
     errorResponse(res, err);
   }
@@ -76,11 +76,40 @@ router.get('/:tripId/blog', async (req, res) => {
     };
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
+    const withUrls = await attachMediaUrls(media);
     // `id` must be the underlying blog_items row id (asset.blogItemId), not the media asset's own
     // id — PATCH/DELETE /blog/items/:itemId operate on blog_items, so shipping the asset id as
     // `id` makes every client action against a photo/video item target a row that doesn't exist
     // there, silently failing (404/409) no matter what the client tries.
-    const mediaItems = await attachMediaUrls(media.map((asset) => ({ ...asset, id: asset.blogItemId, assetId: asset.id, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` })));
+    // Assets whose parent blog_items row is a core.gallery are grouped into one item with an
+    // `assets` array; everything else (today's standalone media.photo/media.video items) keeps
+    // the existing one-asset-per-item shape for backward compatibility with pre-gallery data.
+    const galleryAssetsByItem = new Map<string, any[]>();
+    const mediaItems: any[] = [];
+    for (const asset of withUrls as any[]) {
+      if (asset.parentKindKey === 'core.gallery') {
+        const list = galleryAssetsByItem.get(asset.blogItemId) ?? [];
+        list.push(asset);
+        galleryAssetsByItem.set(asset.blogItemId, list);
+      } else {
+        mediaItems.push({ ...asset, id: asset.blogItemId, assetId: asset.id, kindKey: `media.${asset.mediaKind}`, version: 1, sortKey: `media-${asset.id}` });
+      }
+    }
+    if (galleryAssetsByItem.size) {
+      const galleryMeta = await blogRepository().getGalleryItemsMeta(req.params.tripId, Array.from(galleryAssetsByItem.keys()));
+      for (const [itemId, assets] of galleryAssetsByItem) {
+        const meta = (galleryMeta as any)[itemId];
+        if (!meta) continue; // defensive: gallery item itself was deleted/missing between queries
+        const sortedAssets = [...assets].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+          .map((a) => ({ ...a, assetId: a.id, kindKey: `media.${a.mediaKind}` }));
+        mediaItems.push({
+          id: itemId, tripId: req.params.tripId, kindKey: 'core.gallery', schemaVersion: 1,
+          audience: meta.audience, sortKey: meta.sortKey, authorUserId: meta.authorUserId, lastEditorUserId: meta.lastEditorUserId,
+          version: meta.version, caption: meta.caption, dayDate: sortedAssets[0].dayDate,
+          createdAt: meta.createdAt, updatedAt: meta.updatedAt, assets: sortedAssets,
+        });
+      }
+    }
     for (const item of mediaItems) {
       const day = blog.days.find((candidate) => candidate.localDate === item.dayDate);
       if (day) (day.items as any[]).push(item);
@@ -114,6 +143,18 @@ router.post('/:tripId/blog/items', async (req, res) => {
     const descriptor = getBlogItemDescriptor(kind);
     if (!descriptor || !(await isFeatureEnabled(descriptor.featureFlag))) {
       res.status(404).json({ error: 'Blog item type is not enabled' });
+      return;
+    }
+    if (kind === 'core.gallery') {
+      const dayDate = String(req.body?.dayDate ?? '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dayDate)) {
+        res.status(400).json({ error: 'dayDate is required' });
+        return;
+      }
+      const caption = req.body?.caption == null ? null : String(req.body.caption).slice(0, 2000);
+      const audience = validAudience(req.body?.audience) ? req.body.audience : 'public';
+      const item = await blogRepository().createGalleryItem(userIdOf(req), req.params.tripId, { dayDate, caption, audience });
+      res.status(201).json(item);
       return;
     }
     if (kind !== 'core.text') {
@@ -228,6 +269,7 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
       caption: req.body?.caption ?? null,
       altText: req.body?.altText ?? null,
       idempotencyKey,
+      galleryItemId: req.body?.galleryItemId ? String(req.body.galleryItemId) : null,
     });
     res.status(201).json(result);
   } catch (err) {
@@ -264,6 +306,23 @@ router.get('/:tripId/blog/media', async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ media: await attachMediaUrls(media) });
   } catch (err) { errorResponse(res, err); }
+});
+
+router.delete('/:tripId/blog/media/:assetId', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_galleries'))) {
+      res.status(404).json({ error: 'Galleries are not enabled' });
+      return;
+    }
+    const result = await blogMediaRepository().deleteMediaAsset(userIdOf(req), req.params.assetId);
+    if (!result.deleted) {
+      res.status(404).json({ error: 'Media asset not found' });
+      return;
+    }
+    res.status(204).end();
+  } catch (err) {
+    errorResponse(res, err);
+  }
 });
 
 router.post('/:tripId/blog/items/:itemId/highlight', async (req, res) => {

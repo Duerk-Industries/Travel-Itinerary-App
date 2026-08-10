@@ -1,3 +1,5 @@
+import { BlogMediaAsset } from './mediaTypes';
+
 export type BlogAudience = 'travelers' | 'followers' | 'public';
 
 export type BlogItemKind =
@@ -41,6 +43,24 @@ export interface BlogTextItem {
   sourceType?: 'itinerary_detail' | null;
   sourceId?: string | null;
   sourceDetached?: boolean;
+}
+
+export interface BlogGalleryItem {
+  id: string;
+  tripId: string;
+  blogDayId: string;
+  localDate: string;
+  kindKey: 'core.gallery';
+  schemaVersion: number;
+  audience: BlogAudience;
+  sortKey: string;
+  authorUserId: string;
+  lastEditorUserId: string;
+  version: number;
+  caption: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assets: BlogMediaAsset[];
 }
 
 export interface BlogDay {
@@ -90,6 +110,7 @@ export interface BlogCapabilities {
     maxTextBlocksPerDay: number;
     maxMediaItemsPerDay: number;
     videoMaxDurationSeconds: number;
+    maxAssetsPerGallery: number;
   };
 }
 

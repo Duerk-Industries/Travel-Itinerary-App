@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
-import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity } from './types';
+import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
 
 type BlogRow = {
   id: string;
@@ -285,6 +285,50 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
     [id]
   );
   return mapItem(item.rows[0]);
+};
+
+export const createGalleryItem = async (userId: string, tripId: string, input: { dayDate: string; caption?: string | null; audience?: BlogAudience }): Promise<BlogGalleryItem> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const dayId = await getDayId(tripId, input.dayDate);
+  const id = randomUUID();
+  const sortKey = `${Date.now().toString().padStart(16, '0')}-${id}`;
+  await queryBlog(
+    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
+     VALUES ($1, $2, $3, 'core.gallery', 1, $4, $5, $6, $6)`,
+    [id, tripId, dayId, input.audience ?? 'public', sortKey, userId]
+  );
+  if (input.caption) {
+    await queryBlog('INSERT INTO blog_item_payloads (item_id, payload) VALUES ($1, $2::jsonb)', [id, JSON.stringify({ caption: input.caption })]);
+  }
+  await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+  const row = await queryBlog<any>('SELECT i.*, d.local_date FROM blog_items i JOIN blog_days d ON d.id = i.blog_day_id WHERE i.id = $1', [id]);
+  const item = row.rows[0];
+  return {
+    id, tripId, blogDayId: dayId, localDate: formatDate(item.local_date), kindKey: 'core.gallery', schemaVersion: 1,
+    audience: item.audience as BlogAudience, sortKey, authorUserId: userId, lastEditorUserId: userId, version: 1,
+    caption: input.caption ?? null, createdAt: new Date(item.created_at).toISOString(), updatedAt: new Date(item.updated_at).toISOString(), assets: [],
+  };
+};
+
+export const getGalleryItemsMeta = async (tripId: string, itemIds: string[]): Promise<Record<string, { blogDayId: string; sortKey: string; audience: BlogAudience; authorUserId: string; lastEditorUserId: string; version: number; caption: string | null; createdAt: string; updatedAt: string }>> => {
+  if (!itemIds.length) return {};
+  const placeholders = itemIds.map((_, i) => `$${i + 2}`).join(',');
+  const rows = await queryBlog<any>(
+    `SELECT i.id, i.blog_day_id, i.sort_key, i.audience, i.author_user_id, i.last_editor_user_id, i.version, i.created_at, i.updated_at, p.payload
+     FROM blog_items i LEFT JOIN blog_item_payloads p ON p.item_id = i.id
+     WHERE i.trip_id = $1 AND i.id IN (${placeholders}) AND i.deleted_at IS NULL AND i.kind_key = 'core.gallery'`,
+    [tripId, ...itemIds]
+  );
+  const out: Record<string, any> = {};
+  for (const row of rows.rows) {
+    out[String(row.id)] = {
+      blogDayId: String(row.blog_day_id), sortKey: String(row.sort_key), audience: row.audience as BlogAudience,
+      authorUserId: String(row.author_user_id), lastEditorUserId: String(row.last_editor_user_id), version: Number(row.version ?? 1),
+      caption: row.payload?.caption ?? null, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),
+    };
+  }
+  return out;
 };
 
 export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextItem | null> => {

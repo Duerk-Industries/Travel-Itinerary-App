@@ -29,6 +29,12 @@ export interface BlogMediaAsset {
   primaryUrl?: string | null;
   thumbnailUrl?: string | null;
   isHighlight?: boolean;
+  // The parent blog_items row's kind_key ('media.photo' | 'media.video' | 'core.gallery') — distinct
+  // from mediaKind above, which is the asset's own photo/video/audio/panorama type. Used by
+  // GET /:tripId/blog to decide whether an asset renders as its own standalone item or gets grouped
+  // into its parent gallery's `assets` array.
+  parentKindKey?: string;
+  position?: number;
 }
 
 export interface BlogUploadInitInput {
@@ -41,6 +47,9 @@ export interface BlogUploadInitInput {
   caption?: string | null;
   altText?: string | null;
   idempotencyKey: string;
+  // When set, the uploaded asset joins this existing core.gallery item instead of creating a new
+  // standalone blog item. The gallery's own day is authoritative; dayDate above is ignored in that case.
+  galleryItemId?: string | null;
 }
 
 export interface BlogUploadInitResult {

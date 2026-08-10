@@ -4,13 +4,14 @@ import path from 'path';
 import { ensureUserInTrip, ensureUserCanReadTrip } from '../db.firebase';
 import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
+import { getApiCacheSetting } from '../config/apiLimits';
 import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { getDb } from '../db.firebase';
 
 const config = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; } })();
 const included = (tier: string) => Number(config.tiers?.[tier]?.includedBytes ?? config.tiers?.free?.includedBytes ?? 0);
 const nowIso = () => new Date().toISOString();
-const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, caption: data.caption ?? null, altText: data.altText ?? null, isHighlight: Boolean(data.isHighlight) });
+const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, caption: data.caption ?? null, altText: data.altText ?? null, isHighlight: Boolean(data.isHighlight), parentKindKey: data.parentKindKey ?? undefined, position: data.position != null ? Number(data.position) : undefined });
 
 const ensureAccount = async (userId: string): Promise<any> => {
   const ref = getDb().collection('blog_storage_accounts').doc(userId);
@@ -44,9 +45,27 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   if (!allowed.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
   const max = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : 1024 * 1024 * 1024;
   if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > max) throw new Error('Media exceeds the configured size limit');
+  const db = getDb();
+
+  // When joining an existing gallery, the gallery item's own day is authoritative — a stale or
+  // mismatched client-supplied dayDate must not be able to desync an asset from its gallery.
+  let galleryDayDate: string | null = null;
+  let galleryAssetCount = 0;
+  if (input.galleryItemId) {
+    const gallerySnap = await db.collection('blog_items').doc(input.galleryItemId).get();
+    const galleryData = gallerySnap.exists ? (gallerySnap.data() as any) : null;
+    if (!galleryData || String(galleryData.tripId) !== input.tripId || galleryData.deletedAt != null || galleryData.kindKey !== 'core.gallery') {
+      throw new Error('A valid galleryItemId is required to add photos to a gallery');
+    }
+    const memberSnap = await db.collection('blog_media_assets').where('blogItemId', '==', input.galleryItemId).get();
+    galleryAssetCount = memberSnap.docs.filter((doc) => String((doc.data() as any).state) !== 'deleted').length;
+    const maxAssets = getApiCacheSetting('tripBlog', 'maxAssetsPerGallery') ?? 30;
+    if (galleryAssetCount >= maxAssets) throw new Error('Gallery exceeds the maximum number of photos allowed');
+    galleryDayDate = String(galleryData.localDate);
+  }
+
   const summary = await getStorageSummary(userId);
   if (!summary.entitlementActive || input.byteSize > summary.availableBytes) throw new Error('QUOTA_EXCEEDED');
-  const db = getDb();
   const existing = await db.collection('blog_media_assets').where('sourceRef', '==', input.idempotencyKey).where('uploaderUserId', '==', userId).limit(1).get();
   if (!existing.empty) {
     const doc = existing.docs[0];
@@ -57,11 +76,16 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     return { asset: map(existingData, doc.id), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
   }
   const assetId = randomUUID();
-  const blogItemId = randomUUID();
+  const blogItemId = input.galleryItemId ?? randomUUID();
+  const dayDate = galleryDayDate ?? input.dayDate;
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
-  const data = { tripId: input.tripId, blogItemId, dayDate: input.dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, createdAt: nowIso(), updatedAt: nowIso() };
+  const parentKindKey = input.galleryItemId ? 'core.gallery' : (input.mediaKind === 'photo' ? 'media.photo' : 'media.video');
+  const position = input.galleryItemId ? galleryAssetCount : 0;
+  const data = { tripId: input.tripId, blogItemId, dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, parentKindKey, position, createdAt: nowIso(), updatedAt: nowIso() };
   await db.collection('blog_media_assets').doc(assetId).set(data);
-  await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: input.dayDate, kindKey: input.mediaKind === 'photo' ? 'media.photo' : 'media.video', schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });
+  if (!input.galleryItemId) {
+    await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: input.dayDate, localDate: input.dayDate, kindKey: parentKindKey, schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });
+  }
   const accountRef = db.collection('blog_storage_accounts').doc(userId);
   await db.runTransaction(async (tx) => { const current = (await tx.get(accountRef)).data() as any; const available = Number(current?.includedBytes ?? 0) + Number(current?.purchasedBytes ?? 0) - Number(current?.visibleCommittedBytes ?? 0) - Number(current?.reservedBytes ?? 0); if (available < input.byteSize) throw new Error('QUOTA_EXCEEDED'); tx.set(accountRef, { reservedBytes: Number(current?.reservedBytes ?? 0) + input.byteSize, updatedAt: nowIso() }, { merge: true }); });
   const uploadUrl = await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
@@ -121,6 +145,40 @@ export const listMedia = async (userId: string, tripId: string): Promise<BlogMed
   }));
   return assets.filter((asset) => !deletedItemIds.has(asset.blogItemId));
 };
+// Removes a single asset from a gallery (not for standalone media.photo/media.video items — those
+// are removed whole via DELETE /blog/items/:itemId). If it was the last asset in its gallery, the
+// now-empty gallery item is soft-deleted too so it doesn't linger as an invisible post.
+export const deleteMediaAsset = async (userId: string, assetId: string): Promise<{ deleted: boolean }> => {
+  const db = getDb();
+  const assetRef = db.collection('blog_media_assets').doc(assetId);
+  const assetSnap = await assetRef.get();
+  if (!assetSnap.exists) return { deleted: false };
+  const asset = assetSnap.data() as any;
+  if (String(asset.state) === 'deleted') return { deleted: false };
+  const itemRef = db.collection('blog_items').doc(String(asset.blogItemId));
+  const itemSnap = await itemRef.get();
+  const item = itemSnap.exists ? (itemSnap.data() as any) : null;
+  if (!item || item.deletedAt != null) return { deleted: false };
+  if (item.kindKey !== 'core.gallery') throw new Error('This asset must be part of a gallery to remove individually; use DELETE /blog/items/:itemId for standalone photos or videos instead');
+  if (!(await ensureUserInTrip(String(asset.tripId), userId))) throw new Error('Not authorized to edit this trip');
+
+  const accountRef = db.collection('blog_storage_accounts').doc(String(asset.storageAccountUserId));
+  const bytesField = asset.state === 'ready' ? 'visibleCommittedBytes' : asset.state === 'grace_hidden' ? 'graceHiddenBytes' : 'reservedBytes';
+  await db.runTransaction(async (tx) => {
+    const accountSnap = await tx.get(accountRef);
+    const account = accountSnap.data() as any;
+    tx.set(accountRef, { [bytesField]: Math.max(0, Number(account?.[bytesField] ?? 0) - Number(asset.billableBytes ?? 0)), updatedAt: nowIso() }, { merge: true });
+    tx.set(assetRef, { state: 'deleted', updatedAt: nowIso() }, { merge: true });
+  });
+
+  const remainingSnap = await db.collection('blog_media_assets').where('blogItemId', '==', asset.blogItemId).get();
+  const remaining = remainingSnap.docs.filter((doc) => String((doc.data() as any).state) !== 'deleted').length;
+  if (remaining === 0) {
+    await itemRef.set({ deletedAt: nowIso(), version: Number(item.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
+  }
+  return { deleted: true };
+};
+
 export const setHighlight = async (userId: string, itemId: string, highlighted: boolean): Promise<void> => { const snap = await getDb().collection('blog_items').doc(itemId).get(); if (!snap.exists) throw new Error('Blog item not found'); const row = snap.data() as any; if (!(await ensureUserInTrip(String(row.tripId), userId))) throw new Error('Not authorized'); const assets = await getDb().collection('blog_media_assets').where('blogItemId', '==', itemId).get(); await Promise.all(assets.docs.map((doc) => doc.ref.set({ isHighlight: highlighted, updatedAt: nowIso() }, { merge: true }))); };
 export const hideExpiredMediaForUser = async (userId: string, inactiveAt = new Date()): Promise<number> => {
   const summary = await getStorageSummary(userId);

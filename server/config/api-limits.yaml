@@ -466,6 +466,7 @@ caching:
     signedUrlTtlMs: 3600000
     cdnCacheTtlSeconds: 86400
     maxUploadInitPerMinutePerAccount: 30
+    maxAssetsPerGallery: 30
     maxUploadBytesPerDay: 1073741824
     maxProcessingJobsPerAccount: 4
     publicReadsPerMinutePerIp: 120

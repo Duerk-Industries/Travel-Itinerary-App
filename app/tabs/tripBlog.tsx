@@ -67,12 +67,66 @@ export const BlogMediaPreview = ({ item, backgroundColor }) => {
   );
 };
 
+const GalleryGrid = ({ item, backgroundColor, mutedColor, canEdit, onRemoveAsset, removingAssetId }) => {
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const assets = item.assets || [];
+  if (!assets.length) return null;
+  const activeAsset = lightboxIndex != null ? assets[lightboxIndex] : null;
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {assets.map((asset, index) => {
+          const assetId = asset.assetId || asset.id;
+          return (
+            <TouchableOpacity key={assetId} testID={`gallery-thumb-${assetId}`} accessibilityRole="button" onPress={() => setLightboxIndex(index)} style={{ width: 96, height: 96 }}>
+              <Image source={{ uri: asset.thumbnailUrl || asset.primaryUrl }} style={{ width: 96, height: 96, borderRadius: 6, backgroundColor }} resizeMode="cover" />
+              {canEdit ? (
+                <TouchableOpacity
+                  testID={`gallery-remove-${assetId}`}
+                  accessibilityRole="button"
+                  onPress={() => onRemoveAsset(assetId)}
+                  disabled={removingAssetId === assetId}
+                  style={{ position: 'absolute', top: 2, right: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 14, lineHeight: 16 }}>{removingAssetId === assetId ? '…' : '×'}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
+      {lightboxIndex != null ? (
+        <Modal testID="gallery-lightbox" visible transparent animationType="fade" onRequestClose={() => setLightboxIndex(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 20 }}>
+            <TouchableOpacity testID="gallery-lightbox-close" accessibilityRole="button" onPress={() => setLightboxIndex(null)} style={{ position: 'absolute', top: 40, right: 20, zIndex: 1 }}>
+              <Text style={{ color: '#fff', fontSize: 28 }}>×</Text>
+            </TouchableOpacity>
+            {activeAsset ? <BlogMediaPreview item={activeAsset} backgroundColor="transparent" /> : null}
+            {assets.length > 1 ? (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, marginTop: 16 }}>
+                <TouchableOpacity testID="gallery-prev" accessibilityRole="button" onPress={() => setLightboxIndex((current) => (current - 1 + assets.length) % assets.length)}>
+                  <Text style={{ color: '#fff', fontSize: 18 }}>‹ Prev</Text>
+                </TouchableOpacity>
+                <TouchableOpacity testID="gallery-next" accessibilityRole="button" onPress={() => setLightboxIndex((current) => (current + 1) % assets.length)}>
+                  <Text style={{ color: '#fff', fontSize: 18 }}>Next ›</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
+        </Modal>
+      ) : null}
+    </View>
+  );
+};
+
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
+  const [removingAssetId, setRemovingAssetId] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [limit, setLimit] = useState(7);
   const [cursor, setCursor] = useState(null);
@@ -263,11 +317,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }));
   };
 
-  const uploadOneFile = async (dayDate, pickedFile) => {
+  const uploadOneFile = async (dayDate, pickedFile, galleryItemId = null) => {
     const idempotencyKey = createIdempotencyKey('up');
     const initRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/upload-init`, {
       method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-      body: JSON.stringify({ dayDate, mediaKind: 'photo', mimeType: pickedFile.mimeType, byteSize: pickedFile.size }),
+      body: JSON.stringify({ dayDate, mediaKind: 'photo', mimeType: pickedFile.mimeType, byteSize: pickedFile.size, ...(galleryItemId ? { galleryItemId } : {}) }),
     });
 
     if (initRes.status === 413) {
@@ -332,6 +386,81 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     } finally {
       setUploading(false);
       setUploadProgress(null);
+    }
+  };
+
+  // Same picker + per-file upload flow as handleUpload, except every file joins one shared
+  // core.gallery item (created up front) instead of becoming its own standalone post.
+  const handleGalleryUpload = async (dayDate) => {
+    if (!canEdit) return;
+    const picked = await pickImageFiles();
+    if (!picked.length) return; // user cancelled the picker
+
+    const supported = picked.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType));
+    const unsupportedCount = picked.length - supported.length;
+    if (!supported.length) {
+      Alert.alert('Gallery upload', 'Only JPEG or PNG photos are supported.');
+      return;
+    }
+
+    setUploading(true);
+    let galleryItem = null;
+    let succeeded = 0;
+    let failed = 0;
+    let quotaBlocked = false;
+    try {
+      const createRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kindKey: 'core.gallery', dayDate }),
+      });
+      if (!createRes.ok) throw new Error((await createRes.json().catch(() => ({}))).error || 'Unable to create the gallery');
+      galleryItem = await createRes.json();
+
+      for (let index = 0; index < supported.length; index += 1) {
+        if (quotaBlocked) break;
+        setUploadProgress({ current: index + 1, total: supported.length });
+        try {
+          const outcome = await uploadOneFile(dayDate, supported[index], galleryItem.id);
+          if (outcome === 'quota_exceeded') { quotaBlocked = true; break; }
+          succeeded += 1;
+        } catch (error) {
+          failed += 1;
+        }
+      }
+      if (succeeded === 0 && galleryItem) {
+        // Nothing landed in the gallery — clean up the now-orphaned empty item rather than
+        // leaving an invisible post behind server-side (empty galleries simply don't render).
+        await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${galleryItem.id}`, {
+          method: 'DELETE', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ version: galleryItem.version }),
+        }).catch(() => {});
+      }
+      await load();
+      if (!quotaBlocked && (failed > 0 || unsupportedCount > 0)) {
+        const parts = [];
+        if (succeeded > 0) parts.push(`${succeeded} uploaded`);
+        if (failed > 0) parts.push(`${failed} failed`);
+        if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
+        Alert.alert('Gallery upload', parts.join(', '));
+      }
+    } catch (error) {
+      Alert.alert('Gallery upload', error.message || 'Unable to create the gallery');
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const removeGalleryAsset = async (assetId) => {
+    if (!canEdit || removingAssetId) return;
+    setRemovingAssetId(assetId);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${assetId}`, { method: 'DELETE', headers });
+      if (!response.ok && response.status !== 404) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to remove photo');
+      await load();
+    } catch (error) {
+      Alert.alert('Trip blog', error.message || 'Unable to remove photo');
+    } finally {
+      setRemovingAssetId(null);
     }
   };
 
@@ -493,6 +622,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo'}</Text>
                   </TouchableOpacity>
                 )}
+                {canEdit && (
+                  <TouchableOpacity
+                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#7c3aed' }]}
+                    onPress={() => handleGalleryUpload(day.localDate)}
+                    disabled={uploading}
+                  >
+                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Gallery'}</Text>
+                  </TouchableOpacity>
+                )}
                 {day.weather ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f9ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
                     <Text style={{ fontSize: 16, marginRight: 4 }}>{day.weather.icon}</Text>
@@ -506,7 +644,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             {(day.items || []).map((item) => (
               <View key={item.id} style={{ marginTop: 8 }}>
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
-                {item.kindKey && item.kindKey.startsWith('media.') ? (
+                {item.kindKey === 'core.gallery' ? (
+                  <GalleryGrid item={item} backgroundColor={inputColor} mutedColor={mutedColor} canEdit={canEdit} onRemoveAsset={removeGalleryAsset} removingAssetId={removingAssetId} />
+                ) : item.kindKey && item.kindKey.startsWith('media.') ? (
                   // Media items are not text: there's no blog_text_contents row backing them, so
                   // routing them through the text Save flow fails with a confusing version-conflict
                   // error — Remove is the one supported action here.
@@ -532,7 +672,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 )}
                 {canEdit ? (
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                    {item.kindKey && item.kindKey.startsWith('media.') ? null : (
+                    {item.kindKey === 'core.gallery' || (item.kindKey && item.kindKey.startsWith('media.')) ? null : (
                       <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
                     )}
                     <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>

@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
-import { BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity } from './types';
+import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
 import { getCanonicalPublicPathFirebase } from './firebasePublicationRepository';
 
 const nowIso = () => new Date().toISOString();
@@ -201,6 +201,31 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   await getDb().collection('blog_items').doc(id).set(data);
   await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
   return mapItem({ id, data: () => data });
+};
+
+export const createGalleryItem = async (userId: string, tripId: string, input: { dayDate: string; caption?: string | null; audience?: BlogAudience }): Promise<BlogGalleryItem> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const day = await getDay(tripId, input.dayDate);
+  const id = randomUUID();
+  const now = nowIso();
+  const data = { id, tripId, blogDayId: day.id, localDate: day.localDate, kindKey: 'core.gallery', schemaVersion: 1, audience: input.audience ?? 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${id}`, authorUserId: userId, lastEditorUserId: userId, version: 1, caption: input.caption ?? null, createdAt: now, updatedAt: now, deletedAt: null };
+  await getDb().collection('blog_items').doc(id).set(data);
+  await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: now }, { merge: true });
+  return { id, tripId, blogDayId: day.id, localDate: day.localDate, kindKey: 'core.gallery', schemaVersion: 1, audience: data.audience as BlogAudience, sortKey: data.sortKey, authorUserId: userId, lastEditorUserId: userId, version: 1, caption: input.caption ?? null, createdAt: now, updatedAt: now, assets: [] };
+};
+
+export const getGalleryItemsMeta = async (tripId: string, itemIds: string[]): Promise<Record<string, { blogDayId: string; sortKey: string; audience: BlogAudience; authorUserId: string; lastEditorUserId: string; version: number; caption: string | null; createdAt: string; updatedAt: string }>> => {
+  if (!itemIds.length) return {};
+  const docs = await Promise.all(itemIds.map((itemId) => getDb().collection('blog_items').doc(itemId).get()));
+  const out: Record<string, any> = {};
+  for (const doc of docs) {
+    if (!doc.exists) continue;
+    const data = doc.data() as any;
+    if (String(data.tripId) !== tripId || data.kindKey !== 'core.gallery' || data.deletedAt != null) continue;
+    out[doc.id] = { blogDayId: String(data.blogDayId), sortKey: String(data.sortKey), audience: data.audience ?? 'public', authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), caption: data.caption ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt) };
+  }
+  return out;
 };
 
 export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextItem | null> => {
