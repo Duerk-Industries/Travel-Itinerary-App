@@ -190,6 +190,15 @@ foreach ($pair in (Parse-DotEnv $EnvFile)) {
   $envPairs += "$($pair.Key)=$($pair.Value)"
 }
 
+# .env files may contain repeated assignments. Keep the last value for each
+# key (dotenv convention) so gcloud receives each key only once.
+$deduplicatedEnvPairs = [ordered]@{}
+foreach ($envPair in $envPairs) {
+  $envPairKey = ($envPair -split '=', 2)[0]
+  if ($envPairKey) { $deduplicatedEnvPairs[$envPairKey] = $envPair }
+}
+$envPairs = @($deduplicatedEnvPairs.Values)
+
 if ($sawGoogleApplicationCredentials) {
   Write-Warning "GOOGLE_APPLICATION_CREDENTIALS is present in $EnvFile. Cloud Run should use ADC via its runtime service account; this key is ignored for deploy."
 }
@@ -225,8 +234,6 @@ if (-not $hasAuthSecretMapping -and -not $hasSafeAuthSecretEnv) {
   exit 1
 }
 
-$hasSecretOverrides = $secretMap.Count -gt 0
-
 if ($secretMap.Count -gt 0) {
   $secretKeys = @($secretMap.Keys)
   foreach ($key in $secretKeys) {
@@ -239,7 +246,7 @@ if ($envPairs.Count -eq 0) {
   Write-Error "No env vars parsed from $EnvFile after filtering .secrets-managed keys."
   exit 1
 }
-$envKeys = $envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ }
+$envKeys = @($envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ } | Select-Object -Unique)
 
 $secretsArg = ''
 if ($secretMap.Count -gt 0) {
@@ -256,18 +263,6 @@ if ($secretMap.Count -gt 0) {
   # Secret Manager references contain no commas, and --set-secrets on the
   # installed Windows SDK should receive its normal comma-separated form.
   $secretsArg = ($secretPairs -join ',')
-}
-
-if ($hasSecretOverrides) {
-  $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--clear-secrets')
-  if ($projectId) { $cmd += @('--project', $projectId) }
-  & $gcloudCommand @cmd
-}
-
-if ($envKeys.Count -gt 0) {
-  $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($envKeys -join ','))
-  if ($projectId) { $cmd += @('--project', $projectId) }
-  & $gcloudCommand @cmd
 }
 
 $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--update-env-vars', $envArg)
