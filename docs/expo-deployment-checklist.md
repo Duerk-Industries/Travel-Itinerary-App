@@ -18,6 +18,74 @@ Covers iOS native (EAS Build → App Store), Android native (EAS Build → Play 
 
 ---
 
+## 0. One-time Apple Developer / App Store Connect setup
+
+These are account- and listing-level prerequisites that live outside EAS and
+outside this repo. A build can succeed and still be un-submittable (or
+rejected) if any of these are missing. Re-check this section whenever Apple
+Developer Program membership renews (annually) or before the *first*
+submission of a new app record.
+
+- **Program agreements / banking / tax.** In App Store Connect → Agreements,
+  Tax, and Banking, ensure the current Paid Apps Agreement (and any other
+  required agreement) is active. Apple blocks *all* releases — including free
+  apps — while an agreement is unsigned.
+- **App ID capability: Sign in with Apple.** The app ships `AppleSignInButton`
+  ([app/components/AppleSignInButton.tsx](../app/components/AppleSignInButton.tsx))
+  alongside other social login. Apple Guideline 4.8 requires native Sign in
+  with Apple whenever another third-party/social login is offered. Confirm in
+  the Apple Developer portal that the **Sign In with Apple** capability is
+  enabled for App ID `com.duerkindustries.travelitineraryplanner` and included
+  in the provisioning profile used for the production build — a missing
+  capability here is a common App Review rejection reason, not something EAS
+  will catch for you.
+- **iOS signing credentials.** Verify a valid distribution certificate and
+  production provisioning profile are on file in EAS (they expire annually and
+  a build can succeed locally against a cached credential that's actually
+  stale):
+  ```bash
+  cd app
+  npx --yes eas-cli@20.2.0 credentials
+  # iOS → production → check certificate / profile expiry
+  ```
+- **App Store Connect submit credentials.** `app/eas.json`'s `submit.production`
+  profile is currently empty (`{}`), so `eas submit --platform ios` falls back
+  to interactive Apple ID login (with 2FA) at submit time. That's fine for a
+  human running this checklist locally. For a non-interactive/CI submission,
+  add an App Store Connect API key instead:
+  ```bash
+  npx --yes eas-cli@20.2.0 submit --platform ios --profile production
+  # or configure once via:
+  #   "submit": { "production": { "ios": {
+  #     "ascApiKeyPath": "./AuthKey_XXXX.p8",
+  #     "ascApiKeyId": "XXXX",
+  #     "ascApiKeyIssuerId": "..."
+  #   } } }
+  ```
+- **App Store Connect app record.** Create (or confirm) the app record for
+  bundle ID `com.duerkindustries.travelitineraryplanner`, and fill in the
+  listing metadata Apple requires before review can start: screenshots for
+  each required device size, description, keywords, support URL, marketing
+  URL, age rating, and the **App Privacy "nutrition label"** questionnaire
+  (data collection/tracking disclosures). None of this is set by EAS — it's
+  filled in directly in App Store Connect.
+- **Privacy manifest (`PrivacyInfo.xcprivacy`).** Since mid-2024, Apple's
+  App Store Connect static analysis rejects binaries where a bundled SDK uses
+  a "required reason" API (e.g. UserDefaults, file timestamps, disk space)
+  without declaring it in a privacy manifest. Firebase and other native SDKs
+  in this app may pull in APIs that require one. After the first production
+  build, check the EAS build logs / Xcode archive for any missing
+  privacy-manifest warnings before submitting.
+- **Marketing version bump.** `version` is hardcoded in
+  [expo.config.shared.cjs](../expo.config.shared.cjs) (currently `0.1.0`) and
+  is shared by both `app/app.config.ts` and the root config. `autoIncrement:
+  true` in `eas.json` only bumps the **build number** automatically — the
+  semantic/marketing version does not change on its own. Bump it by hand in
+  `expo.config.shared.cjs` before any release that should show a new version
+  string in the App Store.
+
+---
+
 ## 1. Verify tests and types pass
 
 ```bash
@@ -127,6 +195,12 @@ npx --yes eas-cli@20.2.0 build --platform ios --profile production --clear-cache
 ---
 
 ## 5. iOS build and submit
+
+> Before running this section for the first time (or after an annual
+> credential/agreement renewal), work through **[Section 0](#0-one-time-apple-developer--app-store-connect-setup)**
+> — signing credentials, Sign in with Apple capability, and App Store Connect
+> listing metadata all have to be in place or the build/submit below will
+> either fail or sit stuck in review.
 
 ### Build
 
