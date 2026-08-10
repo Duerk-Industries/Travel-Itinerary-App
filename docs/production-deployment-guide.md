@@ -22,6 +22,41 @@ swap `bash scripts/x.sh --flag value` for `.\scripts\x.ps1 -Flag value`
 (e.g. `--dry-run` → `-DryRun`, `--release-manifest <path>` →
 `-ReleaseManifest <path>`).
 
+## Automatic Deploy on Push to Main
+
+Independent of the scripted Phase 11 pipeline described in the rest of this
+guide, **any push to `main` immediately and automatically deploys to
+production**, with no approval gate, no test-environment pass, and no
+canary:
+
+- `.github/workflows/deploy-api.yml` builds the backend straight from the
+  pushed `server/` source (`gcloud run deploy --source .`) and deploys it to
+  the `travel-itinerary-app` Cloud Run service in `us-east5`, then runs
+  `gcloud run services update-traffic ... --to-latest` — 100% of traffic
+  moves to the new revision immediately.
+- `.github/workflows/firebase-hosting-merge.yml` runs
+  `npm --prefix app run export:web` and deploys the result to Firebase
+  Hosting (`travel-itinerary-app-483623`), also with no approval gate.
+- `.github/workflows/ci.yml` (typecheck/test/expo-doctor) also runs on the
+  same push, but it's a separate workflow — it does not block or gate either
+  deploy workflow above. A push with failing tests still deploys.
+
+**Practical implication:** merging or pushing to `main` is itself a
+production deploy action for both the API and the web frontend, regardless
+of whether anyone runs any of the `scripts/deploy-*` commands below. There is
+currently no branch-protection rule wired to block this at the infrastructure
+level — GitHub will warn ("Changes must be made through a pull request") if
+the repo's ruleset requires PRs, but an account with bypass permission can
+still push directly to `main` and both deploys will fire.
+
+Use this fast path only when you specifically want an immediate, full-traffic
+release. For anything you want staged through a test environment, a canary
+smoke test, and a rollback-ready manifest/evidence pair, use the Phase 11
+pipeline documented below instead — and be aware that landing that same
+commit on `main` (e.g. via a PR merge) will *also* trigger this automatic
+deploy at the same time, in parallel with whatever the Phase 11 scripts are
+doing.
+
 ## One-Time Setup
 
 1. Create the real deployment config:
