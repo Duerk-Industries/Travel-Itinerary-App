@@ -5,6 +5,7 @@ import { stopFailedRetryScheduler } from './services/failedRetryScheduler';
 import { stopGmailPollingScheduler } from './services/gmailPollingService';
 import { stopIngestionMetricsScheduler } from './services/ingestionMetricsService';
 import { stopRetentionScheduler } from './services/retentionService';
+import { stopAutocompleteCacheRefreshScheduler } from './services/destinationAttractionAutocompleteService';
 
 export type ShutdownSignal = 'SIGTERM' | 'SIGINT';
 
@@ -39,6 +40,7 @@ export const gracefulShutdown = async (
   stopRetentionScheduler();
   stopIngestionMetricsScheduler();
   stopFailedRetryScheduler();
+  stopAutocompleteCacheRefreshScheduler();
 
   const forceCloseTimer = setTimeout(() => {
     logError('[shutdown] graceful timeout reached; closing remaining HTTP connections', { timeoutMs });

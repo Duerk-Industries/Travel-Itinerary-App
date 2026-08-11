@@ -206,12 +206,22 @@ router.post('/batch', async (req, res) => {
           destinationOptionIds.length ? getDestinationLocationOptionsByIds(destinationOptionIds) : Promise.resolve([]),
         ]);
         const mergedOptions = [...localOptions, ...destinationOptions];
+        const resolvedLocalIds = new Set(mergedOptions.map((option) => option.id));
         for (const option of mergedOptions) {
           results.push({
             id: option.id,
             place_id: option.id,
             name: option.name,
           });
+        }
+        for (const id of localIds) {
+          if (!resolvedLocalIds.has(id)) {
+            results.push({
+              id,
+              place_id: id,
+              name: fallbackLocationNameFromId(id),
+            });
+          }
         }
       } catch (err) {
         if (isTransientNetworkError(err)) {

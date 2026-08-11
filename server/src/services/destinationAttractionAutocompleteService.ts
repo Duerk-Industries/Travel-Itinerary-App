@@ -1,8 +1,11 @@
 import fs from 'fs';
-import { getEnvValue } from '../env';
+import { getStorage } from 'firebase-admin/storage';
+import { getEnvFlag, getEnvValue } from '../env';
 import { getApiCacheSetting } from '../config/apiLimits';
+import { logError, logInfo } from '../logger';
 import { parseCsvLine } from './destinationsAttractionsCsv';
 import { resolveRuntimeDataPath } from '../utils/runtimeDataPath';
+import { ensureFirebaseStorageApp, resolveLocationBucketName } from '../utils/gcsBucket';
 
 export type DestinationLocationOption = {
   id: string;
@@ -25,12 +28,12 @@ export type AttractionAutocompleteOption = {
   budgetTier?: string;
 };
 
-type DestinationRecord = DestinationLocationOption & {
+export type DestinationRecord = DestinationLocationOption & {
   destinationKey: string;
   searchText: string;
 };
 
-type AttractionRecord = AttractionAutocompleteOption & {
+export type AttractionRecord = AttractionAutocompleteOption & {
   destinationKey: string;
   searchText: string;
   rank: number;
@@ -95,6 +98,47 @@ const resolveAttractionsCsvPath = (): string => {
   return resolveRuntimeDataPath('attractions_catalog.csv', getEnvValue('ATTRACTIONS_CSV_LOCAL_PATH'));
 };
 
+// Pre-processed JSON mirrors of the two CSVs below, uploaded by
+// `scripts/update-attraction-autocomplete-jsons.ts`. Downloading+JSON.parsing
+// these is far cheaper than re-running the hand-rolled CSV parser against
+// ~154k rows on every cache rebuild (see buildDestinationDataset/
+// buildAttractionDataset) — JSON.parse is a native, highly optimized V8
+// path, and the records are already fully resolved (no per-row string
+// splitting/quote handling). Local CSV parsing remains as the fallback for
+// local dev and for the (rare) case the JSON mirror is missing/stale.
+const resolveAutocompleteJsonPrefix = (): string => {
+  const raw = String(getEnvValue('LOCATION_RAW_CSV_PREFIX', { defaultValue: 'locations/' }) ?? 'locations/');
+  const trimmed = raw.replace(/^\/+/, '').trim();
+  if (!trimmed) return 'locations/';
+  return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+};
+
+const resolveDestinationsJsonPath = (): string =>
+  `${resolveAutocompleteJsonPrefix()}${getEnvValue('DESTINATIONS_AUTOCOMPLETE_JSON_NAME', { defaultValue: 'destinations_autocomplete.json' })}`;
+
+const resolveAttractionsJsonPath = (): string =>
+  `${resolveAutocompleteJsonPrefix()}${getEnvValue('ATTRACTIONS_AUTOCOMPLETE_JSON_NAME', { defaultValue: 'attractions_autocomplete.json' })}`;
+
+const downloadJsonArrayFromStorage = async <T>(filePath: string): Promise<T[] | null> => {
+  const bucketName = resolveLocationBucketName();
+  if (!bucketName) return null;
+  try {
+    ensureFirebaseStorageApp(bucketName);
+    const file = getStorage().bucket(bucketName).file(filePath);
+    const [exists] = await file.exists();
+    if (!exists) return null;
+    const [buffer] = await file.download();
+    const parsed = JSON.parse(buffer.toString('utf8'));
+    return Array.isArray(parsed) ? (parsed as T[]) : null;
+  } catch (err) {
+    logInfo(`[autocomplete] storage JSON unavailable for ${filePath}, falling back to local CSV`);
+    return null;
+  }
+};
+
+const YIELD_BATCH_SIZE = 5000;
+const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
 const datasetTtlMs = (): number => {
   const minutes =
     Number(getApiCacheSetting('locations', 'csvCacheTtlMinutes')) ||
@@ -127,7 +171,7 @@ const setCachedResults = <T>(store: Map<string, CachedResult<T>>, key: string, r
   if (oldestKey) store.delete(oldestKey);
 };
 
-const pushMapArray = <T>(map: Map<string, T[]>, key: string, value: T): void => {
+export const pushMapArray = <T>(map: Map<string, T[]>, key: string, value: T): void => {
   const list = map.get(key);
   if (list) {
     list.push(value);
@@ -163,7 +207,7 @@ const splitCsvRows = (raw: string): Array<Record<string, string>> => {
   return rows;
 };
 
-const parseDestinations = (raw: string): DestinationRecord[] => {
+export const parseDestinations = (raw: string): DestinationRecord[] => {
   const rows = splitCsvRows(raw);
   const seenIds = new Set<string>();
   const records: DestinationRecord[] = [];
@@ -193,7 +237,7 @@ const parseDestinations = (raw: string): DestinationRecord[] => {
   return records;
 };
 
-const parseAttractions = (
+export const parseAttractions = (
   raw: string,
   destinationsByKey: Map<string, DestinationRecord[]>
 ): AttractionRecord[] => {
@@ -229,22 +273,29 @@ const parseAttractions = (
   return records;
 };
 
-const buildDestinationDataset = (): DestinationDataset => {
+const buildDestinationDataset = async (): Promise<DestinationDataset> => {
   const destinationsPath = resolveDestinationsCsvPath();
-  const destinationsRaw = fs.existsSync(destinationsPath) ? fs.readFileSync(destinationsPath, 'utf8') : '';
-  const destinations = parseDestinations(destinationsRaw);
+  const fromStorage = await downloadJsonArrayFromStorage<DestinationRecord>(resolveDestinationsJsonPath());
+  const destinations =
+    fromStorage ??
+    parseDestinations(fs.existsSync(destinationsPath) ? fs.readFileSync(destinationsPath, 'utf8') : '');
   const destinationsById = new Map<string, DestinationRecord>();
   const destinationsByName = new Map<string, DestinationRecord[]>();
   const destinationsByCountry = new Map<string, DestinationRecord[]>();
   const destinationsByState = new Map<string, DestinationRecord[]>();
   const destinationsByKey = new Map<string, DestinationRecord[]>();
-  destinations.forEach((record) => {
+  for (let i = 0; i < destinations.length; i += 1) {
+    const record = destinations[i];
     destinationsById.set(record.id, record);
     pushMapArray(destinationsByName, record.destinationKey, record);
     if (record.countryName) pushMapArray(destinationsByCountry, normalizeKey(record.countryName), record);
     if (record.stateName) pushMapArray(destinationsByState, normalizeKey(record.stateName), record);
     pushMapArray(destinationsByKey, record.destinationKey, record);
-  });
+    // Yield periodically so building the index for ~154k rows never blocks
+    // the event loop long enough to stall unrelated requests on the same
+    // instance (this is what caused the production OOM/socket.io timeouts).
+    if (i > 0 && i % YIELD_BATCH_SIZE === 0) await yieldToEventLoop();
+  }
   const destinationsMtimeMs = fs.existsSync(destinationsPath) ? fs.statSync(destinationsPath).mtimeMs : 0;
   return {
     loadedAt: Date.now(),
@@ -258,18 +309,27 @@ const buildDestinationDataset = (): DestinationDataset => {
   };
 };
 
-const buildAttractionDataset = (destinationsByKey: Map<string, DestinationRecord[]>): AttractionDataset => {
+const buildAttractionDataset = async (
+  destinationsByKey: Map<string, DestinationRecord[]>
+): Promise<AttractionDataset> => {
   const attractionsPath = resolveAttractionsCsvPath();
-  const attractionsRaw = fs.existsSync(attractionsPath) ? fs.readFileSync(attractionsPath, 'utf8') : '';
-  const attractions = parseAttractions(attractionsRaw, destinationsByKey);
+  const fromStorage = await downloadJsonArrayFromStorage<AttractionRecord>(resolveAttractionsJsonPath());
+  const attractions =
+    fromStorage ??
+    parseAttractions(
+      fs.existsSync(attractionsPath) ? fs.readFileSync(attractionsPath, 'utf8') : '',
+      destinationsByKey
+    );
   const attractionsByDestination = new Map<string, AttractionRecord[]>();
-  for (const attr of attractions) {
+  for (let i = 0; i < attractions.length; i += 1) {
+    const attr = attractions[i];
     const list = attractionsByDestination.get(attr.destinationKey);
     if (list) {
       list.push(attr);
     } else {
       attractionsByDestination.set(attr.destinationKey, [attr]);
     }
+    if (i > 0 && i % YIELD_BATCH_SIZE === 0) await yieldToEventLoop();
   }
   const attractionsMtimeMs = fs.existsSync(attractionsPath) ? fs.statSync(attractionsPath).mtimeMs : 0;
   return {
@@ -310,7 +370,7 @@ const getDestinationDataset = async (): Promise<DestinationDataset> => {
   if (destinationCacheStillFresh() && destinationDatasetCache) return destinationDatasetCache;
   if (destinationDatasetLoadPromise) return destinationDatasetLoadPromise;
   destinationDatasetLoadPromise = (async () => {
-    const next = buildDestinationDataset();
+    const next = await buildDestinationDataset();
     destinationDatasetCache = next;
     destinationQueryCache.clear();
     attractionQueryCache.clear();
@@ -328,7 +388,7 @@ const getAttractionDataset = async (): Promise<AttractionDataset> => {
   if (attractionDatasetLoadPromise) return attractionDatasetLoadPromise;
   attractionDatasetLoadPromise = (async () => {
     const destinationDataset = await getDestinationDataset();
-    const next = buildAttractionDataset(destinationDataset.destinationsByKey);
+    const next = await buildAttractionDataset(destinationDataset.destinationsByKey);
     attractionDatasetCache = next;
     attractionQueryCache.clear();
     return next;
@@ -501,4 +561,47 @@ export const clearDestinationAttractionAutocompleteCache = (): void => {
  */
 export const prewarmAutocompleteCache = async (): Promise<void> => {
   await Promise.all([getDestinationDataset(), getAttractionDataset()]);
+};
+
+let refreshHandle: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Warms the autocomplete dataset immediately, then keeps refreshing it
+ * proactively — at 80% of the cache TTL — for as long as the process runs.
+ *
+ * This closes the two gaps that caused a production incident (multi-second
+ * event-loop stalls, correlated failures on unrelated concurrent requests,
+ * and eventually an OOM abort): the dataset rebuild used to only happen
+ * either at startup (skipped by default on Cloud Run, see AUTOCOMPLETE_PREWARM
+ * in index.ts) or lazily inline on whichever real request happened to land
+ * first after the TTL lapsed. Proactively refreshing here means a rebuild
+ * never has to happen on a real request's critical path — combined with the
+ * storage-JSON + chunked/yielding build in buildDestinationDataset /
+ * buildAttractionDataset, even a rebuild that does happen inline is now
+ * cheap and non-blocking.
+ *
+ * Idempotent — calling twice without stopping keeps the original handle.
+ */
+export const startAutocompleteCacheRefreshScheduler = (): boolean => {
+  if (refreshHandle) return false;
+  if (process.env.NODE_ENV === 'test') return false;
+  if (!getEnvFlag('AUTOCOMPLETE_CACHE_REFRESH_ENABLED', { defaultValue: true })) {
+    logInfo('[autocomplete] background refresh disabled by AUTOCOMPLETE_CACHE_REFRESH_ENABLED=false');
+    return false;
+  }
+  const intervalMs = Math.max(60_000, Math.floor(datasetTtlMs() * 0.8));
+  logInfo(`[autocomplete] starting background cache refresh (interval=${intervalMs}ms)`);
+  prewarmAutocompleteCache().catch((err) => logError('[autocomplete] initial cache warm failed (background)', err));
+  refreshHandle = setInterval(() => {
+    prewarmAutocompleteCache().catch((err) => logError('[autocomplete] background refresh failed', err));
+  }, intervalMs);
+  refreshHandle.unref();
+  return true;
+};
+
+export const stopAutocompleteCacheRefreshScheduler = (): void => {
+  if (refreshHandle) {
+    clearInterval(refreshHandle);
+    refreshHandle = null;
+  }
 };

@@ -27,6 +27,11 @@ COPY --from=build /app/dist ./dist
 # Keep the service-account key excluded by .dockerignore; Cloud Run uses ADC.
 COPY --from=build /app/config ./config
 COPY --from=build /app/public ./public
+# locationServices.ts falls back to these local CSVs (via resolveRuntimeDataPath,
+# which looks for dist/data/**) when the GCS-hosted location JSONs are
+# unavailable. Without this, that fallback silently returns an empty dataset
+# in production instead of degrading gracefully.
+COPY --from=build /app/data ./dist/data
 
 EXPOSE 8080
 CMD ["node", "dist/index.js"]
