@@ -27,6 +27,9 @@ COPY --from=build /app/dist ./dist
 # Keep the service-account key excluded by .dockerignore; Cloud Run uses ADC.
 COPY --from=build /app/config ./config
 COPY --from=build /app/public ./public
+# itineraryInstructionService.ts / itineraryPromptPlanService.ts read the bundled
+# prompt markdown and JSON schemas from here at runtime (relative to process.cwd()).
+COPY --from=build /app/prompts ./prompts
 # locationServices.ts falls back to these local CSVs (via resolveRuntimeDataPath,
 # which looks for dist/data/**) when the GCS-hosted location JSONs are
 # unavailable. Without this, that fallback silently returns an empty dataset

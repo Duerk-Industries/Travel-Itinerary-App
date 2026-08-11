@@ -10,6 +10,9 @@ export type AsyncItineraryTracker = {
   stageLabel?: string | null;
   stageDetail?: string | null;
   etaSeconds?: number | null;
+  /** The original /api/itinerary/async request body, kept so a failed job can be retried
+   * with the same inputs without sending the user back through the create-trip wizard. */
+  request?: Record<string, unknown> | null;
 };
 
 type UseAsyncItineraryPollingParams = {
