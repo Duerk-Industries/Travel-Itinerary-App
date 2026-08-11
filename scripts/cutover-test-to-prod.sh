@@ -77,7 +77,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
     --session-affinity \
     --max-instances 1 \
     --service-account "$PROD_RUNTIME_SERVICE_ACCOUNT" --update-labels "app-git-sha=$MANIFEST_GIT_SHA" \
-    --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$PROD_DOMAIN,BACKEND_URL=$PROD_DOMAIN,GOOGLE_CALLBACK_URL=$PROD_DOMAIN/api/auth/google/callback,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
+    --update-env-vars "GCLOUD_PROJECT_ID=$GCLOUD_PROJECT_ID,WEB_URL=$PROD_DOMAIN,BACKEND_URL=$PROD_DOMAIN,GOOGLE_CALLBACK_URL=$PROD_DOMAIN/api/auth/google/callback,APPLE_CALLBACK_URL=$PROD_DOMAIN/api/auth/apple/callback,FIRESTORE_DATABASE_ID=$PROD_FIRESTORE_DATABASE_ID,AI_CAPTURE_BUCKET=$PROD_AI_CAPTURE_BUCKET,DB_PROVIDER=firebase" \
     --set-secrets "$SECRET_ARG" \
     --remove-env-vars "$(cloud_run_secret_pairs | cut -d= -f1 | paste -sd, -)"
 
