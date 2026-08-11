@@ -209,6 +209,22 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   env_pairs+=("${key}=${value}")
 done < "$ENV_FILE"
 
+# .env files may contain repeated assignments. Keep the last value for each
+# key (dotenv convention) so gcloud receives each key only once.
+declare -A deduplicated_env_pairs=()
+deduplicated_env_order=()
+for pair in "${env_pairs[@]}"; do
+  key="${pair%%=*}"
+  if [[ -z "${deduplicated_env_pairs[$key]+present}" ]]; then
+    deduplicated_env_order+=("$key")
+  fi
+  deduplicated_env_pairs["$key"]="$pair"
+done
+env_pairs=()
+for key in "${deduplicated_env_order[@]}"; do
+  env_pairs+=("${deduplicated_env_pairs[$key]}")
+done
+
 if [[ "$saw_google_application_credentials" -eq 1 ]]; then
   echo "WARNING: GOOGLE_APPLICATION_CREDENTIALS is present in ${ENV_FILE}. Cloud Run should use ADC via its runtime service account; this key is ignored for deploy." >&2
 fi
@@ -330,10 +346,6 @@ else
   # To avoid accidental removal, this script will not clear secrets.
   # Use `gcloud run services update ... --clear-secrets` manually if needed.
   :
-fi
-if [[ "${#env_keys[@]}" -gt 0 ]]; then
-  remove_secrets_arg="$(IFS=,; echo "${env_keys[*]}")"
-  gcloud run services update "$SERVICE_NAME" --region "$REGION" ${project_id:+--project "$project_id"} --remove-secrets "$remove_secrets_arg"
 fi
 remove_env_keys=()
 for key in FIRESTORE_EMULATOR_HOST GOOGLE_APPLICATION_CREDENTIALS; do
