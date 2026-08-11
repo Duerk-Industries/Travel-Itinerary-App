@@ -1,0 +1,11 @@
+{
+  "name": "image-size",
+  "version": "2.0.3",
+  "description": "Bounded image dimension parser for Metro asset processing",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
