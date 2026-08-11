@@ -145,6 +145,22 @@ export const filterAirportOptionLabels = (options: string[], query: string): str
   return options.filter((opt) => opt.toLowerCase().includes(normalizedQuery)).slice(0, airportSuggestionLimit);
 };
 
+/**
+ * Edit forms need a usable airport query even for legacy records that stored
+ * only the IATA code, while newer API responses may also include a display
+ * label. Prefer the label, then the stored location, then the code.
+ */
+export const getFlightLocationForEdit = (
+  location?: unknown,
+  label?: unknown,
+  code?: unknown
+): string => {
+  for (const value of [label, location, code]) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+};
+
 const isValidTime = (value: string): boolean => {
   const match = value.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return false;
@@ -756,6 +772,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (label && label.trim().length) return label;
     const normalized = code ? code.toUpperCase() : '';
     if (!normalized) return '-';
+    if (!/^[A-Z0-9]{3,4}$/.test(normalized)) return code ?? normalized;
     const match = airports.find((a) => (a.iata_code ?? '').toUpperCase() === normalized);
     if (match) return formatAirportLabel(match);
     return normalized;
@@ -1015,12 +1032,24 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       passengerIds: normalizedPassengerIds,
       departureDate: normalizeDateString(flight.departure_date),
       arrivalDate: normalizeDateString(flight.arrival_date || (flight as any).arrivalDate || flight.departure_date),
-      departureLocation: flight.departure_location ?? '',
+      departureLocation: getFlightLocationForEdit(
+        flight.departure_location,
+        flight.departure_airport_label || flight.departureAirportLabel,
+        flight.departure_airport_code
+      ),
       departureAirportCode: flight.departure_airport_code ?? '',
       departureTime: normalizeTimeInput(flight.departure_time, flight.departure_time),
-      arrivalLocation: flight.arrival_location ?? '',
+      arrivalLocation: getFlightLocationForEdit(
+        flight.arrival_location,
+        flight.arrival_airport_label || flight.arrivalAirportLabel,
+        flight.arrival_airport_code
+      ),
       arrivalAirportCode: flight.arrival_airport_code ?? '',
-      layoverLocation: flight.layover_location ?? '',
+      layoverLocation: getFlightLocationForEdit(
+        flight.layover_location,
+        flight.layover_airport_label || flight.layoverAirportLabel,
+        flight.layover_location_code
+      ),
       layoverLocationCode: flight.layover_location_code ?? '',
       layoverDuration: flight.layover_duration ?? '',
       arrivalTime: normalizeTimeInput(flight.arrival_time, flight.arrival_time),
