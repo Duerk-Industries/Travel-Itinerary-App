@@ -185,10 +185,13 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
   };
 
   const showDropdown = suggestions.length > 0 || (query.trim().length > 0 && suggestions.length === 0 && canSearch);
-  const activeDropdownZIndex = Platform.OS === 'web' && showDropdown ? 800 : 1;
+  // zIndex must elevate on native too, not just web — otherwise this dropdown's absolutely
+  // positioned suggestion list doesn't stack above sibling fields rendered after it (e.g.
+  // LocationSelector's own dropdown, or later form rows), and the two visually overlap.
+  const activeDropdownZIndex = showDropdown ? 800 : 1;
 
   return (
-    <View style={{ marginTop: 12, position: 'relative', zIndex: activeDropdownZIndex }}>
+    <View style={{ marginTop: 12, position: 'relative', zIndex: activeDropdownZIndex }} testID="must-see-attraction-selector-root">
       <View style={[styles.row, { alignItems: 'flex-start', zIndex: activeDropdownZIndex }]}>
         <View style={[styles.dropdown, { flex: 1 }]}>
           <TextInput

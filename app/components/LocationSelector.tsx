@@ -290,10 +290,13 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
     countryStateSuggestions.length > 0 || (countryStateQuery.trim().length > 0 && countryStateSuggestions.length === 0);
   const showCityDropdown =
     citySuggestions.length > 0 || (cityQuery.trim().length > 0 && citySuggestions.length === 0 && canSearchCities);
-  const activeDropdownZIndex = Platform.OS === 'web' && (showCountryStateDropdown || showCityDropdown) ? 800 : 1;
+  // zIndex must elevate on native too, not just web — otherwise this dropdown's absolutely
+  // positioned suggestion list doesn't stack above sibling fields rendered after it (e.g.
+  // MustSeeAttractionSelector, or later form rows), and the two visually overlap.
+  const activeDropdownZIndex = showCountryStateDropdown || showCityDropdown ? 800 : 1;
 
   return (
-    <View style={{ position: 'relative', zIndex: activeDropdownZIndex }}>
+    <View style={{ position: 'relative', zIndex: activeDropdownZIndex }} testID="location-selector-root">
       <View style={[styles.row, { alignItems: 'flex-start', zIndex: showCountryStateDropdown ? activeDropdownZIndex : 1 }]}>
         <View style={[styles.dropdown, { flex: 1 }]}>
           <TextInput

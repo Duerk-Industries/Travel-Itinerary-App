@@ -2,6 +2,7 @@
 /// <reference types="node" />
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
 import type { LocationOption } from '../components/LocationSelector';
 
@@ -114,5 +115,32 @@ describe('MustSeeAttractionSelector', () => {
     const addedAttraction = defaultProps.onAddAttraction.mock.calls[0][0];
     expect(addedAttraction.name).toBe('Central Park');
     expect(addedAttraction.destinationName).toBeUndefined();
+  });
+
+  it('elevates the dropdown above sibling fields on native, not just web', async () => {
+    // Regression test: the dropdown zIndex used to only elevate when Platform.OS === 'web',
+    // so on iOS/Android the suggestion list stayed at its base zIndex and visually overlapped
+    // with sibling fields rendered after it instead of stacking above them.
+    const originalOS = Platform.OS;
+    (Platform as any).OS = 'ios';
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        { id: 'attr:paris:eiffel-tower', sourceType: 'attraction', name: 'Eiffel Tower', destinationName: 'Paris' },
+      ],
+    });
+    const selectedLocations: LocationOption[] = [
+      { id: 'destination:paris-france', sourceType: 'destination', name: 'Paris', countryName: 'France' },
+    ];
+    const { getByPlaceholderText, getByText, getByTestId } = render(
+      <MustSeeAttractionSelector {...defaultProps} selectedLocations={selectedLocations} />
+    );
+    expect(getByTestId('must-see-attraction-selector-root').props.style.zIndex).toBe(1);
+
+    fireEvent.changeText(getByPlaceholderText('Must See Attractions'), 'Eif');
+    await waitFor(() => getByText('Eiffel Tower'));
+
+    expect(getByTestId('must-see-attraction-selector-root').props.style.zIndex).toBe(800);
+    (Platform as any).OS = originalOS;
   });
 });

@@ -1673,6 +1673,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 contentContainerStyle={{ paddingBottom: 12 }}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
               >
                 <Text style={styles.helperText}>We'll generate a starter plan you can edit later.</Text>
                 <Text style={styles.helperText}>
@@ -1855,6 +1856,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 contentContainerStyle={{ paddingBottom: 12 }}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
               >
                 <Text style={styles.helperText}>All days are free to start. Add manual items to any day.</Text>
                 {!computedDays && dates.mode === 'range' ? (
@@ -2575,7 +2577,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
         {/* Step content scrolls; nav buttons stay anchored below */}
-        <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ gap: 12, flexGrow: 1 }}>
+        <ScrollView
+          style={{ flex: 1, minHeight: 0 }}
+          contentContainerStyle={{ gap: 12, flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
           {renderStepContent()}
         </ScrollView>
         <View style={[styles.row, { marginTop: 8 }]}>
