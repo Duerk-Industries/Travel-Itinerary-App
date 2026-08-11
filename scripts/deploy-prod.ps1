@@ -50,7 +50,7 @@ if (-not $DryRun) {
     --max-instances 1 `
     --service-account $env:PROD_RUNTIME_SERVICE_ACCOUNT `
     --update-labels "app-git-sha=$manifestGitSha" `
-    --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:PROD_DOMAIN),FIRESTORE_DATABASE_ID=$($env:PROD_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:PROD_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `
+    --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:PROD_DOMAIN),BACKEND_URL=$($env:PROD_DOMAIN),GOOGLE_CALLBACK_URL=$($env:PROD_DOMAIN)/api/auth/google/callback,FIRESTORE_DATABASE_ID=$($env:PROD_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:PROD_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `
     --set-secrets $secretDeploy.Argument `
     --remove-env-vars $secretDeploy.Keys
   if ($LASTEXITCODE -ne 0) { Fail 'gcloud run deploy failed for production service' }
