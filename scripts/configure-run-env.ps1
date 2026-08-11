@@ -121,6 +121,26 @@ function Get-DisplayEnvPair([string]$Pair) {
   return "$key=<redacted>"
 }
 
+# gcloud's --update-env-vars/--set-secrets flags are KEY=VALUE dicts. Their
+# default item delimiter is a comma, so values such as ZAI_MODELS=a,b,c must
+# use a custom delimiter. Backslash-escaping the comma does not work reliably
+# when the argument is passed through PowerShell.
+function Get-SafeGcloudDelimiter([string[]]$Pairs) {
+  $joined = ($Pairs -join '')
+  foreach ($candidate in @('@', '~', '#', '|', '!')) {
+    if ($joined.IndexOf($candidate) -lt 0) { return $candidate }
+  }
+  return [guid]::NewGuid().ToString('N')
+}
+
+function Join-GcloudDictArg([string[]]$Pairs) {
+  if ($Pairs.Count -eq 0) { return '' }
+  $delimiter = Get-SafeGcloudDelimiter $Pairs
+  # This argument is passed as an array element to gcloud.cmd; a single custom
+  # delimiter marker is what the installed Windows gcloud parser accepts here.
+  return "^$delimiter^" + ($Pairs -join $delimiter)
+}
+
 if (-not $EnvFile) {
   if (Test-Path -LiteralPath 'server/.env') {
     $EnvFile = 'server/.env'
@@ -167,9 +187,17 @@ foreach ($pair in (Parse-DotEnv $EnvFile)) {
   if ($pair.Key -in @('GCLOUD_PROJECT_ID', 'GOOGLE_CLOUD_PROJECT')) {
     $projectId = $pair.Value
   }
-  $value = $pair.Value -replace ',', '\,'
-  $envPairs += "$($pair.Key)=$value"
+  $envPairs += "$($pair.Key)=$($pair.Value)"
 }
+
+# .env files may contain repeated assignments. Keep the last value for each
+# key (dotenv convention) so gcloud receives each key only once.
+$deduplicatedEnvPairs = [ordered]@{}
+foreach ($envPair in $envPairs) {
+  $envPairKey = ($envPair -split '=', 2)[0]
+  if ($envPairKey) { $deduplicatedEnvPairs[$envPairKey] = $envPair }
+}
+$envPairs = @($deduplicatedEnvPairs.Values)
 
 if ($sawGoogleApplicationCredentials) {
   Write-Warning "GOOGLE_APPLICATION_CREDENTIALS is present in $EnvFile. Cloud Run should use ADC via its runtime service account; this key is ignored for deploy."
@@ -206,8 +234,6 @@ if (-not $hasAuthSecretMapping -and -not $hasSafeAuthSecretEnv) {
   exit 1
 }
 
-$hasSecretOverrides = $secretMap.Count -gt 0
-
 if ($secretMap.Count -gt 0) {
   $secretKeys = @($secretMap.Keys)
   foreach ($key in $secretKeys) {
@@ -215,12 +241,12 @@ if ($secretMap.Count -gt 0) {
     $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
   }
 }
-$envArg = ($envPairs -join ',')
+$envArg = Join-GcloudDictArg $envPairs
 if ($envPairs.Count -eq 0) {
   Write-Error "No env vars parsed from $EnvFile after filtering .secrets-managed keys."
   exit 1
 }
-$envKeys = $envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ }
+$envKeys = @($envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ } | Select-Object -Unique)
 
 $secretsArg = ''
 if ($secretMap.Count -gt 0) {
@@ -234,19 +260,9 @@ if ($secretMap.Count -gt 0) {
     }
     $secretPairs += ('{0}={1}' -f $key, $value)
   }
+  # Secret Manager references contain no commas, and --set-secrets on the
+  # installed Windows SDK should receive its normal comma-separated form.
   $secretsArg = ($secretPairs -join ',')
-}
-
-if ($hasSecretOverrides) {
-  $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--clear-secrets')
-  if ($projectId) { $cmd += @('--project', $projectId) }
-  & $gcloudCommand @cmd
-}
-
-if ($envKeys.Count -gt 0) {
-  $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($envKeys -join ','))
-  if ($projectId) { $cmd += @('--project', $projectId) }
-  & $gcloudCommand @cmd
 }
 
 $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--update-env-vars', $envArg)

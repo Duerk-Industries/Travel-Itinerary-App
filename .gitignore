@@ -32,6 +32,7 @@ app/logs
 logs
 patches
 build
+coverage
 *.log*
 logs
 *example*
@@ -56,4 +57,5 @@ test_inputs/default_accounts.json
 server/__fixtures__/gold
 scripts/deploy.config
 app/-DryRun/frontend/
-
+/app/android
+/app/ios

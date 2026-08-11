@@ -356,6 +356,21 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     finally { setSettingCoverForDay(null); }
   };
 
+  // A photo that belongs to a core.gallery blog item can't be removed via DELETE /blog/items/:id
+  // (that deletes the whole gallery) — it has its own per-asset endpoint instead, which is also
+  // what keeps the rest of the gallery intact. Standalone media items go through deleteItem.
+  const removeGalleryAsset = async (assetId) => {
+    if (!canEdit || deleting) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${assetId}`, { method: 'DELETE', headers });
+      if (!response.ok && response.status !== 404) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to remove photo');
+      await load();
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to remove photo'); }
+    finally { setDeleting(false); }
+  };
+  const removeMediaItem = (item) => (item.isGalleryMember ? removeGalleryAsset(item.assetId) : deleteItem(item));
+
   if (!activeTripId) return <View style={styles.card}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
   if (loading) return <View style={styles.card}><ActivityIndicator /></View>;
   const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
@@ -469,7 +484,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               </View>
             ))}
             {(() => {
-              const allMedia = (day.items || []).filter((item) => item.kindKey && item.kindKey.startsWith('media.'));
+              // core.gallery items group a batch of assets under one blog_item (see blogRoutes.ts);
+              // flatten those `assets` back out alongside standalone media.* items so every
+              // traveler's photos/videos for the day become one combined, browsable set regardless
+              // of which upload flow produced them. Gallery members are tagged so Remove routes to
+              // the per-asset delete endpoint (removeGalleryAsset) instead of the whole-item delete
+              // standalone items use (deleteItem) — see removeMediaItem above.
+              const allMedia = (day.items || []).flatMap((item) => {
+                if (item.kindKey === 'core.gallery') {
+                  return (item.assets || []).map((asset) => ({ ...asset, isGalleryMember: true }));
+                }
+                return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
+              });
               const readyMedia = allMedia.filter((item) => item.thumbnailUrl || item.primaryUrl);
               const processingMedia = allMedia.filter((item) => !(item.thumbnailUrl || item.primaryUrl));
               return (
@@ -485,7 +511,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                       onOpenLightbox={() => setLightboxDay(day.localDate)}
                       canRemove={canEdit}
                       removing={deleting}
-                      onRemove={(item) => deleteItem(item)}
+                      onRemove={(item) => removeMediaItem(item)}
                       textColor={textColor}
                       mutedColor={mutedColor}
                       borderColor={borderColor}
@@ -498,7 +524,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                       <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
                       {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
                       {canEdit ? (
-                        <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}>
+                        <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
                           <Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text>
                         </TouchableOpacity>
                       ) : null}

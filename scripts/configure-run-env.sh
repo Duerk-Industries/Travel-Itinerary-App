@@ -137,6 +137,40 @@ display_env_pair() {
   fi
 }
 
+# gcloud's --update-env-vars/--set-secrets flags use comma-delimited KEY=VALUE
+# items by default. Values such as ZAI_MODELS=a,b,c require a custom delimiter;
+# backslash-escaping commas is not supported reliably by gcloud.
+get_safe_gcloud_delimiter() {
+  local joined="$1"
+  local candidate
+  for candidate in '@' '~' '#' '|' '!'; do
+    if [[ "$joined" != *"$candidate"* ]]; then
+      printf '%s' "$candidate"
+      return
+    fi
+  done
+  printf 'DELIM_%s' "$(date +%s%N)"
+}
+
+join_gcloud_dict_arg() {
+  local -a pairs=("$@")
+  local joined="${pairs[*]}"
+  local delimiter
+  delimiter="$(get_safe_gcloud_delimiter "$joined")"
+  local result="^${delimiter}^"
+  local pair
+  local first=1
+  for pair in "${pairs[@]}"; do
+    if (( first )); then
+      first=0
+    else
+      result+="$delimiter"
+    fi
+    result+="$pair"
+  done
+  printf '%s' "$result"
+}
+
 env_pairs=()
 project_id=""
 declare -A secret_map=()
@@ -172,9 +206,24 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   if [[ "$key" == "GCLOUD_PROJECT_ID" || "$key" == "GOOGLE_CLOUD_PROJECT" ]]; then
     project_id="$value"
   fi
-  value="${value//,/\\,}"
   env_pairs+=("${key}=${value}")
 done < "$ENV_FILE"
+
+# .env files may contain repeated assignments. Keep the last value for each
+# key (dotenv convention) so gcloud receives each key only once.
+declare -A deduplicated_env_pairs=()
+deduplicated_env_order=()
+for pair in "${env_pairs[@]}"; do
+  key="${pair%%=*}"
+  if [[ -z "${deduplicated_env_pairs[$key]+present}" ]]; then
+    deduplicated_env_order+=("$key")
+  fi
+  deduplicated_env_pairs["$key"]="$pair"
+done
+env_pairs=()
+for key in "${deduplicated_env_order[@]}"; do
+  env_pairs+=("${deduplicated_env_pairs[$key]}")
+done
 
 if [[ "$saw_google_application_credentials" -eq 1 ]]; then
   echo "WARNING: GOOGLE_APPLICATION_CREDENTIALS is present in ${ENV_FILE}. Cloud Run should use ADC via its runtime service account; this key is ignored for deploy." >&2
@@ -269,7 +318,7 @@ if [[ "${#env_pairs[@]}" -eq 0 ]]; then
   echo "No env vars parsed from $ENV_FILE after filtering .secrets-managed keys." >&2
   exit 1
 fi
-env_arg="$(IFS=,; echo "${env_pairs[*]}")"
+env_arg="$(join_gcloud_dict_arg "${env_pairs[@]}")"
 env_keys=()
 for pair in "${env_pairs[@]}"; do
   env_keys+=("${pair%%=*}")
@@ -281,6 +330,8 @@ if [[ "${#secret_map[@]}" -gt 0 ]]; then
   for key in "${!secret_map[@]}"; do
     secret_pairs+=("${key}=${secret_map[$key]}")
   done
+  # Secret Manager references contain no commas, so keep --set-secrets in its
+  # normal comma-separated form for compatibility across gcloud versions.
   secrets_arg="$(IFS=,; echo "${secret_pairs[*]}")"
 fi
 
@@ -295,10 +346,6 @@ else
   # To avoid accidental removal, this script will not clear secrets.
   # Use `gcloud run services update ... --clear-secrets` manually if needed.
   :
-fi
-if [[ "${#env_keys[@]}" -gt 0 ]]; then
-  remove_secrets_arg="$(IFS=,; echo "${env_keys[*]}")"
-  gcloud run services update "$SERVICE_NAME" --region "$REGION" ${project_id:+--project "$project_id"} --remove-secrets "$remove_secrets_arg"
 fi
 remove_env_keys=()
 for key in FIRESTORE_EMULATOR_HOST GOOGLE_APPLICATION_CREDENTIALS; do

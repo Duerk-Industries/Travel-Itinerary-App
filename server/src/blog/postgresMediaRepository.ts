@@ -5,6 +5,7 @@ import { ensureUserInTrip, ensureUserCanReadTrip } from '../db';
 import { queryBlog } from '../db.postgres';
 import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
+import { getApiCacheSetting } from '../config/apiLimits';
 import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 
 const tierConfig = (() => {
@@ -51,7 +52,7 @@ export const setIncludedStorage = async (userId: string, includedBytes: number):
   );
 };
 
-const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, caption: row.caption ?? null, altText: row.alt_text ?? null, createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight) });
+const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, caption: row.caption ?? null, altText: row.alt_text ?? null, createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
 
 const ensureMediaDays = async (tripId: string): Promise<void> => {
   const trip = await queryBlog<{ start_date: string | null; end_date: string | null }>('SELECT start_date, end_date FROM trips WHERE id = $1 LIMIT 1', [tripId]);
@@ -77,14 +78,40 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   if (!allowedMime.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
   const maxBytes = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : 1024 * 1024 * 1024;
   if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > maxBytes) throw new Error('Media exceeds the configured size limit');
+
+  // When joining an existing gallery, the gallery item's own day is authoritative — a stale or
+  // mismatched client-supplied dayDate must not be able to desync an asset from its gallery.
+  let galleryDay: { id: string; localDate: string } | null = null;
+  let galleryAssetCount = 0;
+  if (input.galleryItemId) {
+    const gallery = await queryBlog<any>(
+      `SELECT i.blog_day_id, i.deleted_at, i.kind_key, d.local_date
+       FROM blog_items i JOIN blog_days d ON d.id = i.blog_day_id
+       WHERE i.id = $1 AND i.trip_id = $2`,
+      [input.galleryItemId, input.tripId]
+    );
+    const galleryRow = gallery.rows[0];
+    if (!galleryRow || galleryRow.deleted_at != null || galleryRow.kind_key !== 'core.gallery') {
+      throw new Error('A valid galleryItemId is required to add photos to a gallery');
+    }
+    const countRow = await queryBlog<{ count: string }>('SELECT COUNT(*)::int AS count FROM blog_item_assets WHERE item_id = $1', [input.galleryItemId]);
+    galleryAssetCount = Number(countRow.rows[0].count);
+    const maxAssets = getApiCacheSetting('tripBlog', 'maxAssetsPerGallery') ?? 30;
+    if (galleryAssetCount >= maxAssets) throw new Error('Gallery exceeds the maximum number of photos allowed');
+    galleryDay = { id: String(galleryRow.blog_day_id), localDate: dateString(galleryRow.local_date) };
+  }
+
   const summary = await getStorageSummary(userId);
   if (!summary.entitlementActive || input.byteSize > summary.availableBytes) throw new Error('QUOTA_EXCEEDED');
   const assetId = randomUUID();
-  const blogItemId = randomUUID();
-  await ensureMediaDays(input.tripId);
-  const dayRows = await queryBlog<{ id: string; local_date: string }>('SELECT id, local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [input.tripId]);
-  const day = dayRows.rows.find((row) => dateString(row.local_date) === input.dayDate);
-  if (!day) throw new Error('The selected day is outside the trip range');
+  const blogItemId = input.galleryItemId ?? randomUUID();
+  let day: { id: string; local_date?: string } | undefined = galleryDay ? { id: galleryDay.id } : undefined;
+  if (!input.galleryItemId) {
+    await ensureMediaDays(input.tripId);
+    const dayRows = await queryBlog<{ id: string; local_date: string }>('SELECT id, local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [input.tripId]);
+    day = dayRows.rows.find((row) => dateString(row.local_date) === input.dayDate);
+    if (!day) throw new Error('The selected day is outside the trip range');
+  }
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
   const reservation = await queryBlog<any>(
     `UPDATE blog_storage_accounts SET reserved_bytes = reserved_bytes + $2, updated_at = NOW()
@@ -98,19 +125,23 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
      VALUES ($1, $2, $3, $4, 'reserved', NOW() + INTERVAL '15 minutes')`,
     [randomUUID(), userId, input.idempotencyKey, input.byteSize]
   );
-  await queryBlog(
-    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
-     VALUES ($1, $2, $3, $4, 1, 'public', $5, $6, $6)`,
-    [blogItemId, input.tripId, day.id, input.mediaKind === 'photo' ? 'media.photo' : 'media.video', `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
-  );
+  if (!input.galleryItemId) {
+    await queryBlog(
+      `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
+       VALUES ($1, $2, $3, $4, 1, 'public', $5, $6, $6)`,
+      [blogItemId, input.tripId, day!.id, input.mediaKind === 'photo' ? 'media.photo' : 'media.video', `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
+    );
+  }
   await queryBlog(
     `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, physical_bytes, billable_bytes, source_mime_type, captured_at, caption, alt_text, source_ref, object_key, created_at, updated_at)
      VALUES ($1, $2, $3, $3, $4, 'uploading', $5, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
     [assetId, input.tripId, userId, input.mediaKind, input.byteSize, input.mimeType.toLowerCase(), input.capturedAt ?? null, input.caption ?? null, input.altText ?? null, input.idempotencyKey, objectKey]
   );
-  await queryBlog('INSERT INTO blog_item_assets (item_id, asset_id, position, role) VALUES ($1, $2, 0, \'primary\')', [blogItemId, assetId]);
+  const position = input.galleryItemId ? galleryAssetCount : 0;
+  const role = input.galleryItemId ? 'gallery_member' : 'primary';
+  await queryBlog('INSERT INTO blog_item_assets (item_id, asset_id, position, role) VALUES ($1, $2, $3, $4)', [blogItemId, assetId, position, role]);
   const row = await queryBlog<any>(
-    `SELECT a.*, i.id AS blog_item_id, d.local_date, FALSE AS is_highlight
+    `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
      FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
     [assetId]
   );
@@ -136,7 +167,7 @@ export const completeUpload = async (userId: string, assetId: string, physicalBy
   await queryBlog('UPDATE blog_storage_accounts SET reserved_bytes = GREATEST(0, reserved_bytes - $2), visible_committed_bytes = visible_committed_bytes + $2, updated_at = NOW() WHERE user_id = $1', [userId, Number(row.physical_bytes)]);
   await queryBlog('UPDATE blog_storage_reservations SET state = \'committed\' WHERE user_id = $1 AND idempotency_key = $2', [userId, row.source_ref]);
   const updated = await queryBlog<any>(
-    `SELECT a.*, i.id AS blog_item_id, d.local_date, FALSE AS is_highlight
+    `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
      FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
     [assetId]
   );
@@ -156,12 +187,44 @@ export const listMedia = async (userId: string, tripId: string): Promise<BlogMed
   const access = await ensureUserCanReadTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to view this trip');
   const rows = await queryBlog<any>(
-    `SELECT a.*, i.id AS blog_item_id, d.local_date, FALSE AS is_highlight
+    `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
      FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id
-     WHERE a.trip_id = $1 AND a.state <> 'deleted' AND i.deleted_at IS NULL ORDER BY d.local_date ASC, i.sort_key ASC`,
+     WHERE a.trip_id = $1 AND a.state <> 'deleted' AND i.deleted_at IS NULL ORDER BY d.local_date ASC, i.sort_key ASC, ia.position ASC`,
     [tripId]
   );
   return rows.rows.map(mapAsset);
+};
+
+// Removes a single asset from a gallery (not for standalone media.photo/media.video items — those
+// are removed whole via DELETE /blog/items/:itemId). If it was the last asset in its gallery, the
+// now-empty gallery item is soft-deleted too so it doesn't linger as an invisible post.
+export const deleteMediaAsset = async (userId: string, assetId: string): Promise<{ deleted: boolean }> => {
+  const current = await queryBlog<any>(
+    `SELECT a.id, a.trip_id, a.storage_account_user_id, a.billable_bytes, a.state, ia.item_id, i.kind_key
+     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id
+     WHERE a.id = $1 AND a.state <> 'deleted' AND i.deleted_at IS NULL`,
+    [assetId]
+  );
+  const asset = current.rows[0];
+  if (!asset) return { deleted: false };
+  if (asset.kind_key !== 'core.gallery') throw new Error('This asset must be part of a gallery to remove individually; use DELETE /blog/items/:itemId for standalone photos or videos instead');
+  const access = await ensureUserInTrip(String(asset.trip_id), userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const bytesColumn = asset.state === 'ready' ? 'visible_committed_bytes' : asset.state === 'grace_hidden' ? 'grace_hidden_bytes' : 'reserved_bytes';
+  await queryBlog(
+    `UPDATE blog_storage_accounts SET ${bytesColumn} = GREATEST(0, ${bytesColumn} - $2), updated_at = NOW() WHERE user_id = $1`,
+    [asset.storage_account_user_id, Number(asset.billable_bytes)]
+  );
+  await queryBlog(`UPDATE blog_media_assets SET state = 'deleted', updated_at = NOW() WHERE id = $1`, [assetId]);
+  await queryBlog('DELETE FROM blog_item_assets WHERE asset_id = $1', [assetId]);
+  const remaining = await queryBlog<{ count: string }>('SELECT COUNT(*)::int AS count FROM blog_item_assets WHERE item_id = $1', [asset.item_id]);
+  if (Number(remaining.rows[0].count) === 0) {
+    await queryBlog(
+      `UPDATE blog_items SET deleted_at = NOW(), version = version + 1, last_editor_user_id = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
+      [asset.item_id, userId]
+    );
+  }
+  return { deleted: true };
 };
 
 export const setHighlight = async (userId: string, itemId: string, highlighted: boolean): Promise<void> => {

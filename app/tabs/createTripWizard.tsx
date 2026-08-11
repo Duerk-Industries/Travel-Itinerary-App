@@ -86,7 +86,7 @@ type CreateTripWizardProps = {
   theme?: AppTheme;
   onCancel: () => void;
   onTripCreated: (tripId: string) => void;
-  onAiItineraryQueued?: (tripId: string, jobId: string) => void;
+  onAiItineraryQueued?: (tripId: string, jobId: string, request: Record<string, unknown>) => void;
   onUnauthorized?: () => void;
   onWizardCarRentals?: (rentals: CarRental[]) => void;
   currentUserName?: string | null;
@@ -1280,29 +1280,29 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             }
             if (generateItinerary) {
               const idempotencyKey = createIdempotencyKey(`wizard-${tripId}`);
+              const aiRequestBody = {
+                country: destination,
+                locations: locationNames,
+                mustSeeAttractions: selectedMustSeeAttractions
+                  .filter((item) => item.name)
+                  .map((item) =>
+                    item.destinationName ? { name: item.name, destinationName: item.destinationName } : item.name
+                  ),
+                days,
+                budgetMin: budgetRange.min,
+                budgetMax: budgetRange.max,
+                departureAirport: itineraryDepartureAirport.trim() || undefined,
+                tripId,
+                itineraryId,
+                tt: wizardPromptTraits.tt,
+                ut: wizardPromptTraits.ut,
+              };
               const aiRes = await fetchWithTimeout(
                 `${backendUrl}/api/itinerary/async`,
                 {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey, ...headers },
-                  body: JSON.stringify({
-                    country: destination,
-                    locations: locationNames,
-                    mustSeeAttractions: selectedMustSeeAttractions
-                      .filter((item) => item.name)
-                      .map((item) =>
-                        item.destinationName ? { name: item.name, destinationName: item.destinationName } : item.name
-                      ),
-                    days,
-                    budgetMin: budgetRange.min,
-                    budgetMax: budgetRange.max,
-                    departureAirport: itineraryDepartureAirport.trim() || undefined,
-                    tripId,
-                    itineraryId,
-                    tt: wizardPromptTraits.tt,
-                    ut: wizardPromptTraits.ut,
-                    idempotencyKey,
-                  }),
+                  body: JSON.stringify({ ...aiRequestBody, idempotencyKey }),
                 },
                 10000
               );
@@ -1315,7 +1315,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   )}" hasJob=${Boolean(aiData?.jobId)}`
                 );
               } else {
-                onAiItineraryQueued?.(tripId, String(aiData.jobId));
+                // Stash the request body (minus the one-shot idempotency key) so a later
+                // retry from the Overview tab can resubmit the same inputs.
+                onAiItineraryQueued?.(tripId, String(aiData.jobId), aiRequestBody);
               }
             }
           }

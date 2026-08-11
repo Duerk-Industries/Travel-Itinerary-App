@@ -41,6 +41,7 @@
     "test:server:shard": "npm --prefix server run test:shard --",
     "locations:update": "tsx scripts/update-location-jsons.ts",
     "locations:upload": "tsx scripts/update-location-jsons.ts",
+    "autocomplete:update": "tsx scripts/update-attraction-autocomplete-jsons.ts",
     "emulators:start": "node scripts/select-latest-firebase-export.mjs && npx --yes firebase-tools emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
     "images:migrate-cache": "tsx scripts/migrate-image-cache-to-storage.ts",
     "firestore:group-access:backfill": "tsx scripts/backfill-group-access.ts",

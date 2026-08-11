@@ -77,6 +77,8 @@ type LocationDataset = {
 
 let cache: LocationDataset | null = null;
 let cacheLoadPromise: Promise<LocationDataset> | null = null;
+let countryStateCache: LocationDataset | null = null;
+let countryStateCacheLoadPromise: Promise<LocationDataset> | null = null;
 let refreshCooldownUntil = 0;
 let consecutiveRefreshFailures = 0;
 const countryStateQueryCache = new Map<string, { ts: number; results: LocationOption[] }>();
@@ -213,11 +215,13 @@ const compareCity = (a: SearchableOption, b: SearchableOption, q: string): numbe
   return a.name.localeCompare(b.name);
 };
 
-const loadDatasetFromStorage = async (): Promise<LocationDataset> => {
+const loadDatasetFromStorage = async (includeCities = true): Promise<LocationDataset> => {
   const { bucketName, prefix } = resolveStorageConfig();
   ensureFirebaseApp(bucketName);
   const bucket = getStorage().bucket(bucketName);
-  const files = ['countries.json', 'states.json', 'cities.json', 'regions.json', 'subregions.json'];
+  const files = includeCities
+    ? ['countries.json', 'states.json', 'cities.json', 'regions.json', 'subregions.json']
+    : ['countries.json', 'states.json', 'regions.json', 'subregions.json'];
   const downloadWithRetry = async (fileName: string): Promise<string> => {
     const filePath = `${prefix}${fileName}`;
     const attempts = 3;
@@ -235,12 +239,14 @@ const loadDatasetFromStorage = async (): Promise<LocationDataset> => {
     throw new Error(`Unable to download ${filePath}`);
   };
   const buffers = await Promise.all(files.map((fileName) => downloadWithRetry(fileName)));
-
-  const countries = parseJson<CountryRow>(buffers[0], 'countries.json');
-  const states = parseJson<StateRow>(buffers[1], 'states.json');
-  const cities = parseJson<CityRow>(buffers[2], 'cities.json');
-  const regions = parseJson<RegionRow>(buffers[3], 'regions.json');
-  const subregions = parseJson<SubregionRow>(buffers[4], 'subregions.json');
+  const rawByFile = new Map(files.map((fileName, index) => [fileName, buffers[index]]));
+  const countries = parseJson<CountryRow>(rawByFile.get('countries.json') ?? '[]', 'countries.json');
+  const states = parseJson<StateRow>(rawByFile.get('states.json') ?? '[]', 'states.json');
+  const cities = includeCities
+    ? parseJson<CityRow>(rawByFile.get('cities.json') ?? '[]', 'cities.json')
+    : [];
+  const regions = parseJson<RegionRow>(rawByFile.get('regions.json') ?? '[]', 'regions.json');
+  const subregions = parseJson<SubregionRow>(rawByFile.get('subregions.json') ?? '[]', 'subregions.json');
 
   const countryById = new Map<number, CountryRow>();
   const stateById = new Map<number, StateRow>();
@@ -595,7 +601,7 @@ const getCachedDataset = async (): Promise<LocationDataset> => {
     try {
       let dataset: LocationDataset;
       try {
-        dataset = await loadDatasetFromStorage();
+        dataset = await loadDatasetFromStorage(true);
       } catch (storageErr) {
         logInfo('[locationServices] Storage dataset unavailable, falling back to local CSV');
         try {
@@ -632,6 +638,48 @@ const getCachedDataset = async (): Promise<LocationDataset> => {
   }
 };
 
+/**
+ * Country/state autocomplete must not load the full city catalog. The city
+ * JSON is intentionally large and is only needed after the user has selected
+ * a country or state. Keeping a separate cache prevents a lightweight search
+ * from exhausting the Cloud Run Node.js heap.
+ */
+const getCachedCountryStateDataset = async (): Promise<LocationDataset> => {
+  const now = Date.now();
+  if (cache) return cache;
+  if (countryStateCache && now - countryStateCache.loadedAt < cacheTtlMs()) {
+    return countryStateCache;
+  }
+  if (countryStateCacheLoadPromise) return countryStateCacheLoadPromise;
+
+  countryStateCacheLoadPromise = (async () => {
+    try {
+      let dataset: LocationDataset;
+      try {
+        dataset = await loadDatasetFromStorage(false);
+      } catch (storageErr) {
+        logInfo('[locationServices] Country/state storage dataset unavailable, falling back to local CSV');
+        try {
+          dataset = await loadDatasetFromLocalCsv();
+        } catch (localCsvErr) {
+          logError('[locationServices] Country/state local CSV fallback also failed', localCsvErr);
+          throw storageErr;
+        }
+        if (dataset.countryState.length === 0) {
+          logError('[locationServices] Country/state local CSV fallback returned no data', storageErr);
+          throw storageErr;
+        }
+      }
+      countryStateCache = dataset;
+      return dataset;
+    } finally {
+      countryStateCacheLoadPromise = null;
+    }
+  })();
+
+  return countryStateCacheLoadPromise;
+};
+
 export const searchCountryStateOptions = async (query: string, limit = 10): Promise<LocationOption[]> => {
   const q = normalizeQuery(query);
   if (!q) return [];
@@ -644,7 +692,7 @@ export const searchCountryStateOptions = async (query: string, limit = 10): Prom
     return cached.results;
   }
 
-  const dataset = await getCachedDataset();
+  const dataset = await getCachedCountryStateDataset();
   const filtered = dataset.countryState.filter((item) => item.searchName.includes(q));
   filtered.sort((a, b) => compareCountryState(a, b, q));
   const results = applyLimit(filtered, max);
@@ -704,6 +752,8 @@ export const searchCityOptions = async (
 export const clearLocationCache = () => {
   cache = null;
   cacheLoadPromise = null;
+  countryStateCache = null;
+  countryStateCacheLoadPromise = null;
   countryStateQueryCache.clear();
   cityQueryCache.clear();
 };
@@ -711,9 +761,13 @@ export const clearLocationCache = () => {
 export const getLocationOptionsByIds = async (ids: string[]): Promise<LocationOption[]> => {
   const normalized = Array.from(new Set((ids ?? []).map((id) => String(id).trim()).filter(Boolean)));
   if (!normalized.length) return [];
-  const dataset = await getCachedDataset();
+  // Batch resolution is commonly used for country/state trip locations. Do
+  // not load the heavyweight city catalog just to resolve those IDs; city
+  // IDs that are not already present in the application database are handled
+  // by the route's stable ID-label fallback.
+  const dataset = await getCachedCountryStateDataset();
   const byId = new Map<string, LocationOption>();
-  [...dataset.countries, ...dataset.states, ...dataset.cities].forEach(({ searchName, ...rest }) => {
+  [...dataset.countries, ...dataset.states].forEach(({ searchName, ...rest }) => {
     byId.set(rest.id, rest);
   });
   return normalized.map((id) => byId.get(id)).filter(Boolean) as LocationOption[];

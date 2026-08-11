@@ -11,7 +11,7 @@ import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from '
 import { applyStartupFeatureFlagOverrides, seedEntitlementDefaults } from './services/entitlementService';
 import { seedDefaultTestAccountsIfEnabled } from './services/testAccountSeedService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
-import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
+import { startAutocompleteCacheRefreshScheduler } from './services/destinationAttractionAutocompleteService';
 import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
 import { createSocketServer } from './socket';
 import { startGmailPollingScheduler } from './services/gmailPollingService';
@@ -107,15 +107,19 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     logInfo('[attractions] startup CSV import disabled');
   }
 
-  const runAutocompletePrewarm = getEnvFlag('AUTOCOMPLETE_PREWARM', { defaultValue: !isCloudRunRuntime });
-  if (runAutocompletePrewarm) {
-    // Pre-warm the destination/attraction autocomplete cache so the first
-    // wizard search doesn't pay the CSV parsing cost (~154k rows).
-    prewarmAutocompleteCache().catch((err: any) =>
-      logError('[autocomplete] cache pre-warm failed (background)', err)
-    );
+  // Previously this defaulted to `!isCloudRunRuntime` (skipped on Cloud Run)
+  // because the rebuild was a synchronous, blocking parse of ~154k CSV rows
+  // that was too expensive to risk on every cold start. Now that the
+  // dataset loads from a pre-processed JSON mirror in Cloud Storage with a
+  // chunked/yielding index build (see destinationAttractionAutocompleteService),
+  // it's safe to warm on every environment, including Cloud Run — that's
+  // what closes the gap where the first request on a freshly scaled
+  // instance used to pay the full parse cost inline.
+  const runAutocompleteRefresh = getEnvFlag('AUTOCOMPLETE_PREWARM', { defaultValue: true });
+  if (runAutocompleteRefresh) {
+    startAutocompleteCacheRefreshScheduler();
   } else {
-    logInfo('[autocomplete] cache pre-warm disabled');
+    logInfo('[autocomplete] cache pre-warm/refresh disabled');
   }
 
   if (process.env.NODE_ENV !== 'test') {

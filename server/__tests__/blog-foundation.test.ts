@@ -5,6 +5,13 @@ import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser 
 
 describe('trip blog foundation', () => {
   const owner = { firstName: 'Blog', lastName: 'Author', email: 'blog-foundation@example.com', password: 'Password123!' };
+  const dateFromTodayUtc = (days: number): string => {
+    const date = new Date();
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  };
+  const tripStartDate = dateFromTodayUtc(7);
+  const tripEndDate = dateFromTodayUtc(8);
   let token = '';
   let tripId = '';
 
@@ -16,7 +23,7 @@ describe('trip blog foundation', () => {
     await registerWebUser(owner);
     await confirmWebUser(owner.email);
     token = (await loginWebUser(owner)).body.token;
-    const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`).send({ name: 'Blog Trip', startDate: '2026-08-01', endDate: '2026-08-02', participants: [] }).expect(201);
+    const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`).send({ name: 'Blog Trip', startDate: tripStartDate, endDate: tripEndDate, participants: [] }).expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
   });
 
@@ -28,7 +35,7 @@ describe('trip blog foundation', () => {
     const created = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ dayDate: '2026-08-01', body: '北京 🐰 مرحبا', languageTag: 'zh-Hans' })
+      .send({ dayDate: tripStartDate, body: '北京 🐰 مرحبا', languageTag: 'zh-Hans' })
       .expect(201);
     expect(created.body.body).toContain('北京');
     const read = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
@@ -39,7 +46,7 @@ describe('trip blog foundation', () => {
     const created = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ dayDate: '2026-08-02', body: 'First version' })
+      .send({ dayDate: tripEndDate, body: 'First version' })
       .expect(201);
     await request(app)
       .patch(`/api/trips/${tripId}/blog/items/${created.body.id}`)

@@ -119,7 +119,7 @@ flags:
     enabled: false
     description: "Phase 8 allowlisted itinerary structured cards"
   trip_blog_galleries:
-    enabled: false
+    enabled: true
     description: "Phase 8 gallery parent items"
   trip_blog_panorama_media:
     enabled: false

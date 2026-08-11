@@ -28,6 +28,7 @@ import {
   type RootStackParamList,
 } from './navigationConfig';
 import { formatDateLong } from './utils/formatDateLong';
+import { createIdempotencyKey } from './utils/idempotencyKey';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
@@ -2416,14 +2417,73 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setActivePage('overview');
   }, [fetchTrips, fetchGroups, fetchInvites]);
 
-  const onAiItineraryQueued = useCallback((tripId: string, jobId: string) => {
+  const onAiItineraryQueued = useCallback((tripId: string, jobId: string, request?: Record<string, unknown>) => {
     setAsyncItineraryByTrip((prev) => ({
       ...prev,
       [tripId]: {
         jobId,
         status: 'pending',
+        request: request ?? prev[tripId]?.request ?? null,
       },
     }));
+  }, []);
+
+  // Resubmits the AI itinerary generation request stored on a failed job. The stored
+  // `request` is the same body createTripWizard originally sent to /api/itinerary/async,
+  // so this is the only way to retry without recreating the trip (there's no separate
+  // "regenerate" entry point elsewhere in the app).
+  const retryAiItinerary = useCallback(
+    async (tripId: string) => {
+      const tracker = asyncItineraryByTrip[tripId];
+      if (!tracker?.request) {
+        Alert.alert('Unable to retry', 'The original itinerary request is no longer available. Please try creating a new AI itinerary.');
+        return;
+      }
+      const idempotencyKey = createIdempotencyKey(`retry-${tripId}`);
+      try {
+        const res = await fetch(`${backendUrl}/api/itinerary/async`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey, ...headers },
+          body: JSON.stringify({ ...tracker.request, idempotencyKey }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.jobId) {
+          setAsyncItineraryByTrip((prev) => ({
+            ...prev,
+            [tripId]: { ...prev[tripId], status: 'failed', error: data?.error || `Retry failed (status ${res.status})` },
+          }));
+          return;
+        }
+        setAsyncItineraryByTrip((prev) => ({
+          ...prev,
+          [tripId]: {
+            ...prev[tripId],
+            jobId: String(data.jobId),
+            status: 'pending',
+            error: undefined,
+            stage: null,
+            stageLabel: null,
+            stageDetail: null,
+            etaSeconds: null,
+          },
+        }));
+      } catch (err) {
+        setAsyncItineraryByTrip((prev) => ({
+          ...prev,
+          [tripId]: { ...prev[tripId], status: 'failed', error: (err as Error).message },
+        }));
+      }
+    },
+    [asyncItineraryByTrip, backendUrl, headers]
+  );
+
+  const dismissAiItineraryError = useCallback((tripId: string) => {
+    setAsyncItineraryByTrip((prev) => {
+      if (!(tripId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
   }, []);
 
   const deleteTrip = async (tripId: string) => {
@@ -3341,6 +3401,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
                       : null
                   }
+                  onRetryAiItinerary={retryAiItinerary}
+                  onDismissAiItineraryError={dismissAiItineraryError}
                   editSignal={overviewEditSignal}
                   goToDay1Signal={goToDay1Signal}
                   onUpdateCurrency={updateTripCurrency}

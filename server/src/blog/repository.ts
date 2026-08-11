@@ -8,6 +8,8 @@ export interface BlogRepository {
   getBlog: typeof postgres.getBlog;
   getBlogCapabilities: typeof postgres.getBlogCapabilities;
   createBlogTextItem: typeof postgres.createBlogTextItem;
+  createGalleryItem: typeof postgres.createGalleryItem;
+  getGalleryItemsMeta: typeof postgres.getGalleryItemsMeta;
   updateBlogTextItem: typeof postgres.updateBlogTextItem;
   deleteBlogItem: typeof postgres.deleteBlogItem;
   setDayCover: typeof postgres.setDayCover;
