@@ -1,54 +1,80 @@
-# Apple Auth Implementation Audit & Hardening
+# Implementation Plan: Activities Inline Grid Editing and Unified Detail Dialogs
 
-Audit the "Login with Apple" implementation for bugs and ensure high test coverage across both Postgres and Firebase adapters.
+Standardize the trip item detailed view and add a high-productivity spreadsheet-style grid for activities.
 
 ## User Review Required
 
-- **Native UI vs Web Flow**: The app currently uses a `WebBrowser` flow for Apple sign-in on native devices. This is functional but less "native" than using `expo-apple-authentication`. I've confirmed that the latter is not currently used and am proposing its removal to clean up dependencies.
-- **Cookie Path**: I'm broadening the `apple_oauth_nonce` cookie path from `/api/auth/apple` to `/` to ensure maximum compatibility across browsers during the redirect-and-POST callback flow.
+- **Selection and Clipboard Complexity:** Implementing rectangular selection and TSV clipboard support in React Native (Web/Native) requires a robust custom implementation as no existing library in the project currently handles this specialized interaction.
+- **Bulk Save Strategy:** The bulk save will be implemented as a single `PATCH /api/activities/bulk` request. Partial failures will be handled by returning individual row status, allowing the user to resolve issues in the grid without losing other changes.
 
 ## Proposed Changes
 
-### Backend Refactoring & Fixes
+### Configuration and Constants
 
-#### [app.ts](file:///C:/Git/Tristan/Travel-Itinerary-App/server/src/app.ts)
-- Broaden `apple_oauth_nonce` cookie path to `/` for robustness.
-- Ensure `clearAppleOAuthNonceCookie` uses the same path.
+#### [feature-flags.yaml](file:///C:/Git/Tristan/Travel-Itinerary-App/server/config/feature-flags.yaml)
+- Add `feature_grid_editing` and `feature_standardized_item_dialogs`.
 
-#### [package.json](file:///C:/Git/Tristan/Travel-Itinerary-App/package.json)
-- Remove unused `expo-apple-authentication` dependency.
+#### [api-limits.yaml](file:///C:/Git/Tristan/Travel-Itinerary-App/server/config/api-limits.yaml)
+- Add `ACTIVITY_API` provider with limits for `BULK_UPDATE` and `BULK_DELETE`.
+
+---
+
+### Shared Components (UI Primitives)
+
+#### [EditableDataGrid.tsx](file:///C:/Git/Tristan/Travel-Itinerary-App/app/components/EditableDataGrid.tsx)
+- **New Component:** A generic, high-performance grid supporting:
+    - Custom column definitions and cell editors.
+    - Rectangular cell selection and arrow-key navigation.
+    - TSV Copy/Cut/Paste integration.
+    - Staged row deletion and "dirty" row tracking.
+
+#### [TripItemDetailsDialog.tsx](file:///C:/Git/Tristan/Travel-Itinerary-App/app/components/TripItemDetailsDialog.tsx)
+- **New Component:** A unified dialog for viewing details of Flights, Lodgings, and Activities.
+- Integrates "Edit" (opens entity editor) and "Delete" (with confirmation) in a standardized footer.
 
 ---
 
-### Test Coverage Enhancement
+### Activities Tab Refactoring
 
-#### [appleOAuthRoutes.test.ts](file:///C:/Git/Tristan/Travel-Itinerary-App/server/__tests__/appleOAuthRoutes.test.ts)
-- Add a comprehensive test case for a successful Apple login callback.
-- Mock `exchangeAppleAuthorizationCode` and `verifyAppleIdToken` to simulate the full flow.
-- Verify that a JWT token is correctly generated and the user is redirected with an `auth_code`.
+#### [ActivityEditingForm.tsx](file:///C:/Git/Tristan/Travel-Itinerary-App/app/components/ActivityEditingForm.tsx)
+- **New Component:** Extracted logic from `activities.tsx` to provide a consistent form for both modals and potential grid popovers.
 
-#### [NEW] [appleAuthFirebase.test.ts](file:///C:/Git/Tristan/Travel-Itinerary-App/server/__tests__/appleAuthFirebase.test.ts)
-- Implement tests for `findOrCreateAppleUser` specifically against the **Firebase** provider.
-- Use the Firebase emulator for realistic data access testing.
-- Cover user creation, account linking (by verified email), and subsequent login (by Apple ID).
+#### [activities.tsx](file:///C:/Git/Tristan/Travel-Itinerary-App/app/tabs/activities.tsx)
+- Add "Edit table" button.
+- Implement the transition to `EditableDataGrid` when editing.
+- Define activity-specific columns (Date, Type, Name, Location, etc.).
+- Implement bulk save logic calling the new API.
 
 ---
+
+### Server (Bulk Operations)
+
+#### [activityRoutes.ts](file:///C:/Git/Tristan/Travel-Itinerary-App/server/src/routes/activityRoutes.ts)
+- Add `PATCH /api/activities/bulk`.
+- Add `DELETE /api/activities/bulk`.
+- Implement robust validation for multi-row payloads.
+
+#### [db.postgres.ts](file:///C:/Git/Tristan/Travel-Itinerary-App/server/src/db.postgres.ts) and [db.firebase.ts](file:///C:/Git/Tristan/Travel-Itinerary-App/server/src/db.firebase.ts)
+- Add `bulkUpdateActivities` and `bulkDeleteActivities` implementations.
+- Ensure associated expenses are updated/removed.
+
+---
+
+### Overview Tab Migration
+
+#### [overview.tsx](file:///C:/Git/Tristan/Travel-Itinerary-App/app/tabs/overview.tsx)
+- Replace fragmented detail modal logic with `TripItemDetailsDialog`.
+- Unify the selected-item state model.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run the new and updated backend tests:
-  ```bash
-  cd server
-  # Run Apple OAuth route tests
-  npx jest __tests__/appleOAuthRoutes.test.ts
-  # Run Apple Auth parity tests (Postgres/Memory)
-  npx jest __tests__/appleAuth.test.ts
-  # Run new Apple Auth Firebase tests (requires emulator)
-  npx jest __tests__/appleAuthFirebase.test.ts
-  ```
+- **Unit Tests:** `app/utils/clipboardGrid.test.ts` for TSV parsing/formatting; `server/src/routes/activityRoutes.test.ts` for bulk endpoint validation.
+- **Component Tests:** `app/components/EditableDataGrid.test.tsx` for selection and keyboard navigation logic.
+- **E2E Tests:** `app/e2e/activities-grid.test.ts` for full copy/paste and bulk save flow.
 
 ### Manual Verification
-- Deploy to a staging environment.
-- Verify that "Sign in with Apple" still works on both Web and a native iOS build.
-- Inspect the `apple_oauth_nonce` cookie in the browser to confirm the updated path.
+- Verify rectangular selection across multi-select columns (Travelers/Payers).
+- Confirm that cutting a cell only clears the source after a successful paste.
+- Test "Delete" staging in the grid followed by "Cancel" to ensure restoration.
+- Open different trip items from Overview and verify consistent action placement.
