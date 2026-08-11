@@ -315,4 +315,27 @@ describe('LocationSelector', () => {
     });
     (Platform as any).OS = originalOS;
   });
+
+  it('elevates the dropdown above sibling fields on native, not just web', async () => {
+    // Regression test: the dropdown zIndex used to only elevate when Platform.OS === 'web',
+    // so on iOS/Android the suggestion list stayed at its base zIndex and visually overlapped
+    // with sibling fields rendered after it (e.g. MustSeeAttractionSelector) instead of
+    // stacking above them.
+    const originalOS = Platform.OS;
+    (Platform as any).OS = 'ios';
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 'country-1', name: 'Canada', sourceType: 'country' }],
+    });
+
+    const { getByPlaceholderText, getByText, getByTestId } = render(<LocationSelector {...defaultProps} />);
+    expect(getByTestId('location-selector-root').props.style.zIndex).toBe(1);
+
+    const input = getByPlaceholderText('Search countries or states');
+    fireEvent.changeText(input, 'Can');
+    await waitFor(() => getByText('Canada'));
+
+    expect(getByTestId('location-selector-root').props.style.zIndex).toBe(800);
+    (Platform as any).OS = originalOS;
+  });
 });

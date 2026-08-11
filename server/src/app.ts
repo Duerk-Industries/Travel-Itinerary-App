@@ -118,6 +118,14 @@ const getAllowedOrigins = () => {
   // Add primary webUrl
   origins.add(webUrl);
 
+  // wander-bunnies.com is the app's canonical production domain (see the default
+  // above), but BACKEND_URL/WEB_URL can point webUrl elsewhere (e.g. the legacy
+  // duerk.org domain) without anyone updating AUTH_REDIRECT_URI_ALLOWLIST to
+  // compensate — that gap is exactly what silently broke every fetch() call from
+  // wander-bunnies.com with a CORS 500 in production. Always allow it regardless of
+  // env config so this can't regress the same way again.
+  origins.add('https://wander-bunnies.com');
+
   // Add origins from allowlist if configured
   const allowlist = getEnvValue('AUTH_REDIRECT_URI_ALLOWLIST') || '';
   allowlist.split(/[;,]/).forEach(origin => {

@@ -32,13 +32,39 @@ jobs:
           npm --version
           node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 20) throw new Error('Node 20 or newer is required');"
 
+      # Native builds consume EAS's monthly build-credit quota, so this only fires when
+      # app/package.json's version actually bumped (the existing "Bump app version to X"
+      # commit convention) rather than on every push to main -- routine fixes shouldn't
+      # burn a build. Falls back to building if the previous version can't be determined
+      # (e.g. the very first push), since skipping silently is worse than one extra build.
+      - name: Check for app version bump
+        id: version_check
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURR_VERSION=$(node -e "console.log(require('./app/package.json').version)")
+          PREV_VERSION=""
+          if git fetch --no-tags --depth=1 origin "${{ github.event.before }}" 2>/dev/null; then
+            PREV_VERSION=$(git show "${{ github.event.before }}:app/package.json" 2>/dev/null \
+              | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).version)}catch{console.log('')}})" || echo "")
+          fi
+          echo "Previous version: ${PREV_VERSION:-<unknown>}"
+          echo "Current version: $CURR_VERSION"
+          if [ -n "$PREV_VERSION" ] && [ "$PREV_VERSION" = "$CURR_VERSION" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
+        if: steps.version_check.outputs.changed == 'true'
         run: npm ci --no-audit --no-fund
         env:
           # patch-package's postinstall is part of the install; allow it.
           HUSKY: 0
 
       - name: Build native apps and export web
+        if: steps.version_check.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -49,3 +75,8 @@ jobs:
           npm run export:web -- --output-dir ../public
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Skipped (no version bump)
+        if: steps.version_check.outputs.changed != 'true'
+        shell: bash
+        run: echo "app/package.json version unchanged since the previous commit on main -- skipping native build to conserve EAS build credits."

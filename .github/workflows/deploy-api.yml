@@ -59,6 +59,7 @@ jobs:
             --max-instances 1 \
             --allow-unauthenticated \
             --service-account "travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com" \
+            --update-env-vars "WEB_URL=https://wander-bunnies.com,BACKEND_URL=https://wander-bunnies.com,GOOGLE_CALLBACK_URL=https://wander-bunnies.com/api/auth/google/callback,APPLE_CALLBACK_URL=https://wander-bunnies.com/api/auth/apple/callback" \
             --project "$GCLOUD_PROJECT_ID"
           gcloud run services update-traffic travel-itinerary-app \
             --region us-east5 \
