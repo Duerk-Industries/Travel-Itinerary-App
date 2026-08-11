@@ -155,19 +155,32 @@ function Join-GcloudDictArg([string[]]$Pairs) {
   return "^$delimiter^" + ($Pairs -join $delimiter)
 }
 
-function Invoke-LegacySecretCleanup([string]$ServiceName, [string]$Region, [string[]]$EnvKeys, [string]$Memory, [bool]$AllowClearSecretsFallback, [string]$PhaseLabel) {
-  if ($EnvKeys.Count -eq 0) { return $true }
-
-  Write-Host "$PhaseLabel legacy secret bindings for .env-managed keys..."
-  $removeCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($EnvKeys -join ','), '--memory', $Memory)
-  & gcloud @removeCmd
-  if ($LASTEXITCODE -eq 0) { return $true }
-  if (-not $AllowClearSecretsFallback) { return $false }
-
-  Write-Warning "$PhaseLabel targeted secret cleanup failed; retrying with --clear-secrets to remove stale Cloud Run secret bindings."
-  $clearCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--clear-secrets', '--memory', $Memory)
-  & gcloud @clearCmd
-  return ($LASTEXITCODE -eq 0)
+# Cloud Run health-checks every new revision on its own, so a key that's currently
+# secret-bound but is about to become a plain env var (or vice versa) must never be
+# split across two separate `gcloud run deploy`/`services update` calls — the revision
+# created in between would have neither the secret binding nor the literal value and
+# would fail to start (this bit us for real: STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET
+# were dropped by a standalone --remove-secrets step, and the app hard-crashes at
+# startup without them). Looking up which keys are currently secret-bound lets the
+# caller fold the diff into the SAME deploy command as --update-env-vars, so the type
+# transition lands atomically in one revision.
+function Get-CurrentSecretBoundEnvKeys([string]$ServiceName, [string]$Region) {
+  $json = & gcloud run services describe $ServiceName --region $Region --format=json 2>$null
+  if ($LASTEXITCODE -ne 0 -or -not $json) { return @() }
+  try {
+    $service = ($json -join "`n") | ConvertFrom-Json
+  } catch {
+    return @()
+  }
+  $keys = @()
+  foreach ($container in @($service.spec.template.spec.containers)) {
+    foreach ($e in @($container.env)) {
+      if ($e.valueFrom -and $e.valueFrom.secretKeyRef) {
+        $keys += $e.name
+      }
+    }
+  }
+  return Get-UniqueStrings $keys
 }
 
 Write-Host "Deploying Cloud Run service source code..."
@@ -193,7 +206,6 @@ if (-not $SecretsFile) {
 
 $secretMap = @{}
 $envPairs = @()
-$envKeys = @()
 $sawGoogleApplicationCredentials = $false
 $authSecretFromEnv = $null
 if ($EnvFile) {
@@ -258,8 +270,6 @@ if ($secretMap.Count -gt 0) {
     $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
   }
 }
-$envKeys = Get-UniqueStrings ($envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ })
-
 $envArg = ''
 if ($envPairs.Count -gt 0) {
   $envArg = Join-GcloudDictArg $envPairs
@@ -277,32 +287,32 @@ if ($secretMap.Count -gt 0) {
   foreach ($key in @($secretMap.Keys)) { Write-Host "  $key -> $($secretMap[$key])" }
 }
 
+# Anything currently secret-bound on the live service that isn't in this deploy's
+# secretMap needs to be dropped — most commonly a key that moved from server/.secrets
+# to server/.env (or was removed from both). --set-secrets would express this as
+# "replace the whole secret set," but --set-secrets and --remove-secrets are mutually
+# exclusive on the same `gcloud run deploy` call, and --update-env-vars must be able to
+# supply the literal replacement value in that same call (see Get-CurrentSecretBoundEnvKeys
+# above for why). --update-secrets + --remove-secrets can be combined instead, giving the
+# same end state atomically.
+$currentSecretBoundKeys = Get-CurrentSecretBoundEnvKeys -ServiceName $ServiceName -Region $Region
+$secretsToRemove = @($currentSecretBoundKeys | Where-Object { -not $secretMap.ContainsKey($_) })
+if ($secretsToRemove.Count -gt 0) {
+  Write-Host "Secret bindings to remove (no longer in server/.secrets):"
+  foreach ($key in $secretsToRemove) { Write-Host "  $key" }
+}
+
 $cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region, '--session-affinity', '--max-instances', '1')
 $cmd += @('--memory', $Memory)
 if ($envArg) { $cmd += @('--update-env-vars', $envArg) }
-if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }
+if ($secretsArg) { $cmd += @('--update-secrets', $secretsArg) }
+if ($secretsToRemove.Count -gt 0) { $cmd += @('--remove-secrets', ($secretsToRemove -join ',')) }
 if ($secretMap.Count -gt 0) { $cmd += @('--remove-env-vars', ($secretMap.Keys -join ',')) }
 $removeEnvKeys = @()
 foreach ($candidate in @('FIRESTORE_EMULATOR_HOST', 'GOOGLE_APPLICATION_CREDENTIALS')) {
   if (Should-IgnoreKey $candidate $IgnoreKeys) { $removeEnvKeys += $candidate }
 }
 if ($removeEnvKeys.Count -gt 0) { $cmd += @('--remove-env-vars', ($removeEnvKeys -join ',')) }
-
-if ($envKeys.Count -gt 0) {
-  $describeCmd = @('run', 'services', 'describe', $ServiceName, '--region', $Region)
-  & gcloud @describeCmd *> $null
-  if ($LASTEXITCODE -eq 0) {
-    if ($secretMap.Count -gt 0) {
-      Write-Host "Skipping pre-deploy legacy secret cleanup because secret mappings must be applied with the source deploy."
-    } else {
-      $allowClearSecretsFallback = $true
-      if (-not (Invoke-LegacySecretCleanup -ServiceName $ServiceName -Region $Region -EnvKeys $envKeys -Memory $Memory -AllowClearSecretsFallback $allowClearSecretsFallback -PhaseLabel 'Removing pre-deploy')) {
-        Write-Error "Pre-deploy legacy secret removal failed with gcloud exit code $LASTEXITCODE."
-        exit $LASTEXITCODE
-      }
-    }
-  }
-}
 
 if (-not $SkipFirestoreIndexes) {
   $indexScript = Join-Path $PSScriptRoot 'deploy-firestore-indexes.ps1'
@@ -332,14 +342,6 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {
   Write-Error "API deployed, but routing traffic to the latest revision failed with gcloud exit code $LASTEXITCODE."
   exit $LASTEXITCODE
-}
-
-if ($envKeys.Count -gt 0) {
-  $allowClearSecretsFallback = $secretMap.Count -eq 0
-  if (-not (Invoke-LegacySecretCleanup -ServiceName $ServiceName -Region $Region -EnvKeys $envKeys -Memory $Memory -AllowClearSecretsFallback $allowClearSecretsFallback -PhaseLabel 'Removing post-deploy')) {
-    Write-Error "Legacy secret removal failed with gcloud exit code $LASTEXITCODE."
-    exit $LASTEXITCODE
-  }
 }
 
 Write-Host "API deployment completed."
