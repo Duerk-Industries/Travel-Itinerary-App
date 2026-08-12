@@ -11,6 +11,7 @@ import {
   deleteItineraryRecord,
   ensureUserCanReadTrip,
   ensureUserInTrip,
+  getItineraryDetailContext,
   listItineraries,
   listItineraryDetails,
   updateItineraryChecklistItem,
@@ -28,6 +29,7 @@ import {
   upsertReaction,
 } from '../services/itineraryReactionService';
 import { castReactionDto } from './itineraryDataDtos';
+import { triggerBlogSyncForTrip } from '../blog/triggerSync';
 
 // Itinerary data helpers: AI-generated plans, search, and summaries.
 const router = Router();
@@ -185,6 +187,13 @@ router.post('/:id/details', async (req, res) => {
       checklistItems,
     });
     res.status(201).json(created);
+    // Fire-and-forget: don't hold the response on this. Trip blog readers only
+    // care about 'note'/'place' kinds, but resolving that filter here would
+    // just duplicate syncLinkedItineraryItems' own check — let it decide.
+    void (async () => {
+      const context = await getItineraryDetailContext(created.id);
+      triggerBlogSyncForTrip(context?.tripId, userId);
+    })();
   } catch (err) {
     const message = (err as Error).message;
     res.status(statusForDbError(message)).json({ error: message });
@@ -194,8 +203,12 @@ router.post('/:id/details', async (req, res) => {
 router.delete('/details/:detailId', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
+    // Must resolve tripId *before* deleting — the row (and the join back to its
+    // trip) won't exist to look up afterward.
+    const context = await getItineraryDetailContext(req.params.detailId);
     await deleteItineraryDetail(userId, req.params.detailId);
     res.status(204).send();
+    triggerBlogSyncForTrip(context?.tripId, userId);
   } catch (err) {
     const message = (err as Error).message;
     res.status(statusForDbError(message)).json({ error: message });
@@ -221,6 +234,10 @@ router.put('/details/:detailId', async (req, res) => {
       position: body.position != null ? Number(body.position) : undefined,
     });
     res.json(updated);
+    void (async () => {
+      const context = await getItineraryDetailContext(req.params.detailId);
+      triggerBlogSyncForTrip(context?.tripId, userId);
+    })();
   } catch (err) {
     const message = (err as Error).message;
     res.status(statusForDbError(message)).json({ error: message });

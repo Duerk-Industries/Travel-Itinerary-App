@@ -546,6 +546,72 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
   });
 
+  test('day with no items shows all four "+ Add X" buttons grouped in one row', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByTestId('day-details-add-transfer-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-rental-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-activity-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-accommodation-button')).toBeTruthy();
+  });
+
+  test('a section with items gets its own inline add button and drops out of the bottom row', async () => {
+    const flights = [
+      {
+        id: 'flight-1',
+        passenger_name: 'Traveler',
+        passenger_ids: [],
+        trip_id: 'trip1',
+        departure_date: '2026-01-29',
+        departure_location: 'BOS',
+        departure_airport_code: 'BOS',
+        departure_time: '08:00',
+        arrival_date: '2026-01-29',
+        arrival_location: 'SFO',
+        arrival_airport_code: 'SFO',
+        arrival_time: '11:00',
+        cost: 0,
+        carrier: 'Flight',
+        flight_number: '',
+        booking_reference: '',
+      },
+    ];
+    const { findByTestId, findAllByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} flights={flights as any} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+
+    // Exactly one "+ Add transfer" button — inline after the transfer section, never
+    // duplicated into the bottom row.
+    expect(await findAllByTestId('day-details-add-transfer-button')).toHaveLength(1);
+
+    // The still-empty sections keep their buttons in the bottom row.
+    expect(await findByTestId('day-details-add-rental-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-activity-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-accommodation-button')).toBeTruthy();
+  });
+
+  test('+ Add transfer opens the same flight editor used on the Transfers tab, seeded with the viewed day', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-transfer-button'));
+    expect(await findByTestId('flight-modal-departure-location')).toBeTruthy();
+  });
+
+  test('+ Add rental car opens a rental dialog seeded with the viewed day', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-rental-button'));
+    expect(await findByTestId('car-rental-form-modal')).toBeTruthy();
+  });
+
+  test('+ Add accommodation opens the same lodging dialog used on the Lodging tab', async () => {
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-accommodation-button'));
+    expect(await findByText('Add Lodging')).toBeTruthy();
+  });
+
   test('day details sorts activities by time, keeps them out of the narrative, and opens one activity detail', async () => {
     const tours = [
       {

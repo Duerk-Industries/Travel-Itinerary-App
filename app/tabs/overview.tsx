@@ -11,7 +11,7 @@ import { ActivityIndicator, Alert, Linking,
   Image,
   type LayoutChangeEvent,
   useWindowDimensions, } from 'react-native';
-import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
+import { addDaysToIso, computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
   buildOverviewRows,
@@ -1990,6 +1990,62 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowAddTour(true);
   };
 
+  // Day-details "+ Add X" buttons — same add flow/fields as each type's own dedicated
+  // page, just pre-seeded with the day currently being viewed and reachable without
+  // switching into the overview's "edit everything" (isEditing) mode.
+  const addFlightForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setSelectedFlight(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingFlightId('new');
+    const tripForFlights = trip
+      ? ({
+          ...trip,
+          groupName: (group as any)?.name ?? (trip as any).groupName ?? 'Group',
+        } as any)
+      : undefined;
+    const draft = createFlightDraftForTrip(tripForFlights, defaultPayerId);
+    if (groupMembers.length) {
+      draft.passengerIds = groupMembers.map((m) => m.id);
+      draft.passengerName = buildPassengerName(draft.passengerIds) || draft.passengerName;
+    }
+    draft.departureDate = dateIso;
+    draft.arrivalDate = dateIso;
+    setEditingFlightDraft(draft);
+    setShowFlightEditor(true);
+  };
+
+  const addLodgingForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setSelectedLodging(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingLodgingId(null);
+    const draft = buildOverviewLodgingDraft();
+    draft.checkInDate = dateIso;
+    draft.checkOutDate = addDaysToIso(dateIso, 1) || dateIso;
+    setLodgingDraft(draft);
+    setShowAddLodging(true);
+  };
+
+  const addTourForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setSelectedTour(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingTourId(null);
+    setTourDraft(createInitialActivityState(dateIso));
+    setShowAddTour(true);
+  };
+
+  const addRentalForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setEditingRentalId(null);
+    const draft = createInitialCarRentalDraft();
+    draft.pickupDate = dateIso;
+    draft.dropoffDate = dateIso;
+    setRentalDraft(draft);
+    setShowAddRental(true);
+  };
+
   const deleteItemFromDetails = () => {
     if (!itemToDelete) return;
     const { kind, id, name } = itemToDelete;
@@ -2356,9 +2412,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const renderOverviewLodgingEditor = () => (
     <LodgingDialog
-      visible={!readOnly && Boolean(showAddLodging && editingLodgingId)}
+      visible={!readOnly && Boolean(showAddLodging)}
       styles={styles}
-      title="Lodging Details"
+      title={editingLodgingId ? 'Lodging Details' : 'Add Lodging'}
       draft={lodgingDraft}
       setDraft={setLodgingDraft}
       groupMembers={groupMembers}
@@ -2599,6 +2655,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   >
                     <Text style={styles.dayInfoButtonText}>See transfer details →</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="day-details-add-transfer-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add transfer to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addFlightForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -2627,6 +2692,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     }}
                   >
                     <Text style={styles.dayInfoButtonText}>See rental car details →</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="day-details-add-rental-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add rental car to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addRentalForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -2688,6 +2762,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </View>
                     );
                   })}
+                  <TouchableOpacity
+                    testID="day-details-add-activity-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add activity to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addTourForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -2730,6 +2813,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </TouchableOpacity>
                     );
                   })}
+                  <TouchableOpacity
+                    testID="day-details-add-accommodation-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add accommodation to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addLodgingForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -2849,6 +2941,55 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.dayInfoButtonText}>+ Add item</Text>
                 </TouchableOpacity>
               </View>
+
+              {!flightsForDay.length || !rentalsForDay.length || !toursForDay.length || !lodgingsForDay.length ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {!flightsForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-transfer-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add transfer to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addFlightForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {!rentalsForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-rental-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add rental car to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addRentalForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {!toursForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-activity-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add activity to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addTourForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {!lodgingsForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-accommodation-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add accommodation to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addLodgingForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ) : null}
 
               {nextDayCard ? (
                 <TouchableOpacity
@@ -3719,6 +3860,102 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {showAddRental ? (
+        <View style={styles.modalOverlay} testID="car-rental-form-modal">
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeRentalModal} />
+          <View style={[styles.modalCard, { marginTop: 0 }]}>
+            <Text style={styles.sectionTitle}>{editingRentalId ? 'Edit Car Rental' : 'Add Car Rental'}</Text>
+            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+              <Text style={styles.modalLabel}>Pickup location</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Pickup location"
+                value={rentalDraft.pickupLocation}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, pickupLocation: text }))}
+              />
+              <Text style={styles.modalLabel}>Pickup date</Text>
+              {Platform.OS === 'web' ? (
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={rentalDraft.pickupDate}
+                  onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, pickupDate: text }))}
+                />
+              ) : (
+                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalPickup', rentalDraft.pickupDate)}>
+                  <Text style={styles.cellText}>{rentalDraft.pickupDate || 'YYYY-MM-DD'}</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.modalLabel}>Drop-off location</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Drop-off location"
+                value={rentalDraft.dropoffLocation}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, dropoffLocation: text }))}
+              />
+              <Text style={styles.modalLabel}>Drop-off date</Text>
+              {Platform.OS === 'web' ? (
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={rentalDraft.dropoffDate}
+                  onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, dropoffDate: text }))}
+                />
+              ) : (
+                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalDropoff', rentalDraft.dropoffDate)}>
+                  <Text style={styles.cellText}>{rentalDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.modalLabel}>Vendor</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Vendor"
+                value={rentalDraft.vendor}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, vendor: text }))}
+              />
+              <Text style={styles.modalLabel}>Car model</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Car model"
+                value={rentalDraft.model}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, model: text }))}
+              />
+              <Text style={styles.modalLabel}>Prepaid?</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Yes or No"
+                value={rentalDraft.prepaid}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, prepaid: text }))}
+              />
+              <Text style={styles.modalLabel}>Cost</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Cost"
+                keyboardType="numeric"
+                value={rentalDraft.cost}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
+              />
+              <Text style={styles.modalLabel}>Notes</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+                placeholder="Notes"
+                value={rentalDraft.notes}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, notes: text }))}
+                multiline
+              />
+            </ScrollView>
+            <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeRentalModal} testID="car-rental-cancel">
+                <Text style={styles.dangerButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={saveRental} testID="car-rental-save">
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
