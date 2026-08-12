@@ -329,11 +329,32 @@ if (-not $SkipFirestoreIndexes) {
   Write-Host "Skipping Firestore index deployment because SKIP_FIRESTORE_INDEXES=1."
 }
 
-& gcloud @cmd
+$deployStartedAt = [DateTime]::UtcNow
+$deployOutput = @(& gcloud @cmd 2>&1)
+$deployExitCode = $LASTEXITCODE
+$deployOutput | ForEach-Object { Write-Host $_ }
 
-if ($LASTEXITCODE -ne 0) {
-  Write-Error "API deployment failed with gcloud exit code $LASTEXITCODE."
-  exit $LASTEXITCODE
+if ($deployExitCode -ne 0) {
+  # `gcloud run deploy --source` often reports only "Build failed" even
+  # though Cloud Build has the actionable compiler/Docker error. Surface the
+  # build id and status when gcloud includes it, or find the build created by
+  # this deploy as a fallback.
+  $deployText = ($deployOutput | ForEach-Object { [string]$_ }) -join "`n"
+  $buildMatch = [regex]::Match($deployText, '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+  $buildId = if ($buildMatch.Success) { $buildMatch.Value } else { '' }
+  if (-not $buildId) {
+    $filter = "createTime>$($deployStartedAt.ToString('o'))"
+    $recentBuildOutput = @(& gcloud builds list "--filter=$filter" '--limit=1' '--format=value(id)' 2>$null)
+    if ($recentBuildOutput.Count -gt 0) { $buildId = ([string]$recentBuildOutput[0]).Trim() }
+  }
+  if ($buildId) {
+    Write-Host "Cloud Build: $buildId"
+    & gcloud builds describe $buildId '--format=yaml(status,logUrl,failureInfo)' 2>&1 | ForEach-Object { Write-Host $_ }
+    Write-Error "API deployment failed with gcloud exit code $deployExitCode. Cloud Build: $buildId"
+  } else {
+    Write-Error "API deployment failed with gcloud exit code $deployExitCode. No Cloud Build ID was returned; rerun with gcloud verbosity or inspect Cloud Build history."
+  }
+  exit $deployExitCode
 }
 
 # A prior --no-traffic canary deploy pins traffic away from LATEST until it is
