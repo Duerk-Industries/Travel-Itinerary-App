@@ -1894,24 +1894,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowAddTour(true);
   };
 
-  const deleteItemFromDetails = async () => {
+  const deleteItemFromDetails = () => {
     if (!itemToDelete) return;
-    const { kind, id } = itemToDelete;
-    const path = kind === 'flight' ? `/api/transfers/${id}` : kind === 'lodging' ? `/api/lodgings/${id}` : `/api/activities/${id}`;
-    const res = await fetch(`${backendUrl}${path}`, { method: 'DELETE', headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      Alert.alert(data.error || `Unable to delete ${kind}`);
-      return;
-    }
+    const { kind, id, name } = itemToDelete;
+    // Close every dialog immediately on confirm so the UI never appears to hang
+    // waiting on the network — the delete itself runs in the background below.
     setItemToDelete(null);
     setSelectedFlight(null);
     setSelectedLodging(null);
     setSelectedTour(null);
     setDetailModal(null);
-    if (kind === 'flight') onFlightDataChanged();
-    if (kind === 'lodging') onLodgingDataChanged();
-    if (kind === 'activity') onTourDataChanged();
+    (async () => {
+      try {
+        const path = kind === 'flight' ? `/api/transfers/${id}` : kind === 'lodging' ? `/api/lodgings/${id}` : `/api/activities/${id}`;
+        const res = await fetch(`${backendUrl}${path}`, { method: 'DELETE', headers });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Unable to delete ${name || kind}`);
+        if (kind === 'flight') onFlightDataChanged();
+        if (kind === 'lodging') onLodgingDataChanged();
+        if (kind === 'activity') onTourDataChanged();
+      } catch (err: any) {
+        Alert.alert(err?.message || `Unable to delete ${name || kind}`);
+      }
+    })();
   };
 
   const openRentalEditor = (rental: CarRental) => {
@@ -2709,7 +2714,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               ) : null}
             </ScrollView>
             {detailModal ? renderDetailSectionsModal(detailModal) : null}
-            {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}
+            {/* Selected-item dialogs (TripItemDetailsDialog/ConfirmDialog) are rendered once,
+                unconditionally, by the top-level return below — this branch must not render
+                a second copy, or two identical dialog instances mount simultaneously. */}
           </View>
         );
       }

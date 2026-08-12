@@ -341,7 +341,7 @@ providers:
       PLAID_KMS_ENCRYPT: 300
       PLAID_KMS_DECRYPT: 3000
 
-  WANDER_BUNNIES_INTERNAL:
+  ACTIVITIES_API:
     window: day
     windowHours: 24
     overall: 100000

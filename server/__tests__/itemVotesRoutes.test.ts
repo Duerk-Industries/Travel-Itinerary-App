@@ -19,6 +19,10 @@ describe('Item vote routes', () => {
       (req as any).user = { userId: 'user-1' };
       next();
     });
+    // `db` is auto-mocked for this file; activityRoutes' GET / reserves API usage via
+    // reserveApiUsageOrThrow, which calls this counter under the hood. Without a
+    // resolved return value the auto-mock resolves to `undefined` and the route 500s.
+    (db.atomicIncrementApiUsageIfUnderLimit as jest.Mock).mockResolvedValue({ allowed: true, newCount: 1 });
   });
 
   const appFor = (path: string, router: any) => {

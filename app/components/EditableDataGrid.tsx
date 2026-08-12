@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { parseClipboardMatrix, serializeClipboardMatrix } from '../utils/clipboardGrid';
 
 export type GridEditorKind = 'text' | 'date' | 'time' | 'decimal' | 'select' | 'multiSelect' | 'textarea' | 'readonly' | 'action';
+
+export type GridPickerOption = { id: string; label: string };
 
 export type GridColumn<Row extends { id: string }> = {
   key: string;
@@ -11,11 +13,21 @@ export type GridColumn<Row extends { id: string }> = {
   editor: GridEditorKind;
   editable?: boolean;
   options?: readonly string[];
+  /** multiSelect only: the full set of choices offered by the "Pick…" picker modal. */
+  pickerOptions?: readonly GridPickerOption[];
+  /** multiSelect only: current selection by id, used to pre-check the picker modal. */
+  getSelectedIds?: (row: Row) => string[];
   getValue: (row: Row) => string;
   parseValue?: (value: string, row: Row) => { ok: true; value: unknown } | { ok: false; error: string };
 };
 
 export type GridCellError = { rowId: string; columnKey: string; message: string };
+
+type NativeDateTimePickerComponent = React.ComponentType<{
+  value: Date;
+  mode: 'date' | 'time';
+  onChange: (event: unknown, date?: Date) => void;
+}>;
 
 export type EditableDataGridProps<Row extends { id: string }> = {
   rows: Row[];
@@ -34,14 +46,42 @@ export type EditableDataGridProps<Row extends { id: string }> = {
   onError?: (message: string) => void;
   styles?: Record<string, any>;
   theme?: { colors?: { text?: string; textMuted?: string; border?: string; surface?: string; link?: string; danger?: string } };
+  /** Native-only: pass the app's existing @react-native-community/datetimepicker component
+   * (the same one used elsewhere in the app) so grid date/time cells open a real native
+   * picker instead of requiring hand-typed text. */
+  nativeDateTimePicker?: NativeDateTimePickerComponent | null;
 };
 
 type CellPosition = { rowIndex: number; columnIndex: number };
-
-const samePosition = (a: CellPosition | null, b: CellPosition | null): boolean =>
-  Boolean(a && b && a.rowIndex === b.rowIndex && a.columnIndex === b.columnIndex);
+type OpenPicker = { rowId: string; columnKey: string; kind: 'select' | 'multiSelect' | 'date' | 'time' };
 
 const cellKey = (rowId: string, columnKey: string): string => `${rowId}:${columnKey}`;
+
+// Native form controls (a focused <input>, <textarea>, or <select>) handle their own
+// arrow-key text-cursor/option movement and their own per-character undo natively. The
+// grid's own arrow-key cell navigation and Ctrl/Cmd+Z/Y shortcuts must not fight that —
+// they only apply when keyboard focus is NOT inside one of these controls (e.g. the grid
+// container itself, or a non-form-control cell such as a readonly column).
+const isFormControlTarget = (target: unknown): boolean => {
+  const tagName = (target as { tagName?: string } | undefined)?.tagName;
+  return tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT';
+};
+
+const parseDateInputValue = (raw: string, mode: 'date' | 'time'): Date => {
+  const base = new Date();
+  if (mode === 'time') {
+    if (raw && /^\d{1,2}:\d{2}/.test(raw)) {
+      const [h, m] = raw.split(':').map(Number);
+      if (!Number.isNaN(h) && !Number.isNaN(m)) base.setHours(h, m, 0, 0);
+    }
+    return base;
+  }
+  if (raw && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return base;
+};
 
 export function EditableDataGrid<Row extends { id: string }>({
   rows,
@@ -60,15 +100,32 @@ export function EditableDataGrid<Row extends { id: string }>({
   onError,
   styles = {},
   theme,
+  nativeDateTimePicker = null,
 }: EditableDataGridProps<Row>) {
   const [anchor, setAnchor] = useState<CellPosition | null>(null);
   const [active, setActive] = useState<CellPosition | null>(null);
   const [cutSelection, setCutSelection] = useState<Array<{ rowId: string; columnKey: string }>>([]);
+  const [openPicker, setOpenPicker] = useState<OpenPicker | null>(null);
+  const [pickerDraftIds, setPickerDraftIds] = useState<string[]>([]);
+  const [pickerDraftDate, setPickerDraftDate] = useState<Date>(new Date());
+
+  // Style fallbacks are declared up front, before anything that renders a row, so
+  // renderEditor/renderRows (invoked eagerly below while building `content`) never
+  // reference a const ahead of its declaration.
+  const selectedCellStyle = styles.selectedCell ?? { backgroundColor: theme?.colors?.surface ?? '#eff6ff' };
+  const errorCellStyle = styles.errorCell ?? { borderColor: theme?.colors?.danger ?? '#dc2626', borderWidth: 1 };
+  const deletedRowStyle = styles.deletedRow ?? { opacity: 0.5 };
+  const errorTextStyle = styles.errorText ?? { color: theme?.colors?.danger ?? '#dc2626', fontSize: 11 };
+  const disabledButtonStyle = styles.disabledButton ?? { opacity: 0.45 };
+  const gridToolbarStyle = styles.gridToolbar ?? { flexDirection: 'row', gap: 8, paddingBottom: 8 };
+  const pickerButtonStyle = styles.gridPickerButton ?? { justifyContent: 'center' };
+  const pickerLinkStyle = styles.gridPickerLink ?? { marginHorizontal: 4, marginBottom: 4 };
+  const pickerLinkTextStyle = styles.linkText ?? { color: theme?.colors?.link ?? '#2563eb', fontSize: 12 };
+  const pickerOverlayStyle = styles.modalOverlay ?? { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.5)' };
+  const pickerCardStyle = styles.modalCard ?? { backgroundColor: theme?.colors?.surface ?? '#fff', borderRadius: 12, padding: 16, minWidth: 260, maxHeight: '80%' };
+  const pickerOptionRowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, paddingVertical: 8 };
+
   const errorByCell = useMemo(() => new Map(cellErrors.map((error) => [cellKey(error.rowId, error.columnKey), error.message])), [cellErrors]);
-  const editableColumns = useMemo(
-    () => columns.map((column, index) => ({ column, index })).filter(({ column }) => column.editable !== false && column.editor !== 'readonly' && column.editor !== 'action'),
-    [columns],
-  );
 
   const selection = useMemo(() => {
     if (!anchor || !active) return null;
@@ -125,7 +182,6 @@ export function EditableDataGrid<Row extends { id: string }>({
       onError?.('Select an editable column before pasting.');
       return;
     }
-    const targetHeight = selection ? selection.bottom - selection.top + 1 : 1;
     const matrix = parsed.value;
     const targetRows = selection ? rows.slice(selection.top, selection.bottom + 1) : [rows[active.rowIndex]];
     if (matrix.length !== 1 && matrix.length !== targetRows.length) {
@@ -154,8 +210,9 @@ export function EditableDataGrid<Row extends { id: string }>({
     event.preventDefault();
   };
 
-  const handleKeyDown = (event: { key: string; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; preventDefault: () => void }) => {
+  const handleKeyDown = (event: { key: string; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; target?: unknown; preventDefault: () => void }) => {
     if (!active || disabled) return;
+    if (isFormControlTarget(event.target)) return;
     const command = Boolean(event.ctrlKey || event.metaKey);
     if (command && event.key.toLowerCase() === 'z') {
       event.preventDefault();
@@ -180,6 +237,56 @@ export function EditableDataGrid<Row extends { id: string }>({
     }
   };
 
+  const openSelectPicker = (row: Row, column: GridColumn<Row>) => {
+    if (disabled) return;
+    setOpenPicker({ rowId: row.id, columnKey: column.key, kind: 'select' });
+  };
+
+  const openMultiSelectPicker = (row: Row, column: GridColumn<Row>) => {
+    if (disabled) return;
+    setPickerDraftIds(column.getSelectedIds ? column.getSelectedIds(row) : []);
+    setOpenPicker({ rowId: row.id, columnKey: column.key, kind: 'multiSelect' });
+  };
+
+  const openDateTimePicker = (row: Row, column: GridColumn<Row>) => {
+    if (disabled) return;
+    setPickerDraftDate(parseDateInputValue(column.getValue(row), column.editor === 'time' ? 'time' : 'date'));
+    setOpenPicker({ rowId: row.id, columnKey: column.key, kind: column.editor === 'time' ? 'time' : 'date' });
+  };
+
+  const closePicker = () => setOpenPicker(null);
+
+  const openPickerColumn = openPicker ? columns.find((column) => column.key === openPicker.columnKey) : undefined;
+
+  const commitMultiSelectPicker = () => {
+    if (!openPicker || !openPickerColumn) return;
+    const labels = (openPickerColumn.pickerOptions ?? [])
+      .filter((option) => pickerDraftIds.includes(option.id))
+      .map((option) => option.label)
+      .join('; ');
+    onCellChange(openPicker.rowId, openPicker.columnKey, labels);
+    closePicker();
+  };
+
+  const commitSelectPicker = (option: string) => {
+    if (!openPicker) return;
+    onCellChange(openPicker.rowId, openPicker.columnKey, option);
+    closePicker();
+  };
+
+  const commitDateTimePicker = (event: unknown, date?: Date) => {
+    if (!openPicker) return;
+    if (!date) {
+      closePicker();
+      return;
+    }
+    const value = openPicker.kind === 'time'
+      ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+      : date.toISOString().slice(0, 10);
+    onCellChange(openPicker.rowId, openPicker.columnKey, value);
+    closePicker();
+  };
+
   const renderEditor = (row: Row, column: GridColumn<Row>, rowIndex: number, columnIndex: number) => {
     const value = column.getValue(row);
     const error = errorByCell.get(cellKey(row.id, column.key));
@@ -189,18 +296,55 @@ export function EditableDataGrid<Row extends { id: string }>({
     };
     const inputStyle = [styles.input, { minWidth: column.width - 16, width: column.width - 16, margin: 4 }];
     let editor: React.ReactNode;
-    if (column.editor === 'select' && Platform.OS === 'web') {
-      editor = React.createElement('select', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4 } }, (column.options ?? []).map((option) => React.createElement('option', { key: option, value: option }, option)));
-    } else if (column.editor === 'date' || column.editor === 'time' || column.editor === 'decimal') {
+    if (column.editor === 'select') {
       if (Platform.OS === 'web') {
-        editor = React.createElement('input', { type: column.editor === 'decimal' ? 'number' : column.editor, value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } });
+        editor = React.createElement('select', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4 } }, (column.options ?? []).map((option) => React.createElement('option', { key: option, value: option }, option)));
       } else {
-        editor = <TextInput style={inputStyle} value={value} onChangeText={onChange} keyboardType={column.editor === 'decimal' ? 'decimal-pad' : 'default'} placeholder={column.editor === 'date' ? 'YYYY-MM-DD' : column.editor === 'time' ? 'HH:mm' : '0.00'} />;
+        // Native gets the same picker affordance as the app's existing status/type
+        // choosers elsewhere, instead of requiring the exact option text be typed.
+        editor = (
+          <TouchableOpacity disabled={disabled} style={[inputStyle, pickerButtonStyle]} onPress={() => openSelectPicker(row, column)}>
+            <Text style={styles.cellText}>{value || 'Select…'}</Text>
+          </TouchableOpacity>
+        );
+      }
+    } else if (column.editor === 'date' || column.editor === 'time') {
+      if (Platform.OS === 'web') {
+        editor = React.createElement('input', { type: column.editor, value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } });
+      } else if (nativeDateTimePicker) {
+        editor = (
+          <TouchableOpacity disabled={disabled} style={[inputStyle, pickerButtonStyle]} onPress={() => openDateTimePicker(row, column)}>
+            <Text style={styles.cellText}>{value || (column.editor === 'date' ? 'YYYY-MM-DD' : 'HH:mm')}</Text>
+          </TouchableOpacity>
+        );
+      } else {
+        editor = <TextInput style={inputStyle} value={value} onChangeText={onChange} placeholder={column.editor === 'date' ? 'YYYY-MM-DD' : 'HH:mm'} />;
+      }
+    } else if (column.editor === 'decimal') {
+      if (Platform.OS === 'web') {
+        editor = React.createElement('input', { type: 'number', value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } });
+      } else {
+        editor = <TextInput style={inputStyle} value={value} onChangeText={onChange} keyboardType="decimal-pad" placeholder="0.00" />;
       }
     } else if (column.editor === 'textarea') {
       editor = Platform.OS === 'web'
         ? React.createElement('textarea', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, minHeight: 36, margin: 4, boxSizing: 'border-box' } })
         : <TextInput style={[inputStyle, { minHeight: 42 }]} value={value} onChangeText={onChange} multiline />;
+    } else if (column.editor === 'multiSelect') {
+      const textEditor = Platform.OS === 'web'
+        ? React.createElement('input', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } })
+        : <TextInput style={inputStyle} value={value} onChangeText={onChange} />;
+      // A "Pick…" affordance is layered on top of the existing free-text entry (which
+      // still supports typing/pasting semicolon-separated names) so the column is
+      // discoverable on both platforms without removing the clipboard-paste path.
+      editor = column.pickerOptions?.length ? (
+        <View style={{ minWidth: column.width, width: column.width }}>
+          {textEditor}
+          <TouchableOpacity disabled={disabled} style={pickerLinkStyle} onPress={() => openMultiSelectPicker(row, column)}>
+            <Text style={pickerLinkTextStyle}>Pick…</Text>
+          </TouchableOpacity>
+        </View>
+      ) : textEditor;
     } else {
       editor = Platform.OS === 'web'
         ? React.createElement('input', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } })
@@ -249,12 +393,7 @@ export function EditableDataGrid<Row extends { id: string }>({
         style: { outline: 'none' },
       }
     : {};
-  const gridToolbarStyle = styles.gridToolbar ?? { flexDirection: 'row', gap: 8, paddingBottom: 8 };
-  const selectedCellStyle = styles.selectedCell ?? { backgroundColor: theme?.colors?.surface ?? '#eff6ff' };
-  const errorCellStyle = styles.errorCell ?? { borderColor: theme?.colors?.danger ?? '#dc2626', borderWidth: 1 };
-  const deletedRowStyle = styles.deletedRow ?? { opacity: 0.5 };
-  const errorTextStyle = styles.errorText ?? { color: theme?.colors?.danger ?? '#dc2626', fontSize: 11 };
-  const disabledButtonStyle = styles.disabledButton ?? { opacity: 0.45 };
+
   return (
     <View>
       <View style={gridToolbarStyle}>
@@ -262,6 +401,47 @@ export function EditableDataGrid<Row extends { id: string }>({
         <TouchableOpacity style={[styles.button, (!canRedo || disabled) && disabledButtonStyle]} disabled={!canRedo || disabled} onPress={onRedo} accessibilityLabel="Redo activity table change"><Text style={styles.buttonText}>Redo</Text></TouchableOpacity>
       </View>
       {Platform.OS === 'web' ? React.createElement('div', rootProps, content) : content}
+      {openPicker?.kind === 'select' ? (
+        <Modal transparent visible animationType="fade" onRequestClose={closePicker}>
+          <View style={pickerOverlayStyle}>
+            <View style={pickerCardStyle}>
+              {(openPickerColumn?.options ?? []).map((option) => (
+                <TouchableOpacity key={option} style={pickerOptionRowStyle} onPress={() => commitSelectPicker(option)}>
+                  <Text style={styles.cellText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={[styles.button, { marginTop: 12 }]} onPress={closePicker}><Text style={styles.buttonText}>Cancel</Text></TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+      {openPicker?.kind === 'multiSelect' ? (
+        <Modal transparent visible animationType="fade" onRequestClose={closePicker}>
+          <View style={pickerOverlayStyle}>
+            <View style={pickerCardStyle}>
+              {(openPickerColumn?.pickerOptions ?? []).map((option) => {
+                const checked = pickerDraftIds.includes(option.id);
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={pickerOptionRowStyle}
+                    onPress={() => setPickerDraftIds((current) => (checked ? current.filter((id) => id !== option.id) : [...current, option.id]))}
+                  >
+                    <Text style={styles.cellText}>{checked ? '☑' : '☐'} {option.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={closePicker}><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={commitMultiSelectPicker}><Text style={styles.buttonText}>Done</Text></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+      {(openPicker?.kind === 'date' || openPicker?.kind === 'time') && nativeDateTimePicker
+        ? React.createElement(nativeDateTimePicker, { value: pickerDraftDate, mode: openPicker.kind, onChange: commitDateTimePicker })
+        : null}
     </View>
   );
 }

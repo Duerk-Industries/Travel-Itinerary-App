@@ -281,6 +281,12 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const [gridHistory, setGridHistory] = useState<Array<{ rows: Tour[]; deleteIds: string[] }>>([]);
   const [gridRedo, setGridRedo] = useState<Array<{ rows: Tour[]; deleteIds: string[] }>>([]);
   const [gridErrors, setGridErrors] = useState<GridCellError[]>([]);
+  // Separate from gridErrors (client-side validation, which blocks Save until fixed):
+  // these are server-reported per-row failures from a previous partial-failure bulk
+  // save. They're shown as row highlights/messages too, but must NOT block retrying
+  // Save — since their columnKey ('actions') isn't a real editable field, they could
+  // otherwise never be cleared and would permanently deadlock the editing session.
+  const [gridServerErrors, setGridServerErrors] = useState<GridCellError[]>([]);
   const [gridMessage, setGridMessage] = useState<string | null>(null);
   const [gridSaving, setGridSaving] = useState(false);
   const [tourToDelete, setTourToDelete] = useState<Tour | null>(null);
@@ -411,6 +417,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     }
     const method = editingTourId ? 'PUT' : 'POST';
     const url = editingTourId ? `${backendUrl}/api/activities/${editingTourId}` : `${backendUrl}/api/activities`;
+    // Close the editor immediately on Save — the request below runs in the
+    // background so the dialog never appears to hang while it's in flight.
+    closeTourEditor();
     (async () => {
       try {
         const res = await fetch(url, {
@@ -427,7 +436,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           throw new Error(data.error || `Unable to save activity (status ${res.status})`);
         }
         onDataChanged ? onDataChanged() : await fetchTours();
-        closeTourEditor();
       } catch (err: any) {
         console.error('saveActivity failed', err);
         Alert.alert(err.message || 'Unable to save activity');
@@ -524,15 +532,31 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       { key: 'bookedOn', label: 'Booked On', width: 170, editor: 'text', getValue: (row) => row.bookedOn || '' },
       { key: 'reference', label: 'Reference', width: 170, editor: 'text', getValue: (row) => row.reference || '' },
       { key: 'notes', label: 'Notes', width: 240, editor: 'textarea', getValue: (row) => row.notes || '' },
-      { key: 'paidBy', label: 'Paid By', width: 210, editor: 'multiSelect', getValue: (row) => people(row.paidBy) },
-      { key: 'travelerIds', label: 'Travelers', width: 210, editor: 'multiSelect', getValue: (row) => people(row.travelerIds) },
+      {
+        key: 'paidBy',
+        label: 'Paid By',
+        width: 210,
+        editor: 'multiSelect',
+        getValue: (row) => people(row.paidBy),
+        getSelectedIds: (row) => row.paidBy ?? [],
+        pickerOptions: activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member) })),
+      },
+      {
+        key: 'travelerIds',
+        label: 'Travelers',
+        width: 210,
+        editor: 'multiSelect',
+        getValue: (row) => people(row.travelerIds),
+        getSelectedIds: (row) => row.travelerIds ?? [],
+        pickerOptions: activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member) })),
+      },
       { key: 'netRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
       { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? String(row.userRating) : '-' },
       { key: 'netVotes', label: 'Votes', width: 100, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
       { key: 'suggestions', label: 'Suggestions', width: 140, editor: 'readonly', editable: false, getValue: () => 'See details' },
       { key: 'actions', label: 'Actions', width: 110, editor: 'action', editable: false, getValue: () => '' },
     ];
-  }, [memberLabelById, payerName]);
+  }, [memberLabelById, payerName, activeMembers]);
 
   const beginGridEdit = () => {
     if (readOnly || !featureGridEditing) return;
@@ -543,6 +567,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     setGridHistory([]);
     setGridRedo([]);
     setGridErrors([]);
+    setGridServerErrors([]);
     setGridMessage(null);
     setTableEditing(true);
   };
@@ -555,14 +580,21 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     setGridHistory([]);
     setGridRedo([]);
     setGridErrors([]);
+    setGridServerErrors([]);
     setGridMessage(null);
   };
 
-  const recordGridChange = (nextRows: Tour[], nextDeleteIds: Set<string>) => {
+  const recordGridChange = (nextRows: Tour[], nextDeleteIds: Set<string>, changedRowIds: string[] = []) => {
     setGridHistory((previous) => [...previous.slice(-99), { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]);
     setGridRedo([]);
     setGridRows(nextRows);
     setGridDeleteIds(nextDeleteIds);
+    // The user is actively changing this row again (editing a field, or staging/
+    // un-staging its deletion) — clear any stale server-reported failure for it so a
+    // prior partial-failure Save doesn't permanently block retrying.
+    if (changedRowIds.length) {
+      setGridServerErrors((errors) => errors.filter((error) => !changedRowIds.includes(error.rowId)));
+    }
   };
 
   const undoGridChange = () => {
@@ -620,7 +652,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     }
     setGridError(rowId, columnKey);
     const nextRows = gridRows.map((item) => item.id === rowId ? { ...item, [columnKey]: value } as Tour : item);
-    recordGridChange(nextRows, new Set(gridDeleteIds));
+    recordGridChange(nextRows, new Set(gridDeleteIds), [rowId]);
   };
 
   const changeGridCells = (changes: Array<{ rowId: string; columnKey: string; value: string }>) => {
@@ -668,14 +700,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       nextRows = nextRows.map((item) => item.id === change.rowId ? { ...item, [change.columnKey]: value } as Tour : item);
     }
     setGridErrors(nextErrors);
-    if (nextRows !== gridRows) recordGridChange(nextRows, new Set(gridDeleteIds));
+    if (nextRows !== gridRows) recordGridChange(nextRows, new Set(gridDeleteIds), Array.from(new Set(changes.map((change) => change.rowId))));
   };
 
   const toggleGridDelete = (rowId: string) => {
     const next = new Set(gridDeleteIds);
     if (next.has(rowId)) next.delete(rowId);
     else next.add(rowId);
-    recordGridChange(gridRows, next);
+    recordGridChange(gridRows, next, [rowId]);
   };
 
   const saveGridEdit = async () => {
@@ -725,7 +757,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       return;
     }
     setGridSaving(true);
-    const succeeded = new Set<string>();
+    const succeededUpdateIds = new Set<string>();
+    const succeededDeleteIds = new Set<string>();
     const failures: GridCellError[] = [];
     for (let index = 0; index < operations.length; index += 50) {
       const chunk = operations.slice(index, index + 50);
@@ -744,13 +777,40 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         setGridSaving(false);
         return;
       }
-      for (const result of [...(payload.updates ?? []), ...(payload.deletes ?? [])]) {
-        if (result.ok) succeeded.add(String(result.id));
+      for (const result of payload.updates ?? []) {
+        if (result.ok) succeededUpdateIds.add(String(result.id));
         else failures.push({ rowId: String(result.id), columnKey: 'actions', message: String(result.error || 'Unable to save row') });
+      }
+      for (const result of payload.deletes ?? []) {
+        if (result.ok) succeededDeleteIds.add(String(result.id));
+        else failures.push({ rowId: String(result.id), columnKey: 'actions', message: String(result.error || 'Unable to delete row') });
       }
     }
     if (failures.length) {
-      setGridErrors(failures);
+      // Partial failure: reconcile the rows/deletes that DID succeed into the local
+      // baseline so a retry only resubmits what's actually still outstanding, and
+      // doesn't re-attempt an already-deleted row (which would otherwise come back
+      // from the server as a confusing "not found" failure on the next try).
+      if (succeededUpdateIds.size || succeededDeleteIds.size) {
+        setGridOriginalRows((current) =>
+          current
+            .filter((row) => !succeededDeleteIds.has(row.id))
+            .map((row) => {
+              if (!succeededUpdateIds.has(row.id)) return row;
+              const latest = gridRows.find((candidate) => candidate.id === row.id);
+              return latest ?? row;
+            })
+        );
+        if (succeededDeleteIds.size) {
+          setGridRows((current) => current.filter((row) => !succeededDeleteIds.has(row.id)));
+          setGridDeleteIds((current) => {
+            const next = new Set(current);
+            succeededDeleteIds.forEach((id) => next.delete(id));
+            return next;
+          });
+        }
+      }
+      setGridServerErrors(failures);
       setGridMessage('Some rows could not be saved. Review the highlighted rows and try again.');
       setGridSaving(false);
       return;
@@ -758,7 +818,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     onDataChanged ? onDataChanged() : await fetchTours();
     setGridSaving(false);
     cancelGridEdit();
-    void succeeded;
   };
 
   const renderDetailRow = (label: string, value: React.ReactNode) => (
@@ -785,11 +844,21 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ) : null}
             {tableEditing ? (
               <>
-                <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} testID="activity-table-cancel">
+                <TouchableOpacity
+                  disabled={gridSaving}
+                  style={[styles.button, styles.dangerButton, gridSaving && { opacity: 0.45 }]}
+                  onPress={cancelGridEdit}
+                  testID="activity-table-cancel"
+                >
                   <Text style={styles.dangerButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={saveGridEdit} testID="activity-table-save">
-                  <Text style={styles.buttonText}>Save changes</Text>
+                <TouchableOpacity
+                  disabled={gridSaving}
+                  style={[styles.button, gridSaving && { opacity: 0.45 }]}
+                  onPress={saveGridEdit}
+                  testID="activity-table-save"
+                >
+                  <Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text>
                 </TouchableOpacity>
               </>
             ) : null}
@@ -834,7 +903,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             columns={gridColumns}
             clipboardEnabled={Platform.OS === 'web' && featureGridEditingClipboard}
             disabled={gridSaving}
-            cellErrors={gridErrors}
+            cellErrors={gridServerErrors.length ? [...gridErrors, ...gridServerErrors] : gridErrors}
             stagedDeleteIds={gridDeleteIds}
             onCellChange={changeGridCell}
             onCellsChange={changeGridCells}
@@ -846,6 +915,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             onError={setGridMessage}
             styles={styles}
             theme={theme}
+            nativeDateTimePicker={DateTimePickerComponent}
           />
         </HorizontalTableScroll>
       ) : null}

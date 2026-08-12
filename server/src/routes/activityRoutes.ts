@@ -21,6 +21,7 @@ import { readDto } from '../utils/dtoParse';
 import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDto } from './activityDtos';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'Class',
@@ -52,7 +53,7 @@ router.use(authenticate);
 
 const reserveActivityUsage = async (caller: string, res: Response): Promise<boolean> => {
   try {
-    await reserveApiUsageOrThrow({ provider: 'WANDER_BUNNIES_INTERNAL', caller });
+    await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller });
     return true;
   } catch (err) {
     res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
@@ -64,7 +65,7 @@ router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const tripId = req.query.tripId as string | undefined;
   try {
-    await reserveApiUsageOrThrow({ provider: 'WANDER_BUNNIES_INTERNAL', caller: 'ACTIVITIES_LIST' });
+    await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_LIST' });
   } catch (err) {
     res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
     return;
@@ -156,8 +157,16 @@ router.patch('/bulk', async (req, res) => {
   const dto = readDto(bulkActivitiesDto, req.body ?? {}, res);
   if (!dto) return;
   try {
-    await reserveApiUsageOrThrow({ provider: 'WANDER_BUNNIES_INTERNAL', caller: 'ACTIVITIES_BULK_SAVE' });
+    // Per-user/IP burst guard first (cheap, identity-scoped) before touching the
+    // shared aggregate budget below.
+    await reserveActivitiesBulkSaveRateLimit(userId, req.ip ?? null);
+    await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_BULK_SAVE' });
   } catch (err) {
+    if (err instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds));
+      res.status(429).json({ error: err.message });
+      return;
+    }
     res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
     return;
   }
@@ -167,7 +176,7 @@ router.patch('/bulk', async (req, res) => {
 
   for (const update of dto.updates) {
     try {
-      await reserveApiUsageOrThrow({ provider: 'WANDER_BUNNIES_INTERNAL', caller: 'ACTIVITIES_ACTIVITY_ROW_WRITE' });
+      await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_ACTIVITY_ROW_WRITE' });
       const fields = update.fields;
       const normalizedPaidBy = Array.isArray(fields.paidBy)
         ? (fields.paidBy.length ? fields.paidBy.map((p) => String(p)) : undefined)
@@ -225,7 +234,7 @@ router.patch('/bulk', async (req, res) => {
 
   for (const id of dto.deletes) {
     try {
-      await reserveApiUsageOrThrow({ provider: 'WANDER_BUNNIES_INTERNAL', caller: 'ACTIVITIES_ACTIVITY_ROW_DELETE' });
+      await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_ACTIVITY_ROW_DELETE' });
       const deleted = await deleteActivity(id, userId);
       if (!deleted) throw new Error('Activity not found or not authorized');
       await deleteExpenseForSource('activity', id, userId);

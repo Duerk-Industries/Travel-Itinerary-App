@@ -100,6 +100,22 @@ export const reserveItineraryGenerationRateLimit = async (
   });
 };
 
+// Per-user/IP burst guard for the Activities bulk-save endpoint. This is a secondary,
+// identity-scoped layer alongside the ACTIVITIES_API aggregate cap in api-limits.yaml
+// (reserveApiUsageOrThrow) — that cap protects the shared daily budget across all users,
+// this one stops a single user/IP from exhausting it or hammering the endpoint.
+export const reserveActivitiesBulkSaveRateLimit = async (
+  userId: string,
+  ip: string | null | undefined,
+): Promise<void> => {
+  await reserveRequestRateLimits({
+    name: 'activities_bulk_save',
+    identities: [`user:${userId}`, ip ? `ip:${ip}` : null],
+    limit: parsePositiveInt(process.env.ACTIVITIES_BULK_RATE_LIMIT_MAX, testSafeDefault(20)),
+    windowMs: parsePositiveInt(process.env.ACTIVITIES_BULK_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1000),
+  });
+};
+
 export const authLoginRateLimit: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
   const identifier = String(req.body?.identifier ?? req.body?.email ?? '').trim().toLowerCase();
   try {
