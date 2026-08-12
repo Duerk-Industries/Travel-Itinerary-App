@@ -1,9 +1,20 @@
 # UX Remediation (Tables, Photos, Onboarding, Blog, Forms, Copy) — Implementation Plan
 
-**Status:** Planning complete. Ready for implementation.
+**Status:** Implemented (Phases 1–3 of §9's rollout; see Implementation Status below). Tier 2 AI blog polish (Phase 5) remains future work.
 **Last updated:** 2026-08-12
 **Origin:** Follow-up to a hands-on field review of the running app (account creation through booking, expenses, and the trip blog, played as a multigenerational family and benchmarked against wanderlog.com). Covers the 6 roadmap items that review surfaced: tap-to-edit tables, cover photography reliability, quick-start trip creation, a narrative trip blog pass, persistent field labels, and a terminology sweep.
 **Non-goals:** New product features. Everything here makes existing, already-shipped functionality easier to use, cheaper to run, and safer to roll back — it does not add itinerary logic, payment flows, or new integrations.
+
+## Implementation Status (2026-08-12)
+
+All six initiatives below shipped in a first pass (`First pass at UX improvements`). A follow-up pass closed the two gaps that pass left against this plan: **none of the three major-UI-surface changes were behind a feature flag** (the one requirement this plan treated as non-negotiable for A/B/C — see §0.1), and **B, C, and E had no automated test coverage at all**. Both are now fixed:
+
+- **Flags added** (all default `enabled: true`, matching the shipped behavior, with a real, tested `false` branch as a genuine kill switch — not a decorative flag with no fallback path): `feature_tap_to_edit_tables`, `feature_cover_photo_fallback_v2`, `feature_quick_start_trip_wizard`. Wired through `feature-flags.yaml` → `GET /api/auth/features` → `App.tsx` → the owning tabs, exactly per §0.1.
+- **Test coverage added**: `DestinationPlaceholderCard`, `FormField`/`PasswordField` unit tests; `AuthForm` label-persistence + password-toggle integration tests; `HomeTab` and `OverviewTab` flag-on/flag-off cover-photo tests; a full-render `CreateTripWizard` Quick Start test (the first render-level test this component has ever had); flag-off tests added to all four tap-to-edit tables (Transfers, Lodging, Activities, Car Rentals); a `GET /api/auth/features` route test.
+- **Initiative F adapted to the actual toolchain**: this repo has no ESLint config anywhere (`npm run lint` is a `tsc` alias) — a custom ESLint rule wasn't a fit. Shipped instead as a plain Jest test (`app/tests/userFacingCopyGuard.test.ts`) that scans `app/tabs` and `app/components` for the exact jargon phrases already found leaking, running in the same `npm test` CI gate a new ESLint rule would have needed its own step for.
+- **One pre-existing regression found and fixed in the same pass**: `server/__tests__/blog-foundation.test.ts` still asserted the old `"Location: X"` literal format after the Tier‑1 narrative rewrite changed it — updated to assert the new sentence-form output instead of reverting the (intentional, correct) behavior change.
+- **Deliberate scope reduction from the original plan, left as-is**: Quick Start does not offer the "Generate a starter itinerary?" toggle §3 originally specified — it creates the trip and stops, leaving AI generation to "Customize before creating." This is a legitimate simplification (fewer decisions before the first trip exists) but is a real behavior gap from this doc; revisit if Quick-Start-to-AI-itinerary conversion turns out to matter.
+- **Not started (unchanged from the original plan)**: Tier 2 AI blog polish (`feature_blog_ai_narrative`, the `OPENAI`/`BLOG_NARRATIVE_POLISH` caller) — correctly last in the §9 rollout sequence; no code, flag, or budget entry exists for it yet.
 
 Every design below is deliberately built **on top of infrastructure that already exists in this codebase** rather than inventing parallel systems: the DB-backed feature-flag service (`entitlementService.ts`), the per-provider API budget/rate limiter (`usageLimiter.ts` + `config/api-limits.yaml`), the three-way DB adapter contract (`postgres` / `firebase` / `memory`), and the existing `GET /api/auth/features` flag-delivery endpoint. Where a mechanism already exists, this plan extends its config rather than rebuilding it.
 

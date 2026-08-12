@@ -91,6 +91,11 @@ type CreateTripWizardProps = {
   onWizardCarRentals?: (rentals: CarRental[]) => void;
   currentUserName?: string | null;
   currentUserEmail?: string | null;
+  // Kill switch for defaulting the wizard to the 3-field Quick Start screen
+  // (implementation-plan-ux-remediation.md, Initiative C). Defaults to `true`;
+  // `false` starts every new trip directly in the full 9-step wizard, same as
+  // before this initiative shipped.
+  featureQuickStartTripWizard?: boolean;
 };
 
 const steps = [
@@ -220,6 +225,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   onWizardCarRentals,
   currentUserName,
   currentUserEmail,
+  featureQuickStartTripWizard = true,
 }) => {
   const destinationAttractionWizardEnabled = !['0', 'false', 'off', 'no'].includes(
     String(process.env.EXPO_PUBLIC_WIZARD_DESTINATION_ATTRACTIONS_ENABLED ?? 'true')
@@ -237,7 +243,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   );
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
-  const [quickStartMode, setQuickStartMode] = useState(true);
+  const [quickStartMode, setQuickStartMode] = useState(featureQuickStartTripWizard);
   const [details, setDetails] = useState<TripDetails>({ name: '', description: '' });
   const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
   const [selectedMustSeeAttractions, setSelectedMustSeeAttractions] = useState<AttractionOption[]>([]);

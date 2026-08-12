@@ -257,10 +257,20 @@ router.get('/confirm-email', async (req, res) => {
 });
 
 router.get('/features', async (_req, res) => {
-  const [gridEditing, gridClipboard, standardizedDialogs] = await Promise.all([
+  const [
+    gridEditing,
+    gridClipboard,
+    standardizedDialogs,
+    tapToEditTables,
+    coverPhotoFallbackV2,
+    quickStartTripWizard,
+  ] = await Promise.all([
     getFeatureFlag('feature_grid_editing'),
     getFeatureFlag('feature_grid_editing_clipboard'),
     getFeatureFlag('feature_standardized_item_dialogs'),
+    getFeatureFlag('feature_tap_to_edit_tables'),
+    getFeatureFlag('feature_cover_photo_fallback_v2'),
+    getFeatureFlag('feature_quick_start_trip_wizard'),
   ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
@@ -270,6 +280,9 @@ router.get('/features', async (_req, res) => {
     featureGridEditing: gridEditing?.enabled === true,
     featureGridEditingClipboard: gridClipboard?.enabled === true,
     featureStandardizedItemDialogs: standardizedDialogs?.enabled === true,
+    featureTapToEditTables: tapToEditTables?.enabled === true,
+    featureCoverPhotoFallbackV2: coverPhotoFallbackV2?.enabled === true,
+    featureQuickStartTripWizard: quickStartTripWizard?.enabled === true,
   });
 });
 

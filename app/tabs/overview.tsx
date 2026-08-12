@@ -236,6 +236,11 @@ type OverviewTabProps = {
   theme?: AppTheme;
   readOnly?: boolean;
   featureStandardizedItemDialogs?: boolean;
+  // Kill switch for the designed gradient placeholder shown in place of a
+  // missing day/trip cover photo (implementation-plan-ux-remediation.md,
+  // Initiative B). Defaults to `true`; `false` reverts to the plain empty
+  // fallback tile.
+  featureCoverPhotoFallbackV2?: boolean;
 };
 
 type DayCard = {
@@ -445,6 +450,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   theme,
   readOnly = false,
   featureStandardizedItemDialogs = false,
+  featureCoverPhotoFallbackV2 = true,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -2431,8 +2437,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           >
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
-            ) : (
+            ) : featureCoverPhotoFallbackV2 ? (
               <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} />
+            ) : (
+              <View style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-fallback-legacy`} />
             )}
             <View style={styles.dayHeroOverlay} />
             <View style={styles.dayHeroBadge}>

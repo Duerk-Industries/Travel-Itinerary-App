@@ -218,6 +218,30 @@ describe('LodgingTab', () => {
         expect(getByTestId('lodging-editor-dialog')).toBeTruthy();
     });
 
+    it('does not open the edit dialog on row tap when featureTapToEditTables is disabled', () => {
+        // Kill-switch coverage for implementation-plan-ux-remediation.md Initiative A.
+        const { getByTestId, queryByTestId } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+                featureTapToEditTables={false}
+            />
+        );
+
+        fireEvent.press(within(getByTestId('lodging-row-l1')).getByText(formatShortDate('2025-01-01')));
+        expect(queryByTestId('lodging-editor-dialog')).toBeNull();
+    });
+
     it('opens the sortable editable lodging grid', () => {
         const { getByTestId, getByText } = render(
             <LodgingTab

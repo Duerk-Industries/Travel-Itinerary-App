@@ -32,6 +32,9 @@ type LodgingTabProps = {
   theme?: AppTheme;
   readOnly?: boolean;
   featureStandardizedItemDialogs?: boolean;
+  // Kill switch for row-tap-to-edit + sticky identity/actions columns
+  // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
+  featureTapToEditTables?: boolean;
 };
 
 export const formatShortDate = (dateString?: string | null): string => {
@@ -63,6 +66,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   theme,
   readOnly = false,
   featureStandardizedItemDialogs = false,
+  featureTapToEditTables = true,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -331,7 +335,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         >
         <View style={[styles.table, styles.lodgingTable, { minWidth: 878 }]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabNameCol, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortLodgingTable('name')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabNameCol, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortLodgingTable('name')}>
               <Text style={styles.headerText}>Name</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('checkInDate')}>
@@ -349,13 +353,13 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('netRating')}>
               <Text style={styles.headerText}>Rating</Text>
             </TouchableOpacity>
-            <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
               <Text style={styles.headerText}>Actions</Text>
             </View>
           </View>
           {sortedLodgings.map((lodging) => (
-            <TouchableOpacity key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`} onPress={() => { if (!readOnly) openEditDialog(lodging); }} activeOpacity={0.8}>
-              <View style={[styles.tableCell, styles.lodgingTabNameCol, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+            <TouchableOpacity key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openEditDialog(lodging); }} activeOpacity={0.8}>
+              <View style={[styles.tableCell, styles.lodgingTabNameCol, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <TouchableOpacity
                   style={styles.tableNameButton}
                   onPress={(event: any) => { event?.stopPropagation?.(); openDetailsDialog(lodging); }}
@@ -402,7 +406,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   <Text style={styles.cellText}>-</Text>
                 )}
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+              <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <View style={[styles.actionCell, { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' }]}>
                   {!readOnly ? (
                     <>

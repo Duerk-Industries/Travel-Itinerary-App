@@ -342,6 +342,25 @@ describe('Overview UI (nested itinerary)', () => {
     await findByTestId('overview-day-card-1');
   });
 
+  // implementation-plan-ux-remediation.md Initiative B: a day hero card with
+  // no resolved image falls back to the designed placeholder (flag on) or
+  // the plain empty tile it replaced (flag off).
+  test('falls back to the designed cover-photo placeholder when no day image resolves', async () => {
+    const { findByTestId, queryByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} featureCoverPhotoFallbackV2 />
+    );
+    expect(await findByTestId('overview-day-card-1-placeholder')).toBeTruthy();
+    expect(queryByTestId('overview-day-card-1-fallback-legacy')).toBeNull();
+  });
+
+  test('reverts to the plain fallback tile when featureCoverPhotoFallbackV2 is disabled', async () => {
+    const { findByTestId, queryByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} featureCoverPhotoFallbackV2={false} />
+    );
+    expect(await findByTestId('overview-day-card-1-fallback-legacy')).toBeTruthy();
+    expect(queryByTestId('overview-day-card-1-placeholder')).toBeNull();
+  });
+
   test('shows the trip description on the overview page', async () => {
     const trip = {
       ...baseProps.trip,

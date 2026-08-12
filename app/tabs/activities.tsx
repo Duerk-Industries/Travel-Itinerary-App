@@ -284,6 +284,9 @@ type TourTabProps = {
   featureGridEditing?: boolean;
   featureGridEditingClipboard?: boolean;
   featureStandardizedItemDialogs?: boolean;
+  // Kill switch for row-tap-to-edit + sticky identity/actions columns
+  // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
+  featureTapToEditTables?: boolean;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -311,6 +314,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureGridEditing = false,
   featureGridEditingClipboard = false,
   featureStandardizedItemDialogs = false,
+  featureTapToEditTables = true,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -990,7 +994,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ].map((col, idx, arr) => (
               <TouchableOpacity
                 key={col.key}
-                style={[styles.cell, { minWidth: col.width, flex: 1 }, col.key === 'name' && Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any), idx === arr.length - 1 && styles.lastCell]}
+                style={[styles.cell, { minWidth: col.width, flex: 1 }, col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any), idx === arr.length - 1 && styles.lastCell]}
                 onPress={() => sortActivityTable(col.key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Sort by ${col.label}`}
@@ -1001,14 +1005,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ))}
           </View>
           {sortedTours.map((t) => (
-            <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (!readOnly) openTourEditor(t); }} activeOpacity={0.8}>
+            <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openTourEditor(t); }} activeOpacity={0.8}>
               <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                 <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
               </View>
               <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 220, flex: 1 }, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+              <View style={[styles.cell, { minWidth: 220, flex: 1 }, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); setSelectedTourId(t.id); }} testID={`activity-details-${t.id}`}>
                   <Text style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
                 </TouchableOpacity>

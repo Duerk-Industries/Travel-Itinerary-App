@@ -109,7 +109,7 @@ const tourTwo: Tour = {
   name: 'Harbor Cruise',
 };
 
-const renderActivityHarness = (initialTours: Tour[]) => {
+const renderActivityHarness = (initialTours: Tour[], extraProps: Record<string, unknown> = {}) => {
   const Harness = () => {
     const [tours, setTours] = useState<Tour[]>(initialTours);
     return (
@@ -133,6 +133,7 @@ const renderActivityHarness = (initialTours: Tour[]) => {
         mode="live"
         featureGridEditing
         featureGridEditingClipboard
+        {...extraProps}
       />
     );
   };
@@ -146,6 +147,14 @@ describe('Activities grid editing', () => {
 
     fireEvent.press(view.getByTestId('activity-row-tour-1'));
     expect(view.getByTestId('activity-form-modal')).toBeTruthy();
+  });
+
+  it('does not open the edit form on row tap when featureTapToEditTables is disabled', () => {
+    // Kill-switch coverage for implementation-plan-ux-remediation.md Initiative A.
+    const view = renderActivityHarness([tourOne], { featureTapToEditTables: false });
+
+    fireEvent.press(view.getByTestId('activity-row-tour-1'));
+    expect(view.queryByTestId('activity-form-modal')).toBeNull();
   });
 
   it('enters edit mode and renders every row without throwing (regression: TDZ crash on selectedCellStyle)', () => {

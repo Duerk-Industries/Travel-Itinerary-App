@@ -82,6 +82,15 @@ flags:
   feature_standardized_item_dialogs:
     enabled: false
     description: "Enable shared flight, accommodation, and activity detail dialogs"
+  feature_tap_to_edit_tables:
+    enabled: true
+    description: "Tap/click a Transfers, Lodging, Activities, or Car Rentals row to edit it, with sticky identity/actions columns. Kill switch for the row-press + sticky-column UX pass; disabling reverts to Edit-button-only rows with no sticky columns."
+  feature_cover_photo_fallback_v2:
+    enabled: true
+    description: "Render a designed gradient placeholder (destination name) instead of a blank tile when a trip or day cover photo has no image yet. Kill switch for the placeholder art; disabling reverts to the plain empty fallback tile."
+  feature_quick_start_trip_wizard:
+    enabled: true
+    description: "Default the Create Trip wizard to a 3-field Quick Start (name, destination, dates) with a Customize link into the full step wizard. Kill switch for the new entry point; disabling starts every new trip directly in the full step wizard."
   packing_lists_v2:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"

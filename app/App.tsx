@@ -629,6 +629,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureGridEditing, setFeatureGridEditing] = useState(false);
   const [featureGridEditingClipboard, setFeatureGridEditingClipboard] = useState(false);
   const [featureStandardizedItemDialogs, setFeatureStandardizedItemDialogs] = useState(false);
+  // UX-remediation kill switches (implementation-plan-ux-remediation.md). Default to `false`
+  // here — same as every other flag above — until GET /api/auth/features resolves; the DB
+  // seed in feature-flags.yaml defaults each to enabled:true, so this is a brief flash of the
+  // legacy fallback on first load, not the steady-state behavior.
+  const [featureTapToEditTables, setFeatureTapToEditTables] = useState(false);
+  const [featureCoverPhotoFallbackV2, setFeatureCoverPhotoFallbackV2] = useState(false);
+  const [featureQuickStartTripWizard, setFeatureQuickStartTripWizard] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -639,6 +646,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureGridEditing(Boolean(data.featureGridEditing));
           setFeatureGridEditingClipboard(Boolean(data.featureGridEditingClipboard));
           setFeatureStandardizedItemDialogs(Boolean(data.featureStandardizedItemDialogs));
+          setFeatureTapToEditTables(Boolean(data.featureTapToEditTables));
+          setFeatureCoverPhotoFallbackV2(Boolean(data.featureCoverPhotoFallbackV2));
+          setFeatureQuickStartTripWizard(Boolean(data.featureQuickStartTripWizard));
         }
       })
       .catch(() => undefined);
@@ -2894,6 +2904,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onDeleteTrip={confirmDeleteTrip}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
+                  featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
                 />
               )
             : null}
@@ -2929,6 +2940,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   featureGridEditing={featureGridEditing}
                   featureGridEditingClipboard={featureGridEditingClipboard}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+                  featureTapToEditTables={featureTapToEditTables}
                 />
               )
             : null}
@@ -3170,6 +3182,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               payerName={payerName}
               readOnly={isFollowingMode}
               featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+              featureTapToEditTables={featureTapToEditTables}
             />
           )
         : null}
@@ -3209,6 +3222,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onVoteCarRental={voteOnCarRental}
           onRateCarRental={rateOnCarRental}
           onOpenCarDatePicker={openCarDatePicker}
+          featureTapToEditTables={featureTapToEditTables}
         />
       ) : null}
 
@@ -3256,6 +3270,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onExternalEditHandled={handleExternalEditHandled}
               showList={true}
               readOnly={isFollowingMode}
+              featureTapToEditTables={featureTapToEditTables}
             />
           )
         : null}
@@ -3452,6 +3467,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   theme={theme}
                   readOnly={isFollowingMode}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+                  featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
                 />
               )
             : null}
@@ -3671,6 +3687,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onWizardCarRentals={setCarRentals}
               currentUserName={userName}
               currentUserEmail={userEmail}
+              featureQuickStartTripWizard={featureQuickStartTripWizard}
             />
           </View>
         </View>

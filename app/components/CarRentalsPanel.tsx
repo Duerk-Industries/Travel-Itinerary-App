@@ -53,6 +53,9 @@ export type CarRentalsPanelProps = {
   /** Open the date picker for either pickup or drop-off. On web this fires `ref.showPicker()`; on native it toggles the NativeDateTimePicker that lives in the parent. */
   onOpenCarDatePicker: (field: 'pickup' | 'dropoff') => void;
   theme?: AppTheme;
+  /** Kill switch for row-tap-to-edit + sticky identity/actions columns
+   * (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`. */
+  featureTapToEditTables?: boolean;
 };
 
 /**
@@ -85,6 +88,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   onRateCarRental,
   onOpenCarDatePicker,
   theme,
+  featureTapToEditTables = true,
 }) => {
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [editingCarId, setEditingCarId] = React.useState<string | null>(null);
@@ -426,7 +430,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
       >
       <View style={styles.table} testID="car-rentals-table">
         <View style={[styles.tableRow, styles.tableHeaderRow]}>
-          <TouchableOpacity style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortCarTable('pickupLocation')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortCarTable('pickupLocation')}>
             <Text style={styles.headerText}>Route</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 120 }]} onPress={() => sortCarTable('pickupDate')}>
@@ -444,14 +448,14 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 110 }]} onPress={() => sortCarTable('netRating')}>
             <Text style={styles.headerText}>Rating</Text>
           </TouchableOpacity>
-          <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
+          <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
             <Text style={styles.headerText}>Actions</Text>
           </View>
         </View>
 
         {sortedCarRentals.map((car, idx, arr) => (
-          <TouchableOpacity key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]} onPress={() => { if (!isFollowingMode) openEditDialog(car); }} activeOpacity={0.8}>
-            <View style={[styles.tableCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+          <TouchableOpacity key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]} onPress={() => { if (!isFollowingMode && featureTapToEditTables) openEditDialog(car); }} activeOpacity={0.8}>
+            <View style={[styles.tableCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
               <Text style={styles.cellText}>
                 {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
               </Text>
@@ -482,7 +486,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 <Text style={styles.cellText}>-</Text>
               )}
             </View>
-            <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+            <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
               <View style={styles.actionCell}>
                 {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
                   <>

@@ -506,6 +506,12 @@ type FlightsTabProps = {
   modalOverlayStyle?: Record<string, any>;
   modalCardStyle?: Record<string, any>;
   theme?: AppTheme;
+  // Kill switch for row-tap-to-edit + sticky identity/actions columns
+  // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`
+  // so existing callers that don't pass it (e.g. tests, the wizard's internal
+  // usage) keep today's behavior; App.tsx wires this to the
+  // feature_tap_to_edit_tables flag for the live table view.
+  featureTapToEditTables?: boolean;
 };
 
 type Airport = {
@@ -577,6 +583,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   modalOverlayStyle,
   modalCardStyle,
   theme,
+  featureTapToEditTables = true,
 }) => {
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
@@ -1540,8 +1547,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 style={[
                   styles.cell,
                   { minWidth: col.minWidth ?? 120, flex: 1 },
-                  col.key === 'passenger_name' && Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
-                  col.key === 'actions' && Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
+                  col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
+                  col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   idx === columns.length - 1 && styles.lastCell,
                 ]}
                 onPress={() => col.key !== 'actions' && sortFlightTable(String(col.key))}
@@ -1551,7 +1558,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
             ))}
           </View>
           {sortedFlights.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`} onPress={() => { if (!readOnly) openFlightDetails(item); }} activeOpacity={0.8}>
+            <TouchableOpacity key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openFlightDetails(item); }} activeOpacity={0.8}>
               {columns.map((col, idx) => {
                 const isLast = idx === columns.length - 1;
                 if (col.key === 'actions') {
@@ -1562,7 +1569,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         styles.cell,
                         styles.actionCell,
                         { minWidth: col.minWidth ?? 120, flex: 1 },
-                        Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
+                        Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1692,7 +1699,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     style={[
                       styles.cell,
                       { minWidth: col.minWidth ?? 120, flex: 1 },
-                      col.key === 'passenger_name' && Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
+                      col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                       isLast && styles.lastCell,
                     ]}
                   >
