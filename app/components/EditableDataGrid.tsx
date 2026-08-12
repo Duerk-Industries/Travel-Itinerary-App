@@ -12,6 +12,7 @@ export type GridColumn<Row extends { id: string }> = {
   width: number;
   editor: GridEditorKind;
   editable?: boolean;
+  sortable?: boolean;
   options?: readonly string[];
   /** multiSelect only: the full set of choices offered by the "Pick…" picker modal. */
   pickerOptions?: readonly GridPickerOption[];
@@ -41,8 +42,9 @@ export type EditableDataGridProps<Row extends { id: string }> = {
   onDeleteRow: (rowId: string) => void;
   onUndo: () => void;
   onRedo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
+  sortKey?: string | null;
+  sortDirection?: 'asc' | 'desc';
+  onSort?: (columnKey: string) => void;
   onError?: (message: string) => void;
   styles?: Record<string, any>;
   theme?: { colors?: { text?: string; textMuted?: string; border?: string; surface?: string; link?: string; danger?: string } };
@@ -95,8 +97,9 @@ export function EditableDataGrid<Row extends { id: string }>({
   onDeleteRow,
   onUndo,
   onRedo,
-  canUndo,
-  canRedo,
+  sortKey = null,
+  sortDirection = 'asc',
+  onSort,
   onError,
   styles = {},
   theme,
@@ -118,13 +121,21 @@ export function EditableDataGrid<Row extends { id: string }>({
   const deletedRowStyle = styles.deletedRow ?? { opacity: 0.5 };
   const errorTextStyle = styles.errorText ?? { color: theme?.colors?.danger ?? '#dc2626', fontSize: 11 };
   const disabledButtonStyle = styles.disabledButton ?? { opacity: 0.45 };
-  const gridToolbarStyle = styles.gridToolbar ?? { flexDirection: 'row', gap: 8, paddingBottom: 8 };
   const pickerButtonStyle = styles.gridPickerButton ?? { justifyContent: 'center' };
   const pickerLinkStyle = styles.gridPickerLink ?? { marginHorizontal: 4, marginBottom: 4 };
   const pickerLinkTextStyle = styles.linkText ?? { color: theme?.colors?.link ?? '#2563eb', fontSize: 12 };
   const pickerOverlayStyle = styles.modalOverlay ?? { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.5)' };
   const pickerCardStyle = styles.modalCard ?? { backgroundColor: theme?.colors?.surface ?? '#fff', borderRadius: 12, padding: 16, minWidth: 260, maxHeight: '80%' };
   const pickerOptionRowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, paddingVertical: 8 };
+  const gridInputThemeStyle = {
+    backgroundColor: theme?.colors?.surface ?? '#fff',
+    color: theme?.colors?.text ?? '#111827',
+    borderColor: theme?.colors?.border ?? '#ccd4df',
+  };
+  const webInputStyle = {
+    ...gridInputThemeStyle,
+    boxSizing: 'border-box' as const,
+  };
 
   const errorByCell = useMemo(() => new Map(cellErrors.map((error) => [cellKey(error.rowId, error.columnKey), error.message])), [cellErrors]);
 
@@ -310,11 +321,11 @@ export function EditableDataGrid<Row extends { id: string }>({
         return next;
       });
     };
-    const inputStyle = [styles.input, { minWidth: column.width - 16, width: column.width - 16, margin: 4 }];
+    const inputStyle = [styles.input, gridInputThemeStyle, { minWidth: column.width - 16, width: column.width - 16, margin: 4 }];
     let editor: React.ReactNode;
     if (column.editor === 'select') {
       if (Platform.OS === 'web') {
-        editor = React.createElement('select', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4 } }, (column.options ?? []).map((option) => React.createElement('option', { key: option, value: option }, option)));
+        editor = React.createElement('select', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } }, (column.options ?? []).map((option) => React.createElement('option', { key: option, value: option }, option)));
       } else {
         // Native gets the same picker affordance as the app's existing status/type
         // choosers elsewhere, instead of requiring the exact option text be typed.
@@ -326,7 +337,7 @@ export function EditableDataGrid<Row extends { id: string }>({
       }
     } else if (column.editor === 'date' || column.editor === 'time') {
       if (Platform.OS === 'web') {
-        editor = React.createElement('input', { type: column.editor, value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } });
+        editor = React.createElement('input', { type: column.editor, value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } });
       } else if (nativeDateTimePicker) {
         editor = (
           <TouchableOpacity disabled={disabled} style={[inputStyle, pickerButtonStyle]} onPress={() => openDateTimePicker(row, column)}>
@@ -338,13 +349,13 @@ export function EditableDataGrid<Row extends { id: string }>({
       }
     } else if (column.editor === 'decimal') {
       if (Platform.OS === 'web') {
-        editor = React.createElement('input', { type: 'number', value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } });
+        editor = React.createElement('input', { type: 'number', value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } });
       } else {
         editor = <TextInput style={inputStyle} value={value} onChangeText={onChange} keyboardType="decimal-pad" placeholder="0.00" />;
       }
     } else if (column.editor === 'textarea') {
       editor = Platform.OS === 'web'
-        ? React.createElement('textarea', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, minHeight: 36, margin: 4, boxSizing: 'border-box' } })
+        ? React.createElement('textarea', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, minHeight: 36, margin: 4 } })
         : <TextInput style={[inputStyle, { minHeight: 42 }]} value={value} onChangeText={onChange} multiline />;
     } else if (column.editor === 'multiSelect') {
       const textEditor = Platform.OS === 'web'
@@ -358,7 +369,7 @@ export function EditableDataGrid<Row extends { id: string }>({
                 commitMultiSelect();
               }
             },
-            style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' },
+            style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 },
             placeholder: 'Name; Name',
           })
         : <TextInput style={inputStyle} value={multiSelectValue} onChangeText={onMultiSelectChange} onBlur={commitMultiSelect} onEndEditing={commitMultiSelect} placeholder="Name; Name" />;
@@ -375,7 +386,7 @@ export function EditableDataGrid<Row extends { id: string }>({
       ) : textEditor;
     } else {
       editor = Platform.OS === 'web'
-        ? React.createElement('input', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } })
+        ? React.createElement('input', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { ...webInputStyle, minWidth: column.width - 16, width: column.width - 16, margin: 4 } })
         : <TextInput style={inputStyle} value={value} onChangeText={onChange} />;
     }
     return (
@@ -409,7 +420,29 @@ export function EditableDataGrid<Row extends { id: string }>({
     </View>
   ));
 
-  const header = <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">{columns.map((column) => <View key={column.key} style={[styles.cell, { minWidth: column.width, width: column.width }, column.editor === 'action' && styles.lastCell]}><Text style={styles.headerText}>{column.label}</Text></View>)}</View>;
+  const header = <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">{columns.map((column) => {
+    const isSortable = Boolean(onSort) && column.sortable !== false;
+    const indicator = sortKey === column.key ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+    const headerLabel = `${column.label}${indicator}`;
+    return (
+      <TouchableOpacity
+        key={column.key}
+        style={[styles.cell, { minWidth: column.width, width: column.width }, column.editor === 'action' && styles.lastCell]}
+        disabled={!isSortable}
+        onPress={() => {
+          setAnchor(null);
+          setActive(null);
+          onSort?.(column.key);
+        }}
+        accessible={isSortable}
+        accessibilityRole={isSortable ? 'button' : undefined}
+        accessibilityLabel={isSortable ? `Sort by ${column.label}` : column.label}
+        testID={isSortable ? `activity-sort-${column.key}` : undefined}
+      >
+        <Text style={styles.headerText}>{headerLabel}</Text>
+      </TouchableOpacity>
+    );
+  })}</View>;
   const content = <View style={styles.table}>{header}{renderRows()}</View>;
   const rootProps: Record<string, unknown> = Platform.OS === 'web'
     ? {
@@ -424,10 +457,6 @@ export function EditableDataGrid<Row extends { id: string }>({
 
   return (
     <View>
-      <View style={gridToolbarStyle}>
-        <TouchableOpacity style={[styles.button, (!canUndo || disabled) && disabledButtonStyle]} disabled={!canUndo || disabled} onPress={onUndo} accessibilityLabel="Undo activity table change"><Text style={styles.buttonText}>Undo</Text></TouchableOpacity>
-        <TouchableOpacity style={[styles.button, (!canRedo || disabled) && disabledButtonStyle]} disabled={!canRedo || disabled} onPress={onRedo} accessibilityLabel="Redo activity table change"><Text style={styles.buttonText}>Redo</Text></TouchableOpacity>
-      </View>
       {Platform.OS === 'web' ? React.createElement('div', rootProps, content) : content}
       {openPicker?.kind === 'select' ? (
         <Modal transparent visible animationType="fade" onRequestClose={closePicker}>

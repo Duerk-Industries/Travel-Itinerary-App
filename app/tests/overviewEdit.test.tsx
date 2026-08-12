@@ -429,4 +429,66 @@ describe('Overview edit controls', () => {
     const payload = JSON.parse(options.body);
     expect(payload.paidBy).toEqual(['member-1', 'member-2']);
   });
+
+  test('saves lodging opened from its overview details dialog and returns to view mode', async () => {
+    const fetchMock = jest.fn(async (url: string, options?: any): Promise<any> => {
+      if (String(url).includes('/api/itineraries')) {
+        return { ok: true, json: async () => [] } as any;
+      }
+      if (String(url).includes('/api/lodgings/lodging-1') && options?.method === 'PUT') {
+        return { ok: true, json: async () => ({}) } as any;
+      }
+      return { ok: true, json: async () => ({}) } as any;
+    });
+    (global as any).fetch = fetchMock;
+
+    const lodging = {
+      id: 'lodging-1',
+      userId: 'user-1',
+      tripId: baseTrip.id,
+      name: 'Hotel 1',
+      checkInDate: '2026-01-02',
+      checkOutDate: '2026-01-05',
+      rooms: '1',
+      refundBy: '',
+      totalCost: '400',
+      costPerNight: '100',
+      address: '123 Main St',
+      paidBy: ['member-1'],
+      travelerIds: ['member-1'],
+    };
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(
+        <OverviewTab
+          {...baseProps}
+          lodgings={[lodging] as any}
+          featureStandardizedItemDialogs
+        />
+      );
+    });
+    const root = tree!.root;
+
+    act(() => {
+      root.findByProps({ testID: 'overview-day-card-1' }).props.onPress();
+    });
+    act(() => {
+      root.findByProps({ testID: 'day-details-lodging-lodging-1' }).props.onPress();
+    });
+    expect(root.findByProps({ testID: 'lodging-overview-details' })).toBeTruthy();
+
+    act(() => {
+      pressByText(root, 'Edit');
+    });
+    expect(root.findAllByType(LodgingDialog)).toHaveLength(1);
+
+    await act(async () => {
+      pressByTextWithin(root.findByType(LodgingDialog), 'Save');
+    });
+
+    expect(root.findAllByType(LodgingDialog)).toHaveLength(0);
+    expect(findByText(root, 'Edit')).toBeTruthy();
+    expect(baseProps.onLodgingDataChanged).toHaveBeenCalled();
+  });
 });

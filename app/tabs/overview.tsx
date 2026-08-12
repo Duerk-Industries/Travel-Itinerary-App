@@ -549,6 +549,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlightDraft, setEditingFlightDraft] = useState<FlightEditDraft | null>(null);
   const [showFlightEditor, setShowFlightEditor] = useState(false);
+  const [returnToOverviewViewAfterItemEdit, setReturnToOverviewViewAfterItemEdit] = useState(false);
   const [flightEditorAnchor, setFlightEditorAnchor] = useState(0);
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -1608,6 +1609,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowAddTraveler(false);
     setTravelerDraft({ firstName: '', lastName: '', email: '' });
     setEditingDetailId(null);
+    setReturnToOverviewViewAfterItemEdit(false);
     setIsEditing(false);
   };
 
@@ -1822,18 +1824,30 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setEditingFlightDraft(null);
     setTimePickerTarget(null);
     setFlightEditorAnchor(0);
+    if (returnToOverviewViewAfterItemEdit) {
+      setReturnToOverviewViewAfterItemEdit(false);
+      setIsEditing(false);
+    }
   };
 
   const closeLodgingModal = () => {
     setShowAddLodging(false);
     setEditingLodgingId(null);
     setLodgingDraft(buildOverviewLodgingDraft());
+    if (returnToOverviewViewAfterItemEdit) {
+      setReturnToOverviewViewAfterItemEdit(false);
+      setIsEditing(false);
+    }
   };
 
   const closeTourModal = () => {
     setShowAddTour(false);
     setEditingTourId(null);
     setTourDraft(createInitialActivityState(trip?.startDate ?? null));
+    if (returnToOverviewViewAfterItemEdit) {
+      setReturnToOverviewViewAfterItemEdit(false);
+      setIsEditing(false);
+    }
   };
 
   const closeRentalModal = () => {
@@ -1848,6 +1862,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       closeLodgingModal();
       closeTourModal();
       closeRentalModal();
+      setReturnToOverviewViewAfterItemEdit(false);
       setPendingRemovalIds([]);
     }
   }, [isEditing]);
@@ -1857,6 +1872,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       setSelectedFlight(flight);
       return;
     }
+    setReturnToOverviewViewAfterItemEdit(false);
     setSelectedFlight(null);
     setEditingFlightId(flight.id);
     setEditingFlightDraft(toFlightEditDraft(flight));
@@ -1873,6 +1889,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openFlightAdd = () => {
     if (!isEditing) return;
+    setReturnToOverviewViewAfterItemEdit(false);
     setSelectedFlight(null);
     setEditingFlightId('new');
     const tripForFlights = trip
@@ -1897,6 +1914,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       else openLodgingDetails(lodging);
       return;
     }
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingLodgingId(lodging.id);
     setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
     setShowAddLodging(true);
@@ -1904,6 +1922,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openAddLodging = () => {
     if (!isEditing) return;
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingLodgingId(null);
     setLodgingDraft(buildOverviewLodgingDraft());
     setShowAddLodging(true);
@@ -1911,6 +1930,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openAddTour = () => {
     if (!isEditing) return;
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingTourId(null);
     setTourDraft(createInitialActivityState(trip?.startDate ?? null));
     setShowAddTour(true);
@@ -1928,6 +1948,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       setSelectedTour(tour);
       return;
     }
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingTourId(tour.id);
     setTourDraft(buildTourDraftFromRow({ ...tour, paidBy: (tour as any).paidBy ?? [] } as any));
     setShowAddTour(true);
@@ -1936,6 +1957,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const editFlightFromDetails = (flight: Flight) => {
     if (readOnly) return;
     setSelectedFlight(null);
+    setReturnToOverviewViewAfterItemEdit(true);
     setIsEditing(true);
     setEditingFlightId(flight.id);
     setEditingFlightDraft(toFlightEditDraft(flight));
@@ -1945,6 +1967,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const editLodgingFromDetails = (lodging: Lodging) => {
     if (readOnly) return;
     setSelectedLodging(null);
+    setReturnToOverviewViewAfterItemEdit(true);
     setIsEditing(true);
     setEditingLodgingId(lodging.id);
     setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
@@ -1954,6 +1977,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const editActivityFromDetails = (tour: Tour) => {
     if (readOnly) return;
     setSelectedTour(null);
+    setReturnToOverviewViewAfterItemEdit(true);
     setIsEditing(true);
     setEditingTourId(tour.id);
     setTourDraft(buildTourDraftFromRow({ ...tour, paidBy: (tour as any).paidBy ?? [] } as any));

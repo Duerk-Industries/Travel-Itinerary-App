@@ -152,6 +152,24 @@ describe('Activities grid editing', () => {
     expect(getByTestId('activity-row-tour-2')).toBeTruthy();
   });
 
+  it('sorts the activity rows from headers in view and edit modes', () => {
+    const rowIds = (getAllByTestId: (testId: RegExp) => Array<{ props: { testID: string } }>) =>
+      getAllByTestId(/activity-row-/).map((row) => row.props.testID);
+
+    const view = renderActivityHarness([tourOne, tourTwo]);
+    expect(rowIds(view.getAllByTestId as any)).toEqual(['activity-row-tour-1', 'activity-row-tour-2']);
+    fireEvent.press(view.getByTestId('activity-sort-name'));
+    expect(rowIds(view.getAllByTestId as any)).toEqual(['activity-row-tour-2', 'activity-row-tour-1']);
+    view.unmount();
+
+    const edit = renderActivityHarness([tourOne, tourTwo]);
+    fireEvent.press(edit.getByTestId('activity-table-edit'));
+    fireEvent.press(edit.getByTestId('activity-sort-name'));
+    expect(rowIds(edit.getAllByTestId as any)).toEqual(['activity-row-tour-2', 'activity-row-tour-1']);
+    expect(edit.getByTestId('activity-table-undo')).toBeTruthy();
+    expect(edit.getByTestId('activity-table-redo')).toBeTruthy();
+  });
+
   it('edits a cell and saves only the changed row via the bulk endpoint', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
       ok: true,

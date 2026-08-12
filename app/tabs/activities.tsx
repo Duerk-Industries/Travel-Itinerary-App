@@ -96,6 +96,47 @@ export type TourDraft = {
   travelerIds: string[];
 };
 
+type ActivitySort = {
+  key: string | null;
+  direction: 'asc' | 'desc';
+};
+
+const activitySortValue = (tour: Tour, key: string): string | number => {
+  const value = tour[key as keyof Tour];
+  if (Array.isArray(value)) return value.join('; ');
+  if (value === null || value === undefined) return '';
+  if (key === 'netRating' || key === 'userRating' || key === 'netVotes' || key === 'cost') {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : '';
+  }
+  if (key === 'status') return normalizeItineraryStatus(String(value), LEGACY_ITINERARY_STATUS);
+  return String(value);
+};
+
+const sortActivityRows = (rows: Tour[], sort: ActivitySort): Tour[] => {
+  const key = sort.key ?? 'date';
+  const direction = sort.direction === 'asc' ? 1 : -1;
+  return [...rows].sort((left, right) => {
+    const leftValue = activitySortValue(left, key);
+    const rightValue = activitySortValue(right, key);
+    const leftEmpty = leftValue === '';
+    const rightEmpty = rightValue === '';
+    if (leftEmpty !== rightEmpty) return leftEmpty ? 1 : -1;
+    if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+      if (leftValue !== rightValue) return (leftValue - rightValue) * direction;
+    } else {
+      const comparison = String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: 'base', numeric: true });
+      if (comparison !== 0) return comparison * direction;
+    }
+    if (sort.key === null && key === 'date') {
+      const timeComparison = String(left.startTime ?? '').localeCompare(String(right.startTime ?? ''), undefined, { numeric: true });
+      if (timeComparison !== 0) return timeComparison;
+      return String(left.name ?? '').localeCompare(String(right.name ?? ''), undefined, { sensitivity: 'base', numeric: true });
+    }
+    return 0;
+  });
+};
+
 export type GroupMemberOption = {
   id: string;
   guestName?: string;
@@ -289,6 +330,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const [gridServerErrors, setGridServerErrors] = useState<GridCellError[]>([]);
   const [gridMessage, setGridMessage] = useState<string | null>(null);
   const [gridSaving, setGridSaving] = useState(false);
+  const [activitySort, setActivitySort] = useState<ActivitySort>({ key: null, direction: 'asc' });
   const [tourToDelete, setTourToDelete] = useState<Tour | null>(null);
   const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
@@ -495,23 +537,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const payerTotalsList = useMemo(() => Object.entries(payerTotals), [payerTotals]);
-  const sortedTours = useMemo(() => {
-    const safeDate = (value?: string | null) => {
-      const text = String(value ?? '').trim();
-      return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '9999-12-31';
-    };
-    const safeTime = (value?: string | null) => {
-      const text = String(value ?? '').trim();
-      return /^\d{2}:\d{2}$/.test(text) ? text : '23:59';
-    };
-    return [...tours].sort((a, b) => {
-      const byDate = safeDate(a.date).localeCompare(safeDate(b.date));
-      if (byDate !== 0) return byDate;
-      const byTime = safeTime(a.startTime).localeCompare(safeTime(b.startTime));
-      if (byTime !== 0) return byTime;
-      return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
-    });
-  }, [tours]);
+  const sortedTours = useMemo(() => sortActivityRows(tours, activitySort), [tours, activitySort]);
+  const sortedGridRows = useMemo(() => sortActivityRows(gridRows, activitySort), [gridRows, activitySort]);
+  const sortActivityTable = (key: string) => {
+    setActivitySort((current) => current.key === key
+      ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+      : { key, direction: 'asc' });
+  };
   const selectedTour = useMemo(
     () => (selectedTourId ? tours.find((tour) => tour.id === selectedTourId) ?? null : null),
     [selectedTourId, tours]
@@ -554,7 +586,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? String(row.userRating) : '-' },
       { key: 'netVotes', label: 'Votes', width: 100, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
       { key: 'suggestions', label: 'Suggestions', width: 140, editor: 'readonly', editable: false, getValue: () => 'See details' },
-      { key: 'actions', label: 'Actions', width: 110, editor: 'action', editable: false, getValue: () => '' },
+      { key: 'actions', label: 'Actions', width: 110, editor: 'action', editable: false, sortable: false, getValue: () => '' },
     ];
   }, [memberLabelById, payerName, activeMembers]);
 
@@ -860,6 +892,24 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 >
                   <Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  disabled={gridSaving || gridHistory.length === 0}
+                  style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, (gridSaving || gridHistory.length === 0) && { opacity: 0.45 }]}
+                  onPress={undoGridChange}
+                  accessibilityLabel="Undo activity table change"
+                  testID="activity-table-undo"
+                >
+                  <Text style={styles.buttonText}>↶</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  disabled={gridSaving || gridRedo.length === 0}
+                  style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, (gridSaving || gridRedo.length === 0) && { opacity: 0.45 }]}
+                  onPress={redoGridChange}
+                  accessibilityLabel="Redo activity table change"
+                  testID="activity-table-redo"
+                >
+                  <Text style={styles.buttonText}>↷</Text>
+                </TouchableOpacity>
               </>
             ) : null}
             {!tableEditing ? (
@@ -897,9 +947,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         />
       ) : null}
       {tableEditing ? (
-        <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+        <>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 6, borderWidth: 1, borderColor: theme?.colors.border ?? '#ccd4df', borderRadius: 8, backgroundColor: theme?.colors.surface ?? '#fff' }} testID="activity-table-scroll-hint">
+            <Text style={{ color: theme?.colors.textMuted ?? theme?.colors.text ?? '#475569', fontSize: 12 }}>↔ Scroll horizontally to see all columns</Text>
+          </View>
+          <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
           <EditableDataGrid
-            rows={gridRows}
+            rows={sortedGridRows}
             columns={gridColumns}
             clipboardEnabled={Platform.OS === 'web' && featureGridEditingClipboard}
             disabled={gridSaving}
@@ -910,33 +964,46 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             onDeleteRow={toggleGridDelete}
             onUndo={undoGridChange}
             onRedo={redoGridChange}
-            canUndo={gridHistory.length > 0}
-            canRedo={gridRedo.length > 0}
+            sortKey={activitySort.key}
+            sortDirection={activitySort.direction}
+            onSort={sortActivityTable}
             onError={setGridMessage}
             styles={styles}
             theme={theme}
             nativeDateTimePicker={DateTimePickerComponent}
           />
-        </HorizontalTableScroll>
+          </HorizontalTableScroll>
+        </>
       ) : null}
-      {!tableEditing ? <HorizontalTableScroll
-        style={styles.tableScroll}
-        contentContainerStyle={styles.tableScrollContent}
-      >
+      {!tableEditing ? <>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 6, borderWidth: 1, borderColor: theme?.colors.border ?? '#ccd4df', borderRadius: 8, backgroundColor: theme?.colors.surface ?? '#fff' }} testID="activity-table-scroll-hint">
+          <Text style={{ color: theme?.colors.textMuted ?? theme?.colors.text ?? '#475569', fontSize: 12 }}>↔ Scroll horizontally to see all columns</Text>
+        </View>
+        <HorizontalTableScroll
+          style={styles.tableScroll}
+          contentContainerStyle={styles.tableScrollContent}
+        >
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">
             {[
-              { label: 'Date', width: 140 },
-              { label: 'Type', width: 180 },
-              { label: 'Activity', width: 220 },
-              { label: 'Start Time', width: 120 },
-              { label: 'Duration', width: 120 },
-              { label: 'Status', width: 130 },
-              { label: 'Rating', width: 120 },
+              { key: 'date', label: 'Date', width: 140 },
+              { key: 'activityType', label: 'Type', width: 180 },
+              { key: 'name', label: 'Activity', width: 220 },
+              { key: 'startTime', label: 'Start Time', width: 120 },
+              { key: 'duration', label: 'Duration', width: 120 },
+              { key: 'status', label: 'Status', width: 130 },
+              { key: 'netRating', label: 'Rating', width: 120 },
             ].map((col, idx, arr) => (
-              <View key={col.label} style={[styles.cell, { minWidth: col.width, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}>
-                <Text style={styles.headerText}>{col.label}</Text>
-              </View>
+              <TouchableOpacity
+                key={col.key}
+                style={[styles.cell, { minWidth: col.width, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
+                onPress={() => sortActivityTable(col.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`Sort by ${col.label}`}
+                testID={`activity-sort-${col.key}`}
+              >
+                <Text style={styles.headerText}>{`${col.label}${activitySort.key === col.key ? (activitySort.direction === 'asc' ? ' ▲' : ' ▼') : ''}`}</Text>
+              </TouchableOpacity>
             ))}
           </View>
           {sortedTours.map((t) => (
@@ -979,7 +1046,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             </View>
           ))}
         </View>
-      </HorizontalTableScroll> : null}
+        </HorizontalTableScroll>
+      </> : null}
       <View style={{ marginTop: 8 }}>
             <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (
