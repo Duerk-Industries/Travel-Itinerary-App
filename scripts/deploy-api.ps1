@@ -10,6 +10,10 @@ $Secrets = if ($env:SECRETS) { $env:SECRETS } else { '' }
 $IgnoreKeys = if ($env:IGNORE_KEYS) { $env:IGNORE_KEYS } else { 'PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
 $IgnoreSecretKeys = if ($env:IGNORE_SECRET_KEYS) { $env:IGNORE_SECRET_KEYS } else { 'GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
 $SkipFirestoreIndexes = $env:SKIP_FIRESTORE_INDEXES -eq '1'
+# On Windows, prefer gcloud.cmd over gcloud.ps1. The PowerShell shim can turn
+# Cloud SDK progress written to stderr (for example, "Building using Dockerfile")
+# into a NativeCommandError even while the deployment is still running.
+$GcloudCommand = if (Get-Command gcloud.cmd -ErrorAction SilentlyContinue) { 'gcloud.cmd' } else { 'gcloud' }
 
 function Strip-InlineComment([string]$Line) {
   $out = ''
@@ -141,20 +145,6 @@ function Get-UniqueStrings([string[]]$Values) {
 # joining pairs with DELIM instead of ','; there is no backslash-escape for a
 # literal comma within a value. This picks a delimiter that doesn't collide
 # with anything already present in the pairs being joined.
-function Get-SafeDelimiter([string[]]$Values) {
-  $joined = ($Values -join '')
-  foreach ($candidate in @('@', '~', '#', '|', '!')) {
-    if ($joined.IndexOf($candidate) -lt 0) { return $candidate }
-  }
-  return [guid]::NewGuid().ToString('N')
-}
-
-function Join-GcloudDictArg([string[]]$Pairs) {
-  if ($Pairs.Count -eq 0) { return '' }
-  $delimiter = Get-SafeDelimiter $Pairs
-  return "^$delimiter^" + ($Pairs -join $delimiter)
-}
-
 # Cloud Run health-checks every new revision on its own, so a key that's currently
 # secret-bound but is about to become a plain env var (or vice versa) must never be
 # split across two separate `gcloud run deploy`/`services update` calls — the revision
@@ -165,7 +155,7 @@ function Join-GcloudDictArg([string[]]$Pairs) {
 # caller fold the diff into the SAME deploy command as --update-env-vars, so the type
 # transition lands atomically in one revision.
 function Get-CurrentSecretBoundEnvKeys([string]$ServiceName, [string]$Region) {
-  $json = & gcloud run services describe $ServiceName --region $Region --format=json 2>$null
+  $json = & $GcloudCommand run services describe $ServiceName --region $Region --format=json 2>$null
   if ($LASTEXITCODE -ne 0 -or -not $json) { return @() }
   try {
     $service = ($json -join "`n") | ConvertFrom-Json
@@ -270,9 +260,19 @@ if ($secretMap.Count -gt 0) {
     $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
   }
 }
-$envArg = ''
+$envFlagsFile = $null
 if ($envPairs.Count -gt 0) {
-  $envArg = Join-GcloudDictArg $envPairs
+  # Use a gcloud flags file for environment variables. This avoids a second
+  # layer of PowerShell/cmd.exe caret processing and preserves values that
+  # contain commas (model lists, allowlists, etc.) exactly.
+  $envFlagValues = [ordered]@{}
+  foreach ($pair in $envPairs) {
+    $parts = $pair -split '=', 2
+    $envFlagValues[$parts[0]] = if ($parts.Count -gt 1) { $parts[1] } else { '' }
+  }
+  $envFlagsFile = [System.IO.Path]::GetTempFileName()
+  $envFlags = [ordered]@{ '--update-env-vars' = $envFlagValues }
+  $envFlags | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $envFlagsFile -Encoding utf8
   Write-Host "Env vars to upload:"
   foreach ($pair in $envPairs) { Write-Host "  $(Get-DisplayEnvPair $pair)" }
 }
@@ -282,7 +282,11 @@ if ($secretMap.Count -gt 0) {
   foreach ($key in @($secretMap.Keys)) {
     $secretPairs += ('{0}={1}' -f $key, [string]$secretMap[$key])
   }
-  $secretsArg = Join-GcloudDictArg $secretPairs
+  # Secret mappings are generated as KEY=KEY:latest and cannot contain
+  # commas, so use gcloud's normal comma delimiter. The custom ^@^ delimiter
+  # syntax is shell-sensitive and is stripped when invoking gcloud.cmd from
+  # PowerShell, producing one invalid secret spec.
+  $secretsArg = $secretPairs -join ','
   Write-Host "Secret mappings to apply (names only):"
   foreach ($key in @($secretMap.Keys)) { Write-Host "  $key -> $($secretMap[$key])" }
 }
@@ -304,7 +308,7 @@ if ($secretsToRemove.Count -gt 0) {
 
 $cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region, '--session-affinity', '--max-instances', '1')
 $cmd += @('--memory', $Memory)
-if ($envArg) { $cmd += @('--update-env-vars', $envArg) }
+if ($envFlagsFile) { $cmd += "--flags-file=$envFlagsFile" }
 if ($secretsArg) { $cmd += @('--update-secrets', $secretsArg) }
 if ($secretsToRemove.Count -gt 0) { $cmd += @('--remove-secrets', ($secretsToRemove -join ',')) }
 if ($secretMap.Count -gt 0) { $cmd += @('--remove-env-vars', ($secretMap.Keys -join ',')) }
@@ -330,8 +334,14 @@ if (-not $SkipFirestoreIndexes) {
 }
 
 $deployStartedAt = [DateTime]::UtcNow
-$deployOutput = @(& gcloud @cmd 2>&1)
-$deployExitCode = $LASTEXITCODE
+try {
+  $deployOutput = @(& $GcloudCommand @cmd 2>&1)
+  $deployExitCode = $LASTEXITCODE
+} finally {
+  if ($envFlagsFile) {
+    Remove-Item -LiteralPath $envFlagsFile -Force -ErrorAction SilentlyContinue
+  }
+}
 $deployOutput | ForEach-Object { Write-Host $_ }
 
 if ($deployExitCode -ne 0) {
@@ -344,12 +354,12 @@ if ($deployExitCode -ne 0) {
   $buildId = if ($buildMatch.Success) { $buildMatch.Value } else { '' }
   if (-not $buildId) {
     $filter = "createTime>$($deployStartedAt.ToString('o'))"
-    $recentBuildOutput = @(& gcloud builds list "--filter=$filter" '--limit=1' '--format=value(id)' 2>$null)
+    $recentBuildOutput = @(& $GcloudCommand builds list "--filter=$filter" '--limit=1' '--format=value(id)' 2>$null)
     if ($recentBuildOutput.Count -gt 0) { $buildId = ([string]$recentBuildOutput[0]).Trim() }
   }
   if ($buildId) {
     Write-Host "Cloud Build: $buildId"
-    & gcloud builds describe $buildId '--format=yaml(status,logUrl,failureInfo)' 2>&1 | ForEach-Object { Write-Host $_ }
+    & $GcloudCommand builds describe $buildId '--format=yaml(status,logUrl,failureInfo)' 2>&1 | ForEach-Object { Write-Host $_ }
     Write-Error "API deployment failed with gcloud exit code $deployExitCode. Cloud Build: $buildId"
   } else {
     Write-Error "API deployment failed with gcloud exit code $deployExitCode. No Cloud Build ID was returned; rerun with gcloud verbosity or inspect Cloud Build history."
@@ -359,7 +369,7 @@ if ($deployExitCode -ne 0) {
 
 # A prior --no-traffic canary deploy pins traffic away from LATEST until it is
 # explicitly restored; a subsequent gcloud run deploy does not undo that.
-& gcloud run services update-traffic $ServiceName --region $Region --to-latest
+& $GcloudCommand run services update-traffic $ServiceName --region $Region --to-latest
 if ($LASTEXITCODE -ne 0) {
   Write-Error "API deployed, but routing traffic to the latest revision failed with gcloud exit code $LASTEXITCODE."
   exit $LASTEXITCODE
