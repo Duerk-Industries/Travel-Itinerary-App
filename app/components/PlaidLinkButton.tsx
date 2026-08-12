@@ -1,7 +1,34 @@
 import React, { useState, useCallback } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, Alert, Platform } from 'react-native';
-import { openLink, LinkSuccess, LinkExit } from 'react-native-plaid-link-sdk';
 import { AppTheme } from '../theme/theme';
+
+type PlaidSuccess = {
+  publicToken: string;
+  metadata?: { institution?: { id?: string; name?: string } | null };
+};
+
+type PlaidExit = {
+  error?: { displayMessage?: string | null } | null;
+};
+
+type PlaidSdk = {
+  openLink: (config: {
+    token: string;
+    onSuccess: (success: PlaidSuccess) => void | Promise<void>;
+    onExit: (exit: PlaidExit) => void;
+  }) => Promise<void>;
+};
+
+let plaidSdk: PlaidSdk | null | undefined;
+const getPlaidSdk = (): PlaidSdk | null => {
+  if (plaidSdk !== undefined) return plaidSdk;
+  try {
+    plaidSdk = require('react-native-plaid-link-sdk') as PlaidSdk;
+  } catch {
+    plaidSdk = null;
+  }
+  return plaidSdk;
+};
 
 type PlaidLinkButtonProps = {
   theme: AppTheme;
@@ -43,11 +70,13 @@ const PlaidLinkButton: React.FC<PlaidLinkButtonProps> = ({
       if (!res.ok) throw new Error(data.error || 'Failed to initialize Plaid Link');
 
       const linkToken = data.linkToken;
+      const sdk = getPlaidSdk();
+      if (!sdk) throw new Error('Bank connection is unavailable in this app build.');
 
       // 2. Open Plaid Link
-      await openLink({
+      await sdk.openLink({
         token: linkToken,
-        onSuccess: async (success: LinkSuccess) => {
+        onSuccess: async (success: PlaidSuccess) => {
           setLoading(true);
           try {
             const exchangeRes = await fetch(`${backendUrl}/api/plaid/exchange-token`, {
@@ -55,8 +84,8 @@ const PlaidLinkButton: React.FC<PlaidLinkButtonProps> = ({
               headers: jsonHeaders,
               body: JSON.stringify({
                 publicToken: success.publicToken,
-                institutionId: success.metadata.institution?.id,
-                institutionName: success.metadata.institution?.name,
+                institutionId: success.metadata?.institution?.id,
+                institutionName: success.metadata?.institution?.name,
               }),
             });
             const exchangeData = await exchangeRes.json();
@@ -68,7 +97,7 @@ const PlaidLinkButton: React.FC<PlaidLinkButtonProps> = ({
             setLoading(false);
           }
         },
-        onExit: (exit: LinkExit) => {
+        onExit: (exit: PlaidExit) => {
           if (exit.error) {
             Alert.alert('Plaid Error', exit.error.displayMessage || 'An error occurred during connection.');
           }

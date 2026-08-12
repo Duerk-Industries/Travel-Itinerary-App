@@ -26,6 +26,7 @@ export type PlaidCandidate = {
 
 type PlaidImportQueueProps = {
   theme: AppTheme;
+  styles: Record<string, any>;
   backendUrl: string;
   jsonHeaders: Record<string, string>;
   tripId: string;
@@ -37,6 +38,7 @@ type PlaidImportQueueProps = {
 
 const PlaidImportQueue: React.FC<PlaidImportQueueProps> = ({
   theme,
+  styles,
   backendUrl,
   jsonHeaders,
   tripId,
@@ -97,7 +99,7 @@ const PlaidImportQueue: React.FC<PlaidImportQueueProps> = ({
 
   return (
     <DialogShell
-      theme={theme}
+      styles={styles}
       title="Import Expenses"
       visible={true}
       onClose={onClose}

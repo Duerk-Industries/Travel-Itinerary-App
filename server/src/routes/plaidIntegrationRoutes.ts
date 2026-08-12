@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { authenticate } from '../auth';
 import { assertCanUseFeature } from '../services/entitlementService';
-import { getDb, insertExpense, ensureUserInTrip, listExpenses } from '../db';
+import { insertExpense, ensureUserInTrip, listExpenses } from '../db';
+import { getDb } from '../db.firebase';
 import { logError } from '../logger';
 import { NeutralCategory } from '@wanderbunnies/plaid-transactions/src/lib/categoryMapping';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
@@ -88,7 +89,10 @@ router.post('/assign', async (req: any, res) => {
     }
 
     await assertCanUseFeature(req.user.userId, 'expense_import_plaid', req.user.role);
-    await ensureUserInTrip(tripId, req.user.userId);
+    const membership = await ensureUserInTrip(tripId, req.user.userId);
+    if (!membership) {
+      return res.status(403).json({ error: 'You must be in the group for this trip' });
+    }
 
     const db = getDb() as any;
     const transactionRef = db.doc(`users/${req.user.userId}/plaidTransactions/${transactionId}`);
@@ -106,7 +110,7 @@ router.post('/assign', async (req: any, res) => {
     // 1. Create Expense
     const expense = await insertExpense({
       tripId,
-      groupId: (await ensureUserInTrip(tripId, req.user.userId)).groupId,
+      groupId: membership.groupId,
       userId: req.user.userId,
       expenseDate: tData.date,
       category,

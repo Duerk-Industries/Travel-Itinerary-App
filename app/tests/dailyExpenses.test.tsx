@@ -7,6 +7,9 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import DailyExpensesTab from '../tabs/dailyExpenses';
+import { getAppTheme } from '../theme/theme';
+
+const theme = getAppTheme('auto', null);
 
 const styles = {
   card: {},
@@ -88,6 +91,7 @@ describe('DailyExpensesTab', () => {
     const { getByText, queryByTestId, getByTestId, getAllByText } = render(
       <DailyExpensesTab
         backendUrl="http://example.test"
+        theme={theme}
         headers={{}}
         jsonHeaders={{}}
         trip={trip}
@@ -128,6 +132,7 @@ describe('DailyExpensesTab', () => {
       const { getByText, getByPlaceholderText } = render(
         <DailyExpensesTab
           backendUrl="http://example.test"
+          theme={theme}
           headers={{ Authorization: 'Bearer token' }}
           jsonHeaders={{ Authorization: 'Bearer token', 'Content-Type': 'application/json' }}
           trip={trip}

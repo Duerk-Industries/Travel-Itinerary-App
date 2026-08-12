@@ -496,6 +496,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       {importExpensesVisible && trip && (
         <PlaidImportQueue
           theme={theme}
+          styles={styles}
           backendUrl={backendUrl}
           jsonHeaders={jsonHeaders}
           tripId={trip.id}

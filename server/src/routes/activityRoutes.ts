@@ -22,7 +22,6 @@ import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDt
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
-import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'Class',

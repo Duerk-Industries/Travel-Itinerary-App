@@ -3,6 +3,9 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AccountProfileManagement from '../tabs/AccountProfileManagement';
+import { getAppTheme } from '../theme/theme';
+
+const theme = getAppTheme('auto', null);
 
 const styles = {
   card: {},
@@ -33,6 +36,7 @@ const styles = {
 
 describe('AccountProfileManagement', () => {
   const defaultProps = {
+    theme,
     backendUrl: '',
     userToken: 'test-token',
     activePage: 'account',

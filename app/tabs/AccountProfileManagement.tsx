@@ -143,6 +143,7 @@ const AccountProfileManagement = ({
   styles,
 }: AccountProfileManagementProps) => {
   const { width, height } = useWindowDimensions();
+  const { spacing } = theme;
   const isCompactDialog = width < 480 || height < 700;
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
