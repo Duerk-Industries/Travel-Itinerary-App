@@ -2,6 +2,7 @@ import { getApiCacheSetting } from '../config/apiLimits';
 import { createTtlCache } from '../utils/ttlCache';
 import { getUnsplashRandomPhoto, searchUnsplashPhotos } from './unsplashApi';
 import { logInfo } from '../logger';
+import { ApiLimitExceededError } from './usageLimiter';
 
 const UNSPLASH_CALLER_IMAGE_SERVICE_LOCATION = 'IMAGE_SERVICE_LOCATION_IMAGE';
 const UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY = 'IMAGE_SERVICE_ITINERARY_IMAGE';
@@ -24,12 +25,20 @@ const urlLookupCache = createTtlCache<string | null>({
   metricName: 'unsplash.url_lookup',
 });
 
+// Once the shared provider limit is reached, avoid attempting every image on
+// each overview refresh. The durable hourly limiter remains the source of
+// truth; this short local cooldown only turns repeated blocked image requests
+// into the normal placeholder path.
+const blockedCallerUntil = new Map<string, number>();
+const BLOCKED_CALLER_COOLDOWN_MS = 60 * 1000;
+
 const normalizeQuery = (query: string): string => String(query ?? '').trim().toLowerCase();
 
 const buildKey = (caller: string, query: string): string => `${caller}::${normalizeQuery(query)}`;
 
 export const clearUnsplashUrlCache = (): void => {
   urlLookupCache.clear();
+  blockedCallerUntil.clear();
 };
 
 const fetchUnsplashImage = async (
@@ -42,17 +51,31 @@ const fetchUnsplashImage = async (
   // never poisons the lookup cache with a permanent null entry.
   if (!trimmedQuery) return null;
 
+  const blockedUntil = blockedCallerUntil.get(caller) ?? 0;
+  if (blockedUntil > Date.now()) return null;
+  if (blockedUntil) blockedCallerUntil.delete(caller);
+
   const key = buildKey(caller, trimmedQuery);
   return urlLookupCache.getOrFetch(
     key,
     async () => {
-      const data = await searchUnsplashPhotos({
-        caller,
-        accessKey,
-        query: trimmedQuery,
-        perPage: 1,
-        orientation: 'landscape',
-      });
+      let data: Awaited<ReturnType<typeof searchUnsplashPhotos>>;
+      try {
+        data = await searchUnsplashPhotos({
+          caller,
+          accessKey,
+          query: trimmedQuery,
+          perPage: 1,
+          orientation: 'landscape',
+        });
+      } catch (error) {
+        if (error instanceof ApiLimitExceededError && error.name === 'ApiLimitExceededError') {
+          blockedCallerUntil.set(caller, Date.now() + BLOCKED_CALLER_COOLDOWN_MS);
+          logInfo(`[unsplash] ${caller} is temporarily paused after reaching the provider limit`);
+          return null;
+        }
+        throw error;
+      }
       const url = firstRegularUrl(data);
       if (!url) {
         logInfo(`[unsplash] no landscape photo returned for caller=${caller} query="${trimmedQuery}"`);
