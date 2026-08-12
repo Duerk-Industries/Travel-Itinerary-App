@@ -169,15 +169,21 @@ export const updateCostEstimatorConfig = async (params: {
     await writeStoredJson(HOSTING_LINE_ITEMS_SETTING_KEY, next, params.actorId);
   }
 
+  // Build without ever including a key whose value is literally `undefined` —
+  // the Firestore adapter's .set() throws on that (nested or not), unlike the
+  // Postgres adapter's JSON.stringify(), which silently drops it. That gap is
+  // exactly why this went uncaught: every test here runs against pg-mem.
+  const afterState: Record<string, unknown> = {
+    key: params.assumptions ? ASSUMPTIONS_SETTING_KEY : HOSTING_LINE_ITEMS_SETTING_KEY,
+  };
+  if (params.assumptions) afterState.assumptions = params.assumptions;
+  if (params.hostingLineItems) afterState.hostingLineItems = params.hostingLineItems;
+
   await writeAuditLog({
     actorUserId: params.actorId,
     action: 'COST_ESTIMATOR_CONFIG_UPDATED',
     reason: params.reason,
-    afterState: {
-      key: params.assumptions ? ASSUMPTIONS_SETTING_KEY : HOSTING_LINE_ITEMS_SETTING_KEY,
-      assumptions: params.assumptions ?? undefined,
-      hostingLineItems: params.hostingLineItems ?? undefined,
-    },
+    afterState,
   });
 
   return getCostEstimatorConfig();
