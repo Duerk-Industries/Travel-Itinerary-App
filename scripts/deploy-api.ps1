@@ -1,4 +1,15 @@
 $ErrorActionPreference = 'Stop'
+# PowerShell 7.3+ turns ANY stderr line from a native command into a
+# terminating error when $ErrorActionPreference = 'Stop' (this is
+# $PSNativeCommandUseErrorActionPreference, default $true there) — regardless
+# of the command's actual exit code and regardless of whether the call goes
+# through gcloud.cmd or gcloud.ps1. gcloud routinely writes routine progress
+# ("Building using Dockerfile and deploying container...") to stderr, so a
+# fully successful `gcloud run deploy` can still abort this script with a
+# NativeCommandError before $LASTEXITCODE is ever checked. Disable it here so
+# native-command failure detection goes through the explicit $LASTEXITCODE
+# checks this script already does after every gcloud call, not stderr content.
+$PSNativeCommandUseErrorActionPreference = $false
 
 $ServiceName = if ($env:SERVICE_NAME) { $env:SERVICE_NAME } else { 'travel-itinerary-app' }
 $Region = if ($env:REGION) { $env:REGION } else { 'us-east5' }
@@ -10,10 +21,95 @@ $Secrets = if ($env:SECRETS) { $env:SECRETS } else { '' }
 $IgnoreKeys = if ($env:IGNORE_KEYS) { $env:IGNORE_KEYS } else { 'PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
 $IgnoreSecretKeys = if ($env:IGNORE_SECRET_KEYS) { $env:IGNORE_SECRET_KEYS } else { 'GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
 $SkipFirestoreIndexes = $env:SKIP_FIRESTORE_INDEXES -eq '1'
+$SkipLockfileCheck = $env:SKIP_LOCKFILE_CHECK -eq '1'
 # On Windows, prefer gcloud.cmd over gcloud.ps1. The PowerShell shim can turn
 # Cloud SDK progress written to stderr (for example, "Building using Dockerfile")
 # into a NativeCommandError even while the deployment is still running.
 $GcloudCommand = if (Get-Command gcloud.cmd -ErrorAction SilentlyContinue) { 'gcloud.cmd' } else { 'gcloud' }
+
+# Belt-and-suspenders on top of the $PSNativeCommandUseErrorActionPreference
+# setting above: that automatic variable doesn't exist before PS 7.3 and,
+# per field reports, isn't reliably honored by every 7.3+ build either. When
+# it isn't, a native command's routine stderr progress output (gcloud's
+# "Building using Dockerfile and deploying container..." is not an error) is
+# still wrapped into a terminating NativeCommandError under
+# $ErrorActionPreference = 'Stop' — and it throws *before* the assignment
+# completes, so callers never get a chance to check $LASTEXITCODE or inspect
+# the output for real diagnostics. Every gcloud call in this script that
+# merges stderr via 2>&1 goes through this wrapper instead of a bare
+# `& $GcloudCommand ...`, so that on every PowerShell version, success or
+# failure is decided solely by $LASTEXITCODE — never by whether gcloud wrote
+# anything to stderr.
+function Invoke-GcloudAllowingStderr {
+  param([Parameter(Mandatory)][ScriptBlock]$ScriptBlock)
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & $ScriptBlock
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+}
+
+# server/ is an npm workspace member — a normal `npm install` there (or at the
+# repo root) updates the *root* package-lock.json, not server/package-lock.json.
+# server/Dockerfile only COPYs the server/ directory into the build context and
+# runs a plain `npm ci` there, so it's server/package-lock.json specifically
+# that has to be self-consistent with server/package.json — and nothing in the
+# normal dev workflow touches that file, so it silently drifts (see
+# docs/implementation_plans for the 2026-08-12 incident: a version bump in
+# server/package.json shipped without regenerating server/package-lock.json,
+# and three consecutive deploys failed at the Docker build step before this
+# check existed). CI now runs this same check on every PR
+# (.github/workflows/ci.yml, job "server-lockfile-sync"); this is the same
+# check run locally, right before committing to a multi-minute Cloud Build,
+# so drift is a several-second local failure instead of a slow, opaque one.
+function Test-ServerLockfileInSync {
+  param([Parameter(Mandatory)][string]$SourceDir)
+  Write-Host "Verifying $SourceDir/package-lock.json matches $SourceDir/package.json (mirrors the Docker build's npm ci)..."
+  $packageJsonPath = Join-Path $SourceDir 'package.json'
+  $lockfilePath = Join-Path $SourceDir 'package-lock.json'
+  if (-not (Test-Path -LiteralPath $packageJsonPath) -or -not (Test-Path -LiteralPath $lockfilePath)) {
+    Write-Host "  Skipping: $packageJsonPath or $lockfilePath not found."
+    return
+  }
+  $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ('deploy-lockfile-check-' + [System.Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+  try {
+    Copy-Item -LiteralPath $packageJsonPath -Destination $tempDir
+    Copy-Item -LiteralPath $lockfilePath -Destination $tempDir
+    Push-Location $tempDir
+    try {
+      $previousErrorActionPreference = $ErrorActionPreference
+      $ErrorActionPreference = 'Continue'
+      try {
+        & npm ci --no-workspaces --no-audit --no-fund --ignore-scripts *>$null
+        $checkExitCode = $LASTEXITCODE
+      } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+      }
+    } finally {
+      Pop-Location
+    }
+  } finally {
+    Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+  }
+  if ($checkExitCode -ne 0) {
+    Write-Error @"
+$lockfilePath is out of sync with $packageJsonPath — server/Dockerfile's `npm ci` would fail this exact way during the Cloud Build step (this is the same check that build runs).
+
+Fix:
+  cd $SourceDir
+  npm install --package-lock-only --no-workspaces
+  cd ..
+Then commit the updated $lockfilePath and retry the deploy.
+
+To bypass this check for one deploy: `set SKIP_LOCKFILE_CHECK=1` (cmd) or `$env:SKIP_LOCKFILE_CHECK = '1'` (PowerShell) before rerunning.
+"@
+    exit 1
+  }
+  Write-Host "  In sync."
+}
 
 function Strip-InlineComment([string]$Line) {
   $out = ''
@@ -179,6 +275,12 @@ Write-Host "  Region: $Region"
 Write-Host "  Source: $SourceDir"
 Write-Host "  Memory: $Memory"
 
+if ($SkipLockfileCheck) {
+  Write-Host "Skipping package-lock.json sync check because SKIP_LOCKFILE_CHECK=1."
+} else {
+  Test-ServerLockfileInSync -SourceDir $SourceDir
+}
+
 if (-not $EnvFile) {
   if (Test-Path -LiteralPath 'server/.env') {
     $EnvFile = 'server/.env'
@@ -335,7 +437,7 @@ if (-not $SkipFirestoreIndexes) {
 
 $deployStartedAt = [DateTime]::UtcNow
 try {
-  $deployOutput = @(& $GcloudCommand @cmd 2>&1)
+  $deployOutput = @(Invoke-GcloudAllowingStderr { & $GcloudCommand @cmd 2>&1 })
   $deployExitCode = $LASTEXITCODE
 } finally {
   if ($envFlagsFile) {
@@ -354,12 +456,32 @@ if ($deployExitCode -ne 0) {
   $buildId = if ($buildMatch.Success) { $buildMatch.Value } else { '' }
   if (-not $buildId) {
     $filter = "createTime>$($deployStartedAt.ToString('o'))"
-    $recentBuildOutput = @(& $GcloudCommand builds list "--filter=$filter" '--limit=1' '--format=value(id)' 2>$null)
+    # $filter contains a literal '>' (Cloud Build's filter comparison syntax,
+    # not shell redirection) with no whitespace elsewhere in the token, so
+    # PowerShell passes "--filter=$filter" to the process unquoted on the
+    # underlying command line. $GcloudCommand is a .cmd (batch) wrapper on
+    # Windows, and cmd.exe parses redirection operators in the raw command
+    # line it uses to launch a batch file *before* the batch script ever
+    # runs — so that bare '>' gets read as "redirect stdout to a file named
+    # 2026-...:...Z", which fails immediately with "The filename, directory
+    # name, or volume label syntax is incorrect." (colons aren't valid in a
+    # Windows filename). Wrapping the token in its own literal quote pair
+    # forces cmd.exe to see the '>' as quoted text instead of an operator;
+    # gcloud's own argument parsing strips that enclosing quote pair same as
+    # any other quoted CLI argument.
+    $filterArg = '"--filter=' + $filter + '"'
+    # `gcloud run deploy --source` submits the build to the same region as the
+    # Cloud Run service (regional Cloud Build workers, not the classic global
+    # pool) — an unqualified `builds list`/`builds describe` queries the
+    # global pool instead, finds nothing, and this fallback silently returns
+    # no build id even though the build clearly exists. --region must match
+    # the deploy's own --region.
+    $recentBuildOutput = @(& $GcloudCommand builds list '--region' $Region $filterArg '--limit=1' '--format=value(id)' 2>$null)
     if ($recentBuildOutput.Count -gt 0) { $buildId = ([string]$recentBuildOutput[0]).Trim() }
   }
   if ($buildId) {
     Write-Host "Cloud Build: $buildId"
-    & $GcloudCommand builds describe $buildId '--format=yaml(status,logUrl,failureInfo)' 2>&1 | ForEach-Object { Write-Host $_ }
+    Invoke-GcloudAllowingStderr { & $GcloudCommand builds describe $buildId '--region' $Region '--format=yaml(status,logUrl,failureInfo)' 2>&1 } | ForEach-Object { Write-Host $_ }
     Write-Error "API deployment failed with gcloud exit code $deployExitCode. Cloud Build: $buildId"
   } else {
     Write-Error "API deployment failed with gcloud exit code $deployExitCode. No Cloud Build ID was returned; rerun with gcloud verbosity or inspect Cloud Build history."
@@ -369,7 +491,7 @@ if ($deployExitCode -ne 0) {
 
 # A prior --no-traffic canary deploy pins traffic away from LATEST until it is
 # explicitly restored; a subsequent gcloud run deploy does not undo that.
-& $GcloudCommand run services update-traffic $ServiceName --region $Region --to-latest
+Invoke-GcloudAllowingStderr { & $GcloudCommand run services update-traffic $ServiceName --region $Region --to-latest 2>&1 } | ForEach-Object { Write-Host $_ }
 if ($LASTEXITCODE -ne 0) {
   Write-Error "API deployed, but routing traffic to the latest revision failed with gcloud exit code $LASTEXITCODE."
   exit $LASTEXITCODE

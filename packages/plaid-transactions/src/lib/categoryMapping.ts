@@ -1,6 +1,10 @@
 /**
  * Neutral taxonomy for transactions. Host applications can map these
  * to their own internal categories.
+ *
+ * Mirrored (not imported) in server/src/routes/plaidIntegrationRoutes.ts —
+ * server/Dockerfile's build context is server/ alone and can't reach this
+ * sibling workspace package. Keep both in sync if this union changes.
  */
 export type NeutralCategory =
   | 'Food & Drink'

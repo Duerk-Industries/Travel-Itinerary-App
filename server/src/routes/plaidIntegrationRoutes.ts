@@ -4,10 +4,29 @@ import { assertCanUseFeature } from '../services/entitlementService';
 import { insertExpense, ensureUserInTrip, listExpenses } from '../db';
 import { getDb } from '../db.firebase';
 import { logError } from '../logger';
-import { NeutralCategory } from '@wanderbunnies/plaid-transactions/src/lib/categoryMapping';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 const router = Router();
+
+// Mirrors NeutralCategory from packages/plaid-transactions/src/lib/categoryMapping.ts —
+// keep in sync if that taxonomy changes (same convention as coveredBy.ts's
+// client/server mirror; see CLAUDE.md). Duplicated on purpose rather than
+// imported: packages/plaid-transactions is a sibling workspace package, and
+// server/Dockerfile's build context is the server/ directory alone — it has
+// no path back to a sibling package, and this route is the only place server
+// code ever touched that package's source, so a real cross-workspace
+// dependency (file: reference + widening the Docker build context to the
+// repo root) would be a lot of moving parts for one 9-value union type.
+type NeutralCategory =
+  | 'Food & Drink'
+  | 'Travel'
+  | 'Shopping'
+  | 'Entertainment'
+  | 'Health'
+  | 'Services'
+  | 'Transfer'
+  | 'Income'
+  | 'Other';
 router.use(authenticate);
 
 // These would normally be imported from the module if we were deploying them here,
