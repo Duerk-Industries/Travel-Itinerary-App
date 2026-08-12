@@ -4,6 +4,7 @@ import axios from 'axios';
 import {
   clearImageServiceCachesForTests,
   getGooglePlaceImage,
+  getItineraryImage,
   getUnsplashImage,
 } from '../src/image-service';
 
@@ -92,5 +93,24 @@ describe('image-service', () => {
     expect(result).toBe('https://images.example.com/unsplash-paris.jpg');
     expect(getSignedUrl).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it('retries the destination when a detailed itinerary query has no photos', async () => {
+    (axios.get as jest.Mock)
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({
+        data: { results: [{ urls: { regular: 'https://images.example.com/osaka.jpg' } }] },
+      });
+
+    const result = await getItineraryImage({
+      locationName: 'Osaka',
+      day: '2026-08-12',
+      contextText: 'quiet family itinerary near a museum with accessible seating',
+    });
+
+    expect(result).toMatchObject({ provider: 'unsplash', fallbackUsed: false });
+    expect(result.url).toBe('https://images.example.com/osaka.jpg');
+    expect(axios.get).toHaveBeenCalledTimes(2);
+    expect((axios.get as jest.Mock).mock.calls[1][0]).toContain('query=Osaka');
   });
 });
