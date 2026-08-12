@@ -3,9 +3,9 @@
 This is the change-by-file implementation summary for
 [Activities Inline Editing and Shared Trip-Item Detail Dialogs](../../docs/implementation_plans/activities-inline-edit-and-shared-detail-dialogs.md).
 
-Status: Proposed — implementation-ready. Active-trip-member authorization, multi-level undo/redo (including
-the follow-up correctness review), native interaction scope, and staged-delete behavior are all confirmed;
-no open decisions remain.
+Status: Implemented — feature flags are disabled by default for controlled rollout. Active-trip-member
+authorization, multi-level undo/redo, native interaction scope, and staged-delete behavior are implemented;
+focused verification passes, with unrelated pre-existing repository build blockers remaining.
 
 ## Confirmed decisions
 

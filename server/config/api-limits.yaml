@@ -341,6 +341,16 @@ providers:
       PLAID_KMS_ENCRYPT: 300
       PLAID_KMS_DECRYPT: 3000
 
+  WANDER_BUNNIES_INTERNAL:
+    window: day
+    windowHours: 24
+    overall: 100000
+    callers:
+      ACTIVITIES_LIST: 50000
+      ACTIVITIES_BULK_SAVE: 1000
+      ACTIVITIES_ACTIVITY_ROW_WRITE: 20000
+      ACTIVITIES_ACTIVITY_ROW_DELETE: 5000
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80

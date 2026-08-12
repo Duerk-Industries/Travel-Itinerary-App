@@ -1,8 +1,8 @@
 # Activities Inline Editing and Shared Trip-Item Detail Dialogs
 
-Status: Proposed — implementation-ready. Authorization, multi-level undo/redo (including the follow-up
-undo/redo review), native interaction scope, and all-fields interpretation are confirmed; no open
-decisions remain.
+Status: Implemented — feature flags are disabled by default for controlled rollout. Authorization,
+multi-level undo/redo, native interaction scope, and all-fields interpretation are implemented; focused
+verification passes, with the repository-wide build retaining unrelated pre-existing blockers.
 
 ## Review result and confirmed decisions
 

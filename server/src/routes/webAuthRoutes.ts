@@ -9,6 +9,7 @@ import {
   deleteUserRecord,
   ensureDefaultGroupForUser,
   findUserByIdentifier,
+  getFeatureFlag,
   getPendingEmailVerification,
   getUserRole,
   ensureCurrentUserTier,
@@ -255,12 +256,20 @@ router.get('/confirm-email', async (req, res) => {
   }
 });
 
-router.get('/features', (_req, res) => {
+router.get('/features', async (_req, res) => {
+  const [gridEditing, gridClipboard, standardizedDialogs] = await Promise.all([
+    getFeatureFlag('feature_grid_editing'),
+    getFeatureFlag('feature_grid_editing_clipboard'),
+    getFeatureFlag('feature_standardized_item_dialogs'),
+  ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
     multiEmailEnabled: getAuthFlag('multiEmailEnabled'),
     appleOAuthEnabled: getAuthFlag('appleOAuthEnabled'),
     uiProviderButtonsEnabled: getAuthFlag('uiProviderButtonsEnabled'),
+    featureGridEditing: gridEditing?.enabled === true,
+    featureGridEditingClipboard: gridClipboard?.enabled === true,
+    featureStandardizedItemDialogs: standardizedDialogs?.enabled === true,
   });
 });
 

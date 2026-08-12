@@ -8,6 +8,10 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import GetYourGuideCta from '../components/GetYourGuideCta';
+import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
+import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { resolveMemberClipboardValue } from '../utils/clipboardGrid';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -236,6 +240,9 @@ type TourTabProps = {
   readOnly?: boolean;
   defaultActivityDate?: string | null;
   destination?: string | null;
+  featureGridEditing?: boolean;
+  featureGridEditingClipboard?: boolean;
+  featureStandardizedItemDialogs?: boolean;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -260,10 +267,23 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   readOnly = false,
   defaultActivityDate = null,
   destination = null,
+  featureGridEditing = false,
+  featureGridEditingClipboard = false,
+  featureStandardizedItemDialogs = false,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
+  const [tableEditing, setTableEditing] = useState(false);
+  const [gridRows, setGridRows] = useState<Tour[]>([]);
+  const [gridOriginalRows, setGridOriginalRows] = useState<Tour[]>([]);
+  const [gridDeleteIds, setGridDeleteIds] = useState<Set<string>>(new Set());
+  const [gridHistory, setGridHistory] = useState<Array<{ rows: Tour[]; deleteIds: string[] }>>([]);
+  const [gridRedo, setGridRedo] = useState<Array<{ rows: Tour[]; deleteIds: string[] }>>([]);
+  const [gridErrors, setGridErrors] = useState<GridCellError[]>([]);
+  const [gridMessage, setGridMessage] = useState<string | null>(null);
+  const [gridSaving, setGridSaving] = useState(false);
+  const [tourToDelete, setTourToDelete] = useState<Tour | null>(null);
   const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
   const DateTimePickerComponent = nativeDateTimePicker;
@@ -489,6 +509,258 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     [selectedTourId, tours]
   );
 
+  const gridColumns = useMemo<GridColumn<Tour>[]>(() => {
+    const people = (ids?: string[]) => (ids ?? []).map((id) => memberLabelById.get(id) ?? payerName(id) ?? id).join('; ');
+    return [
+      { key: 'date', label: 'Date', width: 140, editor: 'date', getValue: (row) => row.date },
+      { key: 'activityType', label: 'Type', width: 180, editor: 'select', options: ACTIVITY_TYPES, getValue: (row) => row.activityType || 'Tour' },
+      { key: 'name', label: 'Activity', width: 220, editor: 'text', getValue: (row) => row.name || '' },
+      { key: 'startLocation', label: 'Start Location', width: 190, editor: 'text', getValue: (row) => row.startLocation || '' },
+      { key: 'startTime', label: 'Start Time', width: 120, editor: 'time', getValue: (row) => row.startTime || '' },
+      { key: 'duration', label: 'Duration', width: 130, editor: 'text', getValue: (row) => row.duration || '' },
+      { key: 'status', label: 'Status', width: 135, editor: 'select', options: ITINERARY_STATUSES, getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
+      { key: 'cost', label: 'Cost', width: 110, editor: 'decimal', getValue: (row) => String(row.cost ?? '') },
+      { key: 'freeCancelBy', label: 'Free Cancel By', width: 150, editor: 'date', getValue: (row) => row.freeCancelBy || '' },
+      { key: 'bookedOn', label: 'Booked On', width: 170, editor: 'text', getValue: (row) => row.bookedOn || '' },
+      { key: 'reference', label: 'Reference', width: 170, editor: 'text', getValue: (row) => row.reference || '' },
+      { key: 'notes', label: 'Notes', width: 240, editor: 'textarea', getValue: (row) => row.notes || '' },
+      { key: 'paidBy', label: 'Paid By', width: 210, editor: 'multiSelect', getValue: (row) => people(row.paidBy) },
+      { key: 'travelerIds', label: 'Travelers', width: 210, editor: 'multiSelect', getValue: (row) => people(row.travelerIds) },
+      { key: 'netRating', label: 'Rating', width: 110, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
+      { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? String(row.userRating) : '-' },
+      { key: 'netVotes', label: 'Votes', width: 100, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
+      { key: 'suggestions', label: 'Suggestions', width: 140, editor: 'readonly', editable: false, getValue: () => 'See details' },
+      { key: 'actions', label: 'Actions', width: 110, editor: 'action', editable: false, getValue: () => '' },
+    ];
+  }, [memberLabelById, payerName]);
+
+  const beginGridEdit = () => {
+    if (readOnly || !featureGridEditing) return;
+    const snapshot = tours.map((tour) => ({ ...tour, paidBy: [...tour.paidBy], travelerIds: [...(tour.travelerIds ?? [])] }));
+    setGridRows(snapshot);
+    setGridOriginalRows(snapshot);
+    setGridDeleteIds(new Set());
+    setGridHistory([]);
+    setGridRedo([]);
+    setGridErrors([]);
+    setGridMessage(null);
+    setTableEditing(true);
+  };
+
+  const cancelGridEdit = () => {
+    setTableEditing(false);
+    setGridRows([]);
+    setGridOriginalRows([]);
+    setGridDeleteIds(new Set());
+    setGridHistory([]);
+    setGridRedo([]);
+    setGridErrors([]);
+    setGridMessage(null);
+  };
+
+  const recordGridChange = (nextRows: Tour[], nextDeleteIds: Set<string>) => {
+    setGridHistory((previous) => [...previous.slice(-99), { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]);
+    setGridRedo([]);
+    setGridRows(nextRows);
+    setGridDeleteIds(nextDeleteIds);
+  };
+
+  const undoGridChange = () => {
+    const previous = gridHistory[gridHistory.length - 1];
+    if (!previous) return;
+    setGridHistory((items) => items.slice(0, -1));
+    setGridRedo((items) => [...items, { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]);
+    setGridRows(previous.rows);
+    setGridDeleteIds(new Set(previous.deleteIds));
+  };
+
+  const redoGridChange = () => {
+    const next = gridRedo[gridRedo.length - 1];
+    if (!next) return;
+    setGridRedo((items) => items.slice(0, -1));
+    setGridHistory((items) => [...items, { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]);
+    setGridRows(next.rows);
+    setGridDeleteIds(new Set(next.deleteIds));
+  };
+
+  const setGridError = (rowId: string, columnKey: string, message?: string) => {
+    setGridErrors((errors) => {
+      const remaining = errors.filter((error) => !(error.rowId === rowId && error.columnKey === columnKey));
+      return message ? [...remaining, { rowId, columnKey, message }] : remaining;
+    });
+  };
+
+  const changeGridCell = (rowId: string, columnKey: string, rawValue: string) => {
+    const row = gridRows.find((item) => item.id === rowId);
+    const column = gridColumns.find((item) => item.key === columnKey);
+    if (!row || !column || column.editor === 'readonly' || column.editor === 'action') return;
+    let value: unknown = rawValue;
+    if ((column.editor === 'date' || column.editor === 'time') && rawValue && !((column.editor === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(rawValue)) || (column.editor === 'time' && /^\d{2}:\d{2}$/.test(rawValue)))) {
+      setGridError(rowId, columnKey, column.editor === 'date' ? 'Use YYYY-MM-DD.' : 'Use HH:mm.');
+      return;
+    }
+    if (column.editor === 'decimal') {
+      value = sanitizeCostInput(rawValue);
+      if (rawValue && !/^\d*(\.\d*)?$/.test(String(value))) {
+        setGridError(rowId, columnKey, 'Enter a non-negative decimal.');
+        return;
+      }
+    }
+    if (column.editor === 'select' && !(column.options ?? []).includes(rawValue)) {
+      setGridError(rowId, columnKey, 'Select a supported option.');
+      return;
+    }
+    if (column.editor === 'multiSelect') {
+      const resolved = resolveMemberClipboardValue(rawValue, activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member), email: member.email })));
+      if (!resolved.ok) {
+        setGridError(rowId, columnKey, resolved.error);
+        return;
+      }
+      value = resolved.value;
+    }
+    setGridError(rowId, columnKey);
+    const nextRows = gridRows.map((item) => item.id === rowId ? { ...item, [columnKey]: value } as Tour : item);
+    recordGridChange(nextRows, new Set(gridDeleteIds));
+  };
+
+  const changeGridCells = (changes: Array<{ rowId: string; columnKey: string; value: string }>) => {
+    let nextRows = gridRows;
+    const nextErrors = [...gridErrors];
+    const clearError = (rowId: string, columnKey: string) => {
+      for (let index = nextErrors.length - 1; index >= 0; index -= 1) {
+        if (nextErrors[index].rowId === rowId && nextErrors[index].columnKey === columnKey) nextErrors.splice(index, 1);
+      }
+    };
+    for (const change of changes) {
+      const row = nextRows.find((item) => item.id === change.rowId);
+      const column = gridColumns.find((item) => item.key === change.columnKey);
+      if (!row || !column || column.editor === 'readonly' || column.editor === 'action') continue;
+      let value: unknown = change.value;
+      const validDateOrTime = column.editor === 'date'
+        ? !change.value || /^\d{4}-\d{2}-\d{2}$/.test(change.value)
+        : column.editor === 'time'
+          ? !change.value || /^\d{2}:\d{2}$/.test(change.value)
+          : true;
+      if (!validDateOrTime) {
+        nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: column.editor === 'date' ? 'Use YYYY-MM-DD.' : 'Use HH:mm.' });
+        continue;
+      }
+      if (column.editor === 'decimal') {
+        value = sanitizeCostInput(change.value);
+        if (change.value && !/^\d*(\.\d*)?$/.test(String(value))) {
+          nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: 'Enter a non-negative decimal.' });
+          continue;
+        }
+      }
+      if (column.editor === 'select' && !(column.options ?? []).includes(change.value)) {
+        nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: 'Select a supported option.' });
+        continue;
+      }
+      if (column.editor === 'multiSelect') {
+        const resolved = resolveMemberClipboardValue(change.value, activeMembers.map((member) => ({ id: member.id, label: formatMemberDisplayName(member), email: member.email })));
+        if (!resolved.ok) {
+          nextErrors.push({ rowId: change.rowId, columnKey: change.columnKey, message: resolved.error });
+          continue;
+        }
+        value = resolved.value;
+      }
+      clearError(change.rowId, change.columnKey);
+      nextRows = nextRows.map((item) => item.id === change.rowId ? { ...item, [change.columnKey]: value } as Tour : item);
+    }
+    setGridErrors(nextErrors);
+    if (nextRows !== gridRows) recordGridChange(nextRows, new Set(gridDeleteIds));
+  };
+
+  const toggleGridDelete = (rowId: string) => {
+    const next = new Set(gridDeleteIds);
+    if (next.has(rowId)) next.delete(rowId);
+    else next.add(rowId);
+    recordGridChange(gridRows, next);
+  };
+
+  const saveGridEdit = async () => {
+    if (!tableEditing || gridSaving) return;
+    const originalById = new Map(gridOriginalRows.map((row) => [row.id, row]));
+    const editableKeys = gridColumns.filter((column) => column.editable !== false && column.editor !== 'action' && column.editor !== 'readonly').map((column) => column.key as keyof Tour);
+    const operations: Array<{ kind: 'update' | 'delete'; id: string; fields?: Record<string, unknown> }> = [];
+    for (const row of gridRows) {
+      if (gridDeleteIds.has(row.id)) {
+        operations.push({ kind: 'delete', id: row.id });
+        continue;
+      }
+      const original = originalById.get(row.id);
+      if (!original) continue;
+      const fields: Record<string, unknown> = {};
+      editableKeys.forEach((key) => {
+        const before = original[key];
+        const after = row[key];
+        if (JSON.stringify(before) !== JSON.stringify(after)) fields[String(key)] = String(key) === 'freeCancelBy' && after === '' ? null : after;
+      });
+      if (Object.keys(fields).length) operations.push({ kind: 'update', id: row.id, fields });
+    }
+    if (operations.length > 200) {
+      setGridMessage('Save up to 200 changed rows per editing session.');
+      return;
+    }
+    const validationErrors = gridRows
+      .filter((row) => !gridDeleteIds.has(row.id))
+      .map((row) => ({ row, validation: buildActivityPayload(row as TourDraft, defaultPayerId) }))
+      .filter(({ validation }) => Boolean(validation.error));
+    if (validationErrors.length) {
+      validationErrors.forEach(({ row, validation }) => setGridError(row.id, 'name', validation.error));
+      setGridMessage('Fix the highlighted cells before saving.');
+      return;
+    }
+    if (gridErrors.length) {
+      setGridMessage('Fix the highlighted cells before saving.');
+      return;
+    }
+    if (mode === 'wizard') {
+      setTours((current) => current.filter((item) => !gridDeleteIds.has(item.id)).map((item) => gridRows.find((row) => row.id === item.id) ?? item));
+      cancelGridEdit();
+      return;
+    }
+    if (!activeTripId) {
+      setGridMessage('Select an active trip before saving.');
+      return;
+    }
+    setGridSaving(true);
+    const succeeded = new Set<string>();
+    const failures: GridCellError[] = [];
+    for (let index = 0; index < operations.length; index += 50) {
+      const chunk = operations.slice(index, index + 50);
+      const response = await fetch(`${backendUrl}/api/activities/bulk`, {
+        method: 'PATCH',
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          tripId: activeTripId,
+          updates: chunk.filter((operation) => operation.kind === 'update').map((operation) => ({ id: operation.id, fields: operation.fields })),
+          deletes: chunk.filter((operation) => operation.kind === 'delete').map((operation) => operation.id),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setGridMessage(payload.error || 'Unable to save activity changes.');
+        setGridSaving(false);
+        return;
+      }
+      for (const result of [...(payload.updates ?? []), ...(payload.deletes ?? [])]) {
+        if (result.ok) succeeded.add(String(result.id));
+        else failures.push({ rowId: String(result.id), columnKey: 'actions', message: String(result.error || 'Unable to save row') });
+      }
+    }
+    if (failures.length) {
+      setGridErrors(failures);
+      setGridMessage('Some rows could not be saved. Review the highlighted rows and try again.');
+      setGridSaving(false);
+      return;
+    }
+    onDataChanged ? onDataChanged() : await fetchTours();
+    setGridSaving(false);
+    cancelGridEdit();
+    void succeeded;
+  };
+
   const renderDetailRow = (label: string, value: React.ReactNode) => (
     <View style={[styles.modalRow, { alignItems: 'flex-start' }]} key={label}>
       <Text style={[styles.cellText, { minWidth: 140, flexShrink: 0, fontWeight: '600' }]}>{label}</Text>
@@ -505,11 +777,31 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
         {!readOnly ? (
-          <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
-            <Text style={styles.buttonText}>+</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            {featureGridEditing && !tableEditing ? (
+              <TouchableOpacity style={styles.button} onPress={beginGridEdit} testID="activity-table-edit">
+                <Text style={styles.buttonText}>Edit table</Text>
+              </TouchableOpacity>
+            ) : null}
+            {tableEditing ? (
+              <>
+                <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} testID="activity-table-cancel">
+                  <Text style={styles.dangerButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={saveGridEdit} testID="activity-table-save">
+                  <Text style={styles.buttonText}>Save changes</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+            {!tableEditing ? (
+              <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
+                <Text style={styles.buttonText}>+</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         ) : null}
       </View>
+      {gridMessage ? <Text style={styles.helperText}>{gridMessage}</Text> : null}
       {Platform.OS !== 'web' && tourDateField && editingTour && DateTimePickerComponent ? (
         <DateTimePickerComponent
           value={tourDateValue}
@@ -535,7 +827,29 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           }}
         />
       ) : null}
-      <HorizontalTableScroll
+      {tableEditing ? (
+        <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+          <EditableDataGrid
+            rows={gridRows}
+            columns={gridColumns}
+            clipboardEnabled={Platform.OS === 'web' && featureGridEditingClipboard}
+            disabled={gridSaving}
+            cellErrors={gridErrors}
+            stagedDeleteIds={gridDeleteIds}
+            onCellChange={changeGridCell}
+            onCellsChange={changeGridCells}
+            onDeleteRow={toggleGridDelete}
+            onUndo={undoGridChange}
+            onRedo={redoGridChange}
+            canUndo={gridHistory.length > 0}
+            canRedo={gridRedo.length > 0}
+            onError={setGridMessage}
+            styles={styles}
+            theme={theme}
+          />
+        </HorizontalTableScroll>
+      ) : null}
+      {!tableEditing ? <HorizontalTableScroll
         style={styles.tableScroll}
         contentContainerStyle={styles.tableScrollContent}
       >
@@ -595,7 +909,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             </View>
           ))}
         </View>
-      </HorizontalTableScroll>
+      </HorizontalTableScroll> : null}
       <View style={{ marginTop: 8 }}>
             <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (
@@ -608,7 +922,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </View>
         ) : null}
       </View>
-      {selectedTour ? (
+      {selectedTour && !featureStandardizedItemDialogs ? (
         <Modal transparent visible={Boolean(selectedTour)} animationType="fade" onRequestClose={() => setSelectedTourId(null)}>
           <View style={styles.modalOverlay} testID="activity-details-modal">
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setSelectedTourId(null)} />
@@ -698,6 +1012,47 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             </View>
           </View>
         </Modal>
+      ) : null}
+      {selectedTour && featureStandardizedItemDialogs ? (
+        <TripItemDetailsDialog
+          visible={Boolean(selectedTour)}
+          kind="activity"
+          title={selectedTour.name || 'Activity'}
+          subtitle={formatPeopleList(selectedTour.travelerIds)}
+          status={normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS)}
+          styles={styles}
+          readOnly={readOnly}
+          rows={[
+            { label: 'Date', value: formatDateLong(selectedTour.date) },
+            { label: 'Type', value: selectedTour.activityType || 'Tour' },
+            { label: 'Start Location', value: selectedTour.startLocation || '-' },
+            { label: 'Start Time', value: selectedTour.startTime || '-' },
+            { label: 'Duration', value: selectedTour.duration || '-' },
+            { label: 'Cost', value: selectedTour.cost ? `$${selectedTour.cost}` : '-' },
+            { label: 'Platform Booked On', value: selectedTour.bookedOn || '-' },
+            { label: 'Free Cancel By', value: selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-' },
+            { label: 'Reference', value: selectedTour.reference || '-' },
+            { label: 'Description', value: selectedTour.notes || '-' },
+            { label: 'Paid by', value: formatPeopleList(selectedTour.paidBy) },
+            { label: 'Attendees', value: formatPeopleList(selectedTour.travelerIds) },
+            { label: 'Rating', value: formatNetVotes(selectedTour.netRating ?? 0) },
+            { label: 'Votes', value: formatNetVotes(selectedTour.netVotes ?? 0) },
+          ]}
+          onClose={() => setSelectedTourId(null)}
+          onEdit={() => { openTourEditor(selectedTour); setSelectedTourId(null); }}
+          onDelete={() => setTourToDelete(selectedTour)}
+          testID="activity-details-modal"
+        />
+      ) : null}
+      {tourToDelete ? (
+        <ConfirmDialog
+          visible
+          title="Delete Activity"
+          message={`Delete ${tourToDelete.name || 'this activity'}? This will be applied when the current action is confirmed.`}
+          onConfirm={() => { const id = tourToDelete.id; setTourToDelete(null); removeTour(id); }}
+          onCancel={() => setTourToDelete(null)}
+          styles={styles}
+        />
       ) : null}
       {!readOnly && editingTour ? (
         <Modal transparent visible={Boolean(editingTour)} animationType="fade" onRequestClose={closeTourEditor}>

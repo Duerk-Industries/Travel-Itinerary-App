@@ -4706,7 +4706,9 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
   const db = getDb();
   const doc = await db.collection('tours').doc(id).get();
   if (!doc.exists) return null;
-  if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
+  const current = normalizeActivityRecord(doc.data()) as Activity;
+  const membership = await ensureUserInTrip(current.tripId, userId);
+  if (!membership) return null;
   const updatePayload = stripUndefined({
     ...activity,
     activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
@@ -4718,12 +4720,15 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
   return normalizeActivityRecord(updated.data()) as Activity;
 };
 
-export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
+export const deleteActivity = async (tourId: string, userId: string): Promise<boolean> => {
   const db = getDb();
   const doc = await db.collection('tours').doc(tourId).get();
-  if (!doc.exists) return;
-  if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
+  if (!doc.exists) return false;
+  const current = normalizeActivityRecord(doc.data()) as Activity;
+  const membership = await ensureUserInTrip(current.tripId, userId);
+  if (!membership) return false;
   await db.collection('tours').doc(tourId).delete();
+  return true;
 };
 
 export const getActivityById = async (id: string): Promise<Activity | null> => {

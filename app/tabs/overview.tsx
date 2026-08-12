@@ -68,7 +68,7 @@ import {
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
-import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
+import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
@@ -232,6 +232,8 @@ type OverviewTabProps = {
   onAddCarRental: (rental: CarRental) => void;
   openFlightInFlightsTab: (flightId: string) => void;
   openLodgingDetails: (lodging: Lodging) => void;
+  readOnly?: boolean;
+  featureStandardizedItemDialogs?: boolean;
 };
 
 type DayCard = {
@@ -247,6 +249,13 @@ type DetailSection = {
   title?: string;
   subtitle?: string;
   items: DetailItem[];
+};
+
+type DetailModalState = {
+  title: string;
+  sections: DetailSection[];
+  kind?: 'flight' | 'lodging' | 'activity';
+  item?: Flight | Lodging | Tour;
 };
 
 type ModalDateField =
@@ -431,6 +440,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onAddCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
+  readOnly = false,
+  featureStandardizedItemDialogs = false,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -477,7 +488,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   });
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
-  const [detailModal, setDetailModal] = useState<{ title: string; sections: DetailSection[] } | null>(null);
+  const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
+  const [detailModal, setDetailModal] = useState<DetailModalState | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{
+    kind: 'flight' | 'lodging' | 'activity';
+    id: string;
+    name: string;
+  } | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
@@ -1810,7 +1827,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openLodgingEditor = (lodging: Lodging) => {
     if (!isEditing) {
-      openLodgingDetails(lodging);
+      if (featureStandardizedItemDialogs) setSelectedLodging(lodging);
+      else openLodgingDetails(lodging);
       return;
     }
     setEditingLodgingId(lodging.id);
@@ -1847,6 +1865,53 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setEditingTourId(tour.id);
     setTourDraft(buildTourDraftFromRow({ ...tour, paidBy: (tour as any).paidBy ?? [] } as any));
     setShowAddTour(true);
+  };
+
+  const editFlightFromDetails = (flight: Flight) => {
+    if (readOnly) return;
+    setSelectedFlight(null);
+    setIsEditing(true);
+    setEditingFlightId(flight.id);
+    setEditingFlightDraft(toFlightEditDraft(flight));
+    setShowFlightEditor(true);
+  };
+
+  const editLodgingFromDetails = (lodging: Lodging) => {
+    if (readOnly) return;
+    setSelectedLodging(null);
+    setIsEditing(true);
+    setEditingLodgingId(lodging.id);
+    setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
+    setShowAddLodging(true);
+  };
+
+  const editActivityFromDetails = (tour: Tour) => {
+    if (readOnly) return;
+    setSelectedTour(null);
+    setIsEditing(true);
+    setEditingTourId(tour.id);
+    setTourDraft(buildTourDraftFromRow({ ...tour, paidBy: (tour as any).paidBy ?? [] } as any));
+    setShowAddTour(true);
+  };
+
+  const deleteItemFromDetails = async () => {
+    if (!itemToDelete) return;
+    const { kind, id } = itemToDelete;
+    const path = kind === 'flight' ? `/api/transfers/${id}` : kind === 'lodging' ? `/api/lodgings/${id}` : `/api/activities/${id}`;
+    const res = await fetch(`${backendUrl}${path}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      Alert.alert(data.error || `Unable to delete ${kind}`);
+      return;
+    }
+    setItemToDelete(null);
+    setSelectedFlight(null);
+    setSelectedLodging(null);
+    setSelectedTour(null);
+    setDetailModal(null);
+    if (kind === 'flight') onFlightDataChanged();
+    if (kind === 'lodging') onLodgingDataChanged();
+    if (kind === 'activity') onTourDataChanged();
   };
 
   const openRentalEditor = (rental: CarRental) => {
@@ -1908,39 +1973,150 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     </View>
   );
 
-  const renderDetailSectionsModal = (modal: { title: string; sections: DetailSection[] }) => (
-    <View style={styles.modalOverlay}>
-      <View style={[styles.confirmModal, styles.detailModal]}>
-        <ScrollView style={styles.detailModalScroll}>
-          <Text style={styles.sectionTitle}>{modal.title}</Text>
-          {modal.sections.map((section, idx) => (
-            <View key={`${section.title ?? 'section'}-${idx}`} style={styles.detailSection}>
-              {section.title ? <Text style={styles.headerText}>{section.title}</Text> : null}
-              {section.subtitle ? <Text style={styles.helperText}>{section.subtitle}</Text> : null}
-              {section.items.map((item) => {
-                const handler = item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined);
-                const content = handler ? (
-                  <TouchableOpacity onPress={handler}>
-                    <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
-                );
-                return (
-                  <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, { alignItems: 'center' }]}>
-                    <Text style={styles.headerText}>{item.label}:</Text>
-                    <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
-                  </View>
-                );
-              })}
-            </View>
-          ))}
-        </ScrollView>
-        <TouchableOpacity style={styles.button} onPress={() => setDetailModal(null)}>
-          <Text style={styles.buttonText}>Close</Text>
-        </TouchableOpacity>
+  const renderDetailSectionsModal = (modal: DetailModalState) => {
+    if (featureStandardizedItemDialogs && modal.kind && modal.item) {
+      const rows = modal.sections.flatMap((section) => section.items);
+      const itemName = modal.kind === 'flight'
+        ? `${(modal.item as Flight).departure_airport_code || 'Departure'} → ${(modal.item as Flight).arrival_airport_code || 'Arrival'}`
+        : String((modal.item as Lodging | Tour).name || modal.title);
+      const status = String((modal.item as Flight | Lodging | Tour).status || '') || undefined;
+      return (
+        <TripItemDetailsDialog
+          visible
+          kind={modal.kind}
+          title={itemName}
+          subtitle={modal.sections.find((section) => section.subtitle)?.subtitle}
+          status={status}
+          rows={rows.map((item) => ({
+            label: item.label,
+            value: item.value,
+            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
+          }))}
+          styles={styles}
+          readOnly={readOnly}
+          onClose={() => setDetailModal(null)}
+          onEdit={() => {
+            if (modal.kind === 'flight') editFlightFromDetails(modal.item as Flight);
+            if (modal.kind === 'lodging') editLodgingFromDetails(modal.item as Lodging);
+            if (modal.kind === 'activity') editActivityFromDetails(modal.item as Tour);
+            setDetailModal(null);
+          }}
+          onDelete={() => setItemToDelete({ kind: modal.kind!, id: modal.item!.id, name: itemName })}
+          testID={`${modal.kind}-overview-details`}
+        />
+      );
+    }
+
+    return (
+      <View style={styles.modalOverlay}>
+        <View style={[styles.confirmModal, styles.detailModal]}>
+          <ScrollView style={styles.detailModalScroll}>
+            <Text style={styles.sectionTitle}>{modal.title}</Text>
+            {modal.sections.map((section, idx) => (
+              <View key={`${section.title ?? 'section'}-${idx}`} style={styles.detailSection}>
+                {section.title ? <Text style={styles.headerText}>{section.title}</Text> : null}
+                {section.subtitle ? <Text style={styles.helperText}>{section.subtitle}</Text> : null}
+                {section.items.map((item) => {
+                  const handler = item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined);
+                  const content = handler ? (
+                    <TouchableOpacity onPress={handler}>
+                      <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
+                  );
+                  return (
+                    <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, { alignItems: 'center' }]}>
+                      <Text style={styles.headerText}>{item.label}:</Text>
+                      <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={styles.button} onPress={() => setDetailModal(null)}>
+            <Text style={styles.buttonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    );
+  };
+
+  const renderSelectedItemDialogs = () => (
+    <>
+      {selectedFlight ? (
+        <TripItemDetailsDialog
+          visible
+          kind="flight"
+          title={`${selectedFlight.departure_airport_code || 'Departure'} → ${selectedFlight.arrival_airport_code || 'Arrival'}`}
+          status={String((selectedFlight as any).status || '') || undefined}
+          rows={formatFlightDetails(selectedFlight).map((item) => ({
+            label: item.label,
+            value: item.value,
+            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
+          }))}
+          styles={styles}
+          readOnly={readOnly}
+          onClose={() => setSelectedFlight(null)}
+          onEdit={() => editFlightFromDetails(selectedFlight)}
+          onDelete={() => setItemToDelete({ kind: 'flight', id: selectedFlight.id, name: selectedFlight.booking_reference || 'this transfer' })}
+          testID="flight-overview-details"
+        />
+      ) : null}
+      {selectedLodging ? (
+        <TripItemDetailsDialog
+          visible
+          kind="lodging"
+          title={selectedLodging.name}
+          status={String(selectedLodging.status || '') || undefined}
+          rows={[
+            { label: 'Check-in', value: formatFriendlyDate(selectedLodging.checkInDate) || selectedLodging.checkInDate },
+            { label: 'Check-out', value: formatFriendlyDate(selectedLodging.checkOutDate) || selectedLodging.checkOutDate },
+            { label: 'Rooms', value: selectedLodging.rooms || '-' },
+            { label: 'Refund by', value: selectedLodging.refundBy || '-' },
+            { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
+            { label: 'Address', value: selectedLodging.address || '-', onPress: selectedLodging.address ? () => onOpenAddress(selectedLodging.address) : undefined },
+          ]}
+          styles={styles}
+          readOnly={readOnly}
+          onClose={() => setSelectedLodging(null)}
+          onEdit={() => editLodgingFromDetails(selectedLodging)}
+          onDelete={() => setItemToDelete({ kind: 'lodging', id: selectedLodging.id, name: selectedLodging.name })}
+          testID="lodging-overview-details"
+        />
+      ) : null}
+      {selectedTour ? (
+        <TripItemDetailsDialog
+          visible
+          kind="activity"
+          title={selectedTour.name}
+          status={String(selectedTour.status || '') || undefined}
+          rows={formatTourDetails(selectedTour).map((item) => ({
+            label: item.label,
+            value: item.value,
+            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
+          }))}
+          styles={styles}
+          readOnly={readOnly}
+          onClose={() => setSelectedTour(null)}
+          onEdit={() => editActivityFromDetails(selectedTour)}
+          onDelete={() => setItemToDelete({ kind: 'activity', id: selectedTour.id, name: selectedTour.name })}
+          testID="activity-overview-details"
+        />
+      ) : null}
+      {itemToDelete ? (
+        <ConfirmDialog
+          visible
+          title={`Delete ${itemToDelete.kind}`}
+          message={`Delete ${itemToDelete.name}? This cannot be undone.`}
+          confirmLabel="Delete"
+          onConfirm={() => void deleteItemFromDetails()}
+          onCancel={() => setItemToDelete(null)}
+          styles={styles}
+        />
+      ) : null}
+    </>
   );
 
   const startLabel = formatFriendlyDate(overviewStartDate);
@@ -2261,7 +2437,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           items: formatFlightDetails(flight),
                         };
                       });
-                      setDetailModal({ title: 'Transfer Details', sections });
+                      if (featureStandardizedItemDialogs && flightsForDay.length === 1) {
+                        setDetailModal({ title: 'Transfer Details', sections, kind: 'flight', item: flightsForDay[0] });
+                      } else {
+                        setDetailModal({ title: 'Transfer Details', sections });
+                      }
                     }}
                   >
                     <Text style={styles.dayInfoButtonText}>See transfer details →</Text>
@@ -2312,15 +2492,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           <TouchableOpacity
                             testID={`day-details-activity-${tour.id}`}
                             onPress={() => {
-                              setDetailModal({
-                                title: 'Activity Details',
-                                sections: [
-                                  {
-                                    subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
-                                    items: formatTourDetails(tour),
-                                  },
-                                ],
-                              });
+                              if (featureStandardizedItemDialogs) {
+                                setDetailModal({
+                                  title: 'Activity Details',
+                                  kind: 'activity',
+                                  item: tour,
+                                  sections: [
+                                    {
+                                      subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                                      items: formatTourDetails(tour),
+                                    },
+                                  ],
+                                });
+                              } else {
+                                setDetailModal({
+                                  title: 'Activity Details',
+                                  sections: [
+                                    {
+                                      subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                                      items: formatTourDetails(tour),
+                                    },
+                                  ],
+                                });
+                              }
                             }}
                           >
                             <Text style={[styles.dayInfoRoute, styles.linkText]}>{tour.name}</Text>
@@ -2515,6 +2709,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               ) : null}
             </ScrollView>
             {detailModal ? renderDetailSectionsModal(detailModal) : null}
+            {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}
           </View>
         );
       }
@@ -3420,6 +3615,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           onCancel={closeAllAddDialogs}
         />
       ) : null}
+      {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}
     </View>
   );
 };

@@ -4,6 +4,7 @@ import { parseDto, DtoValidationError } from '../src/utils/dtoParse';
 import {
   createActivityDto,
   updateActivityDto,
+  bulkActivitiesDto,
   voteOrRatingDto,
 } from '../src/routes/activityDtos';
 
@@ -87,5 +88,20 @@ describe('voteOrRatingDto', () => {
   it('rejects 0, 2, and non-literal numbers', () => {
     expectValidationError(() => parseDto(voteOrRatingDto, { value: 0 }));
     expectValidationError(() => parseDto(voteOrRatingDto, { value: 2 }));
+  });
+});
+
+describe('bulkActivitiesDto', () => {
+  it('accepts mixed row updates and staged deletes', () => {
+    const parsed = parseDto(bulkActivitiesDto, {
+      updates: [{ id: 'activity-1', fields: { name: 'Museum', cost: 25 } }],
+      deletes: ['activity-2'],
+    });
+    expect(parsed.updates[0].fields.name).toBe('Museum');
+    expect(parsed.deletes).toEqual(['activity-2']);
+  });
+
+  it('caps a single bulk request at 50 row operations', () => {
+    expectValidationError(() => parseDto(bulkActivitiesDto, { deletes: Array.from({ length: 51 }, (_, index) => `activity-${index}`) }), /at most 50/);
   });
 });

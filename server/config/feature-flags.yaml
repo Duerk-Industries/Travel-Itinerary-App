@@ -73,6 +73,15 @@ flags:
   getyourguide_activity_suggestions:
     enabled: true
     description: "Enable optional GetYourGuide affiliate activity suggestions (requires verified partner configuration)"
+  feature_grid_editing:
+    enabled: false
+    description: "Enable Activities table editing, staged deletion, and bulk save"
+  feature_grid_editing_clipboard:
+    enabled: false
+    description: "Enable web multi-cell selection and clipboard operations for the Activities grid"
+  feature_standardized_item_dialogs:
+    enabled: false
+    description: "Enable shared flight, accommodation, and activity detail dialogs"
   packing_lists_v2:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"

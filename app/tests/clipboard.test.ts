@@ -4,6 +4,27 @@
 /// <reference types="node" />
 
 import { jest } from '@jest/globals';
+import { parseClipboardMatrix, resolveMemberClipboardValue, serializeClipboardMatrix } from '../utils/clipboardGrid';
+
+describe('activity grid clipboard matrix', () => {
+  it('round-trips quoted tabs, newlines, and multiple rows', () => {
+    const matrix = [['Museum', 'unused'], ['Cafe\twith tab', 'second line\ncontinued']];
+    const text = serializeClipboardMatrix(matrix);
+    expect(parseClipboardMatrix(text)).toEqual({
+      ok: true,
+      value: matrix,
+    });
+  });
+
+  it('resolves pasted traveler labels and rejects unknown members', () => {
+    const members = [
+      { id: 'u1', label: 'Bryan Duerk', email: 'bryan@example.com' },
+      { id: 'u2', label: 'Tristan Duerk', email: 'tristan@example.com' },
+    ];
+    expect(resolveMemberClipboardValue('Bryan Duerk; tristan@example.com', members)).toEqual({ ok: true, value: ['u1', 'u2'] });
+    expect(resolveMemberClipboardValue('Unknown Person', members).ok).toBe(false);
+  });
+});
 
 describe('copyToClipboard (web)', () => {
   beforeEach(() => {

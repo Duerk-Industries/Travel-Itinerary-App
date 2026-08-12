@@ -625,12 +625,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   } = useAuthForm();
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [appleOAuthEnabled, setAppleOAuthEnabled] = useState(false);
+  const [featureGridEditing, setFeatureGridEditing] = useState(false);
+  const [featureGridEditingClipboard, setFeatureGridEditingClipboard] = useState(false);
+  const [featureStandardizedItemDialogs, setFeatureStandardizedItemDialogs] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data) setAppleOAuthEnabled(Boolean(data.appleOAuthEnabled));
+        if (!cancelled && data) {
+          setAppleOAuthEnabled(Boolean(data.appleOAuthEnabled));
+          setFeatureGridEditing(Boolean(data.featureGridEditing));
+          setFeatureGridEditingClipboard(Boolean(data.featureGridEditingClipboard));
+          setFeatureStandardizedItemDialogs(Boolean(data.featureStandardizedItemDialogs));
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -2902,6 +2910,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   readOnly={isFollowingMode}
                   defaultActivityDate={activeTrip?.startDate ?? null}
                   destination={activeTrip?.destination ?? null}
+                  featureGridEditing={featureGridEditing}
+                  featureGridEditingClipboard={featureGridEditingClipboard}
+                  featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                 />
               )
             : null}
@@ -3418,6 +3429,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onAddCarRental={addCarRentalFromOverview}
                   openFlightInFlightsTab={openFlightInFlightsTab}
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
+                  readOnly={isFollowingMode}
+                  featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                 />
               )
             : null}
@@ -3681,6 +3694,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           requestHeaders={headers}
           styles={styles}
           theme={theme}
+          readOnly={isFollowingMode}
           payerName={payerName}
           travelerName={payerName}
           onClose={() => setShowLodgingDetails(false)}

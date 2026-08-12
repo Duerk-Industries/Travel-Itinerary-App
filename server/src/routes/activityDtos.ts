@@ -78,6 +78,30 @@ export const updateActivityDto = z.object({
 });
 export type UpdateActivityDto = z.infer<typeof updateActivityDto>;
 
+const bulkActivityUpdateDto = z.object({
+  id: trimmedNonEmpty('activity id'),
+  fields: updateActivityDto,
+});
+
+export const bulkActivitiesDto = z
+  .object({
+    updates: z.array(bulkActivityUpdateDto).default([]),
+    deletes: z.array(trimmedNonEmpty('activity id')).default([]),
+  })
+  .superRefine((value, ctx) => {
+    if (value.updates.length + value.deletes.length > 50) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        maximum: 50,
+        origin: 'array',
+        inclusive: true,
+        message: 'A bulk activity save may contain at most 50 row operations.',
+        path: ['updates'],
+      });
+    }
+  });
+export type BulkActivitiesDto = z.infer<typeof bulkActivitiesDto>;
+
 // ---------------------------------------------------------------------------
 // POST /api/activities/:id/vote and /api/activities/:id/rating
 // ---------------------------------------------------------------------------
