@@ -196,6 +196,29 @@ describe('LodgingTab', () => {
         });
     });
 
+    it('opens the sortable editable lodging grid', () => {
+        const { getByTestId, getByText } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+            />
+        );
+
+        fireEvent.press(getByTestId('lodging-table-edit'));
+        expect(getByTestId('lodging-table-save')).toBeTruthy();
+        expect(getByText('Check-In')).toBeTruthy();
+    });
+
     it('updates paid by and saves the lodging', async () => {
         const originalFetch = global.fetch;
         const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as any);

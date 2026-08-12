@@ -964,13 +964,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
   }, []);
 
-  const saveCarRentalDraft = useCallback(async (rentalId?: string | null) => {
+  const saveCarRentalDraft = useCallback(async (rentalId?: string | null, draftOverride?: CarRentalDraft) => {
     if (isFollowingMode) return false;
     if (!activeTripId) {
       Alert.alert('Select an active trip before adding a car rental.');
       return false;
     }
-    const result = buildCarRentalFromDraft(carDraft, defaultPayerId, memberIds);
+    const result = buildCarRentalFromDraft(draftOverride ?? carDraft, defaultPayerId, memberIds);
     if (result.error || !result.rental) {
       Alert.alert(result.error || 'Unable to add car rental.');
       return false;
@@ -1010,8 +1010,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return saveCarRentalDraft(null);
   }, [saveCarRentalDraft]);
 
-  const updateCarRental = useCallback(async (id: string) => {
-    return saveCarRentalDraft(id);
+  const updateCarRental = useCallback(async (id: string, draft?: CarRentalDraft) => {
+    return saveCarRentalDraft(id, draft);
   }, [saveCarRentalDraft]);
 
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
@@ -3184,6 +3184,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           isFollowingMode={isFollowingMode}
           userMembers={userMembers}
           styles={styles}
+          theme={theme}
           payerName={payerName}
           formatMemberName={formatMemberName}
           onAddCarRental={addCarRental}
@@ -3231,6 +3232,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 await fetchGroupMembersForActiveTrip();
               }}
               styles={styles}
+              theme={theme}
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
               externalEditFlightId={externalFlightEditId}
@@ -3259,6 +3261,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             await fetchGroupMembersForActiveTrip();
           }}
           styles={styles}
+          theme={theme}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
           externalEditFlightId={externalFlightEditId}
@@ -3430,6 +3433,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onAddCarRental={addCarRentalFromOverview}
                   openFlightInFlightsTab={openFlightInFlightsTab}
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
+                  theme={theme}
                   readOnly={isFollowingMode}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                 />

@@ -102,7 +102,12 @@ const sampleTour: Tour = {
   userRating: 1,
 };
 
-const renderActivityHarness = (initialTours: Tour[] = [], defaultActivityDate?: string | null) => {
+const renderActivityHarness = (
+  initialTours: Tour[] = [],
+  defaultActivityDate?: string | null,
+  featureStandardizedItemDialogs = false,
+  theme?: any,
+) => {
   const Harness = () => {
     const [tours, setTours] = useState<Tour[]>(initialTours);
     return (
@@ -124,6 +129,8 @@ const renderActivityHarness = (initialTours: Tour[] = [], defaultActivityDate?: 
         fetchTours={jest.fn()}
         mode="wizard"
         defaultActivityDate={defaultActivityDate}
+        featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+        theme={theme}
       />
     );
   };
@@ -132,6 +139,19 @@ const renderActivityHarness = (initialTours: Tour[] = [], defaultActivityDate?: 
 };
 
 describe('Activity dialog layout', () => {
+  it.each([
+    ['light', { mode: 'light', colors: { text: '#111827', textMuted: '#6B7280', border: '#E6ECEF', surface: '#FFFFFF', link: '#45B7C6' } }],
+    ['dark', { mode: 'dark', colors: { text: '#E6ECEF', textMuted: '#B8C2CC', border: '#385266', surface: '#243647', link: '#5FD2E0' } }],
+  ])('uses the %s theme colors throughout the standardized activity details dialog', (_mode, theme) => {
+    const { getByTestId, getByText } = renderActivityHarness([sampleTour], undefined, true, theme);
+
+    fireEvent.press(getByTestId('activity-details-tour-1'));
+
+    expect(getByText('Museum Tour').props.style.color).toBe(theme.colors.text);
+    expect(getByText('Date').props.style.color).toBe(theme.colors.text);
+    expect(getByTestId('activity-details-modal')).toBeTruthy();
+  });
+
   it('opens as a contained modal, saves the draft, and closes without a network request', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch' as any);
     const { getByPlaceholderText, getByTestId, getByText, queryByTestId } = renderActivityHarness();

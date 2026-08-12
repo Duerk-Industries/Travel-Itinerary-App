@@ -119,6 +119,13 @@ beforeEach(() => {
 });
 
 describe('CarRentalsPanel', () => {
+  it('opens the sortable editable car-rental grid', () => {
+    const { getByTestId, getByText } = render(<CarRentalsPanel {...baseProps} carRentals={[makeCarRental()]} />);
+    fireEvent.press(getByTestId('car-rental-table-edit'));
+    expect(getByTestId('car-rental-table-save')).toBeTruthy();
+    expect(getByText('Pick-up Location')).toBeTruthy();
+  });
+
   it('renders the Car Rentals heading and an empty table by default', () => {
     const { getByText, queryByTestId } = render(<CarRentalsPanel {...baseProps} />);
     expect(getByText('Car Rentals')).toBeTruthy();

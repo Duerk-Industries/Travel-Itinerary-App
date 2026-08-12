@@ -232,6 +232,7 @@ type OverviewTabProps = {
   onAddCarRental: (rental: CarRental) => void;
   openFlightInFlightsTab: (flightId: string) => void;
   openLodgingDetails: (lodging: Lodging) => void;
+  theme?: AppTheme;
   readOnly?: boolean;
   featureStandardizedItemDialogs?: boolean;
 };
@@ -440,6 +441,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onAddCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
+  theme,
   readOnly = false,
   featureStandardizedItemDialogs = false,
 }) => {
@@ -1958,7 +1960,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (readOnly) return;
     setSelectedFlight(null);
     setReturnToOverviewViewAfterItemEdit(true);
-    setIsEditing(true);
     setEditingFlightId(flight.id);
     setEditingFlightDraft(toFlightEditDraft(flight));
     setShowFlightEditor(true);
@@ -1968,7 +1969,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (readOnly) return;
     setSelectedLodging(null);
     setReturnToOverviewViewAfterItemEdit(true);
-    setIsEditing(true);
     setEditingLodgingId(lodging.id);
     setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
     setShowAddLodging(true);
@@ -1978,7 +1978,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (readOnly) return;
     setSelectedTour(null);
     setReturnToOverviewViewAfterItemEdit(true);
-    setIsEditing(true);
     setEditingTourId(tour.id);
     setTourDraft(buildTourDraftFromRow({ ...tour, paidBy: (tour as any).paidBy ?? [] } as any));
     setShowAddTour(true);
@@ -2088,6 +2087,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
           }))}
           styles={styles}
+          theme={theme}
           readOnly={readOnly}
           onClose={() => setDetailModal(null)}
           onEdit={() => {
@@ -2152,6 +2152,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
           }))}
           styles={styles}
+          theme={theme}
           readOnly={readOnly}
           onClose={() => setSelectedFlight(null)}
           onEdit={() => editFlightFromDetails(selectedFlight)}
@@ -2174,6 +2175,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             { label: 'Address', value: selectedLodging.address || '-', onPress: selectedLodging.address ? () => onOpenAddress(selectedLodging.address) : undefined },
           ]}
           styles={styles}
+          theme={theme}
           readOnly={readOnly}
           onClose={() => setSelectedLodging(null)}
           onEdit={() => editLodgingFromDetails(selectedLodging)}
@@ -2193,6 +2195,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
           }))}
           styles={styles}
+          theme={theme}
           readOnly={readOnly}
           onClose={() => setSelectedTour(null)}
           onEdit={() => editActivityFromDetails(selectedTour)}
@@ -2318,6 +2321,52 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (info.tours.length) return [];
     return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
+
+  const renderOverviewFlightEditor = () => (
+    <FlightEditingForm
+      visible={!readOnly && Boolean(editingFlightDraft && editingFlightId)}
+      flightId={editingFlightId}
+      flight={editingFlightDraft}
+      groupMembers={groupMembers}
+      userMembers={userMembers}
+      styles={styles}
+      formatMemberName={formatMemberName}
+      payerName={payerName}
+      getLocationInputValue={getLocationInputValue}
+      showAirportDropdown={showAirportDropdown}
+      parseLayoverDuration={parseLayoverDuration}
+      openTimePicker={openTimePicker}
+      onAirportEnter={() => undefined}
+      setFlight={setEditingFlightDraft}
+      setPassengerIds={setEditingFlightPassengers}
+      modalDepLocationRef={editDepLocationRef}
+      modalArrLocationRef={editArrLocationRef}
+      modalLayoverLocationRef={editLayoverLocationRef}
+      onClose={closeFlightEditor}
+      onSave={saveFlightDetails}
+    />
+  );
+
+  const renderOverviewLodgingEditor = () => (
+    <LodgingDialog
+      visible={!readOnly && Boolean(showAddLodging && editingLodgingId)}
+      styles={styles}
+      title="Lodging Details"
+      draft={lodgingDraft}
+      setDraft={setLodgingDraft}
+      groupMembers={groupMembers}
+      formatMemberName={formatMemberName}
+      defaultPayerId={defaultPayerId}
+      payerName={payerName}
+      onSave={saveLodging}
+      onCancel={closeLodgingModal}
+      onOpenDatePicker={(field) =>
+        openModalDatePicker(
+          field === 'checkIn' ? 'lodgingCheckIn' : field === 'checkOut' ? 'lodgingCheckOut' : 'lodgingRefundBy'
+        )
+      }
+    />
+  );
 
   const renderDayBar = (activeDate: string | null) => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
@@ -3306,7 +3355,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             .filter((r) => r.type === 'flight')
             .map((row, idx) => {
               const flight = row.meta as Flight;
-              const isEditingFlight = isEditing && editingFlightId === flight.id;
+              const isEditingFlight = showFlightEditor && editingFlightId === flight.id;
               if (isEditingFlight) {
                 return (
                   <View
@@ -3316,18 +3365,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       // No-op; this is just here to satisfy TS
                     }}
                   >
-                    <FlightEditingForm
-                      draft={editingFlightDraft}
-                      setDraft={setEditingFlightDraft}
-                      styles={styles}
-                      onSave={saveFlightEdit}
-                      onCancel={closeFlightEditor}
-                      groupMembers={groupMembers}
-                      defaultPayerId={defaultPayerId}
-                      payerName={payerName}
-                      onSetPassengers={setEditingFlightPassengers}
-                      openModalDate={(field, current) => openModalDatePicker(field as ModalDateField, current)}
-                    />
+                    {renderOverviewFlightEditor()}
                   </View>
                 );
               }
@@ -3371,7 +3409,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             .filter((r) => r.type === 'lodging')
             .map((row) => {
               const lodging = row.meta as Lodging;
-              const isEditingThis = isEditing && editingLodgingId === lodging.id;
+              const isEditingThis = showAddLodging && editingLodgingId === lodging.id;
               if (isEditingThis) {
                 return (
                   <View key={lodging.id}>
@@ -3525,6 +3563,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
       ) : null}
       {renderContent()}
+      {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
+      {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
       {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
         <NativeDateTimePicker
           value={timePickerValue}

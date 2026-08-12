@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { describe, expect, test, jest } from '@jest/globals';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from '../tabs/transfers';
 
 const styles = {
@@ -92,6 +92,33 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  test('opens the sortable editable transfer grid', () => {
+    const { getByTestId, getByText } = render(
+      <FlightsTab
+        backendUrl="http://localhost"
+        userToken="token"
+        activeTripId="trip-1"
+        flights={[flight]}
+        setFlights={jest.fn() as any}
+        groupMembers={[member]}
+        defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`}
+        payerName={() => 'Bryan Traveler'}
+        headers={{}}
+        jsonHeaders={{}}
+        findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
+        styles={styles}
+        airportOptions={[]}
+        onSearchAirports={jest.fn() as any}
+      />
+    );
+
+    fireEvent.press(getByTestId('transfer-table-edit'));
+    expect(getByTestId('transfer-table-save')).toBeTruthy();
+    expect(getByText('Departure Date')).toBeTruthy();
+  });
+
   test('hides mutation controls for followed trips', () => {
     const { queryByTestId, getAllByText } = render(
       <FlightsTab

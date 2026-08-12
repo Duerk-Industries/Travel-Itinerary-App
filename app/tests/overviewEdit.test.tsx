@@ -8,6 +8,7 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
 import LodgingDialog from '../components/LodgingDialog';
+import { FlightEditingForm } from '../components/TransferEditingForm';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -482,6 +483,9 @@ describe('Overview edit controls', () => {
       pressByText(root, 'Edit');
     });
     expect(root.findAllByType(LodgingDialog)).toHaveLength(1);
+    // Item editing is modal; the overview's normal view controls remain visible
+    // underneath instead of switching the whole page into edit mode.
+    expect(findByText(root, 'Edit')).toBeTruthy();
 
     await act(async () => {
       pressByTextWithin(root.findByType(LodgingDialog), 'Save');
@@ -490,5 +494,55 @@ describe('Overview edit controls', () => {
     expect(root.findAllByType(LodgingDialog)).toHaveLength(0);
     expect(findByText(root, 'Edit')).toBeTruthy();
     expect(baseProps.onLodgingDataChanged).toHaveBeenCalled();
+  });
+
+  test('opens flight editing over the overview view without switching the background to edit mode', async () => {
+    const flight = {
+      id: 'flight-1',
+      trip_id: baseTrip.id,
+      passenger_name: 'Traveler',
+      passenger_ids: [],
+      departure_date: '2026-01-02',
+      arrival_date: '2026-01-02',
+      departure_location: 'BOS',
+      departure_airport_code: 'BOS',
+      departure_time: '08:00',
+      arrival_location: 'LAX',
+      arrival_airport_code: 'LAX',
+      arrival_time: '11:00',
+      layover_location: '',
+      layover_location_code: '',
+      layover_duration: '',
+      cost: 100,
+      carrier: 'Test Air',
+      flight_number: 'TA100',
+      booking_reference: 'ABC123',
+      paidBy: [],
+    };
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(
+        <OverviewTab
+          {...baseProps}
+          flights={[flight] as any}
+          featureStandardizedItemDialogs
+        />
+      );
+    });
+    const root = tree!.root;
+
+    act(() => {
+      root.findByProps({ testID: 'overview-day-card-1' }).props.onPress();
+    });
+    act(() => {
+      root.findByProps({ testID: 'day-details-flight-details' }).props.onPress();
+    });
+    act(() => {
+      pressByText(root, 'Edit');
+    });
+
+    expect(root.findAllByType(FlightEditingForm)).toHaveLength(1);
+    expect(root.findByProps({ testID: 'day-details-back' })).toBeTruthy();
   });
 });

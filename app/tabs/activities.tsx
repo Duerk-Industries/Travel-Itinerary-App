@@ -948,9 +948,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       ) : null}
       {tableEditing ? (
         <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 6, borderWidth: 1, borderColor: theme?.colors.border ?? '#ccd4df', borderRadius: 8, backgroundColor: theme?.colors.surface ?? '#fff' }} testID="activity-table-scroll-hint">
-            <Text style={{ color: theme?.colors.textMuted ?? theme?.colors.text ?? '#475569', fontSize: 12 }}>↔ Scroll horizontally to see all columns</Text>
-          </View>
           <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
           <EditableDataGrid
             rows={sortedGridRows}
@@ -976,9 +973,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         </>
       ) : null}
       {!tableEditing ? <>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 6, borderWidth: 1, borderColor: theme?.colors.border ?? '#ccd4df', borderRadius: 8, backgroundColor: theme?.colors.surface ?? '#fff' }} testID="activity-table-scroll-hint">
-          <Text style={{ color: theme?.colors.textMuted ?? theme?.colors.text ?? '#475569', fontSize: 12 }}>↔ Scroll horizontally to see all columns</Text>
-        </View>
         <HorizontalTableScroll
           style={styles.tableScroll}
           contentContainerStyle={styles.tableScrollContent}
@@ -1176,6 +1170,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             { label: 'Rating', value: formatNetVotes(selectedTour.netRating ?? 0) },
             { label: 'Votes', value: formatNetVotes(selectedTour.netVotes ?? 0) },
           ]}
+          theme={theme}
           onClose={() => setSelectedTourId(null)}
           onEdit={() => { openTourEditor(selectedTour); setSelectedTourId(null); }}
           onDelete={() => setTourToDelete(selectedTour)}

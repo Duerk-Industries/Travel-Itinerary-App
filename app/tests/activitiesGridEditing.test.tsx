@@ -157,9 +157,11 @@ describe('Activities grid editing', () => {
       getAllByTestId(/activity-row-/).map((row) => row.props.testID);
 
     const view = renderActivityHarness([tourOne, tourTwo]);
-    expect(rowIds(view.getAllByTestId as any)).toEqual(['activity-row-tour-1', 'activity-row-tour-2']);
+    expect(rowIds(view.getAllByTestId as any)).toEqual(['activity-row-tour-2', 'activity-row-tour-1']);
     fireEvent.press(view.getByTestId('activity-sort-name'));
     expect(rowIds(view.getAllByTestId as any)).toEqual(['activity-row-tour-2', 'activity-row-tour-1']);
+    fireEvent.press(view.getByTestId('activity-sort-name'));
+    expect(rowIds(view.getAllByTestId as any)).toEqual(['activity-row-tour-1', 'activity-row-tour-2']);
     view.unmount();
 
     const edit = renderActivityHarness([tourOne, tourTwo]);
