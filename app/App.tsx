@@ -2836,7 +2836,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
                   </TouchableOpacity>
                 </View>
-              ) : null}
+              ) : (
+                // Phone layout drops the full name pill (and presence avatars) to
+                // save top-bar width, but previously dropped the *only* way to
+                // reach Account settings with it — 'account' is deliberately left
+                // out of the Home tab list too (see regularUserHiddenHomePages),
+                // so mobile users had no path to their profile at all. Keep a
+                // compact icon-only entry point instead of removing it outright.
+                <TouchableOpacity
+                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                  onPress={() => requestPageChange('account')}
+                  accessibilityLabel="Account"
+                  hitSlop={hitSlop.small}
+                >
+                  <Text style={styles.userNameButtonText}>👤</Text>
+                </TouchableOpacity>
+              )}
               {userRole === 'admin' ? (
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.topBarActionButton]}

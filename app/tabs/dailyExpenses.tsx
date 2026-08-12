@@ -107,7 +107,14 @@ const dayCardStyles = {
 };
 
 const formatDateLabel = (iso: string): string => {
-  const date = new Date(iso);
+  // `iso` is a date-only string (YYYY-MM-DD, e.g. from buildDateRange below).
+  // `new Date(iso)` parses that as UTC midnight; toLocaleDateString then
+  // renders it in the browser's local timezone, which rolls the displayed
+  // date back a day for anyone west of UTC (e.g. a trip starting Sat Oct 10
+  // showed as "Fri Oct 9"). Parse the year/month/day explicitly into a local
+  // Date instead, matching the safe pattern already used by formatDateLong.ts.
+  const [y, m, d] = iso.split('-').map((part) => Number(part));
+  const date = Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d) ? new Date(iso) : new Date(y, m - 1, d);
   if (Number.isNaN(date.valueOf())) return iso;
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).replace(/,/g, '');
 };

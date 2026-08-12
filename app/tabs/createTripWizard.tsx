@@ -1698,7 +1698,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     editable={!(dates.mode === 'range' && computedDays)}
                   />
                 <Text style={styles.modalLabel}>Planning Preferences</Text>
-                <Text style={styles.helperText}>These map directly to prompt-plan `tt/ut` fields for itinerary generation.</Text>
+                <Text style={styles.helperText}>Tell us how your group likes to travel and we'll shape the AI itinerary around it.</Text>
 
                 <Text style={styles.modalLabel}>Pace</Text>
                 <View style={styles.traitGrid}>
@@ -2586,10 +2586,16 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         </ScrollView>
         <View style={[styles.row, { marginTop: 8 }]}>
           <TouchableOpacity
-            style={[styles.button, styles.dangerButton, { flex: 1 }]}
+            style={[
+              styles.button,
+              { flex: 1 },
+              stepIndex === 0 ? styles.dangerButton : (styles.mapOptionButton ?? styles.button),
+            ]}
             onPress={stepIndex === 0 ? onCancel : goBack}
           >
-            <Text style={styles.dangerButtonText}>{stepIndex === 0 ? 'Cancel' : 'Back'}</Text>
+            <Text style={stepIndex === 0 ? styles.dangerButtonText : (styles.mapOptionText ?? styles.buttonText)}>
+              {stepIndex === 0 ? 'Cancel' : 'Back'}
+            </Text>
           </TouchableOpacity>
           {stepIndex < totalSteps - 1 ? (
             <>

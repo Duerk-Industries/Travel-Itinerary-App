@@ -661,6 +661,17 @@ export const parseAttractionCatalogCsv = (raw: string): AttractionCatalogEntry[]
       .filter(Boolean) as InterestTag[];
     const legacyHasBudget = iBudgetTier >= 0;
     const legacyHasUpdated = iUpdatedAt >= 0;
+    // Geocoding failures upstream (e.g. a Wikipedia article for a route or
+    // concept with no single real-world point, like "53 Stations of the
+    // Tōkaidō") have historically been written to the CSV as literal "0,0"
+    // rather than left blank. (0, 0) is the middle of the Gulf of Guinea —
+    // no attraction in this catalog is actually there — so treat that exact
+    // pair as "coordinates unknown" rather than a real location. Left
+    // unguarded, this produces nonsensical multi-thousand-kilometer transfer
+    // distances/durations between same-day attractions downstream.
+    const rawLat = toNumberOrNull(read(cols, iLat));
+    const rawLon = toNumberOrNull(read(cols, iLon));
+    const isNullIsland = rawLat === 0 && rawLon === 0;
     rows.push({
       id: read(cols, iId >= 0 ? iId : 0),
       destinationKey: read(cols, iDestinationKey >= 0 ? iDestinationKey : 1),
@@ -679,8 +690,8 @@ export const parseAttractionCatalogCsv = (raw: string): AttractionCatalogEntry[]
       updatedAt: legacyHasUpdated ? read(cols, iUpdatedAt) || new Date().toISOString() : new Date().toISOString(),
       sitelinks: toNumberOrNull(read(cols, iSitelinks)),
       qid: read(cols, iQid) || null,
-      lat: toNumberOrNull(read(cols, iLat)),
-      lon: toNumberOrNull(read(cols, iLon)),
+      lat: isNullIsland ? null : rawLat,
+      lon: isNullIsland ? null : rawLon,
       popularityScore: toNumberOrNull(read(cols, iPopularityScore)),
       primaryTag: (read(cols, iPrimaryTag) as InterestTag) || null,
       wikipediaTitle: read(cols, iWikipediaTitle) || null,
@@ -913,10 +924,14 @@ const enrichCatalogEntries = async (
       const popularityScore = entry.popularityScore ?? (wikipedia?.canonicalTitle
         ? await fetchWikipediaPopularityScore(wikipedia.canonicalTitle)
         : null);
+      // Same Null Island guard as the CSV parser above: a Wikipedia geosearch
+      // miss for a route/concept article (no single real-world point) can
+      // resolve to (0, 0) rather than nothing at all.
+      const wikipediaIsNullIsland = wikipedia?.lat === 0 && wikipedia?.lon === 0;
       output[index] = {
         ...entry,
-        lat: entry.lat ?? wikipedia?.lat ?? null,
-        lon: entry.lon ?? wikipedia?.lon ?? null,
+        lat: entry.lat ?? (wikipediaIsNullIsland ? null : wikipedia?.lat ?? null),
+        lon: entry.lon ?? (wikipediaIsNullIsland ? null : wikipedia?.lon ?? null),
         popularityScore,
         primaryTag: entry.primaryTag ?? entry.interestTags[0] ?? 'culture',
         wikipediaTitle: entry.wikipediaTitle ?? wikipedia?.canonicalTitle ?? null,

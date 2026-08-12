@@ -277,7 +277,7 @@ export function TraitsTab<T extends TraitRecord>({
 
       <View style={[styles.card, styles.traitsSection]}>
         <Text style={styles.sectionTitle}>Itinerary Preferences</Text>
-        <Text style={styles.helperText}>These map directly to prompt-plan `tt/ut` fields used by itinerary generation.</Text>
+        <Text style={styles.helperText}>Tell us how you like to travel and we'll shape AI itineraries around it.</Text>
 
         <Text style={styles.modalLabel}>Pace</Text>
         <View style={styles.traitGrid}>

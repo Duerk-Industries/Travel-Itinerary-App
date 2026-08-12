@@ -2200,9 +2200,18 @@ const timeStringToMinutes = (time: string): number => {
 };
 
 const minutesToTimeString = (minutes: number): string => {
-  const wrapped = ((minutes % 1440) + 1440) % 1440;
-  const hours = Math.floor(wrapped / 60);
-  const mins = wrapped % 60;
+  // Callers only ever pass an accumulating same-day clock that starts at
+  // 09:00 and grows by each item's duration/gap, so `minutes` is never
+  // negative — but a slot stacked with enough long activities/transfers can
+  // push it past 1440 (past midnight). A naive `% 1440` wrap used to turn
+  // that overflow into a plausible-looking but wrong early-morning time
+  // (e.g. a castle visit scheduled for "02:00"), which reads as a genuine
+  // pre-dawn start rather than an overbooked day. Clamp to the last minute
+  // of the day instead so an overloaded day surfaces as a very-late time —
+  // still a signal something doesn't fit, but not a clock running backward.
+  const clamped = Math.min(Math.max(0, minutes), 1439);
+  const hours = Math.floor(clamped / 60);
+  const mins = clamped % 60;
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
