@@ -2635,7 +2635,7 @@ export const mapItems = (
         description,
         accessibilityNote.trim(),
         durationMetadata?.requiresPreOrderTickets ? 'Tickets may need to be pre-ordered.' : '',
-        fit ? `Why this fits your group: ${fit}` : '',
+        fit ? `This stop suits your group because ${fit.replace(/[.。]+$/, '')}.` : '',
       ]
         .filter(Boolean)
         .join(' ');
@@ -2760,7 +2760,7 @@ const buildDetails = (
         activity: text,
         cost: null,
         kind: 'place',
-        noteBody: fit ? `Why this fits your group: ${fit}` : undefined,
+        noteBody: fit ? `This stop suits your group because ${fit.replace(/[.。]+$/, '')}.` : undefined,
       });
       // Insert the travel segment to the NEXT activity right after this one,
       // between the two activities it connects, rather than lumped at the
@@ -2786,7 +2786,7 @@ const buildDetails = (
         activity: note,
         cost: null,
         kind: 'note',
-        noteBody: 'Logistics Note',
+        noteBody: String(note ?? '').trim() || null,
       });
     });
 

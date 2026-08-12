@@ -119,6 +119,16 @@ beforeEach(() => {
 });
 
 describe('CarRentalsPanel', () => {
+  it('opens the edit dialog when a table row is tapped', () => {
+    const rental = makeCarRental();
+    const { getByTestId, getByText } = render(
+      <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
+    );
+
+    fireEvent.press(getByText('LAX → SFO'));
+    expect(getByTestId('car-rental-editor-dialog')).toBeTruthy();
+  });
+
   it('opens the sortable editable car-rental grid', () => {
     const { getByTestId, getByText } = render(<CarRentalsPanel {...baseProps} carRentals={[makeCarRental()]} />);
     fireEvent.press(getByTestId('car-rental-table-edit'));

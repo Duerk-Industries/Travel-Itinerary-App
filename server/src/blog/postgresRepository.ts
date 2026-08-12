@@ -3,6 +3,7 @@ import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
+import { buildNarrativeBlogBody } from './narrative';
 
 type BlogRow = {
   id: string;
@@ -88,9 +89,11 @@ const mapItem = (row: any): BlogTextItem => ({
   sourceDetached: Boolean(row.source_detached),
 });
 
-const sourceBody = (row: any): string => row.kind === 'note'
-  ? String(row.note_body ?? row.activity ?? '')
-  : `Location: ${String(row.activity ?? 'Location')}${row.note_body ? `\n${String(row.note_body)}` : ''}`;
+const sourceBody = (row: any): string => buildNarrativeBlogBody({
+  activity: row.activity,
+  kind: row.kind,
+  noteBody: row.note_body,
+});
 
 const sourceSnapshot = (row: any, body: string): string => JSON.stringify({ body, day: Number(row.day), activity: String(row.activity ?? ''), kind: String(row.kind ?? 'activity'), placeId: row.place_id == null ? null : String(row.place_id), noteBody: row.note_body == null ? null : String(row.note_body) });
 

@@ -1,6 +1,7 @@
 import { getApiCacheSetting } from '../config/apiLimits';
 import { createTtlCache } from '../utils/ttlCache';
 import { getUnsplashRandomPhoto, searchUnsplashPhotos } from './unsplashApi';
+import { logInfo } from '../logger';
 
 const UNSPLASH_CALLER_IMAGE_SERVICE_LOCATION = 'IMAGE_SERVICE_LOCATION_IMAGE';
 const UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY = 'IMAGE_SERVICE_ITINERARY_IMAGE';
@@ -52,7 +53,11 @@ const fetchUnsplashImage = async (
         perPage: 1,
         orientation: 'landscape',
       });
-      return firstRegularUrl(data);
+      const url = firstRegularUrl(data);
+      if (!url) {
+        logInfo(`[unsplash] no landscape photo returned for caller=${caller} query="${trimmedQuery}"`);
+      }
+      return url;
     },
     getUrlLookupTtlMs()
   );

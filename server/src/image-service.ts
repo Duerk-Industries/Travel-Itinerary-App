@@ -8,6 +8,7 @@ import {
   fetchUnsplashImageForItinerary,
   fetchUnsplashImageForLocation,
 } from './apis/unsplashCallers';
+import { logError, logInfo } from './logger';
 
 const bucketName = process.env.LOCATION_BUCKET || 'duerk-travel-itinerary-app-location-data';
 const CACHE_TTL_MS =
@@ -79,6 +80,7 @@ export const computePlaceMatchLikelihood = (query: string, candidate: string): n
 const getUnsplashAccessKeyOrThrow = (): string => {
   const accessKey = getEnvValue('UNSPLASH_ACCESS_KEY');
   if (!accessKey) {
+    logInfo('[unsplash] UNSPLASH_ACCESS_KEY is not configured; using the client placeholder fallback');
     throw new Error('Unsplash Access Key is not configured.');
   }
   return accessKey;
@@ -260,7 +262,8 @@ export async function getItineraryImage(params: {
       return imageUrl;
     });
     return { url: unsplash.url, cached: unsplash.cached, provider: 'unsplash', fallbackUsed: false };
-  } catch {
+  } catch (error) {
+    logError(`[unsplash] itinerary image fallback for location="${String(params.locationName ?? '').trim() || 'unknown'}"`, error);
     return { url: '', cached: false, provider: 'placeholder', fallbackUsed: true };
   }
 }

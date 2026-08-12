@@ -196,6 +196,28 @@ describe('LodgingTab', () => {
         });
     });
 
+    it('opens the edit dialog when any non-name cell in a row is clicked', () => {
+        const { getByTestId } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+            />
+        );
+
+        fireEvent.press(within(getByTestId('lodging-row-l1')).getByText(formatShortDate('2025-01-01')));
+        expect(getByTestId('lodging-editor-dialog')).toBeTruthy();
+    });
+
     it('opens the sortable editable lodging grid', () => {
         const { getByTestId, getByText } = render(
             <LodgingTab

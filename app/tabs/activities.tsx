@@ -554,7 +554,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     return [
       { key: 'date', label: 'Date', width: 140, editor: 'date', getValue: (row) => row.date },
       { key: 'activityType', label: 'Type', width: 180, editor: 'select', options: ACTIVITY_TYPES, getValue: (row) => row.activityType || 'Tour' },
-      { key: 'name', label: 'Activity', width: 220, editor: 'text', getValue: (row) => row.name || '' },
+      { key: 'name', label: 'Activity', width: 220, editor: 'text', sticky: 'left', getValue: (row) => row.name || '' },
       { key: 'startLocation', label: 'Start Location', width: 190, editor: 'text', getValue: (row) => row.startLocation || '' },
       { key: 'startTime', label: 'Start Time', width: 120, editor: 'time', getValue: (row) => row.startTime || '' },
       { key: 'duration', label: 'Duration', width: 130, editor: 'text', getValue: (row) => row.duration || '' },
@@ -586,7 +586,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       { key: 'userRating', label: 'Your Rating', width: 120, editor: 'readonly', editable: false, getValue: (row) => row.userRating ? String(row.userRating) : '-' },
       { key: 'netVotes', label: 'Votes', width: 100, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
       { key: 'suggestions', label: 'Suggestions', width: 140, editor: 'readonly', editable: false, getValue: () => 'See details' },
-      { key: 'actions', label: 'Actions', width: 110, editor: 'action', editable: false, sortable: false, getValue: () => '' },
+      { key: 'actions', label: 'Actions', width: 110, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
     ];
   }, [memberLabelById, payerName, activeMembers]);
 
@@ -990,7 +990,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ].map((col, idx, arr) => (
               <TouchableOpacity
                 key={col.key}
-                style={[styles.cell, { minWidth: col.width, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
+                style={[styles.cell, { minWidth: col.width, flex: 1 }, col.key === 'name' && Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any), idx === arr.length - 1 && styles.lastCell]}
                 onPress={() => sortActivityTable(col.key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Sort by ${col.label}`}
@@ -1001,15 +1001,15 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ))}
           </View>
           {sortedTours.map((t) => (
-            <View key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`}>
+            <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (!readOnly) openTourEditor(t); }} activeOpacity={0.8}>
               <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                 <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
               </View>
               <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
-                <TouchableOpacity onPress={() => setSelectedTourId(t.id)} testID={`activity-details-${t.id}`}>
+              <View style={[styles.cell, { minWidth: 220, flex: 1 }, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+                <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); setSelectedTourId(t.id); }} testID={`activity-details-${t.id}`}>
                   <Text style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
                 </TouchableOpacity>
                 {mode !== 'wizard' ? (
@@ -1037,7 +1037,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   <Text style={styles.cellText}>-</Text>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
         </HorizontalTableScroll>

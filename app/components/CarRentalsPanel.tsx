@@ -155,7 +155,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
     : { key, direction: 'asc' });
   const gridColumns = React.useMemo<GridColumn<CarRental>[]>(() => [
-    { key: 'pickupLocation', label: 'Pick-up Location', width: 190, editor: 'text', getValue: (row) => row.pickupLocation || '' },
+    { key: 'pickupLocation', label: 'Pick-up Location', width: 190, editor: 'text', sticky: 'left', getValue: (row) => row.pickupLocation || '' },
     { key: 'pickupDate', label: 'Pick-up', width: 135, editor: 'date', getValue: (row) => row.pickupDate || '' },
     { key: 'dropoffLocation', label: 'Drop-off Location', width: 190, editor: 'text', getValue: (row) => row.dropoffLocation || '' },
     { key: 'dropoffDate', label: 'Drop-off', width: 135, editor: 'date', getValue: (row) => row.dropoffDate || '' },
@@ -168,7 +168,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     { key: 'notes', label: 'Notes', width: 230, editor: 'textarea', getValue: (row) => row.notes || '' },
     { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
-    { key: 'actions', label: 'Actions', width: 100, editor: 'action', editable: false, sortable: false, getValue: () => '' },
+    { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
   const beginGridEdit = () => { if (isFollowingMode) return; const snapshot = carRentals.map((row) => ({ ...row, paidBy: [...(row.paidBy ?? [])], travelerIds: [...(row.travelerIds ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
   const cancelGridEdit = () => { setTableEditing(false); setGridRows([]); setGridOriginalRows([]); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); };
@@ -426,7 +426,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
       >
       <View style={styles.table} testID="car-rentals-table">
         <View style={[styles.tableRow, styles.tableHeaderRow]}>
-          <TouchableOpacity style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }]} onPress={() => sortCarTable('pickupLocation')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortCarTable('pickupLocation')}>
             <Text style={styles.headerText}>Route</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 120 }]} onPress={() => sortCarTable('pickupDate')}>
@@ -444,14 +444,14 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
           <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 110 }]} onPress={() => sortCarTable('netRating')}>
             <Text style={styles.headerText}>Rating</Text>
           </TouchableOpacity>
-          <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell]}>
+          <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
             <Text style={styles.headerText}>Actions</Text>
           </View>
         </View>
 
         {sortedCarRentals.map((car, idx, arr) => (
-          <View key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
-            <View style={[styles.tableCell, { flex: 2, minWidth: 240 }]}>
+          <TouchableOpacity key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]} onPress={() => { if (!isFollowingMode) openEditDialog(car); }} activeOpacity={0.8}>
+            <View style={[styles.tableCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
               <Text style={styles.cellText}>
                 {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
               </Text>
@@ -482,7 +482,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 <Text style={styles.cellText}>-</Text>
               )}
             </View>
-            <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell]}>
+            <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
               <View style={styles.actionCell}>
                 {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
                   <>
@@ -518,7 +518,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 )}
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
       </HorizontalTableScroll>

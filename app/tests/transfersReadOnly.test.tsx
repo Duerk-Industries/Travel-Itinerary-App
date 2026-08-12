@@ -92,6 +92,32 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  test('opens the edit form when a row is tapped in editable mode', () => {
+    const { getByTestId } = render(
+      <FlightsTab
+        backendUrl="http://localhost"
+        userToken="token"
+        activeTripId="trip-1"
+        flights={[flight]}
+        setFlights={jest.fn() as any}
+        groupMembers={[member]}
+        defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`}
+        payerName={() => 'Bryan Traveler'}
+        headers={{}}
+        jsonHeaders={{}}
+        findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
+        styles={styles}
+        airportOptions={[]}
+        onSearchAirports={jest.fn() as any}
+      />
+    );
+
+    fireEvent.press(getByTestId('transfer-row-flight-1'));
+    expect(getByTestId('flight-modal-save')).toBeTruthy();
+  });
+
   test('opens the sortable editable transfer grid', () => {
     const { getByTestId, getByText } = render(
       <FlightsTab

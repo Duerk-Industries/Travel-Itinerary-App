@@ -3,6 +3,7 @@ import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
 import { getCanonicalPublicPathFirebase } from './firebasePublicationRepository';
+import { buildNarrativeBlogBody } from './narrative';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -48,9 +49,11 @@ const mapItem = (doc: any): BlogTextItem => {
   return { id: String(doc.id ?? data.id), tripId: String(data.tripId), blogDayId: String(data.blogDayId), localDate: String(data.localDate), kindKey: 'core.text', schemaVersion: Number(data.schemaVersion ?? 1), audience: data.audience ?? 'public', sortKey: String(data.sortKey), authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), body: String(data.body ?? ''), languageTag: data.languageTag ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt), sourceType: data.sourceType ?? null, sourceId: data.sourceId ?? null, sourceDetached: Boolean(data.sourceDetached) };
 };
 
-const linkedSourceBody = (data: any): string => data.kind === 'note'
-  ? String(data.noteBody ?? data.activity ?? '')
-  : `Location: ${String(data.activity ?? 'Location')}${data.noteBody ? `\n${String(data.noteBody)}` : ''}`;
+const linkedSourceBody = (data: any): string => buildNarrativeBlogBody({
+  activity: data.activity,
+  kind: data.kind,
+  noteBody: data.noteBody,
+});
 
 const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise<void> => {
   const db = getDb();

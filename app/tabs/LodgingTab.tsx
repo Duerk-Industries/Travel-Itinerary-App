@@ -222,7 +222,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
 
   const memberOptions = useMemo(() => groupMembers.map((member) => ({ id: member.id, label: formatUserDisplayName(member) })), [groupMembers]);
   const gridColumns = useMemo<GridColumn<Lodging>[]>(() => [
-    { key: 'name', label: 'Name', width: 220, editor: 'text', getValue: (row) => row.name || '' },
+    { key: 'name', label: 'Name', width: 220, editor: 'text', sticky: 'left', getValue: (row) => row.name || '' },
     { key: 'checkInDate', label: 'Check-In', width: 140, editor: 'date', getValue: (row) => row.checkInDate || '' },
     { key: 'checkOutDate', label: 'Check-Out', width: 140, editor: 'date', getValue: (row) => row.checkOutDate || '' },
     { key: 'status', label: 'Status', width: 135, editor: 'select', options: ITINERARY_STATUSES, getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
@@ -232,7 +232,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     { key: 'address', label: 'Address', width: 230, editor: 'text', getValue: (row) => row.address || '' },
     { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
-    { key: 'actions', label: 'Actions', width: 100, editor: 'action', editable: false, sortable: false, getValue: () => '' },
+    { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
 
   const beginGridEdit = () => {
@@ -331,7 +331,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         >
         <View style={[styles.table, styles.lodgingTable, { minWidth: 878 }]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabNameCol]} onPress={() => sortLodgingTable('name')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabNameCol, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortLodgingTable('name')}>
               <Text style={styles.headerText}>Name</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('checkInDate')}>
@@ -349,16 +349,16 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('netRating')}>
               <Text style={styles.headerText}>Rating</Text>
             </TouchableOpacity>
-            <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell]}>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
               <Text style={styles.headerText}>Actions</Text>
             </View>
           </View>
           {sortedLodgings.map((lodging) => (
-            <View key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`}>
-              <View style={[styles.tableCell, styles.lodgingTabNameCol]}>
+            <TouchableOpacity key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`} onPress={() => { if (!readOnly) openEditDialog(lodging); }} activeOpacity={0.8}>
+              <View style={[styles.tableCell, styles.lodgingTabNameCol, Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <TouchableOpacity
                   style={styles.tableNameButton}
-                  onPress={() => openDetailsDialog(lodging)}
+                  onPress={(event: any) => { event?.stopPropagation?.(); openDetailsDialog(lodging); }}
                 >
                   <Text style={[styles.cellText, styles.cellTextWrap]}>{lodging.name}</Text>
                 </TouchableOpacity>
@@ -402,7 +402,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   <Text style={styles.cellText}>-</Text>
                 )}
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell]}>
+              <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <View style={[styles.actionCell, { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' }]}>
                   {!readOnly ? (
                     <>
@@ -426,7 +426,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   )}
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
         </HorizontalTableScroll>

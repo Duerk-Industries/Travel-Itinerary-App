@@ -5,6 +5,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
 import Skeleton from '../components/Skeleton';
 import { useImageSource } from '../utils/imageSource';
+import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 
 type Trip = {
   id: string;
@@ -273,7 +274,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
           ) : heroLoading ? (
             <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
           ) : (
-            <View style={styles.homeHeroFallback} />
+            <DestinationPlaceholderCard title={heroTitle} style={styles.homeHeroFallback} testID="home-hero-placeholder" />
           )}
           <View style={styles.homeHeroOverlay} />
           <View

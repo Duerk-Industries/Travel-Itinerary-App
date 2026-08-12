@@ -141,6 +141,13 @@ const renderActivityHarness = (initialTours: Tour[]) => {
 };
 
 describe('Activities grid editing', () => {
+  it('opens the edit form when a non-name activity cell is tapped', () => {
+    const view = renderActivityHarness([tourOne]);
+
+    fireEvent.press(view.getByTestId('activity-row-tour-1'));
+    expect(view.getByTestId('activity-form-modal')).toBeTruthy();
+  });
+
   it('enters edit mode and renders every row without throwing (regression: TDZ crash on selectedCellStyle)', () => {
     const { getByTestId } = renderActivityHarness([tourOne, tourTwo]);
 

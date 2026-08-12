@@ -237,6 +237,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   );
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
+  const [quickStartMode, setQuickStartMode] = useState(true);
   const [details, setDetails] = useState<TripDetails>({ name: '', description: '' });
   const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
   const [selectedMustSeeAttractions, setSelectedMustSeeAttractions] = useState<AttractionOption[]>([]);
@@ -813,6 +814,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     return true;
   }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex]);
 
+  const quickStartReady = Boolean(details.name.trim() && selectedLocations.length && dates.startDate && dates.endDate && !validateTripDates({ ...dates, mode: 'range' }));
+
   const goNext = useCallback(() => {
     let error: string | null = null;
     if (stepIndex === 0) error = validateTripDetails(details);
@@ -1170,10 +1173,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const submitWizard = async () => {
     if (!userToken) return;
     const detailError = validateTripDetails(details);
-    const dateError = validateTripDates(dates);
-    const participantError = validateParticipants(participants);
-    if (detailError || dateError || participantError) {
-      setWizardError(detailError || dateError || participantError || '');
+    const dateError = validateTripDates(quickStartMode ? { ...dates, mode: 'range' } : dates);
+    const destinationError = quickStartMode && !selectedLocations.length ? 'Choose at least one destination.' : null;
+    const participantError = quickStartMode ? null : validateParticipants(participants);
+    if (detailError || dateError || participantError || destinationError) {
+      setWizardError(detailError || dateError || participantError || destinationError || '');
       return;
     }
     const currentUserEmailNormalized = normalizeEmail(currentUserEmail);
@@ -1218,14 +1222,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         return;
       }
       const groupId = data.groupId as string | undefined;
-      if (groupId) {
+      if (groupId && !quickStartMode) {
         await saveWizardFlightsForTrip(tripId, groupId);
         await saveWizardLodgingsForTrip(tripId, groupId);
         await saveWizardTours(tripId, groupId);
         await saveWizardCarRentalsForTrip(tripId, groupId);
       }
 
-      if (itineraryEnabled && (itineraryItems.length || generateItinerary)) {
+      if (!quickStartMode && itineraryEnabled && (itineraryItems.length || generateItinerary)) {
         const rangeDays = computeDurationFromRange(dates.startDate, dates.endDate);
         const days =
           (dates.mode === 'range' ? rangeDays : null) ??
@@ -1336,7 +1340,62 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
+  const renderQuickStart = () => (
+    <>
+      <Text style={styles.sectionTitle}>Start planning in seconds</Text>
+      <Text style={styles.helperText}>Add a trip name, destination, and dates now. You can invite travelers and customize planning preferences from the trip later.</Text>
+      <Text style={styles.modalLabel}>Trip name</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. Summer in Japan"
+        accessibilityLabel="Quick start trip name"
+        testID="quick-start-trip-name"
+        value={details.name}
+        onChangeText={(text: string) => setDetails((prev) => ({ ...prev, name: text }))}
+      />
+      <Text style={styles.modalLabel}>Destination</Text>
+      <LocationSelector
+        backendUrl={backendUrl}
+        headers={stableHeaders}
+        selectedLocations={selectedLocations}
+        onAddLocation={addLocation}
+        onRemoveLocation={removeLocation}
+        onNext={primeRangeDates}
+        styles={styles}
+        placeholder={destinationAttractionWizardEnabled ? 'Search destinations, countries, or states' : 'Search locations (countries/regions/cities)'}
+        locationSearchKind={destinationAttractionWizardEnabled ? 'country_destination' : 'country_state'}
+        showCitySearch={!destinationAttractionWizardEnabled}
+      />
+      <Text style={styles.modalLabel}>Dates</Text>
+      <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
+        <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+          {Platform.OS === 'web' ? (
+            <input ref={startDateRef as any} type="date" title="Start date" value={dates.startDate} onChange={(e) => setStartDateWithRangeGuard(e.target.value)} style={webDateInputStyle} data-testid="quick-start-start-date" />
+          ) : (
+            <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')} testID="quick-start-start-date"><Text style={styles.cellText}>{dates.startDate || 'YYYY-MM-DD'}</Text></TouchableOpacity>
+          )}
+        </View>
+        <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
+          {Platform.OS === 'web' ? (
+            <input ref={endDateRef as any} type="date" title="End date" value={dates.endDate} onChange={(e) => setDates((prev) => ({ ...prev, mode: 'range', endDate: normalizeDateString(e.target.value) }))} style={webDateInputStyle} data-testid="quick-start-end-date" />
+          ) : (
+            <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')} testID="quick-start-end-date"><Text style={styles.cellText}>{dates.endDate || 'YYYY-MM-DD'}</Text></TouchableOpacity>
+          )}
+        </View>
+      </View>
+      {computedDays ? <Text style={styles.helperText}>{computedDays} day(s)</Text> : null}
+      <TouchableOpacity
+        style={[styles.button, styles.outlineButton ?? styles.button, { alignSelf: 'flex-start', marginTop: 8 }]}
+        onPress={() => { setQuickStartMode(false); setDateModeSelected(dates.startDate || dates.endDate ? 'range' : null); setDates((prev) => ({ ...prev, mode: 'range' })); }}
+        testID="quick-start-customize"
+      >
+        <Text style={styles.buttonText}>Customize before creating</Text>
+      </TouchableOpacity>
+    </>
+  );
+
   const renderStepContent = () => {
+    if (quickStartMode) return renderQuickStart();
     switch (stepIndex) {
       case 0:
         return (
@@ -2563,9 +2622,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
         <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }]}>
           <View>
-            <Text style={styles.sectionTitle}>Create Trip Wizard</Text>
+            <Text style={styles.sectionTitle}>{quickStartMode ? 'Create a trip' : 'Create Trip Wizard'}</Text>
             <Text style={styles.helperText}>
-              Step {stepIndex + 1} of {totalSteps}: {steps[stepIndex]}
+              {quickStartMode ? 'Quick start' : `Step ${stepIndex + 1} of ${totalSteps}: ${steps[stepIndex]}`}
             </Text>
           </View>
           <TouchableOpacity
@@ -2591,13 +2650,17 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               { flex: 1 },
               stepIndex === 0 ? styles.dangerButton : (styles.mapOptionButton ?? styles.button),
             ]}
-            onPress={stepIndex === 0 ? onCancel : goBack}
+            onPress={quickStartMode || stepIndex === 0 ? onCancel : goBack}
           >
-            <Text style={stepIndex === 0 ? styles.dangerButtonText : (styles.mapOptionText ?? styles.buttonText)}>
-              {stepIndex === 0 ? 'Cancel' : 'Back'}
+            <Text style={quickStartMode || stepIndex === 0 ? styles.dangerButtonText : (styles.mapOptionText ?? styles.buttonText)}>
+              {quickStartMode || stepIndex === 0 ? 'Cancel' : 'Back'}
             </Text>
           </TouchableOpacity>
-          {stepIndex < totalSteps - 1 ? (
+          {quickStartMode ? (
+            <TouchableOpacity style={[styles.button, { flex: 1 }, !quickStartReady && { opacity: 0.6 }]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
+              <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
+            </TouchableOpacity>
+          ) : stepIndex < totalSteps - 1 ? (
             <>
               <TouchableOpacity
                 style={[styles.button, { flex: 1 }, !canMoveNext && { opacity: 0.6 }]}

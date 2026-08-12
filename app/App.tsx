@@ -87,6 +87,7 @@ import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
+import PasswordField from './components/PasswordField';
 import LandingPage from './components/LandingPage';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
@@ -3567,20 +3568,24 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <Text style={styles.helperText}>
                 This is your first Google sign-in for this account. Set a password now to finish account setup.
               </Text>
-              <TextInput
+              <PasswordField
+                label="New password"
+                styles={styles}
+                testID="initial-password"
                 style={styles.input}
                 placeholder="New password"
-                secureTextEntry
                 autoComplete="new-password"
                 textContentType="newPassword"
                 nativeID="new-password"
                 value={passwordSetupForm.newPassword}
                 onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPassword: text }))}
               />
-              <TextInput
+              <PasswordField
+                label="Confirm new password"
+                styles={styles}
+                testID="initial-password-confirm"
                 style={styles.input}
                 placeholder="Confirm new password"
-                secureTextEntry
                 autoComplete="new-password"
                 textContentType="newPassword"
                 nativeID="new-password-confirm"

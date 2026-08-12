@@ -723,7 +723,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
     : { key, direction: 'asc' });
   const gridColumns = useMemo<GridColumn<Flight>[]>(() => [
-    { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', getValue: (row) => row.passenger_name || '' },
+    { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', sticky: 'left', getValue: (row) => row.passenger_name || '' },
     { key: 'status', label: 'Status', width: 135, editor: 'select', options: Object.values({ Needed: 'Needed', Proposed: 'Proposed', Booked: 'Booked', Completed: 'Completed', Cancelled: 'Cancelled' }), getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
     { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: TRANSFER_TYPES, getValue: (row) => String(row.transfer_type || row.transferType || 'Flight') },
     { key: 'departure_date', label: 'Departure Date', width: 145, editor: 'date', getValue: (row) => row.departure_date || '' },
@@ -739,7 +739,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     { key: 'booking_reference', label: 'Booking Ref', width: 160, editor: 'text', getValue: (row) => row.booking_reference || '' },
     { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
     { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
-    { key: 'actions', label: 'Actions', width: 100, editor: 'action', editable: false, sortable: false, getValue: () => '' },
+    { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
   ], []);
   const beginGridEdit = () => { if (readOnly) return; const snapshot = flights.map((row) => ({ ...row, passenger_ids: [...(row.passenger_ids ?? [])], paidBy: [...(row.paidBy ?? row.paid_by ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
   const cancelGridEdit = () => { setTableEditing(false); setGridRows([]); setGridOriginalRows([]); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); };
@@ -1540,6 +1540,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 style={[
                   styles.cell,
                   { minWidth: col.minWidth ?? 120, flex: 1 },
+                  col.key === 'passenger_name' && Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
+                  col.key === 'actions' && Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   idx === columns.length - 1 && styles.lastCell,
                 ]}
                 onPress={() => col.key !== 'actions' && sortFlightTable(String(col.key))}
@@ -1549,7 +1551,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
             ))}
           </View>
           {sortedFlights.map((item) => (
-            <View key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`}>
+            <TouchableOpacity key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`} onPress={() => { if (!readOnly) openFlightDetails(item); }} activeOpacity={0.8}>
               {columns.map((col, idx) => {
                 const isLast = idx === columns.length - 1;
                 if (col.key === 'actions') {
@@ -1560,6 +1562,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         styles.cell,
                         styles.actionCell,
                         { minWidth: col.minWidth ?? 120, flex: 1 },
+                        Platform.OS === 'web' && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1689,6 +1692,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     style={[
                       styles.cell,
                       { minWidth: col.minWidth ?? 120, flex: 1 },
+                      col.key === 'passenger_name' && Platform.OS === 'web' && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                       isLast && styles.lastCell,
                     ]}
                   >
@@ -1696,7 +1700,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   </View>
                 );
               })}
-            </View>
+            </TouchableOpacity>
           ))}
           {isAddingRow ? (
             <View style={[styles.tableRow, styles.inputRow]}>

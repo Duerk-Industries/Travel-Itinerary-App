@@ -11,6 +11,8 @@ export type GridColumn<Row extends { id: string }> = {
   label: string;
   width: number;
   editor: GridEditorKind;
+  /** Web-only frozen identity/control column placement. */
+  sticky?: 'left' | 'right';
   editable?: boolean;
   sortable?: boolean;
   options?: readonly string[];
@@ -127,6 +129,12 @@ export function EditableDataGrid<Row extends { id: string }>({
   const pickerOverlayStyle = styles.modalOverlay ?? { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.5)' };
   const pickerCardStyle = styles.modalCard ?? { backgroundColor: theme?.colors?.surface ?? '#fff', borderRadius: 12, padding: 16, minWidth: 260, maxHeight: '80%' };
   const pickerOptionRowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, paddingVertical: 8 };
+  const stickyIdentityStyle = Platform.OS === 'web'
+    ? ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors?.surface ?? '#fff' } as any)
+    : null;
+  const stickyActionsStyle = Platform.OS === 'web'
+    ? ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors?.surface ?? '#fff' } as any)
+    : null;
   const gridInputThemeStyle = {
     backgroundColor: theme?.colors?.surface ?? '#fff',
     color: theme?.colors?.text ?? '#111827',
@@ -390,7 +398,7 @@ export function EditableDataGrid<Row extends { id: string }>({
         : <TextInput style={inputStyle} value={value} onChangeText={onChange} />;
     }
     return (
-      <View key={`${row.id}-${column.key}`} style={[styles.cell, { minWidth: column.width, width: column.width }, selected && selectedCellStyle, error && errorCellStyle]}>
+      <View key={`${row.id}-${column.key}`} style={[styles.cell, { minWidth: column.width, width: column.width }, column.sticky === 'left' && stickyIdentityStyle, column.sticky === 'right' && stickyActionsStyle, selected && selectedCellStyle, error && errorCellStyle]}>
         {column.editor === 'readonly' ? <Text style={styles.cellText}>{value || '-'}</Text> : editor}
         {error ? <Text style={errorTextStyle}>{error}</Text> : null}
       </View>
@@ -398,10 +406,10 @@ export function EditableDataGrid<Row extends { id: string }>({
   };
 
   const renderRows = () => rows.map((row, rowIndex) => (
-    <View key={row.id} style={[styles.tableRow, stagedDeleteIds.has(row.id) && deletedRowStyle]} testID={`activity-row-${row.id}`}>
+      <View key={row.id} style={[styles.tableRow, stagedDeleteIds.has(row.id) && deletedRowStyle]} testID={`activity-row-${row.id}`}>
       {columns.map((column, columnIndex) => {
         if (column.editor === 'action') {
-          return <View key={`${row.id}-${column.key}`} style={[styles.cell, { minWidth: column.width, width: column.width }, styles.lastCell]}><TouchableOpacity disabled={disabled} style={[styles.button, styles.dangerButton, disabled && disabledButtonStyle]} onPress={() => onDeleteRow(row.id)}><Text style={styles.dangerButtonText}>{stagedDeleteIds.has(row.id) ? 'Restore' : 'Delete'}</Text></TouchableOpacity></View>;
+          return <View key={`${row.id}-${column.key}`} style={[styles.cell, { minWidth: column.width, width: column.width }, styles.lastCell, stickyActionsStyle]}><TouchableOpacity disabled={disabled} style={[styles.button, styles.dangerButton, disabled && disabledButtonStyle]} onPress={() => onDeleteRow(row.id)}><Text style={styles.dangerButtonText}>{stagedDeleteIds.has(row.id) ? 'Restore' : 'Delete'}</Text></TouchableOpacity></View>;
         }
         return (
           <View
@@ -420,14 +428,14 @@ export function EditableDataGrid<Row extends { id: string }>({
     </View>
   ));
 
-  const header = <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">{columns.map((column) => {
+  const header = <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">{columns.map((column, columnIndex) => {
     const isSortable = Boolean(onSort) && column.sortable !== false;
     const indicator = sortKey === column.key ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
     const headerLabel = `${column.label}${indicator}`;
     return (
       <TouchableOpacity
         key={column.key}
-        style={[styles.cell, { minWidth: column.width, width: column.width }, column.editor === 'action' && styles.lastCell]}
+        style={[styles.cell, { minWidth: column.width, width: column.width }, column.editor === 'action' && styles.lastCell, column.sticky === 'left' && stickyIdentityStyle, (column.sticky === 'right' || column.editor === 'action') && stickyActionsStyle]}
         disabled={!isSortable}
         onPress={() => {
           setAnchor(null);

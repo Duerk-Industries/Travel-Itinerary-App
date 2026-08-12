@@ -57,6 +57,7 @@ import {
   type CarRental,
   type CarRentalDraft,
 } from '../tabs/carRentals';
+import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
 import {
   buildDayEventsMap,
@@ -2431,7 +2432,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
             ) : (
-              <View style={styles.dayHeroImageFallback} />
+              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} />
             )}
             <View style={styles.dayHeroOverlay} />
             <View style={styles.dayHeroBadge}>
