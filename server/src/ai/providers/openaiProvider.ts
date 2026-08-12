@@ -5,7 +5,7 @@ import type { AiCallContext, AiChatRequest, AiChatResponse } from '../types/aiCh
 import type { AiChatProvider } from './AiChatProvider';
 
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
-const OPENAI_SUPPORTED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'];
+const OPENAI_SUPPORTED_MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-5.6-luna'];
 
 const usesReasoningChatParameters = (model: string): boolean =>
   /^gpt-5(?:\.|$|-)/i.test(model) || /^o\d/i.test(model);

@@ -254,6 +254,17 @@ const runProviderContract = (name: string, getProvider: () => AiChatProvider) =>
   });
 };
 
+describe('OpenAI model options', () => {
+  afterEach(() => {
+    delete process.env.OPENAI_MODELS;
+  });
+
+  it('includes GPT-5.6 Luna by default', () => {
+    delete process.env.OPENAI_MODELS;
+    expect(openaiProvider.supportedModels).toContain('gpt-5.6-luna');
+  });
+});
+
 runProviderContract('openaiProvider', () => openaiProvider);
 runProviderContract('openaiCompatibleProvider', () => openaiCompatibleProvider);
 runProviderContract('anthropicProvider', () => anthropicProvider);

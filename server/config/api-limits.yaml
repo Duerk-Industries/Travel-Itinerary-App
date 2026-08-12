@@ -358,6 +358,9 @@ budgeting:
       GPT_4O_MINI:
         inputCostPer1MTokensUsd: 0.15
         outputCostPer1MTokensUsd: 0.60
+      GPT_5_6_LUNA:
+        inputCostPer1MTokensUsd: 0.20
+        outputCostPer1MTokensUsd: 1.20
   ANTHROPIC:
     alertThresholdPercent: 80
     models:
