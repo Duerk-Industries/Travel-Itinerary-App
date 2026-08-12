@@ -3153,6 +3153,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               formatMemberName={formatMemberName}
               payerName={payerName}
               readOnly={isFollowingMode}
+              featureStandardizedItemDialogs={featureStandardizedItemDialogs}
             />
           )
         : null}

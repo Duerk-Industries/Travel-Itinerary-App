@@ -75,7 +75,8 @@ Add all flags with default `false`:
 - `feature_grid_editing` — Activities Edit table entry point, grid, staged deletion, Save/Cancel, and bulk
   route.
 - `feature_grid_editing_clipboard` — web rectangular selection and clipboard handlers only.
-- `feature_standardized_item_dialogs` — shared flight/accommodation/activity detail dialog adoption.
+- `feature_standardized_item_dialogs` — shared flight/accommodation/activity detail dialog adoption in
+  Overview, Activities, and Lodging tabs.
 
 Client and server must use the existing feature-flag loading and DB override behavior. The bulk route must
 remain unavailable when `feature_grid_editing` is disabled.
@@ -234,7 +235,7 @@ Generalize the `DialogShell`/`LodgingDetailsDialog` pattern:
 - Edit closes details and opens the existing entity-specific editor; it does not turn the detail dialog into a
   giant all-entity form.
 
-#### `app/tabs/overview.tsx` and `app/App.tsx`
+#### `app/tabs/overview.tsx`, `app/tabs/LodgingTab.tsx`, and `app/App.tsx`
 
 Move toward a single selected-item discriminated union:
 

@@ -348,7 +348,7 @@ other flag):
 | --- | --- | --- |
 | `feature_grid_editing` | The "Edit table" entry point in `ActivitiesTab` (both platforms) and the `PATCH /api/activities/bulk` route itself (returns 404/`FEATURE_DISABLED` when off, mirroring how other feature-flagged routes fail closed). | `false` — new, higher-risk UI surface; enable after internal verification. |
 | `feature_grid_editing_clipboard` | Just the web copy/cut/paste handlers inside `EditableDataGrid`. Independent kill switch: if TSV parsing or clipboard event handling misbehaves in production, this can be flipped off without losing cell-by-cell editing or the delete column. | `false` initially, flipped on after `feature_grid_editing` proves stable. |
-| `feature_standardized_item_dialogs` | Whether `overview.tsx` (and `activities.tsx`) render `TripItemDetailsDialog` vs. the legacy per-tab detail modals. Lets the two efforts ship and roll back independently since they touch different files. | `false` — flip on once `TripItemDetailsDialog` covers all three adapters and passes verification. |
+| `feature_standardized_item_dialogs` | Whether Overview, Activities, and Lodging tabs render `TripItemDetailsDialog` vs. legacy detail modals. | `false` — flip on once all three adapters pass verification. |
 
 Both client and server check flags the existing way: client via the flags already fetched at session
 bootstrap (same mechanism `AdminTab`/other gated UI uses), server via the flag-check helper already used by
@@ -488,10 +488,9 @@ cost model can be revised from observed usage without enabling verbose per-cell 
   `updateActivityDto`, `updateActivity`/`deleteActivity`) are all **reused**, not duplicated, by both the
   legacy per-row edit modal and the new grid/bulk paths — one source of truth for what a valid activity
   looks like.
-- `TripItemDetailsDialog` replaces three near-duplicate detail-modal implementations
-  (`LodgingDetailsDialog`, `activities.tsx`'s inline modal, `overview.tsx`'s flight/activity modal state)
-  with one component plus three small `DetailRow[]`-building adapter functions — future field additions to
-  the detail view happen in one place.
+- `TripItemDetailsDialog` is the feature-flagged detail surface for Overview, Activities, and Lodging tabs;
+  the legacy lodging dialog remains available only as the rollback path while the shared lodging adapter is
+  verified. Future field additions to the shared detail view happen in one place.
 - All new feature flags default `false`, so this ships dark and is enabled deliberately after internal
   verification, consistent with how other recent higher-risk surfaces in this codebase (e.g.
   `trip_blog_*` phases) were rolled out.
@@ -589,8 +588,9 @@ cost model can be revised from observed usage without enabling verbose per-cell 
 ### Phase 5: Standardized Detail Dialogs
 - Create `TripItemDetailsDialog.tsx` (generalizing `LodgingDetailsDialog`) with per-type `DetailRow[]`
   adapters for flights, lodging, activities.
-- Migrate `overview.tsx` and `activities.tsx` to use it behind `feature_standardized_item_dialogs`; retire
-  `LodgingDetailsDialog` once migrated.
+- Migrate `overview.tsx`, `activities.tsx`, and `LodgingTab.tsx` to use it behind
+  `feature_standardized_item_dialogs`; retain `LodgingDetailsDialog` only as the rollback path until the
+  shared lodging adapter completes production verification.
 
 ### Phase 6: Verification
 - Unit tests for TSV parsing, name resolution, and chunking logic.

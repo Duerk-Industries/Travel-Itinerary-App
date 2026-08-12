@@ -264,12 +264,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
 
   const purchaseStorage = async (planKey) => {
+    // Checkout may hand off to an external browser/app. Dismiss the quota sheet
+    // before starting that asynchronous work so it never appears stuck.
+    setShowQuotaModal(false);
     try {
       const token = headers.Authorization?.replace('Bearer ', '');
       const result = await createCheckoutSession(backendUrl, token, planKey, createIdempotencyKey('st'));
       if (result && 'url' in result) {
         await openBillingUrl(result.url);
-        setShowQuotaModal(false);
       } else {
         throw new Error('Unable to start checkout');
       }

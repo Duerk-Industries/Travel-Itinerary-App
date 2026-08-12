@@ -105,6 +105,7 @@ export function EditableDataGrid<Row extends { id: string }>({
   const [anchor, setAnchor] = useState<CellPosition | null>(null);
   const [active, setActive] = useState<CellPosition | null>(null);
   const [cutSelection, setCutSelection] = useState<Array<{ rowId: string; columnKey: string }>>([]);
+  const [multiSelectDrafts, setMultiSelectDrafts] = useState<Record<string, string>>({});
   const [openPicker, setOpenPicker] = useState<OpenPicker | null>(null);
   const [pickerDraftIds, setPickerDraftIds] = useState<string[]>([]);
   const [pickerDraftDate, setPickerDraftDate] = useState<Date>(new Date());
@@ -289,10 +290,25 @@ export function EditableDataGrid<Row extends { id: string }>({
 
   const renderEditor = (row: Row, column: GridColumn<Row>, rowIndex: number, columnIndex: number) => {
     const value = column.getValue(row);
+    const key = cellKey(row.id, column.key);
+    const multiSelectValue = multiSelectDrafts[key] ?? value;
     const error = errorByCell.get(cellKey(row.id, column.key));
     const selected = Boolean(selection && rowIndex >= selection.top && rowIndex <= selection.bottom && columnIndex >= selection.left && columnIndex <= selection.right);
     const onChange = (next: string) => {
       if (!disabled) onCellChange(row.id, column.key, next);
+    };
+    const onMultiSelectChange = (next: string) => {
+      if (disabled) return;
+      setMultiSelectDrafts((current) => ({ ...current, [key]: next }));
+    };
+    const commitMultiSelect = () => {
+      if (disabled || !(key in multiSelectDrafts)) return;
+      onCellChange(row.id, column.key, multiSelectDrafts[key]);
+      setMultiSelectDrafts((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
     };
     const inputStyle = [styles.input, { minWidth: column.width - 16, width: column.width - 16, margin: 4 }];
     let editor: React.ReactNode;
@@ -332,8 +348,20 @@ export function EditableDataGrid<Row extends { id: string }>({
         : <TextInput style={[inputStyle, { minHeight: 42 }]} value={value} onChangeText={onChange} multiline />;
     } else if (column.editor === 'multiSelect') {
       const textEditor = Platform.OS === 'web'
-        ? React.createElement('input', { value, onChange: (event: { target: { value: string } }) => onChange(event.target.value), style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' } })
-        : <TextInput style={inputStyle} value={value} onChangeText={onChange} />;
+        ? React.createElement('input', {
+            value: multiSelectValue,
+            onChange: (event: { target: { value: string } }) => onMultiSelectChange(event.target.value),
+            onBlur: commitMultiSelect,
+            onKeyDown: (event: { key: string; preventDefault: () => void }) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                commitMultiSelect();
+              }
+            },
+            style: { minWidth: column.width - 16, width: column.width - 16, margin: 4, boxSizing: 'border-box' },
+            placeholder: 'Name; Name',
+          })
+        : <TextInput style={inputStyle} value={multiSelectValue} onChangeText={onMultiSelectChange} onBlur={commitMultiSelect} onEndEditing={commitMultiSelect} placeholder="Name; Name" />;
       // A "Pick…" affordance is layered on top of the existing free-text entry (which
       // still supports typing/pasting semicolon-separated names) so the column is
       // discoverable on both platforms without removing the clipboard-paste path.

@@ -22,6 +22,7 @@ import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDt
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
+import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'Class',
@@ -156,6 +157,17 @@ router.patch('/bulk', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const dto = readDto(bulkActivitiesDto, req.body ?? {}, res);
   if (!dto) return;
+  try {
+    await reserveActivitiesBulkSaveRateLimit(userId, req.ip || req.socket.remoteAddress);
+  } catch (err) {
+    if (err instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds));
+      res.status(429).json({ error: err.message });
+      return;
+    }
+    res.status(500).json({ error: (err as Error).message });
+    return;
+  }
   try {
     // Per-user/IP burst guard first (cheap, identity-scoped) before touching the
     // shared aggregate budget below.

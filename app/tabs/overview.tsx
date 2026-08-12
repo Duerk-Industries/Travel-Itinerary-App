@@ -2556,7 +2556,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         key={lodging.id}
                         testID={`day-details-lodging-${lodging.id}`}
                         style={styles.dayInfoRow}
-                        onPress={() => openLodgingDetails(lodging)}
+                        onPress={() => openLodgingEditor(lodging)}
                       >
                         {lodging.imageUrl ? (
                           <Image

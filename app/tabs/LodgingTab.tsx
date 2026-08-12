@@ -7,6 +7,7 @@ import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraf
 import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
+import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
@@ -27,6 +28,7 @@ type LodgingTabProps = {
   payerName: (id: string) => string;
   theme?: AppTheme;
   readOnly?: boolean;
+  featureStandardizedItemDialogs?: boolean;
 };
 
 export const formatShortDate = (dateString?: string | null): string => {
@@ -57,6 +59,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   payerName: _payerName, // unused
   theme,
   readOnly = false,
+  featureStandardizedItemDialogs = false,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -136,11 +139,13 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const handleDelete = async () => {
     if (readOnly) return;
     if (!lodgingToDelete) return;
-    const result = await removeLodgingApi(backendUrl, jsonHeaders, lodgingToDelete.id);
+    const target = lodgingToDelete;
+    // Dismiss the confirmation/details surfaces before waiting on the delete request.
+    setLodgingToDelete(null);
+    closeDetails();
+    const result = await removeLodgingApi(backendUrl, jsonHeaders, target.id);
     if (result.ok) {
       onRefreshLodgings?.();
-      setLodgingToDelete(null);
-      closeDetails();
     } else {
       Alert.alert(result.error || 'Failed to delete lodging.');
     }
@@ -323,7 +328,35 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         </HorizontalTableScroll>
       </ScrollView>
 
-      {showDetails && selectedLodging && (
+      {showDetails && selectedLodging && featureStandardizedItemDialogs ? (
+        <TripItemDetailsDialog
+          testID="lodging-details-dialog"
+          visible
+          kind="lodging"
+          title={selectedLodging.name}
+          status={normalizeItineraryStatus(selectedLodging.status, LEGACY_ITINERARY_STATUS)}
+          rows={[
+            { label: 'Check-in', value: formatShortDate(selectedLodging.checkInDate) },
+            { label: 'Check-out', value: formatShortDate(selectedLodging.checkOutDate) },
+            { label: 'Rooms', value: selectedLodging.rooms || '1' },
+            { label: 'Refund by', value: formatShortDate(selectedLodging.refundBy) },
+            { label: 'Address', value: selectedLodging.address || '-', onPress: selectedLodging.address ? () => onOpenMap(selectedLodging.address) : undefined },
+            { label: 'Paid by', value: selectedLodging.paidBy?.length ? selectedLodging.paidBy.map(payerName).join(', ') : '-' },
+            { label: 'Travelers', value: selectedLodging.travelerIds?.length ? selectedLodging.travelerIds.map(travelerName).join(', ') : '-' },
+            { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
+            { label: 'Cost per night', value: selectedLodging.costPerNight ? `$${selectedLodging.costPerNight}` : '-' },
+            { label: 'Votes', value: formatNetVotes(selectedLodging.netVotes ?? 0) },
+            { label: 'Rating', value: formatNetVotes(selectedLodging.netRating ?? 0) },
+          ]}
+          styles={styles}
+          theme={theme}
+          readOnly={readOnly}
+          onClose={closeDetails}
+          onEdit={() => openEditDialog(selectedLodging)}
+          onDelete={() => setLodgingToDelete(selectedLodging)}
+        />
+      ) : null}
+      {showDetails && selectedLodging && !featureStandardizedItemDialogs ? (
         <LodgingDetailsDialog
           testID="lodging-details-dialog"
           visible={showDetails}
@@ -340,7 +373,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           onDelete={() => setLodgingToDelete(selectedLodging)}
           onOpenMap={onOpenMap}
         />
-      )}
+      ) : null}
 
       {showEditor && lodgingDraft && (
         <LodgingDialog
