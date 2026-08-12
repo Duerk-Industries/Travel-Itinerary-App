@@ -16,6 +16,7 @@ import {
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Image } from 'react-native';
 import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
 
@@ -350,6 +351,41 @@ describe('Overview UI (nested itinerary)', () => {
     const { findByText } = await renderOverview(<OverviewTab {...baseProps} trip={trip} />);
 
     expect(await findByText('Hiking trip to Yosemite National Park')).toBeTruthy();
+  });
+
+  test('uses an explicitly selected blog photo as the day hero image', async () => {
+    const coverUrl = 'https://storage.example.com/blog-cover.jpg';
+    fetchMock.mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.includes('/api/trips/trip1/blog')) {
+        return {
+          ok: true,
+          json: async () => ({
+            days: [
+              {
+                localDate: '2026-01-29',
+                coverItemId: 'asset-1',
+                coverIsExplicit: true,
+                items: [
+                  {
+                    kindKey: 'core.gallery',
+                    assets: [{ id: 'asset-1', assetId: 'asset-1', mediaKind: 'photo', primaryUrl: coverUrl }],
+                  },
+                ],
+              },
+            ],
+          }),
+        } as any;
+      }
+      return { ok: true, json: async () => [] } as any;
+    });
+
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    const hero = await findByTestId('overview-day-card-1');
+    await waitFor(async () => {
+      const images = hero.findAllByType(Image);
+      expect(images.some((image: any) => image.props.source?.uri === coverUrl)).toBe(true);
+    });
   });
 
   test('keeps the full trip range even when events only exist on the first day', async () => {

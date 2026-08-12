@@ -570,6 +570,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
+  const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
   const [dayWeather, setDayWeather] = useState<Record<string, OverviewWeather>>({});
   const weatherRequestKeyRef = useRef<string>('');
 
@@ -1206,6 +1207,71 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     buildDayCards();
   }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel, trip?.destination]);
 
+  useEffect(() => {
+    setDayImages({});
+    setBlogDayImages({});
+  }, [trip?.id]);
+
+  // A traveler-selected blog cover is the canonical image for that day in the
+  // overview. The blog endpoint also returns a fallback cover for days with
+  // media, so only honor explicitly selected covers here; otherwise the
+  // overview's existing generated destination image remains the fallback.
+  useEffect(() => {
+    let active = true;
+
+    const getPhotoCoverUrl = (day: any): string | null => {
+      if (!day?.coverIsExplicit || !day?.coverItemId) return null;
+      const coverId = String(day.coverItemId);
+      const items = Array.isArray(day.items) ? day.items : [];
+      const media = items.flatMap((item: any) => (
+        item?.kindKey === 'core.gallery' && Array.isArray(item.assets) ? item.assets : [item]
+      ));
+      const cover = media.find((item: any) => String(item?.id ?? '') === coverId || String(item?.assetId ?? '') === coverId);
+      if (!cover || (cover.mediaKind !== 'photo' && cover.kindKey !== 'media.photo')) return null;
+      const url = cover.primaryUrl || cover.thumbnailUrl;
+      return typeof url === 'string' && url.trim() ? url : null;
+    };
+
+    const fetchBlogCovers = async () => {
+      if (!trip?.id) {
+        setBlogDayImages({});
+        return;
+      }
+
+      const next: Record<string, string> = {};
+      let cursor: string | null = null;
+      const seenCursors = new Set<string>();
+
+      try {
+        do {
+          const params = new URLSearchParams({ limit: '100' });
+          if (cursor) params.set('cursor', cursor);
+          const response = await fetch(`${backendUrl}/api/trips/${trip.id}/blog?${params.toString()}`, { headers });
+          if (!response.ok) return;
+          const data = await response.json().catch(() => ({}));
+          const days = Array.isArray(data?.days) ? data.days : [];
+          days.forEach((day: any) => {
+            const url = getPhotoCoverUrl(day);
+            if (url && day.localDate) next[String(day.localDate)] = url;
+          });
+          const lastDate = days.length ? String(days[days.length - 1]?.localDate ?? '') : '';
+          if (days.length < 100 || !lastDate || seenCursors.has(lastDate)) break;
+          seenCursors.add(lastDate);
+          cursor = lastDate;
+        } while (active);
+
+        if (active) setBlogDayImages(next);
+      } catch {
+        // The blog is optional for overview rendering; keep generated images.
+      }
+    };
+
+    fetchBlogCovers().catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, trip?.id, allDates]);
+
   // Lets App.tsx command "jump to Day 1" (e.g. when an AI itinerary finishes generating)
   // without lifting selectedDay state up. Mirrors the editSignal nonce-prop pattern.
   // dayCards is built asynchronously above, so the request is "armed" on signal change
@@ -1366,7 +1432,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     };
     const fetchImages = async () => {
       if (!dayCards.length) return;
-      const missingCards = dayCards.filter((card) => !dayImages[card.date]);
+      const missingCards = dayCards.filter((card) => !blogDayImages[card.date] && !dayImages[card.date]);
       if (!missingCards.length) return;
       const results = await Promise.all(missingCards.map(fetchOneImage));
       if (!active) return;
@@ -1382,7 +1448,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return () => {
       active = false;
     };
-  }, [backendUrl, headers, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
+  }, [backendUrl, headers, blogDayImages, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -2273,7 +2339,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
 
       const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
-        const img = dayImages[card.date];
+        const img = blogDayImages[card.date] ?? dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
           weather && weather.temperatureHighC != null
