@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { triggerBlogSyncForTrip } from '../blog/triggerSync';
 import {
   addItineraryDetail,
   createItineraryRecord,
@@ -515,6 +516,14 @@ const persistResult = async (params: {
     });
     detailKeys.add(key);
     detailsCount += 1;
+  }
+
+  // One background blog sync for the whole generated batch (not one per detail — an
+  // AI-generated itinerary can add dozens of rows here in the loop above, and the trip
+  // has exactly one blog to catch up regardless of how many of them landed). See
+  // itineraryDataRoutes.ts's per-mutation trigger for the same mechanism on manual edits.
+  if (detailsCount > 0) {
+    triggerBlogSyncForTrip(params.tripId, params.userId);
   }
 
   const membership = await ensureUserInTrip(params.tripId, params.userId);

@@ -11,7 +11,7 @@ import { ActivityIndicator, Alert, Linking,
   Image,
   type LayoutChangeEvent,
   useWindowDimensions, } from 'react-native';
-import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
+import { addDaysToIso, computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
   buildOverviewRows,
@@ -57,6 +57,7 @@ import {
   type CarRental,
   type CarRentalDraft,
 } from '../tabs/carRentals';
+import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
 import {
   buildDayEventsMap,
@@ -68,7 +69,7 @@ import {
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
-import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
+import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
 import GetYourGuideCta from '../components/GetYourGuideCta';
 import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
@@ -232,6 +233,14 @@ type OverviewTabProps = {
   onAddCarRental: (rental: CarRental) => void;
   openFlightInFlightsTab: (flightId: string) => void;
   openLodgingDetails: (lodging: Lodging) => void;
+  theme?: AppTheme;
+  readOnly?: boolean;
+  featureStandardizedItemDialogs?: boolean;
+  // Kill switch for the designed gradient placeholder shown in place of a
+  // missing day/trip cover photo (implementation-plan-ux-remediation.md,
+  // Initiative B). Defaults to `true`; `false` reverts to the plain empty
+  // fallback tile.
+  featureCoverPhotoFallbackV2?: boolean;
 };
 
 type DayCard = {
@@ -247,6 +256,13 @@ type DetailSection = {
   title?: string;
   subtitle?: string;
   items: DetailItem[];
+};
+
+type DetailModalState = {
+  title: string;
+  sections: DetailSection[];
+  kind?: 'flight' | 'lodging' | 'activity';
+  item?: Flight | Lodging | Tour;
 };
 
 type ModalDateField =
@@ -431,6 +447,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onAddCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
+  theme,
+  readOnly = false,
+  featureStandardizedItemDialogs = false,
+  featureCoverPhotoFallbackV2 = true,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -477,7 +497,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   });
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
-  const [detailModal, setDetailModal] = useState<{ title: string; sections: DetailSection[] } | null>(null);
+  const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
+  const [detailModal, setDetailModal] = useState<DetailModalState | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{
+    kind: 'flight' | 'lodging' | 'activity';
+    id: string;
+    name: string;
+  } | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
@@ -532,6 +558,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlightDraft, setEditingFlightDraft] = useState<FlightEditDraft | null>(null);
   const [showFlightEditor, setShowFlightEditor] = useState(false);
+  const [returnToOverviewViewAfterItemEdit, setReturnToOverviewViewAfterItemEdit] = useState(false);
   const [flightEditorAnchor, setFlightEditorAnchor] = useState(0);
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -553,6 +580,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
+  const [blogDayImages, setBlogDayImages] = useState<Record<string, string>>({});
   const [dayWeather, setDayWeather] = useState<Record<string, OverviewWeather>>({});
   const weatherRequestKeyRef = useRef<string>('');
 
@@ -1189,6 +1217,71 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     buildDayCards();
   }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel, trip?.destination]);
 
+  useEffect(() => {
+    setDayImages({});
+    setBlogDayImages({});
+  }, [trip?.id]);
+
+  // A traveler-selected blog cover is the canonical image for that day in the
+  // overview. The blog endpoint also returns a fallback cover for days with
+  // media, so only honor explicitly selected covers here; otherwise the
+  // overview's existing generated destination image remains the fallback.
+  useEffect(() => {
+    let active = true;
+
+    const getPhotoCoverUrl = (day: any): string | null => {
+      if (!day?.coverIsExplicit || !day?.coverItemId) return null;
+      const coverId = String(day.coverItemId);
+      const items = Array.isArray(day.items) ? day.items : [];
+      const media = items.flatMap((item: any) => (
+        item?.kindKey === 'core.gallery' && Array.isArray(item.assets) ? item.assets : [item]
+      ));
+      const cover = media.find((item: any) => String(item?.id ?? '') === coverId || String(item?.assetId ?? '') === coverId);
+      if (!cover || (cover.mediaKind !== 'photo' && cover.kindKey !== 'media.photo')) return null;
+      const url = cover.primaryUrl || cover.thumbnailUrl;
+      return typeof url === 'string' && url.trim() ? url : null;
+    };
+
+    const fetchBlogCovers = async () => {
+      if (!trip?.id) {
+        setBlogDayImages({});
+        return;
+      }
+
+      const next: Record<string, string> = {};
+      let cursor: string | null = null;
+      const seenCursors = new Set<string>();
+
+      try {
+        do {
+          const params = new URLSearchParams({ limit: '100' });
+          if (cursor) params.set('cursor', cursor);
+          const response = await fetch(`${backendUrl}/api/trips/${trip.id}/blog?${params.toString()}`, { headers });
+          if (!response.ok) return;
+          const data = await response.json().catch(() => ({}));
+          const days = Array.isArray(data?.days) ? data.days : [];
+          days.forEach((day: any) => {
+            const url = getPhotoCoverUrl(day);
+            if (url && day.localDate) next[String(day.localDate)] = url;
+          });
+          const lastDate = days.length ? String(days[days.length - 1]?.localDate ?? '') : '';
+          if (days.length < 100 || !lastDate || seenCursors.has(lastDate)) break;
+          seenCursors.add(lastDate);
+          cursor = lastDate;
+        } while (active);
+
+        if (active) setBlogDayImages(next);
+      } catch {
+        // The blog is optional for overview rendering; keep generated images.
+      }
+    };
+
+    fetchBlogCovers().catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, trip?.id, allDates]);
+
   // Lets App.tsx command "jump to Day 1" (e.g. when an AI itinerary finishes generating)
   // without lifting selectedDay state up. Mirrors the editSignal nonce-prop pattern.
   // dayCards is built asynchronously above, so the request is "armed" on signal change
@@ -1349,7 +1442,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     };
     const fetchImages = async () => {
       if (!dayCards.length) return;
-      const missingCards = dayCards.filter((card) => !dayImages[card.date]);
+      const missingCards = dayCards.filter((card) => !blogDayImages[card.date] && !dayImages[card.date]);
       if (!missingCards.length) return;
       const results = await Promise.all(missingCards.map(fetchOneImage));
       if (!active) return;
@@ -1365,7 +1458,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return () => {
       active = false;
     };
-  }, [backendUrl, headers, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
+  }, [backendUrl, headers, blogDayImages, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -1525,6 +1618,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowAddTraveler(false);
     setTravelerDraft({ firstName: '', lastName: '', email: '' });
     setEditingDetailId(null);
+    setReturnToOverviewViewAfterItemEdit(false);
     setIsEditing(false);
   };
 
@@ -1739,18 +1833,30 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setEditingFlightDraft(null);
     setTimePickerTarget(null);
     setFlightEditorAnchor(0);
+    if (returnToOverviewViewAfterItemEdit) {
+      setReturnToOverviewViewAfterItemEdit(false);
+      setIsEditing(false);
+    }
   };
 
   const closeLodgingModal = () => {
     setShowAddLodging(false);
     setEditingLodgingId(null);
     setLodgingDraft(buildOverviewLodgingDraft());
+    if (returnToOverviewViewAfterItemEdit) {
+      setReturnToOverviewViewAfterItemEdit(false);
+      setIsEditing(false);
+    }
   };
 
   const closeTourModal = () => {
     setShowAddTour(false);
     setEditingTourId(null);
     setTourDraft(createInitialActivityState(trip?.startDate ?? null));
+    if (returnToOverviewViewAfterItemEdit) {
+      setReturnToOverviewViewAfterItemEdit(false);
+      setIsEditing(false);
+    }
   };
 
   const closeRentalModal = () => {
@@ -1765,6 +1871,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       closeLodgingModal();
       closeTourModal();
       closeRentalModal();
+      setReturnToOverviewViewAfterItemEdit(false);
       setPendingRemovalIds([]);
     }
   }, [isEditing]);
@@ -1774,6 +1881,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       setSelectedFlight(flight);
       return;
     }
+    setReturnToOverviewViewAfterItemEdit(false);
     setSelectedFlight(null);
     setEditingFlightId(flight.id);
     setEditingFlightDraft(toFlightEditDraft(flight));
@@ -1790,6 +1898,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openFlightAdd = () => {
     if (!isEditing) return;
+    setReturnToOverviewViewAfterItemEdit(false);
     setSelectedFlight(null);
     setEditingFlightId('new');
     const tripForFlights = trip
@@ -1810,9 +1919,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openLodgingEditor = (lodging: Lodging) => {
     if (!isEditing) {
-      openLodgingDetails(lodging);
+      if (featureStandardizedItemDialogs) setSelectedLodging(lodging);
+      else openLodgingDetails(lodging);
       return;
     }
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingLodgingId(lodging.id);
     setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
     setShowAddLodging(true);
@@ -1820,6 +1931,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openAddLodging = () => {
     if (!isEditing) return;
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingLodgingId(null);
     setLodgingDraft(buildOverviewLodgingDraft());
     setShowAddLodging(true);
@@ -1827,6 +1939,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openAddTour = () => {
     if (!isEditing) return;
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingTourId(null);
     setTourDraft(createInitialActivityState(trip?.startDate ?? null));
     setShowAddTour(true);
@@ -1844,9 +1957,118 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       setSelectedTour(tour);
       return;
     }
+    setReturnToOverviewViewAfterItemEdit(false);
     setEditingTourId(tour.id);
     setTourDraft(buildTourDraftFromRow({ ...tour, paidBy: (tour as any).paidBy ?? [] } as any));
     setShowAddTour(true);
+  };
+
+  const editFlightFromDetails = (flight: Flight) => {
+    if (readOnly) return;
+    setSelectedFlight(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingFlightId(flight.id);
+    setEditingFlightDraft(toFlightEditDraft(flight));
+    setShowFlightEditor(true);
+  };
+
+  const editLodgingFromDetails = (lodging: Lodging) => {
+    if (readOnly) return;
+    setSelectedLodging(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingLodgingId(lodging.id);
+    setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
+    setShowAddLodging(true);
+  };
+
+  const editActivityFromDetails = (tour: Tour) => {
+    if (readOnly) return;
+    setSelectedTour(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingTourId(tour.id);
+    setTourDraft(buildTourDraftFromRow({ ...tour, paidBy: (tour as any).paidBy ?? [] } as any));
+    setShowAddTour(true);
+  };
+
+  // Day-details "+ Add X" buttons — same add flow/fields as each type's own dedicated
+  // page, just pre-seeded with the day currently being viewed and reachable without
+  // switching into the overview's "edit everything" (isEditing) mode.
+  const addFlightForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setSelectedFlight(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingFlightId('new');
+    const tripForFlights = trip
+      ? ({
+          ...trip,
+          groupName: (group as any)?.name ?? (trip as any).groupName ?? 'Group',
+        } as any)
+      : undefined;
+    const draft = createFlightDraftForTrip(tripForFlights, defaultPayerId);
+    if (groupMembers.length) {
+      draft.passengerIds = groupMembers.map((m) => m.id);
+      draft.passengerName = buildPassengerName(draft.passengerIds) || draft.passengerName;
+    }
+    draft.departureDate = dateIso;
+    draft.arrivalDate = dateIso;
+    setEditingFlightDraft(draft);
+    setShowFlightEditor(true);
+  };
+
+  const addLodgingForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setSelectedLodging(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingLodgingId(null);
+    const draft = buildOverviewLodgingDraft();
+    draft.checkInDate = dateIso;
+    draft.checkOutDate = addDaysToIso(dateIso, 1) || dateIso;
+    setLodgingDraft(draft);
+    setShowAddLodging(true);
+  };
+
+  const addTourForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setSelectedTour(null);
+    setReturnToOverviewViewAfterItemEdit(true);
+    setEditingTourId(null);
+    setTourDraft(createInitialActivityState(dateIso));
+    setShowAddTour(true);
+  };
+
+  const addRentalForDay = (dateIso: string) => {
+    if (readOnly) return;
+    setEditingRentalId(null);
+    const draft = createInitialCarRentalDraft();
+    draft.pickupDate = dateIso;
+    draft.dropoffDate = dateIso;
+    setRentalDraft(draft);
+    setShowAddRental(true);
+  };
+
+  const deleteItemFromDetails = () => {
+    if (!itemToDelete) return;
+    const { kind, id, name } = itemToDelete;
+    // Close every dialog immediately on confirm so the UI never appears to hang
+    // waiting on the network — the delete itself runs in the background below.
+    setItemToDelete(null);
+    setSelectedFlight(null);
+    setSelectedLodging(null);
+    setSelectedTour(null);
+    setDetailModal(null);
+    (async () => {
+      try {
+        const path = kind === 'flight' ? `/api/transfers/${id}` : kind === 'lodging' ? `/api/lodgings/${id}` : `/api/activities/${id}`;
+        const res = await fetch(`${backendUrl}${path}`, { method: 'DELETE', headers });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Unable to delete ${name || kind}`);
+        if (kind === 'flight') onFlightDataChanged();
+        if (kind === 'lodging') onLodgingDataChanged();
+        if (kind === 'activity') onTourDataChanged();
+      } catch (err: any) {
+        Alert.alert(err?.message || `Unable to delete ${name || kind}`);
+      }
+    })();
   };
 
   const openRentalEditor = (rental: CarRental) => {
@@ -1908,39 +2130,154 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     </View>
   );
 
-  const renderDetailSectionsModal = (modal: { title: string; sections: DetailSection[] }) => (
-    <View style={styles.modalOverlay}>
-      <View style={[styles.confirmModal, styles.detailModal]}>
-        <ScrollView style={styles.detailModalScroll}>
-          <Text style={styles.sectionTitle}>{modal.title}</Text>
-          {modal.sections.map((section, idx) => (
-            <View key={`${section.title ?? 'section'}-${idx}`} style={styles.detailSection}>
-              {section.title ? <Text style={styles.headerText}>{section.title}</Text> : null}
-              {section.subtitle ? <Text style={styles.helperText}>{section.subtitle}</Text> : null}
-              {section.items.map((item) => {
-                const handler = item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined);
-                const content = handler ? (
-                  <TouchableOpacity onPress={handler}>
-                    <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
-                );
-                return (
-                  <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, { alignItems: 'center' }]}>
-                    <Text style={styles.headerText}>{item.label}:</Text>
-                    <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
-                  </View>
-                );
-              })}
-            </View>
-          ))}
-        </ScrollView>
-        <TouchableOpacity style={styles.button} onPress={() => setDetailModal(null)}>
-          <Text style={styles.buttonText}>Close</Text>
-        </TouchableOpacity>
+  const renderDetailSectionsModal = (modal: DetailModalState) => {
+    if (featureStandardizedItemDialogs && modal.kind && modal.item) {
+      const rows = modal.sections.flatMap((section) => section.items);
+      const itemName = modal.kind === 'flight'
+        ? `${(modal.item as Flight).departure_airport_code || 'Departure'} → ${(modal.item as Flight).arrival_airport_code || 'Arrival'}`
+        : String((modal.item as Lodging | Tour).name || modal.title);
+      const status = String((modal.item as Flight | Lodging | Tour).status || '') || undefined;
+      return (
+        <TripItemDetailsDialog
+          visible
+          kind={modal.kind}
+          title={itemName}
+          subtitle={modal.sections.find((section) => section.subtitle)?.subtitle}
+          status={status}
+          rows={rows.map((item) => ({
+            label: item.label,
+            value: item.value,
+            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
+          }))}
+          styles={styles}
+          theme={theme}
+          readOnly={readOnly}
+          onClose={() => setDetailModal(null)}
+          onEdit={() => {
+            if (modal.kind === 'flight') editFlightFromDetails(modal.item as Flight);
+            if (modal.kind === 'lodging') editLodgingFromDetails(modal.item as Lodging);
+            if (modal.kind === 'activity') editActivityFromDetails(modal.item as Tour);
+            setDetailModal(null);
+          }}
+          onDelete={() => setItemToDelete({ kind: modal.kind!, id: modal.item!.id, name: itemName })}
+          testID={`${modal.kind}-overview-details`}
+        />
+      );
+    }
+
+    return (
+      <View style={styles.modalOverlay}>
+        <View style={[styles.confirmModal, styles.detailModal]}>
+          <ScrollView style={styles.detailModalScroll}>
+            <Text style={styles.sectionTitle}>{modal.title}</Text>
+            {modal.sections.map((section, idx) => (
+              <View key={`${section.title ?? 'section'}-${idx}`} style={styles.detailSection}>
+                {section.title ? <Text style={styles.headerText}>{section.title}</Text> : null}
+                {section.subtitle ? <Text style={styles.helperText}>{section.subtitle}</Text> : null}
+                {section.items.map((item) => {
+                  const handler = item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined);
+                  const content = handler ? (
+                    <TouchableOpacity onPress={handler}>
+                      <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
+                  );
+                  return (
+                    <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, { alignItems: 'center' }]}>
+                      <Text style={styles.headerText}>{item.label}:</Text>
+                      <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={styles.button} onPress={() => setDetailModal(null)}>
+            <Text style={styles.buttonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    );
+  };
+
+  const renderSelectedItemDialogs = () => (
+    <>
+      {selectedFlight ? (
+        <TripItemDetailsDialog
+          visible
+          kind="flight"
+          title={`${selectedFlight.departure_airport_code || 'Departure'} → ${selectedFlight.arrival_airport_code || 'Arrival'}`}
+          status={String((selectedFlight as any).status || '') || undefined}
+          rows={formatFlightDetails(selectedFlight).map((item) => ({
+            label: item.label,
+            value: item.value,
+            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
+          }))}
+          styles={styles}
+          theme={theme}
+          readOnly={readOnly}
+          onClose={() => setSelectedFlight(null)}
+          onEdit={() => editFlightFromDetails(selectedFlight)}
+          onDelete={() => setItemToDelete({ kind: 'flight', id: selectedFlight.id, name: selectedFlight.booking_reference || 'this transfer' })}
+          testID="flight-overview-details"
+        />
+      ) : null}
+      {selectedLodging ? (
+        <TripItemDetailsDialog
+          visible
+          kind="lodging"
+          title={selectedLodging.name}
+          status={String(selectedLodging.status || '') || undefined}
+          rows={[
+            { label: 'Check-in', value: formatFriendlyDate(selectedLodging.checkInDate) || selectedLodging.checkInDate },
+            { label: 'Check-out', value: formatFriendlyDate(selectedLodging.checkOutDate) || selectedLodging.checkOutDate },
+            { label: 'Rooms', value: selectedLodging.rooms || '-' },
+            { label: 'Refund by', value: selectedLodging.refundBy || '-' },
+            { label: 'Total cost', value: selectedLodging.totalCost ? `$${selectedLodging.totalCost}` : '-' },
+            { label: 'Address', value: selectedLodging.address || '-', onPress: selectedLodging.address ? () => onOpenAddress(selectedLodging.address) : undefined },
+          ]}
+          styles={styles}
+          theme={theme}
+          readOnly={readOnly}
+          onClose={() => setSelectedLodging(null)}
+          onEdit={() => editLodgingFromDetails(selectedLodging)}
+          onDelete={() => setItemToDelete({ kind: 'lodging', id: selectedLodging.id, name: selectedLodging.name })}
+          testID="lodging-overview-details"
+        />
+      ) : null}
+      {selectedTour ? (
+        <TripItemDetailsDialog
+          visible
+          kind="activity"
+          title={selectedTour.name}
+          status={String(selectedTour.status || '') || undefined}
+          rows={formatTourDetails(selectedTour).map((item) => ({
+            label: item.label,
+            value: item.value,
+            onPress: item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined),
+          }))}
+          styles={styles}
+          theme={theme}
+          readOnly={readOnly}
+          onClose={() => setSelectedTour(null)}
+          onEdit={() => editActivityFromDetails(selectedTour)}
+          onDelete={() => setItemToDelete({ kind: 'activity', id: selectedTour.id, name: selectedTour.name })}
+          testID="activity-overview-details"
+        />
+      ) : null}
+      {itemToDelete ? (
+        <ConfirmDialog
+          visible
+          title={`Delete ${itemToDelete.kind}`}
+          message={`Delete ${itemToDelete.name}? This cannot be undone.`}
+          confirmLabel="Delete"
+          onConfirm={() => void deleteItemFromDetails()}
+          onCancel={() => setItemToDelete(null)}
+          styles={styles}
+        />
+      ) : null}
+    </>
   );
 
   const startLabel = formatFriendlyDate(overviewStartDate);
@@ -2048,6 +2385,52 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
+  const renderOverviewFlightEditor = () => (
+    <FlightEditingForm
+      visible={!readOnly && Boolean(editingFlightDraft && editingFlightId)}
+      flightId={editingFlightId}
+      flight={editingFlightDraft}
+      groupMembers={groupMembers}
+      userMembers={userMembers}
+      styles={styles}
+      formatMemberName={formatMemberName}
+      payerName={payerName}
+      getLocationInputValue={getLocationInputValue}
+      showAirportDropdown={showAirportDropdown}
+      parseLayoverDuration={parseLayoverDuration}
+      openTimePicker={openTimePicker}
+      onAirportEnter={() => undefined}
+      setFlight={setEditingFlightDraft}
+      setPassengerIds={setEditingFlightPassengers}
+      modalDepLocationRef={editDepLocationRef}
+      modalArrLocationRef={editArrLocationRef}
+      modalLayoverLocationRef={editLayoverLocationRef}
+      onClose={closeFlightEditor}
+      onSave={saveFlightDetails}
+    />
+  );
+
+  const renderOverviewLodgingEditor = () => (
+    <LodgingDialog
+      visible={!readOnly && Boolean(showAddLodging)}
+      styles={styles}
+      title={editingLodgingId ? 'Lodging Details' : 'Add Lodging'}
+      draft={lodgingDraft}
+      setDraft={setLodgingDraft}
+      groupMembers={groupMembers}
+      formatMemberName={formatMemberName}
+      defaultPayerId={defaultPayerId}
+      payerName={payerName}
+      onSave={saveLodging}
+      onCancel={closeLodgingModal}
+      onOpenDatePicker={(field) =>
+        openModalDatePicker(
+          field === 'checkIn' ? 'lodgingCheckIn' : field === 'checkOut' ? 'lodgingCheckOut' : 'lodgingRefundBy'
+        )
+      }
+    />
+  );
+
   const renderDayBar = (activeDate: string | null) => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
       <TouchableOpacity
@@ -2092,7 +2475,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
 
       const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
-        const img = dayImages[card.date];
+        const img = blogDayImages[card.date] ?? dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
           weather && weather.temperatureHighC != null
@@ -2110,8 +2493,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           >
             {img ? (
               <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
+            ) : featureCoverPhotoFallbackV2 ? (
+              <DestinationPlaceholderCard title={card.location || title} style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-placeholder`} />
             ) : (
-              <View style={styles.dayHeroImageFallback} />
+              <View style={styles.dayHeroImageFallback} testID={`${testID || 'day-hero'}-fallback-legacy`} />
             )}
             <View style={styles.dayHeroOverlay} />
             <View style={styles.dayHeroBadge}>
@@ -2261,10 +2646,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           items: formatFlightDetails(flight),
                         };
                       });
-                      setDetailModal({ title: 'Transfer Details', sections });
+                      if (featureStandardizedItemDialogs && flightsForDay.length === 1) {
+                        setDetailModal({ title: 'Transfer Details', sections, kind: 'flight', item: flightsForDay[0] });
+                      } else {
+                        setDetailModal({ title: 'Transfer Details', sections });
+                      }
                     }}
                   >
                     <Text style={styles.dayInfoButtonText}>See transfer details →</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="day-details-add-transfer-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add transfer to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addFlightForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -2295,6 +2693,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   >
                     <Text style={styles.dayInfoButtonText}>See rental car details →</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="day-details-add-rental-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add rental car to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addRentalForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -2312,15 +2719,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           <TouchableOpacity
                             testID={`day-details-activity-${tour.id}`}
                             onPress={() => {
-                              setDetailModal({
-                                title: 'Activity Details',
-                                sections: [
-                                  {
-                                    subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
-                                    items: formatTourDetails(tour),
-                                  },
-                                ],
-                              });
+                              if (featureStandardizedItemDialogs) {
+                                setDetailModal({
+                                  title: 'Activity Details',
+                                  kind: 'activity',
+                                  item: tour,
+                                  sections: [
+                                    {
+                                      subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                                      items: formatTourDetails(tour),
+                                    },
+                                  ],
+                                });
+                              } else {
+                                setDetailModal({
+                                  title: 'Activity Details',
+                                  sections: [
+                                    {
+                                      subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                                      items: formatTourDetails(tour),
+                                    },
+                                  ],
+                                });
+                              }
                             }}
                           >
                             <Text style={[styles.dayInfoRoute, styles.linkText]}>{tour.name}</Text>
@@ -2341,6 +2762,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </View>
                     );
                   })}
+                  <TouchableOpacity
+                    testID="day-details-add-activity-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add activity to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addTourForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -2357,7 +2787,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         key={lodging.id}
                         testID={`day-details-lodging-${lodging.id}`}
                         style={styles.dayInfoRow}
-                        onPress={() => openLodgingDetails(lodging)}
+                        onPress={() => openLodgingEditor(lodging)}
                       >
                         {lodging.imageUrl ? (
                           <Image
@@ -2383,6 +2813,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </TouchableOpacity>
                     );
                   })}
+                  <TouchableOpacity
+                    testID="day-details-add-accommodation-button"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add accommodation to this day"
+                    style={[styles.dayInfoButton, { marginTop: 8 }]}
+                    onPress={() => addLodgingForDay(activeDayCard.date)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -2503,6 +2942,55 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 </TouchableOpacity>
               </View>
 
+              {!flightsForDay.length || !rentalsForDay.length || !toursForDay.length || !lodgingsForDay.length ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {!flightsForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-transfer-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add transfer to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addFlightForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add transfer</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {!rentalsForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-rental-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add rental car to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addRentalForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add rental car</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {!toursForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-activity-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add activity to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addTourForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add activity</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {!lodgingsForDay.length ? (
+                    <TouchableOpacity
+                      testID="day-details-add-accommodation-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="Add accommodation to this day"
+                      style={styles.dayInfoButton}
+                      onPress={() => addLodgingForDay(activeDayCard.date)}
+                    >
+                      <Text style={styles.dayInfoButtonText}>+ Add accommodation</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ) : null}
+
               {nextDayCard ? (
                 <TouchableOpacity
                   testID="day-details-next"
@@ -2515,6 +3003,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               ) : null}
             </ScrollView>
             {detailModal ? renderDetailSectionsModal(detailModal) : null}
+            {/* Selected-item dialogs (TripItemDetailsDialog/ConfirmDialog) are rendered once,
+                unconditionally, by the top-level return below — this branch must not render
+                a second copy, or two identical dialog instances mount simultaneously. */}
           </View>
         );
       }
@@ -3014,7 +3505,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             .filter((r) => r.type === 'flight')
             .map((row, idx) => {
               const flight = row.meta as Flight;
-              const isEditingFlight = isEditing && editingFlightId === flight.id;
+              const isEditingFlight = showFlightEditor && editingFlightId === flight.id;
               if (isEditingFlight) {
                 return (
                   <View
@@ -3024,18 +3515,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       // No-op; this is just here to satisfy TS
                     }}
                   >
-                    <FlightEditingForm
-                      draft={editingFlightDraft}
-                      setDraft={setEditingFlightDraft}
-                      styles={styles}
-                      onSave={saveFlightEdit}
-                      onCancel={closeFlightEditor}
-                      groupMembers={groupMembers}
-                      defaultPayerId={defaultPayerId}
-                      payerName={payerName}
-                      onSetPassengers={setEditingFlightPassengers}
-                      openModalDate={(field, current) => openModalDatePicker(field as ModalDateField, current)}
-                    />
+                    {renderOverviewFlightEditor()}
                   </View>
                 );
               }
@@ -3079,7 +3559,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             .filter((r) => r.type === 'lodging')
             .map((row) => {
               const lodging = row.meta as Lodging;
-              const isEditingThis = isEditing && editingLodgingId === lodging.id;
+              const isEditingThis = showAddLodging && editingLodgingId === lodging.id;
               if (isEditingThis) {
                 return (
                   <View key={lodging.id}>
@@ -3233,6 +3713,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
       ) : null}
       {renderContent()}
+      {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
+      {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
       {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
         <NativeDateTimePicker
           value={timePickerValue}
@@ -3385,6 +3867,102 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </View>
       ) : null}
 
+      {showAddRental ? (
+        <View style={styles.modalOverlay} testID="car-rental-form-modal">
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeRentalModal} />
+          <View style={[styles.modalCard, { marginTop: 0 }]}>
+            <Text style={styles.sectionTitle}>{editingRentalId ? 'Edit Car Rental' : 'Add Car Rental'}</Text>
+            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+              <Text style={styles.modalLabel}>Pickup location</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Pickup location"
+                value={rentalDraft.pickupLocation}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, pickupLocation: text }))}
+              />
+              <Text style={styles.modalLabel}>Pickup date</Text>
+              {Platform.OS === 'web' ? (
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={rentalDraft.pickupDate}
+                  onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, pickupDate: text }))}
+                />
+              ) : (
+                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalPickup', rentalDraft.pickupDate)}>
+                  <Text style={styles.cellText}>{rentalDraft.pickupDate || 'YYYY-MM-DD'}</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.modalLabel}>Drop-off location</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Drop-off location"
+                value={rentalDraft.dropoffLocation}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, dropoffLocation: text }))}
+              />
+              <Text style={styles.modalLabel}>Drop-off date</Text>
+              {Platform.OS === 'web' ? (
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={rentalDraft.dropoffDate}
+                  onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, dropoffDate: text }))}
+                />
+              ) : (
+                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalDropoff', rentalDraft.dropoffDate)}>
+                  <Text style={styles.cellText}>{rentalDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.modalLabel}>Vendor</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Vendor"
+                value={rentalDraft.vendor}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, vendor: text }))}
+              />
+              <Text style={styles.modalLabel}>Car model</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Car model"
+                value={rentalDraft.model}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, model: text }))}
+              />
+              <Text style={styles.modalLabel}>Prepaid?</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Yes or No"
+                value={rentalDraft.prepaid}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, prepaid: text }))}
+              />
+              <Text style={styles.modalLabel}>Cost</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Cost"
+                keyboardType="numeric"
+                value={rentalDraft.cost}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
+              />
+              <Text style={styles.modalLabel}>Notes</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+                placeholder="Notes"
+                value={rentalDraft.notes}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, notes: text }))}
+                multiline
+              />
+            </ScrollView>
+            <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeRentalModal} testID="car-rental-cancel">
+                <Text style={styles.dangerButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={saveRental} testID="car-rental-save">
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {addPopoverOpen ? (
         <AddItemPopover
           visible
@@ -3420,6 +3998,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           onCancel={closeAllAddDialogs}
         />
       ) : null}
+      {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}
     </View>
   );
 };

@@ -15,7 +15,7 @@ describe('resolveBackendUrl', () => {
           origin: 'http://localhost:19006',
         },
       })
-    ).toBe('http://localhost:4000');
+    ).toBe('http://127.0.0.1:4000');
   });
 
   it('remaps loopback config to the active localhost host in web development', () => {
@@ -30,7 +30,7 @@ describe('resolveBackendUrl', () => {
           origin: 'http://localhost:8081',
         },
       })
-    ).toBe('http://localhost:4000');
+    ).toBe('http://127.0.0.1:4000');
   });
 
   it('uses the current deployed origin when the browser is on a real host and config points to localhost', () => {

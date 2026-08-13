@@ -303,6 +303,54 @@ providers:
     callers:
       BLOG_PUBLIC_READ: 100000
 
+  # Credit Card Transaction Import via Plaid
+  PLAID:
+    window: day
+    windowHours: 24
+    overall: 4000
+    callers:
+      PLAID_LINK_TOKEN_CREATE: 400
+      PLAID_PUBLIC_TOKEN_EXCHANGE: 200
+      PLAID_TRANSACTIONS_SYNC: 2500
+      PLAID_ITEM_REMOVE: 200
+      PLAID_WEBHOOK_DISPATCH: 1000
+
+  FIRESTORE_PLAID:
+    window: hour
+    windowHours: 1
+    overall: 25000
+    callers:
+      PLAID_ITEM_READ: 2000
+      PLAID_TRANSACTION_READ: 10000
+      PLAID_TRANSACTION_WRITE: 10000
+      PLAID_TRANSACTION_DELETE: 3000
+      PLAID_USAGE_COUNTER_WRITE: 3000
+      PLAID_ITEM_DIRECTORY_READ: 2000
+      PLAID_WEBHOOK_EVENT_WRITE: 2000
+      PLAID_SYNC_JOB_WRITE: 2000
+      PLAID_REVIEW_QUEUE_READ: 10000
+      PLAID_EXPENSE_ASSIGNMENT_READ: 5000
+      PLAID_EXPENSE_ASSIGNMENT_WRITE: 3000
+
+  GCP_PLAID:
+    window: day
+    windowHours: 24
+    overall: 10000
+    callers:
+      PLAID_SECRET_MANAGER_ACCESS: 1000
+      PLAID_KMS_ENCRYPT: 300
+      PLAID_KMS_DECRYPT: 3000
+
+  ACTIVITIES_API:
+    window: day
+    windowHours: 24
+    overall: 100000
+    callers:
+      ACTIVITIES_LIST: 50000
+      ACTIVITIES_BULK_SAVE: 1000
+      ACTIVITIES_ACTIVITY_ROW_WRITE: 20000
+      ACTIVITIES_ACTIVITY_ROW_DELETE: 5000
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80
@@ -310,6 +358,9 @@ budgeting:
       GPT_4O_MINI:
         inputCostPer1MTokensUsd: 0.15
         outputCostPer1MTokensUsd: 0.60
+      GPT_5_6_LUNA:
+        inputCostPer1MTokensUsd: 0.20
+        outputCostPer1MTokensUsd: 1.20
   ANTHROPIC:
     alertThresholdPercent: 80
     models:

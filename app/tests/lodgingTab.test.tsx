@@ -196,6 +196,75 @@ describe('LodgingTab', () => {
         });
     });
 
+    it('opens the edit dialog when any non-name cell in a row is clicked', () => {
+        const { getByTestId } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+            />
+        );
+
+        fireEvent.press(within(getByTestId('lodging-row-l1')).getByText(formatShortDate('2025-01-01')));
+        expect(getByTestId('lodging-editor-dialog')).toBeTruthy();
+    });
+
+    it('does not open the edit dialog on row tap when featureTapToEditTables is disabled', () => {
+        // Kill-switch coverage for implementation-plan-ux-remediation.md Initiative A.
+        const { getByTestId, queryByTestId } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+                featureTapToEditTables={false}
+            />
+        );
+
+        fireEvent.press(within(getByTestId('lodging-row-l1')).getByText(formatShortDate('2025-01-01')));
+        expect(queryByTestId('lodging-editor-dialog')).toBeNull();
+    });
+
+    it('opens the sortable editable lodging grid', () => {
+        const { getByTestId, getByText } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+            />
+        );
+
+        fireEvent.press(getByTestId('lodging-table-edit'));
+        expect(getByTestId('lodging-table-save')).toBeTruthy();
+        expect(getByText('Check-In')).toBeTruthy();
+    });
+
     it('updates paid by and saves the lodging', async () => {
         const originalFetch = global.fetch;
         const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as any);

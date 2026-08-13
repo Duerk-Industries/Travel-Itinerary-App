@@ -93,6 +93,36 @@ describe('AuthForm', () => {
     expect(getByTestId('auth-form-submit').props.accessibilityLabel).toBe('Create account');
   });
 
+  it('keeps a persistent "Password" label visible after typing (implementation-plan-ux-remediation.md Initiative E)', () => {
+    const props = buildProps({ authMode: 'login', authForm: { ...emptyForm, password: 'hunter2' } });
+    const { getByText } = render(<AuthForm {...props} />);
+    // Unlike a placeholder (which the typed value replaces), this label is a
+    // sibling <Text> and stays visible regardless of the field's value.
+    expect(getByText('Password')).toBeTruthy();
+  });
+
+  it('lets a traveler reveal and re-hide their password before submitting', () => {
+    const props = buildProps({ authMode: 'login' });
+    const { getByTestId } = render(<AuthForm {...props} />);
+    const passwordInput = getByTestId('auth-password');
+    expect(passwordInput.props.secureTextEntry).toBe(true);
+
+    fireEvent.press(getByTestId('auth-password-toggle'));
+    expect(passwordInput.props.secureTextEntry).toBe(false);
+
+    fireEvent.press(getByTestId('auth-password-toggle'));
+    expect(passwordInput.props.secureTextEntry).toBe(true);
+  });
+
+  it('gives the confirm-password field its own independent visibility toggle', () => {
+    const props = buildProps({ authMode: 'register' });
+    const { getByTestId } = render(<AuthForm {...props} />);
+    fireEvent.press(getByTestId('auth-password-confirm-toggle'));
+    expect(getByTestId('auth-password-confirm').props.secureTextEntry).toBe(false);
+    // The primary password field's own toggle is unaffected by the confirm field's toggle.
+    expect(getByTestId('auth-password').props.secureTextEntry).toBe(true);
+  });
+
   it('pressing the Login submit button calls loginWithPassword (not register)', () => {
     const props = buildProps({ authMode: 'login' });
     const { getByTestId } = render(<AuthForm {...props} />);

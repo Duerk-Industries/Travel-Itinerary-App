@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { describe, expect, test, jest } from '@jest/globals';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from '../tabs/transfers';
 
 const styles = {
@@ -92,6 +92,104 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  beforeEach(() => {
+    // FlightsTab refreshes its list on mount. Keep this suite self-contained so
+    // that the background refresh cannot attempt localhost after Jest teardown.
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    } as any);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('opens the edit form when a row is tapped in editable mode', () => {
+    const { getByTestId } = render(
+      <FlightsTab
+        backendUrl="http://localhost"
+        userToken="token"
+        activeTripId="trip-1"
+        flights={[flight]}
+        setFlights={jest.fn() as any}
+        groupMembers={[member]}
+        defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`}
+        payerName={() => 'Bryan Traveler'}
+        headers={{}}
+        jsonHeaders={{}}
+        findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
+        styles={styles}
+        airportOptions={[]}
+        onSearchAirports={jest.fn() as any}
+      />
+    );
+
+    fireEvent.press(getByTestId('transfer-row-flight-1'));
+    expect(getByTestId('flight-modal-save')).toBeTruthy();
+  });
+
+  test('does not open the edit form on row tap when featureTapToEditTables is disabled', () => {
+    // Kill-switch coverage for implementation-plan-ux-remediation.md Initiative A:
+    // with the flag off, only the explicit Edit button (not the row itself) opens the modal.
+    const { getByTestId, queryByTestId } = render(
+      <FlightsTab
+        backendUrl="http://localhost"
+        userToken="token"
+        activeTripId="trip-1"
+        flights={[flight]}
+        setFlights={jest.fn() as any}
+        groupMembers={[member]}
+        defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`}
+        payerName={() => 'Bryan Traveler'}
+        headers={{}}
+        jsonHeaders={{}}
+        findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
+        styles={styles}
+        airportOptions={[]}
+        onSearchAirports={jest.fn() as any}
+        featureTapToEditTables={false}
+      />
+    );
+
+    fireEvent.press(getByTestId('transfer-row-flight-1'));
+    expect(queryByTestId('flight-modal-save')).toBeNull();
+
+    fireEvent.press(getByTestId('transfer-edit-flight-1'));
+    expect(getByTestId('flight-modal-save')).toBeTruthy();
+  });
+
+  test('opens the sortable editable transfer grid', () => {
+    const { getByTestId, getByText } = render(
+      <FlightsTab
+        backendUrl="http://localhost"
+        userToken="token"
+        activeTripId="trip-1"
+        flights={[flight]}
+        setFlights={jest.fn() as any}
+        groupMembers={[member]}
+        defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`}
+        payerName={() => 'Bryan Traveler'}
+        headers={{}}
+        jsonHeaders={{}}
+        findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
+        styles={styles}
+        airportOptions={[]}
+        onSearchAirports={jest.fn() as any}
+      />
+    );
+
+    fireEvent.press(getByTestId('transfer-table-edit'));
+    expect(getByTestId('transfer-table-save')).toBeTruthy();
+    expect(getByText('Departure Date')).toBeTruthy();
+  });
+
   test('hides mutation controls for followed trips', () => {
     const { queryByTestId, getAllByText } = render(
       <FlightsTab

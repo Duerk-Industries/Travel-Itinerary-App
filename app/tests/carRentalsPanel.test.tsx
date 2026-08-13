@@ -119,6 +119,34 @@ beforeEach(() => {
 });
 
 describe('CarRentalsPanel', () => {
+  it('opens the edit dialog when a table row is tapped', () => {
+    const rental = makeCarRental();
+    const { getByTestId, getByText } = render(
+      <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
+    );
+
+    fireEvent.press(getByText('LAX → SFO'));
+    expect(getByTestId('car-rental-editor-dialog')).toBeTruthy();
+  });
+
+  it('does not open the edit dialog on row tap when featureTapToEditTables is disabled', () => {
+    // Kill-switch coverage for implementation-plan-ux-remediation.md Initiative A.
+    const rental = makeCarRental();
+    const { queryByTestId, getByText } = render(
+      <CarRentalsPanel {...baseProps} carRentals={[rental]} featureTapToEditTables={false} />,
+    );
+
+    fireEvent.press(getByText('LAX → SFO'));
+    expect(queryByTestId('car-rental-editor-dialog')).toBeNull();
+  });
+
+  it('opens the sortable editable car-rental grid', () => {
+    const { getByTestId, getByText } = render(<CarRentalsPanel {...baseProps} carRentals={[makeCarRental()]} />);
+    fireEvent.press(getByTestId('car-rental-table-edit'));
+    expect(getByTestId('car-rental-table-save')).toBeTruthy();
+    expect(getByText('Pick-up Location')).toBeTruthy();
+  });
+
   it('renders the Car Rentals heading and an empty table by default', () => {
     const { getByText, queryByTestId } = render(<CarRentalsPanel {...baseProps} />);
     expect(getByText('Car Rentals')).toBeTruthy();

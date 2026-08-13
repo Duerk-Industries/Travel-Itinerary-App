@@ -47,6 +47,7 @@ import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import ShareTripModal from './components/ShareTripModal';
+import IncomingShareModal from './components/IncomingShareModal';
 import AccountTab, { fetchAccountProfile } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
@@ -86,6 +87,7 @@ import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
+import PasswordField from './components/PasswordField';
 import LandingPage from './components/LandingPage';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
@@ -624,12 +626,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   } = useAuthForm();
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [appleOAuthEnabled, setAppleOAuthEnabled] = useState(false);
+  const [featureGridEditing, setFeatureGridEditing] = useState(false);
+  const [featureGridEditingClipboard, setFeatureGridEditingClipboard] = useState(false);
+  const [featureStandardizedItemDialogs, setFeatureStandardizedItemDialogs] = useState(false);
+  // UX-remediation kill switches (implementation-plan-ux-remediation.md). Default to `false`
+  // here — same as every other flag above — until GET /api/auth/features resolves; the DB
+  // seed in feature-flags.yaml defaults each to enabled:true, so this is a brief flash of the
+  // legacy fallback on first load, not the steady-state behavior.
+  const [featureTapToEditTables, setFeatureTapToEditTables] = useState(false);
+  const [featureCoverPhotoFallbackV2, setFeatureCoverPhotoFallbackV2] = useState(false);
+  const [featureQuickStartTripWizard, setFeatureQuickStartTripWizard] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data) setAppleOAuthEnabled(Boolean(data.appleOAuthEnabled));
+        if (!cancelled && data) {
+          setAppleOAuthEnabled(Boolean(data.appleOAuthEnabled));
+          setFeatureGridEditing(Boolean(data.featureGridEditing));
+          setFeatureGridEditingClipboard(Boolean(data.featureGridEditingClipboard));
+          setFeatureStandardizedItemDialogs(Boolean(data.featureStandardizedItemDialogs));
+          setFeatureTapToEditTables(Boolean(data.featureTapToEditTables));
+          setFeatureCoverPhotoFallbackV2(Boolean(data.featureCoverPhotoFallbackV2));
+          setFeatureQuickStartTripWizard(Boolean(data.featureQuickStartTripWizard));
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -955,13 +975,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
   }, []);
 
-  const saveCarRentalDraft = useCallback(async (rentalId?: string | null) => {
+  const saveCarRentalDraft = useCallback(async (rentalId?: string | null, draftOverride?: CarRentalDraft) => {
     if (isFollowingMode) return false;
     if (!activeTripId) {
       Alert.alert('Select an active trip before adding a car rental.');
       return false;
     }
-    const result = buildCarRentalFromDraft(carDraft, defaultPayerId, memberIds);
+    const result = buildCarRentalFromDraft(draftOverride ?? carDraft, defaultPayerId, memberIds);
     if (result.error || !result.rental) {
       Alert.alert(result.error || 'Unable to add car rental.');
       return false;
@@ -1001,8 +1021,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return saveCarRentalDraft(null);
   }, [saveCarRentalDraft]);
 
-  const updateCarRental = useCallback(async (id: string) => {
-    return saveCarRentalDraft(id);
+  const updateCarRental = useCallback(async (id: string, draft?: CarRentalDraft) => {
+    return saveCarRentalDraft(id, draft);
   }, [saveCarRentalDraft]);
 
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
@@ -2827,7 +2847,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
                   </TouchableOpacity>
                 </View>
-              ) : null}
+              ) : (
+                // Phone layout drops the full name pill (and presence avatars) to
+                // save top-bar width, but previously dropped the *only* way to
+                // reach Account settings with it — 'account' is deliberately left
+                // out of the Home tab list too (see regularUserHiddenHomePages),
+                // so mobile users had no path to their profile at all. Keep a
+                // compact icon-only entry point instead of removing it outright.
+                <TouchableOpacity
+                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                  onPress={() => requestPageChange('account')}
+                  accessibilityLabel="Account"
+                  hitSlop={hitSlop.small}
+                >
+                  <Text style={styles.userNameButtonText}>👤</Text>
+                </TouchableOpacity>
+              )}
               {userRole === 'admin' ? (
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.topBarActionButton]}
@@ -2869,6 +2904,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onDeleteTrip={confirmDeleteTrip}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
+                  featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
                 />
               )
             : null}
@@ -2901,6 +2937,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   readOnly={isFollowingMode}
                   defaultActivityDate={activeTrip?.startDate ?? null}
                   destination={activeTrip?.destination ?? null}
+                  featureGridEditing={featureGridEditing}
+                  featureGridEditingClipboard={featureGridEditingClipboard}
+                  featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+                  featureTapToEditTables={featureTapToEditTables}
                 />
               )
             : null}
@@ -2908,6 +2948,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'expenses'
             ? renderSharedPageScroll(
                 <DailyExpensesTab
+                  theme={theme}
                   backendUrl={backendUrl}
                   headers={headers}
                   jsonHeaders={jsonHeaders}
@@ -3140,6 +3181,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               formatMemberName={formatMemberName}
               payerName={payerName}
               readOnly={isFollowingMode}
+              featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+              featureTapToEditTables={featureTapToEditTables}
             />
           )
         : null}
@@ -3170,6 +3213,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           isFollowingMode={isFollowingMode}
           userMembers={userMembers}
           styles={styles}
+          theme={theme}
           payerName={payerName}
           formatMemberName={formatMemberName}
           onAddCarRental={addCarRental}
@@ -3178,6 +3222,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onVoteCarRental={voteOnCarRental}
           onRateCarRental={rateOnCarRental}
           onOpenCarDatePicker={openCarDatePicker}
+          featureTapToEditTables={featureTapToEditTables}
         />
       ) : null}
 
@@ -3217,6 +3262,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 await fetchGroupMembersForActiveTrip();
               }}
               styles={styles}
+              theme={theme}
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
               externalEditFlightId={externalFlightEditId}
@@ -3224,6 +3270,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onExternalEditHandled={handleExternalEditHandled}
               showList={true}
               readOnly={isFollowingMode}
+              featureTapToEditTables={featureTapToEditTables}
             />
           )
         : null}
@@ -3245,6 +3292,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             await fetchGroupMembersForActiveTrip();
           }}
           styles={styles}
+          theme={theme}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
           externalEditFlightId={externalFlightEditId}
@@ -3416,6 +3464,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onAddCarRental={addCarRentalFromOverview}
                   openFlightInFlightsTab={openFlightInFlightsTab}
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
+                  theme={theme}
+                  readOnly={isFollowingMode}
+                  featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+                  featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
                 />
               )
             : null}
@@ -3532,20 +3584,24 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <Text style={styles.helperText}>
                 This is your first Google sign-in for this account. Set a password now to finish account setup.
               </Text>
-              <TextInput
+              <PasswordField
+                label="New password"
+                styles={styles}
+                testID="initial-password"
                 style={styles.input}
                 placeholder="New password"
-                secureTextEntry
                 autoComplete="new-password"
                 textContentType="newPassword"
                 nativeID="new-password"
                 value={passwordSetupForm.newPassword}
                 onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPassword: text }))}
               />
-              <TextInput
+              <PasswordField
+                label="Confirm new password"
+                styles={styles}
+                testID="initial-password-confirm"
                 style={styles.input}
                 placeholder="Confirm new password"
-                secureTextEntry
                 autoComplete="new-password"
                 textContentType="newPassword"
                 nativeID="new-password-confirm"
@@ -3602,6 +3658,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onClose={() => setShareTripModalOpen(false)}
         />
       ) : null}
+      {userToken ? (
+        <IncomingShareModal
+          backendUrl={backendUrl}
+          headers={headers}
+          trips={trips}
+          activeTripId={activeTripId}
+          styles={styles}
+          theme={theme}
+        />
+      ) : null}
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
           <View style={styles.wizardModal}>
@@ -3621,6 +3687,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onWizardCarRentals={setCarRentals}
               currentUserName={userName}
               currentUserEmail={userEmail}
+              featureQuickStartTripWizard={featureQuickStartTripWizard}
             />
           </View>
         </View>
@@ -3669,6 +3736,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           requestHeaders={headers}
           styles={styles}
           theme={theme}
+          readOnly={isFollowingMode}
           payerName={payerName}
           travelerName={payerName}
           onClose={() => setShowLodgingDetails(false)}

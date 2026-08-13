@@ -73,6 +73,24 @@ flags:
   getyourguide_activity_suggestions:
     enabled: true
     description: "Enable optional GetYourGuide affiliate activity suggestions (requires verified partner configuration)"
+  feature_grid_editing:
+    enabled: false
+    description: "Enable Activities table editing, staged deletion, and bulk save"
+  feature_grid_editing_clipboard:
+    enabled: false
+    description: "Enable web multi-cell selection and clipboard operations for the Activities grid"
+  feature_standardized_item_dialogs:
+    enabled: false
+    description: "Enable shared flight, accommodation, and activity detail dialogs"
+  feature_tap_to_edit_tables:
+    enabled: true
+    description: "Tap/click a Transfers, Lodging, Activities, or Car Rentals row to edit it, with sticky identity/actions columns. Kill switch for the row-press + sticky-column UX pass; disabling reverts to Edit-button-only rows with no sticky columns."
+  feature_cover_photo_fallback_v2:
+    enabled: true
+    description: "Render a designed gradient placeholder (destination name) instead of a blank tile when a trip or day cover photo has no image yet. Kill switch for the placeholder art; disabling reverts to the plain empty fallback tile."
+  feature_quick_start_trip_wizard:
+    enabled: true
+    description: "Default the Create Trip wizard to a 3-field Quick Start (name, destination, dates) with a Customize link into the full step wizard. Kill switch for the new entry point; disabling starts every new trip directly in the full step wizard."
   packing_lists_v2:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"
@@ -136,3 +154,24 @@ flags:
   trip_blog_structured_data:
     enabled: true
     description: "Schema.org public blog metadata"
+  expense_import_plaid:
+    enabled: false
+    description: "Master switch for Plaid bank-link and transaction import"
+  expense_import_plaid_link:
+    enabled: false
+    description: "Allow users to connect new bank accounts via Plaid Link"
+  expense_import_plaid_sync:
+    enabled: false
+    description: "Allow background and manual transaction synchronization"
+  expense_import_plaid_review_queue:
+    enabled: false
+    description: "Show transaction review queue in the UI"
+  expense_import_plaid_assignment:
+    enabled: false
+    description: "Allow assigning transaction candidates to trip expenses"
+  expense_import_plaid_webhooks:
+    enabled: false
+    description: "Process real-time transaction and revocation webhooks from Plaid"
+  expense_import_plaid_auto_category:
+    enabled: false
+    description: "Suggest expense categories based on Plaid's categorization"

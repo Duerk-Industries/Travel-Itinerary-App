@@ -8,6 +8,7 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
 import LodgingDialog from '../components/LodgingDialog';
+import { FlightEditingForm } from '../components/TransferEditingForm';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -142,7 +143,7 @@ describe('Overview edit controls', () => {
     });
 
     const patchCalls = (global as any).fetch.mock.calls.filter((call: any[]) =>
-      String(call[0]).includes('/api/trips/')
+      String(call[0]).includes('/api/trips/') && call[1]?.method === 'PATCH'
     );
     expect(patchCalls.length).toBe(1);
     const patchBody = JSON.parse(patchCalls[0][1].body);
@@ -170,7 +171,7 @@ describe('Overview edit controls', () => {
     });
 
     const patchCalls = (global as any).fetch.mock.calls.filter((call: any[]) =>
-      String(call[0]).includes('/api/trips/')
+      String(call[0]).includes('/api/trips/') && call[1]?.method === 'PATCH'
     );
     expect(patchCalls.length).toBe(0);
   });
@@ -428,5 +429,120 @@ describe('Overview edit controls', () => {
     expect(options.method).toBe('PUT');
     const payload = JSON.parse(options.body);
     expect(payload.paidBy).toEqual(['member-1', 'member-2']);
+  });
+
+  test('saves lodging opened from its overview details dialog and returns to view mode', async () => {
+    const fetchMock = jest.fn(async (url: string, options?: any): Promise<any> => {
+      if (String(url).includes('/api/itineraries')) {
+        return { ok: true, json: async () => [] } as any;
+      }
+      if (String(url).includes('/api/lodgings/lodging-1') && options?.method === 'PUT') {
+        return { ok: true, json: async () => ({}) } as any;
+      }
+      return { ok: true, json: async () => ({}) } as any;
+    });
+    (global as any).fetch = fetchMock;
+
+    const lodging = {
+      id: 'lodging-1',
+      userId: 'user-1',
+      tripId: baseTrip.id,
+      name: 'Hotel 1',
+      checkInDate: '2026-01-02',
+      checkOutDate: '2026-01-05',
+      rooms: '1',
+      refundBy: '',
+      totalCost: '400',
+      costPerNight: '100',
+      address: '123 Main St',
+      paidBy: ['member-1'],
+      travelerIds: ['member-1'],
+    };
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(
+        <OverviewTab
+          {...baseProps}
+          lodgings={[lodging] as any}
+          featureStandardizedItemDialogs
+        />
+      );
+    });
+    const root = tree!.root;
+
+    act(() => {
+      root.findByProps({ testID: 'overview-day-card-1' }).props.onPress();
+    });
+    act(() => {
+      root.findByProps({ testID: 'day-details-lodging-lodging-1' }).props.onPress();
+    });
+    expect(root.findByProps({ testID: 'lodging-overview-details' })).toBeTruthy();
+
+    act(() => {
+      pressByText(root, 'Edit');
+    });
+    expect(root.findAllByType(LodgingDialog)).toHaveLength(1);
+    // Item editing is modal; the overview's normal view controls remain visible
+    // underneath instead of switching the whole page into edit mode.
+    expect(findByText(root, 'Edit')).toBeTruthy();
+
+    await act(async () => {
+      pressByTextWithin(root.findByType(LodgingDialog), 'Save');
+    });
+
+    expect(root.findAllByType(LodgingDialog)).toHaveLength(0);
+    expect(findByText(root, 'Edit')).toBeTruthy();
+    expect(baseProps.onLodgingDataChanged).toHaveBeenCalled();
+  });
+
+  test('opens flight editing over the overview view without switching the background to edit mode', async () => {
+    const flight = {
+      id: 'flight-1',
+      trip_id: baseTrip.id,
+      passenger_name: 'Traveler',
+      passenger_ids: [],
+      departure_date: '2026-01-02',
+      arrival_date: '2026-01-02',
+      departure_location: 'BOS',
+      departure_airport_code: 'BOS',
+      departure_time: '08:00',
+      arrival_location: 'LAX',
+      arrival_airport_code: 'LAX',
+      arrival_time: '11:00',
+      layover_location: '',
+      layover_location_code: '',
+      layover_duration: '',
+      cost: 100,
+      carrier: 'Test Air',
+      flight_number: 'TA100',
+      booking_reference: 'ABC123',
+      paidBy: [],
+    };
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(
+        <OverviewTab
+          {...baseProps}
+          flights={[flight] as any}
+          featureStandardizedItemDialogs
+        />
+      );
+    });
+    const root = tree!.root;
+
+    act(() => {
+      root.findByProps({ testID: 'overview-day-card-1' }).props.onPress();
+    });
+    act(() => {
+      root.findByProps({ testID: 'day-details-flight-details' }).props.onPress();
+    });
+    act(() => {
+      pressByText(root, 'Edit');
+    });
+
+    expect(root.findAllByType(FlightEditingForm)).toHaveLength(1);
+    expect(root.findByProps({ testID: 'day-details-back' })).toBeTruthy();
   });
 });

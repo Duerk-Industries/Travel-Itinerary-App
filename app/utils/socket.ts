@@ -16,22 +16,40 @@ import { resolveBackendUrl } from './backendUrl';
 // Config
 // ---------------------------------------------------------------------------
 
-export const resolveSocketServerUrl = (): string =>
-  resolveBackendUrl({
-    envConfigured:
-      (typeof process !== 'undefined' &&
-        (process.env.EXPO_PUBLIC_BACKEND_URL ??
-          process.env.BACKEND_URL ??
-          process.env.WEB_URL ??
-          process.env.API_BASE_URL ??
-          process.env.API_BASE ??
-          process.env.REACT_APP_BACKEND_URL ??
-          process.env.REACT_NATIVE_APP_BACKEND_URL)) ||
-      '',
+export const resolveSocketServerUrl = (): string => {
+  const envConfigured =
+    (typeof process !== 'undefined' &&
+      (process.env.EXPO_PUBLIC_BACKEND_URL ??
+        process.env.BACKEND_URL ??
+        process.env.WEB_URL ??
+        process.env.API_BASE_URL ??
+        process.env.API_BASE ??
+        process.env.REACT_APP_BACKEND_URL ??
+        process.env.REACT_NATIVE_APP_BACKEND_URL)) ||
+    '';
+  const browserLocation = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location : undefined;
+  const resolved = resolveBackendUrl({
+    envConfigured,
     nodeEnv: typeof process !== 'undefined' ? process.env.NODE_ENV : undefined,
     platformOs: Platform.OS,
-    browserLocation: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location : undefined,
+    browserLocation,
   });
+
+  // Keep socket URLs human-readable and consistent with the local web API
+  // convention. The shared backend resolver intentionally prefers IPv4 for
+  // fetches on Windows, but Socket.IO's web-dev contract and tests use the
+  // explicit localhost origin.
+  if (
+    Platform.OS === 'web' &&
+    !envConfigured &&
+    browserLocation &&
+    /^(localhost|::1)$/i.test(browserLocation.hostname) &&
+    browserLocation.port !== '4000'
+  ) {
+    return 'http://localhost:4000';
+  }
+  return resolved;
+};
 
 export const resolveSocketTransports = (): Array<'polling' | 'websocket'> =>
   // Firebase Hosting proxies HTTP long-polling to Cloud Run but does not

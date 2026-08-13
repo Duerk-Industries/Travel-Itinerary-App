@@ -128,3 +128,48 @@ jobs:
 
       - name: Typecheck domain
         run: npm run typecheck:domain
+
+  server-lockfile-sync:
+    name: server — package-lock.json in sync (matches Docker build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags --prune --depth=1 origin "+${GITHUB_REF}:refs/remotes/origin/event-ref"
+          git checkout --force refs/remotes/origin/event-ref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Node
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 20) throw new Error('Node 20 or newer is required');"
+
+      # server/ is an npm workspace member, so the "server" job's workspace-aware
+      # `npm ci` above never touches server/package-lock.json — it updates the
+      # root lockfile instead. But server/Dockerfile (used by every Cloud Run
+      # deploy) COPYs only the server/ directory and runs a plain `npm ci`
+      # there, treating server/package.json + server/package-lock.json as a
+      # fully standalone project. If those two drift out of sync (e.g. someone
+      # bumps a version in server/package.json without regenerating
+      # server/package-lock.json), the workspace-aware install here stays
+      # green while the Docker build breaks on every deploy. Run in its own
+      # job — never in the workspace "server" job — so a real
+      # server/node_modules here can't shadow the hoisted root node_modules
+      # the other server steps rely on.
+      - name: Verify server/package-lock.json matches server/package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd server
+          npm ci --no-workspaces --no-audit --no-fund
+        env:
+          HUSKY: 0

@@ -1,124 +1,27 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
+import DayMediaGallery from '../components/DayMediaGallery';
+import DayMediaLightbox from '../components/DayMediaLightbox';
+import {
+  SUPPORTED_MIME_TYPES,
+  SUPPORTED_PHOTO_MIME_TYPES,
+  SUPPORTED_VIDEO_MIME_TYPES,
+  isVideoMimeType,
+  guessMimeTypeFromName,
+  uploadBlogFiles,
+} from '../utils/blogUpload';
 
-const SUPPORTED_MIME_TYPES = ['image/jpeg', 'image/png'];
-
-const guessMimeTypeFromName = (name) => {
-  const lower = String(name ?? '').toLowerCase();
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-  return null;
-};
-
-export const resolveMediaAspectRatio = (width, height) => {
-  const numericWidth = Number(width);
-  const numericHeight = Number(height);
-  if (!Number.isFinite(numericWidth) || !Number.isFinite(numericHeight) || numericWidth <= 0 || numericHeight <= 0) {
-    return null;
-  }
-  return numericWidth / numericHeight;
-};
-
-export const BlogMediaPreview = ({ item, backgroundColor }) => {
-  const [aspectRatio, setAspectRatio] = useState(null);
-  const mediaUrl = item.primaryUrl || item.thumbnailUrl;
-
-  useEffect(() => {
-    setAspectRatio(null);
-  }, [mediaUrl]);
-
-  if (item.kindKey === 'media.video' && Platform.OS === 'web') {
-    return React.createElement('video', {
-      src: mediaUrl,
-      controls: true,
-      playsInline: true,
-      preload: 'metadata',
-      style: {
-        display: 'block',
-        width: '100%',
-        height: 'auto',
-        maxWidth: '100%',
-        borderRadius: 8,
-        backgroundColor,
-      },
-    });
-  }
-
-  return (
-    <Image
-      source={{ uri: mediaUrl }}
-      style={{
-        width: '100%',
-        ...(aspectRatio ? { aspectRatio } : { height: 200 }),
-        borderRadius: 8,
-        backgroundColor,
-      }}
-      resizeMode="contain"
-      onLoad={(event) => {
-        const source = event?.nativeEvent?.source;
-        const nextAspectRatio = resolveMediaAspectRatio(source?.width, source?.height);
-        if (nextAspectRatio) setAspectRatio(nextAspectRatio);
-      }}
-    />
-  );
-};
-
-const GalleryGrid = ({ item, backgroundColor, mutedColor, canEdit, onRemoveAsset, removingAssetId }) => {
-  const [lightboxIndex, setLightboxIndex] = useState(null);
-  const assets = item.assets || [];
-  if (!assets.length) return null;
-  const activeAsset = lightboxIndex != null ? assets[lightboxIndex] : null;
-  return (
-    <View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {assets.map((asset, index) => {
-          const assetId = asset.assetId || asset.id;
-          return (
-            <TouchableOpacity key={assetId} testID={`gallery-thumb-${assetId}`} accessibilityRole="button" onPress={() => setLightboxIndex(index)} style={{ width: 96, height: 96 }}>
-              <Image source={{ uri: asset.thumbnailUrl || asset.primaryUrl }} style={{ width: 96, height: 96, borderRadius: 6, backgroundColor }} resizeMode="cover" />
-              {canEdit ? (
-                <TouchableOpacity
-                  testID={`gallery-remove-${assetId}`}
-                  accessibilityRole="button"
-                  onPress={() => onRemoveAsset(assetId)}
-                  disabled={removingAssetId === assetId}
-                  style={{ position: 'absolute', top: 2, right: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Text style={{ color: '#fff', fontSize: 14, lineHeight: 16 }}>{removingAssetId === assetId ? '…' : '×'}</Text>
-                </TouchableOpacity>
-              ) : null}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
-      {lightboxIndex != null ? (
-        <Modal testID="gallery-lightbox" visible transparent animationType="fade" onRequestClose={() => setLightboxIndex(null)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 20 }}>
-            <TouchableOpacity testID="gallery-lightbox-close" accessibilityRole="button" onPress={() => setLightboxIndex(null)} style={{ position: 'absolute', top: 40, right: 20, zIndex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 28 }}>×</Text>
-            </TouchableOpacity>
-            {activeAsset ? <BlogMediaPreview item={activeAsset} backgroundColor="transparent" /> : null}
-            {assets.length > 1 ? (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, marginTop: 16 }}>
-                <TouchableOpacity testID="gallery-prev" accessibilityRole="button" onPress={() => setLightboxIndex((current) => (current - 1 + assets.length) % assets.length)}>
-                  <Text style={{ color: '#fff', fontSize: 18 }}>‹ Prev</Text>
-                </TouchableOpacity>
-                <TouchableOpacity testID="gallery-next" accessibilityRole="button" onPress={() => setLightboxIndex((current) => (current + 1) % assets.length)}>
-                  <Text style={{ color: '#fff', fontSize: 18 }}>Next ›</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </View>
-        </Modal>
-      ) : null}
-    </View>
-  );
-};
+// Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
+// consumer imports these names from this file; the actual implementations now live in
+// app/components/BlogMediaPreview.tsx and app/utils/blogUpload.ts (the latter shared with the
+// share-intent "send to" upload flow — app/utils/incomingShare.ts — so neither tab file nor
+// share-intent code duplicates upload logic).
+export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTypeFromName, SUPPORTED_MIME_TYPES };
 
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
@@ -126,7 +29,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
-  const [removingAssetId, setRemovingAssetId] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [limit, setLimit] = useState(7);
   const [cursor, setCursor] = useState(null);
@@ -140,6 +42,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [publicationBusy, setPublicationBusy] = useState(false);
   const [publicationNotice, setPublicationNotice] = useState('');
   const [editMode, setEditMode] = useState(false);
+  const [settingCoverForDay, setSettingCoverForDay] = useState(null);
+  const [lightboxDay, setLightboxDay] = useState(null);
   const canEdit = !readOnly && editMode;
 
   const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
@@ -282,15 +186,16 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
 
   // Opens the OS file picker (web) or the phone's photo library (native), both configured for
-  // multi-select. Returns a normalized array of { blob, mimeType, size, name } regardless of
-  // platform so the upload loop below doesn't need to know which one ran.
-  const pickImageFiles = async () => {
+  // multi-select of photos AND videos in one action. Returns a normalized array of { blob,
+  // mimeType, size, name } regardless of platform so the upload loop below doesn't need to know
+  // which one ran.
+  const pickMediaFiles = async () => {
     if (Platform.OS === 'web') {
       if (typeof document === 'undefined') return [];
       const files = await new Promise((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = 'image/jpeg,image/png';
+        input.accept = SUPPORTED_MIME_TYPES.join(',');
         input.multiple = true;
         input.onchange = () => resolve(input.files ? Array.from(input.files) : []);
         input.click();
@@ -300,11 +205,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo library access needed', 'Allow photo library access in Settings to add photos to this trip blog.');
+      Alert.alert('Photo library access needed', 'Allow photo library access in Settings to add photos or videos to this trip blog.');
       return [];
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      // `MediaTypeOptions` is deprecated in favor of this array form as of expo-image-picker ~17.
+      mediaTypes: ['images', 'videos'],
       allowsMultipleSelection: true,
       quality: 1,
     });
@@ -313,164 +219,59 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       const mimeType = asset.mimeType || guessMimeTypeFromName(asset.fileName);
       const response = await fetch(asset.uri);
       const blob = await response.blob();
-      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? 'photo' };
+      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo') };
     }));
-  };
-
-  const uploadOneFile = async (dayDate, pickedFile, galleryItemId = null) => {
-    const idempotencyKey = createIdempotencyKey('up');
-    const initRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/upload-init`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-      body: JSON.stringify({ dayDate, mediaKind: 'photo', mimeType: pickedFile.mimeType, byteSize: pickedFile.size, ...(galleryItemId ? { galleryItemId } : {}) }),
-    });
-
-    if (initRes.status === 413) {
-      const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
-      setStoragePlans(plans.filter(p => p.planKey.startsWith('storage_')));
-      setShowQuotaModal(true);
-      return 'quota_exceeded';
-    }
-    if (!initRes.ok) throw new Error((await initRes.json().catch(() => ({}))).error || 'Upload failed');
-    const { asset, uploadUrl } = await initRes.json();
-
-    if (uploadUrl) {
-      // Real signed URL: upload the actual selected file's bytes directly to storage.
-      const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': pickedFile.mimeType }, body: pickedFile.blob });
-      if (!putRes.ok) throw new Error('Failed to upload the photo to storage');
-    }
-
-    const completeRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${asset.id}/complete`, {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ physicalBytes: pickedFile.size }),
-    });
-    if (!completeRes.ok) throw new Error((await completeRes.json().catch(() => ({}))).error || 'Failed to finalize upload');
-    return 'ok';
   };
 
   const handleUpload = async (dayDate) => {
     if (!canEdit) return;
-    const picked = await pickImageFiles();
+    const picked = await pickMediaFiles();
     if (!picked.length) return; // user cancelled the picker
 
     const supported = picked.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType));
     const unsupportedCount = picked.length - supported.length;
     if (!supported.length) {
-      Alert.alert('Photo upload', 'Only JPEG or PNG photos are supported.');
+      Alert.alert('Upload', 'Only JPEG/PNG photos or MP4/MOV/WebM videos are supported.');
       return;
     }
 
     setUploading(true);
-    let succeeded = 0;
-    let failed = 0;
-    let quotaBlocked = false;
     try {
-      for (let index = 0; index < supported.length; index += 1) {
-        if (quotaBlocked) break; // no point continuing once storage is full
-        setUploadProgress({ current: index + 1, total: supported.length });
-        try {
-          const outcome = await uploadOneFile(dayDate, supported[index]);
-          if (outcome === 'quota_exceeded') { quotaBlocked = true; break; }
-          succeeded += 1;
-        } catch (error) {
-          failed += 1;
-        }
+      const result = await uploadBlogFiles(
+        { backendUrl, headers, tripId: activeTripId },
+        dayDate,
+        supported,
+        { onProgress: (current, total) => setUploadProgress({ current, total }) }
+      );
+      if (result.quotaBlocked) {
+        const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
+        setStoragePlans(plans.filter(p => p.planKey.startsWith('storage_')));
+        setShowQuotaModal(true);
       }
       await load();
-      if (!quotaBlocked && (failed > 0 || unsupportedCount > 0)) {
+      if (!result.quotaBlocked && (result.failed > 0 || unsupportedCount > 0 || result.entitlementSkipped > 0)) {
         const parts = [];
-        if (succeeded > 0) parts.push(`${succeeded} uploaded`);
-        if (failed > 0) parts.push(`${failed} failed`);
+        if (result.succeeded > 0) parts.push(`${result.succeeded} uploaded`);
+        if (result.failed > 0) parts.push(`${result.failed} failed`);
+        if (result.entitlementSkipped > 0) parts.push(`${result.entitlementSkipped} skipped (video requires Premium)`);
         if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
-        Alert.alert('Photo upload', parts.join(', '));
+        Alert.alert('Upload', parts.join(', '));
       }
     } finally {
       setUploading(false);
       setUploadProgress(null);
-    }
-  };
-
-  // Same picker + per-file upload flow as handleUpload, except every file joins one shared
-  // core.gallery item (created up front) instead of becoming its own standalone post.
-  const handleGalleryUpload = async (dayDate) => {
-    if (!canEdit) return;
-    const picked = await pickImageFiles();
-    if (!picked.length) return; // user cancelled the picker
-
-    const supported = picked.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType));
-    const unsupportedCount = picked.length - supported.length;
-    if (!supported.length) {
-      Alert.alert('Gallery upload', 'Only JPEG or PNG photos are supported.');
-      return;
-    }
-
-    setUploading(true);
-    let galleryItem = null;
-    let succeeded = 0;
-    let failed = 0;
-    let quotaBlocked = false;
-    try {
-      const createRes = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
-        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kindKey: 'core.gallery', dayDate }),
-      });
-      if (!createRes.ok) throw new Error((await createRes.json().catch(() => ({}))).error || 'Unable to create the gallery');
-      galleryItem = await createRes.json();
-
-      for (let index = 0; index < supported.length; index += 1) {
-        if (quotaBlocked) break;
-        setUploadProgress({ current: index + 1, total: supported.length });
-        try {
-          const outcome = await uploadOneFile(dayDate, supported[index], galleryItem.id);
-          if (outcome === 'quota_exceeded') { quotaBlocked = true; break; }
-          succeeded += 1;
-        } catch (error) {
-          failed += 1;
-        }
-      }
-      if (succeeded === 0 && galleryItem) {
-        // Nothing landed in the gallery — clean up the now-orphaned empty item rather than
-        // leaving an invisible post behind server-side (empty galleries simply don't render).
-        await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${galleryItem.id}`, {
-          method: 'DELETE', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ version: galleryItem.version }),
-        }).catch(() => {});
-      }
-      await load();
-      if (!quotaBlocked && (failed > 0 || unsupportedCount > 0)) {
-        const parts = [];
-        if (succeeded > 0) parts.push(`${succeeded} uploaded`);
-        if (failed > 0) parts.push(`${failed} failed`);
-        if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
-        Alert.alert('Gallery upload', parts.join(', '));
-      }
-    } catch (error) {
-      Alert.alert('Gallery upload', error.message || 'Unable to create the gallery');
-    } finally {
-      setUploading(false);
-      setUploadProgress(null);
-    }
-  };
-
-  const removeGalleryAsset = async (assetId) => {
-    if (!canEdit || removingAssetId) return;
-    setRemovingAssetId(assetId);
-    try {
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${assetId}`, { method: 'DELETE', headers });
-      if (!response.ok && response.status !== 404) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to remove photo');
-      await load();
-    } catch (error) {
-      Alert.alert('Trip blog', error.message || 'Unable to remove photo');
-    } finally {
-      setRemovingAssetId(null);
     }
   };
 
   const purchaseStorage = async (planKey) => {
+    // Checkout may hand off to an external browser/app. Dismiss the quota sheet
+    // before starting that asynchronous work so it never appears stuck.
+    setShowQuotaModal(false);
     try {
       const token = headers.Authorization?.replace('Bearer ', '');
       const result = await createCheckoutSession(backendUrl, token, planKey, createIdempotencyKey('st'));
       if (result && 'url' in result) {
         await openBillingUrl(result.url);
-        setShowQuotaModal(false);
       } else {
         throw new Error('Unable to start checkout');
       }
@@ -539,6 +340,38 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to remove blog item'); }
     finally { setDeleting(false); }
   };
+
+  // Any active traveler may set a day's default photo/video — not gated behind the edit-mode
+  // toggle (`canEdit`), unlike text/media authoring, since picking a favorite shot is a lighter,
+  // non-destructive action a follower still must not get (readOnly still blocks it).
+  const setDayCover = async (dayDate, item) => {
+    if (readOnly || settingCoverForDay) return;
+    setSettingCoverForDay(dayDate);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${dayDate}/cover`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId: item.assetId }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to set the day cover');
+      await load();
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to set the day cover'); }
+    finally { setSettingCoverForDay(null); }
+  };
+
+  // A photo that belongs to a core.gallery blog item can't be removed via DELETE /blog/items/:id
+  // (that deletes the whole gallery) — it has its own per-asset endpoint instead, which is also
+  // what keeps the rest of the gallery intact. Standalone media items go through deleteItem.
+  const removeGalleryAsset = async (assetId) => {
+    if (!canEdit || deleting) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${assetId}`, { method: 'DELETE', headers });
+      if (!response.ok && response.status !== 404) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to remove photo');
+      await load();
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to remove photo'); }
+    finally { setDeleting(false); }
+  };
+  const removeMediaItem = (item) => (item.isGalleryMember ? removeGalleryAsset(item.assetId) : deleteItem(item));
 
   if (!activeTripId) return <View style={styles.card}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
   if (loading) return <View style={styles.card}><ActivityIndicator /></View>;
@@ -619,16 +452,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     onPress={() => handleUpload(day.localDate)}
                     disabled={uploading}
                   >
-                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo'}</Text>
-                  </TouchableOpacity>
-                )}
-                {canEdit && (
-                  <TouchableOpacity
-                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#7c3aed' }]}
-                    onPress={() => handleGalleryUpload(day.localDate)}
-                    disabled={uploading}
-                  >
-                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Gallery'}</Text>
+                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo/Video'}</Text>
                   </TouchableOpacity>
                 )}
                 {day.weather ? (
@@ -641,27 +465,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 ) : null}
               </View>
             </View>
-            {(day.items || []).map((item) => (
+            {(day.items || []).filter((item) => !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
               <View key={item.id} style={{ marginTop: 8 }}>
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
-                {item.kindKey === 'core.gallery' ? (
-                  <GalleryGrid item={item} backgroundColor={inputColor} mutedColor={mutedColor} canEdit={canEdit} onRemoveAsset={removeGalleryAsset} removingAssetId={removingAssetId} />
-                ) : item.kindKey && item.kindKey.startsWith('media.') ? (
-                  // Media items are not text: there's no blog_text_contents row backing them, so
-                  // routing them through the text Save flow fails with a confusing version-conflict
-                  // error — Remove is the one supported action here.
-                  (item.thumbnailUrl || item.primaryUrl) ? (
-                    <View>
-                      <BlogMediaPreview item={item} backgroundColor={inputColor} />
-                      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
-                    </View>
-                  ) : (
-                    <View style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
-                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
-                      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
-                    </View>
-                  )
-                ) : canEdit ? (
+                {canEdit ? (
                   <TextInput
                     multiline value={drafts[item.id] ?? item.body}
                     editable onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
@@ -672,14 +479,73 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 )}
                 {canEdit ? (
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                    {item.kindKey === 'core.gallery' || (item.kindKey && item.kindKey.startsWith('media.')) ? null : (
-                      <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
-                    )}
+                    <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
                     <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
                   </View>
                 ) : null}
               </View>
             ))}
+            {(() => {
+              // core.gallery items group a batch of assets under one blog_item (see blogRoutes.ts);
+              // flatten those `assets` back out alongside standalone media.* items so every
+              // traveler's photos/videos for the day become one combined, browsable set regardless
+              // of which upload flow produced them. Gallery members are tagged so Remove routes to
+              // the per-asset delete endpoint (removeGalleryAsset) instead of the whole-item delete
+              // standalone items use (deleteItem) — see removeMediaItem above.
+              const allMedia = (day.items || []).flatMap((item) => {
+                if (item.kindKey === 'core.gallery') {
+                  return (item.assets || []).map((asset) => ({ ...asset, isGalleryMember: true }));
+                }
+                return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
+              });
+              const readyMedia = allMedia.filter((item) => item.thumbnailUrl || item.primaryUrl);
+              const processingMedia = allMedia.filter((item) => !(item.thumbnailUrl || item.primaryUrl));
+              return (
+                <>
+                  {readyMedia.length ? (
+                    <DayMediaGallery
+                      items={readyMedia}
+                      dayDate={day.localDate}
+                      coverItemId={day.coverItemId}
+                      canSetCover={!readOnly}
+                      settingCover={settingCoverForDay === day.localDate}
+                      onSetCover={(item) => setDayCover(day.localDate, item)}
+                      onOpenLightbox={() => setLightboxDay(day.localDate)}
+                      canRemove={canEdit}
+                      removing={deleting}
+                      onRemove={(item) => removeMediaItem(item)}
+                      textColor={textColor}
+                      mutedColor={mutedColor}
+                      borderColor={borderColor}
+                      backgroundColor={inputColor}
+                      styles={styles}
+                    />
+                  ) : null}
+                  {processingMedia.map((item) => (
+                    <View key={item.id} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
+                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
+                      {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
+                      {canEdit ? (
+                        <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
+                          <Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  ))}
+                  <DayMediaLightbox
+                    visible={lightboxDay === day.localDate}
+                    items={readyMedia}
+                    dayDate={day.localDate}
+                    onClose={() => setLightboxDay(null)}
+                    styles={styles}
+                    textColor={textColor}
+                    mutedColor={mutedColor}
+                    borderColor={borderColor}
+                    backgroundColor={inputColor}
+                  />
+                </>
+              );
+            })()}
             {canEdit && (day.activities || []).length > 0 ? (
               <View style={{ marginTop: 14 }}>
                 <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>

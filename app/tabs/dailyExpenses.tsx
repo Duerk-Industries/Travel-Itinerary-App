@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
+import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
@@ -57,6 +59,7 @@ type ParsedReceiptExpenseDraft = {
 };
 
 type DailyExpensesTabProps = {
+  theme: AppTheme;
   backendUrl: string;
   headers: Record<string, string>;
   jsonHeaders: Record<string, string>;
@@ -104,7 +107,14 @@ const dayCardStyles = {
 };
 
 const formatDateLabel = (iso: string): string => {
-  const date = new Date(iso);
+  // `iso` is a date-only string (YYYY-MM-DD, e.g. from buildDateRange below).
+  // `new Date(iso)` parses that as UTC midnight; toLocaleDateString then
+  // renders it in the browser's local timezone, which rolls the displayed
+  // date back a day for anyone west of UTC (e.g. a trip starting Sat Oct 10
+  // showed as "Fri Oct 9"). Parse the year/month/day explicitly into a local
+  // Date instead, matching the safe pattern already used by formatDateLong.ts.
+  const [y, m, d] = iso.split('-').map((part) => Number(part));
+  const date = Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d) ? new Date(iso) : new Date(y, m - 1, d);
   if (Number.isNaN(date.valueOf())) return iso;
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).replace(/,/g, '');
 };
@@ -136,6 +146,7 @@ if (Platform.OS !== 'web') {
 }
 
 const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
+  theme,
   backendUrl,
   headers,
   jsonHeaders,
@@ -171,6 +182,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [draftPayerIds, setDraftPayerIds] = useState<string[]>([]);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [addExpenseVisible, setAddExpenseVisible] = useState(false);
+  const [importExpensesVisible, setImportExpensesVisible] = useState(false);
   const [receiptParsing, setReceiptParsing] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
@@ -468,6 +480,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         >
           <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.smallButton]}
+          onPress={() => setImportExpensesVisible(true)}
+          testID="expense-import-button"
+        >
+          <Text style={styles.buttonText}>Import</Text>
+        </TouchableOpacity>
       </View>
       {Platform.OS === 'web' ? (
         <input
@@ -481,6 +500,19 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         />
       ) : null}
       {receiptError ? <Text style={styles.warningText}>{receiptError}</Text> : null}
+      {importExpensesVisible && trip && (
+        <PlaidImportQueue
+          theme={theme}
+          styles={styles}
+          backendUrl={backendUrl}
+          jsonHeaders={jsonHeaders}
+          tripId={trip.id}
+          groupMembers={activeMembers.map(m => ({ id: m.id, name: formatMemberDisplayName(m) }))}
+          defaultPayerId={defaultPayerId}
+          onClose={() => setImportExpensesVisible(false)}
+          onImported={(expense) => setExpenses(prev => [expense, ...prev])}
+        />
+      )}
       {addExpenseVisible ? (
         <DialogShell
           visible

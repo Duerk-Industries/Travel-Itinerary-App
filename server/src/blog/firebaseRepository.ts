@@ -1,8 +1,12 @@
 import { randomUUID } from 'crypto';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
 import { getCanonicalPublicPathFirebase } from './firebasePublicationRepository';
+import { buildNarrativeBlogBody } from './narrative';
+import { logError } from '../logger';
+import { markSynced, shouldSkipSync } from './syncCoordination';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -48,52 +52,115 @@ const mapItem = (doc: any): BlogTextItem => {
   return { id: String(doc.id ?? data.id), tripId: String(data.tripId), blogDayId: String(data.blogDayId), localDate: String(data.localDate), kindKey: 'core.text', schemaVersion: Number(data.schemaVersion ?? 1), audience: data.audience ?? 'public', sortKey: String(data.sortKey), authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), body: String(data.body ?? ''), languageTag: data.languageTag ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt), sourceType: data.sourceType ?? null, sourceId: data.sourceId ?? null, sourceDetached: Boolean(data.sourceDetached) };
 };
 
-const linkedSourceBody = (data: any): string => data.kind === 'note'
-  ? String(data.noteBody ?? data.activity ?? '')
-  : `Location: ${String(data.activity ?? 'Location')}${data.noteBody ? `\n${String(data.noteBody)}` : ''}`;
+const linkedSourceBody = (data: any): string => buildNarrativeBlogBody({
+  activity: data.activity,
+  kind: data.kind,
+  noteBody: data.noteBody,
+});
+
+// Processes one itinerary_details doc's blog link independently of every other one, so
+// the caller runs these concurrently via Promise.all instead of one Firestore round-trip
+// at a time. contentRevision now uses FieldValue.increment (atomic on Firestore's side)
+// instead of the previous read-current-value-then-add-1 — that pattern is a real lost-update
+// race under concurrent writers (two parallel bumps can both read the same starting value),
+// and increment also removes a read (the old code re-ran ensureBlog for every changed item
+// just to get the current count; getBlog already calls ensureBlog once before sync runs, so
+// the trip_blogs doc is guaranteed to already exist here).
+const syncOneItineraryDetail = async (
+  detail: FirebaseFirestore.QueryDocumentSnapshot,
+  tripId: string,
+  userId: string,
+  days: Array<{ id: string; localDate: string }>,
+  sourceIds: Set<string>
+): Promise<void> => {
+  const db = getDb();
+  const data = detail.data() as any;
+  if (data.kind !== 'note' && data.kind !== 'place') return;
+  sourceIds.add(detail.id);
+  const body = linkedSourceBody(data);
+  if (!body.trim()) return;
+  const day = days[Math.max(0, Number(data.day ?? 1) - 1)] ?? days[0];
+  if (!day) return;
+  const snapshot = { body, day: Number(data.day ?? 1), activity: String(data.activity ?? ''), kind: String(data.kind), placeId: data.placeId ?? null, noteBody: data.noteBody ?? null };
+  const linkRef = db.collection('blog_item_source_links').doc(`itinerary_detail_${detail.id}`);
+  const link = await linkRef.get();
+  if (!link.exists) {
+    const itemId = randomUUID();
+    const now = nowIso();
+    const item = { id: itemId, tripId, blogDayId: day.id, localDate: String(day.localDate), kindKey: 'core.text', schemaVersion: 1, audience: 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${itemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body, languageTag: null, sourceType: 'itinerary_detail', sourceId: detail.id, sourceDetached: false, createdAt: now, updatedAt: now, deletedAt: null };
+    await Promise.all([
+      db.collection('blog_items').doc(itemId).set(item),
+      linkRef.set({ itemId, sourceType: 'itinerary_detail', sourceId: detail.id, sourceSnapshot: snapshot, detached: false, createdAt: now, updatedAt: now }),
+      db.collection('trip_blogs').doc(tripId).set({ contentRevision: FieldValue.increment(1), updatedAt: now }, { merge: true }),
+    ]);
+    return;
+  }
+  const linkData = link.data() as any;
+  if (linkData.detached) return;
+  if (JSON.stringify(linkData.sourceSnapshot ?? {}) === JSON.stringify(snapshot)) return;
+  const itemRef = db.collection('blog_items').doc(String(linkData.itemId));
+  const itemSnap = await itemRef.get();
+  if (!itemSnap.exists) return;
+  const current = itemSnap.data() as any;
+  const now = nowIso();
+  await Promise.all([
+    itemRef.set({ body, blogDayId: day.id, localDate: String(day.localDate), version: Number(current.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: now }, { merge: true }),
+    linkRef.set({ sourceSnapshot: snapshot, updatedAt: now }, { merge: true }),
+    db.collection('trip_blogs').doc(tripId).set({ contentRevision: FieldValue.increment(1), updatedAt: now }, { merge: true }),
+  ]);
+};
 
 const syncLinkedItineraryItems = async (tripId: string, userId: string): Promise<void> => {
   const db = getDb();
-  const itinerarySnap = await db.collection('itineraries').where('tripId', '==', tripId).get();
-  const daySnap = await db.collection('blog_days').where('tripId', '==', tripId).get();
+  const [itinerarySnap, daySnap] = await Promise.all([
+    db.collection('itineraries').where('tripId', '==', tripId).get(),
+    db.collection('blog_days').where('tripId', '==', tripId).get(),
+  ]);
   const days = daySnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })).sort((a, b) => String(a.localDate).localeCompare(String(b.localDate)));
   const sourceIds = new Set<string>();
-  for (const itinerary of itinerarySnap.docs) {
-    const detailSnap = await db.collection('itinerary_details').where('itineraryId', '==', itinerary.id).get();
-    for (const detail of detailSnap.docs) {
-      const data = detail.data() as any;
-      if (data.kind !== 'note' && data.kind !== 'place') continue;
-      sourceIds.add(detail.id);
-      const body = linkedSourceBody(data); if (!body.trim()) continue;
-      const day = days[Math.max(0, Number(data.day ?? 1) - 1)] ?? days[0]; if (!day) continue;
-      const snapshot = { body, day: Number(data.day ?? 1), activity: String(data.activity ?? ''), kind: String(data.kind), placeId: data.placeId ?? null, noteBody: data.noteBody ?? null };
-      const linkRef = db.collection('blog_item_source_links').doc(`itinerary_detail_${detail.id}`);
-      const link = await linkRef.get();
-      if (!link.exists) {
-        const itemId = randomUUID(); const now = nowIso();
-        const item = { id: itemId, tripId, blogDayId: day.id, localDate: String(day.localDate), kindKey: 'core.text', schemaVersion: 1, audience: 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${itemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body, languageTag: null, sourceType: 'itinerary_detail', sourceId: detail.id, sourceDetached: false, createdAt: now, updatedAt: now, deletedAt: null };
-        await db.collection('blog_items').doc(itemId).set(item);
-        await linkRef.set({ itemId, sourceType: 'itinerary_detail', sourceId: detail.id, sourceSnapshot: snapshot, detached: false, createdAt: now, updatedAt: now });
-        await db.collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: now }, { merge: true });
-        continue;
-      }
-      const linkData = link.data() as any; if (linkData.detached) continue;
-      if (JSON.stringify(linkData.sourceSnapshot ?? {}) === JSON.stringify(snapshot)) continue;
-      const itemRef = db.collection('blog_items').doc(String(linkData.itemId)); const itemSnap = await itemRef.get(); if (!itemSnap.exists) continue;
-      const current = itemSnap.data() as any; const now = nowIso();
-      await itemRef.set({ body, blogDayId: day.id, localDate: String(day.localDate), version: Number(current.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: now }, { merge: true });
-      await linkRef.set({ sourceSnapshot: snapshot, updatedAt: now }, { merge: true });
-      await db.collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: now }, { merge: true });
-    }
-  }
+
+  const detailSnapsByItinerary = await Promise.all(
+    itinerarySnap.docs.map((itinerary) => db.collection('itinerary_details').where('itineraryId', '==', itinerary.id).get())
+  );
+  await Promise.all(
+    detailSnapsByItinerary.flatMap((detailSnap) =>
+      detailSnap.docs.map((detail) => syncOneItineraryDetail(detail, tripId, userId, days, sourceIds))
+    )
+  );
+
   const linkedItems = await db.collection('blog_items').where('tripId', '==', tripId).where('sourceType', '==', 'itinerary_detail').get();
-  for (const item of linkedItems.docs) {
-    const data = item.data() as any;
-    if (data.sourceId && !sourceIds.has(String(data.sourceId)) && !data.sourceDetached) {
-      await item.ref.set({ sourceDetached: true, updatedAt: nowIso() }, { merge: true });
-      const linkRef = db.collection('blog_item_source_links').doc(`itinerary_detail_${data.sourceId}`);
-      await linkRef.set({ detached: true, updatedAt: nowIso() }, { merge: true });
-    }
+  await Promise.all(
+    linkedItems.docs.map(async (item) => {
+      const data = item.data() as any;
+      if (data.sourceId && !sourceIds.has(String(data.sourceId)) && !data.sourceDetached) {
+        const linkRef = db.collection('blog_item_source_links').doc(`itinerary_detail_${data.sourceId}`);
+        await Promise.all([
+          item.ref.set({ sourceDetached: true, updatedAt: nowIso() }, { merge: true }),
+          linkRef.set({ detached: true, updatedAt: nowIso() }, { merge: true }),
+        ]);
+      }
+    })
+  );
+  markSynced(tripId);
+};
+
+// Public entry point for the write-path trigger (itineraryDataRoutes.ts,
+// itineraryAsyncService.ts) — see the matching export in postgresRepository.ts
+// for the full rationale.
+export const syncItineraryToBlog = async (tripId: string, userId: string): Promise<void> => {
+  try {
+    // Unlike getBlog, this can be the *first* thing that ever touches this trip's blog
+    // (e.g. AI itinerary generation firing this immediately after trip creation, before
+    // the traveler has ever opened the Trip Blog tab) — so trip_blogs/blog_days can't be
+    // assumed to exist yet the way getBlog's caller-already-visited-the-tab assumption
+    // gets to. Without this, syncOneItineraryDetail's `days[...]` lookup finds nothing,
+    // every row hits its `if (!day) return`, and the sync silently links zero items —
+    // not an error, just quietly does nothing.
+    await ensureBlog(tripId);
+    await ensureDays(tripId);
+    await syncLinkedItineraryItems(tripId, userId);
+  } catch (err) {
+    logError(`[blog] background itinerary sync failed for trip ${tripId}`, err);
   }
 };
 
@@ -103,7 +170,14 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   const db = getDb();
   const blog = await ensureBlog(tripId);
   await ensureDays(tripId);
-  if (await ensureUserInTrip(tripId, userId)) await syncLinkedItineraryItems(tripId, userId);
+  // The write-path trigger (see syncItineraryToBlog) is the primary sync mechanism now;
+  // this stays as a defensive fallback for any mutation path that isn't hooked into it,
+  // so the read path doesn't need to re-run a full sync on every single GET — skip if one
+  // completed recently (see syncCoordination.ts for why this is always safe to skip, never
+  // stale: mutations invalidate the debounce window synchronously before returning).
+  if (!shouldSkipSync(tripId) && (await ensureUserInTrip(tripId, userId))) {
+    await syncLinkedItineraryItems(tripId, userId);
+  }
 
   let query = db.collection('blog_days').where('tripId', '==', tripId);
   if (options.date) {
@@ -165,6 +239,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       localDate: date,
       headline: data.headline ?? null,
       summary: data.summary ?? null,
+      coverAssetId: data.coverAssetId ?? null,
       items: items.filter((item) => item.blogDayId === doc.id),
       activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
@@ -254,6 +329,24 @@ export const deleteBlogItem = async (userId: string, itemId: string, version?: n
   await ref.set({ deletedAt: nowIso(), version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
   await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
   return true;
+};
+
+export const setDayCover = async (userId: string, tripId: string, dayDate: string, assetId: string | null): Promise<void> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const day = await getDay(tripId, dayDate);
+  if (assetId) {
+    // Unlike Postgres, a Firestore blog_media_assets doc already carries its own tripId/dayDate
+    // (see blogItemId/dayDate on the doc written by initUpload in firebaseMediaRepository.ts), so
+    // this is a direct doc check rather than a join through blog_item_assets/blog_items.
+    const snapshot = await getDb().collection('blog_media_assets').doc(assetId).get();
+    const data = snapshot.exists ? (snapshot.data() as any) : null;
+    if (!data || String(data.tripId) !== tripId || String(data.dayDate) !== dayDate || data.state !== 'ready') {
+      throw new Error('That photo or video must belong to this day and be ready before it can be set as the cover');
+    }
+  }
+  await getDb().collection('blog_days').doc(day.id).set({ coverAssetId: assetId, coverSetByUserId: userId, coverSetAt: nowIso(), updatedAt: nowIso() }, { merge: true });
+  await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
 };
 
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {

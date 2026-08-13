@@ -147,6 +147,18 @@
     <h2>14. Related documents</h2>
     <p><a href="/terms.html">Consumer Terms</a> · <a href="/withdrawal.html">Withdrawal Form</a> · <a href="/cookies.html">Cookie Notice</a> · <a href="/content-moderation.html">Content Moderation and DSA Procedure</a></p>
 
+    <h2>15. Financial account connections (optional)</h2>
+    <p><strong>This feature is off by default and only available if you turn it on.</strong> If you choose to connect a bank or credit card account to import transactions as trip expenses:</p>
+    <ul>
+        <li><strong>What we collect.</strong> Through our service provider Plaid, we receive transaction-level data from your connected account: dates, amounts, merchant names, and Plaid's own category labels. We may also receive the connected institution and account identifiers needed to keep one connection's updates separate from another. We do not receive, and never ask you for, your bank username, password, or multi-factor authentication codes — those are entered only within Plaid's own secure connection flow, which we do not have access to.</li>
+        <li><strong>Why we collect it.</strong> Solely so you can review recent transactions and, if you choose, import individual ones as expenses on a specific trip. We do not use this data for credit scoring, marketing, advertising, or any purpose other than the expense-import feature you activated. We do not sell this data or share it for advertising or profiling. Plaid and Firebase/Google Cloud process it as service providers required to operate this feature.</li>
+        <li><strong>What we don't automatically do.</strong> Connecting an account does not automatically create expenses. Every transaction requires your explicit confirmation before it becomes part of a trip's records.</li>
+        <li><strong>Retention and deletion.</strong> Imported transaction data you have not confirmed into an expense is retained only while your account connection stays active. If you disconnect an account, or if Plaid sends us a permission/account-revocation webhook, we stop syncing and delete that connection and the affected unconfirmed transaction data automatically. Transactions you've already confirmed into a trip expense are retained like any other expense you entered manually, and are covered by this policy's general retention/deletion terms — not deleted just because the underlying connection is later removed. Account deletion also queues deletion of the Plaid connection and its remaining derived data.</li>
+        <li><strong>Your control.</strong> You can disconnect a linked account at any time from Account Settings. Doing so immediately revokes our access at Plaid and triggers the deletion described above.</li>
+        <li><strong>Security.</strong> Your account access token is encrypted before storage and is never exposed to the app's client, to other users, or to anyone but the automated systems that need it to sync transactions on your behalf.</li>
+        <li><strong>No sale or advertising.</strong> We do not use connected-account data for credit decisions, advertising, marketing profiles, or data-broker activity.</li>
+    </ul>
+
     <div class="footer">&copy; 2026 WanderBunnies · Owned and operated by Bryan Duerk</div>
 </body>
 </html>

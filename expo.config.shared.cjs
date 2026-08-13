@@ -125,6 +125,25 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
     },
     plugins: [
       'expo-web-browser',
+      'expo-video',
+      'expo-dev-client',
+      [
+        // Lets a traveler "send to" WanderBunnies from the phone's native Photos/share sheet,
+        // same as sharing to a messaging app — see app/utils/incomingShare.ts for the receiving
+        // side. Photos and videos only (matches SUPPORTED_MIME_TYPES in app/tabs/tripBlog.tsx);
+        // no text/url/audio/file sharing is needed for this feature. Both single-item
+        // (androidIntentFilters) and multi-item (androidMultiIntentFilters) Android share flows
+        // are enabled since a traveler may share one or many photos/videos at once.
+        'expo-share-intent',
+        {
+          iosActivationRules: {
+            NSExtensionActivationSupportsImageWithMaxCount: 20,
+            NSExtensionActivationSupportsMovieWithMaxCount: 20,
+          },
+          androidIntentFilters: ['image/*', 'video/*'],
+          androidMultiIntentFilters: ['image/*', 'video/*'],
+        },
+      ],
       [
         'expo-image-picker',
         {

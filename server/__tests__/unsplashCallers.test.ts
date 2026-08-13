@@ -12,6 +12,7 @@ jest.mock('../src/config/apiLimits', () => ({
 
 import { searchUnsplashPhotos } from '../src/apis/unsplashApi';
 import { getApiCacheSetting } from '../src/config/apiLimits';
+import { ApiLimitExceededError } from '../src/apis/usageLimiter';
 import {
   clearUnsplashUrlCache,
   fetchUnsplashImageForItinerary,
@@ -104,5 +105,19 @@ describe('unsplashCallers (dedupe + TTL cache)', () => {
     const result = await fetchUnsplashImageForLocation('key', '   ');
     expect(result).toBeNull();
     expect(mockedSearch).not.toHaveBeenCalled();
+  });
+
+  it('pauses repeated itinerary searches after the provider limit is reached', async () => {
+    mockedSearch.mockRejectedValueOnce(new ApiLimitExceededError({
+      provider: 'UNSPLASH',
+      caller: 'IMAGE_SERVICE_ITINERARY_IMAGE',
+      scope: 'overall',
+      limit: 50,
+      used: 50,
+    }));
+
+    await expect(fetchUnsplashImageForItinerary('key', 'Osaka')).resolves.toBeNull();
+    await expect(fetchUnsplashImageForItinerary('key', 'Tokyo')).resolves.toBeNull();
+    expect(mockedSearch).toHaveBeenCalledTimes(1);
   });
 });

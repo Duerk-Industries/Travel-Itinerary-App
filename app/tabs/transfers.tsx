@@ -10,6 +10,8 @@ import { toWebStyle } from '../utils/webStyle';
 import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
+import type { AppTheme } from '../theme/theme';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -143,6 +145,22 @@ export const filterAirportOptionLabels = (options: string[], query: string): str
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return options.slice(0, airportSuggestionLimit);
   return options.filter((opt) => opt.toLowerCase().includes(normalizedQuery)).slice(0, airportSuggestionLimit);
+};
+
+/**
+ * Edit forms need a usable airport query even for legacy records that stored
+ * only the IATA code, while newer API responses may also include a display
+ * label. Prefer the label, then the stored location, then the code.
+ */
+export const getFlightLocationForEdit = (
+  location?: unknown,
+  label?: unknown,
+  code?: unknown
+): string => {
+  for (const value of [label, location, code]) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
 };
 
 const isValidTime = (value: string): boolean => {
@@ -487,6 +505,13 @@ type FlightsTabProps = {
   readOnly?: boolean; // Prop added for read-only viewing of followed trips
   modalOverlayStyle?: Record<string, any>;
   modalCardStyle?: Record<string, any>;
+  theme?: AppTheme;
+  // Kill switch for row-tap-to-edit + sticky identity/actions columns
+  // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`
+  // so existing callers that don't pass it (e.g. tests, the wizard's internal
+  // usage) keep today's behavior; App.tsx wires this to the
+  // feature_tap_to_edit_tables flag for the live table view.
+  featureTapToEditTables?: boolean;
 };
 
 type Airport = {
@@ -557,12 +582,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   readOnly = false,
   modalOverlayStyle,
   modalCardStyle,
+  theme,
+  featureTapToEditTables = true,
 }) => {
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
     return buildMemberDisplayLookup(groupMembers);
   }, [groupMembers]);
+  const [flightSort, setFlightSort] = useState<{ key: string | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
   const sortedFlights = useMemo(() => {
     const safeDate = (value?: string | null) => {
       const text = String(value ?? '').trim();
@@ -576,14 +604,31 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       const ids = Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [];
       return formatTravelerListDisplay(ids, flight.passenger_name, groupMembers);
     };
+    const key = flightSort.key ?? 'departure_date';
+    const direction = flightSort.direction === 'asc' ? 1 : -1;
     return [...flights].sort((a, b) => {
-      const byDate = safeDate(a.departure_date).localeCompare(safeDate(b.departure_date));
-      if (byDate !== 0) return byDate;
-      const byTime = safeTime(a.departure_time).localeCompare(safeTime(b.departure_time));
-      if (byTime !== 0) return byTime;
-      return passengerLabel(a).localeCompare(passengerLabel(b), undefined, { sensitivity: 'base' });
+      const left = key === 'passenger_name' ? passengerLabel(a) : (a as any)[key];
+      const right = key === 'passenger_name' ? passengerLabel(b) : (b as any)[key];
+      const leftValue = key === 'cost' || key === 'netVotes' || key === 'netRating' ? Number(left ?? 0) || 0 : String(left ?? '');
+      const rightValue = key === 'cost' || key === 'netVotes' || key === 'netRating' ? Number(right ?? 0) || 0 : String(right ?? '');
+      if (leftValue === '' && rightValue !== '') return 1;
+      if (rightValue === '' && leftValue !== '') return -1;
+      const result = typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: 'base', numeric: true });
+      if (result !== 0) return result * direction;
+      return safeDate(a.departure_date).localeCompare(safeDate(b.departure_date)) || safeTime(a.departure_time).localeCompare(safeTime(b.departure_time));
     });
-  }, [flights, memberNames]);
+  }, [flights, memberNames, flightSort]);
+  const [tableEditing, setTableEditing] = useState(false);
+  const [gridRows, setGridRows] = useState<Flight[]>([]);
+  const [gridOriginalRows, setGridOriginalRows] = useState<Flight[]>([]);
+  const [gridDeleteIds, setGridDeleteIds] = useState<Set<string>>(new Set());
+  const [gridHistory, setGridHistory] = useState<Array<{ rows: Flight[]; deleteIds: string[] }>>([]);
+  const [gridRedo, setGridRedo] = useState<Array<{ rows: Flight[]; deleteIds: string[] }>>([]);
+  const [gridErrors, setGridErrors] = useState<GridCellError[]>([]);
+  const [gridMessage, setGridMessage] = useState<string | null>(null);
+  const [gridSaving, setGridSaving] = useState(false);
 
   const buildPassengerName = (ids: string[]) => {
     const names = ids.map((id) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase())).filter(Boolean) as string[];
@@ -672,6 +717,77 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     [groupMembers]
   );
 
+  const sortedGridRows = useMemo(() => {
+    const key = flightSort.key ?? 'departure_date';
+    const direction = flightSort.direction === 'asc' ? 1 : -1;
+    return [...gridRows].sort((a, b) => {
+      const left = String((a as any)[key] ?? '');
+      const right = String((b as any)[key] ?? '');
+      return left.localeCompare(right, undefined, { sensitivity: 'base', numeric: true }) * direction;
+    });
+  }, [gridRows, flightSort]);
+  const sortFlightTable = (key: string) => setFlightSort((current) => current.key === key
+    ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+    : { key, direction: 'asc' });
+  const gridColumns = useMemo<GridColumn<Flight>[]>(() => [
+    { key: 'passenger_name', label: 'Passenger', width: 170, editor: 'text', sticky: 'left', getValue: (row) => row.passenger_name || '' },
+    { key: 'status', label: 'Status', width: 135, editor: 'select', options: Object.values({ Needed: 'Needed', Proposed: 'Proposed', Booked: 'Booked', Completed: 'Completed', Cancelled: 'Cancelled' }), getValue: (row) => normalizeItineraryStatus(row.status, LEGACY_ITINERARY_STATUS) },
+    { key: 'transfer_type', label: 'Type', width: 120, editor: 'select', options: TRANSFER_TYPES, getValue: (row) => String(row.transfer_type || row.transferType || 'Flight') },
+    { key: 'departure_date', label: 'Departure Date', width: 145, editor: 'date', getValue: (row) => row.departure_date || '' },
+    { key: 'departure_location', label: 'Departure Location', width: 190, editor: 'text', getValue: (row) => row.departure_location || row.departure_airport_code || '' },
+    { key: 'departure_time', label: 'Departure Time', width: 125, editor: 'time', getValue: (row) => row.departure_time || '' },
+    { key: 'arrival_date', label: 'Arrival Date', width: 135, editor: 'date', getValue: (row) => row.arrival_date || row.departure_date || '' },
+    { key: 'arrival_location', label: 'Arrival Location', width: 190, editor: 'text', getValue: (row) => row.arrival_location || row.arrival_airport_code || '' },
+    { key: 'arrival_time', label: 'Arrival Time', width: 120, editor: 'time', getValue: (row) => row.arrival_time || '' },
+    { key: 'layover_duration', label: 'Layover', width: 120, editor: 'text', getValue: (row) => row.layover_duration || '' },
+    { key: 'cost', label: 'Cost', width: 110, editor: 'decimal', getValue: (row) => String(row.cost ?? '') },
+    { key: 'carrier', label: 'Carrier', width: 150, editor: 'text', getValue: (row) => row.carrier || '' },
+    { key: 'flight_number', label: 'Flight #', width: 125, editor: 'text', getValue: (row) => row.flight_number || '' },
+    { key: 'booking_reference', label: 'Booking Ref', width: 160, editor: 'text', getValue: (row) => row.booking_reference || '' },
+    { key: 'netVotes', label: 'Votes', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netVotes ?? 0) },
+    { key: 'netRating', label: 'Rating', width: 90, editor: 'readonly', editable: false, getValue: (row) => String(row.netRating ?? 0) },
+    { key: 'actions', label: 'Actions', width: 100, editor: 'action', sticky: 'right', editable: false, sortable: false, getValue: () => '' },
+  ], []);
+  const beginGridEdit = () => { if (readOnly) return; const snapshot = flights.map((row) => ({ ...row, passenger_ids: [...(row.passenger_ids ?? [])], paidBy: [...(row.paidBy ?? row.paid_by ?? [])] })); setGridRows(snapshot); setGridOriginalRows(snapshot); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); setTableEditing(true); };
+  const cancelGridEdit = () => { setTableEditing(false); setGridRows([]); setGridOriginalRows([]); setGridDeleteIds(new Set()); setGridHistory([]); setGridRedo([]); setGridErrors([]); setGridMessage(null); };
+  const recordGridChange = (rows: Flight[], deleteIds: Set<string>) => { setGridHistory((items) => [...items.slice(-99), { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRedo([]); setGridRows(rows); setGridDeleteIds(deleteIds); };
+  const changeGridCell = (rowId: string, columnKey: string, rawValue: string) => {
+    const column = gridColumns.find((item) => item.key === columnKey);
+    const row = gridRows.find((item) => item.id === rowId);
+    if (!row || !column || column.editor === 'readonly' || column.editor === 'action') return;
+    if ((column.editor === 'date' && rawValue && !/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) || (column.editor === 'time' && rawValue && !/^\d{2}:\d{2}$/.test(rawValue))) { setGridErrors([{ rowId, columnKey, message: column.editor === 'date' ? 'Use YYYY-MM-DD.' : 'Use HH:mm.' }]); return; }
+    if (column.editor === 'decimal' && rawValue && !/^\d*(\.\d*)?$/.test(rawValue)) { setGridErrors([{ rowId, columnKey, message: 'Enter a non-negative decimal.' }]); return; }
+    setGridErrors((errors) => errors.filter((error) => !(error.rowId === rowId && error.columnKey === columnKey)));
+    const value: any = columnKey === 'cost' ? Number(rawValue || 0) : rawValue;
+    recordGridChange(gridRows.map((item) => item.id === rowId ? { ...item, [columnKey]: value } : item), new Set(gridDeleteIds));
+  };
+  const undoGridChange = () => { const previous = gridHistory[gridHistory.length - 1]; if (!previous) return; setGridHistory((items) => items.slice(0, -1)); setGridRedo((items) => [...items, { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRows(previous.rows); setGridDeleteIds(new Set(previous.deleteIds)); };
+  const redoGridChange = () => { const next = gridRedo[gridRedo.length - 1]; if (!next) return; setGridRedo((items) => items.slice(0, -1)); setGridHistory((items) => [...items, { rows: gridRows, deleteIds: Array.from(gridDeleteIds) }]); setGridRows(next.rows); setGridDeleteIds(new Set(next.deleteIds)); };
+  const toggleGridDelete = (rowId: string) => { const next = new Set(gridDeleteIds); if (next.has(rowId)) next.delete(rowId); else next.add(rowId); recordGridChange(gridRows, next); };
+  const saveGridEdit = async () => {
+    if (gridSaving || gridErrors.length) { if (gridErrors.length) setGridMessage('Fix the highlighted cells before saving.'); return; }
+    setGridSaving(true);
+    try {
+      const originalById = new Map(gridOriginalRows.map((row) => [row.id, row]));
+      for (const row of gridRows) {
+        if (gridDeleteIds.has(row.id)) { const result = await removeFlightApi(backendUrl, headers, row.id); if (!result.ok) throw new Error(result.error || 'Unable to delete transfer.'); continue; }
+        const original = originalById.get(row.id);
+        if (!original || JSON.stringify(original) === JSON.stringify(row)) continue;
+        const draft: FlightEditDraft = {
+          status: normalizeItineraryStatus(row.status, DEFAULT_NEW_ITINERARY_STATUS), transferType: (row.transfer_type || row.transferType || 'Flight') as TransferType,
+          passengerName: row.passenger_name || 'Traveler', passengerIds: row.passenger_ids ?? [], departureDate: row.departure_date || '', arrivalDate: row.arrival_date || row.departure_date || '',
+          departureLocation: row.departure_location || row.departure_airport_code || '', departureAirportCode: row.departure_airport_code || row.departure_location || '', departureTime: row.departure_time || '',
+          arrivalLocation: row.arrival_location || row.arrival_airport_code || '', arrivalAirportCode: row.arrival_airport_code || row.arrival_location || '', layoverLocation: row.layover_location || '', layoverLocationCode: row.layover_location_code || '', layoverDuration: row.layover_duration || '', arrivalTime: row.arrival_time || '', cost: String(row.cost ?? ''), carrier: row.carrier || '', flightNumber: row.flight_number || '', bookingReference: row.booking_reference || '', paidBy: row.paidBy ?? row.paid_by ?? [],
+        };
+        const response = await fetch(`${backendUrl}/api/transfers/${row.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(buildFlightPayload(draft, undefined, defaultPayerId)) });
+        const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.error || 'Unable to save transfer.');
+      }
+      onDataChanged ? onDataChanged() : await fetchFlights();
+      cancelGridEdit();
+    } catch (error: any) { setGridMessage(error?.message || 'Unable to save transfer changes.'); }
+    finally { setGridSaving(false); }
+  };
+
   const filterAirports = (query: string): Airport[] => {
     const q = query.trim().toLowerCase();
     if (q.length < 1) return [];
@@ -756,6 +872,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (label && label.trim().length) return label;
     const normalized = code ? code.toUpperCase() : '';
     if (!normalized) return '-';
+    if (!/^[A-Z0-9]{3,4}$/.test(normalized)) return code ?? normalized;
     const match = airports.find((a) => (a.iata_code ?? '').toUpperCase() === normalized);
     if (match) return formatAirportLabel(match);
     return normalized;
@@ -1015,12 +1132,24 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       passengerIds: normalizedPassengerIds,
       departureDate: normalizeDateString(flight.departure_date),
       arrivalDate: normalizeDateString(flight.arrival_date || (flight as any).arrivalDate || flight.departure_date),
-      departureLocation: flight.departure_location ?? '',
+      departureLocation: getFlightLocationForEdit(
+        flight.departure_location,
+        flight.departure_airport_label || flight.departureAirportLabel,
+        flight.departure_airport_code
+      ),
       departureAirportCode: flight.departure_airport_code ?? '',
       departureTime: normalizeTimeInput(flight.departure_time, flight.departure_time),
-      arrivalLocation: flight.arrival_location ?? '',
+      arrivalLocation: getFlightLocationForEdit(
+        flight.arrival_location,
+        flight.arrival_airport_label || flight.arrivalAirportLabel,
+        flight.arrival_airport_code
+      ),
       arrivalAirportCode: flight.arrival_airport_code ?? '',
-      layoverLocation: flight.layover_location ?? '',
+      layoverLocation: getFlightLocationForEdit(
+        flight.layover_location,
+        flight.layover_airport_label || flight.layoverAirportLabel,
+        flight.layover_location_code
+      ),
       layoverLocationCode: flight.layover_location_code ?? '',
       layoverDuration: flight.layover_duration ?? '',
       arrivalTime: normalizeTimeInput(flight.arrival_time, flight.arrival_time),
@@ -1385,6 +1514,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <Text style={styles.sectionTitle}>Transfers</Text>
         {!readOnly ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
+            {!tableEditing ? <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={beginGridEdit} testID="transfer-table-edit"><Text style={styles.buttonText}>Edit table</Text></TouchableOpacity> : null}
+            {tableEditing ? <>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={cancelGridEdit} disabled={gridSaving} testID="transfer-table-cancel"><Text style={styles.dangerButtonText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={saveGridEdit} disabled={gridSaving} testID="transfer-table-save"><Text style={styles.buttonText}>{gridSaving ? 'Saving…' : 'Save changes'}</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={undoGridChange} disabled={gridSaving || !gridHistory.length} testID="transfer-table-undo"><Text style={styles.buttonText}>↶</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="transfer-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
+            </> : null}
             <TouchableOpacity style={[styles.button, styles.outlineButton, { marginRight: 8 }]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
               <Text style={styles.buttonText}>Paste Info</Text>
             </TouchableOpacity>
@@ -1394,6 +1530,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
         ) : null}
       </View>
+      {gridMessage ? <Text style={styles.helperText}>{gridMessage}</Text> : null}
+      {tableEditing ? <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+        <EditableDataGrid rows={sortedGridRows} columns={gridColumns} disabled={gridSaving} cellErrors={gridErrors} stagedDeleteIds={gridDeleteIds} onCellChange={changeGridCell} onDeleteRow={toggleGridDelete} onUndo={undoGridChange} onRedo={redoGridChange} sortKey={flightSort.key} sortDirection={flightSort.direction} onSort={sortFlightTable} styles={styles} theme={theme} nativeDateTimePicker={NativeDateTimePicker} />
+      </HorizontalTableScroll> : null}
+      {!tableEditing ? <>
       <HorizontalTableScroll
         style={styles.tableScroll}
         contentContainerStyle={styles.tableScrollContent}
@@ -1401,20 +1542,23 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]}>
             {columns.map((col, idx) => (
-              <View
+              <TouchableOpacity
                 key={col.key}
                 style={[
                   styles.cell,
                   { minWidth: col.minWidth ?? 120, flex: 1 },
+                  col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
+                  col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   idx === columns.length - 1 && styles.lastCell,
                 ]}
+                onPress={() => col.key !== 'actions' && sortFlightTable(String(col.key))}
               >
                 <Text style={styles.headerText}>{col.label}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
           {sortedFlights.map((item) => (
-            <View key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`}>
+            <TouchableOpacity key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openFlightDetails(item); }} activeOpacity={0.8}>
               {columns.map((col, idx) => {
                 const isLast = idx === columns.length - 1;
                 if (col.key === 'actions') {
@@ -1425,6 +1569,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         styles.cell,
                         styles.actionCell,
                         { minWidth: col.minWidth ?? 120, flex: 1 },
+                        Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1554,6 +1699,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     style={[
                       styles.cell,
                       { minWidth: col.minWidth ?? 120, flex: 1 },
+                      col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                       isLast && styles.lastCell,
                     ]}
                   >
@@ -1561,7 +1707,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   </View>
                 );
               })}
-            </View>
+            </TouchableOpacity>
           ))}
           {isAddingRow ? (
             <View style={[styles.tableRow, styles.inputRow]}>
@@ -1823,6 +1969,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           ) : null}
         </View>
       </HorizontalTableScroll>
+      </> : null}
       <View style={styles.totalRow}>
         <Text style={styles.flightTitle}>Total flight cost: ${flightsTotal.toFixed(2)}</Text>
       </View>

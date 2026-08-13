@@ -3,13 +3,36 @@ import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import {getStorage} from "firebase-admin/storage";
 import {setGlobalOptions} from "firebase-functions/v2";
-import {onObjectFinalized} from "firebase-functions/v2/storage";
+import { onObjectFinalized } from "firebase-functions/v2/storage";
 import * as logger from "firebase-functions/logger";
+import { createPlaidTransactionsModule } from "@wanderbunnies/plaid-transactions";
+import {
+  WanderBunniesSecretProvider,
+  WanderBunniesEncryptionProvider,
+  WanderBunniesIdentityPolicy
+} from "./plaidIntegration";
 
 initializeApp();
-setGlobalOptions({maxInstances: 10});
+const db = getFirestore();
+setGlobalOptions({ maxInstances: 10 });
 
-const RAW_CSV_PREFIX = (process.env.LOCATION_RAW_CSV_PREFIX ?? "raw-csv/").replace(/^\/+/, "");
+// --- Plaid Transactions Module ---
+
+const plaidModule = createPlaidTransactionsModule({
+  db,
+  secretProvider: new WanderBunniesSecretProvider(),
+  encryptionProvider: new WanderBunniesEncryptionProvider(),
+  identityPolicy: new WanderBunniesIdentityPolicy(),
+  webhookUrl: "https://plaidwebhook-v2k4z7z7za-uc.a.run.app", // Placeholder, will be real URL after deploy
+});
+
+export const plaidCreateLinkToken = plaidModule.createLinkToken;
+export const plaidExchangePublicToken = plaidModule.exchangePublicToken;
+export const plaidRemoveItem = plaidModule.removeItem;
+export const plaidSyncNow = plaidModule.syncNow;
+export const plaidWebhook = plaidModule.plaidWebhook;
+
+// --- Existing Location CSV Parser ---
 
 type SourceType = "country_region" | "city";
 

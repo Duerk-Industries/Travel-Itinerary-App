@@ -67,6 +67,7 @@ We share information with the following service providers, only as needed to run
 | **Sentry** | Crash reports, performance diagnostics | Bug diagnosis |
 | **Google** | Name, email (OAuth only) | "Sign in with Google" |
 | **Unsplash, Google Places** | Destination/place names you search — no personal information | Destination photos and place lookup |
+| **Plaid, Firebase/Google Cloud** | Connected-account transaction data, institution/account identifiers, and encrypted connection metadata — only when you enable the optional import feature | Secure transaction synchronization and expense-import review |
 
 We do not share your information with data brokers or advertisers. We may disclose information if required by law, or to protect the rights, safety, or property of WanderBunnies or our users.
 
@@ -119,3 +120,33 @@ We may update this policy from time to time. If we make material changes, we'll 
 ## 10. Contact Us
 
 Questions about this policy or your data? Contact us at **tristan.duerk@gmail.com**.
+
+---
+
+## 11. Optional financial account connections
+
+This section applies only if you choose to enable WanderBunnies' optional Plaid transaction-import
+feature.
+
+- **Data received.** Through Plaid, we receive transaction dates, amounts, merchant names, Plaid
+  category labels, and the institution/account identifiers needed to keep your connection's data
+  separate. Plaid Link handles bank login and multi-factor authentication; WanderBunnies does not
+  receive or store your bank username, password, or MFA codes.
+- **Purpose and control.** We use this data only to show you recent candidates and let you
+  explicitly select and assign individual transactions to a trip expense. Connecting an account
+  never silently creates an expense. You can disconnect the account from Account Settings at any
+  time.
+- **Sharing and use limits.** We do not sell connected-account data or use it for advertising,
+  profiling, credit decisions, or unrelated analytics. Plaid and Firebase/Google Cloud process it
+  as service providers needed to provide this feature.
+- **Retention and deletion.** Disconnecting an account, an applicable Plaid revocation webhook, or
+  account deletion stops synchronization and queues deletion of the connection and unconfirmed
+  Plaid-derived transaction data. A transaction you explicitly confirmed as a WanderBunnies expense
+  remains subject to the ordinary trip-expense retention rules; removing the bank connection does
+  not silently erase that expense.
+- **Security.** The Plaid access token is encrypted before storage, is never returned to the
+  client, and is accessible only to the automated Functions that perform the authorized sync.
+
+This feature-specific disclosure is intentionally narrow. It does not expand the purposes described
+elsewhere in this policy, and final provider terms, retention periods, and legal requirements must
+be reviewed before production enablement.

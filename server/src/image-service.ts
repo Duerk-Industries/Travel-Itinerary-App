@@ -8,6 +8,7 @@ import {
   fetchUnsplashImageForItinerary,
   fetchUnsplashImageForLocation,
 } from './apis/unsplashCallers';
+import { logError, logInfo } from './logger';
 
 const bucketName = process.env.LOCATION_BUCKET || 'duerk-travel-itinerary-app-location-data';
 const CACHE_TTL_MS =
@@ -79,6 +80,7 @@ export const computePlaceMatchLikelihood = (query: string, candidate: string): n
 const getUnsplashAccessKeyOrThrow = (): string => {
   const accessKey = getEnvValue('UNSPLASH_ACCESS_KEY');
   if (!accessKey) {
+    logInfo('[unsplash] UNSPLASH_ACCESS_KEY is not configured; using the client placeholder fallback');
     throw new Error('Unsplash Access Key is not configured.');
   }
   return accessKey;
@@ -200,6 +202,7 @@ const fetchAndCache = async (cachePath: string, fetcher: () => Promise<string>):
   const cachedUrl = await getCachedImageUrl(cachePath);
   if (cachedUrl) return { url: cachedUrl, cached: true };
   const imageUrl = await fetcher();
+  if (!imageUrl) return { url: '', cached: false };
   const cached = await cacheImage(cachePath, imageUrl);
   if (cached && cached !== imageUrl) {
     gcsSignedUrlCache.set(cachePath, cached, SIGNED_URL_TTL_MS);
@@ -250,17 +253,25 @@ export async function getItineraryImage(params: {
 
   try {
     const unsplashPath = `unsplash/${cacheSuffix}.jpg`;
-    const unsplashQuery = queryText || params.locationName;
     const accessKey = getUnsplashAccessKeyOrThrow();
     const unsplash = await fetchAndCache(unsplashPath, async () => {
-      const imageUrl = await fetchUnsplashImageForItinerary(accessKey, unsplashQuery);
-      if (!imageUrl) {
-        throw new Error('No photos found for itinerary image query.');
+      const destinationQuery = String(params.locationName ?? '').trim();
+      const queries = queryText && queryText.toLowerCase() !== destinationQuery.toLowerCase()
+        ? [queryText, destinationQuery]
+        : [destinationQuery];
+      for (const query of queries) {
+        const imageUrl = await fetchUnsplashImageForItinerary(accessKey, query);
+        if (imageUrl) return imageUrl;
       }
-      return imageUrl;
+      logInfo(`[unsplash] no itinerary photo found for location="${destinationQuery || 'unknown'}"; using placeholder`);
+      return '';
     });
+    if (!unsplash.url) {
+      return { url: '', cached: false, provider: 'placeholder', fallbackUsed: true };
+    }
     return { url: unsplash.url, cached: unsplash.cached, provider: 'unsplash', fallbackUsed: false };
-  } catch {
+  } catch (error) {
+    logError(`[unsplash] itinerary image request failed for location="${String(params.locationName ?? '').trim() || 'unknown'}"`, error);
     return { url: '', cached: false, provider: 'placeholder', fallbackUsed: true };
   }
 }

@@ -12,11 +12,13 @@ export interface BlogRepository {
   getGalleryItemsMeta: typeof postgres.getGalleryItemsMeta;
   updateBlogTextItem: typeof postgres.updateBlogTextItem;
   deleteBlogItem: typeof postgres.deleteBlogItem;
+  setDayCover: typeof postgres.setDayCover;
   reorderBlogItems: typeof postgres.reorderBlogItems;
   getPublicPath: (tripId: string) => Promise<string | null>;
   isBlogPublic: (tripId: string) => Promise<boolean>;
   createModalityItem: (userId: string, tripId: string, kindKey: string, schemaVersion: number, audience: string, payload: any, dayDate: string) => Promise<{ itemId: string; payload: any }>;
   searchBlog: (tripId: string, query: string) => Promise<any[]>;
+  syncItineraryToBlog: typeof postgres.syncItineraryToBlog;
 }
 
 export const blogRepository = (): BlogRepository => getCurrentDbProvider() === 'firebase' ? (firebase as unknown as BlogRepository) : (postgres as unknown as BlogRepository);

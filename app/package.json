@@ -24,12 +24,13 @@
     "minimatch": "10.2.5",
     "brace-expansion": "5.0.8",
     "protobufjs": "7.6.5",
+    "image-size": "file:../packages/image-size-safe",
     "body-parser": "2.3.0",
     "shell-quote": "1.10.0",
     "tar": "7.5.22",
     "uuid": "11.1.1",
     "postcss": "8.5.23",
-    "js-yaml": "4.3.0"
+    "js-yaml": "4.3.1"
   },
   "expo": {
     "install": {
@@ -50,14 +51,17 @@
     "expo-apple-authentication": "~8.0.8",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.10",
+    "expo-dev-client": "~6.0.21",
     "expo-file-system": "~19.0.23",
     "expo-font": "~14.0.12",
     "expo-image-picker": "~17.0.11",
     "expo-linking": "~8.0.12",
+    "expo-share-intent": "^5.1.1",
     "expo-sharing": "~14.0.8",
+    "expo-video": "~3.0.16",
     "expo-web-browser": "~15.0.11",
     "firebase": "^12.13.0",
-    "pdfjs-dist": "^5.4.624",
+    "pdfjs-dist": "^6.2.108",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",

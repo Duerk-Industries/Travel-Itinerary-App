@@ -277,7 +277,7 @@ export function TraitsTab<T extends TraitRecord>({
 
       <View style={[styles.card, styles.traitsSection]}>
         <Text style={styles.sectionTitle}>Itinerary Preferences</Text>
-        <Text style={styles.helperText}>These map directly to prompt-plan `tt/ut` fields used by itinerary generation.</Text>
+        <Text style={styles.helperText}>Tell us how you like to travel and we'll shape AI itineraries around it.</Text>
 
         <Text style={styles.modalLabel}>Pace</Text>
         <View style={styles.traitGrid}>
@@ -395,7 +395,7 @@ export function TraitsTab<T extends TraitRecord>({
           );
         })}
 
-        <Text style={styles.modalLabel}>Interests (`ut.i`)</Text>
+        <Text style={styles.modalLabel}>Interests</Text>
         <View style={styles.traitGrid}>
           {PROMPT_INTEREST_OPTIONS.map((interest) => {
             const selected = promptTraits.ut.i.includes(interest);
@@ -436,7 +436,7 @@ export function TraitsTab<T extends TraitRecord>({
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.modalLabel}>User Overrides (`ut`)</Text>
+        <Text style={styles.modalLabel}>Personal preferences</Text>
         <Text style={styles.helperText}>Optional overrides for pace/mobility, plus early-bird and night-owl flags.</Text>
         <View style={styles.traitGrid}>
           <TouchableOpacity

@@ -3,6 +3,8 @@ import { Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'reac
 import type { AuthFormFields, AuthMode } from '../hooks/useAuthForm';
 import GoogleSignInButton from './GoogleSignInButton';
 import AppleSignInButton from './AppleSignInButton';
+import FormField from './FormField';
+import PasswordField from './PasswordField';
 
 export type AuthFormProps = {
   /** Which form to render — Login (minimal fields) vs Create (full fields). */
@@ -89,40 +91,47 @@ const AuthForm: React.FC<AuthFormProps> = ({
 
     {authMode === 'register' ? (
       <>
-        <TextInput
-          style={styles.input}
-          placeholder="First name"
-          autoComplete="given-name"
-          textContentType="givenName"
-          value={authForm.firstName}
-          onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Last name"
-          autoComplete="family-name"
-          textContentType="familyName"
-          value={authForm.lastName}
-          onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
-        />
+        <FormField label="First name" styles={styles}>
+          <TextInput
+            style={styles.input}
+            placeholder="First name"
+            autoComplete="given-name"
+            textContentType="givenName"
+            value={authForm.firstName}
+            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
+          />
+        </FormField>
+        <FormField label="Last name" styles={styles}>
+          <TextInput
+            style={styles.input}
+            placeholder="Last name"
+            autoComplete="family-name"
+            textContentType="familyName"
+            value={authForm.lastName}
+            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
+          />
+        </FormField>
       </>
     ) : null}
 
-    <TextInput
-      style={styles.input}
-      placeholder="Email or Username"
-      autoCapitalize="none"
-      autoComplete={authMode === 'register' ? 'email' : 'username'}
-      textContentType={authMode === 'register' ? 'emailAddress' : 'username'}
-      inputMode="email"
-      nativeID="email"
-      value={authForm.email}
-      onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
-    />
-    <TextInput
-      style={styles.input}
+    <FormField label={authMode === 'register' ? 'Email' : 'Email or username'} styles={styles}>
+      <TextInput
+        style={styles.input}
+        placeholder="Email or Username"
+        autoCapitalize="none"
+        autoComplete={authMode === 'register' ? 'email' : 'username'}
+        textContentType={authMode === 'register' ? 'emailAddress' : 'username'}
+        inputMode="email"
+        nativeID="email"
+        value={authForm.email}
+        onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
+      />
+    </FormField>
+    <PasswordField
+      label="Password"
+      styles={styles}
+      testID="auth-password"
       placeholder="Password"
-      secureTextEntry
       autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
       textContentType={authMode === 'register' ? 'newPassword' : 'password'}
       nativeID="password"
@@ -130,10 +139,11 @@ const AuthForm: React.FC<AuthFormProps> = ({
       onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
     />
     {authMode === 'register' ? (
-      <TextInput
-        style={styles.input}
+      <PasswordField
+        label="Confirm password"
+        styles={styles}
+        testID="auth-password-confirm"
         placeholder="Confirm password"
-        secureTextEntry
         autoComplete="new-password"
         textContentType="newPassword"
         nativeID="password-confirm"

@@ -21,7 +21,7 @@ const formatMonthWindowKey = (now = new Date()): string => {
 };
 
 const toUsdMicros = (usd: number): number => Math.round(usd * MICROS_PER_USD);
-const TRACKED_OPENAI_MODELS = ['gpt-4o-mini'] as const;
+const TRACKED_OPENAI_MODELS = ['gpt-4o-mini', 'gpt-5.6-luna'] as const;
 
 export const getApiBudgetWindowKey = (now = new Date()): string => formatMonthWindowKey(now);
 

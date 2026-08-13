@@ -266,6 +266,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   return (
     <View>
       <AccountProfileManagement
+        theme={theme}
         backendUrl={backendUrl}
         userToken={userToken}
         activePage={activePage}

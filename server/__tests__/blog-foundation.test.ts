@@ -80,7 +80,12 @@ describe('trip blog foundation', () => {
     let blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
     const linked = blog.body.days[0].items.find((item: any) => item.sourceId === detail.body.id);
     expect(linked.body).toBe('Bring tickets');
-    expect(blog.body.days[0].items.find((item: any) => item.sourceId === location.body.id).body).toContain('Location: Museum of Art');
+    // implementation-plan-ux-remediation.md Initiative D (Tier 1): a linked
+    // 'place' item reads as one written sentence, not a raw "Location: X" data
+    // dump — see buildNarrativeBlogBody in src/blog/narrative.ts.
+    expect(blog.body.days[0].items.find((item: any) => item.sourceId === location.body.id).body).toBe(
+      'Museum of Art is a stop your group may enjoy because North entrance.'
+    );
 
     await request(app)
       .put(`/api/itineraries/details/${detail.body.id}`)

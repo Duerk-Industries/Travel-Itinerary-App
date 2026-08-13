@@ -1,0 +1,3 @@
+ALTER TABLE blog_days ADD COLUMN IF NOT EXISTS cover_asset_id UUID REFERENCES blog_media_assets(id) ON DELETE SET NULL;
+ALTER TABLE blog_days ADD COLUMN IF NOT EXISTS cover_set_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE blog_days ADD COLUMN IF NOT EXISTS cover_set_at TIMESTAMP;

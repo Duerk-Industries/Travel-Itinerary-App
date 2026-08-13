@@ -5,6 +5,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
 import Skeleton from '../components/Skeleton';
 import { useImageSource } from '../utils/imageSource';
+import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 
 type Trip = {
   id: string;
@@ -35,6 +36,10 @@ type HomeTabProps = {
   onDeleteTrip?: (trip: { id: string; name: string }) => void;
   disabledPages?: Set<string>;
   hiddenPages?: Set<string>;
+  // Kill switch for the designed gradient placeholder shown in place of a
+  // missing cover photo (implementation-plan-ux-remediation.md, Initiative B).
+  // Defaults to `true`; `false` reverts to the plain empty fallback tile.
+  featureCoverPhotoFallbackV2?: boolean;
 };
 
 const formatTripDuration = (trip?: Trip | null): string | null => {
@@ -63,6 +68,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   onDeleteTrip,
   disabledPages,
   hiddenPages,
+  featureCoverPhotoFallbackV2 = true,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 680;
@@ -272,8 +278,10 @@ const HomeTab: React.FC<HomeTabProps> = ({
             <Image style={styles.homeHeroImage} source={heroImageSource} resizeMode="cover" />
           ) : heroLoading ? (
             <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
+          ) : featureCoverPhotoFallbackV2 ? (
+            <DestinationPlaceholderCard title={heroTitle} style={styles.homeHeroFallback} testID="home-hero-placeholder" />
           ) : (
-            <View style={styles.homeHeroFallback} />
+            <View style={styles.homeHeroFallback} testID="home-hero-fallback-legacy" />
           )}
           <View style={styles.homeHeroOverlay} />
           <View

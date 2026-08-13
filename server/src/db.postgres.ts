@@ -4626,9 +4626,14 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
 
 export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const p = getPool();
+  const current = await getActivityById(id);
+  if (!current) return null;
+  const membership = await ensureUserInTrip(current.tripId, userId);
+  if (!membership) return null;
   const paidBy = typeof activity.paidBy !== 'undefined' ? JSON.stringify(activity.paidBy ?? []) : undefined;
   const travelerIds =
     typeof activity.travelerIds !== 'undefined' ? JSON.stringify(activity.travelerIds ?? []) : undefined;
+  const hasFreeCancelBy = Object.prototype.hasOwnProperty.call(activity, 'freeCancelBy');
   const { rows } = await p.query<Activity>(
     `
     UPDATE tours
@@ -4641,13 +4646,13 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       start_time = COALESCE($8, start_time),
       duration = COALESCE($9, duration),
       cost = COALESCE($10, cost),
-      free_cancel_by = COALESCE($11, free_cancel_by),
+      free_cancel_by = CASE WHEN $17 THEN $11::date ELSE free_cancel_by END,
       booked_on = COALESCE($12, booked_on),
       reference = COALESCE($13, reference),
       notes = COALESCE($14, notes),
       paid_by = COALESCE($15::jsonb, paid_by),
       traveler_ids = COALESCE($16::jsonb, traveler_ids)
-    WHERE id = $1 AND user_id = $2
+    WHERE id = $1 AND trip_id = $2
     RETURNING
       id,
       user_id as "userId",
@@ -4670,7 +4675,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
     `,
     [
       id,
-      userId,
+      current.tripId,
       activity.status ?? null,
       activity.activityType ?? null,
       activity.date ?? null,
@@ -4685,6 +4690,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       activity.notes ?? null,
       paidBy ?? null,
       travelerIds ?? null,
+      hasFreeCancelBy,
     ]
   );
   if (!rows.length) return null;
@@ -4696,9 +4702,14 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
   };
 };
 
-export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
+export const deleteActivity = async (tourId: string, userId: string): Promise<boolean> => {
   const p = getPool();
-  await p.query(`DELETE FROM tours WHERE id = $1 AND user_id = $2`, [tourId, userId]);
+  const current = await getActivityById(tourId);
+  if (!current) return false;
+  const membership = await ensureUserInTrip(current.tripId, userId);
+  if (!membership) return false;
+  const result = await p.query(`DELETE FROM tours WHERE id = $1 AND trip_id = $2`, [tourId, current.tripId]);
+  return Boolean(result.rowCount);
 };
 
 export const listCarRentals = async (userId: string, tripId?: string): Promise<CarRental[]> => {

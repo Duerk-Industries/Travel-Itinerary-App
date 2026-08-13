@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
@@ -18,7 +18,10 @@ import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/it
 import { applyVoteSummary } from '../services/itemVoteService';
 import type { ActivityType } from '../types';
 import { readDto } from '../utils/dtoParse';
-import { createActivityDto, updateActivityDto, voteOrRatingDto } from './activityDtos';
+import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDto } from './activityDtos';
+import { isFeatureEnabled } from '../services/entitlementService';
+import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'Class',
@@ -48,9 +51,25 @@ const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
 
+const reserveActivityUsage = async (caller: string, res: Response): Promise<boolean> => {
+  try {
+    await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller });
+    return true;
+  } catch (err) {
+    res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
+    return false;
+  }
+};
+
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const tripId = req.query.tripId as string | undefined;
+  try {
+    await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_LIST' });
+  } catch (err) {
+    res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
+    return;
+  }
   const activities = await listActivities(userId, tripId);
   if (tripId) {
     const withVotes = await applyVoteSummary(userId, tripId, 'activity', activities as any[]);
@@ -74,6 +93,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+  if (!(await reserveActivityUsage('ACTIVITIES_ACTIVITY_ROW_WRITE', res))) return;
   const userId = (req as any).user.userId as string;
   const dto = readDto(createActivityDto, req.body, res);
   if (!dto) return;
@@ -128,7 +148,118 @@ router.post('/', async (req, res) => {
   res.status(201).json(activity);
 });
 
+router.patch('/bulk', async (req, res) => {
+  if (!(await isFeatureEnabled('feature_grid_editing'))) {
+    res.status(404).json({ error: 'FEATURE_DISABLED' });
+    return;
+  }
+  const userId = (req as any).user.userId as string;
+  const dto = readDto(bulkActivitiesDto, req.body ?? {}, res);
+  if (!dto) return;
+  try {
+    await reserveActivitiesBulkSaveRateLimit(userId, req.ip || req.socket.remoteAddress);
+  } catch (err) {
+    if (err instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds));
+      res.status(429).json({ error: err.message });
+      return;
+    }
+    res.status(500).json({ error: (err as Error).message });
+    return;
+  }
+  try {
+    // Per-user/IP burst guard first (cheap, identity-scoped) before touching the
+    // shared aggregate budget below.
+    await reserveActivitiesBulkSaveRateLimit(userId, req.ip ?? null);
+    await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_BULK_SAVE' });
+  } catch (err) {
+    if (err instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds));
+      res.status(429).json({ error: err.message });
+      return;
+    }
+    res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
+    return;
+  }
+
+  const updates: Array<{ id: string; ok: boolean; error?: string; activity?: unknown }> = [];
+  const deletes: Array<{ id: string; ok: boolean; error?: string }> = [];
+
+  for (const update of dto.updates) {
+    try {
+      await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_ACTIVITY_ROW_WRITE' });
+      const fields = update.fields;
+      const normalizedPaidBy = Array.isArray(fields.paidBy)
+        ? (fields.paidBy.length ? fields.paidBy.map((p) => String(p)) : undefined)
+        : undefined;
+      let finalActivityType: ActivityType | undefined;
+      if (fields.activityType != null) {
+        const normalizedActivityType = normalizeActivityType(fields.activityType);
+        if (!normalizedActivityType) throw new Error('Invalid activityType');
+        finalActivityType = normalizedActivityType;
+      }
+      const normalizedTravelers = Array.isArray(fields.travelerIds)
+        ? fields.travelerIds.map((id) => String(id)).filter(Boolean)
+        : undefined;
+      const updated = await updateActivity(update.id, userId, {
+        activityType: finalActivityType,
+        status: fields.status == null ? undefined : normalizeItineraryStatus(String(fields.status)),
+        date: fields.date ?? undefined,
+        name: fields.name ?? undefined,
+        startLocation: fields.startLocation ?? undefined,
+        startTime: fields.startTime ?? undefined,
+        duration: fields.duration ?? undefined,
+        cost: fields.cost == null ? undefined : Number(fields.cost),
+        freeCancelBy: Object.prototype.hasOwnProperty.call(fields, 'freeCancelBy') ? fields.freeCancelBy : undefined,
+        bookedOn: fields.bookedOn ?? undefined,
+        reference: fields.reference ?? undefined,
+        notes: fields.notes ?? undefined,
+        paidBy: normalizedPaidBy,
+        travelerIds: normalizedTravelers,
+      });
+      if (!updated) throw new Error('Activity not found or not authorized');
+      const membership = await ensureUserInTrip(updated.tripId, userId);
+      if (membership) {
+        const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
+        const defaultTravelers = members.map((m) => String((m as any).id));
+        const forIds = normalizedTravelers && normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
+        await upsertExpenseForSource({
+          userId,
+          tripId: updated.tripId,
+          groupId: membership.groupId,
+          expenseDate: updated.date,
+          category: 'Activities',
+          amount: Number(updated.cost) || 0,
+          currency: undefined,
+          payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+          forIds,
+          sourceType: 'activity',
+          sourceId: updated.id,
+        });
+      }
+      updates.push({ id: update.id, ok: true, activity: updated });
+    } catch (err) {
+      updates.push({ id: update.id, ok: false, error: (err as Error).message || 'Unable to update activity' });
+    }
+  }
+
+  for (const id of dto.deletes) {
+    try {
+      await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_ACTIVITY_ROW_DELETE' });
+      const deleted = await deleteActivity(id, userId);
+      if (!deleted) throw new Error('Activity not found or not authorized');
+      await deleteExpenseForSource('activity', id, userId);
+      deletes.push({ id, ok: true });
+    } catch (err) {
+      deletes.push({ id, ok: false, error: (err as Error).message || 'Unable to delete activity' });
+    }
+  }
+
+  res.json({ updates, deletes });
+});
+
 router.put('/:id', async (req, res) => {
+  if (!(await reserveActivityUsage('ACTIVITIES_ACTIVITY_ROW_WRITE', res))) return;
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
   const dto = readDto(updateActivityDto, req.body ?? {}, res);
@@ -159,7 +290,7 @@ router.put('/:id', async (req, res) => {
     startTime: dto.startTime ?? undefined,
     duration: dto.duration ?? undefined,
     cost: dto.cost == null ? undefined : Number(dto.cost),
-    freeCancelBy: dto.freeCancelBy ?? undefined,
+    freeCancelBy: Object.prototype.hasOwnProperty.call(dto, 'freeCancelBy') ? dto.freeCancelBy : undefined,
     bookedOn: dto.bookedOn ?? undefined,
     reference: dto.reference ?? undefined,
     notes: dto.notes ?? undefined,
@@ -194,6 +325,7 @@ router.put('/:id', async (req, res) => {
 
 // Allow partial updates via PATCH (used by client/tests for payer updates).
 router.patch('/:id', async (req, res) => {
+  if (!(await reserveActivityUsage('ACTIVITIES_ACTIVITY_ROW_WRITE', res))) return;
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
   const dto = readDto(updateActivityDto, req.body ?? {}, res);
@@ -258,8 +390,13 @@ router.patch('/:id', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
+  if (!(await reserveActivityUsage('ACTIVITIES_ACTIVITY_ROW_DELETE', res))) return;
   const userId = (req as any).user.userId as string;
-  await deleteActivity(req.params.id, userId);
+  const deleted = await deleteActivity(req.params.id, userId);
+  if (!deleted) {
+    res.status(404).json({ error: 'Activity not found' });
+    return;
+  }
   await deleteExpenseForSource('activity', req.params.id, userId);
   res.status(204).send();
 });

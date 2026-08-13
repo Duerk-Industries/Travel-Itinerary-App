@@ -16,6 +16,7 @@ import {
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Image } from 'react-native';
 import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
 
@@ -341,6 +342,25 @@ describe('Overview UI (nested itinerary)', () => {
     await findByTestId('overview-day-card-1');
   });
 
+  // implementation-plan-ux-remediation.md Initiative B: a day hero card with
+  // no resolved image falls back to the designed placeholder (flag on) or
+  // the plain empty tile it replaced (flag off).
+  test('falls back to the designed cover-photo placeholder when no day image resolves', async () => {
+    const { findByTestId, queryByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} featureCoverPhotoFallbackV2 />
+    );
+    expect(await findByTestId('overview-day-card-1-placeholder')).toBeTruthy();
+    expect(queryByTestId('overview-day-card-1-fallback-legacy')).toBeNull();
+  });
+
+  test('reverts to the plain fallback tile when featureCoverPhotoFallbackV2 is disabled', async () => {
+    const { findByTestId, queryByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} featureCoverPhotoFallbackV2={false} />
+    );
+    expect(await findByTestId('overview-day-card-1-fallback-legacy')).toBeTruthy();
+    expect(queryByTestId('overview-day-card-1-placeholder')).toBeNull();
+  });
+
   test('shows the trip description on the overview page', async () => {
     const trip = {
       ...baseProps.trip,
@@ -350,6 +370,41 @@ describe('Overview UI (nested itinerary)', () => {
     const { findByText } = await renderOverview(<OverviewTab {...baseProps} trip={trip} />);
 
     expect(await findByText('Hiking trip to Yosemite National Park')).toBeTruthy();
+  });
+
+  test('uses an explicitly selected blog photo as the day hero image', async () => {
+    const coverUrl = 'https://storage.example.com/blog-cover.jpg';
+    fetchMock.mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.includes('/api/trips/trip1/blog')) {
+        return {
+          ok: true,
+          json: async () => ({
+            days: [
+              {
+                localDate: '2026-01-29',
+                coverItemId: 'asset-1',
+                coverIsExplicit: true,
+                items: [
+                  {
+                    kindKey: 'core.gallery',
+                    assets: [{ id: 'asset-1', assetId: 'asset-1', mediaKind: 'photo', primaryUrl: coverUrl }],
+                  },
+                ],
+              },
+            ],
+          }),
+        } as any;
+      }
+      return { ok: true, json: async () => [] } as any;
+    });
+
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    const hero = await findByTestId('overview-day-card-1');
+    await waitFor(async () => {
+      const images = hero.findAllByType(Image);
+      expect(images.some((image: any) => image.props.source?.uri === coverUrl)).toBe(true);
+    });
   });
 
   test('keeps the full trip range even when events only exist on the first day', async () => {
@@ -489,6 +544,72 @@ describe('Overview UI (nested itinerary)', () => {
     fireEvent.press(await findByTestId('overview-day-card-1'));
     expect(await findByTestId('day-details-itinerary-items')).toBeTruthy();
     expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
+  });
+
+  test('day with no items shows all four "+ Add X" buttons grouped in one row', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByTestId('day-details-add-transfer-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-rental-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-activity-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-accommodation-button')).toBeTruthy();
+  });
+
+  test('a section with items gets its own inline add button and drops out of the bottom row', async () => {
+    const flights = [
+      {
+        id: 'flight-1',
+        passenger_name: 'Traveler',
+        passenger_ids: [],
+        trip_id: 'trip1',
+        departure_date: '2026-01-29',
+        departure_location: 'BOS',
+        departure_airport_code: 'BOS',
+        departure_time: '08:00',
+        arrival_date: '2026-01-29',
+        arrival_location: 'SFO',
+        arrival_airport_code: 'SFO',
+        arrival_time: '11:00',
+        cost: 0,
+        carrier: 'Flight',
+        flight_number: '',
+        booking_reference: '',
+      },
+    ];
+    const { findByTestId, findAllByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} flights={flights as any} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+
+    // Exactly one "+ Add transfer" button — inline after the transfer section, never
+    // duplicated into the bottom row.
+    expect(await findAllByTestId('day-details-add-transfer-button')).toHaveLength(1);
+
+    // The still-empty sections keep their buttons in the bottom row.
+    expect(await findByTestId('day-details-add-rental-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-activity-button')).toBeTruthy();
+    expect(await findByTestId('day-details-add-accommodation-button')).toBeTruthy();
+  });
+
+  test('+ Add transfer opens the same flight editor used on the Transfers tab, seeded with the viewed day', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-transfer-button'));
+    expect(await findByTestId('flight-modal-departure-location')).toBeTruthy();
+  });
+
+  test('+ Add rental car opens a rental dialog seeded with the viewed day', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-rental-button'));
+    expect(await findByTestId('car-rental-form-modal')).toBeTruthy();
+  });
+
+  test('+ Add accommodation opens the same lodging dialog used on the Lodging tab', async () => {
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-accommodation-button'));
+    expect(await findByText('Add Lodging')).toBeTruthy();
   });
 
   test('day details sorts activities by time, keeps them out of the narrative, and opens one activity detail', async () => {

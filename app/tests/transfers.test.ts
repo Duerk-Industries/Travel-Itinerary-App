@@ -1,6 +1,12 @@
 /// <reference types="node" />
 import { describe, expect, test } from '@jest/globals';
-import { buildFlightPayloadForCreate, createInitialFlightCreateDraft, filterAirportOptionLabels, normalizeFlightFromApi } from '../tabs/transfers';
+import {
+  buildFlightPayloadForCreate,
+  createInitialFlightCreateDraft,
+  filterAirportOptionLabels,
+  getFlightLocationForEdit,
+  normalizeFlightFromApi,
+} from '../tabs/transfers';
 
 describe('Flights helpers', () => {
   test('requires an active trip id', () => {
@@ -158,6 +164,12 @@ describe('Flights helpers', () => {
     ];
     expect(filterAirportOptionLabels(labels, 'buch')).toEqual(['Bucharest (OTP)']);
     expect(filterAirportOptionLabels(labels, 'bg')).toEqual(['Milan Bergamo (BGY)']);
+  });
+
+  test('uses an airport label or code when a legacy edit record lacks a location', () => {
+    expect(getFlightLocationForEdit('', 'New York (JFK)', 'JFK')).toBe('New York (JFK)');
+    expect(getFlightLocationForEdit('', '', 'JFK')).toBe('JFK');
+    expect(getFlightLocationForEdit('', '', '')).toBe('');
   });
 });
 

@@ -15,6 +15,12 @@ type ResolveBackendUrlParams = {
 
 const isLoopbackHostname = (value: string): boolean => /^(localhost|127\.0\.0\.1|::1)$/i.test(value.trim());
 
+// Node's local server listens on IPv4 (0.0.0.0). Prefer the explicit IPv4
+// loopback address in web development because some Windows browsers resolve
+// `localhost` to ::1 first, where the server is not listening.
+const getWebLoopbackHostname = (value: string): string =>
+  /^(localhost|::1)$/i.test(value.trim()) ? '127.0.0.1' : value;
+
 const stripTrailingSlash = (value: string): string => value.replace(/\/$/, '');
 
 const normalizeBackendUrl = (raw: string, defaultProtocol: 'http' | 'https'): string => {
@@ -38,7 +44,7 @@ const remapLoopbackHostname = (configuredBackend: string, browserHostname: strin
   if (!parsed || !isLoopbackHostname(parsed.hostname) || !isLoopbackHostname(browserHostname)) {
     return null;
   }
-  parsed.hostname = browserHostname;
+  parsed.hostname = getWebLoopbackHostname(browserHostname);
   return stripTrailingSlash(parsed.toString());
 };
 
@@ -75,7 +81,7 @@ export const resolveBackendUrl = ({
       if (remappedLoopbackBackend) {
         return remappedLoopbackBackend;
       }
-      return `${protocol}//${hostname}:4000`;
+      return `${protocol}//${getWebLoopbackHostname(hostname)}:4000`;
     }
 
     if (configuredBackend) {
@@ -93,7 +99,7 @@ export const resolveBackendUrl = ({
     if (configuredBackend) {
       return normalizeBackendUrl(configuredBackend, 'http');
     }
-    return 'http://localhost:4000';
+    return 'http://127.0.0.1:4000';
   }
 
   // Native: if a loopback backend was configured (typical local dev setup

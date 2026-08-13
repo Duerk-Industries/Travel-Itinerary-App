@@ -82,8 +82,12 @@ router.get('/:tripId/blog', async (req, res) => {
     // `id` makes every client action against a photo/video item target a row that doesn't exist
     // there, silently failing (404/409) no matter what the client tries.
     // Assets whose parent blog_items row is a core.gallery are grouped into one item with an
-    // `assets` array; everything else (today's standalone media.photo/media.video items) keeps
-    // the existing one-asset-per-item shape for backward compatibility with pre-gallery data.
+    // `assets` array; everything else (standalone media.photo/media.video items) keeps the
+    // one-asset-per-item shape. The client flattens both shapes back into one combined per-day
+    // set (see DayMediaGallery/DayMediaLightbox usage in tripBlog.tsx) — this grouping exists so
+    // a batch of photos uploaded together stays associated as one unit (shared audience/version,
+    // deletable as a whole via DELETE /blog/items/:itemId) without preventing the day view from
+    // treating every traveler's media as one browsable collection.
     const galleryAssetsByItem = new Map<string, any[]>();
     const mediaItems: any[] = [];
     for (const asset of withUrls as any[]) {
@@ -110,9 +114,38 @@ router.get('/:tripId/blog', async (req, res) => {
         });
       }
     }
+    // Cover resolution below needs one flat entry per *asset* (matching what the client's own
+    // flattening of core.gallery items produces — see the allMedia flatMap in tripBlog.tsx), not
+    // one entry per blog_item — otherwise a traveler picking a gallery photo as the day's cover
+    // could never match here, since only the gallery wrapper item is pushed into day.items and it
+    // has no assetId of its own (only its nested assets do).
+    const mediaByDay = new Map<string, any[]>();
     for (const item of mediaItems) {
       const day = blog.days.find((candidate) => candidate.localDate === item.dayDate);
-      if (day) (day.items as any[]).push(item);
+      if (!day) continue;
+      (day.items as any[]).push(item);
+      const flatEntries = item.kindKey === 'core.gallery' ? (item.assets ?? []) : [item];
+      mediaByDay.set(day.localDate, [...(mediaByDay.get(day.localDate) ?? []), ...flatEntries]);
+    }
+    // Resolve each day's cover: prefer the traveler's explicit pick (if that asset is still
+    // present — a hidden/deleted asset silently falls through to the fallback below, same as an
+    // unset cover) else the most-recently-uploaded media item for that day, so a day with photos
+    // always has *something* to show as its default even before anyone picks one.
+    for (const day of blog.days) {
+      const dayMedia = mediaByDay.get(day.localDate) ?? [];
+      const explicit = (day as any).coverAssetId ? dayMedia.find((item) => item.assetId === (day as any).coverAssetId) : null;
+      if (explicit) {
+        (day as any).coverItemId = explicit.id;
+        (day as any).coverIsExplicit = true;
+      } else if (dayMedia.length) {
+        const mostRecent = [...dayMedia].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())[0];
+        (day as any).coverItemId = mostRecent.id;
+        (day as any).coverIsExplicit = false;
+      } else {
+        (day as any).coverItemId = null;
+        (day as any).coverIsExplicit = false;
+      }
+      delete (day as any).coverAssetId;
     }
     // Return the canonical public path only after publication has completed. The alias is
     // generated during the publication/consent flow, so deriving it from the display name in
@@ -210,6 +243,20 @@ router.delete('/:tripId/blog/items/:itemId', async (req, res) => {
       res.status(409).json({ error: 'The blog item changed or was already deleted' });
       return;
     }
+    res.status(204).end();
+  } catch (err) {
+    errorResponse(res, err);
+  }
+});
+
+router.post('/:tripId/blog/days/:dayDate/cover', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog'))) {
+      res.status(404).json({ error: 'Trip blog is not enabled' });
+      return;
+    }
+    const assetId = req.body?.assetId == null ? null : String(req.body.assetId);
+    await blogRepository().setDayCover(userIdOf(req), req.params.tripId, req.params.dayDate, assetId);
     res.status(204).end();
   } catch (err) {
     errorResponse(res, err);

@@ -32,6 +32,10 @@ const galleryAsset = (id: string, position: number) => ({
   position, dayDate: '2026-09-01', caption: null, altText: null,
 });
 
+// A core.gallery blog_item groups a batch of uploaded assets — see blogRoutes.ts. The client
+// flattens `assets` back out into the same combined per-day set standalone media.* items use
+// (DayMediaGallery/DayMediaLightbox), so a traveler sees one browsable day gallery regardless of
+// which upload flow produced any given photo.
 const galleryItem = {
   id: 'gallery-item-1', tripId, kindKey: 'core.gallery', schemaVersion: 1, audience: 'public',
   sortKey: 'gallery-1', authorUserId: 'user-1', lastEditorUserId: 'user-1', version: 1,
@@ -42,7 +46,7 @@ const galleryItem = {
 const blogBody = {
   id: 'blog-1', tripId, title: 'Test Blog', subtitle: null, introduction: null, contentRevision: 1,
   visibilityState: 'private', visibilityEpoch: 0, publicPath: null,
-  days: [{ id: 'day-1', tripId, localDate: '2026-09-01', headline: null, summary: null, items: [galleryItem], activities: [] }],
+  days: [{ id: 'day-1', tripId, localDate: '2026-09-01', headline: null, summary: null, coverItemId: 'asset-1', coverIsExplicit: false, items: [galleryItem], activities: [] }],
 };
 
 describe('TripBlogTab gallery rendering', () => {
@@ -64,42 +68,48 @@ describe('TripBlogTab gallery rendering', () => {
     <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} styles={styles} theme={{ colors: {} }} readOnly={false} />
   );
 
-  it('renders a gallery item as a grid of thumbnails, not one post per photo', async () => {
-    const { findByTestId } = renderTab();
-    await findByTestId('gallery-thumb-asset-1');
-    await findByTestId('gallery-thumb-asset-2');
-    await findByTestId('gallery-thumb-asset-3');
+  it('flattens a gallery item into the combined day view: one photo shown by default, not a grid', async () => {
+    const { findByTestId, queryByTestId } = renderTab();
+    // Default view shows exactly one photo (the day's cover) plus prev/next — the gallery's three
+    // assets are combined into this one browsable set, not rendered as three separate posts.
+    await findByTestId('day-media-open-lightbox');
+    expect(queryByTestId('day-media-prev')).toBeTruthy();
+    expect(queryByTestId('day-media-next')).toBeTruthy();
   });
 
-  it('opens the lightbox on tap and steps through photos with Prev/Next', async () => {
-    const { findByTestId, getByTestId, queryByTestId } = renderTab();
-    await findByTestId('gallery-thumb-asset-1');
+  it('opens the tiled lightbox on tap and shows every gallery asset as its own tile', async () => {
+    const { findByTestId, getByTestId } = renderTab();
+    await findByTestId('day-media-open-lightbox');
+    fireEvent.press(getByTestId('day-media-open-lightbox'));
 
-    expect(queryByTestId('gallery-prev')).toBeNull();
-    fireEvent.press(getByTestId('gallery-thumb-asset-1'));
-    await waitFor(() => expect(getByTestId('gallery-next')).toBeTruthy());
-
-    fireEvent.press(getByTestId('gallery-next'));
-    fireEvent.press(getByTestId('gallery-lightbox-close'));
-    await waitFor(() => expect(queryByTestId('gallery-prev')).toBeNull());
+    await waitFor(() => expect(getByTestId('day-media-tile-asset-1')).toBeTruthy());
+    expect(getByTestId('day-media-tile-asset-2')).toBeTruthy();
+    expect(getByTestId('day-media-tile-asset-3')).toBeTruthy();
   });
 
-  it('removes a single photo via the per-thumbnail control and reloads the blog', async () => {
+  it('removes a single gallery photo via the per-asset endpoint, not the whole-gallery endpoint', async () => {
     const { findByText, findByTestId } = renderTab();
-    const initialBlogGetCalls = () => fetchMock.mock.calls.filter(([reqUrl, reqInit]: [string, RequestInit?]) =>
+    const blogGetCalls = () => fetchMock.mock.calls.filter(([reqUrl, reqInit]: [string, RequestInit?]) =>
       String(reqUrl).includes(`/api/trips/${tripId}/blog?`) && (reqInit?.method ?? 'GET') === 'GET').length;
 
-    // The remove overlay only renders in edit mode.
+    // The remove control only renders in edit mode.
     fireEvent.press(await findByText('Edit blog'));
-    const callsBeforeRemove = initialBlogGetCalls();
-    const removeButton = await findByTestId('gallery-remove-asset-1');
+    const callsBeforeRemove = blogGetCalls();
+    // Default view opens on the day's cover, which is asset-1.
+    const removeButton = await findByTestId('day-media-remove');
     fireEvent.press(removeButton);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
       `${backendUrl}/api/trips/${tripId}/blog/media/asset-1`,
       expect.objectContaining({ method: 'DELETE' }),
     ));
+    // A gallery-member removal must never hit the whole-item endpoint (that would delete the
+    // entire gallery, taking the other two photos with it).
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      `${backendUrl}/api/trips/${tripId}/blog/items/gallery-item-1`,
+      expect.anything(),
+    );
     // Removal triggers a fresh GET /blog to pick up the server's post-removal state.
-    await waitFor(() => expect(initialBlogGetCalls()).toBeGreaterThan(callsBeforeRemove));
+    await waitFor(() => expect(blogGetCalls()).toBeGreaterThan(callsBeforeRemove));
   });
 });
