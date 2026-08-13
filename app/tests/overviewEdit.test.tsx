@@ -143,7 +143,7 @@ describe('Overview edit controls', () => {
     });
 
     const patchCalls = (global as any).fetch.mock.calls.filter((call: any[]) =>
-      String(call[0]).includes('/api/trips/')
+      String(call[0]).includes('/api/trips/') && call[1]?.method === 'PATCH'
     );
     expect(patchCalls.length).toBe(1);
     const patchBody = JSON.parse(patchCalls[0][1].body);
@@ -171,7 +171,7 @@ describe('Overview edit controls', () => {
     });
 
     const patchCalls = (global as any).fetch.mock.calls.filter((call: any[]) =>
-      String(call[0]).includes('/api/trips/')
+      String(call[0]).includes('/api/trips/') && call[1]?.method === 'PATCH'
     );
     expect(patchCalls.length).toBe(0);
   });
