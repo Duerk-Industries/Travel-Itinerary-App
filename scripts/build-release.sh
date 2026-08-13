@@ -62,11 +62,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
   mkdir -p "$REPO_ROOT/server/public"
   cp -r "$FRONTEND_DIR/." "$REPO_ROOT/server/public/"
   IMAGE_TAG="${ARTIFACT_REGISTRY_REPO}/backend:${SHORT_SHA}"
-  # --suppress-logs: the CI service account isn't Viewer/Owner on the
-  # project, so gcloud's log-streaming tail fails even when the build
-  # itself succeeds (confirmed via `gcloud builds describe`). Still waits
-  # for the build and exits non-zero on real failure -- just doesn't tail.
-  gcloud builds submit "$REPO_ROOT/server" --tag "$IMAGE_TAG" --suppress-logs
+  submit_cloud_build "$REPO_ROOT/server" "$IMAGE_TAG"
   IMAGE_DIGEST="$(gcloud container images describe "$IMAGE_TAG" --format='value(image_summary.digest)')"
   IMAGE_DIGEST="${IMAGE_TAG%@*}@${IMAGE_DIGEST}"
 fi

@@ -76,12 +76,7 @@ if (-not $DryRun) {
   Copy-Item -Path (Join-Path $frontendDir '*') -Destination $serverPublicDir -Recurse -Force
 
   $imageTag = "$($env:ARTIFACT_REGISTRY_REPO)/backend:$shortSha"
-  # --suppress-logs: the CI service account isn't Viewer/Owner on the
-  # project, so gcloud's log-streaming tail fails even when the build
-  # itself succeeds (confirmed via `gcloud builds describe`). Still waits
-  # for the build and exits non-zero on real failure -- just doesn't tail.
-  & gcloud builds submit (Join-Path $Script:RepoRoot 'server') --tag $imageTag --suppress-logs
-  if ($LASTEXITCODE -ne 0) { Fail 'gcloud builds submit failed' }
+  Submit-CloudBuild (Join-Path $Script:RepoRoot 'server') $imageTag
   $digestOnly = (& gcloud container images describe $imageTag --format='value(image_summary.digest)').Trim()
   if ($LASTEXITCODE -ne 0) { Fail 'gcloud container images describe failed' }
   $imageDigest = "$($imageTag.Split('@')[0])@$digestOnly"

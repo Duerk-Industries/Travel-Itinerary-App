@@ -83,6 +83,33 @@ cloud_run_secret_arg() {
   printf '^%s^%s' "$delimiter" "$(IFS="$delimiter"; echo "${pairs[*]}")"
 }
 
+# Submits a Cloud Build and waits for it via `builds describe` polling
+# instead of `gcloud builds submit`'s own blocking wait, which tails Cloud
+# Logging to detect completion and hard-fails ("This tool can only stream
+# logs if you are Viewer/Owner...") for service accounts that can write
+# build logs (cloudbuild.builds.editor/builder) but can't read them back
+# (no logging.viewer) -- true for this repo's CI deployer account. Polling
+# `builds describe` instead uses the Cloud Build API's own `builds.get`,
+# which that role already grants, so it works regardless of Logging
+# permissions and still fails loudly on a real build failure.
+submit_cloud_build() {
+  local source_dir="$1"
+  local image_tag="$2"
+  local build_id status
+  build_id="$(gcloud builds submit "$source_dir" --tag "$image_tag" --async --format='value(id)')" \
+    || fail "Failed to enqueue Cloud Build for $image_tag"
+  echo "Submitted Cloud Build $build_id for $image_tag; polling for completion..." >&2
+  while true; do
+    status="$(gcloud builds describe "$build_id" --format='value(status)')" \
+      || fail "Failed to poll Cloud Build $build_id status"
+    case "$status" in
+      SUCCESS) break ;;
+      QUEUED|WORKING|PENDING) sleep 5 ;;
+      *) fail "Cloud Build $build_id ended with status $status" ;;
+    esac
+  done
+}
+
 sha256_file() {
   local file="$1"
   if command -v sha256sum >/dev/null 2>&1; then

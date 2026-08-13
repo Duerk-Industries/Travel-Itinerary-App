@@ -101,6 +101,28 @@ function Get-CloudRunSecretDeployArgs([string]$SecretsFile = '') {
   }
 }
 
+# Submits a Cloud Build and waits for it via `builds describe` polling
+# instead of `gcloud builds submit`'s own blocking wait, which tails Cloud
+# Logging to detect completion and hard-fails ("This tool can only stream
+# logs if you are Viewer/Owner...") for service accounts that can write
+# build logs (cloudbuild.builds.editor/builder) but can't read them back
+# (no logging.viewer) -- true for this repo's CI deployer account. Polling
+# `builds describe` instead uses the Cloud Build API's own `builds.get`,
+# which that role already grants, so it works regardless of Logging
+# permissions and still fails loudly on a real build failure.
+function Submit-CloudBuild([string]$SourceDir, [string]$ImageTag) {
+  $buildId = (& gcloud builds submit $SourceDir --tag $ImageTag --async --format='value(id)').Trim()
+  if ($LASTEXITCODE -ne 0 -or -not $buildId) { Fail "Failed to enqueue Cloud Build for $ImageTag" }
+  Write-Host "Submitted Cloud Build $buildId for ${ImageTag}; polling for completion..."
+  while ($true) {
+    $status = (& gcloud builds describe $buildId --format='value(status)').Trim()
+    if ($LASTEXITCODE -ne 0) { Fail "Failed to poll Cloud Build $buildId status" }
+    if ($status -eq 'SUCCESS') { break }
+    if ($status -in @('QUEUED', 'WORKING', 'PENDING')) { Start-Sleep -Seconds 5; continue }
+    Fail "Cloud Build $buildId ended with status $status"
+  }
+}
+
 function Get-Sha256File([string]$FilePath) {
   return (Get-FileHash -LiteralPath $FilePath -Algorithm SHA256).Hash.ToLowerInvariant()
 }
