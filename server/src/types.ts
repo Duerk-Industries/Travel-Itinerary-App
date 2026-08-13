@@ -443,6 +443,15 @@ export type PackingListV2DisplayGroup = {
   items: Array<PackingListItem & { normalizedLabel?: string; packedBy?: string[]; personalOwnerIds?: string[] }>;
 };
 
+export type PackingListV2Source = {
+  key: string;
+  label: string;
+  kind: 'preset' | 'personal';
+  active: boolean;
+  ownerMemberId?: string | null;
+  presetKey?: string | null;
+};
+
 export type PackingListV2Trip = {
   groups: PackingListV2DisplayGroup[];
   travelers: PackingListTraveler[];
@@ -450,6 +459,8 @@ export type PackingListV2Trip = {
   currentTravelerId?: string | null;
   items?: Array<PackingListItem & { packedBy?: string[] }>;
   tripPresetKeys?: string[];
+  sources?: PackingListV2Source[];
+  manualItems?: PackingListItem[];
 };
 
 export interface LocationRecord {

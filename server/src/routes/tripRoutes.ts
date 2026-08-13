@@ -33,6 +33,7 @@ import {
   getPackingListV2,
   addTripPackingPresetV2,
   removeTripPackingPresetV2,
+  setTripPackingSourceV2,
   replaceTripPackingListV2,
   addTripPackingItemV2,
   removeTripPackingItemV2,
@@ -419,6 +420,26 @@ router.delete('/:id/packing-list/presets/:presetKey', async (req, res) => {
       return;
     }
     res.json(await removeTripPackingPresetV2(userId, req.params.id, req.params.presetKey));
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.patch('/:id/packing-list/sources', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    const kind = req.body?.kind === 'personal' ? 'personal' : req.body?.kind === 'preset' ? 'preset' : null;
+    const key = String(req.body?.key ?? '').trim();
+    if (!kind || !key || typeof req.body?.enabled !== 'boolean') {
+      res.status(400).json({ error: 'A packing source kind, key, and enabled value are required' });
+      return;
+    }
+    res.json(await setTripPackingSourceV2(userId, req.params.id, kind, key, req.body.enabled));
   } catch (err) {
     const message = (err as Error).message;
     res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });

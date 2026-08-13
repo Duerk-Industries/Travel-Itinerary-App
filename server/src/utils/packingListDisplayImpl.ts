@@ -51,6 +51,7 @@ export const buildPackingListDisplayGroups = (inputGroups: PackingDisplayInputGr
   const shared: PackingDisplayInputGroup = { key: 'multiple_travelers', label: 'Multiple Travelers', kind: 'multiple_travelers', order: 0, items: [] };
   const seen = new Set<string>();
   const result: PackingDisplayGroup[] = [];
+  const categoryGroups = new Map<string, PackingDisplayGroup>();
   for (const group of groups) {
     const remaining: PackingDisplayItem[] = [];
     for (const item of group.items) {
@@ -59,13 +60,30 @@ export const buildPackingListDisplayGroups = (inputGroups: PackingDisplayInputGr
       seen.add(normalizedLabel);
       const identityItem = { ...item, normalizedLabel };
       if (group.kind === 'personal' && (personalOwners.get(normalizedLabel)?.size ?? 0) >= 2) shared.items.push(identityItem);
-      else remaining.push(identityItem);
+      else remaining.push({ ...identityItem, category: item.category?.trim() || group.label });
     }
-    if (remaining.length) result.push({ ...group, items: remaining });
+    for (const item of remaining) {
+      const category = item.category.trim() || group.label;
+      const categoryKey = category.toLocaleLowerCase();
+      const existing = categoryGroups.get(categoryKey);
+      if (existing) existing.items.push({ ...item, category: existing.label });
+      else {
+        const categoryGroup = { ...group, label: category, items: [{ ...item, category }] };
+        categoryGroups.set(categoryKey, categoryGroup);
+        result.push(categoryGroup);
+      }
+    }
   }
-  if (shared.items.length) {
-    const firstPersonalIndex = result.findIndex((group) => group.kind === 'personal');
-    result.splice(firstPersonalIndex < 0 ? result.length : firstPersonalIndex, 0, shared);
+  for (const item of shared.items) {
+    const category = item.category?.trim() || shared.label;
+    const categoryKey = category.toLocaleLowerCase();
+    const existing = categoryGroups.get(categoryKey);
+    if (existing) existing.items.push({ ...item, category: existing.label });
+    else {
+      const categoryGroup = { ...shared, key: 'multiple_travelers', label: category, items: [{ ...item, category }] };
+      categoryGroups.set(categoryKey, categoryGroup);
+      result.push(categoryGroup);
+    }
   }
   return result;
 };

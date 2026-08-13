@@ -216,6 +216,38 @@ router.put('/packing-list', async (req, res) => {
   }
 });
 
+router.delete('/packing-list/:itemId', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const itemId = String(req.params.itemId ?? '').trim();
+  try {
+    if (await isFeatureEnabled('packing_lists_v2')) {
+      const [preferences, items] = await Promise.all([
+        getUserPackingPreferencesV2(userId),
+        getUserPackingListV2(userId),
+      ]);
+      const nextItems = items.filter((item) => item.id !== itemId);
+      if (nextItems.length === items.length) {
+        res.status(404).json({ error: 'Packing item not found' });
+        return;
+      }
+      const result = await replaceUserPackingPreferencesV2(userId, preferences.presetKeys, nextItems);
+      reconcileUserPackingListsInBackground(userId);
+      res.json(result);
+      return;
+    }
+
+    const items = await getUserPackingList(userId);
+    const nextItems = items.filter((item: any) => item.id !== itemId);
+    if (nextItems.length === items.length) {
+      res.status(404).json({ error: 'Packing item not found' });
+      return;
+    }
+    res.json({ items: await replaceUserPackingList(userId, nextItems) });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 router.get('/export', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const profile = await getWebUserProfile(userId);

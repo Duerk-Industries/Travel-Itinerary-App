@@ -146,6 +146,8 @@ export const addTripPackingPresetV2 = async (...args: Parameters<ReturnType<type
   adapter().addTripPackingPresetV2(...args);
 export const removeTripPackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['removeTripPackingPresetV2']>) =>
   adapter().removeTripPackingPresetV2(...args);
+export const setTripPackingSourceV2 = async (...args: Parameters<ReturnType<typeof adapter>['setTripPackingSourceV2']>) =>
+  adapter().setTripPackingSourceV2(...args);
 export const removePackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['removePackingPresetV2']>) =>
   adapter().removePackingPresetV2(...args);
 export const reactivatePackingPresetV2 = async (...args: Parameters<ReturnType<typeof adapter>['reactivatePackingPresetV2']>) =>

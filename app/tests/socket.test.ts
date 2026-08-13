@@ -40,9 +40,9 @@ describe('socket URL resolution', () => {
     expect(resolveSocketServerUrl()).toBe('http://localhost:4000');
   });
 
-  it('uses polling only on web because Firebase Hosting rejects websocket upgrades', () => {
+  it('uses websocket first for local web development with polling fallback', () => {
     Platform.OS = 'web';
-    expect(resolveSocketTransports()).toEqual(['polling']);
+    expect(resolveSocketTransports()).toEqual(['websocket', 'polling']);
   });
 
   it('also connects via polling first on native, for the same reason', () => {

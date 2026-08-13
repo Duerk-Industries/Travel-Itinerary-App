@@ -88,6 +88,7 @@ export const buildPackingListDisplayGroups = (
   };
   const seen = new Set<string>();
   const result: PackingDisplayGroup[] = [];
+  const categoryGroups = new Map<string, PackingDisplayGroup>();
 
   for (const group of groups) {
     const remaining: PackingDisplayItem[] = [];
@@ -99,14 +100,33 @@ export const buildPackingListDisplayGroups = (
       if (group.kind === 'personal' && (personalOwners.get(normalizedLabel)?.size ?? 0) >= 2) {
         sharedGroup.items.push(withIdentity);
       } else {
-        remaining.push(withIdentity);
+        remaining.push({ ...withIdentity, category: item.category?.trim() || group.label });
       }
     }
-    if (remaining.length) result.push({ ...group, items: remaining });
+    for (const item of remaining) {
+      const category = item.category.trim() || group.label;
+      const categoryKey = category.toLocaleLowerCase();
+      const existing = categoryGroups.get(categoryKey);
+      if (existing) {
+        existing.items.push({ ...item, category: existing.label });
+      } else {
+        const categoryGroup = { ...group, label: category, items: [{ ...item, category }] };
+        categoryGroups.set(categoryKey, categoryGroup);
+        result.push(categoryGroup);
+      }
+    }
   }
-  if (sharedGroup.items.length) {
-    const firstPersonalIndex = result.findIndex((group) => group.kind === 'personal');
-    result.splice(firstPersonalIndex < 0 ? result.length : firstPersonalIndex, 0, sharedGroup);
+  for (const item of sharedGroup.items) {
+    const category = item.category?.trim() || sharedGroup.label;
+    const categoryKey = category.toLocaleLowerCase();
+    const existing = categoryGroups.get(categoryKey);
+    if (existing) {
+      existing.items.push({ ...item, category: existing.label });
+    } else {
+      const categoryGroup = { ...sharedGroup, key: 'multiple_travelers', label: category, items: [{ ...item, category }] };
+      categoryGroups.set(categoryKey, categoryGroup);
+      result.push(categoryGroup);
+    }
   }
   return result;
 };
