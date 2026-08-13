@@ -92,6 +92,19 @@ const flight: Flight = {
 };
 
 describe('FlightsTab read-only mode', () => {
+  beforeEach(() => {
+    // FlightsTab refreshes its list on mount. Keep this suite self-contained so
+    // that the background refresh cannot attempt localhost after Jest teardown.
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    } as any);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test('opens the edit form when a row is tapped in editable mode', () => {
     const { getByTestId } = render(
       <FlightsTab
