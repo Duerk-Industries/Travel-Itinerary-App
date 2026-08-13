@@ -14,6 +14,9 @@ export type PageKey =
   | 'trips'
   | 'create-trip'
   | 'account'
+  | 'account-fellow-travelers'
+  | 'account-packing-list'
+  | 'account-travel-profile'
   | 'follow'
   | 'following'
   | 'admin';

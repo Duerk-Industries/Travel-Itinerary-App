@@ -63,6 +63,39 @@ const ensureUserInGroup = async (groupId: string, userId: string): Promise<boole
 };
 
 /**
+ * Presets selected from a user's profile are copied into that user's editable
+ * list. Keeping this operation on the server makes the profile list the
+ * source of truth for trips and avoids a slow client-side read/merge/write
+ * round trip.
+ */
+const materializeUserPackingPreset = async (userId: string, presetKey: string) => {
+  const [preferences, personalItems, presets] = await Promise.all([
+    getUserPackingPreferencesV2(userId),
+    getUserPackingListV2(userId),
+    listPackingPresetsV2(),
+  ]);
+  const preset = presets.find((candidate) => candidate.key === presetKey);
+  if (!preset) throw new Error('Packing preset not found');
+
+  // Migrate any older virtual profile selections at the same time. This keeps
+  // existing users from losing items when they first use the new editable
+  // profile-list behavior.
+  const keysToMaterialize = new Set(preferences.presetKeys.filter((key) => key !== 'general'));
+  keysToMaterialize.add(presetKey);
+  const presetItems = presets
+    .filter((candidate) => keysToMaterialize.has(candidate.key))
+    .flatMap((candidate) => candidate.items.map((item) => ({ category: item.category, label: item.label })));
+
+  return replaceUserPackingPreferencesV2(userId, ['general'], [...personalItems, ...presetItems]);
+};
+
+const reconcileUserPackingListsInBackground = (userId: string): void => {
+  void reconcileUserPackingListsV2(userId).catch((err) => {
+    logError('[account] background packing-list reconciliation failed', err);
+  });
+};
+
+/**
  * Fire-and-forget audit write for account self-service mutations. Never
  * throws — a failed audit write must not fail the underlying mutation.
  */
@@ -141,8 +174,23 @@ router.put('/packing-list-presets', async (req, res) => {
     }
     const items = await getUserPackingListV2(userId);
     const result = await replaceUserPackingPreferencesV2(userId, Array.isArray(req.body?.presetKeys) ? req.body.presetKeys : [], items);
-    const reconciliation = await reconcileUserPackingListsV2(userId);
-    res.json({ ...result, reconciliation });
+    reconcileUserPackingListsInBackground(userId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post('/packing-list-presets/:presetKey', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('packing_lists_v2'))) {
+      res.status(404).json({ error: 'Packing lists v2 is not enabled' });
+      return;
+    }
+    const result = await materializeUserPackingPreset(userId, String(req.params.presetKey ?? '').trim());
+    reconcileUserPackingListsInBackground(userId);
+    res.json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -157,12 +205,44 @@ router.put('/packing-list', async (req, res) => {
         Array.isArray(req.body?.preferences?.presetKeys) ? req.body.preferences.presetKeys : Array.isArray(req.body?.presetKeys) ? req.body.presetKeys : ['general'],
         Array.isArray(req.body?.items) ? req.body.items : [],
       );
-      const reconciliation = await reconcileUserPackingListsV2(userId);
-      res.json({ ...result, reconciliation });
+      reconcileUserPackingListsInBackground(userId);
+      res.json(result);
       return;
     }
     const items = await replaceUserPackingList(userId, Array.isArray(req.body?.items) ? req.body.items : []);
     res.json({ items });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.delete('/packing-list/:itemId', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const itemId = String(req.params.itemId ?? '').trim();
+  try {
+    if (await isFeatureEnabled('packing_lists_v2')) {
+      const [preferences, items] = await Promise.all([
+        getUserPackingPreferencesV2(userId),
+        getUserPackingListV2(userId),
+      ]);
+      const nextItems = items.filter((item) => item.id !== itemId);
+      if (nextItems.length === items.length) {
+        res.status(404).json({ error: 'Packing item not found' });
+        return;
+      }
+      const result = await replaceUserPackingPreferencesV2(userId, preferences.presetKeys, nextItems);
+      reconcileUserPackingListsInBackground(userId);
+      res.json(result);
+      return;
+    }
+
+    const items = await getUserPackingList(userId);
+    const nextItems = items.filter((item: any) => item.id !== itemId);
+    if (nextItems.length === items.length) {
+      res.status(404).json({ error: 'Packing item not found' });
+      return;
+    }
+    res.json({ items: await replaceUserPackingList(userId, nextItems) });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }

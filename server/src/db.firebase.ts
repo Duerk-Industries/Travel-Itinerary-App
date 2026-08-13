@@ -8460,7 +8460,7 @@ export const getUserPackingListV2 = async (userId: string): Promise<PackingListI
   const snap = await userPackingCollection(userId).get();
   return snap.docs
     .map((doc: any, index: number) => firebasePackingItem(doc.data(), doc.id, index))
-    .sort((a: PackingListItem, b: PackingListItem) => a.position - b.position);
+    .sort((a: PackingListItem, b: PackingListItem) => a.category.localeCompare(b.category, undefined, { sensitivity: 'base' }) || a.position - b.position || a.label.localeCompare(b.label));
 };
 
 export const replaceUserPackingPreferencesV2 = async (
@@ -8527,20 +8527,26 @@ export const getPackingListV2 = async (userId: string, tripId: string): Promise<
   const tripDoc = await packingV2TripCollection().doc(tripId).get();
   const tripData = tripDoc.data() as any;
   const tripPresetKeys = Array.isArray(tripData?.presetKeys) ? tripData.presetKeys.filter((key: unknown): key is string => typeof key === 'string') : [];
+  const disabledPresetKeys = new Set<string>(Array.isArray(tripData?.disabledPresetKeys) ? tripData.disabledPresetKeys.filter((key: unknown): key is string => typeof key === 'string') : []);
+  const disabledPersonalUserIds = new Set<string>(Array.isArray(tripData?.disabledPersonalUserIds) ? tripData.disabledPersonalUserIds.filter((key: unknown): key is string => typeof key === 'string') : []);
   const manualItems = Array.isArray(tripData?.manualItems) ? tripData.manualItems : [];
   const inputGroups: any[] = [];
+  const attachedPresetKeys = new Set<string>(tripPresetKeys);
   for (const member of travelers) {
     if (!member.userId) continue;
     const preferences = await getUserPackingPreferencesV2(member.userId);
     for (const key of preferences.presetKeys) {
+      if (disabledPresetKeys.has(key)) continue;
       const preset = presetByKey.get(key);
       if (!preset) continue;
+      attachedPresetKeys.add(key);
       inputGroups.push({ key, label: preset.label, kind: 'preset', order: key === 'general' ? 0 : undefined, ownerMemberId: null, items: preset.items });
     }
     const personal = await getUserPackingListV2(member.userId);
-    if (personal.length) inputGroups.push({ key: `personal:${member.userId}`, label: `${member.name}'s list`, kind: 'personal', ownerMemberId: member.userId, items: personal.map((item) => ({ ...item, personalOwnerIds: [member.userId] })) });
+    if (!disabledPersonalUserIds.has(member.userId) && personal.length) inputGroups.push({ key: `personal:${member.userId}`, label: `${member.name}'s list`, kind: 'personal', ownerMemberId: member.userId, items: personal.map((item) => ({ ...item, personalOwnerIds: [member.userId] })) });
   }
   for (const key of tripPresetKeys) {
+    if (disabledPresetKeys.has(key)) continue;
     const preset = presetByKey.get(key);
     if (preset) inputGroups.push({ key, label: preset.label, kind: 'preset', items: preset.items });
   }
@@ -8553,27 +8559,62 @@ export const getPackingListV2 = async (userId: string, tripId: string): Promise<
   });
   const groupsWithChecks = inputGroups.map((group) => ({ ...group, items: group.items.map((item: any) => ({ ...item, packedBy: packedBy.get(item.id) ?? [] })) }));
   const groups = buildPackingListDisplayGroups(groupsWithChecks, userId) as any;
-  return { groups, travelers, presets, currentTravelerId: travelers.find((traveler) => traveler.userId === userId)?.id ?? null, items: groups.flatMap((group: any) => group.items.map((item: any) => ({ ...item, category: group.label }))), tripPresetKeys };
+  return {
+    groups,
+    travelers,
+    presets,
+    currentTravelerId: travelers.find((traveler) => traveler.userId === userId)?.id ?? null,
+    items: groups.flatMap((group: any) => group.items.map((item: any) => ({ ...item, category: item.category || group.label }))),
+    tripPresetKeys,
+    sources: [
+      ...presets.map((preset) => ({ key: `preset:${preset.key}`, label: preset.label, kind: 'preset' as const, presetKey: preset.key, active: !disabledPresetKeys.has(preset.key) && attachedPresetKeys.has(preset.key) })),
+      ...travelers.filter((traveler) => traveler.userId).map((traveler) => ({ key: `personal:${traveler.userId}`, label: `${traveler.name}'s list`, kind: 'personal' as const, ownerMemberId: traveler.userId, active: !disabledPersonalUserIds.has(traveler.userId as string) })),
+    ],
+    manualItems: manualItems.map((item: any, index: number) => ({ ...item, id: item.id ?? `${tripId}-manual-${index}`, position: index })),
+  };
 };
 
 export const addTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
-  const access = await ensureUserCanReadTrip(tripId, userId);
-  if (!access) throw new Error('Not authorized to view this trip');
-  const preset = (await listPackingPresetsV2()).find((item) => item.key === presetKey);
-  if (!preset) throw new Error('Packing preset not found');
-  const ref = packingV2TripCollection().doc(tripId);
-  const current = (await ref.get()).data() as any;
-  const keys = Array.from(new Set([...(Array.isArray(current?.presetKeys) ? current.presetKeys : []), presetKey]));
-  await ref.set({ tripId, presetKeys: keys, updatedAt: nowIso() }, { merge: true });
-  return getPackingListV2(userId, tripId);
+  return setTripPackingSourceV2(userId, tripId, 'preset', presetKey, true);
 };
 
 export const removeTripPackingPresetV2 = async (userId: string, tripId: string, presetKey: string): Promise<PackingListV2Trip> => {
+  return setTripPackingSourceV2(userId, tripId, 'preset', presetKey, false);
+};
+
+export const setTripPackingSourceV2 = async (
+  userId: string,
+  tripId: string,
+  kind: 'preset' | 'personal',
+  sourceKey: string,
+  enabled: boolean
+): Promise<PackingListV2Trip> => {
   const access = await ensureUserCanReadTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to view this trip');
   const ref = packingV2TripCollection().doc(tripId);
   const current = (await ref.get()).data() as any;
-  await ref.set({ presetKeys: (Array.isArray(current?.presetKeys) ? current.presetKeys : []).filter((key: string) => key !== presetKey), updatedAt: nowIso() }, { merge: true });
+  if (kind === 'preset') {
+    const presetKey = sourceKey.replace(/^preset:/, '');
+    if (!(await listPackingPresetsV2()).some((preset) => preset.key === presetKey && preset.isActive)) throw new Error('Packing preset not found');
+    const currentKeys: string[] = Array.isArray(current?.presetKeys) ? current.presetKeys.filter((key: unknown): key is string => typeof key === 'string') : [];
+    const disabled = new Set<string>(Array.isArray(current?.disabledPresetKeys) ? current.disabledPresetKeys.filter((key: unknown): key is string => typeof key === 'string') : []);
+    if (enabled) {
+      disabled.delete(presetKey);
+      currentKeys.push(presetKey);
+    } else {
+      disabled.add(presetKey);
+    }
+    await ref.set({ tripId, presetKeys: Array.from(new Set(currentKeys)).filter((key: string) => !disabled.has(key)), disabledPresetKeys: Array.from(disabled), updatedAt: nowIso() }, { merge: true });
+  } else {
+    const ownerId = sourceKey.replace(/^personal:/, '');
+    if (!ownerId) throw new Error('Packing list owner is required');
+    const members = await listGroupMembers(access.groupId, userId);
+    if (!members.some((member) => !member.removedAt && member.userId === ownerId)) throw new Error('Packing list owner is not a trip member');
+    const disabled = new Set<string>(Array.isArray(current?.disabledPersonalUserIds) ? current.disabledPersonalUserIds.filter((key: unknown): key is string => typeof key === 'string') : []);
+    if (enabled) disabled.delete(ownerId);
+    else disabled.add(ownerId);
+    await ref.set({ tripId, disabledPersonalUserIds: Array.from(disabled), updatedAt: nowIso() }, { merge: true });
+  }
   return getPackingListV2(userId, tripId);
 };
 

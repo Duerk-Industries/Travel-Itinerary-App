@@ -94,7 +94,7 @@ describe('PackingListTable', () => {
       }),
     } as any);
 
-    const { findByText, getByText, getByTestId } = render(
+    const { findByText, getByText, getByTestId, UNSAFE_getAllByType } = render(
       <PackingListTable
         backendUrl="http://localhost"
         headers={{ Authorization: 'Bearer token' }}
@@ -106,6 +106,9 @@ describe('PackingListTable', () => {
     fireEvent.press(getByText('Edit'));
     fireEvent.press(getByTestId('user-packing-add-item'));
     expect(getByTestId(/^user-packing-item-draft-/)).toBeTruthy();
+    const categoryField = UNSAFE_getAllByType('select' as any)[0];
+    expect(categoryField.children.map((option: any) => option.children?.[0])).toEqual(expect.arrayContaining(['Documents', 'Other']));
+    fireEvent(categoryField, 'change', { currentTarget: { value: 'Documents' } });
     fireEvent.changeText(getByTestId(/^user-packing-item-draft-/), 'Phone charger');
     fireEvent.press(getByText('Save'));
 
@@ -118,6 +121,36 @@ describe('PackingListTable', () => {
         })
       );
     });
+  });
+
+  test('edits and immediately persists removal of existing profile packing items', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        items: [
+          { id: 'item-1', category: 'Documents', label: 'Passport', position: 0 },
+          { id: 'item-2', category: 'Clothing', label: 'T-shirt', position: 1 },
+        ],
+      }),
+    } as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ items: [{ id: 'item-1', category: 'Documents', label: 'ID card', position: 0 }] }),
+    } as any);
+
+    const { findByText, getByText, getByTestId, queryByText } = render(
+      <PackingListTable backendUrl="http://localhost" headers={{ Authorization: 'Bearer token' }} variant="user" />
+    );
+    await findByText('Passport');
+    fireEvent.press(getByText('Edit'));
+    fireEvent.changeText(getByTestId('user-packing-item-item-1'), 'ID card');
+    fireEvent.press(getByTestId('user-packing-remove-item-item-2'));
+
+    expect(queryByText('T-shirt')).toBeNull();
+
+    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith(
+      'http://localhost/api/account/packing-list/item-2',
+      expect.objectContaining({ method: 'DELETE' })
+    ));
   });
 
   test('prints a trip packing list from the table', async () => {
@@ -169,10 +202,102 @@ describe('PackingListTable', () => {
     } as any).mockResolvedValueOnce({ ok: true, json: async () => ({ groups: [{ id: 'beach', key: 'beach', label: 'Beach', kind: 'preset', items: [{ id: 'item-3', label: 'Sun hat', category: 'Beach', position: 0, packedBy: [] }] }], travelers: [{ id: 'traveler-1', name: 'Alex' }], presets: [{ key: 'beach', label: 'Beach' }], tripPresetKeys: ['beach'] }) } as any);
 
     const { findByText, getByText, getByTestId, queryAllByText } = render(<PackingListTable backendUrl="http://localhost" headers={{ Authorization: 'Bearer token' }} tripId="trip-1" variant="trip" />);
-    await waitFor(() => expect(queryAllByText('General')).toHaveLength(1));
-    await waitFor(() => expect(queryAllByText("Alex's list").length).toBeGreaterThan(0));
+    await waitFor(() => expect(queryAllByText('Documents')).toHaveLength(1));
+    await waitFor(() => expect(queryAllByText(/Alex's list/).length).toBeGreaterThan(0));
     expect(getByTestId('trip-packing-preset-scroll').props.style).toEqual(expect.objectContaining({ width: '100%', maxWidth: '100%', flexGrow: 0 }));
     fireEvent.press(getByText('+ Beach'));
-    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/trips/trip-1/packing-list/presets', expect.objectContaining({ method: 'POST' })));
+    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/trips/trip-1/packing-list/sources', expect.objectContaining({ method: 'PATCH' })));
+  });
+
+  test('materializes a user preset into the editable custom list without waiting for the save request', async () => {
+    let resolveMaterialize: (value: any) => void = () => {};
+    const materializeResponse = new Promise((resolve) => {
+      resolveMaterialize = resolve;
+    });
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        items: [{ id: 'item-1', category: 'Documents', label: 'Passport', position: 0 }],
+        preferences: { presetKeys: ['general'] },
+        presets: [{ key: 'men', label: 'Men', items: [{ id: 'men-1', category: 'Clothing', label: 'Polo shirt', position: 0 }] }],
+      }),
+    } as any).mockImplementationOnce(() => materializeResponse as any);
+
+    const { findByText, getByText, getByTestId, queryByTestId } = render(
+      <PackingListTable backendUrl="http://localhost" headers={{ Authorization: 'Bearer token' }} variant="user" />
+    );
+    await findByText('Passport');
+
+    fireEvent.press(getByText('Men'));
+
+    // Optimistic: the preset's item renders under a synthetic local id immediately,
+    // before the background materialize request has resolved.
+    expect(getByTestId('user-packing-item-preset-men-men-1')).toBeTruthy();
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/account/packing-list-presets/men', expect.objectContaining({ method: 'POST' }))
+    );
+
+    // The server assigns fresh, real ids to every item on this write (not just the
+    // newly-added one — see replaceUserPackingPreferencesV2). The client must apply
+    // that response so its local ids stay valid for later edits/deletes.
+    resolveMaterialize({
+      ok: true,
+      json: async () => ({
+        preferences: { presetKeys: ['general'] },
+        items: [
+          { id: 'item-1', category: 'Documents', label: 'Passport', position: 0 },
+          { id: 'server-men-1', category: 'Clothing', label: 'Polo shirt', position: 1 },
+        ],
+      }),
+    });
+    await waitFor(() => expect(getByTestId('user-packing-item-server-men-1')).toBeTruthy());
+    expect(queryByTestId('user-packing-item-preset-men-men-1')).toBeNull();
+
+    // Deleting the item now targets its real, current server id — and actually persists.
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ preferences: { presetKeys: ['general'] }, items: [{ id: 'item-1', category: 'Documents', label: 'Passport', position: 0 }] }),
+    } as any);
+    fireEvent.press(getByTestId('user-packing-remove-item-server-men-1'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        'http://localhost/api/account/packing-list/server-men-1',
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    );
+    expect(queryByTestId('user-packing-item-server-men-1')).toBeNull();
+  });
+
+  test('renders without a duplicate-key warning when the same category appears in two non-adjacent runs', async () => {
+    // groupedItems only merges *adjacent* same-category items, so a category can
+    // legitimately reappear later in the list — e.g. a preset appended at the tail
+    // shares a category with an earlier item. Regression test for a real duplicate
+    // React key crash ("Travel Gear & Accessories" appearing in two groups).
+    jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        items: [
+          { id: 'item-1', category: 'Travel Gear & Accessories', label: 'Compact jewelry case', position: 0 },
+          { id: 'item-2', category: 'Clothing & Footwear', label: 'Shapewear', position: 1 },
+          { id: 'item-3', category: 'Travel Gear & Accessories', label: 'Packing cubes', position: 2 },
+        ],
+        preferences: { presetKeys: ['general'] },
+        presets: [],
+      }),
+    } as any);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const { findByText } = render(
+      <PackingListTable backendUrl="http://localhost" headers={{ Authorization: 'Bearer token' }} variant="user" />
+    );
+    await findByText('Compact jewelry case');
+    await findByText('Packing cubes');
+
+    const duplicateKeyWarning = errorSpy.mock.calls.some((call) =>
+      call.some((arg) => typeof arg === 'string' && arg.includes('same key'))
+    );
+    expect(duplicateKeyWarning).toBe(false);
+    errorSpy.mockRestore();
   });
 });

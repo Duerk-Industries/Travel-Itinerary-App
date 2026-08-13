@@ -44,26 +44,59 @@ describe('packing lists v2', () => {
     expect(await getUserPackingListV2(ownerId)).toEqual([]);
   });
 
+  it('materializes a selected profile preset into personal items used by trips', async () => {
+    await replaceUserPackingPreferencesV2(ownerId, ['general'], []);
+
+    const added = await request(app)
+      .post('/api/account/packing-list-presets/men')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    expect(added.body.preferences.presetKeys).toEqual(['general']);
+    expect(added.body.items.some((item: any) => item.label === 'Polo shirt')).toBe(true);
+
+    const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'Personal packing trip', members: [] });
+    const trip = await getPackingListV2(ownerId, created.trip.id);
+    expect(trip.groups.some((group) => group.items.some((item) => item.label === 'Polo shirt'))).toBe(true);
+  });
+
+  it('deletes one persisted profile packing item without restoring it', async () => {
+    const saved = await replaceUserPackingPreferencesV2(ownerId, ['general'], [
+      { category: 'Toiletries', label: 'Makeup remover' },
+      { category: 'Accessories', label: 'Compact jewelry case' },
+    ]);
+    const itemToRemove = saved.items.find((item) => item.label === 'Makeup remover');
+    expect(itemToRemove).toBeDefined();
+
+    await request(app)
+      .delete(`/api/account/packing-list/${itemToRemove!.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    expect((await getUserPackingListV2(ownerId)).some((item) => item.id === itemToRemove!.id)).toBe(false);
+    expect((await getUserPackingListV2(ownerId)).some((item) => item.label === 'Compact jewelry case')).toBe(true);
+  });
+
   it('composes profile presets and trip additions into ordered groups', async () => {
     await replaceUserPackingPreferencesV2(ownerId, ['general', 'hiking'], [{ category: 'Personal', label: 'Personal travel journal' }]);
     const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'V2 trip', members: [] });
     const initial = await getPackingListV2(ownerId, created.trip.id);
-    expect(initial.groups[0].label).toBe('General');
-    expect(initial.groups.some((group) => group.label.toLowerCase().includes('hiking'))).toBe(true);
-    expect(initial.groups.some((group) => group.label.includes('Owner'))).toBe(true);
+    expect(initial.groups[0].label).toBe('Health & Toiletries');
+    expect(initial.sources?.some((source) => source.label.toLowerCase().includes('hiking'))).toBe(true);
+    expect(initial.sources?.some((source) => source.label.includes('Owner'))).toBe(true);
 
     const added = await request(app)
       .post(`/api/trips/${created.trip.id}/packing-list/presets`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ presetKey: 'beach' })
       .expect(200);
-    expect(added.body.groups.some((group: any) => group.label.toLowerCase().includes('beach'))).toBe(true);
+    expect(added.body.sources.some((source: any) => source.label.toLowerCase().includes('beach') && source.active)).toBe(true);
     const manual = await request(app)
       .put(`/api/trips/${created.trip.id}/packing-list`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ items: [{ category: 'Trip notes', label: 'Trip-only item' }] })
       .expect(200);
-    expect(manual.body.groups.some((group: any) => group.label === 'Trip additions')).toBe(true);
+    expect(manual.body.groups.some((group: any) => group.items.some((item: any) => item.label === 'Trip-only item' && item.category === 'Trip notes'))).toBe(true);
   });
 
   it('retracts profile contributions when a member is removed', async () => {

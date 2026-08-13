@@ -31,7 +31,7 @@ describe('PackingPresetSelector', () => {
     expect(queryByTestId('account-packing-presets')).toBeNull();
   });
 
-  test('shows General as always-on and non-removable, plus selectable presets', async () => {
+  test('shows General as always-on plus presets that can be added to the custom list', async () => {
     jest.spyOn(global, 'fetch' as any).mockResolvedValue({
       ok: true,
       status: 200,
@@ -52,11 +52,11 @@ describe('PackingPresetSelector', () => {
     expect(generalToggle.props.disabled).toBe(true);
     expect(generalToggle.props.value).toBe(true);
 
-    expect(getByTestId('account-packing-preset-toggle-beach').props.value).toBe(true);
-    expect(getByTestId('account-packing-preset-toggle-hiking').props.value).toBe(false);
+    expect(getByTestId('account-packing-preset-toggle-beach').props.children).toBeTruthy();
+    expect(getByTestId('account-packing-preset-toggle-hiking').props.children).toBeTruthy();
   });
 
-  test('toggling a preset saves the full desired key set including General', async () => {
+  test('adding a preset posts a materialization request immediately', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch' as any)
       .mockResolvedValueOnce({
@@ -73,19 +73,17 @@ describe('PackingPresetSelector', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ preferences: { presetKeys: ['general', 'hiking'] }, items: [] }),
+        json: async () => ({ preferences: { presetKeys: ['general'] }, items: [{ category: 'Hiking', label: 'Trail shoes' }] }),
       } as any);
 
     const { getByTestId } = render(<PackingPresetSelector {...baseProps} />);
     await waitFor(() => expect(getByTestId('account-packing-preset-toggle-hiking')).toBeTruthy());
 
-    fireEvent(getByTestId('account-packing-preset-toggle-hiking'), 'valueChange', true);
+    fireEvent.press(getByTestId('account-packing-preset-toggle-hiking'));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    const [, putCall] = fetchMock.mock.calls as any[];
-    expect(putCall[0]).toBe('http://localhost/api/account/packing-list-presets');
-    expect(putCall[1]?.method).toBe('PUT');
-    const body = JSON.parse(putCall[1]?.body as string);
-    expect(body.presetKeys.sort()).toEqual(['general', 'hiking']);
+    const [, postCall] = fetchMock.mock.calls as any[];
+    expect(postCall[0]).toBe('http://localhost/api/account/packing-list-presets/hiking');
+    expect(postCall[1]?.method).toBe('POST');
   });
 });

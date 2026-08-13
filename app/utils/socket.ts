@@ -51,12 +51,27 @@ export const resolveSocketServerUrl = (): string => {
   return resolved;
 };
 
-export const resolveSocketTransports = (): Array<'polling' | 'websocket'> =>
+export const resolveSocketTransports = (): Array<'polling' | 'websocket'> => {
+  if (Platform.OS !== 'web') return ['polling', 'websocket'];
+
+  // The local API accepts WebSocket connections directly. Starting with
+  // polling in local development creates noisy 400s when a dev server restart
+  // invalidates an old Engine.IO session (the browser then POSTs the stale
+  // `sid`). WebSocket-first avoids that polling session entirely, while
+  // tryAllTransports below still provides a polling fallback.
+  const serverUrl = resolveSocketServerUrl();
+  try {
+    const hostname = new URL(serverUrl).hostname;
+    if (/^(localhost|127\.0\.0\.1|::1)$/i.test(hostname)) return ['websocket', 'polling'];
+  } catch {
+    // Fall through to the hosted-web default when the configured URL is not a
+    // valid absolute URL.
+  }
+
   // Firebase Hosting proxies HTTP long-polling to Cloud Run but does not
-  // preserve the browser's WebSocket upgrade. Listing websocket on web makes
-  // Engine.IO attempt an upgrade that Firefox reports as a refused connection,
-  // even though the established polling session remains healthy.
-  Platform.OS === 'web' ? ['polling'] : ['polling', 'websocket'];
+  // preserve the browser's WebSocket upgrade.
+  return ['polling'];
+};
 
 // ---------------------------------------------------------------------------
 // Singleton
