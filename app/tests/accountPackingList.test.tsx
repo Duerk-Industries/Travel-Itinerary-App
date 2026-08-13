@@ -66,23 +66,21 @@ const defaultProps = {
   fetchTraitProfile: jest.fn(),
 };
 
-describe('Account packing list popup', () => {
+describe('Account profile links', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  test('opens and closes the default packing list modal', () => {
-    jest.spyOn(global, 'fetch' as any).mockResolvedValue({
-      ok: true,
-      json: async () => ({ items: [] }),
-    } as any);
+  test('links to the fellow travelers, packing list, and travel profile pages', () => {
+    const onNavigate = jest.fn();
+    const { getByTestId } = render(<AccountTab {...defaultProps} onNavigate={onNavigate} />);
 
-    const { getByTestId, queryByTestId } = render(<AccountTab {...defaultProps} />);
+    fireEvent.press(getByTestId('account-link-fellow-travelers'));
+    fireEvent.press(getByTestId('account-link-packing-list'));
+    fireEvent.press(getByTestId('account-link-travel-profile'));
 
-    expect(queryByTestId('account-packing-list-modal')).toBeNull();
-    fireEvent.press(getByTestId('account-open-packing-list'));
-    expect(getByTestId('account-packing-list-modal')).toBeTruthy();
-    fireEvent.press(getByTestId('account-close-packing-list'));
-    expect(queryByTestId('account-packing-list-modal')).toBeNull();
+    expect(onNavigate).toHaveBeenNthCalledWith(1, 'account-fellow-travelers');
+    expect(onNavigate).toHaveBeenNthCalledWith(2, 'account-packing-list');
+    expect(onNavigate).toHaveBeenNthCalledWith(3, 'account-travel-profile');
   });
 });

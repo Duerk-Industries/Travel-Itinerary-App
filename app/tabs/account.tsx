@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, Linking } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TouchableOpacity, View, useColorScheme, Linking } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
 import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
 import { type TemperatureUnit, normalizeTemperatureUnit } from '../utils/temperatureUnit';
@@ -7,7 +7,6 @@ import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
 import PackingListTable from '../components/PackingListTable';
-import PackingPresetSelector from '../components/PackingPresetSelector';
 import PremiumSubscriptionPanel from '../components/PremiumSubscriptionPanel';
 import { useBillingStatus } from '../hooks/useBillingStatus';
 import { fetchBillingPlans, type PlanInfo } from '../utils/billing';
@@ -37,9 +36,6 @@ export interface FellowTraveler {
   email?: string | null;
   createdAt: string;
 }
-
-type FamilyForm = { givenName: string; middleName: string; familyName: string; email: string; relationship: string };
-type FellowTravelerForm = { firstName: string; lastName: string };
 
 type Styles = ReturnType<typeof StyleSheet.create>;
 
@@ -147,6 +143,7 @@ interface AccountTabProps {
   backendUrl: string;
   userToken: string | null;
   activePage: string;
+  onNavigate?: (page: AccountPage) => void;
   accountProfile: AccountProfile;
   setAccountProfile: Setter<AccountProfile>;
   familyRelationships: any[];
@@ -183,24 +180,13 @@ interface AccountTabProps {
   fetchTraitProfile: () => Promise<void>;
 }
 
-const relationshipOptions = [
-  'Not Applicable',
-  'Parent',
-  'Child',
-  'Sibling',
-  'Spouse/Partner',
-  'Grandparent',
-  'Grandchild',
-  'Aunt/Uncle',
-  'Niece/Nephew',
-  'Cousin',
-  'Friend',
-];
+export type AccountPage = 'account' | 'account-fellow-travelers' | 'account-packing-list' | 'account-travel-profile';
 
 const AccountTab: React.FC<AccountTabProps> = ({
   backendUrl,
   userToken,
   activePage,
+  onNavigate = () => undefined,
   accountProfile,
   setAccountProfile,
   familyRelationships,
@@ -238,7 +224,6 @@ const AccountTab: React.FC<AccountTabProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const theme = getAppTheme(appearancePreference, colorScheme);
-  const [showPackingList, setShowPackingList] = useState(false);
   const [billingPlans, setBillingPlans] = useState<PlanInfo[]>([]);
   const {
     billingStatus,
@@ -263,9 +248,71 @@ const AccountTab: React.FC<AccountTabProps> = ({
     };
   }, [backendUrl, userToken]);
 
+  const isSubPage = activePage !== 'account';
+  const subPageTitle = activePage === 'account-fellow-travelers'
+    ? 'Fellow Travelers'
+    : activePage === 'account-packing-list'
+      ? 'Packing List'
+      : 'Travel Profile';
+
+  const renderPageHeader = (title: string, description: string) => (
+    <View style={localStyles.pageHeader}>
+      <TouchableOpacity
+        style={[styles.button, styles.smallButton]}
+        onPress={() => onNavigate('account')}
+        testID="account-subpage-back"
+      >
+        <Text style={styles.buttonText}>Back to Profile</Text>
+      </TouchableOpacity>
+      <Text style={[localStyles.pageTitle, { color: theme.colors.text }]}>{title}</Text>
+      <Text style={styles.helperText}>{description}</Text>
+    </View>
+  );
+
+  const renderProfileLinks = () => (
+    <View style={localStyles.linksSection} testID="account-profile-links">
+      <Text style={styles.sectionTitle}>Profile settings</Text>
+      <Text style={styles.helperText}>Manage the details used for planning trips with your group.</Text>
+      <View style={localStyles.linkGrid}>
+        <TouchableOpacity
+          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          onPress={() => onNavigate('account-fellow-travelers')}
+          testID="account-link-fellow-travelers"
+        >
+          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Fellow Travelers</Text>
+          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Manage saved travelers and family relationships.</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          onPress={() => onNavigate('account-packing-list')}
+          testID="account-link-packing-list"
+        >
+          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Packing List</Text>
+          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Edit the personal items added to your trips.</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[localStyles.linkCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          onPress={() => onNavigate('account-travel-profile')}
+          testID="account-link-travel-profile"
+        >
+          <Text style={[localStyles.linkTitle, { color: theme.colors.text }]}>Travel Profile</Text>
+          <Text style={[localStyles.linkDescription, { color: theme.colors.textMuted }]}>Save your travel style and itinerary preferences.</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <View>
-      <AccountProfileManagement
+      {isSubPage ? renderPageHeader(
+        subPageTitle,
+        activePage === 'account-fellow-travelers'
+          ? 'Manage the people you travel with and their saved profiles.'
+          : activePage === 'account-packing-list'
+            ? 'Items saved here are included when you join a trip.'
+            : 'Tell us how you like to travel so itinerary suggestions fit you better.'
+      ) : null}
+      {!isSubPage ? <AccountProfileManagement
         theme={theme}
         backendUrl={backendUrl}
         userToken={userToken}
@@ -286,8 +333,8 @@ const AccountTab: React.FC<AccountTabProps> = ({
         onSearchAirports={onSearchAirports}
         logout={logout}
         styles={styles}
-      />
-      <PremiumSubscriptionPanel
+      /> : null}
+      {!isSubPage ? <PremiumSubscriptionPanel
         backendUrl={backendUrl}
         token={userToken}
         billingStatus={billingStatus}
@@ -297,8 +344,9 @@ const AccountTab: React.FC<AccountTabProps> = ({
         onDismissCheckoutSuccess={clearCheckoutSuccessMessage}
         appearancePreference={appearancePreference}
         systemColorScheme={colorScheme}
-      />
-      <FamilyRelationships
+      /> : null}
+      {!isSubPage ? renderProfileLinks() : null}
+      {activePage === 'account-fellow-travelers' ? <FamilyRelationships
         backendUrl={backendUrl}
         userToken={userToken}
         headers={headers}
@@ -309,50 +357,15 @@ const AccountTab: React.FC<AccountTabProps> = ({
         setFellowTravelers={setFellowTravelers}
         showRelationshipDropdown={showRelationshipDropdown}
         setShowRelationshipDropdown={setShowRelationshipDropdown}
-        hideFamilySection
         styles={styles}
-      />
-      <View style={[localStyles.packingLauncher, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
-        <View style={localStyles.packingLauncherText}>
-          <Text style={[localStyles.packingTitle, { color: theme.colors.text }]}>Default packing list</Text>
-          <Text style={[localStyles.packingMeta, { color: theme.colors.textMuted }]}>Manage the items copied into trips when you are added.</Text>
-        </View>
-        <Pressable
-          style={[styles.button, localStyles.packingButton]}
-          onPress={() => setShowPackingList(true)}
-          testID="account-open-packing-list"
-        >
-          <Text style={styles.buttonText}>Open List</Text>
-        </Pressable>
-      </View>
-      <PackingPresetSelector backendUrl={backendUrl} headers={headers} jsonHeaders={jsonHeaders} theme={theme} />
-      {showPackingList ? (
-        <Modal transparent animationType="fade" visible onRequestClose={() => setShowPackingList(false)}>
-          <View style={[localStyles.modalOverlay, { backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.68)' : 'rgba(17,24,39,0.35)' }]} testID="account-packing-list-modal">
-            <View style={[localStyles.modalCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-              <View style={localStyles.modalHeader}>
-                <Text style={[localStyles.modalTitle, { color: theme.colors.text }]}>Default packing list</Text>
-                <Pressable
-                  onPress={() => setShowPackingList(false)}
-                  style={[localStyles.closeButton, { backgroundColor: theme.colors.surfaceMuted }]}
-                  testID="account-close-packing-list"
-                >
-                  <Text style={[localStyles.closeText, { color: theme.colors.text }]}>x</Text>
-                </Pressable>
-              </View>
-              <ScrollView style={localStyles.modalBody} contentContainerStyle={localStyles.modalBodyContent}>
-                <PackingListTable
-                  backendUrl={backendUrl}
-                  headers={headers}
-                  variant="user"
-                  title="Default packing list"
-                />
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      ) : null}
-      <AccountTraits
+      /> : null}
+      {activePage === 'account-packing-list' ? <PackingListTable
+        backendUrl={backendUrl}
+        headers={headers}
+        variant="user"
+        title="Personal packing list"
+      /> : null}
+      {activePage === 'account-travel-profile' ? <AccountTraits
         backendUrl={backendUrl}
         userToken={userToken}
         headers={headers}
@@ -370,7 +383,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         fetchTraits={fetchTraits}
         fetchTraitProfile={fetchTraitProfile}
         styles={styles}
-      />
+      /> : null}
       <View style={[localStyles.legalSection, { borderTopColor: theme.colors.border }]}>
         <Text style={[localStyles.legalTitle, { color: theme.colors.textMuted }]}>Legal</Text>
         <View style={localStyles.legalLinks}>
@@ -395,19 +408,13 @@ const AccountTab: React.FC<AccountTabProps> = ({
 };
 
 const localStyles = StyleSheet.create({
-  packingLauncher: { borderWidth: 1, borderRadius: 8, padding: 14, marginVertical: 12, gap: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' },
-  packingLauncherText: { flex: 1, gap: 4 },
-  packingTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
-  packingMeta: { fontSize: 13 },
-  packingButton: { alignSelf: 'center', maxWidth: '100%' },
-  modalOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
-  modalCard: { width: '100%', maxWidth: 980, maxHeight: '88%', borderWidth: 1, borderRadius: 8, padding: 16 },
-  modalHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
-  modalTitle: { fontSize: 20, fontWeight: '700', flexShrink: 1 },
-  closeButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  closeText: { fontSize: 18, fontWeight: '700' },
-  modalBody: { maxHeight: 680 },
-  modalBodyContent: { paddingBottom: 8 },
+  pageHeader: { gap: 8, marginBottom: 16 },
+  pageTitle: { fontSize: 26, fontWeight: '700' },
+  linksSection: { marginVertical: 16, gap: 10 },
+  linkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  linkCard: { borderWidth: 1, borderRadius: 8, padding: 14, minWidth: 220, flex: 1, gap: 5 },
+  linkTitle: { fontSize: 17, fontWeight: '700' },
+  linkDescription: { fontSize: 13, lineHeight: 18 },
   legalSection: { marginTop: 24, paddingVertical: 20, borderTopWidth: 1, alignItems: 'center', gap: 8 },
   legalTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   legalLinks: { flexDirection: 'row', alignItems: 'center', gap: 4 },

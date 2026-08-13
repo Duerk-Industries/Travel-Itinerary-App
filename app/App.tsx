@@ -48,7 +48,7 @@ import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayer
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import ShareTripModal from './components/ShareTripModal';
 import IncomingShareModal from './components/IncomingShareModal';
-import AccountTab, { fetchAccountProfile } from './tabs/account';
+import AccountTab, { fetchAccountProfile, type AccountPage } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -199,7 +199,7 @@ type Page =
   | 'trips'
   | 'create-trip'
   | 'cost'
-  | 'account'
+  | AccountPage
   | 'follow'
   | 'following'
   | 'admin';
@@ -2060,6 +2060,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           await Promise.all([fetchTrips(authToken), fetchGroups()]);
           break;
         case 'account':
+        case 'account-fellow-travelers':
+        case 'account-packing-list':
+        case 'account-travel-profile':
           await Promise.all([fetchTraits(), fetchTraitProfile(), loadFamilyRelationships(authToken), loadFellowTravelers(authToken)]);
           break;
         case 'follow':
@@ -2277,6 +2280,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'ingest' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
+          sessionPage === 'account-fellow-travelers' ||
+          sessionPage === 'account-packing-list' ||
+          sessionPage === 'account-travel-profile' ||
           sessionPage === 'follow' ||
           sessionPage === 'following'
         ) {
@@ -3120,12 +3126,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </View>
           ) : null}
 
-          {activePage === 'account'
+          {(activePage === 'account' || activePage === 'account-fellow-travelers' || activePage === 'account-packing-list' || activePage === 'account-travel-profile')
             ? renderSharedPageScroll(
                 <AccountTab
                   backendUrl={backendUrl}
                   userToken={userToken}
                   activePage={activePage}
+                  onNavigate={(page) => requestPageChange(page)}
                   accountProfile={accountProfile}
                   setAccountProfile={setAccountProfile}
                   familyRelationships={familyRelationships}
