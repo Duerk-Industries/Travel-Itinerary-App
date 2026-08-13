@@ -44,6 +44,22 @@ describe('packing lists v2', () => {
     expect(await getUserPackingListV2(ownerId)).toEqual([]);
   });
 
+  it('materializes a selected profile preset into personal items used by trips', async () => {
+    await replaceUserPackingPreferencesV2(ownerId, ['general'], []);
+
+    const added = await request(app)
+      .post('/api/account/packing-list-presets/men')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    expect(added.body.preferences.presetKeys).toEqual(['general']);
+    expect(added.body.items.some((item: any) => item.label === 'Polo shirt')).toBe(true);
+
+    const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'Personal packing trip', members: [] });
+    const trip = await getPackingListV2(ownerId, created.trip.id);
+    expect(trip.groups.some((group) => group.items.some((item) => item.label === 'Polo shirt'))).toBe(true);
+  });
+
   it('composes profile presets and trip additions into ordered groups', async () => {
     await replaceUserPackingPreferencesV2(ownerId, ['general', 'hiking'], [{ category: 'Personal', label: 'Personal travel journal' }]);
     const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'V2 trip', members: [] });

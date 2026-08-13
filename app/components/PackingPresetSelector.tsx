@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 type PackingPreset = {
   key: string;
@@ -13,6 +13,8 @@ type ThemeColors = {
   textMuted: string;
   border: string;
   surface: string;
+  surfaceMuted?: string;
+  link?: string;
 };
 
 interface PackingPresetSelectorProps {
@@ -30,9 +32,9 @@ const GENERAL_KEY = 'general';
 const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUrl, headers, jsonHeaders, theme }) => {
   const [available, setAvailable] = useState<boolean | null>(null);
   const [presets, setPresets] = useState<PackingPreset[]>([]);
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set([GENERAL_KEY]));
-  const [saving, setSaving] = useState(false);
+  const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const requestQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +52,6 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
         const data = await res.json();
         if (cancelled) return;
         setPresets(Array.isArray(data.presets) ? data.presets : []);
-        setSelectedKeys(new Set([GENERAL_KEY, ...(Array.isArray(data.preferences?.presetKeys) ? data.preferences.presetKeys : [])]));
         setAvailable(true);
       } catch {
         if (!cancelled) setAvailable(false);
@@ -62,38 +63,29 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
     };
   }, [backendUrl, headers]);
 
-  const toggle = useCallback(
-    async (key: string, nextValue: boolean) => {
-      if (key === GENERAL_KEY) return;
-      const next = new Set(selectedKeys);
-      if (nextValue) next.add(key);
-      else next.delete(key);
-      setSelectedKeys(next);
-      setSaving(true);
-      setError(null);
-      try {
-        const res = await fetch(`${backendUrl}/api/account/packing-list-presets`, {
-          method: 'PUT',
+  const addPreset = useCallback((key: string) => {
+    if (key === GENERAL_KEY) return;
+    setAddedKeys((previous) => new Set(previous).add(key));
+    setError(null);
+    requestQueue.current = requestQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const res = await fetch(`${backendUrl}/api/account/packing-list-presets/${encodeURIComponent(key)}`, {
+          method: 'POST',
           headers: jsonHeaders,
-          body: JSON.stringify({ presetKeys: Array.from(next) }),
         });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          setError(data.error ?? 'Could not save your packing list preferences.');
-          setSelectedKeys(selectedKeys);
-          return;
-        }
-        const data = await res.json();
-        setSelectedKeys(new Set([GENERAL_KEY, ...(Array.isArray(data.preferences?.presetKeys) ? data.preferences.presetKeys : [])]));
-      } catch {
-        setError('Could not save your packing list preferences.');
-        setSelectedKeys(selectedKeys);
-      } finally {
-        setSaving(false);
-      }
-    },
-    [backendUrl, jsonHeaders, selectedKeys]
-  );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? 'Could not add that packing list.');
+      })
+      .catch((err: any) => {
+        setAddedKeys((previous) => {
+          const next = new Set(previous);
+          next.delete(key);
+          return next;
+        });
+        setError(err.message ?? 'Could not add that packing list.');
+      });
+  }, [backendUrl, jsonHeaders]);
 
   if (available === null) {
     return (
@@ -104,7 +96,7 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
   }
   if (available === false) return null;
 
-  const activePresets = presets.filter((preset) => preset.isActive || selectedKeys.has(preset.key));
+  const activePresets = presets.filter((preset) => preset.isActive);
 
   return (
     <View
@@ -113,7 +105,7 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
     >
       <Text style={[localStyles.title, { color: theme.colors.text }]}>Packing list preferences</Text>
       <Text style={[localStyles.subtitle, { color: theme.colors.textMuted }]}>
-        Selected lists are added to any trip you are a traveler on, alongside your custom list above.
+        Add a preset to your editable personal list. Those items are included in every trip you join.
       </Text>
       {error ? <Text style={localStyles.error}>{error}</Text> : null}
       <View style={[localStyles.row, { borderColor: theme.colors.border }]} testID="account-packing-preset-general">
@@ -131,12 +123,14 @@ const PackingPresetSelector: React.FC<PackingPresetSelectorProps> = ({ backendUr
               <Text style={[localStyles.rowLabel, { color: theme.colors.text }]}>{preset.label}</Text>
               {preset.description ? <Text style={[localStyles.rowMeta, { color: theme.colors.textMuted }]}>{preset.description}</Text> : null}
             </View>
-            <Switch
-              value={selectedKeys.has(preset.key)}
-              onValueChange={(value) => toggle(preset.key, value)}
-              disabled={saving}
+            <Pressable
+              style={[localStyles.addButton, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted ?? theme.colors.surface }]}
+              onPress={() => addPreset(preset.key)}
+              disabled={addedKeys.has(preset.key)}
               testID={`account-packing-preset-toggle-${preset.key}`}
-            />
+            >
+              <Text style={{ color: theme.colors.link ?? theme.colors.text, fontWeight: '700' }}>{addedKeys.has(preset.key) ? 'Added' : 'Add'}</Text>
+            </Pressable>
           </View>
         ))}
     </View>
@@ -152,6 +146,7 @@ const localStyles = StyleSheet.create({
   rowText: { flex: 1, gap: 2, paddingRight: 12 },
   rowLabel: { fontSize: 15, fontWeight: '600' },
   rowMeta: { fontSize: 12 },
+  addButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },
 });
 
 export default PackingPresetSelector;

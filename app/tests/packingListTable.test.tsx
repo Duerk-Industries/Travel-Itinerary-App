@@ -175,4 +175,31 @@ describe('PackingListTable', () => {
     fireEvent.press(getByText('+ Beach'));
     await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/trips/trip-1/packing-list/presets', expect.objectContaining({ method: 'POST' })));
   });
+
+  test('materializes a user preset into the editable custom list without waiting for the save request', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        items: [{ id: 'item-1', category: 'Documents', label: 'Passport', position: 0 }],
+        preferences: { presetKeys: ['general'] },
+        presets: [{ key: 'men', label: 'Men', items: [{ id: 'men-1', category: 'Clothing', label: 'Polo shirt', position: 0 }] }],
+      }),
+    } as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ preferences: { presetKeys: ['general'] }, items: [{ category: 'Documents', label: 'Passport' }, { category: 'Clothing', label: 'Polo shirt' }] }),
+    } as any);
+
+    const { findByText, getByText, getByTestId, queryByTestId } = render(
+      <PackingListTable backendUrl="http://localhost" headers={{ Authorization: 'Bearer token' }} variant="user" />
+    );
+    await findByText('Passport');
+
+    fireEvent.press(getByText('Men'));
+
+    await waitFor(() => expect(getByTestId('user-packing-item-preset-men-men-1')).toBeTruthy());
+    expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/account/packing-list-presets/men', expect.objectContaining({ method: 'POST' }));
+
+    fireEvent.press(getByTestId('user-packing-remove-item-preset-men-men-1'));
+    expect(queryByTestId('user-packing-item-preset-men-men-1')).toBeNull();
+  });
 });

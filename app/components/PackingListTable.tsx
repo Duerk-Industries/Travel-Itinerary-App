@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
 import PackingListMatrix from './PackingListMatrix';
@@ -28,6 +28,12 @@ type Props = {
   title?: string;
   allowPrint?: boolean;
   printTitle?: string;
+};
+
+type PresetOption = {
+  key: string;
+  label: string;
+  items?: PackingItem[];
 };
 
 const endpointFor = (variant: Props['variant'], backendUrl: string, tripId?: string | null) => {
@@ -120,10 +126,11 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [v2, setV2] = useState(false);
-  const [presets, setPresets] = useState<Array<{ key: string; label: string }>>([]);
+  const [presets, setPresets] = useState<PresetOption[]>([]);
   const [selectedPresetKeys, setSelectedPresetKeys] = useState<string[]>(['general']);
   const [tripPresetKeys, setTripPresetKeys] = useState<string[]>([]);
   const [currentTravelerId, setCurrentTravelerId] = useState<string | null>(null);
+  const userPresetRequestQueue = useRef<Promise<void>>(Promise.resolve());
 
   const url = endpointFor(variant, backendUrl, tripId);
   const canLoad = variant !== 'trip' || Boolean(tripId);
@@ -162,10 +169,10 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
   const applyResponse = (data: any) => {
     const hasGroups = Array.isArray(data.groups);
     setV2(hasGroups || data.preferences !== undefined || Array.isArray(data.tripPresetKeys));
-    setPresets(Array.isArray(data.presets) ? data.presets : []);
-    setSelectedPresetKeys(Array.isArray(data.preferences?.presetKeys) ? data.preferences.presetKeys : ['general']);
-    setTripPresetKeys(Array.isArray(data.tripPresetKeys) ? data.tripPresetKeys : []);
-    setCurrentTravelerId(typeof data.currentTravelerId === 'string' ? data.currentTravelerId : null);
+    if (Array.isArray(data.presets)) setPresets(data.presets);
+    if (data.preferences && Array.isArray(data.preferences.presetKeys)) setSelectedPresetKeys(data.preferences.presetKeys);
+    if (Array.isArray(data.tripPresetKeys)) setTripPresetKeys(data.tripPresetKeys);
+    if (typeof data.currentTravelerId === 'string') setCurrentTravelerId(data.currentTravelerId);
     const nextItems = hasGroups
       ? data.groups.flatMap((group: any) =>
           // Group headings are rendered by groupedItems below. Keeping them
@@ -265,11 +272,52 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     }
   };
 
+  const enqueueUserPresetSave = (presetKey: string): void => {
+    userPresetRequestQueue.current = userPresetRequestQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const res = await fetch(`${backendUrl}/api/account/packing-list-presets/${encodeURIComponent(presetKey)}`, {
+          method: 'POST',
+          headers,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error ?? 'Unable to add preset');
+      })
+      .catch((err: any) => {
+        setError(err.message ?? 'Unable to add preset');
+        void load();
+      });
+  };
+
   const addPreset = async (presetKey: string) => {
     if (!isTrip) {
       if (presetKey === 'general') return;
-      setSelectedPresetKeys((previous) => previous.includes(presetKey) ? previous.filter((key) => key !== presetKey) : [...previous, presetKey]);
+      const preset = presets.find((candidate) => candidate.key === presetKey);
+      if (!preset) return;
+
+      // Materialize the preset into the editable list before doing any I/O.
+      // This keeps the button responsive even when the server is reconciling
+      // several trips for the account in the background.
+      const source = editMode ? draftItems : items;
+      const seen = new Set(source.map((item) => normalizePackingLabel(`${item.category} ${item.label}`)));
+      const additions = (preset.items ?? [])
+        .filter((item) => {
+          const key = normalizePackingLabel(`${item.category} ${item.label}`);
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map((item, index) => ({
+          ...item,
+          id: `preset-${presetKey}-${item.id ?? index}`,
+          position: source.length + index,
+        }));
+      const merged = [...source, ...additions].map((item, index) => ({ ...item, position: index }));
+      setItems(merged);
+      setDraftItems(merged);
+      setSelectedPresetKeys(['general']);
       setEditMode(true);
+      enqueueUserPresetSave(presetKey);
       return;
     }
     try {
@@ -468,7 +516,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                       <Pressable style={localStyles.orderButton} onPress={() => moveDraft(item.id, 1)}>
                         <Text style={[localStyles.orderText, { color: theme.colors.text }]}>↓</Text>
                       </Pressable>
-                      <Pressable style={localStyles.orderButton} onPress={() => setDraftItems((prev) => prev.filter((entry) => entry.id !== item.id).map((entry, pos) => ({ ...entry, position: pos })))}>
+                      <Pressable style={localStyles.orderButton} onPress={() => setDraftItems((prev) => prev.filter((entry) => entry.id !== item.id).map((entry, pos) => ({ ...entry, position: pos })))} testID={`${variant}-packing-remove-item-${item.id}`}>
                         <Text style={[localStyles.orderText, { color: theme.colors.error }]}>×</Text>
                       </Pressable>
                     </View>
