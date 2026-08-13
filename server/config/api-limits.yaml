@@ -180,9 +180,14 @@ providers:
   GOOGLE_STATIC_MAPS:
     window: hour
     windowHours: 24
-    overall: 500
+    overall: 800
     callers:
       STATIC_MAP_PREVIEW: 500
+      # trip_day_map feature flag (default off). Deliberately smaller than
+      # STATIC_MAP_PREVIEW: this renders on every day-detail view open, not
+      # just when a user opens a lodging dialog, so it's the higher-volume
+      # caller. Raise only after watching real usage/cost for a week.
+      TRIP_DAY_MAP: 300
 
   NOMINATIM:
     window: hour
@@ -393,6 +398,16 @@ budgeting:
     monthlyBudgetUsd: 20
     alertThresholdPercent: 80
     models: {}
+  # $0.002/request at Google's standard Static Maps pricing ($2 per 1000
+  # loads). Ceiling below assumes the hard per-day caller caps above never
+  # get raised without revisiting this number too: 800/day * 30 = 24,000
+  # requests/mo worst case = ~$48; 24h response caching keeps real spend far
+  # below that in practice. Budget is intentionally set below the worst case
+  # so the 80% alert fires with real headroom left before a runaway cost.
+  GOOGLE_STATIC_MAPS:
+    monthlyBudgetUsd: 15
+    alertThresholdPercent: 80
+    models: {}
 
 # Per-request USD price for providers that aren't token-priced. 0 = genuinely free today; the admin
 # cost-estimator panel (Phase 3) will make these editable without a code deploy. Unlisted providers
@@ -402,7 +417,13 @@ requestPricing:
   WIKIMEDIA: 0
   GOOGLE_ROUTES: 0
   GMAIL: 0
-  GOOGLE_STATIC_MAPS: 0
+  # Standard tier, $2 per 1000 Static Maps loads. Was explicitly priced at $0
+  # here before (a placeholder, not a real free tier) even though the
+  # STATIC_MAP_PREVIEW caller has been live since the lodging details dialog
+  # shipped — cost tracking silently recorded $0 for every call. Fixing this
+  # makes that existing feature's cost visible too, not just the new
+  # trip_day_map caller.
+  GOOGLE_STATIC_MAPS: 0.002
   NOMINATIM: 0
   CLAMAV: 0
   DOCLING: 0
@@ -484,6 +505,11 @@ caching:
     detailsCacheTimeoutMinutes: 1440
   googleStaticMaps:
     cacheTtlMinutes: 1440
+    # Hard cap on markers per trip_day_map request. Keeps the outbound Google
+    # Static Maps URL well under their documented length limits and keeps the
+    # rendered image legible. Excess points are dropped server-side (earliest
+    # items in the day kept) rather than erroring the whole map.
+    maxPointsPerTripDayMap: 12
   # Phase 0 guardrails for the optional GetYourGuide integration. No Partner
   # API calls are enabled until the verified partner quota/terms are recorded.
   # The API TTL values are reserved configuration only; do not persist GYG

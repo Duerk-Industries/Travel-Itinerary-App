@@ -94,6 +94,9 @@ flags:
   packing_lists_v2:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"
+  trip_day_map:
+    enabled: false
+    description: "Show a static multi-pin map (flights/lodging/activities/car rentals) on the Overview day-detail view. Off by default until a GOOGLE_STATIC_MAPS_API_KEY / GOOGLE_MAPS_API_KEY is provisioned; see docs/implementation_plans/implementation-plan-trip-day-map.md"
   trip_blog:
     enabled: true
     description: "Phase 1 joint trip blog (text + photo), private only"

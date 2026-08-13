@@ -1,0 +1,7 @@
+# Shell scripts must stay LF regardless of a checkout machine's core.autocrlf
+# setting — on Windows, autocrlf converting these to CRLF breaks them when
+# invoked via WSL/Git-Bash (POSIX shells choke on the trailing \r), which
+# silently broke the Phase 11 deploy pipeline's own __tests__/deploy/* suite
+# and scripts/lib/require-github-actor.sh specifically. See
+# docs/production-deployment-guide.md for how these scripts are used.
+*.sh text eol=lf

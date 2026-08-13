@@ -171,6 +171,60 @@ describe('getCostEstimatorConfig / updateCostEstimatorConfig', () => {
     );
   });
 
+  // Regression test for a bug that shipped 2026-08-12 and only reproduced against
+  // Firestore in production: writeAuditLog is mocked at the module boundary here
+  // (see the jest.mock('../src/db', ...) at the top of the file), so this suite
+  // can't catch the Firestore adapter's own runtime behavior directly. What it can
+  // — and must — assert is the contract the fix depends on: nothing this service
+  // hands to writeAuditLog may contain a literal `undefined` anywhere, nested or
+  // not. The Postgres adapter's JSON.stringify() silently drops such keys (which
+  // is exactly why every other test here stayed green while this was broken);
+  // Firestore's .set() throws on them instead.
+  const assertNoUndefinedValues = (value: unknown, path = 'afterState'): void => {
+    if (value === undefined) {
+      throw new Error(`Found undefined at ${path} — Firestore's .set() will throw on this.`);
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item, i) => assertNoUndefinedValues(item, `${path}[${i}]`));
+    } else if (value !== null && typeof value === 'object') {
+      for (const [key, nested] of Object.entries(value)) {
+        assertNoUndefinedValues(nested, `${path}.${key}`);
+      }
+    }
+  };
+
+  it('never passes an undefined-valued field to writeAuditLog when only assumptions are updated', async () => {
+    mockedGetAdminSetting.mockResolvedValue(null);
+    mockedSetAdminSetting.mockResolvedValue({} as any);
+
+    await updateCostEstimatorConfig({
+      assumptions: { totalUsers: 50000 },
+      actorId: 'admin-1',
+      reason: 'Assumptions-only update',
+    });
+
+    const call = mockedWriteAuditLog.mock.calls[0]?.[0] as any;
+    expect(call).toBeDefined();
+    expect('hostingLineItems' in (call.afterState ?? {})).toBe(false);
+    assertNoUndefinedValues(call.afterState);
+  });
+
+  it('never passes an undefined-valued field to writeAuditLog when only hosting line items are updated', async () => {
+    mockedGetAdminSetting.mockResolvedValue(null);
+    mockedSetAdminSetting.mockResolvedValue({} as any);
+
+    await updateCostEstimatorConfig({
+      hostingLineItems: [{ id: 'cloud-run', name: 'Cloud Run', monthlyCostUsd: 75 }],
+      actorId: 'admin-1',
+      reason: 'Hosting-only update',
+    });
+
+    const call = mockedWriteAuditLog.mock.calls[0]?.[0] as any;
+    expect(call).toBeDefined();
+    expect('assumptions' in (call.afterState ?? {})).toBe(false);
+    assertNoUndefinedValues(call.afterState);
+  });
+
   it('round-trips a hosting line item update', async () => {
     let stored: string | null = null;
     mockedGetAdminSetting.mockImplementation(async (key: string) =>

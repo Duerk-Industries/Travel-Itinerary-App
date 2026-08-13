@@ -67,6 +67,8 @@ import {
   tourMatchesDay,
 } from '../utils/overviewDayEvents';
 import { FlightEditingForm } from '../components/TransferEditingForm';
+import TripDayMap from '../components/TripDayMap';
+import { type TripMapPoint } from '../utils/googleMaps';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
@@ -2555,6 +2557,31 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const lodgingsForDay = activeDayInfo.lodgings;
         const rentalsForDay = activeDayInfo.rentals;
 
+        // Trip-day map points (see TripDayMap / GET /api/maps/trip-day). Plain
+        // free-text addresses, not resolved coordinates — Google's Static Maps
+        // API geocodes marker locations internally, so this deliberately
+        // avoids adding a separate geocoding call. Order determines the A/B/C…
+        // pin labels; the server independently caps + re-validates this list,
+        // so an unusually packed day degrades (drops the tail) rather than
+        // breaking the map entirely.
+        const dayMapPoints: TripMapPoint[] = [];
+        flightsForDay.forEach((f) => {
+          if (f.departure_location) dayMapPoints.push({ kind: 'flight', address: f.departure_location });
+          if (f.arrival_location) dayMapPoints.push({ kind: 'flight', address: f.arrival_location });
+        });
+        lodgingsForDay.forEach((l) => {
+          if (l.address) dayMapPoints.push({ kind: 'lodging', address: l.address });
+        });
+        toursForDay.forEach((t) => {
+          if (t.startLocation) dayMapPoints.push({ kind: 'activity', address: t.startLocation });
+        });
+        rentalsForDay.forEach((r) => {
+          if (r.pickupLocation) dayMapPoints.push({ kind: 'car_rental', address: r.pickupLocation });
+          if (r.dropoffLocation && r.dropoffLocation !== r.pickupLocation) {
+            dayMapPoints.push({ kind: 'car_rental', address: r.dropoffLocation });
+          }
+        });
+
         const flightParticipantKeys = flightsForDay.map((f) => {
           const ids = Array.isArray(f.passenger_ids) && f.passenger_ids.length ? f.passenger_ids : [];
           return ids.slice().sort().join('|');
@@ -2599,6 +2626,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
+              {dayMapPoints.length ? (
+                <TripDayMap points={dayMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="day-detail-map" />
+              ) : null}
               {narrativeLines.length ? (
                 <View style={styles.dayNarrativeBox}>
                   {narrativeLines.map((line, idx) => (
