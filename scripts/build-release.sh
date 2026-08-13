@@ -53,6 +53,14 @@ CONFIG_FINGERPRINT="$(node -e "const v=require('./scripts/lib/phase11-validators
 IMAGE_DIGEST="${ARTIFACT_REGISTRY_REPO}/backend:${SHORT_SHA}@sha256:${GIT_SHA:0:40}000000000000000000000000"
 
 if [[ "$DRY_RUN" != "1" ]]; then
+  # server/public has no tracked files (git doesn't store empty directories),
+  # so a clean checkout never has it -- the Dockerfile's
+  # `COPY --from=build /app/public ./public` fails without this. app.ts also
+  # serves this directory directly (express.static), separately from the
+  # Firebase Hosting deploy of the same frontend build.
+  rm -rf "$REPO_ROOT/server/public"
+  mkdir -p "$REPO_ROOT/server/public"
+  cp -r "$FRONTEND_DIR/." "$REPO_ROOT/server/public/"
   IMAGE_TAG="${ARTIFACT_REGISTRY_REPO}/backend:${SHORT_SHA}"
   gcloud builds submit "$REPO_ROOT/server" --tag "$IMAGE_TAG"
   IMAGE_DIGEST="$(gcloud container images describe "$IMAGE_TAG" --format='value(image_summary.digest)')"

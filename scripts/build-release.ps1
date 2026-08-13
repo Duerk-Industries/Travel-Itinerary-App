@@ -65,6 +65,16 @@ $dryRunDigestHex = ($gitSha.Substring(0, [Math]::Min(40, $gitSha.Length)).PadRig
 $imageDigest = "$($env:ARTIFACT_REGISTRY_REPO)/backend:${shortSha}@sha256:$dryRunDigestHex"
 
 if (-not $DryRun) {
+  # server/public has no tracked files (git doesn't store empty directories),
+  # so a clean checkout never has it -- the Dockerfile's
+  # `COPY --from=build /app/public ./public` fails without this. app.ts also
+  # serves this directory directly (express.static), separately from the
+  # Firebase Hosting deploy of the same frontend build.
+  $serverPublicDir = Join-Path $Script:RepoRoot 'server\public'
+  if (Test-Path -LiteralPath $serverPublicDir) { Remove-Item -LiteralPath $serverPublicDir -Recurse -Force }
+  New-Item -ItemType Directory -Force -Path $serverPublicDir | Out-Null
+  Copy-Item -Path (Join-Path $frontendDir '*') -Destination $serverPublicDir -Recurse -Force
+
   $imageTag = "$($env:ARTIFACT_REGISTRY_REPO)/backend:$shortSha"
   & gcloud builds submit (Join-Path $Script:RepoRoot 'server') --tag $imageTag
   if ($LASTEXITCODE -ne 0) { Fail 'gcloud builds submit failed' }
