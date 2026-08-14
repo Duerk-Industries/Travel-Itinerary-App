@@ -544,7 +544,7 @@ export interface AttractionShortlistBlob {
 export interface ItineraryPlanCacheEntry {
   id: string;
   cacheKey: string;
-  stage: 'route' | 'day';
+  stage: 'route' | 'day' | 'binding_plan';
   signature: string;
   dependencyFingerprint: string;
   payload: unknown;

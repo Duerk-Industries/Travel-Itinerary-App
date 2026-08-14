@@ -25,6 +25,7 @@ import {
   getConfiguredProviderApiKey,
   getProviderApiKeyEnvVar,
 } from '../services/aiProviderConfigService';
+import type { RoadTripHints } from '../services/itineraryRoadTripService';
 
 // Accepts either a plain attraction name or `{ name, destinationName }` so the
 // generator can place must-see attractions on the correct destination's day.
@@ -43,6 +44,52 @@ const parseMustSeeAttractions = (raw: unknown): MustSeeAttractionInput[] => {
     if (name) out.push(name);
   }
   return out;
+};
+
+const parseRoadTripHints = (raw: unknown): RoadTripHints | undefined => {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const value = raw as Record<string, unknown>;
+  const corridors = Array.isArray(value.corridors)
+    ? value.corridors.slice(0, 32).flatMap((candidate) => {
+        if (!candidate || typeof candidate !== 'object') return [];
+        const item = candidate as Record<string, unknown>;
+        const fromLocationId = String(item.fromLocationId ?? '').trim().slice(0, 160);
+        const toLocationId = String(item.toLocationId ?? '').trim().slice(0, 160);
+        const minutes = Number(item.minutes);
+        if (!fromLocationId || !toLocationId || !Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) return [];
+        const mode = ['drive', 'rail', 'bus', 'flight', 'other'].includes(String(item.mode)) ? item.mode as any : undefined;
+        const confidence = ['verified', 'estimated', 'low'].includes(String(item.confidence)) ? item.confidence as any : undefined;
+        return [{ fromLocationId, toLocationId, minutes: Math.round(minutes), ...(mode ? { mode } : {}), ...(confidence ? { confidence } : {}) }];
+      })
+    : undefined;
+  const deadlines = Array.isArray(value.deadlines)
+    ? value.deadlines.slice(0, 31).flatMap((candidate) => {
+        if (!candidate || typeof candidate !== 'object') return [];
+        const item = candidate as Record<string, unknown>;
+        const date = String(item.date ?? '').trim();
+        const at = String(item.at ?? '').trim();
+        const reasonCode = String(item.reasonCode ?? '').trim().slice(0, 80);
+        const slack = Number(item.requiredSlackMinutes);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(at) || !reasonCode) return [];
+        return [{ date, at, reasonCode, ...(Number.isFinite(slack) ? { requiredSlackMinutes: Math.max(0, Math.min(1440, Math.round(slack))) } : {}) }];
+      })
+    : undefined;
+  const variants = Array.isArray(value.variants)
+    ? value.variants.slice(0, 124).flatMap((candidate) => {
+        if (!candidate || typeof candidate !== 'object') return [];
+        const item = candidate as Record<string, unknown>;
+        const variantId = String(item.variantId ?? '').trim().slice(0, 100);
+        const date = String(item.date ?? '').trim();
+        const labelReasonCode = String(item.labelReasonCode ?? '').trim().slice(0, 80);
+        if (!variantId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !labelReasonCode) return [];
+        const list = (key: string, max: number): string[] => Array.isArray(item[key]) ? item[key].map((entry) => String(entry ?? '').trim()).filter(Boolean).slice(0, max) : [];
+        const estimatedMinutes = Number(item.estimatedMinutes);
+        const conditions = list('conditions', 8).filter((entry): entry is any => ['dry', 'poor_weather', 'opening_hours', 'reservation_confirmed'].includes(entry));
+        return [{ variantId, date, labelReasonCode, blockIds: list('blockIds', 40), activityNames: list('activityNames', 40), legIds: list('legIds', 16), ...(Number.isFinite(estimatedMinutes) ? { estimatedMinutes: Math.max(0, Math.min(1440, Math.round(estimatedMinutes))) } : {}), conditions, exclusiveGroup: String(item.exclusiveGroup ?? `day_${date}`).trim().slice(0, 100), tradeoffReasonCodes: list('tradeoffReasonCodes', 8) }];
+      })
+    : undefined;
+  if (!corridors?.length && !deadlines?.length && !variants?.length) return undefined;
+  return { ...(corridors?.length ? { corridors } : {}), ...(deadlines?.length ? { deadlines } : {}), ...(variants?.length ? { variants } : {}) };
 };
 
 // Returns a UTC monthly window key, e.g. "2026-03"
@@ -327,6 +374,7 @@ router.post('/', async (req, res) => {
       tripStartMonth,
       tripStartYear,
       tripIdSeed: tripId,
+      roadTripHints: parseRoadTripHints(req.body?.roadTrip),
     });
     const normalizedPlan = String(result.planMarkdown ?? '')
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
@@ -351,6 +399,7 @@ router.post('/', async (req, res) => {
         route: result.route,
         itinerary: result.itinerary,
       },
+      ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}),
     });
     // Affiliate work is explicitly post-response/background work. It cannot
     // change ordering, cache payloads, or add latency to itinerary generation.
@@ -513,6 +562,7 @@ router.post('/async', async (req, res) => {
     tripStyle: tripStyle ? String(tripStyle).trim() : undefined,
     tt,
     ut,
+    roadTripHints: parseRoadTripHints(req.body?.roadTrip),
     groupTraits,
     tripStartDate,
     tripEndDate,

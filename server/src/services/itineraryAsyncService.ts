@@ -29,6 +29,7 @@ import {
   type ItineraryPromptPlanResult,
   type MustSeeAttractionInput,
 } from './itineraryPromptPlanService';
+import type { RoadTripHints } from './itineraryRoadTripService';
 import { computeUnmatchedDestinationAndAttractionWarnings } from './attractionMatchWarnings';
 import { scheduleGetYourGuideDescriptorEnrichment } from './getYourGuideItineraryEnrichmentService';
 import { renderSimplifiedItineraryMarkdown } from './itineraryMarkdownRenderer';
@@ -66,6 +67,7 @@ export type AsyncItineraryJob = {
     lodgingsCount: number;
     activitiesCount: number;
     carRentalsCount: number;
+    roadTrip?: ItineraryPromptPlanResult['roadTrip'];
   };
 };
 
@@ -176,6 +178,7 @@ type QueueInput = {
   tripStartYear?: number | null;
   idempotencyKey?: string;
   usageWindowKey?: string;
+  roadTripHints?: RoadTripHints;
 };
 
 const jobs = new Map<string, AsyncItineraryJob>();
@@ -860,6 +863,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripStartMonth: input.tripStartMonth,
       tripStartYear: input.tripStartYear,
       tripIdSeed: input.tripId,
+      roadTripHints: input.roadTripHints,
       captureId: jobId,
       usageWindowKey: input.usageWindowKey,
       onStageChange: (stage: ItineraryGenerationStageId) => updateJobStage(jobId, stage, input.days),
@@ -896,7 +900,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     job.status = 'completed';
     job.updatedAt = nowIso();
     job.etaSeconds = 0;
-    job.result = { itineraryId, ...persisted };
+    job.result = { itineraryId, ...persisted, ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}) };
     jobs.set(jobId, job);
     // Nudge the ETA heuristic toward how long this job actually took, so later
     // jobs' remaining-time estimates track real server/provider performance

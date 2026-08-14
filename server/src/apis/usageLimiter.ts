@@ -155,6 +155,19 @@ export class ApiLimitExceededError extends Error {
   }
 }
 
+/** Configuration is part of the safety boundary for newly metered work. */
+export class ApiLimitConfigurationError extends Error {
+  public readonly provider: string;
+  public readonly caller: string;
+
+  constructor(params: { provider: string; caller: string }) {
+    super(`API limit configuration is missing or invalid for provider=${params.provider} caller=${params.caller}`);
+    this.name = 'ApiLimitConfigurationError';
+    this.provider = params.provider;
+    this.caller = params.caller;
+  }
+}
+
 export class ApiBudgetExceededError extends ApiLimitExceededError {
   public readonly monthlyBudgetUsd: number;
   public readonly estimatedSpendUsd: number;
@@ -298,6 +311,7 @@ export const reserveApiUsageOrThrow = async (params: {
   provider: string;
   caller: string;
   units?: number;
+  requireConfiguredLimit?: boolean;
 }): Promise<void> => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);
@@ -324,6 +338,10 @@ export const reserveApiUsageOrThrow = async (params: {
   const callerLimit = parseLimit(
     providerConfig?.callers?.[caller] == null ? undefined : String(providerConfig.callers[caller])
   );
+
+  if (params.requireConfiguredLimit && (overallLimit === null || callerLimit === null)) {
+    throw new ApiLimitConfigurationError({ provider, caller });
+  }
 
   if (overallLimit !== null) {
     await reserveScopeUsageOrThrow({

@@ -4373,7 +4373,7 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
 };
 
 const toItineraryPlanCacheEntry = (id: string, data: any): ItineraryPlanCacheEntry | null => {
-  if (!data?.cacheKey || !['route', 'day'].includes(data.stage) || !data.signature || !data.dependencyFingerprint) return null;
+  if (!data?.cacheKey || !['route', 'day', 'binding_plan'].includes(data.stage) || !data.signature || !data.dependencyFingerprint) return null;
   // payload and fragments are stored as JSON strings because they can contain
   // nested arrays (e.g. PromptDay.it), which Firestore rejects.
   let payload = data.payload;

@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { BindingPlanSchema, type BindingPlan } from '../schemas/itineraryCacheSchemas';
-import { stableHash } from './itineraryPlanCacheService';
-import { recordApiUsage } from '../apis/providerBudgeting'; // Assuming this exists
+import { BindingPlanSchema, type ActivityBlock, type BindingPlan } from '../schemas/itineraryCacheSchemas';
+import { readItineraryPlanCache, stableHash, writeItineraryPlanCache } from './itineraryPlanCacheService';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 /**
  * Canonical compatibility projection for Tier 0 cache hits.
@@ -10,18 +11,18 @@ import { recordApiUsage } from '../apis/providerBudgeting'; // Assuming this exi
  */
 export const CacheCompatibilityProjectionSchema = z.object({
   schema_version: z.literal('binding-plan-v2'),
-  algorithm_version: z.string(),
-  corpus_release_id: z.string(),
-  template_revision: z.string(),
-  destinations: z.array(z.string()),
-  duration_bucket: z.number().int(),
-  local_date_shape: z.string(),
-  season_label: z.string(),
-  pace: z.string(),
-  party_class: z.string(),
-  mobility_class: z.string(),
-  interest_signature: z.string(),
-});
+  algorithm_version: z.string().max(80),
+  corpus_release_id: z.string().max(160),
+  template_revision: z.string().max(160),
+  destinations: z.array(z.string().max(160)).min(1).max(8),
+  duration_bucket: z.number().int().min(1).max(31),
+  local_date_shape: z.string().max(80),
+  season_label: z.string().max(40),
+  pace: z.string().max(40),
+  party_class: z.string().max(40),
+  mobility_class: z.string().max(40),
+  interest_signature: z.string().max(160),
+}).strict();
 
 export type CacheCompatibilityProjection = z.infer<typeof CacheCompatibilityProjectionSchema>;
 
@@ -29,7 +30,8 @@ export type CacheCompatibilityProjection = z.infer<typeof CacheCompatibilityProj
  * Builds the opaque SHA-256 cache key from a canonical projection.
  */
 export const buildCacheKeyV2 = (projection: CacheCompatibilityProjection): string => {
-  const json = JSON.stringify(projection);
+  const normalized = CacheCompatibilityProjectionSchema.parse(projection);
+  const json = JSON.stringify(normalized);
   return createHash('sha256').update(json).digest('hex');
 };
 
@@ -42,16 +44,48 @@ export const recordCacheRoi = async (params: {
   baselineTokensOutput: number;
   model: string;
 }) => {
-  if (!params.isHit) return;
+  // Avoided inference is telemetry, not a negative provider cost. Callers can
+  // feed this bounded value into the existing metrics/estimator pipeline.
+  return params.isHit
+    ? { tokensSaved: Math.max(0, params.baselineTokensInput) + Math.max(0, params.baselineTokensOutput), model: params.model }
+    : { tokensSaved: 0, model: params.model };
+};
 
-  // Record "negative usage" or a specific ROI metric
-  await recordApiUsage({
-    provider: 'itinerary_cache_roi',
-    caller: 'AVOIDED_INFERENCE',
-    metadata: {
-      tokens_saved: params.baselineTokensInput + params.baselineTokensOutput,
-      model_avoided: params.model,
-    }
+export const readBindingPlanCache = async (params: {
+  projection: CacheCompatibilityProjection;
+  dependencyFingerprint: string;
+  now?: Date;
+}): Promise<BindingPlan | null> => {
+  await reserveApiUsageOrThrow({ provider: 'ITINERARY_CACHE_STORAGE', caller: 'BINDING_READ', units: 1, requireConfiguredLimit: true });
+  await recordProviderRequestCost({ provider: 'ITINERARY_CACHE_STORAGE', costPerRequestUsd: 0 });
+  const signature = stableHash(params.projection);
+  const payload = await readItineraryPlanCache<unknown>({
+    stage: 'binding_plan',
+    signature,
+    dependencyFingerprint: params.dependencyFingerprint,
+    now: params.now,
+  });
+  const parsed = BindingPlanSchema.safeParse(payload);
+  return parsed.success ? parsed.data : null;
+};
+
+export const writeBindingPlanCache = async (params: {
+  projection: CacheCompatibilityProjection;
+  dependencyFingerprint: string;
+  plan: BindingPlan;
+  ttlDays: number;
+  now?: Date;
+}): Promise<void> => {
+  const parsed = BindingPlanSchema.parse(params.plan);
+  await reserveApiUsageOrThrow({ provider: 'ITINERARY_CACHE_STORAGE', caller: 'BINDING_WRITE', units: 1, requireConfiguredLimit: true });
+  await recordProviderRequestCost({ provider: 'ITINERARY_CACHE_STORAGE', costPerRequestUsd: 0 });
+  await writeItineraryPlanCache({
+    stage: 'binding_plan',
+    signature: stableHash(params.projection),
+    dependencyFingerprint: params.dependencyFingerprint,
+    payload: parsed,
+    ttlDays: Math.max(1, Math.min(90, params.ttlDays)),
+    now: params.now,
   });
 };
 
@@ -62,8 +96,26 @@ export const recordCacheRoi = async (params: {
 export const validatePrivateConstraints = (plan: BindingPlan, constraints: {
   maxEnergyPerDay: number;
   requireStepFree: boolean;
+  blocks: Record<string, ActivityBlock>;
 }): boolean => {
-  // Logic to re-check the bound blocks against the actual private request
-  // (Requires joining the plan against the corpus release, which should be in-memory)
+  const parsed = BindingPlanSchema.safeParse(plan);
+  if (!parsed.success || !constraints.blocks || !Number.isFinite(constraints.maxEnergyPerDay)) return false;
+  const seen = new Set<string>();
+  for (const day of parsed.data.days) {
+    let energy = 0;
+    for (const blockId of Object.values(day.bindings)) {
+      if (!blockId) continue;
+      if (seen.has(blockId)) return false;
+      seen.add(blockId);
+      const block = constraints.blocks[blockId];
+      if (!block) return false;
+      energy += block.energy_cost;
+      if (constraints.requireStepFree) {
+        const accessibility = (block as unknown as { audience?: { accessibility?: { step_free?: boolean } } }).audience?.accessibility;
+        if (accessibility?.step_free !== true) return false;
+      }
+    }
+    if (energy > constraints.maxEnergyPerDay) return false;
+  }
   return true;
 };

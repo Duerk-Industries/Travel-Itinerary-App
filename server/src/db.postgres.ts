@@ -7350,7 +7350,7 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
 
 const toItineraryPlanCacheEntry = (row: any): ItineraryPlanCacheEntry | null => {
   const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
-  if (!payload.cacheKey || !['route', 'day'].includes(payload.stage) || !payload.signature || !payload.dependencyFingerprint) return null;
+  if (!payload.cacheKey || !['route', 'day', 'binding_plan'].includes(payload.stage) || !payload.signature || !payload.dependencyFingerprint) return null;
   return {
     id: row.id, cacheKey: String(payload.cacheKey), stage: payload.stage, signature: String(payload.signature),
     dependencyFingerprint: String(payload.dependencyFingerprint), payload: payload.value,

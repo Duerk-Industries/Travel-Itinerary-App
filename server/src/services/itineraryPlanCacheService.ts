@@ -80,10 +80,10 @@ export const buildCatalogFingerprint = (byDestination: Record<string, Attraction
 );
 
 export const buildPromptFingerprint = (templates: unknown): string => stableHash(templates);
-export const buildCacheKey = (stage: 'route' | 'day', signature: string, dependencyFingerprint: string): string =>
+export const buildCacheKey = (stage: 'route' | 'day' | 'binding_plan', signature: string, dependencyFingerprint: string): string =>
   `it-plan:${stage}:${stableHash({ signature, dependencyFingerprint }).slice(0, 40)}`;
 
-export const readItineraryPlanCache = async <T>(params: { stage: 'route' | 'day'; signature: string; dependencyFingerprint: string; now?: Date }): Promise<T | null> => {
+export const readItineraryPlanCache = async <T>(params: { stage: 'route' | 'day' | 'binding_plan'; signature: string; dependencyFingerprint: string; now?: Date }): Promise<T | null> => {
   const cacheKey = buildCacheKey(params.stage, params.signature, params.dependencyFingerprint);
   const entry = await getItineraryPlanCacheEntry(cacheKey);
   if (!entry || entry.signature !== params.signature || entry.dependencyFingerprint !== params.dependencyFingerprint) return null;
@@ -91,7 +91,7 @@ export const readItineraryPlanCache = async <T>(params: { stage: 'route' | 'day'
   return entry.payload as T;
 };
 
-export const writeItineraryPlanCache = async <T>(params: { stage: 'route' | 'day'; signature: string; dependencyFingerprint: string; payload: T; ttlDays: number; fragments?: unknown[]; now?: Date }): Promise<ItineraryPlanCacheEntry> => {
+export const writeItineraryPlanCache = async <T>(params: { stage: 'route' | 'day' | 'binding_plan'; signature: string; dependencyFingerprint: string; payload: T; ttlDays: number; fragments?: unknown[]; now?: Date }): Promise<ItineraryPlanCacheEntry> => {
   const now = params.now ?? new Date();
   const cacheKey = buildCacheKey(params.stage, params.signature, params.dependencyFingerprint);
   return upsertItineraryPlanCacheEntry({

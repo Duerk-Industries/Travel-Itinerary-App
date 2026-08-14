@@ -205,3 +205,21 @@ flags:
   itinerary_practical_notes:
     enabled: false
     description: "Enable country/region-scoped PracticalNote selection and rendering"
+  itinerary_road_trip_lite:
+    enabled: false
+    description: "Enable provider-free private base-stay, travel-leg, deadline, and road-trip summary planning"
+  itinerary_day_variants:
+    enabled: false
+    description: "Enable mutually exclusive whole-day road-trip variants"
+  itinerary_timed_route_days:
+    enabled: false
+    description: "Enable deterministic road-trip deadline, slack, checkpoint, and optional-stop planning"
+  itinerary_live_route_conditions:
+    enabled: false
+    description: "Enable optional capped Google Routes refinement for road-trip legs"
+  itinerary_live_weather_variants:
+    enabled: false
+    description: "Enable optional capped near-departure weather selection for road-trip variants"
+  itinerary_anchor_schedule_verification:
+    enabled: false
+    description: "Enable optional capped verification of selected time-critical anchor schedules"
