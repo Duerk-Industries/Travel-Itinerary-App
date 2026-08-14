@@ -547,6 +547,9 @@ permits, pricing, safety, and accessibility claims are never served stale; suppr
 render a “verify before you go” state from current evidence. Negative cold-location/coverage results may be
 cached for five minutes to absorb bursts, but a provider/auth error is not a negative fact.
 
+Use a **tiered caching strategy**: L0 (in-process LRU) handles hot-key bursts and prevents redundant L1
+fetches within a request window; L1 (durable DB) handles cross-instance sharing.
+
 Use single-flight coalescing per cache key in process and a short, owner-tokened distributed lease for
 cross-instance fills. Lease acquisition, renewal, and release are bounded storage operations. Waiters have
 a short timeout and fall back deterministically; they do not start a second fill. Sample/batch hit metadata
@@ -988,8 +991,9 @@ Initial hard caps, enforced before decode/write and duplicated in configuration 
 
 Use safe JSON, not language-native object serialization. Verify `payload_bytes` and `payload_sha256` before
 decode. Firestore document size remains comfortably below its platform ceiling; the application cap is the
-portable contract. Compression is unnecessary below 64 KiB and is disabled initially to avoid
-decompression-bomb and cross-adapter complexity.
+portable contract. Use **JIT Compression** (Brotli or Gzip) for serialized binding payloads larger than
+8 KiB to minimize storage and egress costs, while remaining under the 64 KiB platform cap. Store a
+`compression` field (`br`, `gzip`, or `none`) in the metadata.
 
 ### 16.3 Immutable corpus releases
 
@@ -1073,6 +1077,9 @@ capacity until deleted.
 - Add caller-aware unit pricing for cache reads, writes, deletes, retained GiB-month, egress, queue
   operations, and worker compute. Record actual units against the same durable monthly cost-counter/reporting
   plane; do not build a cache-only dashboard ledger.
+- **Track economic ROI**: implement an `itinerary_cache_roi` provider that records "Avoided Inference Tokens"
+  (calculated as the difference between a full baseline generation and a binding-plan generation, minus
+  cache overhead).
 - Prevent double counting: caller detail rolls up to the provider total once. Estimated reservation cost is
   replaced/reconciled by actual cost, not added to it.
 - Record zero-cost operations as usage even when no cost-counter row is needed. “Free” still consumes quotas
@@ -1207,6 +1214,20 @@ Keep responsibilities separated:
 - authoring/release service owns drafts, evidence, approvals, and immutable promotion;
 - renderer owns localized, escaped copy and reason-code presentation.
 
+Primary implementation touchpoints:
+
+| Area | Files/changes |
+|---|---|
+| Canonical types/schemas | `server/src/types.ts` plus a focused itinerary-cache schema module |
+| Cache orchestration | evolve `server/src/services/itineraryPlanCacheService.ts`; do not add a sibling cache |
+| Persistence | `server/src/db.ts`, `db.postgres.ts`, `db.firebase.ts`, memory adapter, and a Postgres migration |
+| Limits/capacity | `server/src/apis/usageLimiter.ts`, atomic DB counter contract, and `server/config/api-limits.yaml` |
+| Runtime costs | `server/src/apis/providerBudgeting.ts` and provider registry/callers |
+| Estimates | `server/config/cost-model.yaml` and `server/src/services/costEstimatorService.ts` |
+| Flags | `server/config/feature-flags.yaml`, server orchestration/workers, and existing client flag bootstrap |
+| Observability | existing metrics/Prometheus/admin summaries with fixed-cardinality cache metrics |
+| Tests | cache service/DB suites, durable limiter/cost wiring/config tests, corpus tool tests, and E2E fallback UX |
+
 `corpus_tools.py` is a bounded offline QA/planning utility. It must use UTF-8, reject duplicate IDs and
 oversized/malformed input, validate cross-references, produce deterministic output, and remain credential-
 free. Its `promote` command is a preflight, not a write. Production mutations go through authenticated,
@@ -1248,9 +1269,16 @@ read paths.
 - reason-code rendering/localization/escaping and no free-form model prose;
 - write-through economics, TTL jitter, freshness boundaries, negative-cache classification, and LRU byte cap.
 
-Use property-based tests for “a hard-incompatible block is never selected,” “private fields never affect or
-enter the shared projection,” “validator acceptance is invariant under candidate ordering,” and “serialized
-payload remains within cap.” Fuzz cache/model/provider JSON and corpus files.
+Use **property-based tests** (e.g. `fast-check`) for “a hard-incompatible block is never selected,”
+“private fields never affect or enter the shared projection,” “validator acceptance is invariant under
+candidate ordering,” and “serialized payload remains within cap.” Fuzz cache/model/provider JSON and
+corpus files.
+
+### Golden Itinerary Eval Set
+
+Maintain a versioned JSON **"Gold Set"** of 50 diverse trip requests (e.g., "3 days in Lisbon, mobility
+limited, budget: tight"). Every change to the selector or validator must pass this suite, asserting zero
+hard-constraint violations and consistent signature coverage.
 
 ### Integration and adapter-contract tests
 

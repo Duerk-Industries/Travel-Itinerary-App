@@ -23,7 +23,7 @@ import math
 import re
 import statistics
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from itertools import combinations
 from pathlib import Path
@@ -255,12 +255,21 @@ class Finding:
 # --------------------------------------------------------------------------
 
 
-def _read_json(root: Path, name: str, expected_type: type, max_items: int | None = None) -> Any:
+def _read_json(
+    root: Path,
+    name: str,
+    expected_type: type,
+    max_items: int | None = None,
+    *,
+    required: bool = True,
+) -> Any:
     root = root.resolve()
     path = (root / name).resolve()
     if path.parent != root:
         raise CorpusLoadError(f"{name}: resolved path escapes corpus directory")
     if not path.exists():
+        if required:
+            raise CorpusLoadError(f"{name}: required file not found")
         return [] if expected_type is list else {}
     size = path.stat().st_size
     if size > MAX_FILE_BYTES:
@@ -554,8 +563,9 @@ def validate_location_caps(loc: Location, blocks: list[Block]) -> list[Finding]:
     return out
 
 
-def audit(root: Path) -> tuple[list[Finding], int]:
-    locations, blocks, groups = load_corpus(root)
+def audit_loaded(
+    locations: dict[str, Location], blocks: dict[str, Block], groups: dict[str, Group]
+) -> tuple[list[Finding], int]:
     findings: list[Finding] = []
 
     mean = corpus_mean(blocks.values())
@@ -569,6 +579,10 @@ def audit(root: Path) -> tuple[list[Finding], int]:
             findings.append(Finding("error", scope, "invalid location_id"))
         if not isinstance(loc.name, str) or not loc.name.strip() or len(loc.name) > MAX_TITLE_CHARS:
             findings.append(Finding("error", scope, f"name must be 1-{MAX_TITLE_CHARS} characters"))
+        if not isinstance(loc.location_type, str) or not loc.location_type.strip() or len(loc.location_type) > 64:
+            findings.append(Finding("error", scope, "invalid location_type"))
+        if isinstance(loc.priority, bool) or not isinstance(loc.priority, int) or not (0 <= loc.priority <= 1_000_000):
+            findings.append(Finding("error", scope, "priority outside 0..1000000"))
         loc_blocks = [b for b in blocks.values() if b.location_id == loc.location_id]
         findings += validate_location_caps(loc, loc_blocks)
 
@@ -581,6 +595,10 @@ def audit(root: Path) -> tuple[list[Finding], int]:
 
     errors = sum(1 for f in findings if f.severity == "error")
     return findings, errors
+
+
+def audit(root: Path) -> tuple[list[Finding], int]:
+    return audit_loaded(*load_corpus(root))
 
 
 # --------------------------------------------------------------------------
@@ -625,9 +643,10 @@ def coverage(loc: Location, blocks: dict[str, Block], groups: dict[str, Group]) 
     missing = [d for d, c in counts.items() if c < MIN_DOMINANT_PER_DIM and d not in gated]
 
     incomplete = [
-        (g.group_id, len(g.member_ids))
+        (g.group_id, sum(1 for member_id in g.member_ids if blocks.get(member_id) and blocks[member_id].live))
         for g in groups.values()
-        if g.location_id == loc.location_id and len(g.member_ids) < GROUP_MIN_MEMBERS
+        if g.location_id == loc.location_id
+        and sum(1 for member_id in g.member_ids if blocks.get(member_id) and blocks[member_id].live) < GROUP_MIN_MEMBERS
     ]
 
     return Coverage(loc.location_id, counts, servable, unservable, missing, incomplete)
@@ -676,10 +695,13 @@ def plan_jobs(
     jobs: list[Job] = []
 
     for loc in locations.values():
-        w = demand.get(loc.location_id, loc.priority) / 50.0
+        raw_weight = demand.get(loc.location_id, loc.priority)
+        if isinstance(raw_weight, bool) or not isinstance(raw_weight, (int, float)) or not math.isfinite(raw_weight):
+            raise CorpusLoadError(f"invalid demand/priority for {loc.location_id}")
+        w = float(raw_weight) / 50.0
         cov = coverage(loc, blocks, groups)
 
-        if not any(b.location_id == loc.location_id for b in blocks.values()):
+        if not any(b.location_id == loc.location_id and b.live for b in blocks.values()):
             jobs.append(
                 Job(
                     priority=w * 100,
@@ -762,13 +784,9 @@ def promote(root: Path, block_ids: list[str]) -> tuple[list[str], list[Finding]]
     verification metadata, and reviewer evidence. Production promotion is an
     authenticated, audited immutable-release operation in the server.
     """
-    _, blocks, _ = load_corpus(root)
+    locations, blocks, groups = load_corpus(root)
     promoted: list[str] = []
-    findings, errors = audit(root)
-    blockers: list[Finding] = [f for f in findings if f.severity == "error"]
-    if errors:
-        blockers.insert(0, Finding("error", "corpus", "promotion requires a clean full-corpus audit"))
-        return promoted, blockers
+    blockers: list[Finding] = []
 
     for bid in block_ids:
         b = blocks.get(bid)
@@ -804,6 +822,18 @@ def promote(root: Path, block_ids: list[str]) -> tuple[list[str], list[Finding]]
             continue
 
         promoted.append(bid)
+
+    if any(f.severity == "error" for f in blockers):
+        return [], blockers
+
+    simulated = dict(blocks)
+    for bid in promoted:
+        simulated[bid] = replace(blocks[bid], source="curated")
+    findings, errors = audit_loaded(locations, simulated, groups)
+    if errors:
+        blockers.append(Finding("error", "corpus", "promotion requires the resulting full corpus to pass audit"))
+        blockers.extend(f for f in findings if f.severity == "error")
+        return [], blockers
 
     return promoted, blockers
 

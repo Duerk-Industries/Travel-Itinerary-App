@@ -1,5 +1,12 @@
 # Itinerary Phase 4 design
 
+> **Relationship to the block-cache proposal:** this document describes the existing route/day cache
+> baseline. The production-hardening and migration requirements for the proposed reusable block/binding
+> cache are in `itinerary_improvement/itinerary-cache-schema.md` §§16–24. That proposal must evolve the
+> existing service and adapter methods, not run as a parallel cache. In particular, v2 adds dedicated
+> Postgres storage, immutable corpus releases, checksummed/size-bounded entries, private-overlay validation,
+> weighted storage/API caps, cost-estimator coverage, component feature flags, and bounded migration cleanup.
+
 Shared caches contain only normalized, generic route and validated day structures. Keys exclude user IDs,
 names, free text, must-sees, home locations, and reservations. Must-sees are injected after cache reads.
 
