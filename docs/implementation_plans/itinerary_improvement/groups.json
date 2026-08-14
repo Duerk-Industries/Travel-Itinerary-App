@@ -1,0 +1,35 @@
+[
+ {
+  "group_id": "grp_lis_belem_anchor",
+  "location_id": "loc_lisbon",
+  "zone_id": "z_belem",
+  "role": "anchor",
+  "member_ids": [
+   "blk_lis_jeronimos",
+   "blk_lis_torre",
+   "blk_lis_maat",
+   "blk_lis_gardens"
+  ]
+ },
+ {
+  "group_id": "grp_lis_alfama_anchor",
+  "location_id": "loc_lisbon",
+  "zone_id": "z_alfama",
+  "role": "anchor",
+  "member_ids": [
+   "blk_lis_se",
+   "blk_lis_carmo",
+   "blk_lis_daytrip"
+  ]
+ },
+ {
+  "group_id": "grp_gla_anchor",
+  "location_id": "loc_glacier",
+  "zone_id": "z_logan",
+  "role": "anchor",
+  "member_ids": [
+   "blk_gla_hidden",
+   "blk_gla_grinnell"
+  ]
+ }
+]
