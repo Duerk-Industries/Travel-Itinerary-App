@@ -13,7 +13,7 @@ import { getLearnedParser } from '../shared/repository';
 import { logInfo } from '../../logger';
 import { extractLabeledFieldValue, extractPhoneLikeValue, toTitleCaseWords } from './hotelFieldExtractors';
 import { extractSemanticFieldsForType } from './semanticFieldHelpers';
-import { extractTransportCandidatesExported } from './index';
+import { extractTransportCandidatesExported, extractAccountHolderName } from './index';
 
 const INGESTION_SOURCE_PARSER_MIN_MATCH_RATIO = 0.4;
 
@@ -306,30 +306,15 @@ const extractCommonGuestName = (text: string): string | null => {
   // the captured text actually looks like a name (starts with a capital letter) rather than
   // trailing lowercase prose that happened to follow a label-like phrase (e.g. "guest name below").
   if (labeled && /^[A-Z]/.test(labeled) && !/[0-9<>@]/.test(labeled)) return labeled;
-  const match = text.match(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Qiang\s+Lai)\b/i);
-  return normalizeSpace(match?.[1]) || null;
-};
-
-const nameWordsSubsumedBy = (shortName: string, longName: string): boolean => {
-  const longWords = new Set(longName.toLowerCase().split(/\s+/));
-  return shortName.toLowerCase().split(/\s+/).every((word) => longWords.has(word));
+  // Last resort: these are Gmail-exported confirmations, so the account holder's name is
+  // almost always right there in the "Name <email>" / "To: Name <email>" header — a real,
+  // per-document signal, unlike guessing at a fixed set of names.
+  return extractAccountHolderName(text);
 };
 
 const extractCommonTravelerNames = (text: string): string[] => {
-  const names = new Map<string, string>();
-  for (const match of text.matchAll(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Tristan\s+Duerk|Jasmine\s+Duerk|Qiang\s+Lai)\b/gi)) {
-    const value = normalizeSpace(match[1]);
-    const key = value.toLowerCase();
-    if (!names.has(key)) names.set(key, value);
-  }
   const guestName = extractCommonGuestName(text);
-  if (guestName) {
-    for (const [key, value] of Array.from(names.entries())) {
-      if (value !== guestName && nameWordsSubsumedBy(value, guestName)) names.delete(key);
-    }
-    names.set(guestName.toLowerCase(), guestName);
-  }
-  return Array.from(names.values()).slice(0, 8);
+  return guestName ? [guestName] : [];
 };
 
 const stripPhoneFromAddress = (value: unknown): unknown =>
@@ -802,11 +787,15 @@ const extractBuiltInSourceResult = async (
       toDateOnly(text.match(/Cancel by [^,]+,\s*((?:[A-Za-z]+\s+\d{1,2},\s+20\d{2})|(?:20\d{2}-\d{2}-\d{2}))/i)?.[1] ?? null)
       ?? addDays(date, -1);
     if (confirmationNumber && name) {
+      // Viator confirmations don't list the traveler's name in a labeled field — recover
+      // it from the Gmail export header ("Name <email>" / "To: Name <email>") instead of
+      // assuming a fixed name.
+      const accountHolderName = extractAccountHolderName(text);
       return directCandidateResult(doc, config, {
         itemType: effectiveItemType,
         providerVendor: 'Viator',
         confirmationNumber,
-        travelerNamesOverride: ['Bryan Duerk'],
+        travelerNamesOverride: accountHolderName ? [accountHolderName] : undefined,
         confidenceScore: 0.95,
         extractedFields: {
           providerVendor: 'Viator',

@@ -130,7 +130,7 @@ const getExtractionUser = async (userId: string) => {
   return extractionUserCache.get(userId)!;
 };
 
-const extractAccountHolderName = (text: string): string | null => {
+export const extractAccountHolderName = (text: string): string | null => {
   const inlineHeader = text.match(/^\s*([A-Z][A-Za-z' -]{1,80})\s*<[^>]+>/);
   if (inlineHeader?.[1]) return normalizeTravelerName(inlineHeader[1]);
   const recipient = text.match(/\bTo:\s*([^\n<]+?)\s*<[^>]+>/i);

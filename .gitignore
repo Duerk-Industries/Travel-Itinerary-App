@@ -59,3 +59,4 @@ scripts/deploy.config
 app/-DryRun/frontend/
 /app/android
 /app/ios
+.artifacts
