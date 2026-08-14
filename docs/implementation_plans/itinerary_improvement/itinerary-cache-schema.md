@@ -27,6 +27,58 @@ independent itinerary cache. Section 16 defines the migration and release gates.
 
 ---
 
+## 0. Relationship to the existing prompt-based pipeline
+
+This is the question a reader hits first and the design did not previously answer: **is this a replacement
+for the itinerary generator that ships today, or a new path alongside it?** It is the latter, and that must
+be explicit before any other section, because it changes the blast radius of every flag, cache key, and cost
+line item below.
+
+`server/src/services/itineraryPromptPlanService.ts` (`ITINERARY_PIPELINE_VERSION = 'itinerary-pipeline-v8'`,
+~3,800 lines) is a mature, already-shipped, staged full-generation pipeline: P0 normalize → P1 route → P2 days
+→ P3 validate → P3b targeted repair → P4 render, each stage its own provider caller
+(`ITINERARY_PLAN_P0_NORM` … `ITINERARY_PLAN_P4_RENDER` in `api-limits.yaml`), with its own route/day cache via
+the very `readItineraryPlanCache`/`writeItineraryPlanCache` functions this design proposes to extend, plus its
+own cost-control knobs already live in `caching.itineraryPlan.*` in `api-limits.yaml` — chunking, escalation,
+shadow sampling, deterministic day-fill and day-fill-repair, skip-validator-when-clean. This system is not a
+stub; it is the one currently generating every itinerary in production.
+
+**This design does not replace it, touch its prompts, or remove its cache entries.** Binding-plan-v2 is a new,
+narrower-scope serving path that only activates for destinations with a promoted corpus release. Concretely:
+
+- `itineraryPlanCacheService.ts`'s `stage` parameter gains a third literal value, `'binding_plan'`, alongside
+  the existing `'route'` and `'day'` (already reflected in §16.2's schema table). Cache keys and rows for the
+  two systems never collide, and legacy `'route'`/`'day'` reads/writes are completely unaffected by this
+  proposal at every rollout stage.
+- Every location without a live corpus release — which is every location at launch, and the long tail
+  indefinitely per §11's coverage targets — continues to be served exactly as today, through
+  `itineraryPromptPlanService.ts`, with no behavior change and no new flag in its path. The "Tier 2 — cold"
+  behavior in §10 is a bounded *interim* baseline shown while corpus authoring catches up for a destination
+  that is on the corpus roadmap; it is not, and must not become, a second fallback generator competing with
+  the existing one. For any location not being actively prepopulated, Tier 2 exhaustion routes straight to
+  the existing pipeline unchanged, not to a bespoke degraded response.
+- The `itinerary_block_cache` master flag (§18) gates only the new path's entry point. With it off, request
+  routing is byte-for-byte what it is today — the flag check happens before any binding-plan-v2 code runs,
+  not as a fallback caught after a failure.
+- Cost and limit accounting for the two systems are additive, not overlapping: P0–P4's existing
+  `ITINERARY_PLAN_P*` callers and `caching.itineraryPlan.*` settings keep their current meaning and budgets;
+  §17's new `ITINERARY_BLOCK_BIND` / `ITINERARY_CORPUS_AUTHOR` / `ITINERARY_CACHE_STORAGE` /
+  `ITINERARY_CACHE_JOBS` entries are entirely new provider/caller rows, never a reinterpretation of the
+  existing ones. A request that falls through from binding-plan-v2 to the legacy pipeline is billed under the
+  legacy pipeline's existing callers exactly as an unflagged request would be — it does not pay for both paths.
+- Deprecating or retiring P0–P4 for corpus-covered destinations is plausible future work once binding-plan-v2
+  has years, not months, of production evidence — but it is a separate proposal with its own rollout and
+  rollback plan. Nothing in this document authorizes removing or bypassing the existing pipeline's validation,
+  budget, or safety behavior.
+
+If a future revision of this design decides binding-plan-v2 should *call into* P0–P4 (for example, using P4's
+renderer for prose that binding-plan-v2 does not otherwise produce) rather than remain fully independent, that
+decision needs its own subsection here with the same rigor as everything else in this document — a silent
+dependency between the two systems is exactly the kind of thing that turns two independently-reasoned-about
+caches into one under-tested one.
+
+---
+
 ## 1. Layer model
 
 Five layers. Four may be shared; the rendered trip remains private and request-scoped.
@@ -536,7 +588,11 @@ user request and never writes directly to the live corpus.
 ### Freshness states and cache topology
 
 Use a small bounded in-process LRU in front of the shared durable cache. Initial safety defaults are 256
-entries or 32 MiB total, five-minute TTL, no unbounded map. The durable entry has three deadlines:
+entries or 32 MiB total, five-minute TTL, no unbounded map. No LRU library is a dependency of this repo today
+and no equivalent bounded/evicting cache exists in `server/src` to reuse — evaluate a small, audited package
+(e.g. `lru-cache`) against a hand-rolled bounded `Map` with manual eviction before implementation, rather than
+assuming one is already available. Either choice needs its own eviction/byte-accounting unit tests regardless.
+The durable entry has three deadlines:
 
 - `fresh_until`: normal reads;
 - `stale_until`: stale-while-revalidate is permitted for low-risk descriptive content; and
@@ -1011,9 +1067,17 @@ bytes exactly once using an idempotency key.
 
 ### 17.1 One admission path for API and storage work
 
-The current `reserveApiUsageOrThrow({ provider, caller })` increments one request and supports durable
-provider/caller windows. Cache storage also needs weighted units and a releasable retained-capacity gauge.
-Extend this standard control plane rather than adding cache-local counters:
+The current `reserveApiUsageOrThrow({ provider, caller }: { provider: string; caller: string })`
+(`server/src/apis/usageLimiter.ts:303`) takes no unit/weight argument — it always reserves exactly one
+request against the atomic `atomicIncrementApiUsageIfUnderLimit` DB function
+(`db.postgres.ts:10612`, `db.firebase.ts:7105`; the memory adapter inherits the Postgres implementation by
+spread, so no third copy is needed) and supports durable provider/caller windows only in that fixed-unit
+shape. Cache storage also needs weighted units and a releasable retained-capacity gauge — neither exists anywhere in
+the codebase today. (`caching.tripBlog.maxUploadBytesPerDay` in `api-limits.yaml` looks like a precedent for a
+byte-budget check, but a repo-wide search turns up zero references to it in `server/src` — it is unenforced
+configuration, not a working pattern to imitate. Do not copy its shape; it is itself a gap, arguably one this
+proposal's new capacity-reservation primitive should eventually also close, but that is out of scope here.)
+Extend the standard control plane rather than adding cache-local counters:
 
 ```ts
 reserveApiUsageOrThrow({ provider, caller, units?: number }) // units defaults to 1
@@ -1116,7 +1180,11 @@ visible warning. Admin price edits remain audited through the existing estimator
 
 ## 18. Feature flags and configuration
 
-Seed these in `server/config/feature-flags.yaml`, all default `false` for the new implementation:
+Seed these in `server/config/feature-flags.yaml`, each as `{ enabled: false, description: "..." }` — the
+existing flat per-flag shape already used by every entry in that file (e.g. `itinerary_reactions`, `flight_parser`).
+There is no naming collision with any current flag; `itinerary_reactions` is the only other flag with an
+`itinerary` prefix today, and it is unrelated (up/down-vote reactions on itinerary rows). All default `false`
+for the new implementation:
 
 | Flag | Gates | Dependency |
 |---|---|---|
@@ -1136,9 +1204,16 @@ delete data. Disabling reads bypasses both L0 and shared data. Disabling the mas
 background work; in-flight jobs stop at the next safe checkpoint.
 
 This repository's general feature-flag behavior is fail-open for missing rows. Therefore the rollout tool
-must verify that every required row exists, has an owner/description, and is explicitly disabled before the
-master flag can be enabled. Do not silently change the global fail-open contract inside this feature. Treat
-missing itinerary flag rows as a readiness failure and alert, while keeping runtime fallback safe.
+must verify that every required row exists, has a non-empty `description`, and is explicitly disabled before
+the master flag can be enabled. Do not silently change the global fail-open contract inside this feature.
+Treat missing itinerary flag rows as a readiness failure and alert, while keeping runtime fallback safe.
+
+Note that `owner` is not a field the current `feature-flags.yaml` schema or its loader supports — every
+existing entry has only `enabled` and `description`. If per-flag ownership tracking is wanted (reasonable,
+given this feature introduces nine flags with different blast radii), it is a small, separate, repo-wide
+schema/loader change, not something this feature can assume already exists or add unilaterally as an
+undocumented extra key. Land it first (or track ownership outside the YAML, e.g. in this document plus the
+on-call runbook in §24) rather than having the readiness check depend on a field nothing else honors.
 
 Numeric controls—TTLs, sizes, job limits, concurrency, timeouts, repetition threshold, stale windows, and
 sampling rates—belong in the validated `caching.itineraryBlockCache` section of `api-limits.yaml` (or the

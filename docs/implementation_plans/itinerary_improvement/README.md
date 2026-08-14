@@ -1,6 +1,13 @@
 # Itinerary improvement planning artifacts
 
-`itinerary-cache-schema.md` is the production design and rollout plan. The JSON files are deliberately
+`itinerary-cache-schema.md` is the **single canonical** production design and rollout plan (sections 16–24
+cover storage/migration, limits/cost, feature flags, performance/observability, security/privacy,
+maintainability, UX, and the test/rollout plan end to end — including how this design relates to the
+existing prompt-based itinerary generator, see §0). `itinerary-cache-v2-improvement-plan.md` is an earlier
+draft, now fully superseded and kept only for history — do not implement from it; it contains a few
+now-corrected inaccuracies documented at the top of that file.
+
+The JSON files are deliberately
 small authoring fixtures, not a live corpus or production storage format. They contain known failures so
 the audit demonstrates duplicate-category, group-span, duration, energy, nightlife, and cold-location gaps;
 CI for the tool should assert the expected findings rather than treating these fixtures as promotable data.
