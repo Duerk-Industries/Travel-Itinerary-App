@@ -70,6 +70,10 @@ narrower-scope serving path that only activates for destinations with a promoted
   has years, not months, of production evidence — but it is a separate proposal with its own rollout and
   rollback plan. Nothing in this document authorizes removing or bypassing the existing pipeline's validation,
   budget, or safety behavior.
+- [x] **Implementation Note:** `reserveApiUsageOrThrow` and `atomicIncrementApiUsageIfUnderLimit` have been
+  extended to support a `units` parameter (defaulting to 1). This allows reserving byte-weighted or
+  token-weighted units against the standard architecture, rather than only counting request events.
+  The DB adapters now check `count + units <= limit` atomically.
 
 If a future revision of this design decides binding-plan-v2 should *call into* P0–P4 (for example, using P4's
 renderer for prose that binding-plan-v2 does not otherwise produce) rather than remain fully independent, that

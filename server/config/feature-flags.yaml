@@ -178,3 +178,30 @@ flags:
   expense_import_plaid_auto_category:
     enabled: false
     description: "Suggest expense categories based on Plaid's categorization"
+  itinerary_block_cache:
+    enabled: false
+    description: "Master switch for binding-plan-v2 (cached activity blocks and templates)"
+  itinerary_block_cache_reads:
+    enabled: false
+    description: "Enable L0/shared v2 cache reads and legacy migration reads"
+  itinerary_block_cache_writes:
+    enabled: false
+    description: "Enable write-through, repetition counters, and cleanup metadata"
+  itinerary_block_cache_llm_binding:
+    enabled: false
+    description: "Enable lightweight model bind after deterministic selector failure"
+  itinerary_block_cache_stale_revalidate:
+    enabled: false
+    description: "Enable low-risk stale serve and background refresh jobs"
+  itinerary_corpus_authoring:
+    enabled: false
+    description: "Enable draft block authoring and external verification workers"
+  itinerary_corpus_promotion:
+    enabled: false
+    description: "Enable human-reviewed immutable release promotion"
+  itinerary_cache_prepopulation:
+    enabled: false
+    description: "Enable demand-driven batch planning and cache fills"
+  itinerary_practical_notes:
+    enabled: false
+    description: "Enable country/region-scoped PracticalNote selection and rendering"

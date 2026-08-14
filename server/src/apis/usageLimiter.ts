@@ -190,6 +190,7 @@ const reserveScopeUsageOrThrow = async (params: {
   limit: number;
   window: LimitWindow;
   windowKey: string;
+  units: number;
 }): Promise<void> => {
   const bucketKey =
     params.scope === 'overall' ? `overall:${params.provider}` : `caller:${params.provider}:${params.caller}`;
@@ -202,17 +203,10 @@ const reserveScopeUsageOrThrow = async (params: {
     scope: params.scope,
     windowKey: params.windowKey,
     limit: params.limit,
+    units: params.units,
   });
 
-  const storedCount =
-    result.allowed
-      ? await getApiUsageCount(
-          params.provider,
-          params.scope === 'overall' ? '*' : params.caller,
-          params.scope,
-          params.windowKey
-        )
-      : result.newCount;
+  const storedCount = result.newCount;
 
   bucket.used = storedCount;
   const pct = (storedCount / params.limit) * 100;
@@ -300,9 +294,18 @@ export const __resetInProcessUsageCachesForTests = (): void => {
   blockedLogStates.clear();
 };
 
-export const reserveApiUsageOrThrow = async (params: { provider: string; caller: string }): Promise<void> => {
+export const reserveApiUsageOrThrow = async (params: {
+  provider: string;
+  caller: string;
+  units?: number;
+}): Promise<void> => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);
+  const units = Math.max(1, Math.floor(Number(params.units ?? 1)));
+  if (!Number.isFinite(units)) {
+    throw new Error(`Invalid usage units: ${params.units}`);
+  }
+
   const budgetStatus = await getCurrentApiBudgetStatus(provider);
   if (budgetStatus.monthlyBudgetUsd != null && budgetStatus.isOverBudget) {
     throw new ApiBudgetExceededError({
@@ -330,6 +333,7 @@ export const reserveApiUsageOrThrow = async (params: { provider: string; caller:
       limit: overallLimit,
       window,
       windowKey,
+      units,
     });
   }
 
@@ -341,6 +345,7 @@ export const reserveApiUsageOrThrow = async (params: { provider: string; caller:
       limit: callerLimit,
       window,
       windowKey,
+      units,
     });
   }
 };

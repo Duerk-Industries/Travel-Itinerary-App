@@ -532,9 +532,14 @@ export const incrementApiCostCounter = async (...args: Parameters<ReturnType<typ
   adapter().incrementApiCostCounter(...args);
 export const getApiUsageCount = async (...args: Parameters<ReturnType<typeof adapter>['getApiUsageCount']>) =>
   adapter().getApiUsageCount(...args);
-export const atomicIncrementApiUsageIfUnderLimit = async (
-  ...args: Parameters<ReturnType<typeof adapter>['atomicIncrementApiUsageIfUnderLimit']>
-) => adapter().atomicIncrementApiUsageIfUnderLimit(...args);
+export const atomicIncrementApiUsageIfUnderLimit = async (params: {
+  provider: string;
+  caller: string;
+  scope: 'overall' | 'caller';
+  windowKey: string;
+  limit: number;
+  units?: number;
+}) => adapter().atomicIncrementApiUsageIfUnderLimit(params);
 export const listApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['listApiUsageCounters']>) =>
   adapter().listApiUsageCounters(...args);
 export const resetApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiUsageCounters']>) =>

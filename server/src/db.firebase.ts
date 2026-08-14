@@ -7108,17 +7108,19 @@ export const atomicIncrementApiUsageIfUnderLimit = async (params: {
   scope: 'overall' | 'caller';
   windowKey: string;
   limit: number;
+  units?: number;
 }): Promise<{ allowed: boolean; newCount: number }> => {
   const db = getDb();
+  const units = Math.max(1, Math.floor(params.units ?? 1));
   const docId = `${params.scope}_${params.provider}_${params.caller}_${params.windowKey}`;
   const ref = db.collection('api_usage_counters').doc(docId);
   return db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
     const current = doc.exists ? Number(doc.data()!.count ?? 0) : 0;
-    if (current >= params.limit) {
+    if (current + units > params.limit) {
       return { allowed: false, newCount: current };
     }
-    const nextCount = current + 1;
+    const nextCount = current + units;
     tx.set(
       ref,
       {

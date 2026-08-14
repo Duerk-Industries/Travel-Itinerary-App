@@ -10615,8 +10615,10 @@ export const atomicIncrementApiUsageIfUnderLimit = async (params: {
   scope: 'overall' | 'caller';
   windowKey: string;
   limit: number;
+  units?: number;
 }): Promise<{ allowed: boolean; newCount: number }> => {
   const p = getPool();
+  const units = Math.max(1, Math.floor(params.units ?? 1));
   await p.query(
     `INSERT INTO api_usage_counters (id, provider, caller, scope, window_key, count, updated_at)
      VALUES (uuid_generate_v4(), $1, $2, $3, $4, 0, NOW())
@@ -10625,10 +10627,10 @@ export const atomicIncrementApiUsageIfUnderLimit = async (params: {
   );
   const { rows } = await p.query<{ count: string }>(
     `UPDATE api_usage_counters
-     SET count = count + 1, updated_at = NOW()
-     WHERE provider = $1 AND caller = $2 AND scope = $3 AND window_key = $4 AND count < $5
+     SET count = count + $6, updated_at = NOW()
+     WHERE provider = $1 AND caller = $2 AND scope = $3 AND window_key = $4 AND count + $6 <= $5
      RETURNING count`,
-    [params.provider, params.caller, params.scope, params.windowKey, params.limit]
+    [params.provider, params.caller, params.scope, params.windowKey, params.limit, units]
   );
   if (rows.length) {
     return { allowed: true, newCount: parseInt(rows[0].count, 10) };

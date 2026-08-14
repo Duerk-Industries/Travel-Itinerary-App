@@ -108,6 +108,17 @@ usagePerUser:
       review_queue_reads: 0
       assignment_reads: 0
       assignment_writes: 0
+    itineraryCache:
+      # Tier 0/1 scenarios for Basic. Most users stay on legacy generation
+      # while the corpus expanded.
+      binding_reads: 2
+      binding_writes: 0.1
+      corpus_reads: 2
+      author_tokens_input: 0
+      author_tokens_output: 0
+      binder_tokens_input: 1000
+      binder_tokens_output: 100
+      retained_kib_month: 2
   Premium:
     # Premium has unlimited AI itinerary generations in current tier config.
     # This model assumes a production planning average of 20 generations/month
@@ -189,6 +200,16 @@ usagePerUser:
       review_queue_reads: 10
       assignment_reads: 10
       assignment_writes: 10
+    itineraryCache:
+      # Premium users hit corpus-covered destinations more often.
+      binding_reads: 15
+      binding_writes: 1
+      corpus_reads: 20
+      author_tokens_input: 5000
+      author_tokens_output: 2000
+      binder_tokens_input: 10000
+      binder_tokens_output: 1000
+      retained_kib_month: 10
 
 costSources:
   - id: google_cloud_baseline
@@ -409,3 +430,29 @@ costSources:
       - { metric: secret_manager_accesses, unitCostUsd: 0.00 } # replace with current regional price
       - { metric: kms_encryptions, unitCostUsd: 0.00 } # replace with current KMS operation price
       - { metric: kms_decryptions, unitCostUsd: 0.00 } # replace with current KMS operation price
+
+  - id: itinerary_cache_binding_storage
+    name: Itinerary Cache L1 Storage
+    type: variable
+    api: itineraryCache
+    usageLevels:
+      - { metric: binding_reads, unitCostUsd: 0.06, perUnits: 100000 }
+      - { metric: binding_writes, unitCostUsd: 0.18, perUnits: 100000 }
+      - { metric: corpus_reads, unitCostUsd: 0.06, perUnits: 100000 }
+      - { metric: retained_kib_month, unitCostUsd: 0.000026 } # $0.026 per GB
+
+  - id: itinerary_cache_authoring
+    name: Itinerary Cache Authoring
+    type: variable
+    api: itineraryCache
+    usageLevels:
+      - { metric: author_tokens_input, unitCostUsd: 15.00, perUnits: 1000000 } # Sonnet 3.5 like
+      - { metric: author_tokens_output, unitCostUsd: 75.00, perUnits: 1000000 }
+
+  - id: itinerary_cache_binding_inference
+    name: Itinerary Cache Binder (Tier 1)
+    type: variable
+    api: itineraryCache
+    usageLevels:
+      - { metric: binder_tokens_input, unitCostUsd: 0.15, perUnits: 1000000 } # 4o-mini
+      - { metric: binder_tokens_output, unitCostUsd: 0.60, perUnits: 1000000 }

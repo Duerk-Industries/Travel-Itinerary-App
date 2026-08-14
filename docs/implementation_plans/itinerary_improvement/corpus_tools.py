@@ -96,10 +96,10 @@ MAX_DEMAND_ENTRIES = 5_000
 MAX_PLAN_JOBS = 1_000
 MAX_ID_CHARS = 128
 MAX_TITLE_CHARS = 300
-MAX_VERIFICATION_SOURCE_CHARS = 512
+MAX_VERIFICATION_SOURCE_CHARS = 2_048
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 VERIFICATION_SOURCE_PATTERN = re.compile(
-    r"^(official|provider|partner):[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$"
+    r"^(official|provider|partner):[A-Za-z0-9][A-Za-z0-9._/-]{0,2047}$"
 )
 ALLOWED_ROLES = {"anchor", "supporting", "filler", "meal", "rest", "contingency"}
 ALLOWED_SOURCES = {"curated", "partner", "llm_draft"}
