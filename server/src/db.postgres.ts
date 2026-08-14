@@ -7571,7 +7571,7 @@ export const refreshAirportsDaily = async (): Promise<void> => {
   } catch (err) {
     logError('Failed to download airports dataset, falling back to local file', err);
     try {
-      const localPath = path.resolve(__dirname, '../../data/airport_codes.json');
+      const localPath = path.resolve(__dirname, '../data/airport_codes.json');
       if (fs.existsSync(localPath)) {
         data = JSON.parse(fs.readFileSync(localPath, 'utf8'));
         logInfo(`[airports] Loaded ${Array.isArray(data) ? data.length : 0} airports from local fallback`);

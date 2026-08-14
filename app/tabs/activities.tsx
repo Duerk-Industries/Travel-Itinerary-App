@@ -3,7 +3,6 @@ import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, Toucha
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
-import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
@@ -11,6 +10,7 @@ import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ActivityEditForm from '../components/ActivityEditForm';
 import { resolveMemberClipboardValue } from '../utils/clipboardGrid';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -38,7 +38,7 @@ export type ActivityType =
   | 'Spa/Wellness'
   | 'Ticketed Attraction'
   | 'Tour';
-const ACTIVITY_TYPES: ActivityType[] = [
+export const ACTIVITY_TYPES: ActivityType[] = [
   'Class',
   'Concert/Show',
   'Day Trip',
@@ -336,8 +336,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const [gridSaving, setGridSaving] = useState(false);
   const [activitySort, setActivitySort] = useState<ActivitySort>({ key: null, direction: 'asc' });
   const [tourToDelete, setTourToDelete] = useState<Tour | null>(null);
-  const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
-  const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
   const DateTimePickerComponent = nativeDateTimePicker;
   const activeMembers = useMemo(
     () => groupMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
@@ -349,29 +347,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     return labels;
   }, [activeMembers]);
 
-  const resolveTravelerLabel = (member: GroupMemberOption) => {
-    return formatMemberDisplayName(member);
-  };
-
   const formatPeopleList = (ids?: string[]) => {
     if (!ids?.length) return '-';
     return ids.map((id) => memberLabelById.get(id) ?? payerName(id) ?? id).join(', ');
   };
-
-  const toggleBaseStyle = styles.toggleOption ?? {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme?.colors.border ?? '#111',
-    backgroundColor: theme?.colors.surface ?? '#fff',
-  };
-  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
-    borderColor: theme?.colors.link ?? '#111',
-  };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
 
   const openTourEditor = (tour?: Tour) => {
     if (readOnly) return;
@@ -390,39 +369,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     }
     setEditingTour(base);
     setEditingTourId(tour?.id ?? null);
-    const baseDate = tour?.date ?? new Date().toISOString().slice(0, 10);
-    setTourDateValue(baseDate ? new Date(baseDate) : new Date());
   };
 
   const closeTourEditor = () => {
     setEditingTour(null);
     setEditingTourId(null);
-    setTourDateField(null);
-  };
-
-  const openTourDatePicker = (field: 'date' | 'bookedOn' | 'freeCancel' | 'startTime') => {
-    setTourDateField(field);
-    if (!editingTour) return;
-    const current =
-      field === 'date'
-        ? editingTour.date
-        : field === 'bookedOn'
-          ? editingTour.bookedOn
-          : field === 'freeCancel'
-            ? editingTour.freeCancelBy
-            : editingTour.startTime;
-    if (field === 'startTime') {
-      const base = new Date();
-      if (current && /^\d{1,2}:\d{2}/.test(current)) {
-        const [h, m] = current.split(':').map(Number);
-        if (!Number.isNaN(h) && !Number.isNaN(m)) {
-          base.setHours(h, m, 0, 0);
-        }
-      }
-      setTourDateValue(base);
-    } else {
-      setTourDateValue(current ? new Date(current) : new Date());
-    }
   };
 
   const saveTour = () => {
@@ -925,31 +876,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         ) : null}
       </View>
       {gridMessage ? <Text style={styles.helperText}>{gridMessage}</Text> : null}
-      {Platform.OS !== 'web' && tourDateField && editingTour && DateTimePickerComponent ? (
-        <DateTimePickerComponent
-          value={tourDateValue}
-          mode={tourDateField === 'startTime' ? 'time' : 'date'}
-          onChange={(_, date) => {
-            if (!date) {
-              setTourDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            setEditingTour((prev) => {
-              if (!prev) return prev;
-              if (tourDateField === 'startTime') {
-                const hours = String(date.getHours()).padStart(2, '0');
-                const mins = String(date.getMinutes()).padStart(2, '0');
-                return { ...prev, startTime: `${hours}:${mins}` };
-              }
-              if (tourDateField === 'date') return { ...prev, date: iso };
-              if (tourDateField === 'bookedOn') return { ...prev, bookedOn: iso };
-              return { ...prev, freeCancelBy: iso };
-            });
-            setTourDateField(null);
-          }}
-        />
-      ) : null}
       {tableEditing ? (
         <>
           <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
@@ -1192,234 +1118,16 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         />
       ) : null}
       {!readOnly && editingTour ? (
-        <Modal transparent visible={Boolean(editingTour)} animationType="fade" onRequestClose={closeTourEditor}>
-          <View style={styles.modalOverlay} testID="activity-form-modal">
-            <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />
-            <View style={[styles.modalCard, { marginTop: 0 }]}>
-            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Activity' : 'Add Activity'}</Text>
-            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
-              <Text style={styles.modalLabel}>Date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                  type="date"
-                  title="Activity date"
-                  value={editingTour.date}
-                  onChange={(e) => setEditingTour((p) => (p ? { ...p, date: e.target.value } : p))}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openTourDatePicker('date')}>
-                  <Text style={styles.cellText}>{formatDateLong(editingTour.date)}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Status</Text>
-              {Platform.OS === 'web' ? (
-                <select
-                  value={normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS)}
-                  onChange={(e) => setEditingTour((p) => (p ? { ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) } : p))}
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                >
-                  {ITINERARY_STATUSES.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <View style={styles.payerChips}>
-                  {ITINERARY_STATUSES.map((opt) => {
-                    const selected = normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS) === opt;
-                    return (
-                      <TouchableOpacity
-                        key={`tour-status-${opt}`}
-                        style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                        onPress={() => setEditingTour((p) => (p ? { ...p, status: opt } : p))}
-                      >
-                        <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-              <Text style={styles.modalLabel}>Activity Type</Text>
-              {Platform.OS === 'web' ? (
-                <select
-                  value={editingTour.activityType || 'Tour'}
-                  onChange={(e) =>
-                    setEditingTour((p) =>
-                      p
-                        ? {
-                            ...p,
-                            activityType: ACTIVITY_TYPES.includes(e.target.value as ActivityType)
-                              ? (e.target.value as ActivityType)
-                              : 'Tour',
-                          }
-                        : p
-                    )
-                  }
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                >
-                  {ACTIVITY_TYPES.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <View style={styles.payerChips}>
-                  {ACTIVITY_TYPES.map((opt) => {
-                    const selected = (editingTour.activityType || 'Tour') === opt;
-                    return (
-                      <TouchableOpacity
-                        key={`activity-type-${opt}`}
-                        style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                        onPress={() => setEditingTour((p) => (p ? { ...p, activityType: opt } : p))}
-                      >
-                        <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-              <Text style={styles.modalLabel}>Activity</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Activity name"
-                value={editingTour.name}
-                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, name: text } : p))}
-              />
-              <Text style={styles.modalLabel}>Start location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Start location"
-                value={editingTour.startLocation}
-                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, startLocation: text } : p))}
-              />
-              <Text style={styles.modalLabel}>Start time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                  type="time"
-                  title="Start time"
-                  value={editingTour.startTime}
-                  onChange={(e) => setEditingTour((p) => (p ? { ...p, startTime: e.target.value } : p))}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openTourDatePicker('startTime')}>
-                  <Text style={styles.cellText}>{editingTour.startTime || 'Select time'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Duration</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Duration"
-                value={editingTour.duration}
-                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, duration: text } : p))}
-              />
-              <Text style={styles.modalLabel}>Cost</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Cost"
-                keyboardType="numeric"
-                value={editingTour.cost}
-                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, cost: sanitizeCostInput(text) } : p))}
-              />
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>Free cancellation by</Text>
-                <TouchableOpacity onPress={() => setEditingTour((p) => (p ? { ...p, freeCancelBy: '' } : p))}>
-                  <Text style={styles.linkText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-              {Platform.OS === 'web' ? (
-                <input
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                  type="date"
-                  title="Free cancellation by date"
-                  value={editingTour.freeCancelBy}
-                  onChange={(e) => setEditingTour((p) => (p ? { ...p, freeCancelBy: e.target.value } : p))}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openTourDatePicker('freeCancel')}>
-                  <Text style={styles.cellText}>{editingTour.freeCancelBy ? formatDateLong(editingTour.freeCancelBy) : 'Select date'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Platform Booked On</Text>
-              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                <TextInput
-                  style={[styles.input, { flex: 1, minWidth: 220 }]}
-                  placeholder="Viator, Get Your Guide, Klook, etc."
-                  value={editingTour.bookedOn}
-                  onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, bookedOn: text } : p))}
-                />
-                <TextInput
-                  style={[styles.input, { flex: 1, minWidth: 220 }]}
-                  placeholder="Reference"
-                  value={editingTour.reference}
-                  onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, reference: text } : p))}
-                />
-              </View>
-              <Text style={styles.modalLabel}>Description</Text>
-              <TextInput
-                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
-                placeholder="Description"
-                value={editingTour.notes}
-                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, notes: text } : p))}
-                multiline
-              />
-              <Text style={styles.modalLabel}>Participants</Text>
-              <View style={styles.payerChips}>
-                {activeMembers.map((m) => {
-                  const selected = editingTour.travelerIds.includes(m.id);
-                  const name = resolveTravelerLabel(m);
-                  return (
-                    <TouchableOpacity
-                      key={`tour-participant-${m.id}`}
-                      style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                      onPress={() => {
-                        const next = selected
-                          ? editingTour.travelerIds.filter((id) => id !== m.id)
-                          : [...editingTour.travelerIds, m.id];
-                        setEditingTour((p) => (p ? { ...p, travelerIds: next } : p));
-                      }}
-                    >
-                      <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              <Text style={styles.modalLabel}>Paid by</Text>
-              <View style={styles.payerChips}>
-                {activeMembers.map((m) => {
-                  const selected = editingTour.paidBy.includes(m.id);
-                  const name = resolveTravelerLabel(m);
-                  return (
-                    <TouchableOpacity
-                      key={`tour-payer-${m.id}`}
-                      style={[toggleBaseStyle, selected && toggleSelectedStyle]}
-                      onPress={() => {
-                        const next = selected
-                          ? editingTour.paidBy.filter((id) => id !== m.id)
-                          : [...editingTour.paidBy, m.id];
-                        setEditingTour((p) => (p ? { ...p, paidBy: next } : p));
-                      }}
-                    >
-                      <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
-            <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourEditor} testID="activity-cancel">
-                <Text style={styles.dangerButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-            </View>
-          </View>
-        </Modal>
+        <ActivityEditForm
+          draft={editingTour}
+          onChange={(updater) => setEditingTour((prev) => (prev ? updater(prev) : prev))}
+          onSave={saveTour}
+          onCancel={closeTourEditor}
+          isNew={!editingTourId}
+          members={groupMembers}
+          styles={styles}
+          theme={theme}
+        />
       ) : null}
     </View>
   );

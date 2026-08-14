@@ -5206,8 +5206,63 @@ export const deleteTrait = async (userId: string, traitId: string): Promise<void
 };
 
 export const refreshAirportsDaily = async (): Promise<void> => {
-  // Firestore adapter leaves airport ingestion to external scripts; noop to avoid network calls here.
-  return;
+  let data: any[] = [];
+  try {
+    data = await downloadAirportDatasetForDailyRefresh();
+  } catch (err) {
+    logError('Failed to download airports dataset, falling back to local file', err);
+    try {
+      const localPath = path.resolve(__dirname, '../data/airport_codes.json');
+      if (fs.existsSync(localPath)) {
+        data = JSON.parse(fs.readFileSync(localPath, 'utf8'));
+        logInfo(`[airports] Loaded ${Array.isArray(data) ? data.length : 0} airports from local fallback`);
+      }
+    } catch (localErr) {
+      logError('Failed to load local airports fallback', localErr);
+      return;
+    }
+  }
+
+  const filtered = normalizeAirportDataset(data);
+  if (!filtered.length) {
+    logError('[airports] no records to process', null);
+    return;
+  }
+
+  const db = getDb();
+  const chunkSize = 400; // stay under Firestore's 500-write batch limit
+  for (let i = 0; i < filtered.length; i += chunkSize) {
+    const chunk = filtered.slice(i, i + chunkSize);
+    const batch = db.batch();
+    for (const airport of chunk) {
+      const search = Array.from(
+        new Set(
+          [
+            airport.iata_code.toLowerCase(),
+            airport.city.toLowerCase(),
+            ...airport.name.toLowerCase().split(/\s+/),
+          ].filter(Boolean)
+        )
+      );
+      batch.set(db.collection('airports').doc(airport.iata_code), {
+        iata_code: airport.iata_code,
+        name: airport.name,
+        city: airport.city,
+        country: airport.country,
+        lat: airport.lat,
+        lng: airport.lng,
+        label: airport.label,
+        search,
+        updatedAt: nowIso(),
+      });
+    }
+    try {
+      await batch.commit();
+    } catch (err) {
+      logError('Failed to refresh airports batch', err);
+    }
+  }
+  logInfo(`[airports] Refreshed ${filtered.length} airports in Firestore`);
 };
 
 export const searchUsersByEmail = async (query: string): Promise<User[]> => {
@@ -8360,7 +8415,8 @@ export const deactivateOldPricesForPlan = async (
   await batch.commit();
 };
 
-import { mergeAirportSearchResults, searchBundledAirportDataset } from './services/airportCatalog';
+import { mergeAirportSearchResults, normalizeAirportDataset, searchBundledAirportDataset } from './services/airportCatalog';
+import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
 
 // ---------------------------------------------------------------------------
 // Packing lists v2 (Firestore provider)

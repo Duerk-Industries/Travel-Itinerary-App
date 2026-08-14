@@ -591,11 +591,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }>>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
   const [carDraft, setCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
-  const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
-  const [carDateValue, setCarDateValue] = useState<Date>(new Date());
-  const [carPrepaidOpen, setCarPrepaidOpen] = useState(false);
-  const carPickupDateRef = useRef<HTMLInputElement | null>(null);
-  const carDropoffDateRef = useRef<HTMLInputElement | null>(null);
   const {
     traits,
     newTraitName,
@@ -971,10 +966,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setExternalFlightEditId(flightId);
   }, []);
 
-  const applyCarDate = useCallback((field: 'pickup' | 'dropoff', value: string) => {
-    setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
-  }, []);
-
   const saveCarRentalDraft = useCallback(async (rentalId?: string | null, draftOverride?: CarRentalDraft) => {
     if (isFollowingMode) return false;
     if (!activeTripId) {
@@ -1119,26 +1110,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setCarRentals(cars);
     }
   }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
-
-  const openCarDatePicker = useCallback((field: 'pickup' | 'dropoff') => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
-      const base = (field === 'pickup' ? carDraft.pickupDate : carDraft.dropoffDate) || '';
-      const date = base ? new Date(base) : new Date();
-      setCarDateValue(date);
-      setCarDateField(field);
-      return;
-    }
-    const ref = field === 'pickup' ? carPickupDateRef.current : carDropoffDateRef.current;
-    if ((ref as any)?.showPicker) {
-      (ref as any).showPicker();
-      return;
-    }
-    if (typeof ref?.click === 'function') {
-      ref.click();
-      return;
-    }
-    ref?.focus();
-  }, [carDraft.dropoffDate, carDraft.pickupDate]);
 
   // Resolve a member id to a human-friendly name for payer chips.
   const memberNameById = useMemo(
@@ -3213,10 +3184,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           carRentals={carRentals}
           carDraft={carDraft}
           setCarDraft={setCarDraft}
-          carPrepaidOpen={carPrepaidOpen}
-          setCarPrepaidOpen={setCarPrepaidOpen}
-          carPickupDateRef={carPickupDateRef}
-          carDropoffDateRef={carDropoffDateRef}
           isFollowingMode={isFollowingMode}
           userMembers={userMembers}
           styles={styles}
@@ -3228,28 +3195,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onRemoveCarRental={removeCarRental}
           onVoteCarRental={voteOnCarRental}
           onRateCarRental={rateOnCarRental}
-          onOpenCarDatePicker={openCarDatePicker}
           featureTapToEditTables={featureTapToEditTables}
         />
       ) : null}
 
-      {Platform.OS !== 'web' && carDateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={carDateValue}
-          mode="date"
-          onChange={(_: any, date: Date | undefined) => {
-            if (!date) {
-              setCarDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            applyCarDate(carDateField, iso);
-            setCarDateField(null);
-          }}
-        />
-      ) : null}
-
-      
       {activePage === 'flights'
         ? renderSharedPageScroll(
             <FlightsTab
@@ -3469,6 +3418,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onLodgingDataChanged={handleLodgingsDataChanged}
                   onTourDataChanged={handleToursDataChanged}
                   onAddCarRental={addCarRentalFromOverview}
+                  onUpdateCarRental={updateCarRental}
                   openFlightInFlightsTab={openFlightInFlightsTab}
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
                   theme={theme}

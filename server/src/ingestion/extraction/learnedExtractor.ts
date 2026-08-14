@@ -877,7 +877,13 @@ const extractBuiltInSourceResult = async (
             duration: normalizeSpace(text.match(/(\d+(?:\.\d+)?)\s*hours/i)?.[1] ? `${text.match(/(\d+(?:\.\d+)?)\s*hours/i)?.[1]} hours` : ''),
             paid: amount != null,
             status: 'Booked',
-            freeCancelBy: toDateOnly(text.match(/Cancel before [^A-Za-z]*\d{1,2}:\d{2}\s*[AP]M on ([A-Za-z]+\s+\d{1,2})/i)?.[1] ?? '2025-08-23'),
+            // The "Cancel before ... on <Month Day>" line has no year of its own, so infer it
+            // from any 4-digit year elsewhere in the document (e.g. the activity date line)
+            // rather than assuming a fixed date.
+            freeCancelBy: toDateOnlyWithFallbackYear(
+              text.match(/Cancel before [^A-Za-z]*\d{1,2}:\d{2}\s*[AP]M on ([A-Za-z]+\s+\d{1,2})/i)?.[1] ?? null,
+              text
+            ) ?? addDays(date, -3),
             bookedOn: 'GetYourGuide',
             reference: bookingReferenceNumber,
           },

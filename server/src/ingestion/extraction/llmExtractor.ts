@@ -1,7 +1,9 @@
 /**
  * Real LLM-backed extractor for travel document ingestion.
  *
- * - Only runs when isLocalEnv() is true (dev/local environment)
+ * - Runs in local dev and production; skipped only in tests / in-memory-DB fixture runs
+ *   (see `canHandle`), and further gated per-user by tier entitlements (`canRun`, passed
+ *   in by the caller) and by whether an API key is configured for the active provider.
  * - Calls the active AI provider to extract structured travel fields
  * - When extraction succeeds, auto-generates regex patterns and stores them
  *   as a learned source parser for future use (parser learning)
@@ -20,7 +22,6 @@ import {
   getConfiguredProviderApiKey,
   getProviderApiKeyEnvVar,
 } from '../../services/aiProviderConfigService';
-import { isLocalEnv } from '../../env';
 import { getEnvFlag } from '../../env';
 import { logInfo, logError } from '../../logger';
 
@@ -131,8 +132,12 @@ export class LlmExtractor implements ExtractionStrategy {
   ) {}
 
   canHandle(_doc: NormalizedDocument): boolean {
-    // Only run in local dev, never during tests (test mocks interfere with OpenAI calls)
-    return isLocalEnv() && process.env.NODE_ENV !== 'test' && process.env.USE_IN_MEMORY_DB !== '1';
+    // Runs in local dev and production alike; never during tests (test mocks interfere with
+    // real provider calls, and the in-memory DB is only used for test/local fixture runs).
+    // Tier/feature-flag gating happens via `canRun` (allowSmallLlm/allowLargeLlm from the
+    // caller's entitlements) and the `ingestion_llm_extract` API-key/feature-flag check inside
+    // `extract()`, so this is just an environment safety guard, not a production on/off switch.
+    return process.env.NODE_ENV !== 'test' && process.env.USE_IN_MEMORY_DB !== '1';
   }
 
   async extract(doc: NormalizedDocument, config: ExtractionConfig): Promise<ExtractionResult> {
