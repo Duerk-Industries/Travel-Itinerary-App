@@ -96,10 +96,14 @@ MAX_DEMAND_ENTRIES = 5_000
 MAX_PLAN_JOBS = 1_000
 MAX_ID_CHARS = 128
 MAX_TITLE_CHARS = 300
-MAX_VERIFICATION_SOURCE_CHARS = 2_048
+MAX_VERIFICATION_SOURCE_CHARS = 512
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+VERIFICATION_SOURCE_PATTERN = re.compile(
+    r"^(official|provider|partner):[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$"
+)
 ALLOWED_ROLES = {"anchor", "supporting", "filler", "meal", "rest", "contingency"}
 ALLOWED_SOURCES = {"curated", "partner", "llm_draft"}
+ALLOWED_TIME_PERIODS = {"early_morning", "morning", "midday", "afternoon", "evening", "night"}
 
 # Conservative manifest estimates only. The server recalculates and reserves
 # worst-case units; it never trusts these client-authored values.
@@ -115,6 +119,19 @@ JOB_ESTIMATES = {
 
 class CorpusLoadError(ValueError):
     """Expected, user-actionable corpus input failure (no traceback needed)."""
+
+
+def reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in out:
+            raise CorpusLoadError(f"duplicate JSON object key '{key}'")
+        out[key] = value
+    return out
+
+
+def reject_non_standard_number(token: str) -> None:
+    raise CorpusLoadError(f"non-standard JSON number '{token}'")
 
 
 # --------------------------------------------------------------------------
@@ -275,8 +292,12 @@ def _read_json(
     if size > MAX_FILE_BYTES:
         raise CorpusLoadError(f"{name}: {size} bytes exceeds {MAX_FILE_BYTES}-byte cap")
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=reject_duplicate_object_keys,
+            parse_constant=reject_non_standard_number,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
         raise CorpusLoadError(f"{name}: cannot read valid UTF-8 JSON ({exc})") from exc
     if not isinstance(value, expected_type):
         raise CorpusLoadError(f"{name}: expected {expected_type.__name__} at top level")
@@ -348,6 +369,8 @@ def validate_block(b: Block) -> list[Finding]:
         out.append(Finding("error", scope, f"unknown role '{b.role}'"))
     if b.source not in ALLOWED_SOURCES:
         out.append(Finding("error", scope, f"unknown source '{b.source}'"))
+    if not isinstance(b.verified_venue, bool):
+        out.append(Finding("error", scope, "verified_venue must be boolean"))
     if isinstance(b.duration_typical, bool) or not isinstance(b.duration_typical, int) or not (1 <= b.duration_typical <= 1_440):
         out.append(Finding("error", scope, "duration_typical outside 1-1440 minutes"))
     if isinstance(b.energy_cost, bool) or not isinstance(b.energy_cost, int) or not (1 <= b.energy_cost <= 5):
@@ -387,7 +410,26 @@ def validate_block(b: Block) -> list[Finding]:
 
     if not isinstance(b.time_fit, dict):
         out.append(Finding("error", scope, "time_fit must be an object"))
-    elif b.interest_weights["nightlife"] >= 7 and b.time_fit:
+    else:
+        unknown_periods = sorted(set(b.time_fit) - ALLOWED_TIME_PERIODS)
+        if unknown_periods:
+            out.append(Finding("error", scope, f"unknown time_fit periods: {', '.join(unknown_periods)}"))
+        invalid_periods = [
+            period
+            for period, value in b.time_fit.items()
+            if isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or not (0 <= value <= 1)
+        ]
+        if invalid_periods:
+            out.append(Finding("error", scope, f"time_fit values outside 0..1: {', '.join(sorted(invalid_periods))}"))
+    if (
+        isinstance(b.time_fit, dict)
+        and not any(f.severity == "error" and "time_fit" in f.message for f in out)
+        and b.interest_weights["nightlife"] >= 7
+        and b.time_fit
+    ):
         evening = b.time_fit.get("evening", 0.0)
         night = b.time_fit.get("night", 0.0)
         if evening < 0.5 and night < 0.5:
@@ -412,8 +454,15 @@ def validate_block(b: Block) -> list[Finding]:
         not isinstance(b.verification_source, str)
         or not b.verification_source.strip()
         or len(b.verification_source) > MAX_VERIFICATION_SOURCE_CHARS
+        or not VERIFICATION_SOURCE_PATTERN.fullmatch(b.verification_source)
     ):
-        out.append(Finding("error", scope, "verification_source is empty or too long"))
+        out.append(
+            Finding(
+                "error",
+                scope,
+                "verification_source must be an opaque official:/provider:/partner: evidence ID",
+            )
+        )
     if b.reviewed_by is not None and (
         not isinstance(b.reviewed_by, str)
         or len(b.reviewed_by) > MAX_ID_CHARS
@@ -438,6 +487,14 @@ def validate_group(
     if not isinstance(g.member_ids, list):
         out.append(Finding("error", scope, "member_ids must be an array"))
         return out
+    invalid_member_ids = [
+        value
+        for value in g.member_ids
+        if not isinstance(value, str) or len(value) > MAX_ID_CHARS or not ID_PATTERN.fullmatch(value)
+    ]
+    if invalid_member_ids:
+        out.append(Finding("error", scope, "member_ids contains invalid IDs"))
+        return out
     if len(g.member_ids) != len(set(g.member_ids)):
         out.append(Finding("error", scope, "duplicate member IDs"))
 
@@ -450,8 +507,7 @@ def validate_group(
     n = len(members)
 
     if not (GROUP_MIN_MEMBERS <= n <= GROUP_MAX_MEMBERS):
-        sev = "error" if n < GROUP_MIN_MEMBERS else "warn"
-        out.append(Finding(sev, scope, f"{n} members, expected {GROUP_MIN_MEMBERS}-{GROUP_MAX_MEMBERS}"))
+        out.append(Finding("error", scope, f"{n} members, expected {GROUP_MIN_MEMBERS}-{GROUP_MAX_MEMBERS}"))
     if not members:
         return out
 
@@ -569,11 +625,12 @@ def audit_loaded(
     findings: list[Finding] = []
 
     mean = corpus_mean(blocks.values())
-    for b in blocks.values():
-        findings += validate_block(b)
-    for g in groups.values():
-        findings += validate_group(g, blocks, mean)
-    for loc in locations.values():
+    for block_id in sorted(blocks):
+        findings += validate_block(blocks[block_id])
+    for group_id in sorted(groups):
+        findings += validate_group(groups[group_id], blocks, mean)
+    for location_id in sorted(locations):
+        loc = locations[location_id]
         scope = f"location/{loc.location_id}"
         if len(loc.location_id) > MAX_ID_CHARS or not ID_PATTERN.fullmatch(loc.location_id):
             findings.append(Finding("error", scope, "invalid location_id"))
@@ -586,10 +643,10 @@ def audit_loaded(
         loc_blocks = [b for b in blocks.values() if b.location_id == loc.location_id]
         findings += validate_location_caps(loc, loc_blocks)
 
-    for b in blocks.values():
+    for b in sorted(blocks.values(), key=lambda item: item.block_id):
         if b.location_id not in locations:
             findings.append(Finding("error", f"block/{b.block_id}", f"unknown location {b.location_id}"))
-    for g in groups.values():
+    for g in sorted(groups.values(), key=lambda item: item.group_id):
         if g.location_id not in locations:
             findings.append(Finding("error", f"group/{g.group_id}", f"unknown location {g.location_id}"))
 
@@ -644,7 +701,7 @@ def coverage(loc: Location, blocks: dict[str, Block], groups: dict[str, Group]) 
 
     incomplete = [
         (g.group_id, sum(1 for member_id in g.member_ids if blocks.get(member_id) and blocks[member_id].live))
-        for g in groups.values()
+        for g in sorted(groups.values(), key=lambda item: item.group_id)
         if g.location_id == loc.location_id
         and sum(1 for member_id in g.member_ids if blocks.get(member_id) and blocks[member_id].live) < GROUP_MIN_MEMBERS
     ]
@@ -694,7 +751,7 @@ def plan_jobs(
     demand = demand or {}
     jobs: list[Job] = []
 
-    for loc in locations.values():
+    for loc in sorted(locations.values(), key=lambda item: item.location_id):
         raw_weight = demand.get(loc.location_id, loc.priority)
         if isinstance(raw_weight, bool) or not isinstance(raw_weight, (int, float)) or not math.isfinite(raw_weight):
             raise CorpusLoadError(f"invalid demand/priority for {loc.location_id}")
@@ -739,7 +796,7 @@ def plan_jobs(
                 )
             )
 
-    jobs.sort(key=lambda j: -j.priority)
+    jobs.sort(key=lambda j: (-j.priority, j.location_id, j.kind, j.target))
     return jobs
 
 
@@ -868,7 +925,7 @@ def cmd_audit(args) -> int:
 def cmd_coverage(args) -> int:
     root = Path(args.corpus)
     locations, blocks, groups = load_corpus(root)
-    for loc in locations.values():
+    for loc in sorted(locations.values(), key=lambda item: item.location_id):
         cov = coverage(loc, blocks, groups)
         print(f"\n{loc.name} ({loc.location_id}, {loc.location_type})")
         print(f"  signatures servable: {len(cov.servable)}/36  ({cov.rate:.0%})")

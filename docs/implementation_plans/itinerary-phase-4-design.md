@@ -6,6 +6,9 @@
 > existing service and adapter methods, not run as a parallel cache. In particular, v2 adds dedicated
 > Postgres storage, immutable corpus releases, checksummed/size-bounded entries, private-overlay validation,
 > weighted storage/API caps, cost-estimator coverage, component feature flags, and bounded migration cleanup.
+> Cache lookup stays behind the existing generation entitlement/rate/idempotency reservation, so a hit does
+> not bypass a user's generation allowance. New v2 callers use the limiter's required-config mode and fail
+> closed when a provider/caller cap, paid-provider budget, or storage-capacity meter is missing.
 
 Shared caches contain only normalized, generic route and validated day structures. Keys exclude user IDs,
 names, free text, must-sees, home locations, and reservations. Must-sees are injected after cache reads.

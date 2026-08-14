@@ -47,6 +47,15 @@ class CorpusToolsTests(unittest.TestCase):
         with temp, self.assertRaisesRegex(tools.CorpusLoadError, "duplicate block_id"):
             tools.load_corpus(root)
 
+    def test_duplicate_json_object_keys_are_rejected(self):
+        temp, root = self.make_corpus()
+        with temp:
+            (root / "blocks.json").write_text(
+                '[{"block_id":"blk_one","block_id":"blk_two"}]', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(tools.CorpusLoadError, "duplicate JSON object key"):
+                tools.load_corpus(root)
+
     def test_oversized_file_is_rejected_before_json_decode(self):
         temp, root = self.make_corpus()
         with temp, patch.object(tools, "MAX_FILE_BYTES", 4):
@@ -67,6 +76,12 @@ class CorpusToolsTests(unittest.TestCase):
         self.assertGreater(errors, 0)
         self.assertTrue(any("unknown location" in finding.message for finding in findings))
 
+    def test_invalid_time_fit_and_boolean_verification_are_findings_not_crashes(self):
+        block = tools.Block(**valid_block(time_fit={"night": "late"}, verified_venue="yes"))
+        findings = tools.validate_block(block)
+        self.assertTrue(any("time_fit values" in finding.message for finding in findings))
+        self.assertTrue(any("verified_venue must be boolean" in finding.message for finding in findings))
+
     def test_promotion_is_read_only_and_requires_evidence(self):
         draft = valid_block(
             source="llm_draft",
@@ -85,12 +100,58 @@ class CorpusToolsTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertNotIn("force", inspect.signature(tools.promote).parameters)
 
+    def test_promotion_rejects_raw_or_untrusted_verification_urls(self):
+        draft = valid_block(
+            source="llm_draft",
+            verified_venue=True,
+            verification_source="https://untrusted.example/place",
+            verified_at="2026-01-01",
+            reviewed_by="reviewer_123",
+        )
+        temp, root = self.make_corpus(blocks=[draft])
+        with temp:
+            promotable, blockers = tools.promote(root, ["blk_test"])
+        self.assertEqual(promotable, [])
+        self.assertTrue(any("opaque official:/provider:/partner:" in finding.message for finding in blockers))
+
+    def test_group_above_documented_member_cap_is_an_error(self):
+        blocks = {
+            f"blk_{index}": tools.Block(**valid_block(block_id=f"blk_{index}"))
+            for index in range(5)
+        }
+        group = tools.Group(
+            group_id="grp_test",
+            location_id="loc_test",
+            zone_id="z_test",
+            role="anchor",
+            member_ids=list(blocks),
+        )
+        findings = tools.validate_group(group, blocks)
+        self.assertTrue(any(f.severity == "error" and "expected 3-4" in f.message for f in findings))
+
+    def test_invalid_group_member_shape_is_rejected_before_set_operations(self):
+        group = tools.Group(
+            group_id="grp_test",
+            location_id="loc_test",
+            zone_id="z_test",
+            role="anchor",
+            member_ids=[{"not": "hashable"}],  # type: ignore[list-item]
+        )
+        findings = tools.validate_group(group, {})
+        self.assertTrue(any("invalid IDs" in finding.message for finding in findings))
+
     def test_plan_manifest_includes_bounded_usage_estimate(self):
         locations = {"loc_test": tools.Location(**valid_location())}
         jobs = tools.plan_jobs(locations, {}, {}, {"loc_test": 100})
         manifest = jobs[0].to_dict()
         self.assertEqual(manifest["kind"], "cold_start")
         self.assertEqual(manifest["estimated_max_usage"], tools.JOB_ESTIMATES["cold_start"])
+
+    def test_plan_tie_order_is_deterministic(self):
+        first = tools.Location(location_id="loc_z", name="Z", location_type="city", priority=50)
+        second = tools.Location(location_id="loc_a", name="A", location_type="city", priority=50)
+        jobs = tools.plan_jobs({first.location_id: first, second.location_id: second}, {}, {})
+        self.assertEqual([job.location_id for job in jobs], ["loc_a", "loc_z"])
 
     def test_demand_rejects_non_finite_values(self):
         with tempfile.TemporaryDirectory() as temp_name:

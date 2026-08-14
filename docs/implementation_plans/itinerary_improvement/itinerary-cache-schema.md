@@ -1047,9 +1047,12 @@ Initial hard caps, enforced before decode/write and duplicated in configuration 
 
 Use safe JSON, not language-native object serialization. Verify `payload_bytes` and `payload_sha256` before
 decode. Firestore document size remains comfortably below its platform ceiling; the application cap is the
-portable contract. Use **JIT Compression** (Brotli or Gzip) for serialized binding payloads larger than
-8 KiB to minimize storage and egress costs, while remaining under the 64 KiB platform cap. Store a
-`compression` field (`br`, `gzip`, or `none`) in the metadata.
+portable contract. Do not introduce request-time (“JIT”) compression. Postgres may already compress large
+values internally, and recompressing every hit can cost more CPU/latency than these small payloads save.
+Start with `compression: "none"`. If adapter-specific measurements show a net saving, compress once on write
+only, after the uncompressed payload passes the 64 KiB cap, and retain its uncompressed byte length/hash.
+Require at least 20% measured size reduction, cap both compressed and expanded bytes, reject expansion ratios
+above 10:1, and benchmark/decode-test each adapter before enabling the numeric compression setting.
 
 ### 16.3 Immutable corpus releases
 
@@ -1062,6 +1065,13 @@ Promotion creates a new immutable release in a transaction/batch, then atomicall
 pointer. It never edits the active release in place. Rollback only changes that pointer and invalidates the
 release-dependent L0 entries. Release creation reserves worst-case storage bytes first and reconciles actual
 bytes exactly once using an idempotency key.
+
+Do not read the active-release pointer from durable storage for every itinerary. Keep a separately bounded
+60-second in-process pointer cache, coalesce refreshes, and meter the refresh read. Promotion/rollback sends a
+best-effort invalidation event, but correctness relies on the short TTL and release ID in every binding key,
+not event delivery. Emergency poisoning/source revocation disables reads or adds the release to a small
+fail-closed denylist checked before L0; it does not wait 60 seconds. Corpus snapshots loaded for selection
+have their own byte/count-bounded LRU and are evicted by release ID.
 
 ## 17. Standard limits, quotas, and cost accounting
 
@@ -1080,7 +1090,12 @@ proposal's new capacity-reservation primitive should eventually also close, but 
 Extend the standard control plane rather than adding cache-local counters:
 
 ```ts
-reserveApiUsageOrThrow({ provider, caller, units?: number }) // units defaults to 1
+reserveApiUsageOrThrow({
+  provider,
+  caller,
+  units?: number,                 // defaults to 1
+  requireConfiguredLimit?: true  // missing overall/caller cap throws before work
+})
 reserveCapacityOrThrow({ provider, caller, units, idempotencyKey })
 commitCapacityReservation({ reservationId, actualUnits })
 releaseCapacityReservation({ reservationId })
@@ -1097,11 +1112,27 @@ prevent retry storms from bypassing limits. Byte reservations are committed to a
 released on a terminal failure. Every async job has an idempotency key, estimated units, deadline, attempt
 cap, and one terminal accounting record.
 
+All new itinerary cache, binder, verifier, authoring, queue, and cleanup call sites set
+`requireConfiguredLimit: true`. Unlike the legacy permissive default, this mode requires finite positive
+overall and caller limits and throws `ApiLimitConfigurationError` when either is missing/invalid. The
+orchestrator then disables only the affected component and uses the bounded existing path; it must not make
+the unreserved operation. Startup/readiness validation remains useful, but it is not the enforcement
+boundary. Add a config-negative integration test for every caller so deleting a YAML entry cannot silently
+turn a capped feature into an unlimited one.
+
+Validate required provider/caller/pricing configuration from the in-memory parsed config before reading or
+writing durable usage/cost counters. The metering control plane cannot recursively reserve a unit for its own
+counter transaction; instead, bound it structurally with an allowlisted provider/caller registry, fixed
+window/cardinality limits, TTL cleanup, bounded admin queries, and database-level capacity/retention policy.
+Include its actual counter reads/writes, capacity reservations, feature-flag reads, and audit-log storage in
+the active-backend cost estimate and observability budget. This makes control-plane overhead visible without
+creating infinite recursive accounting.
+
 ### 17.2 Required provider/caller inventory
 
 Add finite entries to `server/config/api-limits.yaml`. The values below are conservative initial staging
 ceilings, not traffic forecasts; production changes require capacity/cost review. Missing provider, caller,
-budget, or unit-price configuration is a failed readiness check—not “unlimited.”
+budget, or unit-price configuration fails closed at runtime and is also a failed readiness check.
 
 | Provider | Caller/unit | Initial aggregate cap | Cap behavior |
 |---|---|---:|---|
@@ -1117,11 +1148,17 @@ budget, or unit-price configuration is a failed readiness check—not “unlimit
 | `ITINERARY_CACHE_STORAGE` | `CORPUS_READ` operation | 50,000/day | Use bounded L0/current release snapshot |
 | `ITINERARY_CACHE_STORAGE` | `CORPUS_WRITE` operation | 1,000/day | Promotion/prepopulation pauses |
 | `ITINERARY_CACHE_STORAGE` | retained KiB gauge | 524,288 KiB platform-wide | Reject new writes/releases |
+| `ITINERARY_CACHE_STORAGE` | binding-entry count gauge | 100,000 live/stale entries | Reject write-through; cleanup continues |
+| `ITINERARY_CACHE_STORAGE` | corpus/draft/evidence item gauge | 250,000 items | Pause authoring/import/promotion |
+| `ITINERARY_CACHE_STORAGE` | pending/quarantined job gauge | 10,000 items | Reject/defer new enqueue |
 | `ITINERARY_CACHE_JOBS` | enqueue/attempt units | 1,000/2,000 per day | Deduplicate/defer; no retry fan-out |
 
 Token limits must be enforced before each call from the provider registry using worst-case prompt and
 completion ceilings, not only counted after the response. The existing AI provider/caller request
-reservation and monthly budget checks remain in force as an additional ceiling. The binder has a hard
+reservation and monthly budget checks remain in force as an additional ceiling. Before either AI flag can
+be enabled, every selectable paid provider/model must have an explicit positive `monthlyBudgetUsd`, alert
+threshold, token price, request callers, and token-unit callers. A null budget is not acceptable merely
+because daily requests are capped. The binder has a hard
 timeout, one attempt, no automatic model escalation, and `max_output_tokens <= 300`. Authoring uses bounded
 per-block jobs; a cold location is not one unbounded prompt.
 
@@ -1130,6 +1167,13 @@ repetition counters, writes, deletes, release metadata, cleanup scans, and revie
 transaction performs multiple billed reads/writes, reserve those actual worst-case units—not one unit for
 the HTTP request. Temporary, draft, stale, quarantined, and superseded bytes all count toward platform
 capacity until deleted.
+
+Logical byte and item gauges cover payloads plus application metadata; fixed indexes, database page/replica
+overhead, point-in-time recovery, and backups are capped at the infrastructure/database policy layer with
+finite retention and included in the active-backend estimator via a measured overhead multiplier. Schema
+migrations may add only the reviewed fixed indexes in §16.2—no user- or destination-created indexes. Logs,
+traces, eval artifacts, and metric exemplars also have byte/event-rate limits and finite retention; they are
+observability storage, not free exhaust.
 
 ### 17.3 Runtime cost tracking
 
@@ -1141,9 +1185,9 @@ capacity until deleted.
 - Add caller-aware unit pricing for cache reads, writes, deletes, retained GiB-month, egress, queue
   operations, and worker compute. Record actual units against the same durable monthly cost-counter/reporting
   plane; do not build a cache-only dashboard ledger.
-- **Track economic ROI**: implement an `itinerary_cache_roi` provider that records "Avoided Inference Tokens"
-  (calculated as the difference between a full baseline generation and a binding-plan generation, minus
-  cache overhead).
+- Track avoided inference as telemetry and an estimator-derived counterfactual, not as an
+  `itinerary_cache_roi` provider or negative cost entry. Avoided spend is not an invoice and must never be
+  subtracted from actual provider cost counters. Report actual spend and modeled savings side by side.
 - Prevent double counting: caller detail rolls up to the provider total once. Estimated reservation cost is
   replaced/reconciled by actual cost, not added to it.
 - Record zero-cost operations as usage even when no cost-counter row is needed. “Free” still consumes quotas
@@ -1166,6 +1210,7 @@ assumptions:
 | Storage | live, draft, stale, superseded, and temporary GiB-month |
 | Compute/queue | jobs, attempts, CPU/GiB-seconds, cleanup scans |
 | Delivery | cache payload egress GiB, if billed separately |
+| Observability | log/trace bytes ingested and retained, metric series/samples, eval artifact GiB-month |
 
 Model low/base/high hit-rate scenarios and the uncached counterfactual. Inputs include active users,
 generations/user, Tier 0 hit rate, deterministic Tier 1 success, LLM-bind rate, cold-location rate, average
@@ -1177,6 +1222,41 @@ Every new usage metric must map to exactly one `costSources` line item, even whe
 Add a config test that fails for an unpriced metric, a double-mapped metric, a missing tier assumption, a
 negative/non-finite value, or an aggregate usage estimate above the configured hard-cap capacity without a
 visible warning. Admin price edits remain audited through the existing estimator configuration path.
+
+Database prices and free allowances differ by deployment. The estimator selects exactly one active backend
+scenario (`firebase`, managed Postgres, or local/in-memory test) and prices its reads/writes/deletes,
+transactions, retained bytes, backups, and egress without also charging the other backend. Production
+readiness fails if `DB_PROVIDER` has no matching storage cost scenario. Local/in-memory may be explicitly
+priced at zero but still needs finite operation/byte caps in tests.
+
+Separate per-user serving demand from shared platform work. Corpus prepopulation, release storage,
+verification refresh, cleanup, backups, and observability baselines are modeled once per deployment (with
+low/base/high growth), not multiplied by every user; request-path reads/binds are multiplied by eligible
+generations. Add a reconciliation test comparing estimated monthly operation/token/byte totals with sampled
+runtime counters and alert when error exceeds an agreed tolerance before using ROI to expand rollout.
+
+### 17.5 Entitlements, abuse limits, and idempotency
+
+Caching changes compute cost, not the product action. Preserve the current generation admission order from
+`itineraryRoutes.ts` and `entitlementService.ts`:
+
+1. authenticate and authorize current trip membership;
+2. assert `ai_itinerary_generation`, then reserve the existing per-account/IP HTTP rate limit;
+3. reserve `ai_itinerary_generations` with the existing idempotency key/monthly tier limit;
+4. return an already-completed idempotent response before doing new cache/provider/storage work;
+5. only then read/bind/fill the shared cache; and
+6. finalize the same generation reservation on either a valid cache result or a newly generated result.
+
+A Tier 0 hit still counts as one user-requested generation and cannot bypass Basic/Premium limits. A retry
+with the same completed idempotency key counts once and performs no new cache read, bind, or authoring
+enqueue. Admins may retain the existing tier-limit bypass, but never bypass global provider/token budgets,
+storage capacity, operation caps, feature flags, or security/quality gates. Failed/quarantined cache reads
+do not themselves create a second user generation charge.
+
+Miss aggregation and authoring are platform maintenance, not user entitlements: deduplicate by shared-safe
+key, remove account/trip identity, require a minimum aggregate demand threshold before authoring, and apply
+short retention. A single user's rare/private constraint must not become a corpus job or leak through demand
+telemetry.
 
 ## 18. Feature flags and configuration
 
@@ -1203,10 +1283,21 @@ The client flag only hides or explains UI; it is never the enforcement boundary.
 delete data. Disabling reads bypasses both L0 and shared data. Disabling the master prevents enqueue and new
 background work; in-flight jobs stop at the next safe checkpoint.
 
+Resolve the nine booleans once per request/job through a typed `resolveItineraryCacheCapabilities()` helper
+that enforces the dependency DAG in the table. Do not scatter ad hoc flag conjunctions across routes,
+services, and workers. An invalid combination (for example prepopulation on while writes are off) resolves
+the child capability to false, emits one rate-limited configuration alert, and performs no child work.
+Contract tests cover every valid capability and representative invalid combinations without requiring a
+fragile 512-case UI matrix.
+
 This repository's general feature-flag behavior is fail-open for missing rows. Therefore the rollout tool
 must verify that every required row exists, has a non-empty `description`, and is explicitly disabled before
 the master flag can be enabled. Do not silently change the global fail-open contract inside this feature.
-Treat missing itinerary flag rows as a readiness failure and alert, while keeping runtime fallback safe.
+Treat missing itinerary flag rows as a readiness failure and alert. To keep runtime fallback genuinely safe,
+the cache orchestrator also has a computed `itineraryBlockCacheReady` prerequisite that is false unless all
+required flag rows, schemas, finite limits, prices/budgets, adapter capabilities, and active corpus pointer
+are present. This is a component readiness check, not a change to the shared feature-flag service. A
+fail-open flag result cannot override a false readiness prerequisite.
 
 Note that `owner` is not a field the current `feature-flags.yaml` schema or its loader supports — every
 existing entry has only `enabled` and `description`. If per-flag ownership tracking is wanted (reasonable,
@@ -1365,6 +1456,8 @@ hard-constraint violations and consistent signature coverage.
 - every external call reserves the correct provider/caller before invocation and records actual cost once;
 - every DB transaction reserves its worst-case operation/byte units and idempotent retries do not double bill;
 - provider, storage, queue, token, and monthly-cost exhaustion each produce the documented bounded fallback;
+- missing/zero provider or caller caps fail closed before work, and a cache hit follows the same generation
+  entitlement/idempotency accounting as a miss;
 - account/trip data never appears in shared cache documents, logs, metrics, or promotion artifacts.
 
 Add static/wiring tests analogous to `apiRequestCostWiring.test.ts` so a new binder, author, verifier, or
@@ -1394,7 +1487,8 @@ and source revocation.
 ## 24. Rollout and definition of done
 
 1. **Foundation, flags off:** canonical schemas, dedicated adapter-parity storage, weighted usage/capacity
-   meters, cost pricing/estimator coverage, observability, and tests.
+   meters, fail-closed required-limit mode, entitlement/idempotency integration, cost pricing/estimator
+   coverage, observability, and tests.
 2. **Offline corpus:** clean immutable reference release, authoring QA, source/license review, no runtime reads.
 3. **Shadow read:** compute keys/read/validate for an internal cohort, never alter responses; paid judging is
    separately flagged, capped, and costed.
@@ -1411,6 +1505,8 @@ and source revocation.
 The feature is not production-complete until:
 
 - [ ] every API, token, operation, job, retry, and retained byte has a finite enforced cap;
+- [ ] missing/invalid limits, prices, budgets, flags, schemas, or adapter support disable the affected
+      component before any billable work;
 - [ ] every usage metric has runtime cost accounting and one estimator mapping;
 - [ ] all major flags exist, default safely, work at route/service/worker boundaries, and have tested rollback;
 - [ ] Postgres, Firebase, and memory pass the same cache/release/limiter contract suite;

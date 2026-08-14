@@ -23,4 +23,5 @@ python -m unittest -v test_corpus_tools.py
 
 `promote` is a read-only preflight. Live authoring, verification, and promotion must run through the
 feature-flagged, authenticated, metered, cost-recorded, audited, immutable-release server workflow described
-in sections 16–24 of the design.
+in sections 16–24 of the design. Fixture verification references are opaque IDs with an `official:`,
+`provider:`, or `partner:` prefix; raw URLs and model/self-attestation are rejected.
