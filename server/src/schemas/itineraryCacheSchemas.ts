@@ -135,18 +135,30 @@ export const TravelLegSchema = z.object({
   confidence: z.enum(['verified', 'estimated', 'low']),
 }).strict();
 
+// 'activity_block' and 'travel_leg' checkpoints resolve checkpointId against data the renderer
+// already has (a bound ActivityBlock or a TravelLeg) at zero marginal cost. 'logistics_waypoint'
+// is for stops that are neither — a fuel stop, a conditional detour — and carries its own small,
+// reviewed reasonCode instead of inventing free text at render time; the refine below enforces
+// that pairing so a waypoint can never reach the renderer without a code to look copy up by.
+const TimedRouteCheckpointSchema = z.object({
+  checkpointId: z.string().min(1).max(100),
+  checkpointType: z.enum(['activity_block', 'travel_leg', 'logistics_waypoint']),
+  reasonCode: z.string().min(1).max(80).optional(),
+  earliestStart: IsoDateTimeSchema.optional(),
+  latestDeparture: IsoDateTimeSchema.optional(),
+  durationMinutes: z.number().int().min(0).max(24 * 60),
+  required: z.boolean(),
+  cutPriority: z.number().int().min(0).max(100).optional(),
+}).strict().refine(
+  (checkpoint) => checkpoint.checkpointType !== 'logistics_waypoint' || Boolean(checkpoint.reasonCode),
+  { message: 'logistics_waypoint checkpoints require a reasonCode', path: ['reasonCode'] }
+);
+
 export const TimedRouteDaySchema = z.object({
   date: IsoDateSchema,
   hardDeadline: z.object({ at: IsoDateTimeSchema, reasonCode: z.string().max(80) }).optional(),
   requiredSlackMinutes: z.number().int().min(0).max(24 * 60),
-  checkpoints: z.array(z.object({
-    checkpointId: z.string().min(1).max(100),
-    earliestStart: IsoDateTimeSchema.optional(),
-    latestDeparture: IsoDateTimeSchema.optional(),
-    durationMinutes: z.number().int().min(0).max(24 * 60),
-    required: z.boolean(),
-    cutPriority: z.number().int().min(0).max(100).optional(),
-  }).strict()).max(12),
+  checkpoints: z.array(TimedRouteCheckpointSchema).max(12),
 }).strict();
 
 export const DayVariantSchema = z.object({
@@ -188,6 +200,7 @@ export const TripLogisticsOverlaySchema = z.object({
 export type BaseStay = z.infer<typeof BaseStaySchema>;
 export type TravelLeg = z.infer<typeof TravelLegSchema>;
 export type TimedRouteDay = z.infer<typeof TimedRouteDaySchema>;
+export type TimedRouteCheckpoint = TimedRouteDay['checkpoints'][number];
 export type DayVariant = z.infer<typeof DayVariantSchema>;
 export type RoadTripConflict = z.infer<typeof RoadTripConflictSchema>;
 export type TripLogisticsOverlay = z.infer<typeof TripLogisticsOverlaySchema>;

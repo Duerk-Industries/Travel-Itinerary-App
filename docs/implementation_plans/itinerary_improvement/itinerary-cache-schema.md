@@ -565,11 +565,12 @@ type TimedRouteDay = {
   requiredSlackMinutes: number;
   checkpoints: Array<{
     checkpointId: string;
-    // 'activity_block' resolves checkpointId against an existing ActivityBlock and reuses its
-    // title/copy at zero marginal cost. Not every stop worth naming is a curated activity — a
-    // fuel stop or a conditional detour isn't — so 'logistics_waypoint' carries its own small,
-    // reviewed reasonCode instead of inventing free text at render time.
-    checkpointType: 'activity_block' | 'logistics_waypoint';
+    // 'activity_block' and 'travel_leg' resolve checkpointId against data the renderer already
+    // has — a bound ActivityBlock's title/copy, or a TravelLeg's mode/duration/provenance — at
+    // zero marginal cost. Not every stop worth naming is either of those — a fuel stop or a
+    // conditional detour isn't — so 'logistics_waypoint' carries its own small, reviewed
+    // reasonCode instead of inventing free text at render time.
+    checkpointType: 'activity_block' | 'travel_leg' | 'logistics_waypoint';
     reasonCode?: string,          // required when checkpointType is 'logistics_waypoint';
                                    // allowlisted, e.g. FUEL_STOP, LAST_FUEL_BEFORE_PASS,
                                    // SCENIC_PULLOFF_IF_AHEAD — mapped to reviewed, localized copy,

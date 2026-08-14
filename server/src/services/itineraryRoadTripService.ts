@@ -50,6 +50,8 @@ export type RoadTripCorridorInput = {
   confidence?: TravelLeg['confidence'];
 };
 
+export type RoadTripCoordinate = { lat: number; lng: number };
+
 export type RoadTripDeadlineInput = {
   date: string;
   at: string;
@@ -81,13 +83,17 @@ export type RoadTripPlannerInput = {
   corridors?: RoadTripCorridorInput[];
   deadlines?: RoadTripDeadlineInput[];
   variants?: RoadTripVariantInput[];
+  /** Keyed by the same normalized location id used for BaseStay.locationId. Optional — when a
+   *  pair of bases both have a coordinate and no explicit/supplied leg time is available, the
+   *  fallback estimate is a real geodesic-distance calculation instead of a flat guess. */
+  locationCoordinates?: Record<string, RoadTripCoordinate>;
   enableTimedRoutes?: boolean;
   enableDayVariants?: boolean;
   maxBases?: number;
   maxLegs?: number;
 };
 
-export type RoadTripHints = Pick<RoadTripPlannerInput, 'corridors' | 'deadlines' | 'variants'>;
+export type RoadTripHints = Pick<RoadTripPlannerInput, 'corridors' | 'deadlines' | 'variants' | 'locationCoordinates'>;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^(\d{2}):(\d{2})$/;
@@ -95,6 +101,43 @@ const MINUTES_PER_DAY = 24 * 60;
 const DEFAULT_SLACK_MINUTES = 60;
 const DEFAULT_HEURISTIC_MINUTES = 120;
 const MAX_DAYS = 31;
+const MAX_CHECKPOINTS_PER_DAY = 12; // must match TimedRouteDaySchema.checkpoints' array cap
+const MAX_DAY_VARIANTS = 124; // must match TripLogisticsOverlaySchema.dayVariants' array cap
+const MAX_CONFLICTS = 64; // must match TripLogisticsOverlaySchema.conflicts' array cap
+// Conservative average speeds including stops, mountain/rural roads, and station dwell time —
+// deliberately on the slow side per the plan's "conservative, clamped buffer" guidance. This is
+// a provider-free planning estimate, not a routed prediction; the optional live-route flag
+// (itinerary_live_route_conditions) refines it later without changing this baseline's shape.
+const AVERAGE_SPEED_KMH_BY_MODE: Record<TravelLeg['mode'], number> = {
+  drive: 55,
+  bus: 45,
+  rail: 80,
+  flight: 500,
+  other: 40,
+};
+const MIN_GEODESIC_MINUTES = 20;
+const GEODESIC_BUFFER_MINUTES = 20; // fixed allowance for border crossings, terminals, mountain passes
+
+const isFiniteCoordinate = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+const isValidCoordinate = (value: unknown): value is RoadTripCoordinate => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<RoadTripCoordinate>;
+  return isFiniteCoordinate(candidate.lat) && isFiniteCoordinate(candidate.lng)
+    && candidate.lat! >= -90 && candidate.lat! <= 90 && candidate.lng! >= -180 && candidate.lng! <= 180;
+};
+
+/** Great-circle distance in kilometers. Deliberately simple (no routing, no roads) — it is a
+ *  lower bound used only to keep the flat-guess fallback honest, never presented as a route. */
+const haversineKm = (a: RoadTripCoordinate, b: RoadTripCoordinate): number => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h = sinLat * sinLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
+};
 
 const safe = (value: unknown): string => String(value ?? '').trim();
 const isIsoDate = (value: unknown): value is string => typeof value === 'string' && ISO_DATE.test(value);
@@ -110,7 +153,12 @@ const normalizeLocationId = (value: unknown): string => safe(value)
 const parseDateUtc = (value: DateLike): Date | null => {
   if (!isIsoDate(value)) return null;
   const parsed = new Date(`${value}T00:00:00.000Z`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  if (Number.isNaN(parsed.getTime())) return null;
+  // `Date` silently rolls an out-of-range day-of-month (e.g. "2026-02-30") into the next month
+  // rather than rejecting it — a genuinely nonexistent date must never quietly become a different,
+  // valid one and shift every downstream base/leg/deadline date by however many days it overflowed.
+  // Verifying the round trip catches it; isIsoDate above already guarantees the format matches.
+  return parsed.toISOString().slice(0, 10) === value ? parsed : null;
 };
 
 const addDays = (date: string, amount: number): string => {
@@ -236,6 +284,20 @@ const estimateLegMinutes = (from: BaseStay, to: BaseStay, input: RoadTripPlanner
   if (corridor && Number.isFinite(corridor.minutes) && corridor.minutes > 0) {
     return { minutes: Math.min(24 * 60, Math.round(corridor.minutes)), source: 'static_corridor', confidence: corridor.confidence ?? 'estimated', mode: corridor.mode ?? 'drive' };
   }
+  const fromCoordinate = input.locationCoordinates?.[from.locationId];
+  const toCoordinate = input.locationCoordinates?.[to.locationId];
+  if (isValidCoordinate(fromCoordinate) && isValidCoordinate(toCoordinate)) {
+    const mode: TravelLeg['mode'] = 'drive';
+    const distanceKm = haversineKm(fromCoordinate, toCoordinate);
+    const drivingMinutes = (distanceKm / AVERAGE_SPEED_KMH_BY_MODE[mode]) * 60;
+    const minutes = Math.min(24 * 60, Math.max(MIN_GEODESIC_MINUTES, Math.round(drivingMinutes + GEODESIC_BUFFER_MINUTES)));
+    // 'estimated', not 'low': this is a real distance calculation, not a magic number — still not
+    // a routed prediction (no roads, borders, or terrain), so one confidence tier below 'verified'.
+    return { minutes, source: 'heuristic', confidence: 'estimated', mode };
+  }
+  // No corridor and no coordinates for at least one endpoint — there is genuinely no signal to
+  // estimate from. Surface this as the lowest confidence tier per the plan (§5), not silently as
+  // if it were a real distance-based number.
   return { minutes: DEFAULT_HEURISTIC_MINUTES, source: 'heuristic', confidence: 'low', mode: 'drive' };
 };
 
@@ -293,6 +355,7 @@ const buildTravelLegs = (bases: BaseStay[], input: RoadTripPlannerInput, conflic
 
 const activityCheckpoint = (activity: RoadTripActivityInput, index: number, date: string) => ({
   checkpointId: `activity_${index}_${normalizeLocationId(activity.name).slice(0, 50)}`.slice(0, 100),
+  checkpointType: 'activity_block' as const,
   ...(isIsoDate(date) && minutesFromTime(activity.startTime) !== null ? { earliestStart: toIsoDateTime(date, minutesFromTime(activity.startTime)!) } : {}),
   durationMinutes: Math.min(MINUTES_PER_DAY, parseDurationMinutes(activity.duration)),
   required: false,
@@ -324,7 +387,7 @@ const buildTimedRouteDays = (bases: BaseStay[], legs: TravelLeg[], input: RoadTr
     const deadline = deadlines.get(date);
     const requiredSlackMinutes = Math.max(0, Math.min(MINUTES_PER_DAY, Math.round(deadline?.requiredSlackMinutes ?? (dayLegs.length ? DEFAULT_SLACK_MINUTES : 0))));
     const checkpoints = [
-      ...dayLegs.map((leg, index) => ({ checkpointId: leg.legId, durationMinutes: Math.ceil(leg.estimatedMinutes * leg.bufferMultiplier), required: true, cutPriority: 0, _index: index })),
+      ...dayLegs.map((leg, index) => ({ checkpointId: leg.legId, checkpointType: 'travel_leg' as const, durationMinutes: Math.ceil(leg.estimatedMinutes * leg.bufferMultiplier), required: true, cutPriority: 0, _index: index })),
       ...(activityByDate.get(date) ?? []).map((activity, index) => ({ ...activityCheckpoint(activity, index, date), _index: index + dayLegs.length })),
     ].map(({ _index: _ignored, ...checkpoint }) => checkpoint);
     const hardDeadline = deadline ? { at: toIsoDateTime(date, minutesFromTime(deadline.at) ?? 18 * 60), reasonCode: deadline.reasonCode.slice(0, 80) || 'USER_DEADLINE' } : undefined;
@@ -341,8 +404,26 @@ const buildTimedRouteDays = (bases: BaseStay[], legs: TravelLeg[], input: RoadTr
     if (plannedMinutes > availableMinutes) {
       conflicts.push({ code: 'DEADLINE_INFEASIBLE', date, message: `Required route checkpoints cannot reach the deadline with ${requiredSlackMinutes} minutes of slack.`, required: true });
     }
-    if (mutable.length || hardDeadline || dayLegs.length) {
-      result.push({ date, ...(hardDeadline ? { hardDeadline } : {}), requiredSlackMinutes, checkpoints: mutable });
+    // A day with more checkpoints than the schema allows must never throw out of this function —
+    // truncate deterministically (required checkpoints first, then lowest-cutPriority optional
+    // ones) and surface it as a bounded conflict instead of letting the final schema .parse() in
+    // buildRoadTripLogisticsOverlay throw on an array-length violation.
+    let boundedCheckpoints = mutable;
+    if (mutable.length > MAX_CHECKPOINTS_PER_DAY) {
+      const required = mutable.filter((checkpoint) => checkpoint.required);
+      const optional = mutable
+        .filter((checkpoint) => !checkpoint.required)
+        .sort((a, b) => (a.cutPriority ?? 0) - (b.cutPriority ?? 0));
+      boundedCheckpoints = [...required, ...optional].slice(0, MAX_CHECKPOINTS_PER_DAY);
+      conflicts.push({
+        code: 'LIMIT_REACHED',
+        date,
+        message: `${mutable.length - boundedCheckpoints.length} lowest-priority optional checkpoint(s) were dropped to stay within the per-day checkpoint cap.`,
+        required: false,
+      });
+    }
+    if (boundedCheckpoints.length || hardDeadline || dayLegs.length) {
+      result.push({ date, ...(hardDeadline ? { hardDeadline } : {}), requiredSlackMinutes, checkpoints: boundedCheckpoints });
     }
     if (dayLegs.length) {
       driving.push({ date, legIds: dayLegs.map((leg) => leg.legId), bufferedMinutes: dayLegs.reduce((sum, leg) => sum + Math.ceil(leg.estimatedMinutes * leg.bufferMultiplier), 0), requiredSlackMinutes, confidence: dayLegs.some((leg) => leg.confidence === 'low') ? 'low' : dayLegs.some((leg) => leg.confidence === 'estimated') ? 'estimated' : 'verified' });
@@ -383,10 +464,17 @@ const buildVariants = (input: RoadTripPlannerInput, activities: RoadTripActivity
       });
     });
   }
+  // Provider-free baseline has no live signal for which condition actually holds, so it must pick
+  // a *deterministic* default rather than whichever variant happens to be listed first — that was
+  // the bug: it previously ignored `conditions` entirely. 'dry' is the assumed baseline absent a
+  // live weather read (itinerary_live_weather_variants refines this later without changing this
+  // fallback's shape, per §5/§18). Ties within the preferred set, and the case where no member
+  // declares 'dry', both fall back to input order for determinism.
   const active: string[] = [];
   const groups = new Set(variants.map((variant) => variant.exclusiveGroup));
   groups.forEach((group) => {
-    const selected = variants.find((variant) => variant.exclusiveGroup === group);
+    const members = variants.filter((variant) => variant.exclusiveGroup === group);
+    const selected = members.find((variant) => variant.conditions.includes('dry')) ?? members[0];
     if (selected) active.push(selected.variantId);
   });
   return { variants, active };
@@ -409,7 +497,27 @@ export const buildRoadTripLogisticsOverlay = (input: RoadTripPlannerInput): Trip
       conflicts.push({ code: 'MISSING_BASE', date, message: `No base stay covers ${date}.`, required: false });
     }
   }
-  return TripLogisticsOverlaySchema.parse({ schemaVersion: 'road-trip-lite-v1', baseStays, travelLegs, timedRouteDays: timed.days, dayVariants: variantResult.variants, activeVariantIds: variantResult.active, conflicts, daysByBase, drivingSummary: timed.driving });
+
+  // Defensive bounding immediately before the schema boundary: baseStays/travelLegs are already
+  // capped upstream via maxBases/maxLegs, and timedRouteDays/checkpoints via MAX_DAYS and the
+  // truncation above, but dayVariants and conflicts have no per-call ceiling on their inputs
+  // (a caller can supply arbitrarily many variant hints, and conflicts accumulate across every
+  // day/step). The schema's own array caps exist to protect payload size (§17.1's byte/item
+  // caps), so exceeding them here must degrade the same way any other overflow does — a bounded
+  // conflict, never a thrown ZodError from `.parse()` below.
+  let dayVariants = variantResult.variants;
+  let activeVariantIds = variantResult.active;
+  if (dayVariants.length > MAX_DAY_VARIANTS) {
+    dayVariants = dayVariants.slice(0, MAX_DAY_VARIANTS);
+    const keptIds = new Set(dayVariants.map((variant) => variant.variantId));
+    activeVariantIds = activeVariantIds.filter((id) => keptIds.has(id));
+    conflicts.push({ code: 'LIMIT_REACHED', message: 'Day-variant list exceeded its cap and was truncated.', required: false });
+  }
+  const boundedConflicts = conflicts.length > MAX_CONFLICTS
+    ? [...conflicts.slice(0, MAX_CONFLICTS - 1), { code: 'LIMIT_REACHED' as const, message: `${conflicts.length - (MAX_CONFLICTS - 1)} additional conflict(s) were dropped to stay within the conflict-list cap.`, required: false }]
+    : conflicts;
+
+  return TripLogisticsOverlaySchema.parse({ schemaVersion: 'road-trip-lite-v1', baseStays, travelLegs, timedRouteDays: timed.days, dayVariants, activeVariantIds, conflicts: boundedConflicts, daysByBase, drivingSummary: timed.driving });
 };
 
 /** Compact, deterministic presentation for clients that do not yet have a

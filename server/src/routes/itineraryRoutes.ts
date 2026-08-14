@@ -46,7 +46,10 @@ const parseMustSeeAttractions = (raw: unknown): MustSeeAttractionInput[] => {
   return out;
 };
 
-const parseRoadTripHints = (raw: unknown): RoadTripHints | undefined => {
+// Exported for direct unit testing — this is pure request-body validation with no I/O, and its
+// bounds/allowlists are exactly the kind of logic that should be tested without standing up the
+// full authenticated generation route.
+export const parseRoadTripHints = (raw: unknown): RoadTripHints | undefined => {
   if (!raw || typeof raw !== 'object') return undefined;
   const value = raw as Record<string, unknown>;
   const corridors = Array.isArray(value.corridors)
@@ -70,7 +73,10 @@ const parseRoadTripHints = (raw: unknown): RoadTripHints | undefined => {
         const at = String(item.at ?? '').trim();
         const reasonCode = String(item.reasonCode ?? '').trim().slice(0, 80);
         const slack = Number(item.requiredSlackMinutes);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(at) || !reasonCode) return [];
+        // Range-checked, not just shape-checked — "25:99" previously matched \d{2}:\d{2} and slid
+        // through to itineraryRoadTripService's own minutesFromTime, which rejects it and silently
+        // substitutes an 18:00 default. Reject it here instead, at the actual input boundary.
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(at) || !reasonCode) return [];
         return [{ date, at, reasonCode, ...(Number.isFinite(slack) ? { requiredSlackMinutes: Math.max(0, Math.min(1440, Math.round(slack))) } : {}) }];
       })
     : undefined;
@@ -88,8 +94,31 @@ const parseRoadTripHints = (raw: unknown): RoadTripHints | undefined => {
         return [{ variantId, date, labelReasonCode, blockIds: list('blockIds', 40), activityNames: list('activityNames', 40), legIds: list('legIds', 16), ...(Number.isFinite(estimatedMinutes) ? { estimatedMinutes: Math.max(0, Math.min(1440, Math.round(estimatedMinutes))) } : {}), conditions, exclusiveGroup: String(item.exclusiveGroup ?? `day_${date}`).trim().slice(0, 100), tradeoffReasonCodes: list('tradeoffReasonCodes', 8) }];
       })
     : undefined;
-  if (!corridors?.length && !deadlines?.length && !variants?.length) return undefined;
-  return { ...(corridors?.length ? { corridors } : {}), ...(deadlines?.length ? { deadlines } : {}), ...(variants?.length ? { variants } : {}) };
+  // Keyed by the same normalized location id the overlay derives for each BaseStay (lodging
+  // address/name when lodgings exist, otherwise the destination) — the identical key-matching
+  // contract corridors already require above, not a new one. A caller that doesn't know that id
+  // ahead of time gets the existing flat/no-coordinate estimate instead of a mismatched one.
+  const locationCoordinatesEntries = value.locationCoordinates && typeof value.locationCoordinates === 'object' && !Array.isArray(value.locationCoordinates)
+    ? Object.entries(value.locationCoordinates as Record<string, unknown>)
+        .slice(0, 16)
+        .flatMap(([key, candidate]) => {
+          const locationId = String(key ?? '').trim().slice(0, 160);
+          if (!locationId || !candidate || typeof candidate !== 'object') return [];
+          const item = candidate as Record<string, unknown>;
+          const lat = Number(item.lat);
+          const lng = Number(item.lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return [];
+          return [[locationId, { lat, lng }] as const];
+        })
+    : [];
+  const locationCoordinates = locationCoordinatesEntries.length ? Object.fromEntries(locationCoordinatesEntries) : undefined;
+  if (!corridors?.length && !deadlines?.length && !variants?.length && !locationCoordinates) return undefined;
+  return {
+    ...(corridors?.length ? { corridors } : {}),
+    ...(deadlines?.length ? { deadlines } : {}),
+    ...(variants?.length ? { variants } : {}),
+    ...(locationCoordinates ? { locationCoordinates } : {}),
+  };
 };
 
 // Returns a UTC monthly window key, e.g. "2026-03"

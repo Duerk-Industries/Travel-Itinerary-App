@@ -25,6 +25,15 @@ describe('binding-plan-v2 cache safety', () => {
     expect(CacheCompatibilityProjectionSchema.safeParse({ ...projection, user_id: 'private' }).success).toBe(false);
   });
 
+  it('produces the same key regardless of input field order (the canonical projection, not the raw object, is hashed)', () => {
+    const reordered = Object.fromEntries(Object.entries(projection).reverse()) as typeof projection;
+    expect(buildCacheKeyV2(reordered)).toBe(buildCacheKeyV2(projection));
+  });
+
+  it('produces a different key when a semantically meaningful field differs', () => {
+    expect(buildCacheKeyV2({ ...projection, pace: 'relaxed' })).not.toBe(buildCacheKeyV2(projection));
+  });
+
   it('revalidates bound blocks against private energy and accessibility constraints', () => {
     const block = {
       block_id: 'blk_hike', location_id: 'loc_brasov', zone_id: 'zone_a', role: 'anchor' as const,
