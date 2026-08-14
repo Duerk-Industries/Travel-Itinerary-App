@@ -9,6 +9,7 @@ import { getUserById } from '../../db';
 import { extractLabeledFieldValue, extractPhoneLikeValue, toTitleCaseWords } from './hotelFieldExtractors';
 import { extractSemanticFieldsForType } from './semanticFieldHelpers';
 import { sanitizeExtractionResult } from './fieldSanitizer';
+import { validateAndAdjustExtractionResult } from './fieldValidator';
 
 export interface ExtractionStrategy {
   canHandle(doc: NormalizedDocument): boolean;
@@ -1215,13 +1216,14 @@ export const extractCandidates = async (
       },
     } satisfies ExtractionResult);
   const sanitizedFinalResult = sanitizeExtractionResult(finalResult);
+  const validatedFinalResult = await validateAndAdjustExtractionResult(sanitizedFinalResult);
   await saveExtractionCacheEntry(
     extractionConfig.userId,
     extractionConfig.contentHash,
     extractionConfig.logicVersion,
-    sanitizedFinalResult as unknown as Record<string, unknown>
+    validatedFinalResult as unknown as Record<string, unknown>
   );
-  return sanitizedFinalResult;
+  return validatedFinalResult;
 };
 
 // Exported for testing

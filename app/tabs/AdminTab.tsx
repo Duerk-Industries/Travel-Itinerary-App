@@ -202,6 +202,15 @@ type IngestionMetrics = {
   costPerUser: Array<{ userId: string; estimatedCostUsd: number }>;
 };
 
+type ShadowParseSummary = {
+  sampleCount: number;
+  comparedSampleCount: number;
+  averageAgreementRate: number | null;
+  byItemType: Array<{ itemType: string; sampleCount: number; averageAgreementRate: number }>;
+  topMismatchedFields: Array<{ itemType: string; fieldName: string; mismatchCount: number }>;
+  source: 'local_capture_archive';
+};
+
 type RetryPolicyConfig = {
   provider: string;
   maxAttempts: number;
@@ -1816,6 +1825,8 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
   theme,
 }) => {
   const [metrics, setMetrics] = useState<IngestionMetrics | null>(null);
+  const [shadowParseSummary, setShadowParseSummary] = useState<ShadowParseSummary | null>(null);
+  const [shadowParseError, setShadowParseError] = useState<string | null>(null);
   const [retryConfig, setRetryConfig] = useState<RetryPolicyConfig | null>(null);
   const [retryForm, setRetryForm] = useState({
     maxAttempts: '',
@@ -1849,6 +1860,15 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+    // Fetched independently: a shadow-parse read failure (e.g. no local capture
+    // archive on this instance) shouldn't block the rest of the ingestion panel.
+    try {
+      setShadowParseError(null);
+      const summary = await apiFetch(backendUrl, headers, '/ingestion/shadow-parse-summary');
+      setShadowParseSummary(summary as ShadowParseSummary);
+    } catch (e: any) {
+      setShadowParseError(e.message);
     }
   }, [backendUrl, headers]);
 
@@ -1950,6 +1970,48 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
             {row.stageName}: {row.averageMs} ms
           </Text>
         ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Shadow-Parse Quality (LLM vs. production)</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          How often a sampled shadow LLM extraction agreed with whatever strategy actually served the item. Reads this
+          instance's local capture archive only, so numbers reflect recent traffic on this server, not a global total.
+        </Text>
+        {shadowParseError ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.error }]}>{shadowParseError}</Text>
+        ) : !shadowParseSummary || shadowParseSummary.comparedSampleCount === 0 ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>No shadow-parse samples captured on this instance yet.</Text>
+        ) : (
+          <>
+            <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>
+              Overall: {Math.round(shadowParseSummary.averageAgreementRate! * 100)}% agreement
+            </Text>
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+              {shadowParseSummary.comparedSampleCount} of {shadowParseSummary.sampleCount} sampled captures had a comparison
+            </Text>
+            {shadowParseSummary.byItemType.map((row) => (
+              <Text key={row.itemType} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                {row.itemType}: {Math.round(row.averageAgreementRate * 100)}% agreement ({row.sampleCount} samples)
+              </Text>
+            ))}
+            {shadowParseSummary.topMismatchedFields.length ? (
+              <>
+                <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Most-mismatched fields</Text>
+                {shadowParseSummary.topMismatchedFields.map((row) => (
+                  <Text key={`${row.itemType}-${row.fieldName}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                    {row.itemType}.{row.fieldName}: {row.mismatchCount} mismatches
+                  </Text>
+                ))}
+              </>
+            ) : (
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 10 }]}>
+                Per-field mismatch detail isn't retained in production captures (stripped for privacy before persisting) —
+                only available when reading a local/dev capture archive.
+              </Text>
+            )}
+          </>
+        )}
       </View>
 
       <View style={[localStyles.card, getCardStyle(theme)]}>

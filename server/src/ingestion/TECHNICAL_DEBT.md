@@ -90,9 +90,9 @@ This file records conservative assumptions and known rollout gaps for the ingest
 - Formal migration files with tested up/down migrations and migration-specific CI coverage are still needed.
 - Firestore structural changes should be documented in a `firestore_schema_changelog.md` alongside migration files.
 
-### PDF structural extraction
-- PDF parsing currently falls back to byte decoding. A real PDF text extraction library (e.g., pdfjs-dist, Apache PDFBox equivalent) should be integrated before Phase 2 processes mailbox-sourced PDF attachments at scale.
-- The `STRUCTURAL_EXTRACT` quality level is set when byte decode looks text-like, but true structural extraction is not yet implemented.
+### PDF structural extraction (resolved)
+- `normalization/index.ts` now performs real structural PDF text extraction via `pdf-parse`, falling back to `pdfjs-dist` page-by-page text content extraction if `pdf-parse` fails or produces non-text-like output. Byte decoding is only used as a last resort when both structural extractors fail.
+- The `STRUCTURAL_EXTRACT` quality level reflects a genuine structural extraction success (from either library), not a byte-decode heuristic.
 
 ### Production OCR
 - Image normalization now attempts OCR with Tesseract before any byte-decode fallback.
