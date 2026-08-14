@@ -565,6 +565,15 @@ type TimedRouteDay = {
   requiredSlackMinutes: number;
   checkpoints: Array<{
     checkpointId: string;
+    // 'activity_block' resolves checkpointId against an existing ActivityBlock and reuses its
+    // title/copy at zero marginal cost. Not every stop worth naming is a curated activity — a
+    // fuel stop or a conditional detour isn't — so 'logistics_waypoint' carries its own small,
+    // reviewed reasonCode instead of inventing free text at render time.
+    checkpointType: 'activity_block' | 'logistics_waypoint';
+    reasonCode?: string,          // required when checkpointType is 'logistics_waypoint';
+                                   // allowlisted, e.g. FUEL_STOP, LAST_FUEL_BEFORE_PASS,
+                                   // SCENIC_PULLOFF_IF_AHEAD — mapped to reviewed, localized copy,
+                                   // same discipline as day-level reason codes in §7/§8
     earliestStart?: string;
     latestDeparture?: string;
     durationMinutes: number;
@@ -606,6 +615,12 @@ The deterministic algorithm is deliberately modest:
    overfull hybrid day.
 5. If the required route is still impossible, return a structured conflict and ask the user to change a base,
    required stop, or deadline. The LLM may explain an allowlisted reason code but never performs the arithmetic.
+6. On any day with a `hardDeadline`, derive — never author — two renderer-only facts from the schedule already
+   built in step 3: a **buffer trigger** per remaining required checkpoint (the latest clock time the user can
+   still leave that checkpoint and reserve `requiredSlackMinutes`, i.e. "if you haven't left X by HH:MM, start
+   cutting"), and the **first-to-cut** optional checkpoint (the lowest `cutPriority` member still in the day),
+   surfaced proactively rather than only after the user actually falls behind. Both are pure arithmetic and
+   lookups over `TimedRouteDay`/`checkpoints`; render them in §13.6.
 
 Drive time is an energy cost, not a free transition: add a configured function of buffered drive minutes to
 the day's energy spend. A provider-free result remains a complete supported result; optional live providers
@@ -852,6 +867,10 @@ Run in code before rendering. Cheaper and more reliable than prompting for corre
 - [ ] Every travel leg occurs while its required transport is available (including car pickup/return windows)
 - [ ] Buffered travel plus required checkpoints reaches every hard deadline with `requiredSlackMinutes` intact
 - [ ] Optional checkpoints are removed only in stable `cutPriority` order; required checkpoints are never auto-cut
+- [ ] Every `logistics_waypoint` checkpoint carries a `reasonCode` from the allowlist; `activity_block` checkpoints
+      resolve to a live block in the pinned corpus release
+- [ ] Rendered buffer-trigger times and the first-to-cut callout (§13.6) are recomputed from the same
+      `TimedRouteDay`/`checkpoints` state used to build the schedule, not a second independent pass
 - [ ] Exactly one `DayVariant` per `exclusiveGroup` is active, and inactive variants do not leak blocks into the day
 - [ ] Anchor/booked blocks fit the exact destination-local `operating_schedule`, including seasonal overrides and exceptions
 - [ ] Heuristic/static/provider travel-time provenance and confidence are rendered honestly; no estimate is presented as live traffic
@@ -1044,7 +1063,7 @@ These are **scoped to country/region × season, not to trip**, which makes them 
 {
   "note_id": "note_jp_takkyubin",
   "scope": { "country": "JP" },        // country | region | location | zone
-  "category": "logistics",             // logistics | passes | entry | money |
+  "category": "logistics",             // logistics | passes | entry | money | safety |
                                        // weather | connectivity | etiquette | seasonal_timing
   "title": "Luggage forwarding",
   "body": "Pre-written. Send large bags ahead by takkyubin between hotels …",
@@ -1065,11 +1084,16 @@ These are **scoped to country/region × season, not to trip**, which makes them 
 
 **Categories worth seeding per country before launch:** entry/visa, payment and cash norms, transit passes and stored-value cards, connectivity, tipping, seasonal timing (when do forecasts publish, when do bookings open), and a weather band table by month.
 
+`safety` covers exactly the reference's bears note — regional wildlife, road, or seasonal-hazard advisories
+that are true regardless of which blocks a given trip binds. It follows §20's stronger-evidence,
+shorter-freshness rule for safety facts, not the `stable`/editorial default; a `safety`-category note without
+a current `last_verified` should suppress rather than render stale.
+
 ---
 
 ## 13. Derived artifacts
 
-Six sections in the example are not *authored* content — they are reorganisations of data already in the
+Seven sections in the example are not *authored* content — they are reorganisations of data already in the
 bound blocks and private logistics overlay. They cost no inference and no authoring, and each is high-value.
 
 ### 13.1 Booking plan
@@ -1083,6 +1107,12 @@ urgency = f(sells_out_risk, booking_window_opens, days_until_travel)
 Split into **"book first"** (sells out, or window already open) and **"book ~1 month out."** The example puts this at the end as a standalone section, which is right — it's the thing a traveler actually acts on, and burying it inside day entries makes it unactionable.
 
 This is pure aggregation over fields the schema already has. Build it.
+
+Render a **second, compact instance of the same aggregation** — the top three or four items only, names and
+booking-window class, no dates or rationale — at the very top of the itinerary, before day 1. The reference
+opens with exactly this: *"Book in advance: Peleș Castle timed entry, Palace of Parliament, Salina Turda, Bran
+Castle."* It is the same sorted list truncated to its head, rendered twice; the full ordered plan still belongs
+at the end for the traveler who is actually working through it. No new computation, no new field.
 
 ### 13.2 Constraint receipt
 
@@ -1118,6 +1148,32 @@ Render each `TravelLeg` with buffered duration, provenance/confidence, required 
 time, reserved slack, and any optional checkpoints that would be cut if the route runs late. This is the
 actionable road-trip summary: it exposes infeasible days before booking and explains conservative timing
 without implying live traffic. It also supplies the validator-backed max-drive-time constraint receipt.
+
+On any day carrying a `hardDeadline`, additionally render the two facts derived in road-trip-lite algorithm
+step 6 (§5): a **buffer trigger** line per remaining required checkpoint — *"if you haven't left Bâlea Lac by
+10:15 or Curtea de Argeș by 14:00, start cutting"* is exactly this, stated once per checkpoint rather than
+buried in prose — and a named **first-to-cut** callout for the day's lowest-`cutPriority` optional checkpoint,
+e.g. *"Cut Poenari Citadel — the 1,480 stairs are a 1.5-hour round trip and it's the one stop that turns this
+from comfortable into tight."* The reasoning clause after the em dash is reviewed copy keyed to the
+checkpoint's reason code, mapped the same way §7 maps day-level `reason_codes` to reviewed localized copy —
+not model prose; only the checkpoint choice and the clock arithmetic are computed per request. Showing this before the user is behind, not only after, is the point — it turns a
+schedule constraint into a decision made in advance instead of a scramble at 4pm.
+
+### 13.7 Activities at a glance, and a footwear/gear line
+
+The mirror of §13.6 for bound `ActivityBlock`s rather than `TravelLeg`s. Render one compact table of every
+bound block that carries physical-effort fields — `duration_minutes`, and for the `hiking_region`/
+`national_park` extension (§5) `distance_km`, `elevation_gain_m`, `difficulty` — grouped by day. This is the
+reference's "Hikes at a glance" table, generalized to any effort-bearing block, not only hikes. Where §13.2's
+constraint receipt shows the aggregate stayed inside a stated ceiling, this table shows the per-day detail
+that ceiling was computed from — same underlying validator numbers (§8), a different, complementary view.
+
+Derive one more line from the same pass, at zero additional authoring cost: reduce the `technical_notes`-style
+terrain/hazard fields already present on the trip's bound hiking blocks (§5, e.g. `"boulder field"`,
+`"stream crossing"`) into a single composite gear reminder — *"proper hiking boots for Zărnești Gorge and
+Padiș; grippy soles minimum for Scărișoara's icy stairs and Cheile Turzii's ladders."* This is a reduction over
+existing per-block authored fields, not a new field and not model output; if two blocks share a hazard note,
+deduplicate rather than repeating the clause.
 
 ---
 
