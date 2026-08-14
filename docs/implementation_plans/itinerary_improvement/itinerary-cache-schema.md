@@ -1,8 +1,14 @@
 # Cached Itinerary Schema — Design Spec
 
-**Scope:** activities and locations only. Lodging and transport (inter-city) are explicitly out of scope for v1, but hook points are noted where they will attach.
+**Scope:** shared activity/location content plus a low-cost, deterministic **road-trip-lite** overlay built only
+from lodging, transfer, destination, and date data already supplied to the trip. Property discovery/booking,
+global route optimization, and live traffic/weather are not part of the baseline; narrowly scoped provider
+enhancements remain optional, independently flagged, capped, cached, costed, and safe to omit.
 
-**Design goal:** move the lightweight LLM from *generating an itinerary* to *binding cached blocks into a cached day shape*. Everything the user reads is pre-written and pre-validated; the model emits a short assignment object containing IDs and reason codes, not prose.
+**Design goal:** move the lightweight LLM from *generating an itinerary* to *binding cached blocks into a cached
+day shape*. Everything the user reads is pre-written and pre-validated; the model emits a short assignment
+object containing IDs and reason codes, not prose. Code—not the LLM—owns route-time arithmetic, opening-hour
+checks, base-stay assignment, hard deadlines, slack, optional-stop cuts, and whole-day variant selection.
 
 **Status:** implementation plan, not the current production schema. This design must evolve the existing
 `itineraryPlanCacheService.ts` and its Postgres/Firebase adapter methods; it must not create a second,
@@ -20,6 +26,9 @@ independent itinerary cache. Section 16 defines the migration and release gates.
   `server/config/cost-model.yaml`. A missing finite cap or price entry blocks rollout of the component.
 - Major serving, binding, write-through, authoring, and prepopulation components have independent
   server-side feature flags and kill switches. Flags are checked again inside workers, not only at enqueue.
+- Road-trip-lite has a provider-free baseline. Enabling it cannot implicitly enable routing, weather, schedule,
+  geocoding, or other provider calls; every live enhancement has its own flag, finite caller cap, cache policy,
+  cost record, and deterministic fallback.
 - Cache and provider exhaustion may reduce personalization, but must never trigger an unmetered expensive
   fallback. The user receives the best bounded deterministic result plus an honest, actionable notice.
 - Generated corpus material is untrusted. It cannot become live without independent evidence, schema/CI
@@ -60,6 +69,10 @@ narrower-scope serving path that only activates for destinations with a promoted
 - The `itinerary_block_cache` master flag (§18) gates only the new path's entry point. With it off, request
   routing is byte-for-byte what it is today — the flag check happens before any binding-plan-v2 code runs,
   not as a fallback caught after a failure.
+- For a corpus-covered multi-base trip, the optional road-trip-lite pass runs after a valid binding plan and
+  before rendering. It derives private base stays, travel legs, deadlines, and variants from the request's
+  existing trip records; it does not put reservation or traveler data into shared cache entries. If its flag
+  is off or its validation fails, the binding plan still renders through the normal path with no provider call.
 - Cost and limit accounting for the two systems are additive, not overlapping: P0–P4's existing
   `ITINERARY_PLAN_P*` callers and `caching.itineraryPlan.*` settings keep their current meaning and budgets;
   §17's new `ITINERARY_BLOCK_BIND` / `ITINERARY_CORPUS_AUTHOR` / `ITINERARY_CACHE_STORAGE` /
@@ -85,7 +98,7 @@ caches into one under-tested one.
 
 ## 1. Layer model
 
-Five layers. Four may be shared; the rendered trip remains private and request-scoped.
+Six layers. Four may be shared; logistics and the rendered trip remain private and request-scoped.
 
 | Layer | Cached? | Owns | Changes when |
 |---|---|---|---|
@@ -93,10 +106,12 @@ Five layers. Four may be shared; the rendered trip remains private and request-s
 | **ActivityBlock** | Yes | A single doable thing, with prose | Occasionally (venue churn) |
 | **DayTemplate** | Yes | Abstract slot sequence + energy budget | Rarely |
 | **BindingPlan** | Yes, if shared-safe | Block IDs, slot IDs, reason codes, dependency versions | On a compatible normalized request |
+| **TripLogisticsOverlay** | Never in shared cache | Base stays, legs, deadlines, slack, checkpoints, day variants | Every request or private trip edit |
 | **ItineraryInstance** | Never in shared cache | Private overlays, pinned items, dates, booking state, rendered copy | Every request |
 
 The LLM only ever proposes the fourth layer, and only as allowlisted IDs plus reason codes. Code validates
-that proposal and renders the fifth layer by joining it against an immutable corpus release. This is what
+that proposal, derives the fifth layer without inference, and renders the sixth by joining both against an
+immutable corpus release. This is what
 makes the caching pay for itself: output tokens collapse from a full document to an assignment map while
 private trip data remains outside the shared value.
 
@@ -217,6 +232,21 @@ This is your cache's inventory. Everything the user reads about an activity live
   "availability": {
     "closed_days": ["monday"],
     "season_window": { "months": [1,2,3,4,5,6,7,8,9,10,11,12] },
+    "operating_schedule": {
+      "timezone": "Europe/Lisbon",
+      "weekly": {
+        "tuesday": [{ "opens": "10:00", "closes": "17:30", "last_entry": "16:45" }]
+      },
+      "seasonal_overrides": [
+        { "from": "2026-10-01", "through": "2027-04-30", "closes": "17:00" }
+      ],
+      "exceptions": [
+        { "date": "2026-12-25", "status": "closed", "note": "Public holiday" }
+      ],
+      "evidence_id": "ev_lis_jeronimos_hours_2026_06",
+      "verified_at": "2026-06-01T12:00:00Z",
+      "confidence": "verified"       // verified | provisional | unknown
+    },
     "booking_lead_days": 2,      // >0 surfaces a "book ahead" warning
     "ticket_required": true,
     "sells_out_risk": "high",
@@ -254,7 +284,11 @@ This is your cache's inventory. Everything the user reads about an activity live
     "pairs_well_with": ["blk_lis_pasteis_belem", "blk_lis_torre_belem"],
     "conflicts_with": ["blk_lis_mosteiro_tour_guided"],   // same content, don't co-schedule
     "substitutes_for": ["blk_lis_se_cathedral"],          // KEY: cheap swap target
-    "prerequisite_of": null
+    "prerequisite_of": null,
+    "foreshadows": ["blk_lis_maritime_museum"],
+    "complements": ["blk_lis_river_walk"],
+    "duplicates": ["blk_lis_mosteiro_tour_guided"],
+    "skip_if_completed": []
   },
 
   "ops": {
@@ -271,6 +305,12 @@ This is your cache's inventory. Everything the user reads about an activity live
 - **`substitutes_for`** is what turns modification into a cheap operation. A swap becomes `{"replace": "blk_a", "with": "blk_b"}` rather than a regenerated day.
 - **`role`** enforces structure. A day is not a bag of activities; it's an anchor plus supporting cast. Research is unanimous that overscheduling is the dominant failure mode, and roles let you cap anchors per day directly.
 - **`volatility`** drives your staleness pipeline. A cathedral is `low`; a pop-up food hall is `high`. Re-verification cost scales with this rather than uniformly across the corpus.
+- **`operating_schedule`** is complete only for anchors, booked items, and other time-critical blocks. Supporting
+  blocks may retain `closed_days` plus `confidence: unknown`; the renderer then asks the traveler to verify.
+  This concentrates verification cost where an error can break the day.
+- **Cross-day relations** (`foreshadows`, `complements`, `duplicates`, and `skip_if_completed`) preserve narrative
+  and prevent repetition without another prompt. They are advisory except `duplicates` and
+  `skip_if_completed`, which the deterministic validator treats as exclusion rules.
 
 ---
 
@@ -457,9 +497,17 @@ The heaviest divergence. Gating fields are hard filters, not preferences.
   "distance_km": 11.2,
   "elevation_gain_m": 640,
   "route_type": "out_and_back",     // loop | out_and_back | point_to_point | shuttle
+  "route_markings": "red triangle",
   "difficulty": "moderate",
   "technical_notes": ["boulder field", "stream crossing"],
+  "surface": ["rock", "forest trail"],
   "water_available": false,          // "carry all water" is a real safety line
+  "trailhead_access": {
+    "road_surface": "gravel",
+    "low_clearance_vehicle_ok": true,
+    "parking_capacity": "limited",
+    "nearest_fuel_km": 38
+  },
   "permit": {
     "required": true, "type": "lottery",
     "lottery_opens_days_before": 120, "success_rate": 0.33
@@ -480,18 +528,103 @@ Hard-filter implication: a hiking block is **excluded from the candidate set** �
 ```
 Distinct because the *default* day here is an empty day. City templates fill slots; beach templates deliberately leave them open and treat activities as optional garnish.
 
-### `road_trip_corridor`
-```jsonc
-{ "legs": [ { "from": "node_a", "to": "node_b", "drive_minutes": 145,
-              "scenic": true, "stops_en_route": ["blk_x"] } ],
-  "max_daily_drive_minutes": 240,
-  "loop_or_oneway": "loop" }
-```
-Drive time is an energy cost, not a free transition. Add `drive_minutes / 60` to the day's energy spend.
+### `road_trip_corridor` and `multi_city_circuit`: deterministic road-trip-lite
 
-### `multi_city_circuit`
+The baseline must produce a useful road-trip backbone without buying route, weather, or additional LLM calls.
+It derives the following private `TripLogisticsOverlay` from trip dates and existing lodging/transfer records.
+Only coarse, traveler-independent corridor hints may be shared; the concrete overlay is never shared or
+promoted into the corpus.
+
+```ts
+type BaseStay = {
+  baseStayId: string;
+  locationId: string;
+  startDate: string;             // inclusive local date
+  endDate: string;               // exclusive local date
+  lodgingItemId?: string;        // private reference; never part of a shared key/value
+  parkingNote?: string;
+  source: 'trip_lodging' | 'trip_destination';
+};
+
+type TravelLeg = {
+  legId: string;
+  fromBaseStayId: string;
+  toBaseStayId: string;
+  mode: 'drive' | 'rail' | 'bus' | 'flight' | 'other';
+  estimatedMinutes: number;
+  bufferMultiplier: number;      // applied by code, clamped by config
+  latestArrival?: string;        // local ISO date/time
+  hardDeadline?: { at: string; reasonCode: string };
+  source: 'supplied_transfer' | 'static_corridor' | 'heuristic' | 'provider';
+  confidence: 'verified' | 'estimated' | 'low';
+};
+
+type TimedRouteDay = {
+  date: string;
+  hardDeadline?: { at: string; reasonCode: string };
+  requiredSlackMinutes: number;
+  checkpoints: Array<{
+    checkpointId: string;
+    earliestStart?: string;
+    latestDeparture?: string;
+    durationMinutes: number;
+    required: boolean;
+    cutPriority?: number;        // lower-priority optional stops are cut first
+  }>;
+};
+
+type DayVariant = {
+  variantId: string;
+  labelReasonCode: string;
+  blockIds: string[];
+  legIds: string[];
+  estimatedMinutes: number;
+  conditions: Array<'dry' | 'poor_weather' | 'opening_hours' | 'reservation_confirmed'>;
+  exclusiveGroup: string;        // exactly one member may be active
+  tradeoffReasonCodes: string[];
+};
+
+type TripLogisticsOverlay = {
+  baseStays: BaseStay[];
+  travelLegs: TravelLeg[];
+  timedRouteDays: TimedRouteDay[];
+  dayVariants: DayVariant[];
+};
+```
+
+The deterministic algorithm is deliberately modest:
+
+1. Form `BaseStay` ranges from existing lodgings; if none exist, use explicit trip destinations and dates and
+   label the base as provisional. Never infer or advertise a property.
+2. Prefer existing transfer duration/time. Otherwise use a reviewed static corridor estimate; as the final
+   provider-free fallback, use a coarse geodesic-distance heuristic and configured mode speed plus a
+   conservative, clamped buffer. Surface its low confidence.
+3. Schedule backward from each hard deadline, reserve `requiredSlackMinutes`, and remove optional checkpoints
+   in deterministic `cutPriority` order until feasible. Required checkpoints are never silently removed.
+4. Select one whole-day variant from each `exclusiveGroup` using hard constraints first, then opening hours,
+   reservations, supplied near-term conditions, and user preference. Never blend exclusive variants into an
+   overfull hybrid day.
+5. If the required route is still impossible, return a structured conflict and ask the user to change a base,
+   required stop, or deadline. The LLM may explain an allowlisted reason code but never performs the arithmetic.
+
+Drive time is an energy cost, not a free transition: add a configured function of buffered drive minutes to
+the day's energy spend. A provider-free result remains a complete supported result; optional live providers
+may refine estimates but cannot make the trip dependent on their availability.
+
+The shared `road_trip_corridor` extension stays intentionally coarse:
+
 ```jsonc
-{ "min_nights_per_node": 2, "transfer_day_energy_penalty": 3 }
+{
+  "from_location_id": "loc_a",
+  "to_location_id": "loc_b",
+  "mode": "drive",
+  "typical_minutes": { "low": 120, "high": 180 },
+  "season_class": "summer",
+  "source_revision": "curated-2026-06",
+  "max_daily_drive_minutes": 240,
+  "min_nights_per_node": 2,
+  "transfer_day_energy_penalty": 3
+}
 ```
 
 ### Cross-cutting: traveler-type modifiers
@@ -610,6 +743,21 @@ cached for five minutes to absorb bursts, but a provider/auth error is not a neg
 Use a **tiered caching strategy**: L0 (in-process LRU) handles hot-key bursts and prevents redundant L1
 fetches within a request window; L1 (durable DB) handles cross-instance sharing.
 
+Road-trip data follows stricter topology rules:
+
+- `BaseStay`, concrete `TravelLeg`, `TimedRouteDay`, `DayVariant`, reservation times, rental windows, flight
+  times, and exact dates are private itinerary data. Keep them in the existing trip/itinerary persistence and
+  private request cache only, subject to the same authorization, retention, operation, and retained-byte caps.
+- A shared corridor estimate may key only on canonical coarse origin/destination IDs, mode, season class,
+  provider/source revision, and schema version. It may not include dates, addresses, property IDs, account/trip
+  IDs, reservation references, or exact deadlines.
+- Reviewed static corridors use the immutable corpus-release lifetime. Provider-derived route estimates use a
+  separately capped cache with a short configured TTL and no stale serve when current conditions are claimed.
+  Opening schedules expire by source volatility; live weather is private, near-departure only, and never
+  promoted into the shared corpus.
+- On cache miss, expiry, cap exhaustion, or provider failure, fall back to the reviewed corridor or labeled
+  heuristic. Do not cascade into another paid provider.
+
 Use single-flight coalescing per cache key in process and a short, owner-tokened distributed lease for
 cross-instance fills. Lease acquisition, renewal, and release are bounded storage operations. Waiters have
 a short timeout and fall back deterministically; they do not start a second fill. Sample/batch hit metadata
@@ -700,6 +848,14 @@ Run in code before rendering. Cheaper and more reliable than prompting for corre
 - [ ] Every private hard constraint is re-evaluated after the read; no cache field is treated as authorization
 - [ ] Timezone-local weekday/date checks use the trip destination timezone, including DST boundaries
 - [ ] Estimated per-day and trip totals remain within the user's budget band; uncertain prices are labeled estimates
+- [ ] Every dated day maps to exactly one compatible `BaseStay`; no activity is placed before arrival or after departure
+- [ ] Every travel leg occurs while its required transport is available (including car pickup/return windows)
+- [ ] Buffered travel plus required checkpoints reaches every hard deadline with `requiredSlackMinutes` intact
+- [ ] Optional checkpoints are removed only in stable `cutPriority` order; required checkpoints are never auto-cut
+- [ ] Exactly one `DayVariant` per `exclusiveGroup` is active, and inactive variants do not leak blocks into the day
+- [ ] Anchor/booked blocks fit the exact destination-local `operating_schedule`, including seasonal overrides and exceptions
+- [ ] Heuristic/static/provider travel-time provenance and confidence are rendered honestly; no estimate is presented as live traffic
+- [ ] Road-trip arithmetic is reproduced from stored inputs/config with no model output or nondeterministic tie-break
 
 The last two catch the failure where cosine ranking is technically satisfied but the trip *feels* wrong — every block a mediocre 0.72 match and nothing the user actually asked for. Coverage is a separate property from average fit, and only the coverage check will catch it.
 
@@ -716,6 +872,8 @@ The last two catch the failure where cosine ranking is technically satisfied but
 - [ ] IDs are unique and bounded; references resolve within the same location/release
 - [ ] Strings, arrays, files, groups, and release payloads stay under declared hard caps
 - [ ] Availability/safety/accessibility evidence has source, license, verification timestamp, volatility, and reviewer metadata
+- [ ] Time-critical anchors have a complete timezone-aware operating schedule or are explicitly marked `unknown`
+- [ ] Shared corridor rows contain only coarse allowlisted fields and never private addresses, dates, or reservation data
 - [ ] No secrets, raw provider payloads, HTML, executable URLs, user/trip identifiers, or free-form personal data
 - [ ] Release manifest hashes every file and records schema/tool versions; promotion is append-only and reversible
 
@@ -911,7 +1069,8 @@ These are **scoped to country/region × season, not to trip**, which makes them 
 
 ## 13. Derived artifacts
 
-Four sections in the example are not *authored* content — they are reorganisations of data already in the bound blocks. They cost no inference and no authoring, and each is high-value.
+Six sections in the example are not *authored* content — they are reorganisations of data already in the
+bound blocks and private logistics overlay. They cost no inference and no authoring, and each is high-value.
 
 ### 13.1 Booking plan
 
@@ -947,6 +1106,19 @@ Zero marginal cost, and it directly counters the homogenization risk in §9 by m
 
 When a user modifies a trip, the example's opening *"What changed in this revision"* — with the reason and the cost delta — is exactly the shape of the Tier 1 delta output (§7). You already emit the patch; render it as prose alongside the updated itinerary rather than silently swapping content.
 
+### 13.5 Days by base
+
+Group the private `BaseStay` ranges into a compact date/night/location table and attach each day to one base.
+This makes hotel changes, day trips, and accidental cross-country backtracking immediately visible. Derive it
+from trip lodging/destination records; never ask the model to restate it.
+
+### 13.6 Driving and deadlines at a glance
+
+Render each `TravelLeg` with buffered duration, provenance/confidence, required departure or latest-arrival
+time, reserved slack, and any optional checkpoints that would be cut if the route runs late. This is the
+actionable road-trip summary: it exposes infeasible days before booking and explains conservative timing
+without implying live traffic. It also supplies the validator-backed max-drive-time constraint receipt.
+
 ---
 
 ## 14. Copy patterns the corpus must support
@@ -979,10 +1151,16 @@ The example carries local-script names throughout, explicitly for signage, taxis
 
 ---
 
-## 15. Hooks for later
+## 15. Included integration hooks and later expansion
 
-- **Lodging:** zone-level recommendations already ship in `zones[].lodging` (§2) — districts and rationale, no properties. The remaining hook is `anchor_zone_id` per night on the trip object, so zone adjacency computes from the base rather than between blocks. Property-level inventory can layer on later without touching this.
-- **Inter-city transport:** `transfer` becomes a day-level `role` with its own energy cost; `min_nights_per_node` already anticipates it.
+- **Included in road-trip-lite:** existing lodging records define private base stays, and existing transfers
+  define private leg times/modes. Zone-level recommendations already ship in `zones[].lodging` (§2), and
+  `anchor_zone_id` lets local adjacency compute from the base.
+- **Still later:** property search, live inventory, booking, multi-provider route optimization, and automatic
+  rearrangement of cities. They require separate product approval, flags, limits, pricing, privacy review, and
+  estimator coverage; nothing in road-trip-lite authorizes them.
+- **Optional enhancement:** live route, weather, and anchor-schedule verification may refine the deterministic
+  overlay only under the independent controls in §§17–18. The baseline remains functional with all three off.
 - **schema.org export:** map `ItineraryInstance` → `TouristTrip`, days → `hasPart` sub-trips, bound blocks → `TouristAttraction` inside an ordered `ItemList`. Useful for crawler/AI-agent visibility; not suitable as the internal generation format.
 
 ---
@@ -1047,6 +1225,11 @@ Initial hard caps, enforced before decode/write and duplicated in configuration 
 | Candidate blocks sent to binder | 40 total, 2/group | Deterministically trim before prompt |
 | Bindings | 8/day, 160/trip | Reject model output |
 | Reason codes | 4/day | Reject extras |
+| Private serialized logistics overlay | 128 KiB/trip | Derive in memory or omit optional detail; never spill into shared cache |
+| Base stays / travel legs | 16 / 32 per trip | Return structured limit conflict; do not truncate required travel |
+| Timed checkpoints | 12/day | Reject excess optional checkpoints before planning |
+| Day variants | 4/day, 2 active-candidate evaluations/group | Deterministically trim optional variants |
+| Shared corridor entry | 4 KiB | Do not cache; use labeled heuristic |
 | L0 process cache | 256 entries and 32 MiB | LRU eviction |
 
 Use safe JSON, not language-native object serialization. Verify `payload_bytes` and `payload_sha256` before
@@ -1081,17 +1264,10 @@ have their own byte/count-bounded LRU and are evicted by release ID.
 
 ### 17.1 One admission path for API and storage work
 
-The current `reserveApiUsageOrThrow({ provider, caller }: { provider: string; caller: string })`
-(`server/src/apis/usageLimiter.ts:303`) takes no unit/weight argument — it always reserves exactly one
-request against the atomic `atomicIncrementApiUsageIfUnderLimit` DB function
-(`db.postgres.ts:10612`, `db.firebase.ts:7105`; the memory adapter inherits the Postgres implementation by
-spread, so no third copy is needed) and supports durable provider/caller windows only in that fixed-unit
-shape. Cache storage also needs weighted units and a releasable retained-capacity gauge — neither exists anywhere in
-the codebase today. (`caching.tripBlog.maxUploadBytesPerDay` in `api-limits.yaml` looks like a precedent for a
-byte-budget check, but a repo-wide search turns up zero references to it in `server/src` — it is unenforced
-configuration, not a working pattern to imitate. Do not copy its shape; it is itself a gap, arguably one this
-proposal's new capacity-reservation primitive should eventually also close, but that is out of scope here.)
-Extend the standard control plane rather than adding cache-local counters:
+`reserveApiUsageOrThrow` and the Postgres/Firebase atomic counters now support positive integer `units`
+(default 1), so request-, element-, token-, operation-, and byte-weighted work can share the standard durable
+limiter. The remaining prerequisite is a releasable retained-capacity gauge for bytes/items that decrease on
+expiry or deletion. Extend the standard control plane rather than adding cache- or road-trip-local counters:
 
 ```ts
 reserveApiUsageOrThrow({
@@ -1106,8 +1282,8 @@ releaseCapacityReservation({ reservationId })
 ```
 
 `units` must be a positive bounded integer. The Postgres, Firebase, and memory implementations atomically
-check `current + units <= limit`; the current `count < limit` implementation is insufficient for weighted
-bytes. Capacity reservations are the gauge form of the same standard usage architecture: they can decrease
+check `current + units <= limit`. Capacity reservations are the gauge form of the same standard usage
+architecture: they can decrease
 on expiry/deletion and have expiring reservations so failed jobs do not leak quota. Before these primitives,
 adapter parity, and concurrency tests ship, all cache-write, authoring, and prepopulation flags stay off.
 
@@ -1145,13 +1321,20 @@ budget, or unit-price configuration fails closed at runtime and is also a failed
 | Every enabled AI provider | binder input/output tokens | 500k/50k per day/provider | Deterministic bind |
 | Every enabled AI provider | author input/output tokens | 400k/120k per day/provider | Pause authoring |
 | Existing verification provider(s) | `ITINERARY_CORPUS_VERIFY` | 100/day/provider | Draft remains non-live |
+| `GOOGLE_ROUTES` | `ITINERARY_ROAD_TRIP_LEGS` matrix-element unit | 50/day; max 12 elements/trip | Use cached static corridor or labeled heuristic |
+| `OPEN_METEO` | `ITINERARY_ROAD_TRIP_WEATHER` request | 100/day; max 7 forecast days/trip | Keep both pre-authored day variants; ask user to choose |
+| Configured schedule provider(s) | `ITINERARY_ANCHOR_SCHEDULE_VERIFY` request | 100/day/provider; max 8/trip; anchors only | Mark schedule unknown and require user verification |
 | `ITINERARY_CACHE_STORAGE` | `BINDING_READ` operation | 50,000/day | L0 or bounded existing path; no uncapped fill |
 | `ITINERARY_CACHE_STORAGE` | `BINDING_WRITE` operation | 5,000/day | Return result without caching |
 | `ITINERARY_CACHE_STORAGE` | `BINDING_DELETE` operation | 5,000/day | Continue next bounded cleanup window |
 | `ITINERARY_CACHE_STORAGE` | `FILL_LEASE` operation | 10,000/day | Do not fill; deterministic response |
 | `ITINERARY_CACHE_STORAGE` | `CORPUS_READ` operation | 50,000/day | Use bounded L0/current release snapshot |
 | `ITINERARY_CACHE_STORAGE` | `CORPUS_WRITE` operation | 1,000/day | Promotion/prepopulation pauses |
+| `ITINERARY_CACHE_STORAGE` | `ROAD_TRIP_PRIVATE_READ/WRITE` operation | 20,000/5,000 per day | Recompute provider-free overlay in memory or omit enhancement |
+| `ITINERARY_CACHE_STORAGE` | `CORRIDOR_READ/WRITE` operation | 20,000/1,000 per day | Use reviewed corpus value or labeled heuristic |
 | `ITINERARY_CACHE_STORAGE` | retained KiB gauge | 524,288 KiB platform-wide | Reject new writes/releases |
+| `ITINERARY_CACHE_STORAGE` | road-trip-private retained KiB sub-gauge | 131,072 KiB within platform cap | Do not persist overlay; derive in request memory |
+| `ITINERARY_CACHE_STORAGE` | corridor retained KiB sub-gauge | 65,536 KiB within platform cap | Reject provider-derived corridor write |
 | `ITINERARY_CACHE_STORAGE` | binding-entry count gauge | 100,000 live/stale entries | Reject write-through; cleanup continues |
 | `ITINERARY_CACHE_STORAGE` | corpus/draft/evidence item gauge | 250,000 items | Pause authoring/import/promotion |
 | `ITINERARY_CACHE_STORAGE` | pending/quarantined job gauge | 10,000 items | Reject/defer new enqueue |
@@ -1165,6 +1348,15 @@ threshold, token price, request callers, and token-unit callers. A null budget i
 because daily requests are capped. The binder has a hard
 timeout, one attempt, no automatic model escalation, and `max_output_tokens <= 300`. Authoring uses bounded
 per-block jobs; a cold location is not one unbounded prompt.
+
+The road-trip-lite baseline issues **zero external requests**. Optional live calls are admitted only after the
+provider and caller limits above, monthly provider budgets, and feature dependencies in §18 pass. Batch route
+legs once per trip, reserve by matrix element rather than HTTP envelope, and reuse a compatible corridor-cache
+hit before reserving. Request weather only when departure is within the configured forecast horizon and only
+for weather-sensitive variant days. Verify schedules only for selected anchors, booked items, or high-volatility
+time-critical stops—not every corpus block. A failed optional call never cascades to a second paid provider.
+The caller caps are subordinate to each provider's existing aggregate cap; readiness fails if the aggregate
+cannot accommodate them.
 
 Every physical database interaction is accounted, including hit reads, misses, lease transactions,
 repetition counters, writes, deletes, release metadata, cleanup scans, and review queue operations. Where a
@@ -1186,6 +1378,9 @@ observability storage, not free exhaust.
   missing model price is a deployment error for these callers.
 - Flat-price verification calls reserve first and call `recordProviderRequestCost` immediately alongside
   the provider operation, including explicitly configured `$0` providers.
+- Route, weather, and schedule enhancements reserve their worst-case request/element units before the call and
+  invoke `recordProviderRequestCost` once with actual billable units. Cache hits and provider-free heuristics
+  record usage/cost under storage or compute metrics, never as fake provider calls.
 - Add caller-aware unit pricing for cache reads, writes, deletes, retained GiB-month, egress, queue
   operations, and worker compute. Record actual units against the same durable monthly cost-counter/reporting
   plane; do not build a cache-only dashboard ledger.
@@ -1198,8 +1393,9 @@ observability storage, not free exhaust.
   and may have provider fair-use terms.
 
 Cost and limit failures use stable reason codes (`CACHE_STORAGE_LIMIT`, `BIND_PROVIDER_LIMIT`,
-`AUTHORING_BUDGET`, etc.) mapped to safe UX. Never log prompts, raw cache projections, user constraints, or
-provider payloads with those events.
+`AUTHORING_BUDGET`, `ROAD_ROUTE_LIMIT`, `ROAD_WEATHER_LIMIT`, `ANCHOR_SCHEDULE_LIMIT`, etc.) mapped to safe
+UX. Never log prompts, raw cache projections, user constraints, exact trip routes/deadlines, or provider
+payloads with those events.
 
 ### 17.4 Cost estimator coverage
 
@@ -1210,6 +1406,8 @@ assumptions:
 |---|---|
 | Binding AI | input, cached-input, and output tokens; deterministic/Tier 1/Tier 2 rates |
 | Verification APIs | requests by provider |
+| Road-trip routing | route batches and billable matrix elements; cache-hit and heuristic-fallback rates |
+| Road-trip conditions | weather requests/days and anchor schedule-verification requests |
 | Database | cache/corpus/lease/queue reads, writes, deletes, and transaction retries |
 | Storage | live, draft, stale, superseded, and temporary GiB-month |
 | Compute/queue | jobs, attempts, CPU/GiB-seconds, cleanup scans |
@@ -1218,7 +1416,8 @@ assumptions:
 
 Model low/base/high hit-rate scenarios and the uncached counterfactual. Inputs include active users,
 generations/user, Tier 0 hit rate, deterministic Tier 1 success, LLM-bind rate, cold-location rate, average
-payload bytes, write-through acceptance, corpus growth, TTL churn, verification calls/block, and retry rate.
+payload bytes, write-through acceptance, corpus growth, TTL churn, verification calls/block, road trips/user,
+legs/trip, route-corridor hit rate, near-departure weather eligibility, selected anchors/day, and retry rate.
 Show gross inference savings, new cache/authoring cost, net savings, and cost per valid itinerary. Do not
 claim savings from a cache hit unless the same baseline generation cost is removed.
 
@@ -1281,18 +1480,24 @@ for the new implementation:
 | `itinerary_corpus_promotion` | Human-reviewed immutable release promotion | Master + authoring + audit trail |
 | `itinerary_cache_prepopulation` | Demand-driven batch planning/fills | Master + writes + authoring + promotion |
 | `itinerary_practical_notes` | PracticalNote selection/rendering | Master + reviewed note corpus |
+| `itinerary_road_trip_lite` | Provider-free private base-stay/leg overlay and derived summaries | Master + reads + private storage/operation caps |
+| `itinerary_day_variants` | Whole-day mutually exclusive variant selection | Master + road-trip-lite + reviewed variants |
+| `itinerary_timed_route_days` | Deadline/slack/checkpoint scheduling and deterministic stop cuts | Master + road-trip-lite |
+| `itinerary_live_route_conditions` | Optional Google Routes leg refinement | Road-trip-lite + configured route cap/pricing/cache |
+| `itinerary_live_weather_variants` | Optional near-departure weather-informed variant choice | Day variants + configured weather cap/pricing |
+| `itinerary_anchor_schedule_verification` | Optional selected-anchor hours refresh | Master + configured verification cap/pricing |
 
 The server checks the relevant flag before reservation/work and workers check it again before every attempt.
 The client flag only hides or explains UI; it is never the enforcement boundary. Disabling writes does not
 delete data. Disabling reads bypasses both L0 and shared data. Disabling the master prevents enqueue and new
 background work; in-flight jobs stop at the next safe checkpoint.
 
-Resolve the nine booleans once per request/job through a typed `resolveItineraryCacheCapabilities()` helper
+Resolve the fifteen booleans once per request/job through a typed `resolveItineraryCacheCapabilities()` helper
 that enforces the dependency DAG in the table. Do not scatter ad hoc flag conjunctions across routes,
 services, and workers. An invalid combination (for example prepopulation on while writes are off) resolves
 the child capability to false, emits one rate-limited configuration alert, and performs no child work.
 Contract tests cover every valid capability and representative invalid combinations without requiring a
-fragile 512-case UI matrix.
+fragile exhaustive UI matrix.
 
 This repository's general feature-flag behavior is fail-open for missing rows. Therefore the rollout tool
 must verify that every required row exists, has a non-empty `description`, and is explicitly disabled before
@@ -1305,7 +1510,7 @@ fail-open flag result cannot override a false readiness prerequisite.
 
 Note that `owner` is not a field the current `feature-flags.yaml` schema or its loader supports — every
 existing entry has only `enabled` and `description`. If per-flag ownership tracking is wanted (reasonable,
-given this feature introduces nine flags with different blast radii), it is a small, separate, repo-wide
+given this feature introduces fifteen flags with different blast radii), it is a small, separate, repo-wide
 schema/loader change, not something this feature can assume already exists or add unilaterally as an
 undocumented extra key. Land it first (or track ownership outside the YAML, e.g. in this document plus the
 on-call runbook in §24) rather than having the readiness check depend on a field nothing else honors.
@@ -1316,12 +1521,18 @@ existing audited runtime numeric-settings mechanism where live editing is requir
 code-defined safety maximum. Zero has one documented meaning per field; it must not accidentally mean
 unlimited.
 
+The three live-data flags are intentionally separate. Operators must be able to disable route refinement,
+weather, or schedule verification without losing the provider-free logistics overlay or the other two. No
+client-visible flag combination may bypass the server capability DAG, and no “live” label appears unless the
+corresponding provider call completed within its freshness window.
+
 ## 19. Performance, reliability, and observability
 
 Initial service objectives, measured separately by tier and cache outcome:
 
 - Tier 0 p95 server overhead under 150 ms excluding client network time;
 - deterministic Tier 1 p95 under 300 ms;
+- provider-free road-trip overlay p95 under 50 ms for the configured maximum trip length;
 - model-bound Tier 1 respects the existing generation deadline and adds no more than one model attempt;
 - cache availability failures never prevent the bounded existing itinerary path;
 - zero shared-hit privacy violations and zero hard-constraint validation escapes;
@@ -1332,7 +1543,9 @@ Metrics use fixed, low-cardinality labels only: tier, stage, outcome, freshness 
 schema version, provider, caller, and coarse location-demand band. Required counters/histograms include hit,
 miss, stale hit, corrupt/quarantined entry, post-read rejection, deterministic success, bind call, bind token
 counts, fill coalescing, lease wait, payload bytes, operation units, retained bytes, cleanup lag, authoring
-queue age, promotion rate, rollback, constraint coverage, latency, and net estimated savings. Never label by
+queue age, promotion rate, rollback, constraint coverage, latency, net estimated savings, road-trip overlay
+success/conflict, route matrix elements, corridor hit, heuristic fallback, weather request/day, schedule
+verification, optional-stop cut reason, and variant-selection reason. Never label by
 cache key, location ID, trip ID, user ID, prompt, or free-form error.
 
 Alerts cover provider/storage limit thresholds, cost-budget thresholds, corrupt-entry rate, post-read
@@ -1348,9 +1561,10 @@ allows fewer. Dead-letter items contain safe identifiers and reason codes, not s
 
 - Authorize private itinerary assembly against current trip membership on every request. Cache presence or
   knowledge of a key conveys no access.
-- Shared entries are classified `public_curated`; private overlays are request memory only. If private result
-  caching is later needed, it requires a separate tenant-scoped encrypted design and account/trip deletion
-  semantics—not an extra field in this shared table.
+- Shared entries are classified `public_curated`; private overlays remain in request memory or are persisted
+  only inside the existing authorized, tenant-scoped itinerary record with its encryption, retention, export,
+  and account/trip deletion semantics. Any new private result cache requires a separate tenant-scoped encrypted
+  design—not an extra field in the shared cache table.
 - Hash canonical keys and use constant-shape lookup responses. Do not expose existence of non-public drafts,
   reviewer identities, or corpus internals to clients.
 - Treat all model/partner output as untrusted. Validate strict JSON, escape renderer output, allowlist URI
@@ -1371,13 +1585,16 @@ allows fewer. Dead-letter items contain safe identifiers and reason codes, not s
 ## 21. Maintainability and ownership
 
 Define canonical Zod schemas and TypeScript types in one server module for LocationProfile, ActivityBlock,
-SubstitutionGroup, DayTemplate, BindingPlan, PracticalNote, release manifest, and DB DTOs. Generate or check
+SubstitutionGroup, DayTemplate, BindingPlan, PracticalNote, `OperatingScheduleEvidence`, `BaseStay`,
+`TravelLeg`, `TimedRouteDay`, `DayVariant`, `TripLogisticsOverlay`, release manifest, and DB DTOs. Generate or check
 the JSON Schema used by authoring CI from those definitions; do not maintain independent handwritten shapes.
 Schema parsers return structured rejection reasons and never coerce arbitrary values into valid IDs/numbers.
 
 Keep responsibilities separated:
 
 - pure selector/vector/template/validator functions have no I/O;
+- a pure logistics planner owns base ranges, leg estimates, slack/deadline arithmetic, checkpoint cuts, and
+  variant exclusivity; it accepts provider results as typed inputs but never calls providers itself;
 - cache service owns canonical keys, freshness, schema/checksum validation, and L0/single-flight behavior;
 - DB adapters own persistence only;
 - provider adapters own reservations, timeouts, and cost recording;
@@ -1395,6 +1612,7 @@ Primary implementation touchpoints:
 | Runtime costs | `server/src/apis/providerBudgeting.ts` and provider registry/callers |
 | Estimates | `server/config/cost-model.yaml` and `server/src/services/costEstimatorService.ts` |
 | Flags | `server/config/feature-flags.yaml`, server orchestration/workers, and existing client flag bootstrap |
+| Road-trip-lite | focused pure logistics service plus existing lodging/transfer/trip DTOs; no new persistence silo |
 | Observability | existing metrics/Prometheus/admin summaries with fixed-cardinality cache metrics |
 | Tests | cache service/DB suites, durable limiter/cost wiring/config tests, corpus tool tests, and E2E fallback UX |
 
@@ -1421,6 +1639,12 @@ read paths.
   permit, accessibility, weather, and safety items always show a verify action and authoritative source.
 - Modification operates as a small previewable diff. Preserve user edits and votes; never replace a private
   itinerary in the background when a corpus release changes.
+- Show the active base, buffered travel time, confidence/source class, hard deadlines, reserved slack, and
+  optional stops at risk of being cut. Never silently delete a required stop or imply a heuristic is live traffic.
+- Present whole-day variants as a clear choice with tradeoffs and selection reason. Weather-informed selection
+  is only “current” inside its forecast freshness window; otherwise retain both choices and ask the user.
+- Exact opening-hours conflicts block the affected anchor and identify the local date/time. Unknown hours show
+  a verify action and source link instead of inventing availability.
 - Empty/rest slots are intentional and explained. Do not fill them merely to make the itinerary look dense.
 - Localization is part of the cache dependency. Unsupported language falls back consistently and is not
   written into a differently labeled language entry.
@@ -1438,17 +1662,35 @@ read paths.
   safety freshness;
 - reason-code rendering/localization/escaping and no free-form model prose;
 - write-through economics, TTL jitter, freshness boundaries, negative-cache classification, and LRU byte cap.
+- base-stay boundary construction, travel-time buffer clamping, backward deadline scheduling, stable optional-
+  stop cuts, impossible-route reporting, and day-variant exclusivity;
+- operating schedules across weekday/season/exception precedence, destination timezone, and DST;
+- provider-free road-trip generation performs zero route/weather/schedule calls and is deterministic for equal inputs.
 
 Use **property-based tests** (e.g. `fast-check`) for “a hard-incompatible block is never selected,”
 “private fields never affect or enter the shared projection,” “validator acceptance is invariant under
-candidate ordering,” and “serialized payload remains within cap.” Fuzz cache/model/provider JSON and
-corpus files.
+candidate ordering,” “a required checkpoint is never auto-cut,” “a selected route always preserves declared
+slack,” “exactly one exclusive day variant is active,” and “serialized payload remains within cap.” Fuzz
+cache/model/provider JSON and corpus files.
 
 ### Golden Itinerary Eval Set
 
 Maintain a versioned JSON **"Gold Set"** of 50 diverse trip requests (e.g., "3 days in Lisbon, mobility
 limited, budget: tight"). Every change to the selector or validator must pass this suite, asserting zero
 hard-constraint violations and consistent signature coverage.
+
+Add a named **15-day Romania road-trip** golden scenario modeled on the reviewed reference itinerary. Its
+machine-checkable assertions are:
+
+- every date maps to the expected Bucharest, Brașov, Sighișoara, Cluj, Apuseni, Sibiu, or final Bucharest base;
+- activities occur only after arrival and before departure, and driving occurs only inside the supplied car-
+  rental window;
+- Peleș Castle is not placed Monday and fits the verified, date-specific opening interval when selected;
+- the final driving day reaches Bucharest by 18:00 with configured slack before a 19:00 car return;
+- Poenari and other optional stops are cut before required deadlines in deterministic priority order;
+- Transfăgărășan Thursday/Friday weather variants remain mutually exclusive and swappable as whole days;
+- the days-by-base, driving/deadline summary, and hike constraint receipt match the structured source facts;
+- disabling every live-data flag still yields a coherent, clearly labeled itinerary with no external calls.
 
 ### Integration and adapter-contract tests
 
@@ -1458,11 +1700,15 @@ hard-constraint violations and consistent signature coverage.
 - single-flight across concurrent requests, expired leases, owner-token safety, timeout fallback;
 - flags off at route, service, enqueue, and worker execution time;
 - every external call reserves the correct provider/caller before invocation and records actual cost once;
+- route matrices reserve/count elements (not merely HTTP calls), weather requests are horizon/day bounded,
+  and schedule verification is restricted to selected anchors/time-critical items;
 - every DB transaction reserves its worst-case operation/byte units and idempotent retries do not double bill;
 - provider, storage, queue, token, and monthly-cost exhaustion each produce the documented bounded fallback;
 - missing/zero provider or caller caps fail closed before work, and a cache hit follows the same generation
   entitlement/idempotency accounting as a miss;
 - account/trip data never appears in shared cache documents, logs, metrics, or promotion artifacts.
+- each road-trip/live-data flag fails independently to the provider-free overlay, and route/weather/schedule
+  cap exhaustion never triggers a different paid provider.
 
 Add static/wiring tests analogous to `apiRequestCostWiring.test.ts` so a new binder, author, verifier, or
 storage operation cannot bypass reservation/cost functions. Config tests require all enabled AI providers to
@@ -1474,7 +1720,8 @@ be priced exactly once.
 Maintain a versioned offline eval corpus covering head/body/tail destinations, multi-city trips, flat and
 conflicting preferences, mobility/accessibility, young children, dietary needs, tight budgets, pinned-item
 conflicts, closures, permits, DST, long trips, cold locations, stale evidence, and malicious corpus/provider
-text. Compare against the existing pipeline on:
+text. Include multi-base road trips with rental windows, hard deadlines, seasonal roads, whole-day alternates,
+and infeasible required routes. Compare against the existing pipeline on:
 
 - hard-constraint violation rate (release blocker if non-zero in the gold set);
 - valid itinerary rate, top-interest coverage, geographic coherence, pacing/density, pin recall;
@@ -1497,14 +1744,19 @@ and source revocation.
 3. **Shadow read:** compute keys/read/validate for an internal cohort, never alter responses; paid judging is
    separately flagged, capped, and costed.
 4. **Deterministic internal serve:** master + reads for staff only; no LLM binding or writes.
-5. **Tier 0 canary:** 1% then 5% of eligible traffic, rollback on privacy/constraint error, latency regression,
+5. **Provider-free road-trip-lite:** staff-only base stays, static/heuristic legs, timed-route arithmetic,
+   day variants, and derived summaries; assert zero external route/weather/schedule calls.
+6. **Tier 0 canary:** 1% then 5% of eligible traffic, rollback on privacy/constraint error, latency regression,
    corrupt/rejection rate, negative savings, or limit pressure.
-6. **Bounded Tier 1:** enable lightweight binding after provider/token/cost metrics and deterministic fallback
+7. **Bounded Tier 1:** enable lightweight binding after provider/token/cost metrics and deterministic fallback
    pass; no model escalation.
-7. **Write-through:** enable only after reuse/economic thresholds are validated and retained-byte cleanup has
+8. **Write-through:** enable only after reuse/economic thresholds are validated and retained-byte cleanup has
    operated successfully for at least one full TTL cycle.
-8. **Authoring/promotion:** enable draft jobs, then reviewed immutable releases; keep prepopulation off.
-9. **Prepopulation:** expand one demand band at a time while net savings and quality stay above thresholds.
+9. **Authoring/promotion:** enable draft jobs, then reviewed immutable releases; keep prepopulation off.
+10. **Optional live enhancements:** independently canary anchor schedules, then near-departure weather, then
+    route refinement only after their caller/element/storage caps, prices, estimator mappings, and fallbacks
+    pass. Do not bundle the three rollouts.
+11. **Prepopulation:** expand one demand band at a time while net savings and quality stay above thresholds.
 
 The feature is not production-complete until:
 
@@ -1517,6 +1769,12 @@ The feature is not production-complete until:
 - [ ] shared keys/values and telemetry pass privacy inspection with no private/free-form fields;
 - [ ] corpus promotion is evidence-backed, audited, immutable, reversible, and has no bypass;
 - [ ] constraint, security, load, chaos, migration, cost, and quality gates pass;
+- [ ] the Romania road-trip golden scenario passes with all live-data flags off and again with each optional
+      provider independently enabled, exhausted, timed out, and disabled;
+- [ ] base/leg/deadline/variant data stays private, route/deadline math is deterministic, and required stops are
+      never silently cut;
+- [ ] route elements, weather requests/days, schedule verifications, private/shared storage operations, and
+      retained bytes are capped, cost-recorded, and represented in low/base/high estimates;
 - [ ] dashboards/alerts and an operator runbook cover kill switches, cap exhaustion, cleanup lag, poisoning,
       source revocation, and corpus rollback;
 - [ ] measured canary net savings are positive without a statistically meaningful quality regression.

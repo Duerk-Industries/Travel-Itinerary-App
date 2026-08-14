@@ -3,7 +3,11 @@
 `itinerary-cache-schema.md` is the **single canonical** production design and rollout plan (sections 16–24
 cover storage/migration, limits/cost, feature flags, performance/observability, security/privacy,
 maintainability, UX, and the test/rollout plan end to end — including how this design relates to the
-existing prompt-based itinerary generator, see §0). `itinerary-cache-v2-improvement-plan.md` is an earlier
+existing prompt-based itinerary generator, see §0). The canonical plan now includes the low-cost
+road-trip-lite overlay and a 15-day Romania road-trip golden scenario covering base stays, rental windows,
+opening schedules, deadline slack, deterministic optional-stop cuts, whole-day weather variants, and derived
+driving/hiking summaries. Live route, weather, and schedule providers are optional and independently
+flagged/capped/costed; the baseline makes no external calls. `itinerary-cache-v2-improvement-plan.md` is an earlier
 draft, now fully superseded and kept only for history — do not implement from it; it contains a few
 now-corrected inaccuracies documented at the top of that file.
 
