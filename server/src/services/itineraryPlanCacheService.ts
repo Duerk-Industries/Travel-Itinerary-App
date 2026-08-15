@@ -371,7 +371,7 @@ export const writeItineraryPlanCache = async <T>(params: {
     });
     const threshold = 3; // Initial hypothesis (§10)
     if (result.newCount < threshold) {
-      logInfo('[itinerary-cache] Repetition threshold not met, skipping L1 write', { cacheKey, count: result.newCount });
+      logInfo(`[itinerary-cache] Repetition threshold not met, skipping L1 write cacheKey=${cacheKey} count=${result.newCount}`);
       return null;
     }
   }
@@ -390,7 +390,7 @@ export const writeItineraryPlanCache = async <T>(params: {
 
   // 2. Hard caps check (§16.2)
   if (byteCount > 64 * 1024) {
-    logInfo('[itinerary-cache] Payload exceeds 64KiB cap, skipping L1 write', { cacheKey, bytes: byteCount });
+    logInfo(`[itinerary-cache] Payload exceeds 64KiB cap, skipping L1 write cacheKey=${cacheKey} bytes=${byteCount}`);
     return null;
   }
 

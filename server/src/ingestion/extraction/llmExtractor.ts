@@ -24,6 +24,7 @@ import {
 } from '../../services/aiProviderConfigService';
 import { getEnvFlag } from '../../env';
 import { logInfo, logError } from '../../logger';
+import { estimateAiCostMicros } from '../../apis/providerBudgeting';
 
 const INGESTION_LLM_MAX_INPUT_CHARS = 6000;
 const INGESTION_DEBUG_LLM_MAX_CHARS = 4000;
@@ -87,6 +88,12 @@ Rules:
 - Return the actual item type, not generic_note, when possible
 - For activities/tours: use activityDate and activityTime for when it happens
 - For restaurants: include partySize and mealType if available`;
+
+const estimatedCostUsd = (provider: string, model: string | null, promptTokens: number, completionTokens: number): number => {
+  const micros = model ? estimateAiCostMicros({ provider, model, promptTokens, completionTokens }) : null;
+  if (micros != null) return micros / 1_000_000;
+  return promptTokens * 0.00000015 + completionTokens * 0.0000006;
+};
 
 const emptyResult = (config: ExtractionConfig, strategyName: string): ExtractionResult => ({
   parsedItems: [],
@@ -165,7 +172,7 @@ export class LlmExtractor implements ExtractionStrategy {
       }
       const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER, providerOverride);
       providerId = provider.id;
-      modelName = modelOverride || activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
+      modelName = modelOverride || (providerOverride ? provider.supportedModels[0] : activeConfig.model) || provider.supportedModels[0] || INGESTION_LLM_MODEL;
       const ctx = createAiCallContext({
         correlationId: config.correlationId,
         jobId: config.importJobId,
@@ -214,7 +221,7 @@ export class LlmExtractor implements ExtractionStrategy {
         tokensOut: completionTokens,
         provider: providerId,
         modelName,
-        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+        estimatedCostUsd: estimatedCostUsd(providerId, modelName, promptTokens, completionTokens),
       });
     }
     if (getEnvFlag('INGESTION_DEBUG_LLM')) {
@@ -237,7 +244,7 @@ export class LlmExtractor implements ExtractionStrategy {
         tokensOut: completionTokens,
         provider: providerId,
         modelName,
-        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+        estimatedCostUsd: estimatedCostUsd(providerId, modelName, promptTokens, completionTokens),
       });
     }
 
@@ -248,7 +255,7 @@ export class LlmExtractor implements ExtractionStrategy {
         tokensOut: completionTokens,
         provider: providerId,
         modelName,
-        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+        estimatedCostUsd: estimatedCostUsd(providerId, modelName, promptTokens, completionTokens),
       });
     }
 

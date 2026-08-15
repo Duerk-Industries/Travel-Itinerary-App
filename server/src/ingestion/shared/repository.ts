@@ -22,6 +22,7 @@ import type {
   NormalizationQuality,
   ParsedItemCandidate,
   ParsedItemReviewState,
+  ParseComparisonRecord,
   PersistedImportJob,
   PersistedParsedItem,
   ProviderConnectionRecord,
@@ -635,6 +636,24 @@ const ensurePgSchema = async (): Promise<void> => {
     );
   `);
   await p.query(`
+    CREATE TABLE IF NOT EXISTS parse_comparisons (
+      import_job_id UUID PRIMARY KEY REFERENCES import_jobs(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      source_type TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      logic_version TEXT NOT NULL,
+      static_parser TEXT NOT NULL,
+      llm_a JSONB NOT NULL DEFAULT '{}'::jsonb,
+      llm_b JSONB NOT NULL DEFAULT '{}'::jsonb,
+      fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+      llm_agreement_rate NUMERIC NOT NULL DEFAULT 0,
+      static_agreement_rate NUMERIC NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_parse_comparisons_user_created ON parse_comparisons(user_id, created_at DESC);`);
+  await p.query(`
     CREATE TABLE IF NOT EXISTS extraction_cache (
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -699,6 +718,7 @@ const ensureFirestoreCollections = async (): Promise<void> => {
     db.collection('ingestion_retry_config').limit(1).get(),
     db.collection('ingestion_webhook_replay_tokens').limit(1).get(),
     db.collection('data_deletion_jobs').limit(1).get(),
+    db.collection('parse_comparisons').limit(1).get(),
   ]);
   schemaReady.add('firebase');
 };
@@ -2330,6 +2350,59 @@ export const recordUsageMetering = async (params: {
   );
 };
 
+/** Persist the privacy-safe dual-LLM/static comparison for one import job. */
+export const saveParseComparison = async (record: ParseComparisonRecord): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  const boundedFields = record.fields.slice(0, 256);
+  const payload = {
+    importJobId: record.importJobId,
+    userId: record.userId,
+    sourceType: record.sourceType,
+    contentHash: record.contentHash,
+    logicVersion: record.logicVersion,
+    staticParser: record.staticParser.slice(0, 120),
+    llmA: { provider: record.llmA.provider.slice(0, 80), model: record.llmA.model?.slice(0, 120) ?? null },
+    llmB: { provider: record.llmB.provider.slice(0, 80), model: record.llmB.model?.slice(0, 120) ?? null },
+    fields: boundedFields,
+    llmAgreementRate: Math.max(0, Math.min(1, record.llmAgreementRate)),
+    staticAgreementRate: Math.max(0, Math.min(1, record.staticAgreementRate)),
+    createdAt: record.createdAt ?? nowIso(),
+  };
+  if (Buffer.byteLength(JSON.stringify(payload), 'utf8') > 128 * 1024) {
+    throw new Error('Parse comparison payload exceeds 128KiB limit');
+  }
+  if (getCurrentDbProvider() === 'firebase') {
+    await getFirebaseDb().collection('parse_comparisons').doc(record.importJobId).set(payload, { merge: true });
+    return;
+  }
+  await getPg().query(
+    `INSERT INTO parse_comparisons (
+      import_job_id, user_id, source_type, content_hash, logic_version, static_parser,
+      llm_a, llm_b, fields, llm_agreement_rate, static_agreement_rate, created_at, updated_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+    ON CONFLICT (import_job_id) DO UPDATE SET
+      user_id=EXCLUDED.user_id, source_type=EXCLUDED.source_type, content_hash=EXCLUDED.content_hash,
+      logic_version=EXCLUDED.logic_version, static_parser=EXCLUDED.static_parser,
+      llm_a=EXCLUDED.llm_a, llm_b=EXCLUDED.llm_b, fields=EXCLUDED.fields,
+      llm_agreement_rate=EXCLUDED.llm_agreement_rate, static_agreement_rate=EXCLUDED.static_agreement_rate,
+      updated_at=NOW()`,
+    [
+      record.importJobId,
+      record.userId,
+      record.sourceType,
+      record.contentHash,
+      record.logicVersion,
+      payload.staticParser,
+      JSON.stringify(payload.llmA),
+      JSON.stringify(payload.llmB),
+      JSON.stringify(payload.fields),
+      payload.llmAgreementRate,
+      payload.staticAgreementRate,
+      payload.createdAt,
+    ],
+  );
+};
+
 export const recordParseAttempt = async (record: ParseAttemptRecord): Promise<void> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
@@ -2685,6 +2758,7 @@ export const deleteUserIngestionData = async (userId: string): Promise<void> => 
       { name: 'ingested_documents', field: 'userId' },
       { name: 'parsed_items', field: 'userId' },
       { name: 'usage_metering', field: 'userId' },
+      { name: 'parse_comparisons', field: 'userId' },
       { name: 'parse_attempts', field: null },
       { name: 'parse_stage_logs', field: null },
       { name: 'extraction_cache', field: 'userId' },
@@ -2713,6 +2787,7 @@ export const deleteUserIngestionData = async (userId: string): Promise<void> => 
   await p.query(`DELETE FROM ingested_documents WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM import_jobs WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM usage_metering WHERE user_id = $1`, [userId]);
+  await p.query(`DELETE FROM parse_comparisons WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM extraction_cache WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM import_job_payloads WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM ingestion_sources WHERE user_id = $1`, [userId]);
@@ -3073,6 +3148,7 @@ export const deleteUserIngestionDataForProvider = async (
       return snap.docs.length;
     };
     const parsedItemsDeleted = await deleteWhere('parsed_items', 'sourceType');
+    await deleteWhere('parse_comparisons', 'sourceType');
     const documentsDeleted = await deleteWhere('ingested_documents', 'sourceType');
     await deleteWhere('import_job_payloads', 'sourceType');
     const jobsDeleted = await deleteWhere('import_jobs', 'sourceType');
@@ -3098,6 +3174,10 @@ export const deleteUserIngestionDataForProvider = async (
 
   await p.query(
     `DELETE FROM parsed_items WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM parse_comparisons WHERE user_id = $1 AND source_type = $2`,
     [userId, sourceType],
   );
   await p.query(

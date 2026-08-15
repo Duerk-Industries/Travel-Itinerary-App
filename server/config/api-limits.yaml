@@ -8,6 +8,13 @@ providers:
       INGESTION_SMALL_LLM: 100
       INGESTION_LARGE_LLM: 50
 
+  INGESTION_STORAGE:
+    window: day
+    windowHours: 24
+    overall: 100000
+    callers:
+      PARSE_COMPARISON_WRITE: 50000
+
   OPENAI:
     window: hour
     windowHours: 24
@@ -453,6 +460,7 @@ budgeting:
 # cost-estimator panel (Phase 3) will make these editable without a code deploy. Unlisted providers
 # default to 0 via getApiRequestPricingUsd().
 requestPricing:
+  INGESTION_STORAGE: 0.000004
   SERPAPI: 0
   WIKIMEDIA: 0
   GOOGLE_ROUTES: 0

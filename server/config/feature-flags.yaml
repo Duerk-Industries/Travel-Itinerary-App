@@ -43,6 +43,9 @@ flags:
   feature_ingest_local_virus_scan_stub:
     enabled: true
     description: "Allow local development to skip virus scanning with a stub"
+  ingestion_dual_llm_consensus:
+    enabled: true
+    description: "Run static extraction plus two independently metered LLM parsers for production imports"
   overview_weather:
     enabled: true
     description: "Show daily overview weather for nearby trips"

@@ -218,11 +218,13 @@ const processExistingImportJob = async (
       result: finalExtraction,
       outcome: 'success',
     });
-    const shadowParsePromise = maybeRunShadowParse({
-      intakeId: job.id,
-      doc: normalized,
-      productionResult: finalExtraction,
-    });
+    const shadowParsePromise = finalExtraction.metadata.parserMode === 'production_consensus'
+      ? Promise.resolve()
+      : maybeRunShadowParse({
+        intakeId: job.id,
+        doc: normalized,
+        productionResult: finalExtraction,
+      });
     // The worker normally keeps shadow evaluation off the critical path. Jest
     // tears down its module environment as soon as the request promise settles,
     // though, so awaiting it in test mode prevents an in-flight LLM extractor

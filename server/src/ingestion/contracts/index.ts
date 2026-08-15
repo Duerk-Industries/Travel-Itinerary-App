@@ -101,6 +101,43 @@ export interface ExtractionMetadata {
   strategyName: string;
   status?: 'ok' | 'skipped';
   skipReason?: string;
+  parserMode?: 'legacy' | 'production_consensus';
+}
+
+export type ParseComparisonFieldStatus =
+  | 'llm_agree'
+  | 'llm_agree_static_differs'
+  | 'llm_disagree_static_used'
+  | 'llm_disagree_unresolved'
+  | 'missing_all';
+
+export interface ParseComparisonField {
+  itemIndex: number;
+  itemType: ParsedItemType;
+  fieldName: string;
+  status: ParseComparisonFieldStatus;
+  staticPresent: boolean;
+  llmAPresent: boolean;
+  llmBPresent: boolean;
+  staticValueHash: string | null;
+  llmAValueHash: string | null;
+  llmBValueHash: string | null;
+  selectedValueHash: string | null;
+}
+
+export interface ParseComparisonRecord {
+  importJobId: string;
+  userId: string;
+  sourceType: IngestionSourceType;
+  contentHash: string;
+  logicVersion: string;
+  staticParser: string;
+  llmA: { provider: string; model: string | null };
+  llmB: { provider: string; model: string | null };
+  fields: ParseComparisonField[];
+  llmAgreementRate: number;
+  staticAgreementRate: number;
+  createdAt?: string;
 }
 
 export interface ParsedItemCandidate {

@@ -181,7 +181,7 @@ const FAIL_CLOSED_FLAGS = new Set([
  * Preserves the platform's fail-open behavior for established flags, while
  * rollout-sensitive cache/provider flags fail closed when their DB row is absent.
  */
-export const isFeatureEnabled = async (key: string): Promise<boolean> => {
+export const isFeatureEnabled = async (key: string, _userId?: string, _role?: string): Promise<boolean> => {
   const cached = flagCache.get(key);
   if (cached && Date.now() < cached.expiresAt) {
     return cached.enabled;

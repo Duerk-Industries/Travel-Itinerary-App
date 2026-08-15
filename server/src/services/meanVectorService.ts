@@ -1,5 +1,5 @@
 import { logInfo, logError } from '../logger';
-import { getDb } from '../db';
+import { getDb } from '../db.firebase';
 import { InterestWeightsSchema } from '../schemas/itineraryCacheSchemas';
 
 /**
@@ -27,13 +27,12 @@ let cachedMeanVector: MeanVector | null = null;
  */
 export const refreshMeanVector = async (): Promise<MeanVector> => {
   try {
-    const db = getDb();
     // Assuming blocks are stored in a way we can query their interest weights.
     // The spec says "ActivityBlock" is a cached unit.
     // For now, I'll assume we can fetch them from Firestore 'itinerary_blocks'
     // or a similar collection group.
 
-    const blocksSnap = await db.collectionGroup('itinerary_blocks').get();
+    const blocksSnap = await getDb().collectionGroup('itinerary_blocks').get();
     const count = blocksSnap.size;
 
     if (count === 0) {
@@ -60,7 +59,7 @@ export const refreshMeanVector = async (): Promise<MeanVector> => {
     ) as MeanVector;
 
     cachedMeanVector = mean;
-    logInfo('[mean-vector] Refreshed global corpus mean', { count, mean });
+    logInfo(`[mean-vector] Refreshed global corpus mean count=${count} mean=${JSON.stringify(mean)}`);
     return mean;
   } catch (err) {
     logError('[mean-vector] Failed to refresh mean vector', err);

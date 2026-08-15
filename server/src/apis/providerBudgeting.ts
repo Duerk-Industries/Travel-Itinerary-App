@@ -12,6 +12,8 @@ import {
 } from '../db';
 import { logInfo } from '../logger';
 
+export { getApiRequestPricingUsd } from '../config/apiLimits';
+
 const MICROS_PER_USD = 1_000_000;
 
 const formatMonthWindowKey = (now = new Date()): string => {

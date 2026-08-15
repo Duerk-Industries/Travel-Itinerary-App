@@ -1,11 +1,16 @@
-import { INGESTION_CONFIDENCE_HIGH, INGESTION_CONFIDENCE_REVIEW_READY, INGESTION_JOB_TOKEN_BUDGET_USD, INGESTION_LOGIC_VERSION } from '../config';
+import { createHash } from 'crypto';
+import { INGESTION_CONFIDENCE_HIGH, INGESTION_CONFIDENCE_REVIEW_READY, INGESTION_FEATURE_FLAGS, INGESTION_JOB_TOKEN_BUDGET_USD, INGESTION_LOGIC_VERSION } from '../config';
 import type { ExtractionConfig, ExtractionResult, NormalizedDocument, ParsedItemCandidate, ParsedItemType, TimezoneStatus } from '../contracts';
 import { buildParsedItemFingerprint } from '../shared/hashing';
-import { getExtractionCacheEntry, recordParseAttempt, recordUsageMetering, saveExtractionCacheEntry } from '../shared/repository';
+import { getExtractionCacheEntry, recordParseAttempt, recordUsageMetering, saveExtractionCacheEntry, saveParseComparison } from '../shared/repository';
 import { resolveTimezone } from '../shared/timezoneResolver';
 import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../../apis/usageLimiter';
-import { logInfo } from '../../logger';
+import { recordProviderRequestCost } from '../../apis/providerBudgeting';
+import { logError, logInfo } from '../../logger';
 import { getUserById } from '../../db';
+import { getEnvValue } from '../../env';
+import { isFeatureEnabled } from '../../services/entitlementService';
+import { getActiveAiProvider, getConfiguredProviderApiKey, getConfiguredProviderModels } from '../../services/aiProviderConfigService';
 import { extractLabeledFieldValue, extractPhoneLikeValue, toTitleCaseWords } from './hotelFieldExtractors';
 import { extractSemanticFieldsForType } from './semanticFieldHelpers';
 import { sanitizeExtractionResult } from './fieldSanitizer';
@@ -1116,6 +1121,176 @@ const defaultStrategies = [
   new NoopLlmExtractor('LargeLLMExtractor', 1, (config: ExtractionConfig) => config.allowLargeLlm, 'INGESTION_LARGE_LLM'),
 ];
 
+const hasValue = (value: unknown): boolean => value !== undefined && value !== null && value !== '';
+
+const stableValue = (value: unknown): string => {
+  if (Array.isArray(value)) return `[${value.map(stableValue).sort().join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => `${JSON.stringify(key)}:${stableValue(child)}`).join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+};
+
+const valueHash = (value: unknown): string | null => hasValue(value)
+  ? createHash('sha256').update(stableValue(value)).digest('hex')
+  : null;
+
+const candidateFieldMap = (candidate: ParsedItemCandidate | undefined): Record<string, unknown> => {
+  if (!candidate) return {};
+  const fields: Record<string, unknown> = { ...(candidate.extractedFields ?? {}) };
+  const topLevel: Record<string, unknown> = {
+    itemType: candidate.itemType,
+    providerVendor: candidate.providerVendor,
+    travelerNames: candidate.travelerNames,
+    confirmationNumber: candidate.confirmationNumber,
+    startDateTimeUtc: candidate.startDateTimeUtc,
+    endDateTimeUtc: candidate.endDateTimeUtc,
+    originalTimezone: candidate.originalTimezone,
+    rawDatetimeString: candidate.rawDatetimeString,
+    timezoneDisplayHint: candidate.timezoneDisplayHint,
+  };
+  for (const [name, value] of Object.entries(topLevel)) {
+    if (hasValue(value) || fields[name] === undefined) fields[name] = value;
+  }
+  return fields;
+};
+
+const setCandidateField = (candidate: ParsedItemCandidate, fieldName: string, value: unknown): void => {
+  if (fieldName === 'itemType' && typeof value === 'string') candidate.itemType = value as ParsedItemType;
+  else if (fieldName === 'providerVendor') candidate.providerVendor = typeof value === 'string' ? value : null;
+  else if (fieldName === 'travelerNames') candidate.travelerNames = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+  else if (fieldName === 'confirmationNumber') candidate.confirmationNumber = typeof value === 'string' ? value : null;
+  else if (fieldName === 'startDateTimeUtc') candidate.startDateTimeUtc = typeof value === 'string' ? value : null;
+  else if (fieldName === 'endDateTimeUtc') candidate.endDateTimeUtc = typeof value === 'string' ? value : null;
+  else if (fieldName === 'originalTimezone') candidate.originalTimezone = typeof value === 'string' ? value : null;
+  else if (fieldName === 'rawDatetimeString') candidate.rawDatetimeString = typeof value === 'string' ? value : null;
+  else if (fieldName === 'timezoneDisplayHint') candidate.timezoneDisplayHint = typeof value === 'string' ? value : null;
+};
+
+const chooseSecondaryProvider = async (primaryProvider: string): Promise<string> => {
+  const explicit = getEnvValue('AI_INGESTION_SECOND_LLM_PROVIDER');
+  if (explicit && getConfiguredProviderApiKey(explicit)) return explicit.toLowerCase();
+  const candidates = ['openai', 'gemini', 'anthropic', 'zai', 'openai_compatible'];
+  return candidates.find((provider) => provider !== primaryProvider && getConfiguredProviderApiKey(provider)) ?? primaryProvider;
+};
+
+const buildProductionConsensus = async (
+  doc: NormalizedDocument,
+  config: ExtractionConfig,
+  staticResult: ExtractionResult,
+  llmAResult: ExtractionResult,
+  llmBResult: ExtractionResult,
+): Promise<{ result: ExtractionResult; comparison: import('../contracts').ParseComparisonRecord }> => {
+  const staticItems = staticResult.parsedItems;
+  const llmAItems = llmAResult.parsedItems;
+  const llmBItems = llmBResult.parsedItems;
+  const itemCount = Math.max(staticItems.length, llmAItems.length, llmBItems.length);
+  const fields: import('../contracts').ParseComparisonField[] = [];
+  const selectedItems: ParsedItemCandidate[] = [];
+  let compared = 0;
+  let agreed = 0;
+  let staticCompared = 0;
+  let staticAgreed = 0;
+
+  for (let index = 0; index < itemCount; index += 1) {
+    const staticItem = staticItems[index];
+    const aItem = llmAItems.find((item) => item.itemType === staticItem?.itemType) ?? llmAItems[index];
+    const bItem = llmBItems.find((item) => item.itemType === staticItem?.itemType) ?? llmBItems[index];
+    const base = staticItem ?? aItem ?? bItem;
+    if (!base) continue;
+    const staticFields = candidateFieldMap(staticItem);
+    const aFields = candidateFieldMap(aItem);
+    const bFields = candidateFieldMap(bItem);
+    const fieldNames = Array.from(new Set([...Object.keys(staticFields), ...Object.keys(aFields), ...Object.keys(bFields)])).sort();
+    const mergedFields: Record<string, unknown> = { ...(staticItem?.extractedFields ?? {}) };
+    const selected: ParsedItemCandidate = {
+      ...base,
+      ...(staticItem ? {} : {
+        providerVendor: null,
+        itemType: 'generic_note' as ParsedItemType,
+        travelerNames: [],
+        confirmationNumber: null,
+        startDateTimeUtc: null,
+        endDateTimeUtc: null,
+        originalTimezone: null,
+        rawDatetimeString: null,
+        timezoneDisplayHint: null,
+      }),
+      extractedFields: mergedFields,
+    };
+    for (const fieldName of fieldNames) {
+      const staticValue = staticFields[fieldName];
+      const aValue = aFields[fieldName];
+      const bValue = bFields[fieldName];
+      const staticPresent = hasValue(staticValue);
+      const aPresent = hasValue(aValue);
+      const bPresent = hasValue(bValue);
+      const llmAgree = aPresent && bPresent && stableValue(aValue) === stableValue(bValue);
+      const selectedValue = llmAgree ? aValue : staticPresent ? staticValue : undefined;
+      let status: import('../contracts').ParseComparisonFieldStatus;
+      if (llmAgree) status = staticPresent && stableValue(staticValue) !== stableValue(aValue) ? 'llm_agree_static_differs' : 'llm_agree';
+      else if (staticPresent) status = 'llm_disagree_static_used';
+      else if (aPresent || bPresent) status = 'llm_disagree_unresolved';
+      else status = 'missing_all';
+      if (aPresent && bPresent) { compared += 1; if (llmAgree) agreed += 1; }
+      if (staticPresent && llmAgree) { staticCompared += 1; if (stableValue(staticValue) === stableValue(aValue)) staticAgreed += 1; }
+      fields.push({
+        itemIndex: index,
+        itemType: base.itemType,
+        fieldName,
+        status,
+        staticPresent,
+        llmAPresent: aPresent,
+        llmBPresent: bPresent,
+        staticValueHash: valueHash(staticValue),
+        llmAValueHash: valueHash(aValue),
+        llmBValueHash: valueHash(bValue),
+        selectedValueHash: valueHash(selectedValue),
+      });
+      if (llmAgree && hasValue(aValue)) {
+        mergedFields[fieldName] = aValue;
+        setCandidateField(selected, fieldName, aValue);
+      }
+    }
+    selected.confidenceScore = Math.min(0.98, Math.max(base.confidenceScore, llmAItems[index]?.confidenceScore ?? 0, llmBItems[index]?.confidenceScore ?? 0));
+    selected.deduplicationFingerprint = buildParsedItemFingerprint(selected);
+    selectedItems.push(selected);
+  }
+
+  const result: ExtractionResult = {
+    parsedItems: selectedItems,
+    usageMetrics: {
+      tokensIn: staticResult.usageMetrics.tokensIn + llmAResult.usageMetrics.tokensIn + llmBResult.usageMetrics.tokensIn,
+      tokensOut: staticResult.usageMetrics.tokensOut + llmAResult.usageMetrics.tokensOut + llmBResult.usageMetrics.tokensOut,
+      provider: `${llmAResult.usageMetrics.provider}+${llmBResult.usageMetrics.provider}`,
+      modelName: `${llmAResult.usageMetrics.modelName ?? 'unknown'}+${llmBResult.usageMetrics.modelName ?? 'unknown'}`,
+      estimatedCostUsd: staticResult.usageMetrics.estimatedCostUsd + llmAResult.usageMetrics.estimatedCostUsd + llmBResult.usageMetrics.estimatedCostUsd,
+    },
+    metadata: {
+      logicVersion: config.logicVersion,
+      extractedAt: new Date().toISOString(),
+      strategyName: 'ProductionConsensusParser',
+      parserMode: 'production_consensus',
+    },
+  };
+  return {
+    result,
+    comparison: {
+      importJobId: config.importJobId,
+      userId: config.userId,
+      sourceType: doc.sourceType,
+      contentHash: config.contentHash,
+      logicVersion: config.logicVersion,
+      staticParser: staticResult.metadata.strategyName,
+      llmA: { provider: llmAResult.usageMetrics.provider, model: llmAResult.usageMetrics.modelName },
+      llmB: { provider: llmBResult.usageMetrics.provider, model: llmBResult.usageMetrics.modelName },
+      fields,
+      llmAgreementRate: compared ? agreed / compared : 0,
+      staticAgreementRate: staticCompared ? staticAgreed / staticCompared : 0,
+    },
+  };
+};
+
 export const extractCandidates = async (
   doc: NormalizedDocument,
   config: Omit<ExtractionConfig, 'logicVersion' | 'tokenBudgetUsd'> & Partial<Pick<ExtractionConfig, 'logicVersion' | 'tokenBudgetUsd'>>,
@@ -1137,11 +1312,98 @@ export const extractCandidates = async (
     userId: config.userId,
     importJobId: config.importJobId,
     correlationId: config.correlationId,
+    aiProvider: config.aiProvider,
   };
 
+  const consensusEnabled = getEnvValue('NODE_ENV', { defaultValue: 'development' }) === 'production'
+    && await isFeatureEnabled(INGESTION_FEATURE_FLAGS.parserConsensus).catch(() => false);
   const cached = await getExtractionCacheEntry(extractionConfig.userId, extractionConfig.contentHash, extractionConfig.logicVersion);
-  if (cached) {
+  if (cached && (!consensusEnabled || (cached as any)?.metadata?.parserMode === 'production_consensus')) {
     return cached as unknown as ExtractionResult;
+  }
+  if (consensusEnabled) {
+    const staticStrategies = strategies.filter((strategy) => !strategy.strategyName.toLowerCase().includes('llm'));
+    let staticResult: ExtractionResult = {
+      parsedItems: [],
+      usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'static', modelName: null, estimatedCostUsd: 0 },
+      metadata: { logicVersion: extractionConfig.logicVersion, extractedAt: new Date().toISOString(), strategyName: 'StaticParser', parserMode: 'legacy' },
+    };
+    for (const strategy of staticStrategies) {
+      if (!strategy.canHandle(doc)) continue;
+      const result = await strategy.extract(doc, extractionConfig);
+      if (!staticResult.parsedItems.length || Math.max(...result.parsedItems.map((item) => item.confidenceScore), 0) > Math.max(...staticResult.parsedItems.map((item) => item.confidenceScore), 0)) {
+        staticResult = result;
+      }
+    }
+
+    const active = await getActiveAiProvider('ingestion_llm_extract');
+    const secondaryProvider = await chooseSecondaryProvider(active.provider);
+    const primaryModel = extractionConfig.aiProvider?.model ?? active.model;
+    const secondaryModels = getConfiguredProviderModels(secondaryProvider, []);
+    const secondaryModel = getEnvValue('AI_INGESTION_SECOND_LLM_MODEL')
+      ?? secondaryModels.find((model) => model !== primaryModel)
+      ?? secondaryModels[0]
+      ?? null;
+    const { LlmExtractor: ProductionLlmExtractor } = await import('./llmExtractor');
+    const llmA = new ProductionLlmExtractor('ProductionLLM_A', 1, () => true);
+    const llmB = new ProductionLlmExtractor('ProductionLLM_B', 1, () => true);
+    const [llmAResult, llmBResult] = await Promise.all([
+      llmA.extract(doc, { ...extractionConfig, aiProvider: { provider: active.provider, model: primaryModel } }),
+      llmB.extract(doc, { ...extractionConfig, aiProvider: { provider: secondaryProvider, model: secondaryModel ?? undefined } }),
+    ]);
+    let productionAttempt = 0;
+    for (const [stageName, stageResult] of [
+      ['StaticParser', staticResult] as const,
+      ['ProductionLLM_A', llmAResult] as const,
+      ['ProductionLLM_B', llmBResult] as const,
+    ]) {
+      productionAttempt += 1;
+      const telemetryAt = new Date().toISOString();
+      await recordParseAttempt({
+        importJobId: extractionConfig.importJobId,
+        stage: stageName.includes('LLM') ? 'SMALL_LLM' : 'SOURCE_SPECIFIC',
+        extractorName: stageName,
+        logicVersion: extractionConfig.logicVersion,
+        attemptNumber: productionAttempt,
+        startedAt: telemetryAt,
+        completedAt: telemetryAt,
+        outcome: stageResult.parsedItems.length ? `${stageName.toLowerCase()}_succeeded` : `${stageName.toLowerCase()}_empty`,
+        confidenceScore: Math.max(...stageResult.parsedItems.map((item) => item.confidenceScore), 0),
+        tokensIn: stageResult.usageMetrics.tokensIn,
+        tokensOut: stageResult.usageMetrics.tokensOut,
+        modelName: stageResult.usageMetrics.modelName,
+        errorCode: null,
+      });
+      await recordUsageMetering({
+        userId: extractionConfig.userId,
+        importJobId: extractionConfig.importJobId,
+        sourceType: doc.sourceType,
+        parserStage: stageName,
+        provider: stageResult.usageMetrics.provider,
+        modelName: stageResult.usageMetrics.modelName,
+        tokenCountIn: stageResult.usageMetrics.tokensIn,
+        tokenCountOut: stageResult.usageMetrics.tokensOut,
+        estimatedCostUsd: stageResult.usageMetrics.estimatedCostUsd,
+      });
+    }
+    const consensus = await buildProductionConsensus(doc, extractionConfig, staticResult, llmAResult, llmBResult);
+    try {
+      await reserveApiUsageOrThrow({ provider: 'INGESTION_STORAGE', caller: 'PARSE_COMPARISON_WRITE', requireConfiguredLimit: true });
+      await saveParseComparison(consensus.comparison);
+      await recordProviderRequestCost({ provider: 'INGESTION_STORAGE' });
+    } catch (error) {
+      logError('[ingestion][consensus] comparison persistence failed', error);
+    }
+    const validatedConsensus = await validateAndAdjustExtractionResult(
+      sanitizeExtractionResult(consensus.result),
+    );
+    await saveExtractionCacheEntry(
+      extractionConfig.userId,
+      extractionConfig.contentHash,
+      extractionConfig.logicVersion,
+      validatedConsensus as unknown as Record<string, unknown>,
+    );
+    return validatedConsensus;
   }
 
   let bestResult: ExtractionResult | null = null;
@@ -1228,3 +1490,5 @@ export const extractCandidates = async (
 
 // Exported for testing
 export { extractChaseFlights as _extractChaseFlights, parseChaseFlightLegs as _parseChaseFlightLegs, extractTimeCodePairs as _extractTimeCodePairs, extractTravelerNames as _extractTravelerNames, isChaseTravel as _isChaseTravel };
+
+export const __buildProductionConsensusForTests = buildProductionConsensus;
