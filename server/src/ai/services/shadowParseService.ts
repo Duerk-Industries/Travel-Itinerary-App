@@ -10,6 +10,7 @@ import { getRunningExperiment } from '../experiments/experimentConfigService';
 import { resolveExperimentVariant } from '../experiments/assignment';
 import { getOrCreateAiExperimentAssignment } from '../../db';
 import { isExperimentVariantTripped, recordExperimentVariantOutcome } from '../experiments/circuitBreaker';
+import { shouldSample } from '../../utils/sampleRate';
 
 const DEFAULT_SAMPLE_RATE_PERCENT = 10;
 const DEFAULT_SHADOW_BUDGET_USD = 20;
@@ -19,11 +20,6 @@ const parseSettingNumber = async (key: string, fallback: number): Promise<number
   const row = await getAdminSetting(key);
   const value = Number(row?.value);
   return Number.isFinite(value) ? value : fallback;
-};
-
-const shouldSample = (sampleRatePercent: number, randomValue = Math.random()): boolean => {
-  const rate = Math.max(0, Math.min(100, sampleRatePercent));
-  return randomValue * 100 < rate;
 };
 
 const buildShadowConfig = (doc: NormalizedDocument) => ({

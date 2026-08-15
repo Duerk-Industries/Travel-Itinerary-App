@@ -7,10 +7,11 @@ import { resolveTimezone } from '../shared/timezoneResolver';
 import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../../apis/usageLimiter';
 import { recordProviderRequestCost } from '../../apis/providerBudgeting';
 import { logError, logInfo } from '../../logger';
-import { getUserById } from '../../db';
+import { getAdminSetting, getUserById } from '../../db';
 import { getEnvValue } from '../../env';
 import { isFeatureEnabled } from '../../services/entitlementService';
 import { getActiveAiProvider, getConfiguredProviderApiKey, getConfiguredProviderModels } from '../../services/aiProviderConfigService';
+import { shouldSample } from '../../utils/sampleRate';
 import { extractLabeledFieldValue, extractPhoneLikeValue, toTitleCaseWords } from './hotelFieldExtractors';
 import { extractSemanticFieldsForType } from './semanticFieldHelpers';
 import { sanitizeExtractionResult } from './fieldSanitizer';
@@ -1174,6 +1175,23 @@ const chooseSecondaryProvider = async (primaryProvider: string): Promise<string>
   return candidates.find((provider) => provider !== primaryProvider && getConfiguredProviderApiKey(provider)) ?? primaryProvider;
 };
 
+const DEFAULT_CONSENSUS_SAMPLE_RATE_PERCENT = 100;
+
+const parseSettingNumber = async (key: string, fallback: number): Promise<number> => {
+  const row = await getAdminSetting(key);
+  const value = Number(row?.value);
+  return Number.isFinite(value) ? value : fallback;
+};
+
+// Deterministic (not `Math.random()`-based) so the same document always gets the same
+// consensus-sampling decision across retries — a random per-call decision would let a retried
+// import flip in or out of consensus mode and thrash the extraction cache entry keyed on
+// userId+contentHash (see the `cached` short-circuit right below where this is used).
+const deterministicUnitInterval = (key: string): number => {
+  const hash = createHash('sha256').update(key).digest();
+  return hash.readUInt32BE(0) / 0xffffffff;
+};
+
 const buildProductionConsensus = async (
   doc: NormalizedDocument,
   config: ExtractionConfig,
@@ -1315,8 +1333,16 @@ export const extractCandidates = async (
     aiProvider: config.aiProvider,
   };
 
-  const consensusEnabled = getEnvValue('NODE_ENV', { defaultValue: 'development' }) === 'production'
+  const parserConsensusFlagEnabled = getEnvValue('NODE_ENV', { defaultValue: 'development' }) === 'production'
     && await isFeatureEnabled(INGESTION_FEATURE_FLAGS.parserConsensus).catch(() => false);
+  // The feature flag is the master on/off switch; the sample-rate setting (admin-configurable,
+  // 100% by default — i.e. "for now, all parsing in production uses 2 LLMs as well as the
+  // static parser") controls what share of documents actually pay for the extra two LLM calls.
+  const consensusEnabled = parserConsensusFlagEnabled
+    && shouldSample(
+      await parseSettingNumber('parser_consensus_sample_rate_percent', DEFAULT_CONSENSUS_SAMPLE_RATE_PERCENT),
+      deterministicUnitInterval(`${extractionConfig.userId ?? ''}:${extractionConfig.contentHash ?? ''}`)
+    );
   const cached = await getExtractionCacheEntry(extractionConfig.userId, extractionConfig.contentHash, extractionConfig.logicVersion);
   if (cached && (!consensusEnabled || (cached as any)?.metadata?.parserMode === 'production_consensus')) {
     return cached as unknown as ExtractionResult;
@@ -1337,13 +1363,21 @@ export const extractCandidates = async (
     }
 
     const active = await getActiveAiProvider('ingestion_llm_extract');
-    const secondaryProvider = await chooseSecondaryProvider(active.provider);
+    // An admin who has explicitly picked LLM B via the admin console (source === 'db') always
+    // wins; otherwise fall back to auto-picking a different configured provider from LLM A.
+    const secondaryConfig = await getActiveAiProvider('ingestion_llm_extract_secondary');
+    const secondaryExplicitlyConfigured = secondaryConfig.source === 'db' && secondaryConfig.enabled;
+    const secondaryProvider = secondaryExplicitlyConfigured
+      ? secondaryConfig.provider
+      : await chooseSecondaryProvider(active.provider);
     const primaryModel = extractionConfig.aiProvider?.model ?? active.model;
     const secondaryModels = getConfiguredProviderModels(secondaryProvider, []);
-    const secondaryModel = getEnvValue('AI_INGESTION_SECOND_LLM_MODEL')
-      ?? secondaryModels.find((model) => model !== primaryModel)
-      ?? secondaryModels[0]
-      ?? null;
+    const secondaryModel = secondaryExplicitlyConfigured
+      ? secondaryConfig.model
+      : (getEnvValue('AI_INGESTION_SECOND_LLM_MODEL')
+        ?? secondaryModels.find((model) => model !== primaryModel)
+        ?? secondaryModels[0]
+        ?? null);
     const { LlmExtractor: ProductionLlmExtractor } = await import('./llmExtractor');
     const llmA = new ProductionLlmExtractor('ProductionLLM_A', 1, () => true);
     const llmB = new ProductionLlmExtractor('ProductionLLM_B', 1, () => true);
@@ -1492,3 +1526,4 @@ export const extractCandidates = async (
 export { extractChaseFlights as _extractChaseFlights, parseChaseFlightLegs as _parseChaseFlightLegs, extractTimeCodePairs as _extractTimeCodePairs, extractTravelerNames as _extractTravelerNames, isChaseTravel as _isChaseTravel };
 
 export const __buildProductionConsensusForTests = buildProductionConsensus;
+export const __deterministicUnitIntervalForTests = deterministicUnitInterval;

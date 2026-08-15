@@ -94,8 +94,17 @@ const requireReason = (reason: unknown): string | null => {
   return reason.trim();
 };
 
-const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract'] as const;
+// 'ingestion_llm_extract' is LLM A (primary) for the production dual-LLM parse consensus;
+// 'ingestion_llm_extract_secondary' is LLM B. Both are independently selectable here so an
+// admin can pick two genuinely different providers/models rather than relying on the
+// auto-pick fallback in chooseSecondaryProvider (extraction/index.ts).
+const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract', 'ingestion_llm_extract_secondary'] as const;
 const AI_RUNTIME_SETTING_DEFAULTS = {
+  // Share of production imports that run the full static+LLM-A+LLM-B consensus parse (see
+  // `ingestion_dual_llm_consensus` feature flag, which is the on/off switch this percentage
+  // sits under). 100 means "all of them" — the requested starting state; lower later from here
+  // once the comparison data shows it's safe to sample instead of parsing every document twice.
+  parser_consensus_sample_rate_percent: '100',
   shadow_parse_sample_rate_percent: '10',
   shadow_parse_monthly_budget_usd: '20',
   ai_aggregation_run_hour_utc: '3',
