@@ -62,4 +62,11 @@ describe('TraitsTab interest weights', () => {
     expect(getAllByText('Authentic/Local').length).toBeGreaterThan(0);
     expect(getAllByText('Iconic Landmarks').length).toBeGreaterThan(0);
   });
+
+  test('surfaces the recognized "no X" / "avoid X" exclusion phrasing near the custom interest field', () => {
+    const { getByPlaceholderText, getByText } = render(<TraitsTab {...defaultProps} />);
+
+    expect(getByPlaceholderText("Custom interest, or 'no nightlife' / 'avoid crowds'")).toBeTruthy();
+    expect(getByText(/no museums.*avoid nightlife.*skip shopping/s)).toBeTruthy();
+  });
 });

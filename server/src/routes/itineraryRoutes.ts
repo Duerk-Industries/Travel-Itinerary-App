@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { getTripById, getWebUserProfile, listTraitsForGroupTrip } from '../db';
+import { getTripById, getWebUserProfile, listTraitsForGroupTrip, listFlights } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
@@ -25,7 +25,7 @@ import {
   getConfiguredProviderApiKey,
   getProviderApiKeyEnvVar,
 } from '../services/aiProviderConfigService';
-import type { RoadTripHints } from '../services/itineraryRoadTripService';
+import type { RoadTripDeadlineInput, RoadTripHints } from '../services/itineraryRoadTripService';
 
 // Accepts either a plain attraction name or `{ name, destinationName }` so the
 // generator can place must-see attractions on the correct destination's day.
@@ -119,6 +119,50 @@ export const parseRoadTripHints = (raw: unknown): RoadTripHints | undefined => {
     ...(variants?.length ? { variants } : {}),
     ...(locationCoordinates ? { locationCoordinates } : {}),
   };
+};
+
+// Auto-derives a hard deadline from a return flight the traveler has already entered on this
+// trip (a real Flight record, not anything newly asked of the user) — the road-trip-lite
+// deadline/cut-priority mechanism needs a time to plan against, and this is the one piece of
+// timed data already collected today. Best-effort: a lookup failure or no qualifying flight just
+// means no derived deadline, never a failed generation.
+export const deriveReturnFlightDeadline = async (userId: string, tripId: string): Promise<RoadTripDeadlineInput | undefined> => {
+  try {
+    const flights = await listFlights(userId, tripId);
+    const candidates = (flights ?? []).filter((flight) =>
+      (flight.transferType ?? 'Flight') === 'Flight'
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(flight.departureDate ?? ''))
+      && /^([01]\d|2[0-3]):[0-5]\d$/.test(String(flight.departureTime ?? ''))
+    );
+    if (!candidates.length) return undefined;
+    // The "return flight" is whichever entered flight departs latest in the trip — the one taking
+    // travelers home, as opposed to an outbound flight to the destination.
+    const returnFlight = candidates.sort((a, b) =>
+      `${a.departureDate}T${a.departureTime}`.localeCompare(`${b.departureDate}T${b.departureTime}`)
+    ).pop();
+    if (!returnFlight) return undefined;
+    return {
+      date: returnFlight.departureDate,
+      at: returnFlight.departureTime,
+      reasonCode: 'RETURN_FLIGHT_DEPARTURE',
+      requiredSlackMinutes: 120,
+    };
+  } catch {
+    return undefined;
+  }
+};
+
+// Supplements (never overrides) caller-supplied road-trip hints with the derived return-flight
+// deadline above, unless the caller already sent an explicit deadline for that same date.
+export const withReturnFlightDeadline = async (
+  userId: string,
+  tripId: string,
+  hints: RoadTripHints | undefined
+): Promise<RoadTripHints | undefined> => {
+  const derived = await deriveReturnFlightDeadline(userId, tripId);
+  if (!derived) return hints;
+  if (hints?.deadlines?.some((deadline) => deadline.date === derived.date)) return hints;
+  return { ...hints, deadlines: [...(hints?.deadlines ?? []), derived] };
 };
 
 // Returns a UTC monthly window key, e.g. "2026-03"
@@ -403,7 +447,7 @@ router.post('/', async (req, res) => {
       tripStartMonth,
       tripStartYear,
       tripIdSeed: tripId,
-      roadTripHints: parseRoadTripHints(req.body?.roadTrip),
+      roadTripHints: await withReturnFlightDeadline(userId, tripId, parseRoadTripHints(req.body?.roadTrip)),
     });
     const normalizedPlan = String(result.planMarkdown ?? '')
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
@@ -591,7 +635,7 @@ router.post('/async', async (req, res) => {
     tripStyle: tripStyle ? String(tripStyle).trim() : undefined,
     tt,
     ut,
-    roadTripHints: parseRoadTripHints(req.body?.roadTrip),
+    roadTripHints: await withReturnFlightDeadline(userId, tripId, parseRoadTripHints(req.body?.roadTrip)),
     groupTraits,
     tripStartDate,
     tripEndDate,
