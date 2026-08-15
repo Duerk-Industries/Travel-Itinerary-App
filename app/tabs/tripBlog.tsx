@@ -59,16 +59,20 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       : 'https://wander-bunnies.com';
     return `${origin.replace(/\/$/, '')}/${publicPath.replace(/^\//, '')}`;
   }, [blog?.publicPath]);
+  // A read-only view inside the app is still an authenticated traveler/follower view. It should
+  // include the complete shared blog (including linked planned activities and non-public items).
+  // Only a genuinely public blog gets the public-only projection. Keeping this distinction here
+  // also means the private/pending-consent preview cannot accidentally hide content merely because
+  // the user is not currently editing.
+  const publicPreview = !editMode && blog?.visibilityState === 'public';
   const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
-    if (editMode) return day;
+    if (!publicPreview) return day;
     return {
       ...day,
-      // The private editor response can contain traveler/follower-only items. The default
-      // preview mirrors the public endpoint and only displays public-audience content.
       items: (day.items || []).filter((item) => !item.audience || item.audience === 'public'),
       activities: [],
     };
-  }), [blog?.days, editMode]);
+  }), [blog?.days, publicPreview]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -401,7 +405,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </TouchableOpacity>
           ) : null}
         </View>
-        <Text style={{ color: mutedColor, marginBottom: 12 }}>{editMode ? 'Editing mode — changes are saved to the trip blog.' : 'Public preview — only content intended for public sharing is shown.'}</Text>
+        <Text style={{ color: mutedColor, marginBottom: 12 }}>
+          {editMode
+            ? 'Editing mode — changes are saved to the trip blog.'
+            : publicPreview
+              ? 'Public preview — only content intended for public sharing is shown.'
+              : 'Traveler/follower view — all shared trip blog content is shown.'}
+        </Text>
         {canEdit ? (
           <View style={{ marginBottom: 16, padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -546,7 +556,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 </>
               );
             })()}
-            {canEdit && (day.activities || []).length > 0 ? (
+            {!publicPreview && (day.activities || []).length > 0 ? (
               <View style={{ marginTop: 14 }}>
                 <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>
                 {(day.activities || []).map((activity) => (

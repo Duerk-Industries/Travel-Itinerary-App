@@ -56,4 +56,62 @@ describe('TripDayMap', () => {
 
     expect(queryByTestId('day-detail-map')).toBeNull();
   });
+
+  describe('on web (react-native-web silently drops <Image source.headers>)', () => {
+    const { Platform } = require('react-native');
+    const originalOS = Platform.OS;
+    const originalFetch = global.fetch;
+
+    // jsdom has no real createObjectURL/revokeObjectURL — stub them for the whole describe block
+    // rather than restoring to "undefined" between tests, which would make the component's own
+    // unmount-cleanup (revokeObjectURL) throw during React Testing Library's automatic cleanup.
+    beforeAll(() => {
+      (global as any).URL.createObjectURL = jest.fn(() => 'blob:fake-object-url');
+      (global as any).URL.revokeObjectURL = jest.fn();
+    });
+
+    beforeEach(() => {
+      Platform.OS = 'web';
+    });
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      global.fetch = originalFetch;
+      jest.clearAllMocks();
+    });
+
+    it('fetches the map with the Authorization header attached and renders a blob: object URL, not the raw backend URL', async () => {
+      const fakeBlob = { size: 1 } as unknown as Blob;
+      global.fetch = jest.fn(async () => ({ ok: true, blob: async () => fakeBlob })) as any;
+
+      const { findByTestId, UNSAFE_getByType } = render(
+        <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      );
+      await findByTestId('day-detail-map');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`${BACKEND_URL}/api/maps/trip-day?points=`),
+        { headers: HEADERS }
+      );
+      expect((global as any).URL.createObjectURL).toHaveBeenCalledWith(fakeBlob);
+
+      const { Image } = require('react-native');
+      const image = UNSAFE_getByType(Image);
+      expect(image.props.source?.uri).toBe('blob:fake-object-url');
+      // The whole point of this workaround is that no header ever reaches the <Image> itself —
+      // it's a same-origin blob: URL now, which needs none.
+      expect(image.props.source?.headers).toBeUndefined();
+    });
+
+    it('renders nothing (not a broken image) when the authenticated fetch fails, e.g. a 401 from a dropped header', async () => {
+      global.fetch = jest.fn(async () => ({ ok: false, status: 401 })) as any;
+
+      const { queryByTestId } = render(
+        <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(queryByTestId('day-detail-map')).toBeNull();
+    });
+  });
 });
