@@ -2301,8 +2301,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (Number.isNaN(date.valueOf())) return dateStr;
     const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
     const weekdayLabel = weekday.endsWith('.') ? weekday : `${weekday}.`;
-    return `${weekdayLabel} ${date.getDate()}`;
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const monthLabel = month.endsWith('.') ? month : `${month}.`;
+    return `${weekdayLabel} ${monthLabel} ${date.getDate()}`;
   };
+
+  const formatLongDayLabel = (dateStr: string): string => {
+    const parts = dateStr.split('-').map((v) => Number(v));
+    const date = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dateStr);
+    if (Number.isNaN(date.valueOf())) return dateStr;
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const monthLabel = month.endsWith('.') ? month : `${month}.`;
+    return `${weekday} ${monthLabel} ${date.getDate()}`;
+  };
+
+  const formatDayCardLabel = (card: DayCard): string => `${card.label} - ${formatLongDayLabel(card.date)}`;
 
   const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
 
@@ -2528,7 +2542,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             )}
             <View style={styles.dayHeroOverlay} />
             <View style={styles.dayHeroBadge}>
-              <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
+              <Text style={styles.dayHeroBadgeText}>{formatDayCardLabel(card)}</Text>
             </View>
             {weatherLabel ? (
               <View
@@ -2648,8 +2662,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             >
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
-              {tripLocationLabel ? <Text style={styles.helperText}>{tripLocationLabel}</Text> : null}
-              {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
               {dayMapPoints.length ? (
@@ -3090,15 +3102,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           </View>
           <Text style={styles.flightTitle}>{trip.name}</Text>
-          {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
-          {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
-          {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
-          {!dateRange && monthLabel && trip.durationDays ? (
-            <Text style={styles.helperText}>
-              Dates: {monthLabel} - {trip.durationDays} day(s)
-            </Text>
-          ) : null}
-          {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
 
           {trip.description ? (
             <View>

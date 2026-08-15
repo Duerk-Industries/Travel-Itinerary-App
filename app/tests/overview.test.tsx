@@ -335,10 +335,11 @@ describe('Overview UI (nested itinerary)', () => {
     }
   });
 
-  test('renders day pills with overview and short dates', async () => {
+  test('renders day pills with overview and month-inclusive dates', async () => {
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
     expect(await findByTestId('overview-day-pill-overview')).toBeTruthy();
-    expect(await findByText('Thu. 29')).toBeTruthy();
+    expect(await findByText('Thu. Jan. 29')).toBeTruthy();
+    expect(await findByText('Day 1 - Thursday Jan. 29')).toBeTruthy();
     await findByTestId('overview-day-card-1');
   });
 
@@ -431,7 +432,6 @@ describe('Overview UI (nested itinerary)', () => {
       <OverviewTab {...baseProps} flights={[flight] as any} />
     );
 
-    expect(await findByText('Trip length: 2 day(s)')).toBeTruthy();
     expect(await findByTestId('overview-day-card-1')).toBeTruthy();
     expect(await findByTestId('overview-day-card-2')).toBeTruthy();
   });
@@ -790,8 +790,6 @@ describe('Overview UI (nested itinerary)', () => {
     };
 
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
-    expect(await findByText(/Dates: .*November.*2025.*November.*2025/i)).toBeTruthy();
-    expect(await findByText('Trip length: 8 day(s)')).toBeTruthy();
     expect(await findByTestId('overview-day-card-1')).toBeTruthy();
     expect(await findByTestId('overview-day-card-8')).toBeTruthy();
   });
