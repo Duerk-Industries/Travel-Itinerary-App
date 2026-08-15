@@ -1,7 +1,9 @@
 /**
  * Real LLM-backed extractor for travel document ingestion.
  *
- * - Only runs when isLocalEnv() is true (dev/local environment)
+ * - Runs in local dev and production; skipped only in tests / in-memory-DB fixture runs
+ *   (see `canHandle`), and further gated per-user by tier entitlements (`canRun`, passed
+ *   in by the caller) and by whether an API key is configured for the active provider.
  * - Calls the active AI provider to extract structured travel fields
  * - When extraction succeeds, auto-generates regex patterns and stores them
  *   as a learned source parser for future use (parser learning)
@@ -20,9 +22,9 @@ import {
   getConfiguredProviderApiKey,
   getProviderApiKeyEnvVar,
 } from '../../services/aiProviderConfigService';
-import { isLocalEnv } from '../../env';
 import { getEnvFlag } from '../../env';
 import { logInfo, logError } from '../../logger';
+import { estimateAiCostMicros } from '../../apis/providerBudgeting';
 
 const INGESTION_LLM_MAX_INPUT_CHARS = 6000;
 const INGESTION_DEBUG_LLM_MAX_CHARS = 4000;
@@ -87,6 +89,12 @@ Rules:
 - For activities/tours: use activityDate and activityTime for when it happens
 - For restaurants: include partySize and mealType if available`;
 
+const estimatedCostUsd = (provider: string, model: string | null, promptTokens: number, completionTokens: number): number => {
+  const micros = model ? estimateAiCostMicros({ provider, model, promptTokens, completionTokens }) : null;
+  if (micros != null) return micros / 1_000_000;
+  return promptTokens * 0.00000015 + completionTokens * 0.0000006;
+};
+
 const emptyResult = (config: ExtractionConfig, strategyName: string): ExtractionResult => ({
   parsedItems: [],
   usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'llm', modelName: null, estimatedCostUsd: 0 },
@@ -131,8 +139,12 @@ export class LlmExtractor implements ExtractionStrategy {
   ) {}
 
   canHandle(_doc: NormalizedDocument): boolean {
-    // Only run in local dev, never during tests (test mocks interfere with OpenAI calls)
-    return isLocalEnv() && process.env.NODE_ENV !== 'test' && process.env.USE_IN_MEMORY_DB !== '1';
+    // Runs in local dev and production alike; never during tests (test mocks interfere with
+    // real provider calls, and the in-memory DB is only used for test/local fixture runs).
+    // Tier/feature-flag gating happens via `canRun` (allowSmallLlm/allowLargeLlm from the
+    // caller's entitlements) and the `ingestion_llm_extract` API-key/feature-flag check inside
+    // `extract()`, so this is just an environment safety guard, not a production on/off switch.
+    return process.env.NODE_ENV !== 'test' && process.env.USE_IN_MEMORY_DB !== '1';
   }
 
   async extract(doc: NormalizedDocument, config: ExtractionConfig): Promise<ExtractionResult> {
@@ -160,7 +172,7 @@ export class LlmExtractor implements ExtractionStrategy {
       }
       const provider = await resolveProvider(INGESTION_LLM_FEATURE_KEY, INGESTION_LLM_CALLER, providerOverride);
       providerId = provider.id;
-      modelName = modelOverride || activeConfig.model || provider.supportedModels[0] || INGESTION_LLM_MODEL;
+      modelName = modelOverride || (providerOverride ? provider.supportedModels[0] : activeConfig.model) || provider.supportedModels[0] || INGESTION_LLM_MODEL;
       const ctx = createAiCallContext({
         correlationId: config.correlationId,
         jobId: config.importJobId,
@@ -209,7 +221,7 @@ export class LlmExtractor implements ExtractionStrategy {
         tokensOut: completionTokens,
         provider: providerId,
         modelName,
-        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+        estimatedCostUsd: estimatedCostUsd(providerId, modelName, promptTokens, completionTokens),
       });
     }
     if (getEnvFlag('INGESTION_DEBUG_LLM')) {
@@ -232,7 +244,7 @@ export class LlmExtractor implements ExtractionStrategy {
         tokensOut: completionTokens,
         provider: providerId,
         modelName,
-        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+        estimatedCostUsd: estimatedCostUsd(providerId, modelName, promptTokens, completionTokens),
       });
     }
 
@@ -243,7 +255,7 @@ export class LlmExtractor implements ExtractionStrategy {
         tokensOut: completionTokens,
         provider: providerId,
         modelName,
-        estimatedCostUsd: (promptTokens * 0.00000015 + completionTokens * 0.0000006),
+        estimatedCostUsd: estimatedCostUsd(providerId, modelName, promptTokens, completionTokens),
       });
     }
 

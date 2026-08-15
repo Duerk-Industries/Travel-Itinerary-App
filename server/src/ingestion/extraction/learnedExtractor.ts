@@ -13,7 +13,7 @@ import { getLearnedParser } from '../shared/repository';
 import { logInfo } from '../../logger';
 import { extractLabeledFieldValue, extractPhoneLikeValue, toTitleCaseWords } from './hotelFieldExtractors';
 import { extractSemanticFieldsForType } from './semanticFieldHelpers';
-import { extractTransportCandidatesExported } from './index';
+import { extractTransportCandidatesExported, extractAccountHolderName } from './index';
 
 const INGESTION_SOURCE_PARSER_MIN_MATCH_RATIO = 0.4;
 
@@ -306,30 +306,15 @@ const extractCommonGuestName = (text: string): string | null => {
   // the captured text actually looks like a name (starts with a capital letter) rather than
   // trailing lowercase prose that happened to follow a label-like phrase (e.g. "guest name below").
   if (labeled && /^[A-Z]/.test(labeled) && !/[0-9<>@]/.test(labeled)) return labeled;
-  const match = text.match(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Qiang\s+Lai)\b/i);
-  return normalizeSpace(match?.[1]) || null;
-};
-
-const nameWordsSubsumedBy = (shortName: string, longName: string): boolean => {
-  const longWords = new Set(longName.toLowerCase().split(/\s+/));
-  return shortName.toLowerCase().split(/\s+/).every((word) => longWords.has(word));
+  // Last resort: these are Gmail-exported confirmations, so the account holder's name is
+  // almost always right there in the "Name <email>" / "To: Name <email>" header — a real,
+  // per-document signal, unlike guessing at a fixed set of names.
+  return extractAccountHolderName(text);
 };
 
 const extractCommonTravelerNames = (text: string): string[] => {
-  const names = new Map<string, string>();
-  for (const match of text.matchAll(/\b(Bryan\s+(?:Edward\s+)?Duerk|Vicky\s+Duerk|Tristan\s+Duerk|Jasmine\s+Duerk|Qiang\s+Lai)\b/gi)) {
-    const value = normalizeSpace(match[1]);
-    const key = value.toLowerCase();
-    if (!names.has(key)) names.set(key, value);
-  }
   const guestName = extractCommonGuestName(text);
-  if (guestName) {
-    for (const [key, value] of Array.from(names.entries())) {
-      if (value !== guestName && nameWordsSubsumedBy(value, guestName)) names.delete(key);
-    }
-    names.set(guestName.toLowerCase(), guestName);
-  }
-  return Array.from(names.values()).slice(0, 8);
+  return guestName ? [guestName] : [];
 };
 
 const stripPhoneFromAddress = (value: unknown): unknown =>
@@ -802,11 +787,15 @@ const extractBuiltInSourceResult = async (
       toDateOnly(text.match(/Cancel by [^,]+,\s*((?:[A-Za-z]+\s+\d{1,2},\s+20\d{2})|(?:20\d{2}-\d{2}-\d{2}))/i)?.[1] ?? null)
       ?? addDays(date, -1);
     if (confirmationNumber && name) {
+      // Viator confirmations don't list the traveler's name in a labeled field — recover
+      // it from the Gmail export header ("Name <email>" / "To: Name <email>") instead of
+      // assuming a fixed name.
+      const accountHolderName = extractAccountHolderName(text);
       return directCandidateResult(doc, config, {
         itemType: effectiveItemType,
         providerVendor: 'Viator',
         confirmationNumber,
-        travelerNamesOverride: ['Bryan Duerk'],
+        travelerNamesOverride: accountHolderName ? [accountHolderName] : undefined,
         confidenceScore: 0.95,
         extractedFields: {
           providerVendor: 'Viator',
@@ -877,7 +866,13 @@ const extractBuiltInSourceResult = async (
             duration: normalizeSpace(text.match(/(\d+(?:\.\d+)?)\s*hours/i)?.[1] ? `${text.match(/(\d+(?:\.\d+)?)\s*hours/i)?.[1]} hours` : ''),
             paid: amount != null,
             status: 'Booked',
-            freeCancelBy: toDateOnly(text.match(/Cancel before [^A-Za-z]*\d{1,2}:\d{2}\s*[AP]M on ([A-Za-z]+\s+\d{1,2})/i)?.[1] ?? '2025-08-23'),
+            // The "Cancel before ... on <Month Day>" line has no year of its own, so infer it
+            // from any 4-digit year elsewhere in the document (e.g. the activity date line)
+            // rather than assuming a fixed date.
+            freeCancelBy: toDateOnlyWithFallbackYear(
+              text.match(/Cancel before [^A-Za-z]*\d{1,2}:\d{2}\s*[AP]M on ([A-Za-z]+\s+\d{1,2})/i)?.[1] ?? null,
+              text
+            ) ?? addDays(date, -3),
             bookedOn: 'GetYourGuide',
             reference: bookingReferenceNumber,
           },
@@ -904,10 +899,13 @@ const extractBuiltInSourceResult = async (
             bookingReference: bookingReferenceNumber,
             totalCost: amount,
             currency,
-            departureDate: '2025-11-21',
+            // This confirmation email never states the travel date anywhere in its body
+            // (only the email's own send date) — leave it unknown rather than guessing,
+            // so the item is flagged for the user to fill in instead of silently wrong.
+            departureDate: null,
             departureTime: normalizeOutputTime(text.match(/Pickup at\s+(\d{1,2}:\d{2}\s*[AP]M)/i)?.[1]) || null,
             departureLocation,
-            arrivalDate: '2025-11-21',
+            arrivalDate: null,
             arrivalLocation,
             duration: normalizeSpace(text.match(/(\d+\s+minutes)/i)?.[1]) || null,
             transferType: 'Private',
@@ -1228,8 +1226,21 @@ const extractBuiltInSourceResult = async (
 
   if (sourceKey === 'klook') {
     const bookingReferenceNumber = text.match(/Booking reference ID:\s*([A-Z0-9]{6,})(?=[A-Z][a-z]|\s|[^A-Za-z0-9]|$)/)?.[1] ?? null;
+    // "Participation Date:\n2025-11-21 00:00:00" appears on every Klook booking type
+    // (activity, car rental, transfer, rail) and is the actual travel date — use it
+    // instead of guessing/hardcoding one.
+    const participationDate = toDateOnly(text.match(/Participation Date:\s*(20\d{2}-\d{2}-\d{2})/i)?.[1] ?? null);
+    // Voucher expiry, e.g. "valid until 31 Dec 2026 23:59" — reformat "DD Mon YYYY" to
+    // the "Mon DD, YYYY" shape toDateOnly already understands.
+    const voucherValidUntilMatch = text.match(/valid until\s+(\d{1,2})\s+([A-Za-z]{3,9})\s+(20\d{2})/i);
+    const voucherValidUntil = voucherValidUntilMatch
+      ? toDateOnly(`${voucherValidUntilMatch[2]} ${voucherValidUntilMatch[1]}, ${voucherValidUntilMatch[3]}`)
+      : null;
     if (effectiveItemType === 'car_rental') {
       const name = cleanActivityName(normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is\s+confirmed/i)?.[1]).replace(/^Taipei Departure:\s*/i, '')) || null;
+      // "Your booking for Taipei Departure: ..." — the city named before "Departure:"
+      // is both the pickup and dropoff point for these customized-itinerary charters.
+      const departureCity = normalizeSpace(text.match(/Your booking for\s+([A-Za-z .'-]+?)\s+Departure:/i)?.[1]) || null;
       if (bookingReferenceNumber && name) {
         return directCandidateResult(doc, config, {
             itemType: 'car_rental',
@@ -1238,13 +1249,13 @@ const extractBuiltInSourceResult = async (
           confidenceScore: 0.93,
           extractedFields: {
             providerVendor: 'Klook.com',
-            activityDate: '2025-11-19',
+            activityDate: participationDate,
             confirmationNumber: bookingReferenceNumber,
             bookingReferenceNumber,
-            pickupDate: '2025-11-19',
-            dropoffDate: '2025-11-19',
-            pickupLocation: 'Taipei',
-            dropoffLocation: 'Taipei',
+            pickupDate: participationDate,
+            dropoffDate: participationDate,
+            pickupLocation: departureCity,
+            dropoffLocation: departureCity,
             model: normalizeSpace(text.match(/Car model:\s*([^\n]+)/i)?.[1]) || normalizeSpace(text.match(/5-Seater Car/i)?.[0]) || null,
             notes: '10-hour charter',
             partySize: extractPartySize(text),
@@ -1258,6 +1269,17 @@ const extractBuiltInSourceResult = async (
     }
     if (effectiveItemType === 'tour_activity') {
       const name = normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is\s+confirmed/i)?.[1]) || null;
+      // Match the colon explicitly: there's also a bare "Address" section header
+      // earlier in the doc with no inline value, and (due to buildLooseLabelRegex's
+      // case-insensitive boundary check) a bare "Address" label can spuriously match
+      // inside unrelated words like "addressee" in the email footer.
+      const address = extractLabeledFieldValue(
+        text,
+        ['Address:'],
+        ['Please refer to the Map', 'Pick-up information', 'Pick-up and drop-off', 'Policy details', 'Reservation procedure'],
+        false,
+        220
+      );
       if (bookingReferenceNumber && name) {
         return directCandidateResult(doc, config, {
             itemType: 'tour_activity',
@@ -1269,13 +1291,13 @@ const extractBuiltInSourceResult = async (
             confirmationNumber: bookingReferenceNumber,
             bookingReferenceNumber,
             name,
-            address: normalizeSpace((text.match(/Address[\s\S]{0,140}?No\.\s*18[^\n]+/i)?.[0] ?? '').replace(/^Address\s*•\s*Location:\s*/i, '')) || 'No. 18, Youya Road, Beitou District, Taipei City',
-            activityDate: null,
+            address,
+            activityDate: participationDate,
             activityTime: null,
             partySize: extractPartySize(text),
             totalCost: null,
             currency: null,
-            freeCancelBy: '2026-12-31',
+            freeCancelBy: voucherValidUntil,
             paid: true,
             status: 'Booked',
             bookedOn: 'Klook',
@@ -1285,6 +1307,11 @@ const extractBuiltInSourceResult = async (
       }
     }
     if (effectiveItemType === 'ferry_bus_transfer') {
+      // e.g. "Ha Noi Private Transfer To Trang An (Ninh Binh) / Sapa / ..." followed by
+      // "Ha Noi · Sapa · 3 Day 2 Night - Include Visiting Attraction" — the second,
+      // dot-separated line gives a clean origin/destination pair.
+      const routeMatch = text.match(/([A-Za-z][A-Za-z ]+?)\s*·\s*([A-Za-z][A-Za-z ]+?)\s*·\s*\d+\s*Day/i);
+      const durationMatch = text.match(/\d+\s*Day\s*\d+\s*Night[^\n·]*/i);
       if (bookingReferenceNumber) {
         return directCandidateResult(doc, config, {
             itemType: 'ferry_bus_transfer',
@@ -1295,10 +1322,11 @@ const extractBuiltInSourceResult = async (
             providerVendor: 'Klook',
             confirmationNumber: bookingReferenceNumber,
             bookingReference: bookingReferenceNumber,
-            departureDate: '2025-11-27',
-            arrivalDate: '2025-11-27',
-            departureLocation: 'Ha Noi hotel pick-up',
-            arrivalLocation: 'Sapa',
+            departureDate: participationDate,
+            arrivalDate: participationDate,
+            departureLocation: normalizeSpace(routeMatch?.[1]) || null,
+            arrivalLocation: normalizeSpace(routeMatch?.[2]) || null,
+            duration: normalizeSpace(durationMatch?.[0]) || null,
             transferType: 'Private',
             status: 'Booked',
             vehicleType: normalizeSpace(text.match(/(SUV\/MPV \(Group of 5\))/i)?.[1]) || null,
@@ -1308,6 +1336,10 @@ const extractBuiltInSourceResult = async (
     }
     if (effectiveItemType === 'rail') {
       const { amount, currency } = parseCurrencyAmount(text);
+      // e.g. "... Promo Code [G02TAIWAN] · Taipei · Taichung · Free voucher (select at
+      // checkout)" — the two cities sit between the promo/product line and the next
+      // dot-separated segment.
+      const routeMatch = text.match(/·\s*([A-Za-z][A-Za-z ]+?)\s*·\s*([A-Za-z][A-Za-z ]+?)\s*·/);
       if (bookingReferenceNumber) {
         return directCandidateResult(doc, config, {
             itemType: 'rail',
@@ -1318,10 +1350,10 @@ const extractBuiltInSourceResult = async (
             providerVendor: 'Klook',
             confirmationNumber: bookingReferenceNumber,
             bookingReference: bookingReferenceNumber,
-            departureDate: '2025-11-21',
-            arrivalDate: '2025-11-21',
-            departureLocation: 'Taipei',
-            arrivalLocation: 'Taichung',
+            departureDate: participationDate,
+            arrivalDate: participationDate,
+            departureLocation: normalizeSpace(routeMatch?.[1]) || null,
+            arrivalLocation: normalizeSpace(routeMatch?.[2]) || null,
             transferType: 'Train',
             totalCost: amount,
             currency,

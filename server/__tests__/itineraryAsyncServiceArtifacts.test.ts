@@ -51,7 +51,19 @@ describe('writeLocalGenerationArtifacts', () => {
   const outputDir = path.resolve(__dirname, '../logs/ai-replay/live', jobId);
 
   afterEach(() => {
-    fs.rmSync(outputDir, { recursive: true, force: true });
+    // Metro may be running against the workspace while server tests execute.
+    // Removing a directory that Metro has already discovered leaves its
+    // fallback watcher trying to reattach to a missing path and crashes Expo
+    // with ENOENT. Remove the generated files but keep the directory stable;
+    // it is ignored runtime output and the next test overwrites these files.
+    for (const fileName of [
+      'Boston-and-New-York-input.json',
+      'Fallback-Destination-input.json',
+      'output.json',
+      'output.md',
+    ]) {
+      fs.rmSync(path.join(outputDir, fileName), { force: true });
+    }
     jest.clearAllMocks();
   });
 

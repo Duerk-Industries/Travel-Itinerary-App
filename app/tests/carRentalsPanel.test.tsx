@@ -95,10 +95,6 @@ const baseProps = {
   carRentals: [] as CarRental[],
   carDraft: createInitialCarRentalDraft(),
   setCarDraft: jest.fn() as any,
-  carPrepaidOpen: false,
-  setCarPrepaidOpen: jest.fn() as any,
-  carPickupDateRef: { current: null } as any,
-  carDropoffDateRef: { current: null } as any,
   isFollowingMode: false,
   userMembers: [baseMember] as any,
   styles,
@@ -109,7 +105,6 @@ const baseProps = {
   onRemoveCarRental: jest.fn(),
   onVoteCarRental: jest.fn(),
   onRateCarRental: jest.fn(),
-  onOpenCarDatePicker: jest.fn(),
 };
 
 beforeEach(() => {
@@ -126,7 +121,7 @@ describe('CarRentalsPanel', () => {
     );
 
     fireEvent.press(getByText('LAX → SFO'));
-    expect(getByTestId('car-rental-editor-dialog')).toBeTruthy();
+    expect(getByTestId('car-rental-form-modal')).toBeTruthy();
   });
 
   it('does not open the edit dialog on row tap when featureTapToEditTables is disabled', () => {
@@ -137,7 +132,7 @@ describe('CarRentalsPanel', () => {
     );
 
     fireEvent.press(getByText('LAX → SFO'));
-    expect(queryByTestId('car-rental-editor-dialog')).toBeNull();
+    expect(queryByTestId('car-rental-form-modal')).toBeNull();
   });
 
   it('opens the sortable editable car-rental grid', () => {
@@ -154,7 +149,7 @@ describe('CarRentalsPanel', () => {
     expect(queryByTestId('car-rental-delete-car-1')).toBeNull();
     // Add opens a separate editor dialog.
     expect(queryByTestId('car-rental-add')).toBeTruthy();
-    expect(queryByTestId('car-rental-editor-dialog')).toBeNull();
+    expect(queryByTestId('car-rental-form-modal')).toBeNull();
   });
 
   it('renders one row per car rental with a route label + vendor/model/reference sub-line', () => {
@@ -186,7 +181,7 @@ describe('CarRentalsPanel', () => {
   it('opens a separate add dialog and fires onAddCarRental when saved', () => {
     const { getByTestId, getByText } = render(<CarRentalsPanel {...baseProps} />);
     fireEvent.press(getByTestId('car-rental-add'));
-    expect(getByTestId('car-rental-editor-dialog')).toBeTruthy();
+    expect(getByTestId('car-rental-form-modal')).toBeTruthy();
     expect(getByText('Add Car Rental')).toBeTruthy();
     fireEvent.press(getByTestId('car-rental-save'));
     expect(baseProps.onAddCarRental).toHaveBeenCalledTimes(1);
@@ -198,7 +193,7 @@ describe('CarRentalsPanel', () => {
       <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
     );
     fireEvent.press(getByTestId('car-rental-edit-car-1'));
-    expect(getByTestId('car-rental-editor-dialog')).toBeTruthy();
+    expect(getByTestId('car-rental-form-modal')).toBeTruthy();
     expect(getByText('Edit Car Rental')).toBeTruthy();
     fireEvent.press(getByTestId('car-rental-save'));
     expect(baseProps.onUpdateCarRental).toHaveBeenCalledWith('car-1');

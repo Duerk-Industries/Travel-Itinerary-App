@@ -2,7 +2,8 @@
 /// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier, upsertAiAbTestMetric } from '../src/db';
+import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier, upsertAiAbTestMetric, setFeatureFlag } from '../src/db';
+import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 import fs from 'fs';
 import os from 'os';
@@ -1062,6 +1063,247 @@ describe('Admin routes', () => {
       const entry = audit.entries.find((item) => item.actorUserId === adminUserId && item.reason === reason);
       expect(entry).toBeTruthy();
       expect((entry!.afterState as any).certification.providerId).toBe('openai');
+    });
+  });
+
+  describe('AI provider config routes (itinerary generator + dual-LLM ingestion parsing)', () => {
+    const originalOpenAiKey = process.env.OPENAI_API_KEY;
+    const originalGeminiKey = process.env.GEMINI_API_KEY;
+
+    beforeAll(() => {
+      // Two distinct configured+registered providers so LLM A / LLM B can be set independently.
+      process.env.OPENAI_API_KEY = 'test-openai-key';
+      process.env.GEMINI_API_KEY = 'test-gemini-key';
+    });
+
+    afterAll(() => {
+      process.env.OPENAI_API_KEY = originalOpenAiKey;
+      process.env.GEMINI_API_KEY = originalGeminiKey;
+    });
+
+    it('lists the itinerary generator and both ingestion-parser LLM slots as configurable features', async () => {
+      const res = await request(app)
+        .get('/api/admin/ai-config')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      const featureKeys = res.body.features.map((feature: any) => feature.featureKey);
+      expect(featureKeys).toEqual(expect.arrayContaining([
+        'itinerary_generation',
+        'ingestion_llm_extract',
+        'ingestion_llm_extract_secondary',
+      ]));
+    });
+
+    it('lets an admin pick the itinerary generator LLM independently of the two ingestion-parser LLMs', async () => {
+      const reason = `Set itinerary generator provider ${Date.now()}`;
+      await request(app)
+        .patch('/api/admin/ai-config/itinerary_generation')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ provider: 'openai', model: 'gpt-4o-mini', enabled: true, reason })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.config).toEqual(expect.objectContaining({ featureKey: 'itinerary_generation', provider: 'openai', model: 'gpt-4o-mini' }));
+        });
+
+      const audit = await listAuditLog({ action: 'AI_PROVIDER_CONFIG_UPDATED' as any });
+      expect(audit.entries.some((entry) => entry.actorUserId === adminUserId && entry.reason === reason)).toBe(true);
+    });
+
+    it('lets an admin explicitly set LLM A and LLM B for ingestion parsing to two different providers', async () => {
+      const reasonA = `Set ingestion LLM A ${Date.now()}`;
+      const reasonB = `Set ingestion LLM B ${Date.now()}`;
+
+      await request(app)
+        .patch('/api/admin/ai-config/ingestion_llm_extract')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ provider: 'openai', model: 'gpt-4o-mini', enabled: true, reason: reasonA })
+        .expect(200);
+
+      await request(app)
+        .patch('/api/admin/ai-config/ingestion_llm_extract_secondary')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ provider: 'gemini', model: 'gemini-2.5-flash', enabled: true, reason: reasonB })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.config).toEqual(expect.objectContaining({ featureKey: 'ingestion_llm_extract_secondary', provider: 'gemini', model: 'gemini-2.5-flash' }));
+        });
+
+      const res = await request(app)
+        .get('/api/admin/ai-config')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const byFeature = Object.fromEntries(res.body.features.map((feature: any) => [feature.featureKey, feature]));
+      expect(byFeature.ingestion_llm_extract.provider).toBe('openai');
+      expect(byFeature.ingestion_llm_extract_secondary.provider).toBe('gemini');
+    });
+
+    it('rejects an unconfigured/unregistered provider for any of the three AI feature slots', async () => {
+      await request(app)
+        .patch('/api/admin/ai-config/ingestion_llm_extract_secondary')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ provider: 'not_a_real_provider', model: 'whatever', enabled: true, reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('rejects an unknown feature key', async () => {
+      await request(app)
+        .patch('/api/admin/ai-config/not_a_real_feature')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ provider: 'openai', model: 'gpt-4o-mini', enabled: true, reason: 'Should be rejected' })
+        .expect(404);
+    });
+  });
+
+  describe('Runtime settings routes (parser consensus + shadow-parse sample rates)', () => {
+    it('lists the dual-LLM parser-consensus sample rate alongside the existing shadow-parse setting', async () => {
+      const res = await request(app)
+        .get('/api/admin/runtime-settings')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const byKey = Object.fromEntries(res.body.settings.map((setting: any) => [setting.key, setting]));
+      expect(byKey.parser_consensus_sample_rate_percent).toBeTruthy();
+      expect(byKey.shadow_parse_sample_rate_percent).toBeTruthy();
+      // Starting state per the current rollout: all production parsing uses both LLMs.
+      expect(byKey.parser_consensus_sample_rate_percent.value).toBe('100');
+    });
+
+    it('lets an admin lower the percentage of production imports that get dual-LLM consensus parsing', async () => {
+      const reason = `Lower consensus sample rate ${Date.now()}`;
+      await request(app)
+        .patch('/api/admin/runtime-settings')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ settings: { parser_consensus_sample_rate_percent: '25' }, reason })
+        .expect(200)
+        .expect((res) => {
+          const updated = res.body.settings.find((setting: any) => setting.key === 'parser_consensus_sample_rate_percent');
+          expect(updated.value).toBe('25');
+        });
+
+      const audit = await listAuditLog({ action: 'ADMIN_SETTING_UPDATED' as any });
+      expect(audit.entries.some((entry) => entry.actorUserId === adminUserId && entry.reason === reason)).toBe(true);
+
+      const res = await request(app)
+        .get('/api/admin/runtime-settings')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const updated = res.body.settings.find((setting: any) => setting.key === 'parser_consensus_sample_rate_percent');
+      expect(updated.value).toBe('25');
+    });
+
+    it('rejects a negative sample rate', async () => {
+      await request(app)
+        .patch('/api/admin/runtime-settings')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ settings: { parser_consensus_sample_rate_percent: '-5' }, reason: 'Should be rejected' })
+        .expect(400);
+    });
+  });
+
+  describe('Itinerary cache prepopulation routes', () => {
+    const validLocation = { locationId: 'loc_lisbon_test', name: 'Lisbon', locationType: 'city', countryCode: 'PT', timezone: 'Europe/Lisbon' };
+
+    afterEach(async () => {
+      // Restore to the seeded default so other tests in this file aren't affected by ordering.
+      await setFeatureFlag('itinerary_cache_prepopulation', false, adminUserId);
+      clearFeatureFlagCacheForTesting();
+    });
+
+    it('GET status reports the configured caps and the active corpus release', async () => {
+      const res = await request(app)
+        .get('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(res.body).toEqual(expect.objectContaining({
+        maxLocationsPerRun: expect.any(Number),
+        maxBlocksPerLocation: expect.any(Number),
+        blocksByLocation: expect.any(Array),
+      }));
+    });
+
+    it('rejects an empty releaseId', async () => {
+      await request(app)
+        .patch('/api/admin/itinerary-cache/active-release')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ releaseId: '', reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('rejects a prepopulate run with no reason', async () => {
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [validLocation] })
+        .expect(400);
+    });
+
+    it('rejects a prepopulate run with an empty locations array', async () => {
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [], reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('rejects a schema-invalid location entry', async () => {
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [{ locationId: 'loc_bad', locationType: 'not_a_real_type', timezone: 'UTC', name: 'Bad' }], reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('rejects more than 50 candidate locations', async () => {
+      const many = Array.from({ length: 51 }, (_, i) => ({ ...validLocation, locationId: `loc_${i}` }));
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: many, reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('returns 403 when the itinerary_cache_prepopulation feature flag is disabled (the seeded default)', async () => {
+      await setFeatureFlag('itinerary_cache_prepopulation', false, adminUserId);
+      clearFeatureFlagCacheForTesting();
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [validLocation], reason: 'Attempt while disabled' })
+        .expect(403);
+    });
+
+    // Must run before the "set the active corpus release" test below — there's no "unset" route
+    // by design (a release id should never silently disappear once configured), so this is the
+    // only point in the suite where an admin console pointed at a fresh environment has none set.
+    it('returns 409 when the flag is enabled but no active corpus release is configured yet', async () => {
+      await setFeatureFlag('itinerary_cache_prepopulation', true, adminUserId);
+      clearFeatureFlagCacheForTesting();
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [validLocation], reason: 'Attempt with no release configured' })
+        .expect(409);
+    });
+
+    it('lets an admin set the active corpus release, with audit logging', async () => {
+      const reason = `Set active corpus release ${Date.now()}`;
+      await request(app)
+        .patch('/api/admin/itinerary-cache/active-release')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ releaseId: 'release-route-test', reason })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.setting).toEqual(expect.objectContaining({ key: 'ACTIVE_CORPUS_RELEASE_ID', value: 'release-route-test' }));
+        });
+
+      const audit = await listAuditLog({ action: 'ADMIN_SETTING_UPDATED' as any });
+      expect(audit.entries.some((entry) => entry.actorUserId === adminUserId && entry.reason === reason)).toBe(true);
+
+      const status = await request(app)
+        .get('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(status.body.activeCorpusReleaseId).toBe('release-route-test');
     });
   });
 

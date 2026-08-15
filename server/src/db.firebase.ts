@@ -76,6 +76,7 @@ import { normalizePackingLabel } from './utils/packingListNormalize';
 import { buildPackingListDisplayGroups } from './utils/packingListDisplay';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
+import { ActivityBlockSchema, LocationProfileSchema, type ActivityBlock, type LocationProfile } from './schemas/itineraryCacheSchemas';
 
 let app: App | null = null;
 
@@ -4373,7 +4374,7 @@ export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBl
 };
 
 const toItineraryPlanCacheEntry = (id: string, data: any): ItineraryPlanCacheEntry | null => {
-  if (!data?.cacheKey || !['route', 'day'].includes(data.stage) || !data.signature || !data.dependencyFingerprint) return null;
+  if (!data?.cacheKey || !['route', 'day', 'binding_plan'].includes(data.stage) || !data.signature || !data.dependencyFingerprint) return null;
   // payload and fragments are stored as JSON strings because they can contain
   // nested arrays (e.g. PromptDay.it), which Firestore rejects.
   let payload = data.payload;
@@ -4393,7 +4394,18 @@ const toItineraryPlanCacheEntry = (id: string, data: any): ItineraryPlanCacheEnt
       fragments = [];
     }
   }
-  return { id, cacheKey: String(data.cacheKey), stage: data.stage, signature: String(data.signature), dependencyFingerprint: String(data.dependencyFingerprint), payload, fragments: Array.isArray(fragments) ? fragments : [], expiresAt: String(data.expiresAt), updatedAt: String(data.updatedAt ?? nowIso()) };
+  return {
+    id,
+    cacheKey: String(data.cacheKey),
+    stage: data.stage,
+    signature: String(data.signature),
+    dependencyFingerprint: String(data.dependencyFingerprint),
+    payload,
+    compression: data.compression,
+    fragments: Array.isArray(fragments) ? fragments : [],
+    expiresAt: String(data.expiresAt),
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
 };
 
 export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<ItineraryPlanCacheEntry | null> => {
@@ -4412,6 +4424,7 @@ export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEnt
     signature: entry.signature,
     dependencyFingerprint: entry.dependencyFingerprint,
     payload: JSON.stringify(entry.payload),
+    compression: entry.compression ?? 'none',
     fragments: JSON.stringify(entry.fragments ?? []),
     expiresAt: entry.expiresAt,
     updatedAt: nowIso(),
@@ -4420,6 +4433,74 @@ export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEnt
   const parsed = toItineraryPlanCacheEntry(saved.id, saved.data());
   if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
   return parsed;
+};
+
+// ---------------------------------------------------------------------------
+// Itinerary cache v2 corpus: authored ActivityBlocks and LocationProfiles.
+// Mirrors db.postgres.ts's itinerary_blocks / itinerary_location_profiles
+// tables as Firestore collections keyed by block_id / location_id.
+// ---------------------------------------------------------------------------
+
+export const upsertItineraryCacheBlock = async (block: ActivityBlock, releaseId: string): Promise<void> => {
+  const parsed = ActivityBlockSchema.parse(block);
+  await getDb().collection('itinerary_blocks').doc(parsed.block_id).set({
+    locationId: parsed.location_id,
+    zoneId: parsed.zone_id,
+    role: parsed.role,
+    category: parsed.category,
+    title: parsed.title,
+    payloadJson: JSON.stringify(parsed),
+    releaseId,
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const listItineraryCacheBlocksForLocation = async (locationId: string, releaseId?: string): Promise<ActivityBlock[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('itinerary_blocks').where('locationId', '==', locationId);
+  if (releaseId) query = query.where('releaseId', '==', releaseId);
+  const snap = await query.get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data();
+      const raw = typeof data.payloadJson === 'string' ? JSON.parse(data.payloadJson) : data.payloadJson;
+      return ActivityBlockSchema.safeParse(raw);
+    })
+    .filter((result): result is { success: true; data: ActivityBlock } => result.success)
+    .map((result) => result.data)
+    .sort((a, b) => a.block_id.localeCompare(b.block_id));
+};
+
+export const countItineraryCacheBlocksByLocation = async (): Promise<Array<{ locationId: string; releaseId: string; blockCount: number }>> => {
+  const snap = await getDb().collection('itinerary_blocks').get();
+  const counts = new Map<string, { locationId: string; releaseId: string; blockCount: number }>();
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    const key = `${data.locationId}::${data.releaseId}`;
+    const existing = counts.get(key);
+    if (existing) existing.blockCount += 1;
+    else counts.set(key, { locationId: String(data.locationId ?? ''), releaseId: String(data.releaseId ?? ''), blockCount: 1 });
+  }
+  return Array.from(counts.values()).sort((a, b) => a.locationId.localeCompare(b.locationId));
+};
+
+export const upsertItineraryCacheLocationProfile = async (profile: LocationProfile, releaseId: string): Promise<void> => {
+  const parsed = LocationProfileSchema.parse(profile);
+  await getDb().collection('itinerary_location_profiles').doc(parsed.location_id).set({
+    name: parsed.name,
+    locationType: parsed.location_type,
+    payloadJson: JSON.stringify(parsed),
+    releaseId,
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const getItineraryCacheLocationProfile = async (locationId: string): Promise<LocationProfile | null> => {
+  const doc = await getDb().collection('itinerary_location_profiles').doc(locationId).get();
+  if (!doc.exists) return null;
+  const data = doc.data() ?? {};
+  const raw = typeof data.payloadJson === 'string' ? JSON.parse(data.payloadJson) : data.payloadJson;
+  const parsed = LocationProfileSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 };
 
 export const getAttractionDurationMetadata = async (
@@ -5206,8 +5287,63 @@ export const deleteTrait = async (userId: string, traitId: string): Promise<void
 };
 
 export const refreshAirportsDaily = async (): Promise<void> => {
-  // Firestore adapter leaves airport ingestion to external scripts; noop to avoid network calls here.
-  return;
+  let data: any[] = [];
+  try {
+    data = await downloadAirportDatasetForDailyRefresh();
+  } catch (err) {
+    logError('Failed to download airports dataset, falling back to local file', err);
+    try {
+      const localPath = path.resolve(__dirname, '../data/airport_codes.json');
+      if (fs.existsSync(localPath)) {
+        data = JSON.parse(fs.readFileSync(localPath, 'utf8'));
+        logInfo(`[airports] Loaded ${Array.isArray(data) ? data.length : 0} airports from local fallback`);
+      }
+    } catch (localErr) {
+      logError('Failed to load local airports fallback', localErr);
+      return;
+    }
+  }
+
+  const filtered = normalizeAirportDataset(data);
+  if (!filtered.length) {
+    logError('[airports] no records to process', null);
+    return;
+  }
+
+  const db = getDb();
+  const chunkSize = 400; // stay under Firestore's 500-write batch limit
+  for (let i = 0; i < filtered.length; i += chunkSize) {
+    const chunk = filtered.slice(i, i + chunkSize);
+    const batch = db.batch();
+    for (const airport of chunk) {
+      const search = Array.from(
+        new Set(
+          [
+            airport.iata_code.toLowerCase(),
+            airport.city.toLowerCase(),
+            ...airport.name.toLowerCase().split(/\s+/),
+          ].filter(Boolean)
+        )
+      );
+      batch.set(db.collection('airports').doc(airport.iata_code), {
+        iata_code: airport.iata_code,
+        name: airport.name,
+        city: airport.city,
+        country: airport.country,
+        lat: airport.lat,
+        lng: airport.lng,
+        label: airport.label,
+        search,
+        updatedAt: nowIso(),
+      });
+    }
+    try {
+      await batch.commit();
+    } catch (err) {
+      logError('Failed to refresh airports batch', err);
+    }
+  }
+  logInfo(`[airports] Refreshed ${filtered.length} airports in Firestore`);
 };
 
 export const searchUsersByEmail = async (query: string): Promise<User[]> => {
@@ -7053,17 +7189,19 @@ export const atomicIncrementApiUsageIfUnderLimit = async (params: {
   scope: 'overall' | 'caller';
   windowKey: string;
   limit: number;
+  units?: number;
 }): Promise<{ allowed: boolean; newCount: number }> => {
   const db = getDb();
+  const units = Math.max(1, Math.floor(params.units ?? 1));
   const docId = `${params.scope}_${params.provider}_${params.caller}_${params.windowKey}`;
   const ref = db.collection('api_usage_counters').doc(docId);
   return db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
     const current = doc.exists ? Number(doc.data()!.count ?? 0) : 0;
-    if (current >= params.limit) {
+    if (current + units > params.limit) {
       return { allowed: false, newCount: current };
     }
-    const nextCount = current + 1;
+    const nextCount = current + units;
     tx.set(
       ref,
       {
@@ -7102,6 +7240,63 @@ export const listApiUsageCounters = async (): Promise<
     };
   });
 };
+
+export const reserveCapacity = async (params: {
+  id: string;
+  provider: string;
+  caller: string;
+  units: number;
+  limit: number;
+  expiresAt: string;
+}): Promise<{ allowed: boolean; current: number }> => {
+  const db = getDb();
+  const reservationsColl = db.collection('capacity_reservations');
+
+  return db.runTransaction(async (tx) => {
+    // Firestore doesn't have a built-in SUM. For v1, we fetch all active reservations
+    // for the provider and sum them in memory. In a high-traffic app, this would
+    // use a distributed counter or a summary document.
+    const committedSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', true));
+    const activeSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', false).where('expiresAt', '>', new Date().toISOString()));
+
+    let current = 0;
+    committedSnap.docs.forEach(doc => { current += doc.data().units; });
+    activeSnap.docs.forEach(doc => { current += doc.data().units; });
+
+    if (current + params.units > params.limit) {
+      return { allowed: false, current };
+    }
+
+    const ref = reservationsColl.doc(params.id);
+    tx.set(ref, {
+      provider: params.provider,
+      caller: params.caller,
+      units: params.units,
+      expiresAt: params.expiresAt,
+      committed: false,
+      createdAt: nowIso(),
+    });
+
+    return { allowed: true, current: current + params.units };
+  });
+};
+
+export const commitCapacity = async (reservationId: string, actualUnits?: number): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('capacity_reservations').doc(reservationId);
+  const update: any = { committed: true };
+  if (actualUnits !== undefined) update.units = actualUnits;
+  await ref.update(update);
+};
+
+export const commitCapacityReservation = commitCapacity;
+
+export const releaseCapacity = async (reservationId: string): Promise<void> => {
+  const db = getDb();
+  await db.collection('capacity_reservations').doc(reservationId).delete();
+};
+
+export const releaseCapacityReservation = releaseCapacity;
 
 export const resetApiUsageCounters = async (): Promise<void> => {
   const db = getDb();
@@ -8360,7 +8555,8 @@ export const deactivateOldPricesForPlan = async (
   await batch.commit();
 };
 
-import { mergeAirportSearchResults, searchBundledAirportDataset } from './services/airportCatalog';
+import { mergeAirportSearchResults, normalizeAirportDataset, searchBundledAirportDataset } from './services/airportCatalog';
+import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
 
 // ---------------------------------------------------------------------------
 // Packing lists v2 (Firestore provider)

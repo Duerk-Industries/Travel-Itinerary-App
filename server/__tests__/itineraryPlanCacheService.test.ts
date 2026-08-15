@@ -4,6 +4,10 @@ import {
 } from '../src/services/itineraryPlanCacheService';
 
 jest.mock('../src/db', () => ({ getItineraryPlanCacheEntry: jest.fn(), upsertItineraryPlanCacheEntry: jest.fn(async (entry) => entry) }));
+// The limiter has its own durable-counter tests. Keep this unit suite focused
+// on cache behavior and prevent the partial DB mock from turning writes into
+// fail-closed null results.
+jest.mock('../src/apis/usageLimiter', () => ({ reserveApiUsageOrThrow: jest.fn(async () => undefined) }));
 const db = jest.requireMock('../src/db') as { getItineraryPlanCacheEntry: jest.Mock; upsertItineraryPlanCacheEntry: jest.Mock };
 
 const base = { destinations: ['Paris', 'Lyon'], duration: 7, pace: 'B', comfort: 'M', mobility: 'M', car: 'P', interactionStyle: 'mixed', budgetMin: 1000, budgetMax: 2500, startDate: '2026-08-01', endDate: '2026-08-07', startHub: 'BOS', endHub: 'CDG', weights: { culture: 50 } };

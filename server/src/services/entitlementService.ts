@@ -156,21 +156,40 @@ export const applyStartupFeatureFlagOverrides = async (): Promise<void> => {
 // Simple 60-second in-process cache — DB is authoritative, cache reduces per-request load.
 const flagCache = new Map<string, { enabled: boolean; expiresAt: number }>();
 const FLAG_CACHE_TTL_MS = 60_000;
+const FAIL_CLOSED_FLAGS = new Set([
+  'packing_lists_v2',
+  'itinerary_block_cache',
+  'itinerary_block_cache_reads',
+  'itinerary_block_cache_writes',
+  'itinerary_block_cache_llm_binding',
+  'itinerary_block_cache_stale_revalidate',
+  'itinerary_corpus_authoring',
+  'itinerary_corpus_promotion',
+  'itinerary_cache_prepopulation',
+  'itinerary_practical_notes',
+  'itinerary_road_trip_lite',
+  'itinerary_day_variants',
+  'itinerary_timed_route_days',
+  'itinerary_live_route_conditions',
+  'itinerary_live_weather_variants',
+  'itinerary_anchor_schedule_verification',
+]);
 
 /**
  * Returns whether a feature flag is enabled.
  * Checks DB with a 60-second in-process TTL cache.
- * Returns true for unknown flags (fail-open) — a missing row means not explicitly disabled.
+ * Preserves the platform's fail-open behavior for established flags, while
+ * rollout-sensitive cache/provider flags fail closed when their DB row is absent.
  */
-export const isFeatureEnabled = async (key: string): Promise<boolean> => {
+export const isFeatureEnabled = async (key: string, _userId?: string, _role?: string): Promise<boolean> => {
   const cached = flagCache.get(key);
   if (cached && Date.now() < cached.expiresAt) {
     return cached.enabled;
   }
   const flag = await getFeatureFlag(key);
-  // v2 packing lists are an explicit rollout flag; an absent row must not
-  // accidentally expose the new write semantics on an older deployment.
-  const enabled = flag?.enabled ?? (key === 'packing_lists_v2' ? false : true);
+  // New write/provider features are explicit rollout flags; an absent row
+  // must not accidentally expose them on an older deployment.
+  const enabled = flag?.enabled ?? (FAIL_CLOSED_FLAGS.has(key) ? false : true);
   flagCache.set(key, { enabled, expiresAt: Date.now() + FLAG_CACHE_TTL_MS });
   return enabled;
 };

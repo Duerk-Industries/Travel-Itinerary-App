@@ -6,6 +6,7 @@ import { requeueDeadLetterImportJob } from '../ingestion/orchestrator';
 import { writeAuditLog } from '../db';
 import { logError } from '../logger';
 import type { TokenPayload } from '../auth';
+import { getShadowParseSummary } from '../ai/analytics/shadowParseSummary';
 
 const router = Router();
 
@@ -21,6 +22,20 @@ router.get('/metrics', async (_req, res) => {
   if (!(await ensureEnabled(res))) return;
   const snapshot = await getIngestionObservabilitySnapshot();
   res.json(snapshot);
+});
+
+router.get('/shadow-parse-summary', async (req, res) => {
+  if (!(await ensureEnabled(res))) return;
+  try {
+    const dateFrom = typeof req.query.dateFrom === 'string' ? req.query.dateFrom : undefined;
+    const dateTo = typeof req.query.dateTo === 'string' ? req.query.dateTo : undefined;
+    const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
+    const summary = await getShadowParseSummary({ dateFrom, dateTo, limit });
+    res.json(summary);
+  } catch (err) {
+    logError('[admin][ingestion] failed to summarize shadow-parse captures', err);
+    res.status(500).json({ error: 'Failed to summarize shadow-parse captures' });
+  }
 });
 
 router.get('/retry-config', async (_req, res) => {

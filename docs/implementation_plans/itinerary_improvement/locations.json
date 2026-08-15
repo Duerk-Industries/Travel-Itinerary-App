@@ -1,0 +1,5 @@
+[
+  {"location_id":"loc_lisbon","name":"Lisbon","location_type":"city","priority":90},
+  {"location_id":"loc_glacier","name":"Glacier NP","location_type":"national_park","priority":60},
+  {"location_id":"loc_porto","name":"Porto","location_type":"city","priority":40}
+]

@@ -44,6 +44,16 @@ import { injectMustSeesIntoCachedFragments } from './fragmentInjectorService';
 import { renderAttractionPods } from './podBasedShortlisterService';
 import { buildArrivalDepartureFacts, renderLogisticsFactBlock, type LogisticsFact } from './arrivalDepartureRulesService';
 import { trimToSentences } from '../utils/sentenceTrim';
+import { isFeatureEnabled } from './entitlementService';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
+import {
+  buildRoadTripLogisticsOverlay,
+  type RoadTripHints,
+  renderRoadTripSummaryMarkdown,
+  type RoadTripPlannerInput,
+} from './itineraryRoadTripService';
+import type { TripLogisticsOverlay } from '../schemas/itineraryCacheSchemas';
 import {
   ITINERARY_STRUCTURE_VALIDATOR_VERSION,
   validateAndRepairItineraryStructure,
@@ -272,6 +282,7 @@ export type ItineraryPromptPlanResult = {
   preferenceContract: NormalizedPreferenceContract;
   evaluation: ItineraryBaselineMetrics;
   cacheUsage: { routeHit: boolean; dayHit: boolean };
+  roadTrip?: TripLogisticsOverlay;
   /** Bounded, deterministic candidates for post-response affiliate enrichment. */
   getYourGuideCandidates?: GetYourGuideCandidate[];
 };
@@ -320,6 +331,7 @@ export type ItineraryPromptPlanServiceInput = {
   tripStartMonth?: number | null;
   tripStartYear?: number | null;
   tripIdSeed?: string;
+  roadTripHints?: RoadTripHints;
   captureId?: string;
   /** Fired synchronously as generation moves between named prompt-pipeline
    * stages, so a caller (e.g. the async job runner) can surface live
@@ -342,6 +354,47 @@ type PromptBundle = {
   normSchema: string;
   step1Schema: string;
   step2Schema: string;
+};
+
+const buildRoadTripOverlayIfEnabled = async (
+  input: ItineraryPromptPlanServiceInput,
+  generatedItems: ItineraryGeneratedItems,
+): Promise<TripLogisticsOverlay | undefined> => {
+  // The provider-free overlay is intentionally fail-closed when its flag or
+  // required storage-meter configuration is unavailable. It must never make
+  // the existing itinerary response fail or trigger an uncapped fallback.
+  const enabled = await isFeatureEnabled('itinerary_road_trip_lite').catch(() => false);
+  if (!enabled) return undefined;
+
+  try {
+    await reserveApiUsageOrThrow({
+      provider: 'ITINERARY_CACHE_STORAGE',
+      caller: 'ROAD_TRIP_PRIVATE_READ',
+      units: 1,
+      requireConfiguredLimit: true,
+    });
+    await recordProviderRequestCost({ provider: 'ITINERARY_CACHE_STORAGE', costPerRequestUsd: 0 });
+    const [enableTimedRoutes, enableDayVariants] = await Promise.all([
+      isFeatureEnabled('itinerary_timed_route_days').catch(() => false),
+      isFeatureEnabled('itinerary_day_variants').catch(() => false),
+    ]);
+    const plannerInput: RoadTripPlannerInput = {
+      destinations: input.destinations,
+      startDate: input.tripStartDate,
+      endDate: input.tripEndDate,
+      lodgings: generatedItems.lodgings,
+      transfers: generatedItems.transfers,
+      activities: generatedItems.activities,
+      carRentals: generatedItems.carRentals,
+      ...(input.roadTripHints ?? {}),
+      enableTimedRoutes,
+      enableDayVariants,
+    };
+    return buildRoadTripLogisticsOverlay(plannerInput);
+  } catch (error) {
+    logInfo(`[itinerary] road-trip overlay skipped: ${error instanceof Error ? error.message : String(error)}`);
+    return undefined;
+  }
 };
 
 const ACTIVITY_CODE_TO_LONG: Record<PromptActivityCode, ActivityType> = {
@@ -3580,7 +3633,7 @@ const runGenerateItineraryViaPromptPlan = async (
   logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
   const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
   const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
-  const planMarkdown = safeRender.markdown;
+  let planMarkdown = safeRender.markdown;
   const details = buildDetails(finalItinerary, normalized.w as any, transferNotesByDay, durationMetadataByName, whyFitsByName, destinationTransferTimingByDate);
   const safeDetails = details.length
     ? details
@@ -3611,6 +3664,11 @@ const runGenerateItineraryViaPromptPlan = async (
   items.carRentals = items.carRentals.map((rental) =>
     rescopeDayTripCarRental(rental, finalItinerary, normalized.car, entryByName)
   );
+  const roadTrip = await buildRoadTripOverlayIfEnabled(input, items);
+  if (roadTrip) {
+    const roadTripSummary = renderRoadTripSummaryMarkdown(roadTrip);
+    if (roadTripSummary) planMarkdown = `${planMarkdown}\n\n${roadTripSummary}`.trim();
+  }
   const getYourGuideCandidates = buildGetYourGuideItineraryCandidates({
     activities: items.activities,
     destinations: promptRequest.d,
@@ -3681,6 +3739,8 @@ const runGenerateItineraryViaPromptPlan = async (
       usedRenderFallback: safeRender.fallbackUsed,
       evaluation,
       fatigueIssues: fatigueManaged.issues,
+      roadTripEnabled: Boolean(roadTrip),
+      roadTripConflictCount: roadTrip?.conflicts.length ?? 0,
     },
   });
   persistItineraryGenerationMetrics({
@@ -3718,6 +3778,7 @@ const runGenerateItineraryViaPromptPlan = async (
     preferenceContract,
     evaluation,
     cacheUsage,
+    ...(roadTrip ? { roadTrip } : {}),
     ...(selectedGetYourGuide.selected.length ? { getYourGuideCandidates: selectedGetYourGuide.selected } : {}),
   };
 };

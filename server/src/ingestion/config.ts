@@ -106,6 +106,7 @@ export const INGESTION_FEATURE_FLAGS = {
   gmailImport: 'feature_ingest_gmail_import',
   adminObservability: 'feature_ingest_admin_observability',
   localVirusScanStub: 'feature_ingest_local_virus_scan_stub',
+  parserConsensus: 'ingestion_dual_llm_consensus',
 } as const;
 
 export const INGESTION_USAGE_KEYS = {

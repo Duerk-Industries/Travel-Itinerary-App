@@ -314,6 +314,21 @@ export const getItineraryPlanCacheEntry = async (
 export const upsertItineraryPlanCacheEntry = async (
   ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryPlanCacheEntry']>
 ) => adapter().upsertItineraryPlanCacheEntry(...args);
+export const upsertItineraryCacheBlock = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryCacheBlock']>
+) => adapter().upsertItineraryCacheBlock(...args);
+export const listItineraryCacheBlocksForLocation = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listItineraryCacheBlocksForLocation']>
+) => adapter().listItineraryCacheBlocksForLocation(...args);
+export const countItineraryCacheBlocksByLocation = async (
+  ...args: Parameters<ReturnType<typeof adapter>['countItineraryCacheBlocksByLocation']>
+) => adapter().countItineraryCacheBlocksByLocation(...args);
+export const upsertItineraryCacheLocationProfile = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryCacheLocationProfile']>
+) => adapter().upsertItineraryCacheLocationProfile(...args);
+export const getItineraryCacheLocationProfile = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryCacheLocationProfile']>
+) => adapter().getItineraryCacheLocationProfile(...args);
 export const getAttractionDurationMetadata = async (
   ...args: Parameters<ReturnType<typeof adapter>['getAttractionDurationMetadata']>
 ): Promise<AttractionDurationMetadata | null> => adapter().getAttractionDurationMetadata(...args);
@@ -532,9 +547,22 @@ export const incrementApiCostCounter = async (...args: Parameters<ReturnType<typ
   adapter().incrementApiCostCounter(...args);
 export const getApiUsageCount = async (...args: Parameters<ReturnType<typeof adapter>['getApiUsageCount']>) =>
   adapter().getApiUsageCount(...args);
-export const atomicIncrementApiUsageIfUnderLimit = async (
-  ...args: Parameters<ReturnType<typeof adapter>['atomicIncrementApiUsageIfUnderLimit']>
-) => adapter().atomicIncrementApiUsageIfUnderLimit(...args);
+export const atomicIncrementApiUsageIfUnderLimit = async (params: {
+  provider: string;
+  caller: string;
+  scope: 'overall' | 'caller';
+  windowKey: string;
+  limit: number;
+  units?: number;
+}) => adapter().atomicIncrementApiUsageIfUnderLimit(params);
+
+export const reserveCapacity = async (...args: Parameters<ReturnType<typeof adapter>['reserveCapacity']>) =>
+  adapter().reserveCapacity(...args);
+export const commitCapacity = async (...args: Parameters<ReturnType<typeof adapter>['commitCapacity']>) =>
+  adapter().commitCapacity(...args);
+export const releaseCapacity = async (...args: Parameters<ReturnType<typeof adapter>['releaseCapacity']>) =>
+  adapter().releaseCapacity(...args);
+
 export const listApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['listApiUsageCounters']>) =>
   adapter().listApiUsageCounters(...args);
 export const resetApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiUsageCounters']>) =>

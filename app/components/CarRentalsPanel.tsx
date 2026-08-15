@@ -1,20 +1,15 @@
 import React from 'react';
-import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
 import { buildCarRentalFromDraft, createInitialCarRentalDraft, type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import type { GroupMemberOption } from '../tabs/transfers';
-import { sanitizeCostInput } from '../utils/sanitizeCost';
-import { toWebStyle } from '../utils/webStyle';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
-  ITINERARY_STATUSES,
   LEGACY_ITINERARY_STATUS,
   normalizeItineraryStatus,
 } from '../utils/itineraryStatus';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
-import DraftTextInput from './DraftTextInput';
-import DialogShell from './DialogShell';
-import SelectField, { type SelectFieldOption } from './SelectField';
+import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
 import type { AppTheme } from '../theme/theme';
 
@@ -24,12 +19,6 @@ export type CarRentalsPanelProps = {
   /** Form draft for the "Add Car Rental" section. */
   carDraft: CarRentalDraft;
   setCarDraft: React.Dispatch<React.SetStateAction<CarRentalDraft>>;
-  /** Prepaid dropdown visibility — lifted so the caller can coordinate with outside-click handling if needed. */
-  carPrepaidOpen: boolean;
-  setCarPrepaidOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  /** Refs into the native <input type=date> fields on web. Used to fire `.showPicker()`. */
-  carPickupDateRef: React.RefObject<HTMLInputElement | null>;
-  carDropoffDateRef: React.RefObject<HTMLInputElement | null>;
   /** When true the form + action buttons are hidden (read-only follower view). */
   isFollowingMode: boolean;
   /** User-type (non-guest, non-removed) group members — feeds the For/Paid By chip lists. */
@@ -50,8 +39,6 @@ export type CarRentalsPanelProps = {
   onVoteCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
   /** Post-trip rating (±1). */
   onRateCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
-  /** Open the date picker for either pickup or drop-off. On web this fires `ref.showPicker()`; on native it toggles the NativeDateTimePicker that lives in the parent. */
-  onOpenCarDatePicker: (field: 'pickup' | 'dropoff') => void;
   theme?: AppTheme;
   /** Kill switch for row-tap-to-edit + sticky identity/actions columns
    * (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`. */
@@ -62,20 +49,16 @@ export type CarRentalsPanelProps = {
  * Car Rentals panel — table of current rentals + an add-rental form. Lives
  * inside `renderSharedPageScroll` in App.tsx and was extracted verbatim as
  * part of the Priority 4 App.tsx decomposition. Presentational only: all
- * state lives in the parent and is pushed in via props. The native
- * DateTimePicker fallback (shown on iOS/Android when `Platform.OS !== 'web'`)
- * is intentionally NOT rendered here — it belongs to the parent component so
- * that the picker sits at the root of the trip screen and not nested inside
- * this panel's ScrollView.
+ * state lives in the parent and is pushed in via props. The add/edit dialog
+ * itself is `CarRentalEditForm` (shared with the Overview day-detail quick
+ * edit) and is fully self-contained, including its own native date-picker
+ * fallback — it renders inside its own top-level `Modal`, so it isn't
+ * affected by this panel's table ScrollView nesting.
  */
 const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   carRentals,
   carDraft,
   setCarDraft,
-  carPrepaidOpen: _carPrepaidOpen,
-  setCarPrepaidOpen: _setCarPrepaidOpen,
-  carPickupDateRef,
-  carDropoffDateRef,
   isFollowingMode,
   userMembers,
   styles,
@@ -86,7 +69,6 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   onRemoveCarRental,
   onVoteCarRental,
   onRateCarRental,
-  onOpenCarDatePicker,
   theme,
   featureTapToEditTables = true,
 }) => {
@@ -102,10 +84,6 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   const [gridMessage, setGridMessage] = React.useState<string | null>(null);
   const [gridSaving, setGridSaving] = React.useState(false);
   const [carSort, setCarSort] = React.useState<{ key: string | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
-  const prepaidOptions: SelectFieldOption[] = [
-    { label: 'Yes', value: 'Yes' },
-    { label: 'No', value: 'No' },
-  ];
 
   const openAddDialog = () => {
     setCarDraft(createInitialCarRentalDraft());
@@ -205,201 +183,6 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     } catch (error: any) { setGridMessage(error?.message || 'Unable to save car rental changes.'); }
     finally { setGridSaving(false); }
   };
-
-  const renderEditorFields = () => (
-    <>
-      <ScrollView style={styles.carEditorScroll ?? { maxHeight: 520 }} contentContainerStyle={styles.carEditorContent ?? { gap: 10 }}>
-        <View style={styles.carFormGrid}>
-          <DraftTextInput
-            style={[styles.input, styles.carFormField]}
-            placeholder="Pick up location"
-            value={carDraft.pickupLocation}
-            onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
-            commitOnBlur={false}
-          />
-          <View style={[styles.dateInputWrap, styles.carFormField]}>
-            {Platform.OS === 'web' ? (
-              <input
-                ref={carPickupDateRef as any}
-                type="date"
-                value={carDraft.pickupDate}
-                onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-              />
-            ) : (
-              <TouchableOpacity
-                style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
-                onPress={() => onOpenCarDatePicker('pickup')}
-              >
-                <Text style={styles.cellText}>{carDraft.pickupDate || 'YYYY-MM-DD'}</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.dateIcon} onPress={() => onOpenCarDatePicker('pickup')}>
-              <Text style={styles.selectCaret}>📅</Text>
-            </TouchableOpacity>
-          </View>
-          <DraftTextInput
-            style={[styles.input, styles.carFormField]}
-            placeholder="Drop off location"
-            value={carDraft.dropoffLocation}
-            onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
-            commitOnBlur={false}
-          />
-          <View style={[styles.dateInputWrap, styles.carFormField]}>
-            {Platform.OS === 'web' ? (
-              <input
-                ref={carDropoffDateRef as any}
-                type="date"
-                value={carDraft.dropoffDate}
-                onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-              />
-            ) : (
-              <TouchableOpacity
-                style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
-                onPress={() => onOpenCarDatePicker('dropoff')}
-              >
-                <Text style={styles.cellText}>{carDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.dateIcon} onPress={() => onOpenCarDatePicker('dropoff')}>
-              <Text style={styles.selectCaret}>📅</Text>
-            </TouchableOpacity>
-          </View>
-          {Platform.OS === 'web' ? (
-            <select
-              value={normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
-              onChange={(e) => setCarDraft((p) => ({ ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-              style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-            >
-              {ITINERARY_STATUSES.map((opt) => (
-                <option key={`car-status-${opt}`} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
-          )}
-          <DraftTextInput
-            style={[styles.input, styles.carFormField]}
-            placeholder="Reference"
-            value={carDraft.reference}
-            onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
-            commitOnBlur={false}
-          />
-          <DraftTextInput
-            style={[styles.input, styles.carFormField]}
-            placeholder="Vendor"
-            value={carDraft.vendor}
-            onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
-            commitOnBlur={false}
-          />
-          <SelectField
-            styles={styles}
-            options={prepaidOptions}
-            value={carDraft.prepaid}
-            placeholder="Prepaid? Select Yes or No"
-            title="Prepaid status"
-            style={styles.carFormField}
-            webStyle={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-            listStyle={styles.prepaidDropdownList}
-            onChange={(value) => setCarDraft((p) => ({ ...p, prepaid: value }))}
-          />
-          <DraftTextInput
-            style={[styles.input, styles.carFormField]}
-            placeholder="Cost"
-            keyboardType="numeric"
-            value={carDraft.cost}
-            onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
-            commitOnBlur={false}
-          />
-          <DraftTextInput
-            style={[styles.input, styles.carFormField]}
-            placeholder="Car model"
-            value={carDraft.model}
-            onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
-            commitOnBlur={false}
-          />
-          <DraftTextInput
-            style={[styles.input, styles.carFormWideField, styles.cellTextWrap]}
-            placeholder="Notes"
-            value={carDraft.notes}
-            onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
-            commitOnBlur={false}
-            multiline
-          />
-        </View>
-        <View style={styles.carMemberRow}>
-          <View style={[styles.carMemberField, { flex: 1 }]}>
-            <Text style={styles.modalLabelSmall}>For</Text>
-            <View style={styles.payerChips}>
-              {carDraft.travelerIds.map((id) => (
-                <View key={`car-traveler-${id}`} style={styles.payerChip}>
-                  <Text style={styles.cellText}>{payerName(id)}</Text>
-                  <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
-                    <Text style={styles.removeText}>x</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-            <View style={styles.payerOptions}>
-              {userMembers
-                .filter((m) => !carDraft.travelerIds.includes(m.id))
-                .map((m) => (
-                  <TouchableOpacity
-                    key={`car-traveler-add-${m.id}`}
-                    style={styles.smallButton}
-                    onPress={() =>
-                      setCarDraft((prev) => ({
-                        ...prev,
-                        travelerIds: [...prev.travelerIds, m.id],
-                      }))
-                    }
-                  >
-                    <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
-          </View>
-          <View style={[styles.carMemberField, { flex: 1 }]}>
-            <Text style={styles.modalLabelSmall}>Paid By</Text>
-            <View style={styles.payerChips}>
-              {carDraft.paidBy.map((id) => (
-                <View key={id} style={styles.payerChip}>
-                  <Text style={styles.cellText}>{payerName(id)}</Text>
-                  <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                    <Text style={styles.removeText}>x</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-            <View style={styles.payerOptions}>
-              {userMembers
-                .filter((m) => !carDraft.paidBy.includes(m.id))
-                .map((m) => (
-                  <TouchableOpacity
-                    key={m.id}
-                    style={styles.smallButton}
-                    onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                  >
-                    <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-      <View style={styles.tableFooter ?? styles.carMemberRow}>
-        <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeEditor} testID="car-rental-cancel">
-          <Text style={styles.dangerButtonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={saveEditor} testID="car-rental-save">
-          <Text style={styles.buttonText}>Save</Text>
-        </TouchableOpacity>
-      </View>
-    </>
-  );
 
   return (
     <View style={styles.card} testID="car-rentals-panel">
@@ -528,17 +311,18 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
       </HorizontalTableScroll>
       </> : null}
 
-      <DialogShell
-        visible={editorOpen}
-        title={editingCarId ? 'Edit Car Rental' : 'Add Car Rental'}
-        styles={styles}
-        onClose={closeEditor}
-        testID="car-rental-editor-dialog"
-        useNativeModal
-        cardStyle={[styles.confirmModal, styles.carEditorDialog]}
-      >
-        {renderEditorFields()}
-      </DialogShell>
+      {editorOpen ? (
+        <CarRentalEditForm
+          draft={carDraft}
+          onChange={setCarDraft}
+          onSave={saveEditor}
+          onCancel={closeEditor}
+          isNew={!editingCarId}
+          members={userMembers}
+          styles={styles}
+          theme={theme}
+        />
+      ) : null}
     </View>
   );
 };

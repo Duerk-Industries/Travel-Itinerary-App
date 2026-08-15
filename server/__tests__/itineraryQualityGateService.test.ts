@@ -19,6 +19,7 @@ const metrics = (overrides: Partial<ItineraryBaselineMetrics> = {}): ItineraryBa
   latencyP50Ms: 100,
   latencyP95Ms: 200,
   unavailableReasons: [],
+  groupCohesionScore: null,
   ...overrides,
 });
 

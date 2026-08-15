@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { logError, logInfo } from '../logger';
 import { getApiLimitProviderConfig } from '../config/apiLimits';
 import {
@@ -5,6 +6,9 @@ import {
   getApiUsageCount,
   listApiUsageCounters,
   resetApiUsageCounters as resetStoredApiUsageCounters,
+  reserveCapacity,
+  commitCapacity,
+  releaseCapacity,
 } from '../db';
 import { getCurrentApiBudgetStatus } from './providerBudgeting';
 
@@ -155,6 +159,19 @@ export class ApiLimitExceededError extends Error {
   }
 }
 
+/** Configuration is part of the safety boundary for newly metered work. */
+export class ApiLimitConfigurationError extends Error {
+  public readonly provider: string;
+  public readonly caller: string;
+
+  constructor(params: { provider: string; caller: string }) {
+    super(`API limit configuration is missing or invalid for provider=${params.provider} caller=${params.caller}`);
+    this.name = 'ApiLimitConfigurationError';
+    this.provider = params.provider;
+    this.caller = params.caller;
+  }
+}
+
 export class ApiBudgetExceededError extends ApiLimitExceededError {
   public readonly monthlyBudgetUsd: number;
   public readonly estimatedSpendUsd: number;
@@ -190,6 +207,7 @@ const reserveScopeUsageOrThrow = async (params: {
   limit: number;
   window: LimitWindow;
   windowKey: string;
+  units: number;
 }): Promise<void> => {
   const bucketKey =
     params.scope === 'overall' ? `overall:${params.provider}` : `caller:${params.provider}:${params.caller}`;
@@ -202,17 +220,10 @@ const reserveScopeUsageOrThrow = async (params: {
     scope: params.scope,
     windowKey: params.windowKey,
     limit: params.limit,
+    units: params.units,
   });
 
-  const storedCount =
-    result.allowed
-      ? await getApiUsageCount(
-          params.provider,
-          params.scope === 'overall' ? '*' : params.caller,
-          params.scope,
-          params.windowKey
-        )
-      : result.newCount;
+  const storedCount = result.newCount;
 
   bucket.used = storedCount;
   const pct = (storedCount / params.limit) * 100;
@@ -300,9 +311,19 @@ export const __resetInProcessUsageCachesForTests = (): void => {
   blockedLogStates.clear();
 };
 
-export const reserveApiUsageOrThrow = async (params: { provider: string; caller: string }): Promise<void> => {
+export const reserveApiUsageOrThrow = async (params: {
+  provider: string;
+  caller: string;
+  units?: number;
+  requireConfiguredLimit?: boolean;
+}): Promise<void> => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);
+  const units = Math.max(1, Math.floor(Number(params.units ?? 1)));
+  if (!Number.isFinite(units)) {
+    throw new Error(`Invalid usage units: ${params.units}`);
+  }
+
   const budgetStatus = await getCurrentApiBudgetStatus(provider);
   if (budgetStatus.monthlyBudgetUsd != null && budgetStatus.isOverBudget) {
     throw new ApiBudgetExceededError({
@@ -322,6 +343,10 @@ export const reserveApiUsageOrThrow = async (params: { provider: string; caller:
     providerConfig?.callers?.[caller] == null ? undefined : String(providerConfig.callers[caller])
   );
 
+  if (params.requireConfiguredLimit && (overallLimit === null || callerLimit === null)) {
+    throw new ApiLimitConfigurationError({ provider, caller });
+  }
+
   if (overallLimit !== null) {
     await reserveScopeUsageOrThrow({
       provider,
@@ -330,6 +355,7 @@ export const reserveApiUsageOrThrow = async (params: { provider: string; caller:
       limit: overallLimit,
       window,
       windowKey,
+      units,
     });
   }
 
@@ -341,6 +367,60 @@ export const reserveApiUsageOrThrow = async (params: { provider: string; caller:
       limit: callerLimit,
       window,
       windowKey,
+      units,
     });
   }
+};
+
+/**
+ * Capacity-based (gauge) resource reservation (§17.1).
+ * Used for byte counts or item counts that persist beyond the request.
+ */
+export const reserveCapacityOrThrow = async (params: {
+  provider: string;
+  caller: string;
+  units: number;
+  idempotencyKey?: string;
+  ttlSeconds?: number;
+}): Promise<string> => {
+  const provider = normalizeKeyPart(params.provider);
+  const caller = normalizeKeyPart(params.caller);
+  const providerConfig = getApiLimitProviderConfig(provider);
+  const limit = parseLimit(providerConfig?.overall == null ? undefined : String(providerConfig.overall));
+
+  if (limit === null) {
+    throw new ApiLimitConfigurationError({ provider, caller });
+  }
+
+  const reservationId = params.idempotencyKey || randomUUID();
+  const expiresAt = new Date(Date.now() + (params.ttlSeconds ?? 3600) * 1000).toISOString();
+
+  const result = await reserveCapacity({
+    id: reservationId,
+    provider,
+    caller,
+    units: params.units,
+    limit,
+    expiresAt,
+  });
+
+  if (!result.allowed) {
+    throw new ApiLimitExceededError({
+      provider,
+      caller,
+      scope: 'overall',
+      limit,
+      used: result.current,
+    });
+  }
+
+  return reservationId;
+};
+
+export const commitCapacityReservation = async (reservationId: string, actualUnits?: number): Promise<void> => {
+  await commitCapacity(reservationId, actualUnits);
+};
+
+export const releaseCapacityReservation = async (reservationId: string): Promise<void> => {
+  await releaseCapacity(reservationId);
 };

@@ -424,7 +424,7 @@ export function TraitsTab<T extends TraitRecord>({
         <View style={styles.row}>
           <TextInput
             style={[styles.input, { flex: 1 }]}
-            placeholder="Custom interest"
+            placeholder="Custom interest, or 'no nightlife' / 'avoid crowds'"
             value={customInterest}
             onChangeText={setCustomInterest}
             autoComplete="off"
@@ -435,6 +435,10 @@ export function TraitsTab<T extends TraitRecord>({
             <Text style={styles.buttonText}>Add</Text>
           </TouchableOpacity>
         </View>
+        <Text style={styles.helperText}>
+          Tip: phrases like "no museums", "avoid nightlife", or "skip shopping" are recognized as
+          things to steer the itinerary away from, not just extra interests.
+        </Text>
 
         <Text style={styles.modalLabel}>Personal preferences</Text>
         <Text style={styles.helperText}>Optional overrides for pace/mobility, plus early-bird and night-owl flags.</Text>

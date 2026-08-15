@@ -27,7 +27,6 @@ import {
 } from '../utils/tripDates';
 import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
-import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
   buildFlightPayload,
   createFlightDraftForTrip,
@@ -58,6 +57,8 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
+import ActivityEditForm from '../components/ActivityEditForm';
+import CarRentalEditForm from '../components/CarRentalEditForm';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
 import {
   buildDayEventsMap,
@@ -94,6 +95,7 @@ const getAsyncStorage = (): Promise<AsyncStorageModule | null> => {
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
+import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -233,6 +235,7 @@ type OverviewTabProps = {
   onLodgingDataChanged: () => void;
   onTourDataChanged: () => void;
   onAddCarRental: (rental: CarRental) => void;
+  onUpdateCarRental?: (id: string, draft?: CarRentalDraft) => boolean | void | Promise<boolean | void>;
   openFlightInFlightsTab: (flightId: string) => void;
   openLodgingDetails: (lodging: Lodging) => void;
   theme?: AppTheme;
@@ -271,12 +274,7 @@ type ModalDateField =
   | 'flightDeparture'
   | 'lodgingCheckIn'
   | 'lodgingCheckOut'
-  | 'lodgingRefundBy'
-  | 'tourDate'
-  | 'tourFreeCancel'
-  | 'tourBookedOn'
-  | 'rentalPickup'
-  | 'rentalDropoff';
+  | 'lodgingRefundBy';
 
 export const dedupeAttendees = (
   attendees: OverviewTabProps['attendees']
@@ -447,6 +445,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onLodgingDataChanged,
   onTourDataChanged,
   onAddCarRental,
+  onUpdateCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
   theme,
@@ -1814,9 +1813,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     onTourDataChanged();
   };
 
-  const saveRental = () => {
+  const saveRental = async () => {
     if (editingRentalId) {
-      // Editing rentals is not supported in this view; just close.
+      const saved = await onUpdateCarRental?.(editingRentalId, rentalDraft);
+      if (saved === false) return;
       closeRentalModal();
       return;
     }
@@ -2301,8 +2301,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (Number.isNaN(date.valueOf())) return dateStr;
     const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
     const weekdayLabel = weekday.endsWith('.') ? weekday : `${weekday}.`;
-    return `${weekdayLabel} ${date.getDate()}`;
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const monthLabel = month.endsWith('.') ? month : `${month}.`;
+    return `${weekdayLabel} ${monthLabel} ${date.getDate()}`;
   };
+
+  const formatLongDayLabel = (dateStr: string): string => {
+    const parts = dateStr.split('-').map((v) => Number(v));
+    const date = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dateStr);
+    if (Number.isNaN(date.valueOf())) return dateStr;
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const monthLabel = month.endsWith('.') ? month : `${month}.`;
+    return `${weekday} ${monthLabel} ${date.getDate()}`;
+  };
+
+  const formatDayCardLabel = (card: DayCard): string => `${card.label} - ${formatLongDayLabel(card.date)}`;
 
   const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
 
@@ -2324,6 +2338,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       .map((id) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase()))
       .filter(Boolean)
       .join(', ');
+
+  const handlePrintItinerary = () => {
+    if (!trip) return;
+    const printed = openPrintableItinerary({
+      trip,
+      travelers: normalizedAttendees,
+      locationLabel: tripLocationLabel,
+      days: dayCards.map((card, idx) => {
+        const info = dayDataByDate.get(card.date);
+        return {
+          date: card.date,
+          dayNumber: idx + 1,
+          details: info?.details ?? [],
+          flights: info?.flights ?? [],
+          lodgings: info?.lodgings ?? [],
+          tours: info?.tours ?? [],
+          rentals: info?.rentals ?? [],
+        };
+      }),
+    });
+    if (!printed && Platform.OS !== 'web') {
+      Alert.alert('Printable itinerary', 'Open the Overview in a web browser to print the itinerary.');
+    } else if (!printed) {
+      Alert.alert('Printable itinerary', 'Allow pop-ups for WanderBunnies, then try again.');
+    }
+  };
 
   // Priority mirrors the day title rule: activities beat the transfer, which
   // beats lodging, so a lodging stay no longer masks a day that has activities
@@ -2502,7 +2542,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             )}
             <View style={styles.dayHeroOverlay} />
             <View style={styles.dayHeroBadge}>
-              <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
+              <Text style={styles.dayHeroBadgeText}>{formatDayCardLabel(card)}</Text>
             </View>
             {weatherLabel ? (
               <View
@@ -2622,8 +2662,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             >
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
-              {tripLocationLabel ? <Text style={styles.helperText}>{tripLocationLabel}</Text> : null}
-              {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
               {dayMapPoints.length ? (
@@ -3054,23 +3092,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         >
           <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }, isPhoneLayout ? { marginLeft: 0 } : null]}
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={styles.buttonText}>Edit</Text>
-            </TouchableOpacity>
+            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0, width: '100%' } : null]}>
+              <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
+                <Text style={styles.buttonText}>Print itinerary</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.flightTitle}>{trip.name}</Text>
-          {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
-          {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
-          {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
-          {!dateRange && monthLabel && trip.durationDays ? (
-            <Text style={styles.helperText}>
-              Dates: {monthLabel} - {trip.durationDays} day(s)
-            </Text>
-          ) : null}
-          {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
 
           {trip.description ? (
             <View>
@@ -3805,16 +3836,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               setLodgingDraft((prev) => ({ ...prev, checkOutDate: iso }));
             } else if (modalDateField === 'lodgingRefundBy') {
               setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
-            } else if (modalDateField === 'tourDate') {
-              setTourDraft((prev) => ({ ...prev, date: iso }));
-            } else if (modalDateField === 'tourFreeCancel') {
-              setTourDraft((prev) => ({ ...prev, freeCancelBy: iso }));
-            } else if (modalDateField === 'tourBookedOn') {
-              setTourDraft((prev) => ({ ...prev, bookedOn: iso }));
-            } else if (modalDateField === 'rentalPickup') {
-              setRentalDraft((prev) => ({ ...prev, pickupDate: iso }));
-            } else if (modalDateField === 'rentalDropoff') {
-              setRentalDraft((prev) => ({ ...prev, dropoffDate: iso }));
             }
             setModalDateField(null);
           }}
@@ -3822,175 +3843,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       ) : null}
 
       {showAddTour ? (
-        <View style={styles.modalOverlay} testID="activity-form-modal">
-          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourModal} />
-          <View style={[styles.modalCard, { marginTop: 0 }]}>
-            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Activity' : 'Add Activity'}</Text>
-            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
-              <Text style={styles.modalLabel}>Date</Text>
-              {Platform.OS === 'web' ? (
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  value={tourDraft.date}
-                  onChangeText={(text) => setTourDraft((prev) => ({ ...prev, date: text }))}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('tourDate', tourDraft.date)}>
-                  <Text style={styles.cellText}>{tourDraft.date || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Activity</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Activity name"
-                value={tourDraft.name}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, name: text }))}
-              />
-              <Text style={styles.modalLabel}>Start location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Start location"
-                value={tourDraft.startLocation}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startLocation: text }))}
-              />
-              <Text style={styles.modalLabel}>Start time</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM"
-                value={tourDraft.startTime}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startTime: text }))}
-              />
-              <Text style={styles.modalLabel}>Duration</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Duration"
-                value={tourDraft.duration}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, duration: text }))}
-              />
-              <Text style={styles.modalLabel}>Cost</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Cost"
-                keyboardType="numeric"
-                value={tourDraft.cost}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
-              />
-              <Text style={styles.modalLabel}>Description</Text>
-              <TextInput
-                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
-                placeholder="Description"
-                value={tourDraft.notes}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, notes: text }))}
-                multiline
-              />
-            </ScrollView>
-            <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourModal} testID="activity-cancel">
-                <Text style={styles.dangerButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <ActivityEditForm
+          draft={tourDraft}
+          onChange={setTourDraft}
+          onSave={saveTour}
+          onCancel={closeTourModal}
+          isNew={!editingTourId}
+          members={groupMembers}
+          styles={styles}
+          theme={theme}
+        />
       ) : null}
 
       {showAddRental ? (
-        <View style={styles.modalOverlay} testID="car-rental-form-modal">
-          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeRentalModal} />
-          <View style={[styles.modalCard, { marginTop: 0 }]}>
-            <Text style={styles.sectionTitle}>{editingRentalId ? 'Edit Car Rental' : 'Add Car Rental'}</Text>
-            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
-              <Text style={styles.modalLabel}>Pickup location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Pickup location"
-                value={rentalDraft.pickupLocation}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, pickupLocation: text }))}
-              />
-              <Text style={styles.modalLabel}>Pickup date</Text>
-              {Platform.OS === 'web' ? (
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  value={rentalDraft.pickupDate}
-                  onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, pickupDate: text }))}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalPickup', rentalDraft.pickupDate)}>
-                  <Text style={styles.cellText}>{rentalDraft.pickupDate || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Drop-off location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Drop-off location"
-                value={rentalDraft.dropoffLocation}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, dropoffLocation: text }))}
-              />
-              <Text style={styles.modalLabel}>Drop-off date</Text>
-              {Platform.OS === 'web' ? (
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  value={rentalDraft.dropoffDate}
-                  onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, dropoffDate: text }))}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalDropoff', rentalDraft.dropoffDate)}>
-                  <Text style={styles.cellText}>{rentalDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Vendor</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Vendor"
-                value={rentalDraft.vendor}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, vendor: text }))}
-              />
-              <Text style={styles.modalLabel}>Car model</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Car model"
-                value={rentalDraft.model}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, model: text }))}
-              />
-              <Text style={styles.modalLabel}>Prepaid?</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Yes or No"
-                value={rentalDraft.prepaid}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, prepaid: text }))}
-              />
-              <Text style={styles.modalLabel}>Cost</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Cost"
-                keyboardType="numeric"
-                value={rentalDraft.cost}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
-              />
-              <Text style={styles.modalLabel}>Notes</Text>
-              <TextInput
-                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
-                placeholder="Notes"
-                value={rentalDraft.notes}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, notes: text }))}
-                multiline
-              />
-            </ScrollView>
-            <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeRentalModal} testID="car-rental-cancel">
-                <Text style={styles.dangerButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveRental} testID="car-rental-save">
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <CarRentalEditForm
+          draft={rentalDraft}
+          onChange={setRentalDraft}
+          onSave={saveRental}
+          onCancel={closeRentalModal}
+          isNew={!editingRentalId}
+          members={userMembers}
+          styles={styles}
+          theme={theme}
+        />
       ) : null}
 
       {addPopoverOpen ? (

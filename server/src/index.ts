@@ -25,6 +25,7 @@ import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './con
 import { getBillingPlanConfig } from './db';
 import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
 import { syncPackingPresetCatalogFromDisk } from './services/packingListCatalogService';
+import { refreshMeanVector } from './services/meanVectorService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -91,6 +92,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await syncPackingPresetCatalogFromDisk();
     await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();
+    await refreshMeanVector().catch(err => logError('[mean-vector] Startup refresh failed', err));
   } catch (err) {
     logError('[startup] initialization failed after binding port', err);
     server.close(() => process.exit(1));

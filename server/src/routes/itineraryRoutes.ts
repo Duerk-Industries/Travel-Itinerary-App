@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { getTripById, getWebUserProfile, listTraitsForGroupTrip } from '../db';
+import { getTripById, getWebUserProfile, listTraitsForGroupTrip, listFlights } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
@@ -25,6 +25,7 @@ import {
   getConfiguredProviderApiKey,
   getProviderApiKeyEnvVar,
 } from '../services/aiProviderConfigService';
+import type { RoadTripDeadlineInput, RoadTripHints } from '../services/itineraryRoadTripService';
 
 // Accepts either a plain attraction name or `{ name, destinationName }` so the
 // generator can place must-see attractions on the correct destination's day.
@@ -43,6 +44,125 @@ const parseMustSeeAttractions = (raw: unknown): MustSeeAttractionInput[] => {
     if (name) out.push(name);
   }
   return out;
+};
+
+// Exported for direct unit testing — this is pure request-body validation with no I/O, and its
+// bounds/allowlists are exactly the kind of logic that should be tested without standing up the
+// full authenticated generation route.
+export const parseRoadTripHints = (raw: unknown): RoadTripHints | undefined => {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const value = raw as Record<string, unknown>;
+  const corridors = Array.isArray(value.corridors)
+    ? value.corridors.slice(0, 32).flatMap((candidate) => {
+        if (!candidate || typeof candidate !== 'object') return [];
+        const item = candidate as Record<string, unknown>;
+        const fromLocationId = String(item.fromLocationId ?? '').trim().slice(0, 160);
+        const toLocationId = String(item.toLocationId ?? '').trim().slice(0, 160);
+        const minutes = Number(item.minutes);
+        if (!fromLocationId || !toLocationId || !Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) return [];
+        const mode = ['drive', 'rail', 'bus', 'flight', 'other'].includes(String(item.mode)) ? item.mode as any : undefined;
+        const confidence = ['verified', 'estimated', 'low'].includes(String(item.confidence)) ? item.confidence as any : undefined;
+        return [{ fromLocationId, toLocationId, minutes: Math.round(minutes), ...(mode ? { mode } : {}), ...(confidence ? { confidence } : {}) }];
+      })
+    : undefined;
+  const deadlines = Array.isArray(value.deadlines)
+    ? value.deadlines.slice(0, 31).flatMap((candidate) => {
+        if (!candidate || typeof candidate !== 'object') return [];
+        const item = candidate as Record<string, unknown>;
+        const date = String(item.date ?? '').trim();
+        const at = String(item.at ?? '').trim();
+        const reasonCode = String(item.reasonCode ?? '').trim().slice(0, 80);
+        const slack = Number(item.requiredSlackMinutes);
+        // Range-checked, not just shape-checked — "25:99" previously matched \d{2}:\d{2} and slid
+        // through to itineraryRoadTripService's own minutesFromTime, which rejects it and silently
+        // substitutes an 18:00 default. Reject it here instead, at the actual input boundary.
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(at) || !reasonCode) return [];
+        return [{ date, at, reasonCode, ...(Number.isFinite(slack) ? { requiredSlackMinutes: Math.max(0, Math.min(1440, Math.round(slack))) } : {}) }];
+      })
+    : undefined;
+  const variants = Array.isArray(value.variants)
+    ? value.variants.slice(0, 124).flatMap((candidate) => {
+        if (!candidate || typeof candidate !== 'object') return [];
+        const item = candidate as Record<string, unknown>;
+        const variantId = String(item.variantId ?? '').trim().slice(0, 100);
+        const date = String(item.date ?? '').trim();
+        const labelReasonCode = String(item.labelReasonCode ?? '').trim().slice(0, 80);
+        if (!variantId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !labelReasonCode) return [];
+        const list = (key: string, max: number): string[] => Array.isArray(item[key]) ? item[key].map((entry) => String(entry ?? '').trim()).filter(Boolean).slice(0, max) : [];
+        const estimatedMinutes = Number(item.estimatedMinutes);
+        const conditions = list('conditions', 8).filter((entry): entry is any => ['dry', 'poor_weather', 'opening_hours', 'reservation_confirmed'].includes(entry));
+        return [{ variantId, date, labelReasonCode, blockIds: list('blockIds', 40), activityNames: list('activityNames', 40), legIds: list('legIds', 16), ...(Number.isFinite(estimatedMinutes) ? { estimatedMinutes: Math.max(0, Math.min(1440, Math.round(estimatedMinutes))) } : {}), conditions, exclusiveGroup: String(item.exclusiveGroup ?? `day_${date}`).trim().slice(0, 100), tradeoffReasonCodes: list('tradeoffReasonCodes', 8) }];
+      })
+    : undefined;
+  // Keyed by the same normalized location id the overlay derives for each BaseStay (lodging
+  // address/name when lodgings exist, otherwise the destination) — the identical key-matching
+  // contract corridors already require above, not a new one. A caller that doesn't know that id
+  // ahead of time gets the existing flat/no-coordinate estimate instead of a mismatched one.
+  const locationCoordinatesEntries = value.locationCoordinates && typeof value.locationCoordinates === 'object' && !Array.isArray(value.locationCoordinates)
+    ? Object.entries(value.locationCoordinates as Record<string, unknown>)
+        .slice(0, 16)
+        .flatMap(([key, candidate]) => {
+          const locationId = String(key ?? '').trim().slice(0, 160);
+          if (!locationId || !candidate || typeof candidate !== 'object') return [];
+          const item = candidate as Record<string, unknown>;
+          const lat = Number(item.lat);
+          const lng = Number(item.lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return [];
+          return [[locationId, { lat, lng }] as const];
+        })
+    : [];
+  const locationCoordinates = locationCoordinatesEntries.length ? Object.fromEntries(locationCoordinatesEntries) : undefined;
+  if (!corridors?.length && !deadlines?.length && !variants?.length && !locationCoordinates) return undefined;
+  return {
+    ...(corridors?.length ? { corridors } : {}),
+    ...(deadlines?.length ? { deadlines } : {}),
+    ...(variants?.length ? { variants } : {}),
+    ...(locationCoordinates ? { locationCoordinates } : {}),
+  };
+};
+
+// Auto-derives a hard deadline from a return flight the traveler has already entered on this
+// trip (a real Flight record, not anything newly asked of the user) — the road-trip-lite
+// deadline/cut-priority mechanism needs a time to plan against, and this is the one piece of
+// timed data already collected today. Best-effort: a lookup failure or no qualifying flight just
+// means no derived deadline, never a failed generation.
+export const deriveReturnFlightDeadline = async (userId: string, tripId: string): Promise<RoadTripDeadlineInput | undefined> => {
+  try {
+    const flights = await listFlights(userId, tripId);
+    const candidates = (flights ?? []).filter((flight) =>
+      (flight.transferType ?? 'Flight') === 'Flight'
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(flight.departureDate ?? ''))
+      && /^([01]\d|2[0-3]):[0-5]\d$/.test(String(flight.departureTime ?? ''))
+    );
+    if (!candidates.length) return undefined;
+    // The "return flight" is whichever entered flight departs latest in the trip — the one taking
+    // travelers home, as opposed to an outbound flight to the destination.
+    const returnFlight = candidates.sort((a, b) =>
+      `${a.departureDate}T${a.departureTime}`.localeCompare(`${b.departureDate}T${b.departureTime}`)
+    ).pop();
+    if (!returnFlight) return undefined;
+    return {
+      date: returnFlight.departureDate,
+      at: returnFlight.departureTime,
+      reasonCode: 'RETURN_FLIGHT_DEPARTURE',
+      requiredSlackMinutes: 120,
+    };
+  } catch {
+    return undefined;
+  }
+};
+
+// Supplements (never overrides) caller-supplied road-trip hints with the derived return-flight
+// deadline above, unless the caller already sent an explicit deadline for that same date.
+export const withReturnFlightDeadline = async (
+  userId: string,
+  tripId: string,
+  hints: RoadTripHints | undefined
+): Promise<RoadTripHints | undefined> => {
+  const derived = await deriveReturnFlightDeadline(userId, tripId);
+  if (!derived) return hints;
+  if (hints?.deadlines?.some((deadline) => deadline.date === derived.date)) return hints;
+  return { ...hints, deadlines: [...(hints?.deadlines ?? []), derived] };
 };
 
 // Returns a UTC monthly window key, e.g. "2026-03"
@@ -327,6 +447,7 @@ router.post('/', async (req, res) => {
       tripStartMonth,
       tripStartYear,
       tripIdSeed: tripId,
+      roadTripHints: await withReturnFlightDeadline(userId, tripId, parseRoadTripHints(req.body?.roadTrip)),
     });
     const normalizedPlan = String(result.planMarkdown ?? '')
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
@@ -351,6 +472,7 @@ router.post('/', async (req, res) => {
         route: result.route,
         itinerary: result.itinerary,
       },
+      ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}),
     });
     // Affiliate work is explicitly post-response/background work. It cannot
     // change ordering, cache payloads, or add latency to itinerary generation.
@@ -513,6 +635,7 @@ router.post('/async', async (req, res) => {
     tripStyle: tripStyle ? String(tripStyle).trim() : undefined,
     tt,
     ut,
+    roadTripHints: await withReturnFlightDeadline(userId, tripId, parseRoadTripHints(req.body?.roadTrip)),
     groupTraits,
     tripStartDate,
     tripEndDate,
