@@ -95,6 +95,7 @@ const getAsyncStorage = (): Promise<AsyncStorageModule | null> => {
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
+import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -2324,6 +2325,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       .filter(Boolean)
       .join(', ');
 
+  const handlePrintItinerary = () => {
+    if (!trip) return;
+    const printed = openPrintableItinerary({
+      trip,
+      travelers: normalizedAttendees,
+      locationLabel: tripLocationLabel,
+      days: dayCards.map((card, idx) => {
+        const info = dayDataByDate.get(card.date);
+        return {
+          date: card.date,
+          dayNumber: idx + 1,
+          details: info?.details ?? [],
+          flights: info?.flights ?? [],
+          lodgings: info?.lodgings ?? [],
+          tours: info?.tours ?? [],
+          rentals: info?.rentals ?? [],
+        };
+      }),
+    });
+    if (!printed && Platform.OS !== 'web') {
+      Alert.alert('Printable itinerary', 'Open the Overview in a web browser to print the itinerary.');
+    } else if (!printed) {
+      Alert.alert('Printable itinerary', 'Allow pop-ups for WanderBunnies, then try again.');
+    }
+  };
+
   // Priority mirrors the day title rule: activities beat the transfer, which
   // beats lodging, so a lodging stay no longer masks a day that has activities
   // (or at least a transfer) happening on it.
@@ -3053,12 +3080,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         >
           <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }, isPhoneLayout ? { marginLeft: 0 } : null]}
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={styles.buttonText}>Edit</Text>
-            </TouchableOpacity>
+            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0, width: '100%' } : null]}>
+              <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
+                <Text style={styles.buttonText}>Print itinerary</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.flightTitle}>{trip.name}</Text>
           {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
