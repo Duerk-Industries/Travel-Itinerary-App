@@ -4393,7 +4393,18 @@ const toItineraryPlanCacheEntry = (id: string, data: any): ItineraryPlanCacheEnt
       fragments = [];
     }
   }
-  return { id, cacheKey: String(data.cacheKey), stage: data.stage, signature: String(data.signature), dependencyFingerprint: String(data.dependencyFingerprint), payload, fragments: Array.isArray(fragments) ? fragments : [], expiresAt: String(data.expiresAt), updatedAt: String(data.updatedAt ?? nowIso()) };
+  return {
+    id,
+    cacheKey: String(data.cacheKey),
+    stage: data.stage,
+    signature: String(data.signature),
+    dependencyFingerprint: String(data.dependencyFingerprint),
+    payload,
+    compression: data.compression,
+    fragments: Array.isArray(fragments) ? fragments : [],
+    expiresAt: String(data.expiresAt),
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
 };
 
 export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<ItineraryPlanCacheEntry | null> => {
@@ -4412,6 +4423,7 @@ export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEnt
     signature: entry.signature,
     dependencyFingerprint: entry.dependencyFingerprint,
     payload: JSON.stringify(entry.payload),
+    compression: entry.compression ?? 'none',
     fragments: JSON.stringify(entry.fragments ?? []),
     expiresAt: entry.expiresAt,
     updatedAt: nowIso(),
@@ -7159,6 +7171,63 @@ export const listApiUsageCounters = async (): Promise<
     };
   });
 };
+
+export const reserveCapacity = async (params: {
+  id: string;
+  provider: string;
+  caller: string;
+  units: number;
+  limit: number;
+  expiresAt: string;
+}): Promise<{ allowed: boolean; current: number }> => {
+  const db = getDb();
+  const reservationsColl = db.collection('capacity_reservations');
+
+  return db.runTransaction(async (tx) => {
+    // Firestore doesn't have a built-in SUM. For v1, we fetch all active reservations
+    // for the provider and sum them in memory. In a high-traffic app, this would
+    // use a distributed counter or a summary document.
+    const committedSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', true));
+    const activeSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', false).where('expiresAt', '>', new Date().toISOString()));
+
+    let current = 0;
+    committedSnap.docs.forEach(doc => { current += doc.data().units; });
+    activeSnap.docs.forEach(doc => { current += doc.data().units; });
+
+    if (current + params.units > params.limit) {
+      return { allowed: false, current };
+    }
+
+    const ref = reservationsColl.doc(params.id);
+    tx.set(ref, {
+      provider: params.provider,
+      caller: params.caller,
+      units: params.units,
+      expiresAt: params.expiresAt,
+      committed: false,
+      createdAt: nowIso(),
+    });
+
+    return { allowed: true, current: current + params.units };
+  });
+};
+
+export const commitCapacity = async (reservationId: string, actualUnits?: number): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('capacity_reservations').doc(reservationId);
+  const update: any = { committed: true };
+  if (actualUnits !== undefined) update.units = actualUnits;
+  await ref.update(update);
+};
+
+export const commitCapacityReservation = commitCapacity;
+
+export const releaseCapacity = async (reservationId: string): Promise<void> => {
+  const db = getDb();
+  await db.collection('capacity_reservations').doc(reservationId).delete();
+};
+
+export const releaseCapacityReservation = releaseCapacity;
 
 export const resetApiUsageCounters = async (): Promise<void> => {
   const db = getDb();

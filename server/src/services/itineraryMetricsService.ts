@@ -24,6 +24,12 @@ export const persistItineraryGenerationMetrics = (input: {
   evaluation?: ItineraryBaselineMetrics | null;
   cacheUsage?: Record<string, unknown> | null;
   fallbackUsed?: boolean;
+  avoidedInference?: {
+    promptTokens: number;
+    completionTokens: number;
+    baselineProvider: string;
+    baselineModel: string;
+  } | null;
 }): void => {
   if (!getEnvFlag('ITINERARY_METRICS_CAPTURE', { defaultValue: process.env.NODE_ENV !== 'test' })) return;
   const provider = input.provider ?? 'openai';
@@ -41,6 +47,28 @@ export const persistItineraryGenerationMetrics = (input: {
   } catch (err) {
     logError('[itinerary-metrics] cost estimation failed; continuing without estimate', err);
   }
+
+  let avoidedInferenceMetrics: ItineraryGenerationMetrics['avoidedInference'] = null;
+  if (input.avoidedInference) {
+    const { promptTokens, completionTokens, baselineProvider, baselineModel } = input.avoidedInference;
+    let avoidedCostMicros: number | null = null;
+    try {
+      avoidedCostMicros = estimateAiCostMicros({
+        provider: baselineProvider,
+        model: baselineModel,
+        promptTokens,
+        completionTokens,
+      });
+    } catch {
+      // ignore
+    }
+    avoidedInferenceMetrics = {
+      promptTokens,
+      completionTokens,
+      estimatedCostMicros: avoidedCostMicros,
+    };
+  }
+
   const metrics: ItineraryGenerationMetrics = {
     generationId: input.generationId ?? randomUUID(),
     tripId: input.tripId ?? null,
@@ -61,6 +89,7 @@ export const persistItineraryGenerationMetrics = (input: {
     })),
     evaluation: input.evaluation ? { ...input.evaluation } : null,
     cacheUsage: input.cacheUsage ?? null,
+    avoidedInference: avoidedInferenceMetrics,
     fallbackUsed: Boolean(input.fallbackUsed),
     createdAt: new Date().toISOString(),
   };

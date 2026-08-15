@@ -5,6 +5,9 @@ import {
   getApiUsageCount,
   listApiUsageCounters,
   resetApiUsageCounters as resetStoredApiUsageCounters,
+  reserveCapacity,
+  commitCapacity,
+  releaseCapacity,
 } from '../db';
 import { getCurrentApiBudgetStatus } from './providerBudgeting';
 
@@ -366,4 +369,57 @@ export const reserveApiUsageOrThrow = async (params: {
       units,
     });
   }
+};
+
+/**
+ * Capacity-based (gauge) resource reservation (§17.1).
+ * Used for byte counts or item counts that persist beyond the request.
+ */
+export const reserveCapacityOrThrow = async (params: {
+  provider: string;
+  caller: string;
+  units: number;
+  idempotencyKey?: string;
+  ttlSeconds?: number;
+}): Promise<string> => {
+  const provider = normalizeKeyPart(params.provider);
+  const caller = normalizeKeyPart(params.caller);
+  const providerConfig = getApiLimitProviderConfig(provider);
+  const limit = parseLimit(providerConfig?.overall == null ? undefined : String(providerConfig.overall));
+
+  if (limit === null) {
+    throw new ApiLimitConfigurationError({ provider, caller });
+  }
+
+  const reservationId = params.idempotencyKey || randomUUID();
+  const expiresAt = new Date(Date.now() + (params.ttlSeconds ?? 3600) * 1000).toISOString();
+
+  const result = await reserveCapacity({
+    id: reservationId,
+    provider,
+    caller,
+    units: params.units,
+    limit,
+    expiresAt,
+  });
+
+  if (!result.allowed) {
+    throw new ApiLimitExceededError({
+      provider,
+      caller,
+      scope: 'overall',
+      limit,
+      used: result.current,
+    });
+  }
+
+  return reservationId;
+};
+
+export const commitCapacityReservation = async (reservationId: string, actualUnits?: number): Promise<void> => {
+  await commitCapacity(reservationId, actualUnits);
+};
+
+export const releaseCapacityReservation = async (reservationId: string): Promise<void> => {
+  await releaseCapacity(reservationId);
 };

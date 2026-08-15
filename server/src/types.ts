@@ -548,6 +548,7 @@ export interface ItineraryPlanCacheEntry {
   signature: string;
   dependencyFingerprint: string;
   payload: unknown;
+  compression?: 'br' | 'none';
   fragments?: unknown[];
   expiresAt: string;
   updatedAt: string;
@@ -750,6 +751,12 @@ export interface ItineraryGenerationMetrics {
   evaluation?: Record<string, unknown> | null;
   cacheUsage?: Record<string, unknown> | null;
   fallbackUsed?: boolean;
+  /** Tokens and estimated cost saved by cache hits or Tier 1 lightweight binding. */
+  avoidedInference?: {
+    promptTokens: number;
+    completionTokens: number;
+    estimatedCostMicros: number | null;
+  } | null;
   /** Estimated cost in micros (1e-6 USD), derived via providerBudgeting's shared pricing tables. Null when the provider/model has no configured pricing. */
   estimatedCostMicros?: number | null;
   createdAt?: string;

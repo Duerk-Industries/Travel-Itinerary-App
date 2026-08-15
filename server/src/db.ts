@@ -540,6 +540,14 @@ export const atomicIncrementApiUsageIfUnderLimit = async (params: {
   limit: number;
   units?: number;
 }) => adapter().atomicIncrementApiUsageIfUnderLimit(params);
+
+export const reserveCapacity = async (...args: Parameters<ReturnType<typeof adapter>['reserveCapacity']>) =>
+  adapter().reserveCapacity(...args);
+export const commitCapacity = async (...args: Parameters<ReturnType<typeof adapter>['commitCapacity']>) =>
+  adapter().commitCapacity(...args);
+export const releaseCapacity = async (...args: Parameters<ReturnType<typeof adapter>['releaseCapacity']>) =>
+  adapter().releaseCapacity(...args);
+
 export const listApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['listApiUsageCounters']>) =>
   adapter().listApiUsageCounters(...args);
 export const resetApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiUsageCounters']>) =>

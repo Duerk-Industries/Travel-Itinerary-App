@@ -1144,6 +1144,77 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_payments_trip ON trip_payments(trip_id, payment_date);`);
 
+  // ---- Itinerary Cache v2 Tables ----
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS itinerary_binding_plan_cache (
+      cache_key TEXT PRIMARY KEY,
+      stage TEXT NOT NULL,
+      schema_version TEXT NOT NULL,
+      algorithm_version TEXT NOT NULL,
+      corpus_release_id TEXT NOT NULL,
+      template_revision TEXT NOT NULL,
+      validator_revision TEXT NOT NULL,
+      signature_hash TEXT NOT NULL,
+      dependency_fingerprint TEXT NOT NULL,
+      payload_json JSONB NOT NULL,
+      payload_sha256 TEXT NOT NULL,
+      payload_bytes INTEGER NOT NULL,
+      compression TEXT NOT NULL DEFAULT 'none',
+      fresh_until TIMESTAMP NOT NULL,
+      stale_until TIMESTAMP NOT NULL,
+      hard_expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_cache_cleanup ON itinerary_binding_plan_cache(hard_expires_at);`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS itinerary_blocks (
+      block_id TEXT PRIMARY KEY,
+      location_id TEXT NOT NULL,
+      zone_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      category TEXT NOT NULL,
+      title TEXT NOT NULL,
+      payload_json JSONB NOT NULL,
+      interest_weights JSONB NOT NULL,
+      energy_cost INTEGER NOT NULL,
+      duration_typical INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      release_id TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_blocks_location ON itinerary_blocks(location_id, release_id);`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS itinerary_location_profiles (
+      location_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      location_type TEXT NOT NULL,
+      payload_json JSONB NOT NULL,
+      release_id TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS capacity_reservations (
+      id UUID PRIMARY KEY,
+      provider TEXT NOT NULL,
+      caller TEXT NOT NULL,
+      units INTEGER NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      committed BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_capacity_reservations_expiry ON capacity_reservations(expires_at) WHERE committed = FALSE;`);
+
   // ---- Entitlement system tables ----
 
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';`);
@@ -7354,6 +7425,7 @@ const toItineraryPlanCacheEntry = (row: any): ItineraryPlanCacheEntry | null => 
   return {
     id: row.id, cacheKey: String(payload.cacheKey), stage: payload.stage, signature: String(payload.signature),
     dependencyFingerprint: String(payload.dependencyFingerprint), payload: payload.value,
+    compression: payload.compression,
     fragments: Array.isArray(payload.fragments) ? payload.fragments : [], expiresAt: String(payload.expiresAt),
     updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
   };
@@ -7367,7 +7439,16 @@ export const getItineraryPlanCacheEntry = async (cacheKey: string): Promise<Itin
 
 export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEntry): Promise<ItineraryPlanCacheEntry> => {
   const p = getPool();
-  const payload = { cacheKey: entry.cacheKey, stage: entry.stage, signature: entry.signature, dependencyFingerprint: entry.dependencyFingerprint, value: entry.payload, fragments: entry.fragments ?? [], expiresAt: entry.expiresAt };
+  const payload = {
+    cacheKey: entry.cacheKey,
+    stage: entry.stage,
+    signature: entry.signature,
+    dependencyFingerprint: entry.dependencyFingerprint,
+    value: entry.payload,
+    compression: entry.compression ?? 'none',
+    fragments: entry.fragments ?? [],
+    expiresAt: entry.expiresAt,
+  };
   const { rows } = await p.query(
     `INSERT INTO locations (id, source_type, category, name, search_name, payload, updated_at)
      VALUES ($1, 'itinerary_plan_cache', 'itinerary_plan_cache', $2, $2, $3::jsonb, NOW())
@@ -10666,6 +10747,71 @@ export const listApiUsageCounters = async (): Promise<
     windowKey: row.window_key,
     count: parseInt(row.count, 10),
   }));
+};
+
+export const reserveCapacity = async (params: {
+  id: string;
+  provider: string;
+  caller: string;
+  units: number;
+  limit: number;
+  expiresAt: string;
+}): Promise<{ allowed: boolean; current: number }> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Sum up current committed capacity + active (non-expired) reservations
+    const { rows } = await client.query<{ current: string }>(
+      `SELECT (
+         COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = TRUE), 0) +
+         COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = FALSE AND expires_at > NOW()), 0)
+       ) AS "current"`,
+      [params.provider]
+    );
+    const current = parseInt(rows[0].current, 10);
+
+    if (current + params.units > params.limit) {
+      await client.query('ROLLBACK');
+      return { allowed: false, current };
+    }
+
+    // 2. Insert new reservation
+    await client.query(
+      `INSERT INTO capacity_reservations (id, provider, caller, units, expires_at, committed)
+       VALUES ($1, $2, $3, $4, $5, FALSE)`,
+      [params.id, params.provider, params.caller, params.units, params.expiresAt]
+    );
+
+    await client.query('COMMIT');
+    return { allowed: true, current: current + params.units };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const commitCapacity = async (reservationId: string, actualUnits?: number): Promise<void> => {
+  const p = getPool();
+  if (actualUnits !== undefined) {
+    await p.query(
+      `UPDATE capacity_reservations SET committed = TRUE, units = $2 WHERE id = $1`,
+      [reservationId, actualUnits]
+    );
+  } else {
+    await p.query(
+      `UPDATE capacity_reservations SET committed = TRUE WHERE id = $1`,
+      [reservationId]
+    );
+  }
+};
+
+export const releaseCapacity = async (reservationId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM capacity_reservations WHERE id = $1`, [reservationId]);
 };
 
 export const resetApiUsageCounters = async (): Promise<void> => {
