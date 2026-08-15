@@ -77,13 +77,13 @@ flags:
     enabled: true
     description: "Enable optional GetYourGuide affiliate activity suggestions (requires verified partner configuration)"
   feature_grid_editing:
-    enabled: false
+    enabled: true
     description: "Enable Activities table editing, staged deletion, and bulk save"
   feature_grid_editing_clipboard:
-    enabled: false
+    enabled: true
     description: "Enable web multi-cell selection and clipboard operations for the Activities grid"
   feature_standardized_item_dialogs:
-    enabled: false
+    enabled: true
     description: "Enable shared flight, accommodation, and activity detail dialogs"
   feature_tap_to_edit_tables:
     enabled: true
@@ -98,7 +98,7 @@ flags:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"
   trip_day_map:
-    enabled: false
+    enabled: true
     description: "Show a static multi-pin map (flights/lodging/activities/car rentals) on the Overview day-detail view. Off by default until a GOOGLE_STATIC_MAPS_API_KEY / GOOGLE_MAPS_API_KEY is provisioned; see docs/implementation_plans/implementation-plan-trip-day-map.md"
   trip_blog:
     enabled: true
@@ -128,7 +128,7 @@ flags:
     enabled: true
     description: "Phase 2 private photo upload, normalization, and per-uploader quota"
   trip_blog_audio:
-    enabled: false
+    enabled: true
     description: "Phase 8 audio and narration modality"
   trip_blog_translation:
     enabled: false
@@ -140,7 +140,7 @@ flags:
     enabled: false
     description: "Phase 8 per-item audience controls"
   trip_blog_structured_cards:
-    enabled: false
+    enabled: true
     description: "Phase 8 allowlisted itinerary structured cards"
   trip_blog_galleries:
     enabled: true
@@ -182,47 +182,47 @@ flags:
     enabled: false
     description: "Suggest expense categories based on Plaid's categorization"
   itinerary_block_cache:
-    enabled: false
+    enabled: true
     description: "Master switch for binding-plan-v2 (cached activity blocks and templates)"
   itinerary_block_cache_reads:
-    enabled: false
+    enabled: true
     description: "Enable L0/shared v2 cache reads and legacy migration reads"
   itinerary_block_cache_writes:
-    enabled: false
+    enabled: true
     description: "Enable write-through, repetition counters, and cleanup metadata"
   itinerary_block_cache_llm_binding:
-    enabled: false
+    enabled: true
     description: "Enable lightweight model bind after deterministic selector failure"
   itinerary_block_cache_stale_revalidate:
-    enabled: false
+    enabled: true
     description: "Enable low-risk stale serve and background refresh jobs"
   itinerary_corpus_authoring:
-    enabled: false
+    enabled: true
     description: "Enable draft block authoring and external verification workers"
   itinerary_corpus_promotion:
-    enabled: false
+    enabled: true
     description: "Enable human-reviewed immutable release promotion"
   itinerary_cache_prepopulation:
-    enabled: false
+    enabled: true
     description: "Enable demand-driven batch planning and cache fills"
   itinerary_practical_notes:
-    enabled: false
+    enabled: true
     description: "Enable country/region-scoped PracticalNote selection and rendering"
   itinerary_road_trip_lite:
-    enabled: false
+    enabled: true
     description: "Enable provider-free private base-stay, travel-leg, deadline, and road-trip summary planning"
   itinerary_day_variants:
-    enabled: false
+    enabled: true
     description: "Enable mutually exclusive whole-day road-trip variants"
   itinerary_timed_route_days:
-    enabled: false
+    enabled: true
     description: "Enable deterministic road-trip deadline, slack, checkpoint, and optional-stop planning"
   itinerary_live_route_conditions:
-    enabled: false
+    enabled: true
     description: "Enable optional capped Google Routes refinement for road-trip legs"
   itinerary_live_weather_variants:
-    enabled: false
+    enabled: true
     description: "Enable optional capped near-departure weather selection for road-trip variants"
   itinerary_anchor_schedule_verification:
-    enabled: false
+    enabled: true
     description: "Enable optional capped verification of selected time-critical anchor schedules"
