@@ -314,6 +314,21 @@ export const getItineraryPlanCacheEntry = async (
 export const upsertItineraryPlanCacheEntry = async (
   ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryPlanCacheEntry']>
 ) => adapter().upsertItineraryPlanCacheEntry(...args);
+export const upsertItineraryCacheBlock = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryCacheBlock']>
+) => adapter().upsertItineraryCacheBlock(...args);
+export const listItineraryCacheBlocksForLocation = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listItineraryCacheBlocksForLocation']>
+) => adapter().listItineraryCacheBlocksForLocation(...args);
+export const countItineraryCacheBlocksByLocation = async (
+  ...args: Parameters<ReturnType<typeof adapter>['countItineraryCacheBlocksByLocation']>
+) => adapter().countItineraryCacheBlocksByLocation(...args);
+export const upsertItineraryCacheLocationProfile = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertItineraryCacheLocationProfile']>
+) => adapter().upsertItineraryCacheLocationProfile(...args);
+export const getItineraryCacheLocationProfile = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryCacheLocationProfile']>
+) => adapter().getItineraryCacheLocationProfile(...args);
 export const getAttractionDurationMetadata = async (
   ...args: Parameters<ReturnType<typeof adapter>['getAttractionDurationMetadata']>
 ): Promise<AttractionDurationMetadata | null> => adapter().getAttractionDurationMetadata(...args);

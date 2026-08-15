@@ -2,7 +2,7 @@ import {
   buildCacheKeyV2,
   CacheCompatibilityProjectionSchema,
   validatePrivateConstraints,
-} from '../src/services/itineraryPlanCacheServiceV2';
+} from '../src/services/itineraryPlanCacheService';
 
 const projection = {
   schema_version: 'binding-plan-v2' as const,

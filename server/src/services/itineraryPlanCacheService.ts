@@ -38,12 +38,15 @@ export type CacheCompatibilityProjection = z.infer<typeof CacheCompatibilityProj
  * L0 (Local LRU) cache. Simple bounded Map implementation.
  */
 const L0_CACHE_MAX_ENTRIES = 256;
-const l0Cache = new Map<string, { payload: any; expiresAt: number }>();
+const l0Cache = new Map<string, { payload: any; localExpiresAt: number; sourceExpiresAt: number }>();
 
-const getL0 = (key: string): any | null => {
+const getL0 = (key: string, now = new Date()): any | null => {
   const entry = l0Cache.get(key);
   if (!entry) return null;
-  if (entry.expiresAt <= Date.now()) {
+  // Check both the process-local TTL and the authoritative cache-entry
+  // expiration. This prevents L0 from reviving an expired L1 entry when a
+  // caller supplies a logical clock (for example, a replay or test).
+  if (entry.localExpiresAt <= Date.now() || entry.sourceExpiresAt <= now.getTime()) {
     l0Cache.delete(key);
     return null;
   }
@@ -53,12 +56,12 @@ const getL0 = (key: string): any | null => {
   return entry.payload;
 };
 
-const setL0 = (key: string, payload: any, ttlMs: number) => {
+const setL0 = (key: string, payload: any, ttlMs: number, sourceExpiresAt: number) => {
   if (l0Cache.size >= L0_CACHE_MAX_ENTRIES) {
     const firstKey = l0Cache.keys().next().value;
     if (firstKey !== undefined) l0Cache.delete(firstKey);
   }
-  l0Cache.set(key, { payload, expiresAt: Date.now() + ttlMs });
+  l0Cache.set(key, { payload, localExpiresAt: Date.now() + ttlMs, sourceExpiresAt });
 };
 
 export interface ItineraryCacheCapabilities {
@@ -298,7 +301,7 @@ export const readItineraryPlanCache = async <T>(params: {
   const cacheKey = buildCacheKey(params.stage, params.signature, params.dependencyFingerprint);
 
   // 1. L0 Cache check
-  const l0Hit = getL0(cacheKey);
+  const l0Hit = getL0(cacheKey, params.now ?? new Date());
   if (l0Hit) return l0Hit as T;
 
   // 2. Resource reservation (L1 Read)
@@ -340,7 +343,7 @@ export const readItineraryPlanCache = async <T>(params: {
   }
 
   // 4. Back-fill L0
-  setL0(cacheKey, payload, 5 * 60 * 1000); // 5 min default L0 TTL
+  setL0(cacheKey, payload, 5 * 60 * 1000, new Date(entry.expiresAt).getTime()); // 5 min default L0 TTL
 
   return payload;
 };
@@ -439,7 +442,12 @@ export const writeItineraryPlanCache = async <T>(params: {
   });
 
   // 5. Update L0
-  setL0(cacheKey, strippedPayload, 5 * 60 * 1000);
+  setL0(
+    cacheKey,
+    strippedPayload,
+    5 * 60 * 1000,
+    new Date(now.getTime() + Math.max(1, params.ttlDays) * 86400000).getTime()
+  );
 
   return entry;
 };

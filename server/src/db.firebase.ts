@@ -76,6 +76,7 @@ import { normalizePackingLabel } from './utils/packingListNormalize';
 import { buildPackingListDisplayGroups } from './utils/packingListDisplay';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
+import { ActivityBlockSchema, LocationProfileSchema, type ActivityBlock, type LocationProfile } from './schemas/itineraryCacheSchemas';
 
 let app: App | null = null;
 
@@ -4432,6 +4433,74 @@ export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEnt
   const parsed = toItineraryPlanCacheEntry(saved.id, saved.data());
   if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
   return parsed;
+};
+
+// ---------------------------------------------------------------------------
+// Itinerary cache v2 corpus: authored ActivityBlocks and LocationProfiles.
+// Mirrors db.postgres.ts's itinerary_blocks / itinerary_location_profiles
+// tables as Firestore collections keyed by block_id / location_id.
+// ---------------------------------------------------------------------------
+
+export const upsertItineraryCacheBlock = async (block: ActivityBlock, releaseId: string): Promise<void> => {
+  const parsed = ActivityBlockSchema.parse(block);
+  await getDb().collection('itinerary_blocks').doc(parsed.block_id).set({
+    locationId: parsed.location_id,
+    zoneId: parsed.zone_id,
+    role: parsed.role,
+    category: parsed.category,
+    title: parsed.title,
+    payloadJson: JSON.stringify(parsed),
+    releaseId,
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const listItineraryCacheBlocksForLocation = async (locationId: string, releaseId?: string): Promise<ActivityBlock[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection('itinerary_blocks').where('locationId', '==', locationId);
+  if (releaseId) query = query.where('releaseId', '==', releaseId);
+  const snap = await query.get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data();
+      const raw = typeof data.payloadJson === 'string' ? JSON.parse(data.payloadJson) : data.payloadJson;
+      return ActivityBlockSchema.safeParse(raw);
+    })
+    .filter((result): result is { success: true; data: ActivityBlock } => result.success)
+    .map((result) => result.data)
+    .sort((a, b) => a.block_id.localeCompare(b.block_id));
+};
+
+export const countItineraryCacheBlocksByLocation = async (): Promise<Array<{ locationId: string; releaseId: string; blockCount: number }>> => {
+  const snap = await getDb().collection('itinerary_blocks').get();
+  const counts = new Map<string, { locationId: string; releaseId: string; blockCount: number }>();
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    const key = `${data.locationId}::${data.releaseId}`;
+    const existing = counts.get(key);
+    if (existing) existing.blockCount += 1;
+    else counts.set(key, { locationId: String(data.locationId ?? ''), releaseId: String(data.releaseId ?? ''), blockCount: 1 });
+  }
+  return Array.from(counts.values()).sort((a, b) => a.locationId.localeCompare(b.locationId));
+};
+
+export const upsertItineraryCacheLocationProfile = async (profile: LocationProfile, releaseId: string): Promise<void> => {
+  const parsed = LocationProfileSchema.parse(profile);
+  await getDb().collection('itinerary_location_profiles').doc(parsed.location_id).set({
+    name: parsed.name,
+    locationType: parsed.location_type,
+    payloadJson: JSON.stringify(parsed),
+    releaseId,
+    updatedAt: nowIso(),
+  }, { merge: true });
+};
+
+export const getItineraryCacheLocationProfile = async (locationId: string): Promise<LocationProfile | null> => {
+  const doc = await getDb().collection('itinerary_location_profiles').doc(locationId).get();
+  if (!doc.exists) return null;
+  const data = doc.data() ?? {};
+  const raw = typeof data.payloadJson === 'string' ? JSON.parse(data.payloadJson) : data.payloadJson;
+  const parsed = LocationProfileSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 };
 
 export const getAttractionDurationMetadata = async (

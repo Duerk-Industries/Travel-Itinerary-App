@@ -2,7 +2,8 @@
 /// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier, upsertAiAbTestMetric } from '../src/db';
+import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier, upsertAiAbTestMetric, setFeatureFlag } from '../src/db';
+import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 import fs from 'fs';
 import os from 'os';
@@ -1196,6 +1197,113 @@ describe('Admin routes', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ settings: { parser_consensus_sample_rate_percent: '-5' }, reason: 'Should be rejected' })
         .expect(400);
+    });
+  });
+
+  describe('Itinerary cache prepopulation routes', () => {
+    const validLocation = { locationId: 'loc_lisbon_test', name: 'Lisbon', locationType: 'city', countryCode: 'PT', timezone: 'Europe/Lisbon' };
+
+    afterEach(async () => {
+      // Restore to the seeded default so other tests in this file aren't affected by ordering.
+      await setFeatureFlag('itinerary_cache_prepopulation', false, adminUserId);
+      clearFeatureFlagCacheForTesting();
+    });
+
+    it('GET status reports the configured caps and the active corpus release', async () => {
+      const res = await request(app)
+        .get('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(res.body).toEqual(expect.objectContaining({
+        maxLocationsPerRun: expect.any(Number),
+        maxBlocksPerLocation: expect.any(Number),
+        blocksByLocation: expect.any(Array),
+      }));
+    });
+
+    it('rejects an empty releaseId', async () => {
+      await request(app)
+        .patch('/api/admin/itinerary-cache/active-release')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ releaseId: '', reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('rejects a prepopulate run with no reason', async () => {
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [validLocation] })
+        .expect(400);
+    });
+
+    it('rejects a prepopulate run with an empty locations array', async () => {
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [], reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('rejects a schema-invalid location entry', async () => {
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [{ locationId: 'loc_bad', locationType: 'not_a_real_type', timezone: 'UTC', name: 'Bad' }], reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('rejects more than 50 candidate locations', async () => {
+      const many = Array.from({ length: 51 }, (_, i) => ({ ...validLocation, locationId: `loc_${i}` }));
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: many, reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('returns 403 when the itinerary_cache_prepopulation feature flag is disabled (the seeded default)', async () => {
+      await setFeatureFlag('itinerary_cache_prepopulation', false, adminUserId);
+      clearFeatureFlagCacheForTesting();
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [validLocation], reason: 'Attempt while disabled' })
+        .expect(403);
+    });
+
+    // Must run before the "set the active corpus release" test below — there's no "unset" route
+    // by design (a release id should never silently disappear once configured), so this is the
+    // only point in the suite where an admin console pointed at a fresh environment has none set.
+    it('returns 409 when the flag is enabled but no active corpus release is configured yet', async () => {
+      await setFeatureFlag('itinerary_cache_prepopulation', true, adminUserId);
+      clearFeatureFlagCacheForTesting();
+      await request(app)
+        .post('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locations: [validLocation], reason: 'Attempt with no release configured' })
+        .expect(409);
+    });
+
+    it('lets an admin set the active corpus release, with audit logging', async () => {
+      const reason = `Set active corpus release ${Date.now()}`;
+      await request(app)
+        .patch('/api/admin/itinerary-cache/active-release')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ releaseId: 'release-route-test', reason })
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.setting).toEqual(expect.objectContaining({ key: 'ACTIVE_CORPUS_RELEASE_ID', value: 'release-route-test' }));
+        });
+
+      const audit = await listAuditLog({ action: 'ADMIN_SETTING_UPDATED' as any });
+      expect(audit.entries.some((entry) => entry.actorUserId === adminUserId && entry.reason === reason)).toBe(true);
+
+      const status = await request(app)
+        .get('/api/admin/itinerary-cache/prepopulate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(status.body.activeCorpusReleaseId).toBe('release-route-test');
     });
   });
 

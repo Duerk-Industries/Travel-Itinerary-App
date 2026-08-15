@@ -24,6 +24,7 @@ import {
   getUniversalPackingList, replaceUniversalPackingList,
   listPackingPresetsV2, syncPackingPresetCatalogV2, removePackingPresetV2, reactivatePackingPresetV2, updatePackingPresetV2,
   deleteAttractionDurationMetadata,
+  countItineraryCacheBlocksByLocation,
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -82,6 +83,12 @@ import {
   updateCostEstimatorRequestPricing,
   REQUEST_PRICED_PROVIDER_KEYS,
 } from '../services/costEstimatorService';
+import {
+  runItineraryCachePrepopulateJob,
+  MAX_LOCATIONS_PER_RUN,
+  MAX_BLOCKS_PER_LOCATION,
+  PrepopulateLocationInputSchema,
+} from '../services/itineraryCachePrepopulateService';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -98,7 +105,11 @@ const requireReason = (reason: unknown): string | null => {
 // 'ingestion_llm_extract_secondary' is LLM B. Both are independently selectable here so an
 // admin can pick two genuinely different providers/models rather than relying on the
 // auto-pick fallback in chooseSecondaryProvider (extraction/index.ts).
-const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract', 'ingestion_llm_extract_secondary'] as const;
+// 'itinerary_cache_prepopulation' is the LLM used to author corpus LocationProfiles/ActivityBlocks
+// (see itineraryCachePrepopulateService.ts) — same admin-selectable-provider mechanism as the two
+// above, not to be confused with the fail-closed feature flag of the same name that gates whether
+// the prepopulate job runs at all.
+const AI_FEATURE_KEYS = ['itinerary_generation', 'ingestion_llm_extract', 'ingestion_llm_extract_secondary', 'itinerary_cache_prepopulation'] as const;
 const AI_RUNTIME_SETTING_DEFAULTS = {
   // Share of production imports that run the full static+LLM-A+LLM-B consensus parse (see
   // `ingestion_dual_llm_consensus` feature flag, which is the on/off switch this percentage
@@ -235,6 +246,119 @@ router.patch('/ai-config/:featureKey', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update AI provider config', err);
     res.status(500).json({ error: 'Failed to update AI provider config' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Itinerary cache corpus prepopulation (design doc §11)
+// ---------------------------------------------------------------------------
+
+// `ACTIVE_CORPUS_RELEASE_ID` is read by checkItineraryCacheReadiness, itineraryPlanCacheService,
+// and the prepopulate job below, but nothing previously wrote it — this is the one place an
+// admin sets which corpus release is "live". Deliberately its own narrow route rather than folded
+// into the generic /runtime-settings numeric-only PATCH, since a release id is an opaque string
+// tag, not a tunable number.
+router.patch('/itinerary-cache/active-release', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  const releaseId = typeof req.body?.releaseId === 'string' ? req.body.releaseId.trim() : '';
+  if (!releaseId || releaseId.length > 80) {
+    res.status(400).json({ error: 'releaseId (1-80 chars) is required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const before = await getAdminSetting('ACTIVE_CORPUS_RELEASE_ID');
+    const updated = await setAdminSetting({ key: 'ACTIVE_CORPUS_RELEASE_ID', value: releaseId, updatedBy: actorId });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'ADMIN_SETTING_UPDATED',
+      beforeState: before ? { ...before } : null,
+      afterState: { ...updated },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ setting: updated });
+  } catch (err) {
+    logError('[admin] failed to set active corpus release', err);
+    res.status(500).json({ error: 'Failed to set active corpus release' });
+  }
+});
+
+router.get('/itinerary-cache/prepopulate', async (_req, res) => {
+  try {
+    const counts = await countItineraryCacheBlocksByLocation();
+    const activeRelease = await getAdminSetting('ACTIVE_CORPUS_RELEASE_ID');
+    res.json({
+      activeCorpusReleaseId: activeRelease?.value ?? null,
+      maxLocationsPerRun: MAX_LOCATIONS_PER_RUN,
+      maxBlocksPerLocation: MAX_BLOCKS_PER_LOCATION,
+      blocksByLocation: counts,
+    });
+  } catch (err) {
+    logError('[admin] failed to load itinerary cache prepopulate status', err);
+    res.status(500).json({ error: 'Failed to load itinerary cache prepopulate status' });
+  }
+});
+
+router.post('/itinerary-cache/prepopulate', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  const rawLocations = Array.isArray(req.body?.locations) ? req.body.locations : null;
+  if (!rawLocations || !rawLocations.length) {
+    res.status(400).json({ error: 'locations (non-empty array) is required' });
+    return;
+  }
+  if (rawLocations.length > 50) {
+    res.status(400).json({ error: `At most 50 candidate locations may be submitted per call (only the top ${MAX_LOCATIONS_PER_RUN} by demandWeight are actually authored)` });
+    return;
+  }
+  const parsedLocations: Array<ReturnType<typeof PrepopulateLocationInputSchema.parse>> = [];
+  for (const [index, candidate] of rawLocations.entries()) {
+    const parsed = PrepopulateLocationInputSchema.safeParse(candidate);
+    if (!parsed.success) {
+      res.status(400).json({ error: `locations[${index}] is invalid: ${parsed.error.issues[0]?.message ?? 'schema validation failed'}` });
+      return;
+    }
+    parsedLocations.push(parsed.data);
+  }
+  const maxLocations = Number.isFinite(Number(req.body?.maxLocations)) ? Number(req.body.maxLocations) : undefined;
+  const maxBlocksPerLocation = Number.isFinite(Number(req.body?.maxBlocksPerLocation)) ? Number(req.body.maxBlocksPerLocation) : undefined;
+
+  try {
+    const actorId = getActorId(req);
+    const result = await runItineraryCachePrepopulateJob({
+      locations: parsedLocations,
+      maxLocations,
+      maxBlocksPerLocation,
+    });
+    if (!result.enabled) {
+      res.status(403).json({ error: 'itinerary_cache_prepopulation feature flag is disabled', result });
+      return;
+    }
+    if (!result.releaseId) {
+      res.status(409).json({ error: 'No ACTIVE_CORPUS_RELEASE_ID admin setting is configured; set one before prepopulating', result });
+      return;
+    }
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'ITINERARY_CACHE_PREPOPULATE_RUN',
+      afterState: { releaseId: result.releaseId, results: result.results },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ result });
+  } catch (err) {
+    logError('[admin] itinerary cache prepopulate run failed', err);
+    res.status(500).json({ error: 'Failed to run itinerary cache prepopulate job' });
   }
 });
 

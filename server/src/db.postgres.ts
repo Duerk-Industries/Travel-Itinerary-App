@@ -79,6 +79,7 @@ import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 import { normalizePackingLabel } from './utils/packingListNormalize';
+import { ActivityBlockSchema, LocationProfileSchema, type ActivityBlock, type LocationProfile } from './schemas/itineraryCacheSchemas';
 
 
 type PoolCtor = typeof Pool;
@@ -1145,75 +1146,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_payments_trip ON trip_payments(trip_id, payment_date);`);
 
   // ---- Itinerary Cache v2 Tables ----
-
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS itinerary_binding_plan_cache (
-      cache_key TEXT PRIMARY KEY,
-      stage TEXT NOT NULL,
-      schema_version TEXT NOT NULL,
-      algorithm_version TEXT NOT NULL,
-      corpus_release_id TEXT NOT NULL,
-      template_revision TEXT NOT NULL,
-      validator_revision TEXT NOT NULL,
-      signature_hash TEXT NOT NULL,
-      dependency_fingerprint TEXT NOT NULL,
-      payload_json JSONB NOT NULL,
-      payload_sha256 TEXT NOT NULL,
-      payload_bytes INTEGER NOT NULL,
-      compression TEXT NOT NULL DEFAULT 'none',
-      fresh_until TIMESTAMP NOT NULL,
-      stale_until TIMESTAMP NOT NULL,
-      hard_expires_at TIMESTAMP NOT NULL,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-  `);
-  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_cache_cleanup ON itinerary_binding_plan_cache(hard_expires_at);`);
-
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS itinerary_blocks (
-      block_id TEXT PRIMARY KEY,
-      location_id TEXT NOT NULL,
-      zone_id TEXT NOT NULL,
-      role TEXT NOT NULL,
-      category TEXT NOT NULL,
-      title TEXT NOT NULL,
-      payload_json JSONB NOT NULL,
-      interest_weights JSONB NOT NULL,
-      energy_cost INTEGER NOT NULL,
-      duration_typical INTEGER NOT NULL,
-      source TEXT NOT NULL,
-      release_id TEXT NOT NULL,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-  `);
-  await p.query(`CREATE INDEX IF NOT EXISTS idx_itinerary_blocks_location ON itinerary_blocks(location_id, release_id);`);
-
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS itinerary_location_profiles (
-      location_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      location_type TEXT NOT NULL,
-      payload_json JSONB NOT NULL,
-      release_id TEXT NOT NULL,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-  `);
-
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS capacity_reservations (
-      id UUID PRIMARY KEY,
-      provider TEXT NOT NULL,
-      caller TEXT NOT NULL,
-      units INTEGER NOT NULL,
-      expires_at TIMESTAMP NOT NULL,
-      committed BOOLEAN NOT NULL DEFAULT FALSE,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-  `);
-  await p.query(`CREATE INDEX IF NOT EXISTS idx_capacity_reservations_expiry ON capacity_reservations(expires_at) WHERE committed = FALSE;`);
+  // Moved to server/migrations/20260815_add_itinerary_cache_v2_tables.sql — see
+  // migrationDriftGuard.test.ts, which enforces that new tables go into a
+  // migration rather than the inline bootstrap here.
 
   // ---- Entitlement system tables ----
 
@@ -7459,6 +7394,84 @@ export const upsertItineraryPlanCacheEntry = async (entry: ItineraryPlanCacheEnt
   const parsed = toItineraryPlanCacheEntry(rows[0]);
   if (!parsed) throw new Error('Failed to parse itinerary plan cache entry after upsert.');
   return parsed;
+};
+
+// ---------------------------------------------------------------------------
+// Itinerary cache v2 corpus: authored ActivityBlocks and LocationProfiles
+// (server/migrations/20260815_add_itinerary_cache_v2_tables.sql). The full
+// validated object is stored as payload_json; the first-class columns exist
+// so `listItineraryCacheBlocksForLocation` / catalog-summary queries don't
+// need to unpack JSONB for every row.
+// ---------------------------------------------------------------------------
+
+export const upsertItineraryCacheBlock = async (block: ActivityBlock, releaseId: string): Promise<void> => {
+  const parsed = ActivityBlockSchema.parse(block);
+  const p = getPool();
+  await p.query(
+    `INSERT INTO itinerary_blocks
+       (block_id, location_id, zone_id, role, category, title, payload_json, interest_weights, energy_cost, duration_typical, source, release_id, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12, NOW())
+     ON CONFLICT (block_id) DO UPDATE SET
+       location_id = EXCLUDED.location_id, zone_id = EXCLUDED.zone_id, role = EXCLUDED.role,
+       category = EXCLUDED.category, title = EXCLUDED.title, payload_json = EXCLUDED.payload_json,
+       interest_weights = EXCLUDED.interest_weights, energy_cost = EXCLUDED.energy_cost,
+       duration_typical = EXCLUDED.duration_typical, source = EXCLUDED.source,
+       release_id = EXCLUDED.release_id, updated_at = NOW()`,
+    [
+      parsed.block_id, parsed.location_id, parsed.zone_id, parsed.role, parsed.category, parsed.title,
+      JSON.stringify(parsed), JSON.stringify(parsed.interest_weights), parsed.energy_cost,
+      parsed.duration_minutes.typical, parsed.source, releaseId,
+    ]
+  );
+};
+
+export const listItineraryCacheBlocksForLocation = async (locationId: string, releaseId?: string): Promise<ActivityBlock[]> => {
+  const p = getPool();
+  const params: unknown[] = [locationId];
+  let releaseClause = '';
+  if (releaseId) {
+    params.push(releaseId);
+    releaseClause = ` AND release_id = $${params.length}`;
+  }
+  const { rows } = await p.query(
+    `SELECT payload_json FROM itinerary_blocks WHERE location_id = $1${releaseClause} ORDER BY block_id`,
+    params
+  );
+  return rows
+    .map((row: any) => ActivityBlockSchema.safeParse(typeof row.payload_json === 'string' ? JSON.parse(row.payload_json) : row.payload_json))
+    .filter((result: ReturnType<typeof ActivityBlockSchema.safeParse>): result is { success: true; data: ActivityBlock } => result.success)
+    .map((result) => result.data);
+};
+
+export const countItineraryCacheBlocksByLocation = async (): Promise<Array<{ locationId: string; releaseId: string; blockCount: number }>> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT location_id as "locationId", release_id as "releaseId", COUNT(*)::int as "blockCount"
+     FROM itinerary_blocks GROUP BY location_id, release_id ORDER BY location_id`
+  );
+  return rows;
+};
+
+export const upsertItineraryCacheLocationProfile = async (profile: LocationProfile, releaseId: string): Promise<void> => {
+  const parsed = LocationProfileSchema.parse(profile);
+  const p = getPool();
+  await p.query(
+    `INSERT INTO itinerary_location_profiles (location_id, name, location_type, payload_json, release_id, updated_at)
+     VALUES ($1, $2, $3, $4::jsonb, $5, NOW())
+     ON CONFLICT (location_id) DO UPDATE SET
+       name = EXCLUDED.name, location_type = EXCLUDED.location_type, payload_json = EXCLUDED.payload_json,
+       release_id = EXCLUDED.release_id, updated_at = NOW()`,
+    [parsed.location_id, parsed.name, parsed.location_type, JSON.stringify(parsed), releaseId]
+  );
+};
+
+export const getItineraryCacheLocationProfile = async (locationId: string): Promise<LocationProfile | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT payload_json FROM itinerary_location_profiles WHERE location_id = $1 LIMIT 1`, [locationId]);
+  if (!rows.length) return null;
+  const raw = rows[0].payload_json;
+  const parsed = LocationProfileSchema.safeParse(typeof raw === 'string' ? JSON.parse(raw) : raw);
+  return parsed.success ? parsed.data : null;
 };
 
 export const getAttractionDurationMetadata = async (

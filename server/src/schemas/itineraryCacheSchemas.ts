@@ -109,6 +109,66 @@ export const BindingPlanSchema = z.object({
 export type ActivityBlock = z.infer<typeof ActivityBlockSchema>;
 export type BindingPlan = z.infer<typeof BindingPlanSchema>;
 
+// §2 LocationProfile — the `zones` array is the load-bearing field; without it the day-binding
+// step has no geographic-coherence signal to work from. Bounded/simplified relative to the full
+// design-doc example (e.g. `lodging.rationale_by_trip_shape` is a plain string map rather than a
+// fixed trip-shape enum) so the corpus can grow without a schema migration every time a new trip
+// shape or transit mode shows up.
+export const LocationZoneAdjacencySchema = z.object({
+  zone_id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
+  minutes: z.number().int().min(0).max(300),
+  mode: z.enum(['walk', 'transit', 'tram', 'metro', 'bus', 'drive', 'ferry', 'other']),
+  line: z.string().max(60).optional(),
+  from_stop: z.string().max(120).optional(),
+  to_stop: z.string().max(120).optional(),
+}).strict();
+
+export const LocationZoneSchema = z.object({
+  zone_id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
+  name: z.string().min(1).max(120),
+  name_local: z.string().max(120).nullable(),
+  centroid: z.tuple([z.number(), z.number()]).nullable(),
+  traversal: z.enum(['walk', 'transit', 'drive', 'mixed']),
+  terrain_note: z.string().max(300).nullable(),
+  adjacency: z.array(LocationZoneAdjacencySchema).max(12),
+  lodging: z.object({
+    suitable: z.boolean(),
+    rationale_by_trip_shape: z.record(z.string(), z.string().max(300)).optional(),
+    access_note: z.string().max(300).nullable(),
+    cost_band: z.enum(['budget', 'mid', 'luxury']).nullable(),
+    alternative_zone_id: z.string().max(80).nullable(),
+    alternative_reason: z.string().max(200).nullable(),
+  }).optional(),
+}).strict();
+
+export const LocationSeasonWindowSchema = z.object({
+  label: z.string().min(1).max(40),
+  months: z.array(z.number().int().min(1).max(12)).min(1).max(12),
+  crowd_factor: z.number().min(0).max(2),
+  heat_flag: z.boolean().optional(),
+  rain_flag: z.boolean().optional(),
+}).strict();
+
+export const LocationProfileSchema = z.object({
+  location_id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
+  name: z.string().min(1).max(160),
+  location_type: z.enum(['city', 'hiking_region', 'national_park', 'coastal', 'beach', 'road_trip_corridor', 'multi_city_circuit']),
+  country_code: z.string().length(2).nullable(),
+  timezone: z.string().min(1).max(80),
+  zones: z.array(LocationZoneSchema).min(1).max(24),
+  season_windows: z.array(LocationSeasonWindowSchema).max(6),
+  local_rhythm: z.object({
+    typical_dinner_start: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
+    midday_closure: z.string().max(120).nullable(),
+    market_mornings: z.array(z.string().max(20)).max(7),
+    common_closure_day: z.string().max(20).nullable(),
+  }).optional(),
+  default_day_template_id: z.string().max(80).nullable(),
+}).strict();
+
+export type LocationZone = z.infer<typeof LocationZoneSchema>;
+export type LocationProfile = z.infer<typeof LocationProfileSchema>;
+
 const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const IsoDateTimeSchema = z.string().datetime({ offset: true });
 
