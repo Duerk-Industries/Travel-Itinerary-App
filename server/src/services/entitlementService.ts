@@ -173,6 +173,11 @@ const FAIL_CLOSED_FLAGS = new Set([
   'itinerary_live_route_conditions',
   'itinerary_live_weather_variants',
   'itinerary_anchor_schedule_verification',
+  // Explicitly "off until infra is provisioned" — see feature-flags.yaml's description
+  // (GOOGLE_STATIC_MAPS_API_KEY / GOOGLE_MAPS_API_KEY). An unseeded DB row must default
+  // to off, not on, or a deployment whose seeding pass hasn't caught up yet silently
+  // exposes the map before anyone's decided to turn it on.
+  'trip_day_map',
 ]);
 
 /**

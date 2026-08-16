@@ -1,6 +1,7 @@
 import { logError } from '../logger';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { recordProviderRequestCost } from '../apis/providerBudgeting';
+import { getApiCacheSetting } from '../config/apiLimits';
 
 export type MonthlyClimatology = {
   averageHighC: number | null;
@@ -61,7 +62,13 @@ export const fetchMonthlyClimatology = async (params: { lat: number; lon: number
   try {
     await reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'ITINERARY_MONTHLY_CLIMATOLOGY' });
     await recordProviderRequestCost({ provider: 'OPEN_METEO' });
-    const response = await (params.fetchImpl ?? fetch)(url, { headers: { Accept: 'application/json' } });
+    // archive-api.open-meteo.com (a decade-spanning daily aggregation query, unlike the plain
+    // forecast/geocoding endpoints in openMeteoWeatherApi.ts) has been observed taking 60+
+    // seconds to respond on some networks with no request-level timeout, which stalls the whole
+    // itinerary generation job for a purely optional enrichment. Fail fast and let the existing
+    // catch-and-cache-null-for-24h path degrade gracefully instead.
+    const timeoutMs = getApiCacheSetting('weather', 'archiveTimeoutMs') ?? 8_000;
+    const response = await (params.fetchImpl ?? fetch)(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
     const body: any = await response.json();
     const times: unknown[] = Array.isArray(body?.daily?.time) ? body.daily.time : [];
