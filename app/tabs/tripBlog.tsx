@@ -1,10 +1,11 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
+import BlogRichTextEditor from '../components/BlogRichTextEditor';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
 import {
@@ -22,6 +23,12 @@ import {
 // share-intent "send to" upload flow — app/utils/incomingShare.ts — so neither tab file nor
 // share-intent code duplicates upload logic).
 export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTypeFromName, SUPPORTED_MIME_TYPES };
+
+// BlogRichTextEditor emits HTML (e.g. `<p></p>`) even when the user hasn't
+// typed anything, so `.trim()` alone no longer detects an empty entry the
+// way it did for the plain TextInput this replaced. Strip tags/entities and
+// check what's left.
+const isRichTextEmpty = (html) => !String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
@@ -316,8 +323,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
 
   const createTextItem = async (dayDate) => {
     if (!canEdit) return;
-    const body = newBody.trim();
-    if (!body) return;
+    const body = newBody;
+    if (isRichTextEmpty(body)) return;
     setCreating(true);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
@@ -479,13 +486,24 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               <View key={item.id} style={{ marginTop: 8 }}>
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
                 {canEdit ? (
-                  <TextInput
-                    multiline value={drafts[item.id] ?? item.body}
-                    editable onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
-                    placeholder="What happened today?" placeholderTextColor={mutedColor} style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
+                  <BlogRichTextEditor
+                    key={item.id}
+                    testID={`blog-item-editor-${item.id}`}
+                    value={drafts[item.id] ?? item.body}
+                    onChangeHTML={(html) => setDrafts((current) => ({ ...current, [item.id]: html }))}
+                    borderColor={borderColor}
+                    backgroundColor={inputColor}
+                    textColor={textColor}
                   />
                 ) : (
-                  <Text style={{ color: textColor, lineHeight: 22, paddingVertical: 8 }}>{item.body || ''}</Text>
+                  <BlogRichTextEditor
+                    key={`view-${item.id}`}
+                    testID={`blog-item-view-${item.id}`}
+                    value={item.body || ''}
+                    editable={false}
+                    backgroundColor="transparent"
+                    textColor={textColor}
+                  />
                 )}
                 {canEdit ? (
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
@@ -569,12 +587,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             ) : null}
             {canEdit && addingDay === day.localDate ? (
               <View style={{ marginTop: 10 }}>
-                <TextInput
-                  multiline autoFocus value={newBody} onChangeText={setNewBody} placeholder="Write about this day…" placeholderTextColor={mutedColor}
-                  style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
+                <BlogRichTextEditor
+                  key={`new-${day.localDate}`}
+                  testID={`blog-new-note-editor-${day.localDate}`}
+                  value={newBody}
+                  onChangeHTML={setNewBody}
+                  borderColor={borderColor}
+                  backgroundColor={inputColor}
+                  textColor={textColor}
                 />
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                  <TouchableOpacity style={styles.button} disabled={creating || !newBody.trim()} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.button} disabled={creating || isRichTextEmpty(newBody)} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
                   <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => setAddingDay(null)}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
                 </View>
               </View>

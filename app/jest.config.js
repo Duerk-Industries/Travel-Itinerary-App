@@ -30,6 +30,7 @@ module.exports = {
     '^expo-image-picker$': '<rootDir>/tests/__mocks__/expo-image-picker.ts',
     '^expo-video$': '<rootDir>/tests/__mocks__/expo-video.ts',
     '^expo-share-intent$': '<rootDir>/tests/__mocks__/expo-share-intent.ts',
+    '^@10play/tentap-editor$': '<rootDir>/tests/__mocks__/@10play/tentap-editor.ts',
   },
 
   // A setup file that runs before each test.
