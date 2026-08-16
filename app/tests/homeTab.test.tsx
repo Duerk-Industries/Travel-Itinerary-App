@@ -225,7 +225,7 @@ describe('HomeTab', () => {
     expect(queryByTestId('home-create-trip-button')).toBeNull();
   });
 
-  test('hides the Ingest nav tile for regular users but shows it for admins', () => {
+  test('shows the Ingest nav tile to admins and Premium/Pro users, hides it from Free users', () => {
     const baseProps = {
       backendUrl: 'http://localhost',
       headers: {},
@@ -239,11 +239,19 @@ describe('HomeTab', () => {
       onFollowTrip: jest.fn(async () => null),
     };
 
-    const regularUser = render(<HomeTab {...baseProps} userRole="user" />);
-    expect(regularUser.queryByTestId('home-nav-ingest')).toBeNull();
-    regularUser.unmount();
+    const freeUser = render(<HomeTab {...baseProps} userRole="user" userTier="free" />);
+    expect(freeUser.queryByTestId('home-nav-ingest')).toBeNull();
+    freeUser.unmount();
 
-    const admin = render(<HomeTab {...baseProps} userRole="admin" />);
+    const premiumUser = render(<HomeTab {...baseProps} userRole="user" userTier="premium" />);
+    expect(premiumUser.getByTestId('home-nav-ingest')).toBeTruthy();
+    premiumUser.unmount();
+
+    const proUser = render(<HomeTab {...baseProps} userRole="user" userTier="pro" />);
+    expect(proUser.getByTestId('home-nav-ingest')).toBeTruthy();
+    proUser.unmount();
+
+    const admin = render(<HomeTab {...baseProps} userRole="admin" userTier="free" />);
     expect(admin.getByTestId('home-nav-ingest')).toBeTruthy();
   });
 

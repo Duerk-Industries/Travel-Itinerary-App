@@ -23,6 +23,7 @@ export type AccountProfile = {
   entitlements?: {
     costTracking?: boolean;
   };
+  tierKey?: string;
 };
 
 const EMPTY_PROFILE: AccountProfile = {

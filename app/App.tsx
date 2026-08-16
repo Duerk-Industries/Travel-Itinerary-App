@@ -2882,6 +2882,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   trips={trips}
                   followedTrips={followedTrips}
                   userRole={userRole}
+                  userTier={accountProfile.tierKey}
                   activeTripOverride={activeTripForHome}
                   styles={styles}
                   onSelectTrip={handleSelectOwnedTrip}

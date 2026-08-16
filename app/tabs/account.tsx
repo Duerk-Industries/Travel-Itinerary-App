@@ -27,6 +27,7 @@ export interface AccountProfile {
   entitlements?: {
     costTracking?: boolean;
   };
+  tierKey?: string;
 }
 
 export interface FellowTraveler {
@@ -94,6 +95,7 @@ export const fetchAccountProfile = async ({
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
       temperatureUnit,
       entitlements: data.entitlements ?? prev.entitlements,
+      tierKey: data.tierKey ?? prev.tierKey,
     }));
     setUserName(fullName);
     setUserEmail(data.email ?? null);
