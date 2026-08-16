@@ -9,9 +9,11 @@
 //
 // Content is stored/exchanged as an HTML string, matching blog_item.body in the
 // existing schema — no changes needed server-side.
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useEditorBridge, RichText, Toolbar, DEFAULT_TOOLBAR_ITEMS } from '@10play/tentap-editor';
+
+const THEME_CSS_TAG = 'blog-editor-theme';
 
 type Props = {
   value: string;
@@ -55,6 +57,19 @@ const BlogRichTextEditor = ({
       onChangeHTML(html);
     },
   });
+
+  // theme.webview.backgroundColor (above) only paints the WebView/iframe's own background —
+  // it doesn't touch the actual document text color, which TipTap otherwise renders in its
+  // default black regardless of the app's light/dark theme (illegible against a dark
+  // background). injectCSS is the documented way to reach the ProseMirror content itself;
+  // re-run whenever the resolved theme colors change so switching light/dark updates existing
+  // editor instances instead of only ones mounted after the switch.
+  useEffect(() => {
+    editor.injectCSS(
+      `body, .ProseMirror, .ProseMirror p, .ProseMirror li, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror blockquote { color: ${textColor}; } .ProseMirror { caret-color: ${textColor}; }`,
+      THEME_CSS_TAG
+    );
+  }, [editor, textColor]);
 
   return (
     <View

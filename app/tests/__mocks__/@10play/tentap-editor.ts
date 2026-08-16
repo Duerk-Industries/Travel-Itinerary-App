@@ -6,6 +6,7 @@ import React from 'react';
 // content to be readable/settable via testID + props — not actual ProseMirror behavior.
 export const useEditorBridge = jest.fn((options: Record<string, unknown>) => ({
   getHTML: jest.fn(async () => String((options as any)?.initialContent ?? '')),
+  injectCSS: jest.fn(),
 }));
 
 export const RichText = (props: Record<string, unknown>) => React.createElement('rich-text', props);
