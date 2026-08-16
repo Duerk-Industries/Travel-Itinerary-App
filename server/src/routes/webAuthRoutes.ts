@@ -24,7 +24,7 @@ import { createToken } from '../auth';
 import { logError, logInfo } from '../logger';
 import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
-import { ensureAdminBootstrap, getSeededTierForEmail } from '../services/entitlementService';
+import { ensureAdminBootstrap, getSeededTierForEmail, isFeatureEnabled } from '../services/entitlementService';
 import { authLoginRateLimit } from '../services/httpRateLimitService';
 import { validateRegistrationAge } from '../services/registrationAgeGate';
 
@@ -264,6 +264,14 @@ router.get('/features', async (_req, res) => {
     tapToEditTables,
     coverPhotoFallbackV2,
     quickStartTripWizard,
+    // Unlike the six flags above (checked via raw getFeatureFlag — no DB row reads as "off" at
+    // this endpoint specifically), these two go through isFeatureEnabled so a missing row
+    // resolves the same way it does at the real write-endpoint gate (itineraryDataRoutes.ts):
+    // fail-open. itinerary_item_kinds in particular has no feature-flags.yaml seed, so getting
+    // this wrong would hide reaction/checklist UI in an environment where the actual API would
+    // have accepted the request.
+    itineraryReactions,
+    itineraryItemKinds,
   ] = await Promise.all([
     getFeatureFlag('feature_grid_editing'),
     getFeatureFlag('feature_grid_editing_clipboard'),
@@ -271,6 +279,8 @@ router.get('/features', async (_req, res) => {
     getFeatureFlag('feature_tap_to_edit_tables'),
     getFeatureFlag('feature_cover_photo_fallback_v2'),
     getFeatureFlag('feature_quick_start_trip_wizard'),
+    isFeatureEnabled('itinerary_reactions'),
+    isFeatureEnabled('itinerary_item_kinds'),
   ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
@@ -283,6 +293,8 @@ router.get('/features', async (_req, res) => {
     featureTapToEditTables: tapToEditTables?.enabled === true,
     featureCoverPhotoFallbackV2: coverPhotoFallbackV2?.enabled === true,
     featureQuickStartTripWizard: quickStartTripWizard?.enabled === true,
+    featureItineraryReactions: itineraryReactions === true,
+    featureItineraryItemKinds: itineraryItemKinds === true,
   });
 });
 

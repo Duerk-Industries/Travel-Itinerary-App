@@ -1837,6 +1837,34 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // Every /ingestion/* route in this section 403s (code: none, just a flat "currently disabled"
+  // message) when feature_ingest_admin_observability is off. Previously this panel auto-fetched
+  // on mount with no awareness of that, so simply opening this admin tab while the flag was off
+  // would surface the global "Permission Denied" popup with zero user action involved — same
+  // failure mode as the trip-day map bug. `null` = still checking; only fetch (or render the
+  // panel at all) once we know the flag is actually on.
+  const [observabilityEnabled, setObservabilityEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiFetch(backendUrl, headers, '/features');
+        const flags = Array.isArray(data?.features) ? data.features : [];
+        const flag = flags.find((f: any) => f?.key === 'feature_ingest_admin_observability');
+        // No row for this key is the server's own fail-open default for it — see
+        // isFeatureEnabled's FAIL_CLOSED_FLAGS exclusion list.
+        if (!cancelled) setObservabilityEnabled(flag ? flag.enabled === true : true);
+      } catch {
+        // Best-effort: if the flags list itself can't be fetched, fall back to attempting the
+        // real panel load rather than hiding it outright on an unrelated network hiccup.
+        if (!cancelled) setObservabilityEnabled(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl, headers]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1872,7 +1900,20 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
     }
   }, [backendUrl, headers]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (observabilityEnabled) load();
+  }, [observabilityEnabled, load]);
+
+  if (observabilityEnabled === false) {
+    return (
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Ingestion</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          Ingestion observability is currently disabled (feature_ingest_admin_observability).
+        </Text>
+      </View>
+    );
+  }
 
   const saveRetryConfig = async () => {
     try {

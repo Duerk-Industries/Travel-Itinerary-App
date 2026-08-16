@@ -7,6 +7,7 @@ process.env.DATABASE_URL = 'pg-mem://localhost/test';
 
 import { initDb, setFeatureFlag } from '../src/db';
 import { app } from '../src/app';
+import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 
 describe('GET /api/auth/features', () => {
   beforeAll(async () => {
@@ -40,5 +41,23 @@ describe('GET /api/auth/features', () => {
     expect(res.body.featureTapToEditTables).toBe(false);
     expect(res.body.featureCoverPhotoFallbackV2).toBe(false);
     expect(res.body.featureQuickStartTripWizard).toBe(false);
+  });
+
+  it('reports itinerary reactions/item-kinds so the client can hide the UI instead of hitting a 403', async () => {
+    await setFeatureFlag('itinerary_reactions', false, null);
+    await setFeatureFlag('itinerary_item_kinds', false, null);
+    clearFeatureFlagCacheForTesting();
+
+    const disabledRes = await request(app).get('/api/auth/features');
+    expect(disabledRes.body.featureItineraryReactions).toBe(false);
+    expect(disabledRes.body.featureItineraryItemKinds).toBe(false);
+
+    await setFeatureFlag('itinerary_reactions', true, null);
+    await setFeatureFlag('itinerary_item_kinds', true, null);
+    clearFeatureFlagCacheForTesting();
+
+    const enabledRes = await request(app).get('/api/auth/features');
+    expect(enabledRes.body.featureItineraryReactions).toBe(true);
+    expect(enabledRes.body.featureItineraryItemKinds).toBe(true);
   });
 });

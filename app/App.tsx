@@ -631,6 +631,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureTapToEditTables, setFeatureTapToEditTables] = useState(false);
   const [featureCoverPhotoFallbackV2, setFeatureCoverPhotoFallbackV2] = useState(false);
   const [featureQuickStartTripWizard, setFeatureQuickStartTripWizard] = useState(false);
+  // Itinerary reactions / checklist-item ("kind") flags. Unlike the others above, these don't
+  // gate an isolated UI panel — the reaction thumbs-up/down and checklist checkbox toggle are
+  // both live, frequently-clicked controls whose write endpoints 403 when the flag is off. Before
+  // these were wired in, disabling either flag meant every tap silently turned into a
+  // "Permission Denied" popup (see permissionDeniedInterceptor.ts) instead of the control just
+  // not doing anything. Default to `true` (not `false` like the others) so a slow first fetch
+  // doesn't make reactions/checklist toggling look broken for the common case where the flag is
+  // actually on — matches each flag's own fail-open default at the real API gate.
+  const [featureItineraryReactions, setFeatureItineraryReactions] = useState(true);
+  const [featureItineraryItemKinds, setFeatureItineraryItemKinds] = useState(true);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -644,6 +654,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureTapToEditTables(Boolean(data.featureTapToEditTables));
           setFeatureCoverPhotoFallbackV2(Boolean(data.featureCoverPhotoFallbackV2));
           setFeatureQuickStartTripWizard(Boolean(data.featureQuickStartTripWizard));
+          setFeatureItineraryReactions(Boolean(data.featureItineraryReactions));
+          setFeatureItineraryItemKinds(Boolean(data.featureItineraryItemKinds));
         }
       })
       .catch(() => undefined);
@@ -3425,6 +3437,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   readOnly={isFollowingMode}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
+                  featureItineraryReactions={featureItineraryReactions}
+                  featureItineraryItemKinds={featureItineraryItemKinds}
                 />
               )
             : null}

@@ -7,6 +7,12 @@ export type AddItemPopoverProps = {
   visible: boolean;
   onSelect: (kind: AddItemKind) => void;
   onClose: () => void;
+  // 'place' | 'note' | 'checklist' all send a `kind` to POST /api/itineraries/details, which
+  // 403s when itinerary_item_kinds is disabled server-side ('activity' never sends a kind, so
+  // it's unaffected). Rather than let picking one of those three reach that 403 — surfaced as a
+  // "Permission Denied" popup by the global interceptor — the caller hides them from this menu
+  // entirely when the flag is off, leaving only "Add a custom activity" selectable.
+  hiddenKinds?: AddItemKind[];
 };
 
 const OPTIONS: Array<{ kind: AddItemKind; icon: string; label: string; description: string }> = [
@@ -16,7 +22,9 @@ const OPTIONS: Array<{ kind: AddItemKind; icon: string; label: string; descripti
   { kind: 'activity', icon: '🗓️', label: 'Add a custom activity', description: 'Time + activity + cost' },
 ];
 
-const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onClose }) => (
+const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onClose, hiddenKinds }) => {
+  const visibleOptions = hiddenKinds?.length ? OPTIONS.filter((opt) => !hiddenKinds.includes(opt.kind)) : OPTIONS;
+  return (
   <Modal
     visible={visible}
     transparent
@@ -32,7 +40,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
         testID="add-item-popover"
       >
         <Text style={styles.title}>Add to itinerary</Text>
-        {OPTIONS.map((opt) => (
+        {visibleOptions.map((opt) => (
           <Pressable
             key={opt.kind}
             testID={`add-item-option-${opt.kind}`}
@@ -58,7 +66,8 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
       </Pressable>
     </Pressable>
   </Modal>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   overlay: {

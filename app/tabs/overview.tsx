@@ -246,6 +246,14 @@ type OverviewTabProps = {
   // Initiative B). Defaults to `true`; `false` reverts to the plain empty
   // fallback tile.
   featureCoverPhotoFallbackV2?: boolean;
+  // Gate the reaction bar / checklist-item toggle interactions themselves (not just visibility)
+  // against their server-side feature flags, so a disabled flag makes the control inert instead
+  // of letting a tap reach a 403 that the global permissionDeniedInterceptor would otherwise pop
+  // as a "Permission Denied" alert. Default `true` — both flags default to on server-side, and
+  // these gate already-relied-upon controls rather than optional new UI, so the safer default
+  // while the real value is still loading is "keep working," not "briefly go inert."
+  featureItineraryReactions?: boolean;
+  featureItineraryItemKinds?: boolean;
 };
 
 type DayCard = {
@@ -452,6 +460,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   readOnly = false,
   featureStandardizedItemDialogs = false,
   featureCoverPhotoFallbackV2 = true,
+  featureItineraryReactions = true,
+  featureItineraryItemKinds = true,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -900,6 +910,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const toggleChecklistItem = useCallback(
     async (detailId: string, item: ChecklistChildRecord) => {
+      // PATCH /checklist-items/:id 403s when itinerary_item_kinds is disabled — skip the request
+      // entirely rather than let a routine checkbox tap surface the global permission-denied modal.
+      if (!featureItineraryItemKinds) return;
       const nextChecked = !item.checkedBy;
       const previous = { checkedBy: item.checkedBy ?? null, checkedAt: item.checkedAt ?? null };
       updateLocalChecklistItem(detailId, item.id, {
@@ -922,7 +935,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         updateLocalChecklistItem(detailId, item.id, previous);
       }
     },
-    [backendUrl, jsonHeaders, updateLocalChecklistItem]
+    [backendUrl, jsonHeaders, updateLocalChecklistItem, featureItineraryItemKinds]
   );
 
   // Reaction handlers — local optimistic, drive the ReactionBar component.
@@ -2941,9 +2954,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     key={it.id}
                                     testID={`overview-checklist-toggle-${it.id}`}
                                     accessibilityRole="checkbox"
-                                    accessibilityState={{ checked }}
+                                    accessibilityState={{ checked, disabled: !featureItineraryItemKinds }}
+                                    disabled={!featureItineraryItemKinds}
                                     onPress={() => toggleChecklistItem(d.id, it)}
-                                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}
+                                    style={[
+                                      { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
+                                      !featureItineraryItemKinds && { opacity: 0.5 },
+                                    ]}
                                   >
                                     <View
                                       style={[
@@ -2974,7 +2991,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <ReactionBar
                               detailId={d.id}
                               summary={d.reactions ?? emptyReactionSummary}
-                              canReact
+                              canReact={featureItineraryReactions}
                               onCast={castReactionForDetail}
                               onClear={clearReactionForDetail}
                             />
@@ -3873,6 +3890,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           visible
           onSelect={handlePopoverSelect}
           onClose={() => setAddPopoverOpen(false)}
+          hiddenKinds={featureItineraryItemKinds ? undefined : ['place', 'note', 'checklist']}
         />
       ) : null}
       {activeAddDialog === 'place' ? (
