@@ -8,8 +8,7 @@
     "app",
     "packages/messaging",
     "packages/domain",
-    "packages/plaid-transactions",
-    "packages/image-size-safe"
+    "packages/plaid-transactions"
   ],
   "scripts": {
     "start": "node server/scripts/start-with-debug.js",
@@ -79,6 +78,7 @@
     "body-parser": "1.20.6",
     "fast-xml-parser": "5.10.1",
     "protobufjs": "7.6.5",
+    "image-size": "file:./packages/image-size-safe",
     "@google-cloud/storage": {
       "uuid": "^11.1.1"
     },

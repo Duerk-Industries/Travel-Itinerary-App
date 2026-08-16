@@ -9,11 +9,9 @@
 //
 // Content is stored/exchanged as an HTML string, matching blog_item.body in the
 // existing schema — no changes needed server-side.
-import React, { useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import { useEditorBridge, RichText, Toolbar, DEFAULT_TOOLBAR_ITEMS } from '@10play/tentap-editor';
-
-const THEME_CSS_TAG = 'blog-editor-theme';
+import { useEditorBridge, RichText, Toolbar, DEFAULT_TOOLBAR_ITEMS, TenTapStartKit, CoreBridge } from '@10play/tentap-editor';
 
 type Props = {
   value: string;
@@ -36,6 +34,26 @@ const BlogRichTextEditor = ({
   textColor = '#111827',
   testID,
 }: Props) => {
+  // theme.webview.backgroundColor (below) only paints the WebView/iframe's own background — it
+  // doesn't touch the actual document text color, which TipTap otherwise renders in its default
+  // black regardless of the app's light/dark theme (illegible against a dark background). Rather
+  // than fix that up after the fact with injectCSS (which leaves a brief flash of black text
+  // before the post-mount effect lands), configure the color into CoreBridge's CSS at bridge
+  // creation time so the WebView never paints the wrong color to begin with. This — like
+  // `theme`/`initialContent` below — is only read once at mount; a color that needs to update on
+  // an already-mounted editor (e.g. a live light/dark toggle) requires remounting via `key`,
+  // same as the existing content-refresh caveat below.
+  const bridgeExtensions = useMemo(
+    () => [
+      ...TenTapStartKit,
+      CoreBridge.configureCSS(
+        `body, .ProseMirror, .ProseMirror p, .ProseMirror li, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror blockquote { color: ${textColor}; } .ProseMirror { caret-color: ${textColor}; }`
+      ),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   // initialContent is only read once by the bridge on mount; changing `value`
   // afterward (e.g. after a save/reload) intentionally does not re-sync the
   // live document — that would clobber in-progress edits. Callers that need
@@ -47,6 +65,7 @@ const BlogRichTextEditor = ({
     avoidIosKeyboard: true,
     dynamicHeight: !editable,
     initialContent: value || '',
+    bridgeExtensions,
     theme: {
       webview: { backgroundColor },
       toolbar: { toolbarBody: { backgroundColor, borderTopColor: borderColor, borderBottomColor: borderColor } },
@@ -57,19 +76,6 @@ const BlogRichTextEditor = ({
       onChangeHTML(html);
     },
   });
-
-  // theme.webview.backgroundColor (above) only paints the WebView/iframe's own background —
-  // it doesn't touch the actual document text color, which TipTap otherwise renders in its
-  // default black regardless of the app's light/dark theme (illegible against a dark
-  // background). injectCSS is the documented way to reach the ProseMirror content itself;
-  // re-run whenever the resolved theme colors change so switching light/dark updates existing
-  // editor instances instead of only ones mounted after the switch.
-  useEffect(() => {
-    editor.injectCSS(
-      `body, .ProseMirror, .ProseMirror p, .ProseMirror li, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6, .ProseMirror blockquote { color: ${textColor}; } .ProseMirror { caret-color: ${textColor}; }`,
-      THEME_CSS_TAG
-    );
-  }, [editor, textColor]);
 
   return (
     <View

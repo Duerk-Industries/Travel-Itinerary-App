@@ -2,10 +2,17 @@ import fs from 'fs/promises';
 import path from 'path';
 import zlib from 'zlib';
 import { promisify } from 'util';
+import { getEnvValue } from '../../env';
 import type { CaptureRecord } from '../types/captureRecord';
 
 const gunzip = promisify(zlib.gunzip);
-const LOCAL_CAPTURE_ROOT = path.resolve(__dirname, '../../../logs/ai-capture');
+// AI_CAPTURE_LOCAL_ROOT lets tests point this at an isolated temp directory instead of the real,
+// gitignored logs/ai-capture — a long-running local dev environment accumulates thousands of real
+// capture files there, and scanning/gunzipping all of them on every query is both slow and (via
+// unbounded concurrent fs reads) prone to sporadic failures that have nothing to do with what the
+// test is actually asserting.
+const resolveLocalCaptureRoot = (): string =>
+  getEnvValue('AI_CAPTURE_LOCAL_ROOT')?.trim() || path.resolve(__dirname, '../../../logs/ai-capture');
 
 export type CaptureBrowserQuery = {
   featureKey?: string;
@@ -96,7 +103,7 @@ const payloadSummary = (payload: Record<string, unknown>): Record<string, unknow
 
 export const listLocalAiCaptures = async (query: CaptureBrowserQuery = {}): Promise<CaptureBrowserItem[]> => {
   const limit = Math.max(1, Math.min(Number(query.limit ?? 50), 250));
-  const files = await listFiles(LOCAL_CAPTURE_ROOT);
+  const files = await listFiles(resolveLocalCaptureRoot());
   const records = (await Promise.all(files.map(readCapture)))
     .filter((record): record is CaptureRecord => Boolean(record))
     .filter((record) => matches(record, query))
@@ -121,7 +128,7 @@ export const listLocalAiCaptures = async (query: CaptureBrowserQuery = {}): Prom
 };
 
 export const getLocalAiCaptureRecord = async (captureId: string): Promise<CaptureRecord | null> => {
-  const files = await listFiles(LOCAL_CAPTURE_ROOT);
+  const files = await listFiles(resolveLocalCaptureRoot());
   for (const file of files) {
     const record = await readCapture(file);
     if (record?.captureId === captureId) return record;
@@ -130,7 +137,7 @@ export const getLocalAiCaptureRecord = async (captureId: string): Promise<Captur
 };
 
 export const readLocalAiCaptureRecordsForDay = async (day: string): Promise<CaptureRecord[]> => {
-  const files = await listFiles(LOCAL_CAPTURE_ROOT);
+  const files = await listFiles(resolveLocalCaptureRoot());
   const records = await Promise.all(files.map(readCapture));
   return records
     .filter((record): record is CaptureRecord => Boolean(record))

@@ -275,7 +275,15 @@ export const parseAttractions = (
 
 const buildDestinationDataset = async (): Promise<DestinationDataset> => {
   const destinationsPath = resolveDestinationsCsvPath();
-  const fromStorage = await downloadJsonArrayFromStorage<DestinationRecord>(resolveDestinationsJsonPath());
+  // An explicit DESTINATIONS_CSV_LOCAL_PATH is a deliberate request to use that exact file —
+  // honor it outright rather than letting the Cloud Storage JSON mirror silently take priority
+  // whenever GCS happens to be reachable (it usually is: resolveLocationBucketName() falls back
+  // to `${GCLOUD_PROJECT_ID}.appspot.com` even with no bucket explicitly configured). Skipping
+  // the storage fetch here is what actually makes the local-fixture override deterministic.
+  const hasLocalDestinationsOverride = Boolean(getEnvValue('DESTINATIONS_CSV_LOCAL_PATH')?.trim());
+  const fromStorage = hasLocalDestinationsOverride
+    ? null
+    : await downloadJsonArrayFromStorage<DestinationRecord>(resolveDestinationsJsonPath());
   const destinations =
     fromStorage ??
     parseDestinations(fs.existsSync(destinationsPath) ? fs.readFileSync(destinationsPath, 'utf8') : '');
@@ -313,7 +321,12 @@ const buildAttractionDataset = async (
   destinationsByKey: Map<string, DestinationRecord[]>
 ): Promise<AttractionDataset> => {
   const attractionsPath = resolveAttractionsCsvPath();
-  const fromStorage = await downloadJsonArrayFromStorage<AttractionRecord>(resolveAttractionsJsonPath());
+  // Same reasoning as buildDestinationDataset above: an explicit local-path override must win
+  // over the Cloud Storage JSON mirror, not lose to it whenever GCS happens to be reachable.
+  const hasLocalAttractionsOverride = Boolean(getEnvValue('ATTRACTIONS_CSV_LOCAL_PATH')?.trim());
+  const fromStorage = hasLocalAttractionsOverride
+    ? null
+    : await downloadJsonArrayFromStorage<AttractionRecord>(resolveAttractionsJsonPath());
   const attractions =
     fromStorage ??
     parseAttractions(
