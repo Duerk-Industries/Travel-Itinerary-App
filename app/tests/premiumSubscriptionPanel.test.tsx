@@ -101,7 +101,7 @@ describe('PremiumSubscriptionPanel', () => {
       url: 'https://checkout.stripe.test/session',
     });
     const onRefresh = jest.fn();
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByLabelText, queryByText } = render(
       <PremiumSubscriptionPanel
         backendUrl="https://wanderbunnies.test"
         token="token"
@@ -110,6 +110,9 @@ describe('PremiumSubscriptionPanel', () => {
         onRefresh={onRefresh}
       />,
     );
+
+    expect(getByText('Unlock AI itineraries, cost tracking, and more with a free trial.')).toBeTruthy();
+    expect(queryByText(/email import/i)).toBeNull();
 
     fireEvent.press(getByText('Annual'));
     fireEvent.press(getByLabelText('Start free trial'));

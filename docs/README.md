@@ -21,6 +21,10 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Operations and Constraints FAQ](faq/operations-and-constraints.md)
 - [Voting on Items FAQ](faq/voting-on-items.md)
 
+## App Store / App Review
+
+- [App Store Review Response Packet](app-store-review-packet.md) — answers to Apple's App Review Information requirements (screen recording, tested devices, app description, setup instructions, external services, regional differences, regulated-industry/third-party material); update before every submission.
+
 ## Deployment, Operations, and Infrastructure
 
 - [Deployment Runbook](../DEPLOYMENT-GCP-FIREBASE.md)

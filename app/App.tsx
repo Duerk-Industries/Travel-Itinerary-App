@@ -2260,7 +2260,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'tours' ||
           sessionPage === 'expenses' ||
           sessionPage === 'ledger' ||
-          sessionPage === 'ingest' ||
+          (sessionPage === 'ingest' && restoredRole === 'admin') ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
           sessionPage === 'account-fellow-travelers' ||

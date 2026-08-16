@@ -225,6 +225,28 @@ describe('HomeTab', () => {
     expect(queryByTestId('home-create-trip-button')).toBeNull();
   });
 
+  test('hides the Ingest nav tile for regular users but shows it for admins', () => {
+    const baseProps = {
+      backendUrl: 'http://localhost',
+      headers: {},
+      activeTripId: 't2',
+      trips,
+      followedTrips,
+      styles,
+      onSelectTrip: jest.fn(),
+      onSelectFollowedTrip: jest.fn(),
+      onNavigate: jest.fn(),
+      onFollowTrip: jest.fn(async () => null),
+    };
+
+    const regularUser = render(<HomeTab {...baseProps} userRole="user" />);
+    expect(regularUser.queryByTestId('home-nav-ingest')).toBeNull();
+    regularUser.unmount();
+
+    const admin = render(<HomeTab {...baseProps} userRole="admin" />);
+    expect(admin.getByTestId('home-nav-ingest')).toBeTruthy();
+  });
+
   test('shows create trip and follow trip header actions for regular users', () => {
     const { queryByTestId, getByTestId } = render(
       <HomeTab

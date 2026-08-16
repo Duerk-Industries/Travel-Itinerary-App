@@ -153,7 +153,11 @@ const HomeTab: React.FC<HomeTabProps> = ({
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
-  const regularUserHiddenHomePages = new Set(['trips', 'account', 'following']);
+  // 'ingest' (Gmail/email import + manual upload) is admin-only for now — Gmail import
+  // itself is untested and not something we want to offer to Premium users yet, so the
+  // whole entry point stays hidden from regular users rather than exposing a tile that
+  // partially works. Remove 'ingest' here once ingestion is ready for a general release.
+  const regularUserHiddenHomePages = new Set(['trips', 'account', 'following', 'ingest']);
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
   const navItems = [

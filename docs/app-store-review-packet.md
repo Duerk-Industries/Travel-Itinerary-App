@@ -1,10 +1,37 @@
 # WanderBunnies App Review Response Packet
 
 **Application:** WanderBunnies - Shared Trip Planner  
-**Draft date:** August 14, 2026  
+**Canonical source:** this file (`docs/app-store-review-packet.md`) — edit here, not in `output/`.  
+**Last updated:** August 14, 2026, for app version/build `[OWNER INPUT REQUIRED]`  
 **Status:** Draft - replace every `[OWNER INPUT REQUIRED]` field before submission
 
 > Do not submit reviewer passwords, API keys, payment-card details, or private user data in a public document. Put reviewer credentials only in the secure App Review credential fields.
+
+## Apple's required App Review information, mapped to this packet
+
+Apple's Notes for Review / App Review Information asks for seven things. Each one is answered below — use this table to jump straight to the answer or to confirm nothing is missing before submitting.
+
+| # | Apple's requirement | Where it's answered |
+|---|---|---|
+| 1 | Physical-device screen recording of core functionality, plus any account, paid-content, UGC, or sensitive-permission flows | [Appendix A: Physical-device screen recording](#appendix-a-physical-device-screen-recording-for-item-1) |
+| 2 | Devices/OS versions tested before submission | [Section 2](#2-devices-and-operating-systems-tested) |
+| 3 | App's functions and target audience, problem solved, value provided | [Section 3](#3-app-functions-target-audience-problem-and-value) |
+| 4 | Setup/access instructions, including credentials or sample files | [Section 4](#4-setup-and-access-instructions) |
+| 5 | External services/tools/platforms used for core functionality | [Section 5](#5-external-services-tools-and-platforms) |
+| 6 | Regional differences in features/content | [Section 6](#6-regional-differences) |
+| 7 | Regulated-industry status and protected third-party material | [Section 7](#7-regulated-industry-and-protected-third-party-material) |
+
+## Keeping this packet current for each release
+
+This packet describes a moving target — new tiers, providers, and UGC surfaces get added over time. Before every App Store submission:
+
+1. **Re-verify, don't assume.** Every `[OWNER INPUT REQUIRED]` and every existing value in Sections 2 and 4 must reflect the build actually being submitted, not a prior release.
+2. **Diff Section 5 against production config.** Compare the external-services table against the current `server/.env` / production environment and any providers added or removed since the last release (check `server/src/apis/`, `server/src/services/`, and feature flags in `server/config/feature-flags.yaml`). Remove services that are now disabled; add new ones before they ship.
+3. **Diff Section 4's feature walkthrough against `app/tabs/`.** If a tab was added, removed, or materially changed (e.g. a new paid feature, a new permission prompt, a new UGC surface), update the main-feature path and, if applicable, the recording script in Appendix A.
+4. **Re-record Appendix A's video** whenever the core user flow, account flows, paid-feature flows, UGC flows, or permission prompts change — not just when Apple rejects the build. Re-run it every release when in doubt; a screen recording of a superseded build does not satisfy Apple's requirement.
+5. **Re-check Appendix B's status table** (Guideline 1.2 UGC requirements) whenever reporting, blocking, or content-filtering work lands, and update the "Current WanderBunnies status" table and the final owner checklist accordingly.
+6. **Bump "Last updated" and the app version/build** at the top of this file as part of the same PR that changes it, so the packet's own history in `git log docs/app-store-review-packet.md` doubles as a release-note trail.
+7. If a Word/PDF copy is needed for upload to App Store Connect, regenerate it from this file at submission time (e.g. `pandoc docs/app-store-review-packet.md -o WanderBunnies_App_Review_Response_Packet.docx`) rather than hand-editing a separate copy — a manually maintained duplicate will drift from this source.
 
 ## 2. Devices and operating systems tested
 

@@ -168,9 +168,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
             }}
           >
             WanderBunnies is a collaborative trip-planning app that helps friends, families and travel groups create
-            shared itineraries, organize flights and lodging, track expenses, maintain packing lists and optionally
-            import travel confirmations from Gmail. The application integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text>{' '}
-            to provide secure authentication and optional automated travel document ingestion.
+            shared itineraries, organize flights and lodging, track expenses, and maintain packing lists. The application
+            integrates with <Text style={{ fontWeight: 'bold' }}>Google APIs</Text> to provide secure authentication.
           </Text>
         </View>
 
@@ -279,12 +278,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
           <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
             <Text style={{ fontSize: typography.small, color: '#0c4a6e', lineHeight: 20 }}>
               <Text style={{ fontWeight: 'bold', color: '#0369a1' }}>Google Identity:</Text> We use your Google profile (name and email) to uniquely identify you within your travel groups and to provide a secure, password-less sign-in experience.
-            </Text>
-          </View>
-
-          <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
-            <Text style={{ fontSize: typography.small, color: '#0c4a6e', lineHeight: 20 }}>
-              <Text style={{ fontWeight: 'bold', color: '#0369a1' }}>Gmail API (Optional):</Text> If you enable the "Email Import" feature, the app requests read-only access to your inbox. WanderBunnies filters for and processes only travel-related confirmation emails (e.g., flight and hotel bookings) to automatically populate your trip itinerary.
             </Text>
           </View>
 

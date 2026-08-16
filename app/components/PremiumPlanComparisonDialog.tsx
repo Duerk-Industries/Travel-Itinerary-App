@@ -31,7 +31,7 @@ const PREMIUM_FEATURES = [
   '250 active trips',
   '200 travelers per trip',
   'Unlimited AI itineraries',
-  'Email import and cost tracking',
+  'Cost tracking and CSV exports',
 ];
 
 const planLabel = (planKey: BillingPlanKey) =>

@@ -63,7 +63,7 @@ describe('PremiumPlanComparisonDialog', () => {
   });
 
   it('shows Basic and Premium quotas, live prices, and annual discount', async () => {
-    const { findByText, getByText, getAllByText } = render(
+    const { findByText, getByText, getAllByText, queryByText } = render(
       <PremiumPlanComparisonDialog
         visible
         backendUrl="https://api.example.test"
@@ -82,6 +82,8 @@ describe('PremiumPlanComparisonDialog', () => {
     expect(getByText('- 250 active trips')).toBeTruthy();
     expect(getByText('- 200 travelers per trip')).toBeTruthy();
     expect(getByText('- Unlimited AI itineraries')).toBeTruthy();
+    expect(getByText('- Cost tracking and CSV exports')).toBeTruthy();
+    expect(queryByText(/email import/i)).toBeNull();
     expect(getByText('$5/mo')).toBeTruthy();
     expect(getByText('$35/yr (42% off monthly)')).toBeTruthy();
     expect(getAllByText('14-day free trial')).toHaveLength(2);

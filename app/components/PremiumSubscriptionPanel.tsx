@@ -211,8 +211,8 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
         <View>
           <Text style={styles.pitch}>
             {premiumTrialsEnabled && trialEligible
-              ? 'Unlock AI itineraries, email import, cost tracking, and more with a free trial.'
-              : 'Unlock AI itineraries, email import, cost tracking, and more.'}
+              ? 'Unlock AI itineraries, cost tracking, and more with a free trial.'
+              : 'Unlock AI itineraries, cost tracking, and more.'}
           </Text>
 
           {/* Plan selector */}

@@ -26,7 +26,7 @@ describe('PremiumTrialWelcomeDialog', () => {
   it('explains trial features and routes to Premium plans', () => {
     const onViewPlans = jest.fn();
     const onDismiss = jest.fn();
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId, queryByText } = render(
       <PremiumTrialWelcomeDialog
         visible
         styles={styles}
@@ -37,9 +37,9 @@ describe('PremiumTrialWelcomeDialog', () => {
 
     expect(getByText('Try Premium free')).toBeTruthy();
     expect(getByText('• AI itinerary generation')).toBeTruthy();
-    expect(getByText('• Email import for bookings')).toBeTruthy();
     expect(getByText('• Cost tracking and CSV exports')).toBeTruthy();
     expect(getByText('• Trip sharing and collaboration tools')).toBeTruthy();
+    expect(queryByText(/email import/i)).toBeNull();
 
     fireEvent.press(getByTestId('premium-trial-view-plans'));
     expect(onViewPlans).toHaveBeenCalledTimes(1);
