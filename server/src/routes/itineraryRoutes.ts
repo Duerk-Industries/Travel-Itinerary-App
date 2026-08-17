@@ -472,6 +472,7 @@ router.post('/', async (req, res) => {
         route: result.route,
         itinerary: result.itinerary,
       },
+      annotations: result.annotations,
       ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}),
     });
     // Affiliate work is explicitly post-response/background work. It cannot

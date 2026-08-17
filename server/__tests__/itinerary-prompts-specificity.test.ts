@@ -13,6 +13,20 @@ const readPrompt = (phase: ItineraryInstructionPhase, fileName: string): { sys: 
 };
 
 describe('itinerary prompt specificity guardrails', () => {
+  it('requests route rationale and uses only appropriately trusted activity-block facts', () => {
+    const p1 = readPrompt('p1', 'p1_route.md');
+    const p2 = readPrompt('p2', 'p2_days.md');
+    const p3 = readPrompt('p3', 'p3_validate.md');
+
+    expect(p1.usr).toContain('route rationale rt');
+    expect(p1.usr).toContain('organizing thesis');
+    expect(p1.usr).toContain('one concise reason this area/base fits the route');
+    expect(p2.usr).toContain('ACTIVITY BLOCKS');
+    expect(p2.usr).toContain('Never treat source="llm_draft" as verified operational evidence');
+    expect(p3.usr).toContain('A verified closed day is a hard conflict and must be repaired');
+    expect(p3.usr).toContain('Never promote source="llm_draft" into verified evidence');
+  });
+
   it('enforces destination-specific activities and no generic events in p2/p3', () => {
     const p2 = readPrompt('p2', 'p2_days.md');
     const p3 = readPrompt('p3', 'p3_validate.md');

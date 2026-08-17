@@ -16,6 +16,9 @@ ATTRACTION SHORTLIST (ranked, use first when relevant):
 ATTRACTION PODS (finish one pod before changing areas):
 {{ATTRACTION_PODS}}
 
+VERIFIED/PROVISIONAL ACTIVITY BLOCKS:
+{{ACTIVITY_BLOCKS}}
+
 LOGISTICS FACTS (hard scheduling limits):
 {{LOGISTICS_FACTS}}
 
@@ -60,6 +63,8 @@ Rules:
 19) For groups larger than 4, add a short logistics note to verify a group-size-appropriate transfer (public transit or larger vehicle as locally appropriate); do not assume a private vehicle is cheaper.
 20) If comfort=L, avoid explicitly budget-oriented commercial experiences, while retaining relevant free iconic/open-access places.
 27) Activity-type feasibility: an activity type must be physically possible at its scheduled location, not just a plausible-sounding place name. Ocean/coastal activities (surfing, snorkeling, scuba diving, a beach day) require a location with direct coastline access — do not schedule them in an inland, mountain, or highland town (a real generation mistakenly scheduled "Surf Lesson" in Monteverde, Costa Rica, a cloud-forest mountain town nowhere near the coast). Hot springs/geothermal activities require known volcanic/geothermal terrain — do not schedule them just because the destination is a resort or beach town with no such feature (a real generation mistakenly scheduled "Hot Springs" in Manuel Antonio, Costa Rica, a Pacific beach town with no geothermal activity). Skiing/snowboarding requires elevation and a snow season. If you are not confident the destination actually has the specific physical feature an activity type depends on, choose a different, genuinely feasible activity type instead.
+28) Activity blocks: when selecting an ACTIVITY BLOCK, copy its title exactly into item text so verified metadata can be attached after generation. Use energyCost, duration, zone, timing, and verified closure/booking fields when scheduling. Treat an operating schedule as a hard fact only when its confidence is "verified"; otherwise add a short verification note instead of claiming exact hours. Never treat source="llm_draft" as verified operational evidence.
+29) Contingencies: for a weather-dependent anchor, prefer a supplied contingency/substitute block in the same location when available. Do not invent a named fallback that is absent from the shortlist or activity blocks.
 
 OUTPUT MUST MATCH schema: {STEP2_SCHEMA_MIN}
 

@@ -19,7 +19,9 @@ export const ActivityBlockSchema = z.object({
   role: z.enum(['anchor', 'supporting', 'filler', 'meal', 'rest', 'contingency']),
   category: z.string(),
   title: z.string().min(1).max(300),
+  /** Canonical native-script name (for example, 東京 or 서울). */
   name_local: z.string().nullable(),
+  /** Romanized/transliterated form, not a second translated display name. */
   name_script: z.string().nullable(),
   copy: z.object({
     teaser: z.string(),

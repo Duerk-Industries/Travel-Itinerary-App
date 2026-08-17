@@ -268,6 +268,12 @@ describe('itinerary prompt plan service', () => {
     });
 
     expect(result.planMarkdown).toContain('Rendered itinerary');
+    expect(result.planMarkdown).toContain('## Route Strategy');
+    expect(result.annotations).toMatchObject({
+      schemaVersion: 'annotated-itinerary-v1',
+      validation: { bookingActionsCovered: true },
+    });
+    expect(result.annotations.days).toHaveLength(3);
     expect(result.profile.pace).toBe('Relaxed');
     expect(result.profile.comfort).toBe('Luxury');
     // Explicit account mobility is a hard constraint and must win over both

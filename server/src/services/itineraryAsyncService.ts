@@ -69,6 +69,7 @@ export type AsyncItineraryJob = {
     activitiesCount: number;
     carRentalsCount: number;
     roadTrip?: ItineraryPromptPlanResult['roadTrip'];
+    annotations?: ItineraryPromptPlanResult['annotations'];
   };
 };
 
@@ -909,7 +910,12 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     job.status = 'completed';
     job.updatedAt = nowIso();
     job.etaSeconds = 0;
-    job.result = { itineraryId, ...persisted, ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}) };
+    job.result = {
+      itineraryId,
+      ...persisted,
+      annotations: result.annotations,
+      ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}),
+    };
     jobs.set(jobId, job);
     // Nudge the ETA heuristic toward how long this job actually took, so later
     // jobs' remaining-time estimates track real server/provider performance

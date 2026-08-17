@@ -1,9 +1,18 @@
 # Itinerary Narrative Depth & Validation — Implementation Plan
 
-**Status:** Scoping. Not yet approved for implementation.
+**Status:** Implemented for the recommended P0/P1/P2/P4 sequence. P3/P5/P6/P7 remain deferred as described below.
 **Last updated:** 2026-08-17
 **Authors:** assistant, in collaboration with @tristanduerk
 **Related:** [implementation-plan-wanderlog-competitive-analysis.md](implementation-plan-wanderlog-competitive-analysis.md) (map/discovery/route-optimization gaps — orthogonal to this doc, which is about the *depth and trustworthiness of generated content*, not features)
+
+## Implementation update — 2026-08-17
+
+- The full generated markdown is persisted on the itinerary and exposed in the Overview as collapsible **Trip Notes**.
+- Verified catalog/Wikipedia attractions can use longer descriptions; free-form activities remain capped at the shorter limit.
+- The Overview derives a deterministic **What to book now** list from unbooked trip records.
+- Plausibility-gated destination narratives are cached and prepended to the guide.
+- The prompt-plan response now also carries `annotated-itinerary-v1`: route rationale, evidence/confidence, booking and verification actions, pace/contingency notes, and validation results. Verified ActivityBlock closures and operating windows are enforced in code; provisional and `llm_draft` facts remain explicitly unverified.
+- Exact entry rules, transit quirks, trail metrics, and translations are still never invented. Those fields are omitted or turned into verification actions unless trusted source data is present.
 
 ---
 
