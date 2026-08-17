@@ -82,6 +82,14 @@ const negativeCacheIsStale = (metadata: AttractionDurationMetadata | null): bool
 
 const WIKIPEDIA_SUMMARY_TIMEOUT_MS = 8000;
 const MAX_DESCRIPTION_SENTENCES = 2;
+// A real, catalog-verified attraction (a curated shortlist entry, not an LLM-invented "wild"
+// activity) gets a longer extract — it's already fact-checked by being a real place with a real
+// Wikipedia article, so there's no extra hallucination risk in showing more of it. Uncatalogued
+// activities stay at MAX_DESCRIPTION_SENTENCES regardless of what callers pass, since the
+// specificity/plausibility gates upstream (looksLikeSearchableAttractionName,
+// wikipediaGeocodingService's isPlausibleMatch) are the only thing standing between those and an
+// unrelated match — more sentences of an unrelated match is strictly worse, not more informative.
+export const MAX_VERIFIED_DESCRIPTION_SENTENCES = 4;
 
 // Fetches a clean, real plain-text summary for an attraction from Wikipedia's
 // REST summary endpoint (distinct from the search-snippet/tagline text
@@ -90,7 +98,10 @@ const MAX_DESCRIPTION_SENTENCES = 2;
 // any failure, disambiguation page, or missing article rather than throwing,
 // since a missing description should fall back to no blurb rather than break
 // generation.
-export const fetchWikipediaSummary = async (name: string): Promise<string | null> => {
+export const fetchWikipediaSummary = async (
+  name: string,
+  maxSentences: number = MAX_DESCRIPTION_SENTENCES
+): Promise<string | null> => {
   const trimmedName = name.trim();
   if (!trimmedName) return null;
   try {
@@ -108,7 +119,7 @@ export const fetchWikipediaSummary = async (name: string): Promise<string | null
     const extract = typeof response.data?.extract === 'string' ? response.data.extract.trim() : '';
     if (!extract) return null;
     if (/may refer to|disambiguation/i.test(extract)) return null;
-    return trimToSentences(extract, MAX_DESCRIPTION_SENTENCES);
+    return trimToSentences(extract, maxSentences);
   } catch (err) {
     logError(`[attractions] wikipedia summary lookup failed for "${trimmedName}"`, err);
     return null;
@@ -136,6 +147,10 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
    * and can let an unrelated but keyword-adjacent article win. Falls back to
    * `name` when not provided. */
   wikipediaSearchTerm?: string;
+  /** True when `name` matched a real entry in the destination's curated attraction catalog
+   * (as opposed to LLM-invented "wild" activity text) — see MAX_VERIFIED_DESCRIPTION_SENTENCES
+   * above for why that earns a longer extract. */
+  isCatalogVerified?: boolean;
 }): Promise<AttractionDurationMetadata> => {
   const refreshDays = Number(getApiCacheSetting('attractions', 'durationMetadataRefreshDays')) || 60;
   const existing = await getAttractionDurationMetadata(params.userId, params.destinationKey, params.name);
@@ -153,8 +168,9 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   const cachedSummary = String(params.cachedWikipediaSummary ?? '').trim();
   const allowDescriptionLookup = params.allowDescriptionLookup ?? true;
   const searchTerm = String(params.wikipediaSearchTerm ?? '').trim() || params.name;
+  const maxSentences = params.isCatalogVerified ? MAX_VERIFIED_DESCRIPTION_SENTENCES : MAX_DESCRIPTION_SENTENCES;
   const searchedDescription = allowDescriptionLookup && !cachedSummary
-    ? (await fetchWikipediaEnrichment(searchTerm, params.destinationDisplayName))?.summary
+    ? (await fetchWikipediaEnrichment(searchTerm, params.destinationDisplayName, maxSentences))?.summary
     : null;
   // Search is the preferred path because generated names are often not exact
   // Wikipedia titles. For canonical attractions, however, search can miss or
@@ -162,7 +178,7 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
   // REST summary endpoint as a verified, title-based fallback rather than
   // silently dropping the attraction blurb.
   const exactDescription = allowDescriptionLookup && !cachedSummary && !searchedDescription
-    ? await fetchWikipediaSummary(searchTerm)
+    ? await fetchWikipediaSummary(searchTerm, maxSentences)
     : null;
   const description = cachedSummary || searchedDescription || exactDescription || null;
   const entry: AttractionDurationMetadata = {
@@ -189,14 +205,23 @@ export const getOrCreateAttractionDurationMetadata = async (params: {
 // trip, not N+1 per activity"). Only cache misses/stale rows fall through to
 // an individual fetch-and-upsert, since a Wikipedia lookup is inherently
 // per-attraction and cannot itself be batched.
+type AttractionDurationBatchEntry = {
+  name: string;
+  activityType: ActivityType;
+  cachedWikipediaSummary?: string | null;
+  allowDescriptionLookup?: boolean;
+  wikipediaSearchTerm?: string;
+  isCatalogVerified?: boolean;
+};
+
 export const getAttractionDurationMetadataBatch = async (params: {
   userId: string;
   destinationKey: string;
   destinationDisplayName: string;
-  entries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null; allowDescriptionLookup?: boolean; wikipediaSearchTerm?: string }>;
+  entries: AttractionDurationBatchEntry[];
 }): Promise<Map<string, AttractionDurationMetadata>> => {
   const result = new Map<string, AttractionDurationMetadata>();
-  const dedupedEntries: Array<{ name: string; activityType: ActivityType; cachedWikipediaSummary?: string | null; allowDescriptionLookup?: boolean; wikipediaSearchTerm?: string }> = [];
+  const dedupedEntries: AttractionDurationBatchEntry[] = [];
   const seen = new Set<string>();
   for (const entry of params.entries) {
     const key = entry.name.trim().toLowerCase();
@@ -233,6 +258,7 @@ export const getAttractionDurationMetadataBatch = async (params: {
       cachedWikipediaSummary: entry.cachedWikipediaSummary,
       allowDescriptionLookup: entry.allowDescriptionLookup,
       wikipediaSearchTerm: entry.wikipediaSearchTerm,
+      isCatalogVerified: entry.isCatalogVerified,
     });
     result.set(key, metadata);
   }

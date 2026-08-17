@@ -71,6 +71,8 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 
 - [Implementation Plan: Entitlements](implementation-plan-entitlements.md)
 - [Implementation Plan: UX Remediation](implementation_plans/implementation-plan-ux-remediation.md)
+- [Implementation Plan: Wanderlog Competitive Analysis](implementation_plans/implementation-plan-wanderlog-competitive-analysis.md)
+- [Implementation Plan: Itinerary Narrative Depth & Validation](implementation_plans/itinerary-narrative-depth-and-validation.md)
 - [GetYourGuide Phase 0 Partner Contract](getyourguide-phase-0-contract.md)
 - [GetYourGuide Phase 2 Server Descriptor](getyourguide-phase-2.md)
 - [GetYourGuide Phase 3 Client CTA](getyourguide-phase-3.md)

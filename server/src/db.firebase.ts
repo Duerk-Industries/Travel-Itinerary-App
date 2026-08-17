@@ -5554,6 +5554,18 @@ export const updateItineraryRecord = async (
   return { ...(updated.data() as Itinerary), tripName };
 };
 
+// See db.postgres.ts's setItineraryPlanMarkdown for why this is a narrow, dedicated setter
+// rather than folded into updateItineraryRecord.
+export const setItineraryPlanMarkdown = async (userId: string, itineraryId: string, planMarkdown: string | null): Promise<void> => {
+  const db = getDb();
+  const doc = await db.collection('itineraries').doc(itineraryId).get();
+  if (!doc.exists) throw new Error('Itinerary not found');
+  const tripId = (doc.data() as any).tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  await db.collection('itineraries').doc(itineraryId).update({ planMarkdown });
+};
+
 export const listItineraryDetails = async (userId: string, itineraryId: string): Promise<ItineraryDetail[]> => {
   const db = getDb();
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();

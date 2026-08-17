@@ -384,6 +384,8 @@ export const deleteItineraryRecord = async (...args: Parameters<ReturnType<typeo
   adapter().deleteItineraryRecord(...args);
 export const updateItineraryRecord = async (...args: Parameters<ReturnType<typeof adapter>['updateItineraryRecord']>) =>
   adapter().updateItineraryRecord(...args);
+export const setItineraryPlanMarkdown = async (...args: Parameters<ReturnType<typeof adapter>['setItineraryPlanMarkdown']>) =>
+  adapter().setItineraryPlanMarkdown(...args);
 export const listItineraryDetails = async (...args: Parameters<ReturnType<typeof adapter>['listItineraryDetails']>) =>
   adapter().listItineraryDetails(...args);
 export const addItineraryDetail = async (...args: Parameters<ReturnType<typeof adapter>['addItineraryDetail']>) =>

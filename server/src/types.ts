@@ -663,6 +663,11 @@ export interface Itinerary {
   days: number;
   budget?: number | null;
   createdAt: string;
+  /** Full narrative markdown from the AI generation's render stage — day-by-day prose, "why
+   * this fits" lines, and (when itineraryAsyncService persists it) prepended per-destination
+   * narrative sections. Null for itineraries created before this field existed, or created
+   * manually rather than via AI generation. */
+  planMarkdown?: string | null;
 }
 
 export type ItineraryDetailKind = 'activity' | 'place' | 'note' | 'checklist';

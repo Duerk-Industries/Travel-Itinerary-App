@@ -265,5 +265,119 @@ describe('Flights dialog', () => {
       )
     ).toEqual(['member-1']);
   });
+
+  // Regression: clicking a modal airport-dropdown option on web did nothing (except when exactly
+  // one suggestion remained) because the field's onBlur fired first and hid the dropdown before
+  // the click could land. onAirportOptionPressIn is the caller's hook to suppress that — verify
+  // this component actually calls it, in the right order relative to onSelectAirport.
+  test('fires onAirportOptionPressIn before onSelectAirport when a dropdown option is clicked', () => {
+    const calls: string[] = [];
+    const onAirportOptionPressIn = jest.fn(() => calls.push('pressIn'));
+    const onSelectAirport = jest.fn((..._args: any[]) => calls.push('select'));
+    const airports = [
+      { iata_code: 'JFK', name: 'John F. Kennedy Intl', city: 'New York' },
+      { iata_code: 'LGA', name: 'LaGuardia', city: 'New York' },
+    ];
+
+    let testRenderer: any;
+    act(() => {
+      testRenderer = renderer.create(
+        <FlightEditingForm
+          visible
+          flightId="new"
+          flight={createFlightDraftForTrip(trip, member.id)}
+          groupMembers={[member]}
+          userMembers={[member]}
+          styles={styles}
+          formatMemberName={(m) => m.email ?? m.firstName ?? m.id}
+          payerName={() => member.email ?? 'Member'}
+          airportTarget="modal-dep"
+          airportAnchor={{ x: 0, y: 0, width: 200, height: 40 }}
+          airportSuggestions={airports}
+          formatAirportLabel={(a) => `${a.name} (${a.iata_code})`}
+          onAirportOptionPressIn={onAirportOptionPressIn}
+          onSelectAirport={onSelectAirport}
+          getLocationInputValue={(raw) => raw}
+          showAirportDropdown={jest.fn()}
+          onAirportEnter={jest.fn()}
+          parseLayoverDuration={() => ({ hours: '', minutes: '' })}
+          openTimePicker={jest.fn()}
+          setFlight={jest.fn()}
+          setPassengerIds={jest.fn()}
+          modalDepLocationRef={{ current: null }}
+          modalArrLocationRef={{ current: null }}
+          modalLayoverLocationRef={{ current: null }}
+          onClose={jest.fn()}
+          onSave={jest.fn()}
+        />
+      );
+    });
+    const root = testRenderer!.root;
+
+    const option = root.findByProps({ children: 'LaGuardia (LGA)' }).parent;
+    act(() => {
+      option.props.onPressIn?.();
+      option.props.onPress();
+    });
+
+    expect(onAirportOptionPressIn).toHaveBeenCalledTimes(1);
+    expect(onSelectAirport).toHaveBeenCalledWith('modal-dep', airports[1]);
+    expect(calls).toEqual(['pressIn', 'select']);
+  });
+
+  // Regression: the time-of-day picker for the edit modal used to render as a sibling outside
+  // this component's <Modal>, so on iOS it was mounted but invisible (a native Modal presents in
+  // its own window above everything else). It must render inside this component's Modal instead.
+  test('renders the native time picker inside the modal for an edit-dep target', () => {
+    const FakeTimePicker = (props: any) => {
+      pickerProps = props;
+      return null;
+    };
+    let pickerProps: any = null;
+    const onTimePickerChange = jest.fn();
+
+    let testRenderer: any;
+    act(() => {
+      testRenderer = renderer.create(
+        <FlightEditingForm
+          visible
+          flightId="new"
+          flight={createFlightDraftForTrip(trip, member.id)}
+          groupMembers={[member]}
+          userMembers={[member]}
+          styles={styles}
+          formatMemberName={(m) => m.email ?? m.firstName ?? m.id}
+          payerName={() => member.email ?? 'Member'}
+          airportTarget={null}
+          getLocationInputValue={(raw) => raw}
+          showAirportDropdown={jest.fn()}
+          onAirportEnter={jest.fn()}
+          parseLayoverDuration={() => ({ hours: '', minutes: '' })}
+          openTimePicker={jest.fn()}
+          timePickerTarget="edit-dep"
+          timePickerValue={new Date('2026-07-31T08:00:00.000Z')}
+          onTimePickerChange={onTimePickerChange}
+          nativeDateTimePicker={FakeTimePicker}
+          setFlight={jest.fn()}
+          setPassengerIds={jest.fn()}
+          modalDepLocationRef={{ current: null }}
+          modalArrLocationRef={{ current: null }}
+          modalLayoverLocationRef={{ current: null }}
+          onClose={jest.fn()}
+          onSave={jest.fn()}
+        />
+      );
+    });
+    const root = testRenderer!.root;
+
+    expect(root.findAllByType(FakeTimePicker)).toHaveLength(1);
+    expect(pickerProps).toBeTruthy();
+
+    const date = new Date('2026-07-31T09:30:00.000Z');
+    act(() => {
+      pickerProps.onChange({ type: 'set' }, date);
+    });
+    expect(onTimePickerChange).toHaveBeenCalledWith({ type: 'set' }, date, 'edit-dep');
+  });
 });
 

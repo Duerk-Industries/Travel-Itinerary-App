@@ -32,6 +32,7 @@ CHECKS (must fix):
 - No dangling hubs/bases.
 - Meals: For every dy[].me ensure exactly ["BQ","LC","DL"]. Replace any long strings with codes.
 - Events: remove generic festival/cultural-event suggestions. Keep only clearly famous destination-linked events.
+- Activity-type feasibility: an activity type must be physically possible at its scheduled location, not just a plausible-sounding place. Ocean/coastal activities (surfing, snorkeling, scuba diving, a beach day) require direct coastline access — remove or replace one scheduled in an inland, mountain, or highland town (a real generation mistakenly scheduled "Surf Lesson" in Monteverde, Costa Rica, a cloud-forest mountain town nowhere near the coast). Hot springs/geothermal activities require known volcanic/geothermal terrain — remove or replace one scheduled at a destination with no such feature (a real generation mistakenly scheduled "Hot Springs" in Manuel Antonio, Costa Rica, a Pacific beach town with no geothermal activity). Skiing/snowboarding requires elevation and a snow season. If unsure the destination has the physical feature the activity type depends on, replace it with a genuinely feasible activity type rather than keep it.
 
 OUTPUT: corrected JSON matching {{STEP2_SCHEMA_MIN}}
 

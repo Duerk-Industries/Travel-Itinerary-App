@@ -997,7 +997,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         setAirportSuggestions(remote.map(parseAirportLabel).slice(0, AIRPORT_SUGGESTION_LIMIT));
       })();
     }
-    let nextAnchor = { x: 16, y: 120, width: 260, height: 40 };
+    // measureInWindow is asynchronous — its callback lands on a later frame, not before this
+    // function returns. The fallback anchor below must only apply when neither measurement path
+    // is available; setting it unconditionally after firing measureInWindow was clobbering the
+    // real (async) measurement with the placeholder {x:16, y:120} position on every keystroke
+    // (showAirportDropdown re-runs on each onChangeText), which is what made the dropdown appear
+    // stuck near the top of the screen instead of anchored under the field.
     if (node?.measureInWindow) {
       node.measureInWindow((x: number, y: number, width: number, height: number) => {
         if (inWindow) {
@@ -1011,14 +1016,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       const containerRect = (containerRef.current as any)?.getBoundingClientRect?.();
       const containerLeft = (containerRect?.left ?? 0) + (typeof window !== 'undefined' ? window.scrollX : 0);
       const containerTop = (containerRect?.top ?? 0) + (typeof window !== 'undefined' ? window.scrollY : 0);
-      nextAnchor = {
+      setAirportAnchor({
         x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0) - (inWindow ? 0 : containerLeft),
         y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0) - (inWindow ? 0 : containerTop),
         width: rect.width,
         height: rect.height,
-      };
+      });
+    } else {
+      setAirportAnchor({ x: 16, y: 120, width: 260, height: 40 });
     }
-    setAirportAnchor(nextAnchor);
   };
 
   const hideAirportDropdown = () => {
@@ -1108,6 +1114,31 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       setTimePickerValue(base);
       setTimePickerTarget(target);
     }
+  };
+
+  const handleTimePickerChange = (
+    event: { type?: string } | undefined,
+    date: Date | undefined,
+    target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null
+  ) => {
+    if (event?.type === 'dismissed') {
+      setTimePickerTarget(null);
+      return;
+    }
+    if (!date) return;
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const value = `${hh}:${mm}`;
+    if (target === 'edit-dep') {
+      setEditingFlight((prev) => (prev ? { ...prev, departureTime: value } : prev));
+    } else if (target === 'edit-arr') {
+      setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
+    } else if (target === 'new-dep') {
+      setNewFlight((prev) => ({ ...prev, departureTime: value }));
+    } else if (target === 'new-arr') {
+      setNewFlight((prev) => ({ ...prev, arrivalTime: value }));
+    }
+    setTimePickerTarget(null);
   };
 
   const openFlightDetails = (flight: Flight) => {
@@ -2096,31 +2127,17 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
+      {/* 'edit-dep'/'edit-arr' render inside FlightEditingForm's own Modal component instead — a
+          native RN Modal presents in its own window layered above everything else, so a picker
+          rendered here (a sibling outside that Modal) would be mounted but visually hidden behind
+          the Transfer Details modal, exactly matching the "can't see the date picker" report. Only
+          'new-dep'/'new-arr' (the inline add-transfer grid, not inside any modal) belong here. */}
+      {Platform.OS !== 'web' && (timePickerTarget === 'new-dep' || timePickerTarget === 'new-arr') && NativeDateTimePicker ? (
         <NativeDateTimePicker
           value={timePickerValue}
           mode="time"
           display="spinner"
-          onChange={(event, date) => {
-            if (event?.type === 'dismissed') {
-              setTimePickerTarget(null);
-              return;
-            }
-            if (!date) return;
-            const hh = String(date.getHours()).padStart(2, '0');
-            const mm = String(date.getMinutes()).padStart(2, '0');
-            const value = `${hh}:${mm}`;
-            if (timePickerTarget === 'edit-dep') {
-              setEditingFlight((prev) => (prev ? { ...prev, departureTime: value } : prev));
-            } else if (timePickerTarget === 'edit-arr') {
-              setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
-            } else if (timePickerTarget === 'new-dep') {
-              setNewFlight((prev) => ({ ...prev, departureTime: value }));
-            } else if (timePickerTarget === 'new-arr') {
-              setNewFlight((prev) => ({ ...prev, arrivalTime: value }));
-            }
-            setTimePickerTarget(null);
-          }}
+          onChange={(event, date) => handleTimePickerChange(event, date, timePickerTarget)}
         />
       ) : null}
       {!readOnly && showPasteModal ? (
@@ -2161,7 +2178,20 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         airportSuggestions={airportAnchorInWindow ? airportSuggestions : []}
         formatAirportLabel={formatAirportLabel}
         onHideAirportDropdown={hideAirportDropdown}
-        onSelectAirport={selectAirport}
+        onSelectAirport={(target, airport) => {
+          selectAirport(target, airport);
+          airportSelectInProgressRef.current = false;
+        }}
+        onAirportOptionPressIn={() => {
+          // Mirrors the guard already used by the non-modal airport dropdown further up this
+          // file: clicking a dropdown option blurs the text input first, which fires onBlur ->
+          // applyTopAirportSuggestion before the click/press event can complete. Without this,
+          // that onBlur handler auto-selects the *first* suggestion (or clears the field) and
+          // hides the dropdown out from under the click — so the option the user actually clicked
+          // never gets selected. Only worked before when exactly one suggestion remained, because
+          // then onBlur's own top-suggestion logic happened to pick the right one anyway.
+          airportSelectInProgressRef.current = true;
+        }}
         groupMembers={groupMembers}
         userMembers={userMembers}
         styles={styles}
@@ -2171,6 +2201,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         showAirportDropdown={showAirportDropdown}
         parseLayoverDuration={parseLayoverDuration}
         openTimePicker={openTimePicker}
+        timePickerTarget={timePickerTarget === 'edit-dep' || timePickerTarget === 'edit-arr' ? timePickerTarget : null}
+        timePickerValue={timePickerValue}
+        onTimePickerChange={handleTimePickerChange}
+        nativeDateTimePicker={NativeDateTimePicker}
         onAirportEnter={applyTopAirportSuggestion}
         setFlight={setEditingFlight}
         setPassengerIds={setEditingFlightPassengers}

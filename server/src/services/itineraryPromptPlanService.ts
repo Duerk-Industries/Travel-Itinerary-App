@@ -27,6 +27,7 @@ import {
   getAttractionDurationMetadataBatch,
   inferRequiresPreOrderTickets,
   formatMinutesAsDuration,
+  MAX_VERIFIED_DESCRIPTION_SENTENCES,
 } from './attractionDurationEstimationService';
 import { getTransferEstimator, HeuristicTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
 import { getItineraryPromptTemplates, type ItineraryPromptTemplate } from './itineraryInstructionService';
@@ -76,6 +77,7 @@ import {
   THIN_DAY_MIN_ITEMS,
 } from './dayFillService';
 import { buildDestinationLogistics, calculateTransferBuffer, compareOpenJawLogistics, resolveCoarseHomeRegion, type CoarseHomeRegion, type LogisticsMobility } from './destinationLogisticsService';
+import { getDestinationNarratives, renderDestinationNarrativesMarkdown } from './destinationNarrativeService';
 import {
   buildGetYourGuideItineraryCandidates,
   selectGetYourGuideItineraryCandidates,
@@ -758,6 +760,21 @@ const GENERIC_ACTIVITY_PATTERNS: RegExp[] = [
   /\btour a historical site\b/i,
   /\benjoy a cultural performance\b/i,
   /\battend (a )?local (event|festival)\b/i,
+  // Listicle/roundup article titles ("5 Things to Do in La Fortuna", "10 Best Restaurants in
+  // Oslo", "Top 10 Attractions", "Ultimate Guide to X") are not activities — they're the title
+  // of a web page, one the itinerary doesn't even link. The model produces these when it falls
+  // back to summarizing a source article by its headline instead of naming one specific,
+  // visitable place from it. Route them through the same specific-fallback machinery as any
+  // other generic text rather than showing an unclickable article title as a "1.5h" stop.
+  /^\s*(the\s+)?(top|best)\s+\d+\b/i,
+  /\b\d+\s+(things|places|reasons|tips|ways|spots|activities|attractions)\s+to\s+(do|see|visit|try|explore)\b/i,
+  /\bthings to do\b/i,
+  /\bplaces to (visit|see|go|eat)\b/i,
+  /\bbest (things|places|restaurants|spots|activities|attractions|bars|beaches|hikes)\s+(to|in|near)\b/i,
+  /\bwhat to do (in|near)\b/i,
+  /\bhow to spend (a|your|one|two|three)\s+(day|days|weekend)\b/i,
+  /\b(travel|complete|ultimate|essential)\s+guide\s+to\b/i,
+  /\b(day trip|weekend) guide\b/i,
 ];
 const SPECIFICITY_ANCHORS: Array<{
   match: RegExp;
@@ -784,7 +801,7 @@ const SPECIFICITY_ANCHORS: Array<{
     },
   },
 ];
-const sanitizeActivityText = (
+export const sanitizeActivityText = (
   inputText: string,
   params: { base: string; activityCode: PromptActivityCode }
 ): { text: string; activityCode: PromptActivityCode } => {
@@ -2090,6 +2107,66 @@ const enforceDescriptionBasedDestinationConsistency = (
   }
 };
 
+// Activity types that require a specific physical feature the destination may simply not have —
+// a real reported failure: "Surf Lesson" scheduled in Monteverde (a Costa Rican cloud-forest
+// mountain town, nowhere near the coast) and "Hot Springs" scheduled in Manuel Antonio (a Pacific
+// beach town with no geothermal activity). Unlike enforceDescriptionBasedDestinationConsistency
+// above (which catches a hallucinated place NAME), this catches a plausible place paired with an
+// implausible activity TYPE for it. `corroborationPattern` is checked only against a *verified*
+// signal: a real curated-catalog match, or a live description that survived
+// wikipediaGeocodingService's own topical-relevance gate (see isPlausibleMatch there) — so an
+// uncorroborated match here means neither source found real-world evidence the feature exists at
+// this destination, not just that the LLM failed to mention it.
+const GEO_RISK_CATEGORIES: Array<{ label: string; activityPattern: RegExp; corroborationPattern: RegExp }> = [
+  {
+    label: 'coastal/ocean water sport',
+    activityPattern: /\b(surf(ing)?|surf lesson|bodyboard(ing)?|kitesurf(ing)?|windsurf(ing)?|snorkel(l?ing)?|scuba|reef dive|paddleboard(ing)?|paddle boarding)\b/i,
+    corroborationPattern: /\b(coast|coastline|beach|ocean|pacific|atlantic|caribbean|gulf of|bay of|seashore|surf)\b/i,
+  },
+  {
+    label: 'hot springs / geothermal',
+    activityPattern: /\b(hot springs?|thermal springs?|geothermal (pool|spa|area)s?|mud baths?)\b/i,
+    corroborationPattern: /\b(hot spring|thermal|geotherm|volcan|geyser)\b/i,
+  },
+  {
+    label: 'snow / alpine skiing',
+    activityPattern: /\b(ski(ing)?|snowboard(ing)?|ski resort|chairlift)\b/i,
+    corroborationPattern: /\b(ski|alpine|mountain|snow|glacier|elevation)\b/i,
+  },
+  {
+    label: 'whale/marine wildlife watching',
+    activityPattern: /\bwhale watching\b/i,
+    corroborationPattern: /\b(coast|ocean|whale|marine|bay|sea)\b/i,
+  },
+];
+
+export const enforceGeographicActivityPlausibility = (
+  itinerary: PromptItinerary,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  durationMetadataByName: Map<string, AttractionDurationMetadata>
+): void => {
+  const catalogNames = new Set(
+    Object.values(shortlistByDestination ?? {}).flat().map((entry) => normalizeText(entry.name).toLowerCase())
+  );
+  for (const day of itinerary.dy) {
+    day.it = day.it.map((item) => {
+      const text = normalizeText(item[2]);
+      const category = GEO_RISK_CATEGORIES.find((candidate) => candidate.activityPattern.test(text));
+      if (!category) return item;
+      // A real entry in the destination's own curated attraction catalog is verified data —
+      // trust it regardless of whether a description happens to be cached yet.
+      if (catalogNames.has(text.toLowerCase())) return item;
+      const description = durationMetadataByName.get(text.toLowerCase())?.description ?? '';
+      if (category.corroborationPattern.test(description)) return item;
+      logError(
+        `[itinerary] replaced geographically implausible "${category.label}" activity "${text}" in "${day.b}" — no catalog match and no corroborating description`
+      );
+      const fallback = sanitizeActivityText('', { base: day.b, activityCode: item[1] });
+      return [item[0], fallback.activityCode, fallback.text] as PromptDay['it'][number];
+    });
+  }
+};
+
 /** Keep the generated lineup coherent with the selected comfort tier. */
 export const enforceBudgetTierCoherence = (
   itinerary: PromptItinerary,
@@ -2490,7 +2567,9 @@ const attachAttractionMetadata = async (
       .replace(/\s+/g, ' ')
       .trim();
     if (!raw || /^top\s+(museum|attraction|activity)$/i.test(raw)) return null;
-    return trimToSentences(raw, 2) || null;
+    // Every entry here is a real destination-catalog attraction (this loop iterates
+    // shortlistByDestination directly) — verified data, so it gets the longer extract.
+    return trimToSentences(raw, MAX_VERIFIED_DESCRIPTION_SENTENCES) || null;
   };
 
   // Seed from already-fetched catalog data for every caller, including preview
@@ -2559,6 +2638,9 @@ const attachAttractionMetadata = async (
         // sentence (see extractAttractionSearchPhrase); the cache key and
         // duration/pre-order heuristics still use the full `name` above.
         wikipediaSearchTerm: extractAttractionSearchPhrase(cleanText, destinationDisplayName),
+        // A real match in the destination's curated catalog (not an LLM-invented "wild"
+        // activity) earns a longer Wikipedia extract — see MAX_VERIFIED_DESCRIPTION_SENTENCES.
+        isCatalogVerified: Boolean(entry),
       };
     });
 
@@ -2568,12 +2650,13 @@ const attachAttractionMetadata = async (
           userId,
           destinationKey,
           destinationDisplayName,
-          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary, allowDescriptionLookup, wikipediaSearchTerm }) => ({
+          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary, allowDescriptionLookup, wikipediaSearchTerm, isCatalogVerified }) => ({
             name,
             activityType,
             cachedWikipediaSummary,
             allowDescriptionLookup,
             wikipediaSearchTerm,
+            isCatalogVerified,
           })),
         });
         for (const [key, metadata] of batch) {
@@ -2780,15 +2863,11 @@ export const rescopeDayTripCarRental = (
 
 const buildDetails = (
   itinerary: PromptItinerary,
-  preferenceWeights: PromptWeights,
   transferNotesByDay?: Map<number, TransferNote[]>,
-  durationMetadataByName?: Map<string, AttractionDurationMetadata>,
-  whyFitsByName?: Map<string, string>,
   destinationTransferTimingByDate?: Map<string, DestinationTransferTiming>
 ): ItineraryGeneratedDetail[] =>
   itinerary.dy.flatMap((day) => {
     const destinationTransfer = destinationTransferTimingByDate?.get(day.dt);
-    const schedule = computeDayItemSchedule(day, preferenceWeights, durationMetadataByName, transferNotesByDay?.get(day.d), destinationTransfer);
     const notesByFromName = new Map<string, TransferNote>();
     for (const note of transferNotesByDay?.get(day.d) ?? []) {
       notesByFromName.set(note.fromName.toLowerCase(), note);
@@ -2805,16 +2884,15 @@ const buildDetails = (
         }]
       : [];
 
-    day.it.forEach(([, _activityCode, text], index) => {
-      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
-      details.push({
-        day: day.d,
-        time: schedule[index].startTime,
-        activity: text,
-        cost: null,
-        kind: 'place',
-        noteBody: fit ? `This stop suits your group because ${fit.replace(/[.。]+$/, '')}.` : undefined,
-      });
+    day.it.forEach(([, _activityCode, text]) => {
+      // A `kind: 'place'` detail for this stop used to be pushed here on every activity — but
+      // mapItems() (above) already creates a full Activity/tours record for the exact same stop,
+      // at the same time, with the exact same "This stop suits your group because ..." reasoning
+      // folded into its own description (see the `fit` handling there). That made "Locations,
+      // notes & checklists" a 1:1 mirror of "Activities" for every generated itinerary — pure
+      // duplication, not additional information. Only genuinely distinct entries (inter-
+      // destination transfer reserves, inter-activity travel segments, day logistics notes)
+      // belong in this list.
       // Insert the travel segment to the NEXT activity right after this one,
       // between the two activities it connects, rather than lumped at the
       // end of the day.
@@ -2831,8 +2909,23 @@ const buildDetails = (
       }
     });
 
-    // Add logistics notes at the end of the day
-    (day.ln ?? []).forEach((note) => {
+    // Add logistics notes at the end of the day — except ones that just restate a transfer
+    // fact already surfaced above (the destination-transfer reserve, or a same-day travel
+    // segment). Those get written into day.ln too (for the raw itinerary/markdown-fallback
+    // consumers of that field), but showing the identical fact a second time in this list
+    // would be exactly the redundancy this function otherwise avoids.
+    const coveredTransferNotes = new Set<string>();
+    if (destinationTransfer) {
+      coveredTransferNotes.add(
+        `${destinationTransfer.mode} transfer ${destinationTransfer.from} → ${destinationTransfer.to}: reserve about ${destinationTransfer.minutes} minutes before activities.`
+      );
+    }
+    for (const note of transferNotesByDay?.get(day.d) ?? []) {
+      coveredTransferNotes.add(
+        `Estimated ${describeTransferMode(note.mode).toLowerCase()} transfer: ${note.fromName} → ${note.toName}, about ${note.minutes} min (${note.distanceKm.toFixed(1)} km).`
+      );
+    }
+    (day.ln ?? []).filter((note) => !coveredTransferNotes.has(note)).forEach((note) => {
       details.push({
         day: day.d,
         time: null,
@@ -3460,6 +3553,7 @@ const runGenerateItineraryViaPromptPlan = async (
     input.groupTraits.length
   );
   enforceDescriptionBasedDestinationConsistency(polishedItinerary, promptRequest.d, durationMetadataByName);
+  enforceGeographicActivityPlausibility(polishedItinerary, shortlistByDestination, durationMetadataByName);
   const destinationTransferTimingByDate = deriveDestinationTransferTiming(polishedItinerary);
 
   const fatigueManaged = enforceFatigueManagement(
@@ -3582,6 +3676,11 @@ const runGenerateItineraryViaPromptPlan = async (
 
   // Surface the same derived transfer estimates used for scheduling so the
   // traveler can understand why activities are grouped and paced this way.
+  // (Kept on day.ln for the raw itinerary/markdown-fallback consumers of this
+  // field — buildDetails() below independently derives its own equivalent
+  // `note`-kind detail entries from the same source data and filters these
+  // exact day.ln strings back out before rendering, so the user-facing
+  // "Locations, notes & checklists" list doesn't show the same transfer twice.)
   for (const day of finalItinerary.dy) {
     const transferNotes = transferNotesByDay.get(day.d) ?? [];
     if (!transferNotes.length) continue;
@@ -3634,7 +3733,20 @@ const runGenerateItineraryViaPromptPlan = async (
   const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
   const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
   let planMarkdown = safeRender.markdown;
-  const details = buildDetails(finalItinerary, normalized.w as any, transferNotesByDay, durationMetadataByName, whyFitsByName, destinationTransferTimingByDate);
+  // A short "why this place" paragraph per unique destination, in visiting order — deterministic
+  // assembly of cached, plausibility-gated Wikipedia content (see destinationNarrativeService.ts),
+  // not LLM-generated structure. Best-effort: a lookup failure here must never fail generation.
+  try {
+    const destinationOrder = finalItinerary.dy.map((day) => day.b).filter(Boolean);
+    if (destinationOrder.length) {
+      const narrativesByName = await getDestinationNarratives(destinationOrder);
+      const narrativesSection = renderDestinationNarrativesMarkdown(destinationOrder, narrativesByName);
+      if (narrativesSection) planMarkdown = `${narrativesSection}\n\n${planMarkdown}`.trim();
+    }
+  } catch (err) {
+    logError('[itinerary] destination narrative assembly failed; continuing without it', err);
+  }
+  const details = buildDetails(finalItinerary, transferNotesByDay, destinationTransferTimingByDate);
   const safeDetails = details.length
     ? details
     : [

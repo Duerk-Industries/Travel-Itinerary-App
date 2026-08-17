@@ -56,7 +56,9 @@ export const anthropicProvider: AiChatProvider = {
         {
           model: req.model,
           max_tokens: req.max_tokens ?? 1024,
-          temperature: req.temperature,
+          // Claude Sonnet 4.5 rejects the legacy temperature parameter. Keep
+          // temperature in the provider-neutral request type for providers
+          // that support it, but do not forward it to Anthropic.
           system: combineSystemMessages(req.messages, jsonMode),
           messages: toAnthropicMessages(req.messages),
         },

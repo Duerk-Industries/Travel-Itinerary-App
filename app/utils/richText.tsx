@@ -38,6 +38,8 @@ export const renderRichTextBlocks = (
     italic: any;
     link: any;
     listItem?: any;
+    heading2?: any;
+    heading3?: any;
   }
 ): React.ReactNode[] => {
   const lines = text.split(/\r?\n/);
@@ -45,6 +47,17 @@ export const renderRichTextBlocks = (
     const trimmed = line.trim();
     if (!trimmed) {
       return <Text key={`rt-empty-${idx}`} style={styles.base}>{' '}</Text>;
+    }
+
+    const headingMatch = /^(#{2,3})\s+(.*)$/.exec(trimmed);
+    if (headingMatch && (styles.heading2 || styles.heading3)) {
+      const level = headingMatch[1].length;
+      const headingStyle = level >= 3 ? styles.heading3 ?? styles.heading2 : styles.heading2 ?? styles.heading3;
+      return (
+        <Text key={`rt-heading-${idx}`} style={headingStyle}>
+          {headingMatch[2]}
+        </Text>
+      );
     }
 
     const listMatch = /^([-*]|\d+\.)\s+/.exec(trimmed);

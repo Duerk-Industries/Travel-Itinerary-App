@@ -38,6 +38,23 @@ describe('itinerary prompt specificity guardrails', () => {
     expect(p3.usr.toLowerCase()).toContain('norway house');
   });
 
+  it('warns against activity types that are geographically infeasible at the assigned location', () => {
+    // Regression guard: real generations scheduled "Surf Lesson" in Monteverde (a Costa Rican
+    // cloud-forest mountain town with no coast) and "Hot Springs" in Manuel Antonio (a Pacific
+    // beach town with no geothermal activity) — a plausible place paired with an activity type
+    // it doesn't actually support. Both stages must instruct against this, on top of the
+    // server-side enforceGeographicActivityPlausibility check that catches what the model misses.
+    const p2 = readPrompt('p2', 'p2_days.md');
+    const p3 = readPrompt('p3', 'p3_validate.md');
+
+    expect(p2.usr).toContain('Activity-type feasibility');
+    expect(p2.usr.toLowerCase()).toContain('monteverde');
+    expect(p2.usr.toLowerCase()).toContain('manuel antonio');
+    expect(p3.usr).toContain('Activity-type feasibility');
+    expect(p3.usr.toLowerCase()).toContain('monteverde');
+    expect(p3.usr.toLowerCase()).toContain('manuel antonio');
+  });
+
   it('forbids arrival framing on any day other than the actual check-in day', () => {
     // Regression guard: a real 7-day, single-base Oslo trip had "Arrive in Oslo and
     // settle into the city rhythm" generated on Day 3 — well after the traveler had

@@ -59,6 +59,7 @@ Rules:
 18) Food-market lunch: when a food market is present in the shortlist/pod and food is relevant, pair it with LC instead of inventing a restaurant.
 19) For groups larger than 4, add a short logistics note to verify a group-size-appropriate transfer (public transit or larger vehicle as locally appropriate); do not assume a private vehicle is cheaper.
 20) If comfort=L, avoid explicitly budget-oriented commercial experiences, while retaining relevant free iconic/open-access places.
+27) Activity-type feasibility: an activity type must be physically possible at its scheduled location, not just a plausible-sounding place name. Ocean/coastal activities (surfing, snorkeling, scuba diving, a beach day) require a location with direct coastline access — do not schedule them in an inland, mountain, or highland town (a real generation mistakenly scheduled "Surf Lesson" in Monteverde, Costa Rica, a cloud-forest mountain town nowhere near the coast). Hot springs/geothermal activities require known volcanic/geothermal terrain — do not schedule them just because the destination is a resort or beach town with no such feature (a real generation mistakenly scheduled "Hot Springs" in Manuel Antonio, Costa Rica, a Pacific beach town with no geothermal activity). Skiing/snowboarding requires elevation and a snow season. If you are not confident the destination actually has the specific physical feature an activity type depends on, choose a different, genuinely feasible activity type instead.
 
 OUTPUT MUST MATCH schema: {STEP2_SCHEMA_MIN}
 

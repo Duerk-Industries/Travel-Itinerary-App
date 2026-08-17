@@ -1080,6 +1080,7 @@ export const initDb = async (): Promise<void> => {
     );
   `);
   await p.query(`ALTER TABLE itineraries ADD COLUMN IF NOT EXISTS budget NUMERIC;`);
+  await p.query(`ALTER TABLE itineraries ADD COLUMN IF NOT EXISTS plan_markdown TEXT;`);
   await p.query(`
     CREATE TABLE IF NOT EXISTS itinerary_details (
       id UUID PRIMARY KEY,
@@ -7820,6 +7821,7 @@ export const listItineraries = async (userId: string): Promise<Array<Itinerary &
             i.destination,
             i.days,
             i.budget,
+            i.plan_markdown as "planMarkdown",
             i.created_at as "createdAt",
             t.name as "tripName"
      FROM itineraries i
@@ -7832,6 +7834,23 @@ export const listItineraries = async (userId: string): Promise<Array<Itinerary &
     [userId]
   );
   return rows;
+};
+
+// Sets the AI generation's narrative markdown on an itinerary record — a deliberately narrow,
+// single-purpose setter (rather than folding this into updateItineraryRecord, which requires
+// re-passing destination/days/budget) since itineraryAsyncService calls this once right after
+// persisting the structured details/generatedItems, independent of any manual edits to those
+// other fields.
+export const setItineraryPlanMarkdown = async (userId: string, itineraryId: string, planMarkdown: string | null): Promise<void> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string }>(
+    `SELECT trip_id as "tripId" FROM itineraries WHERE id = $1`,
+    [itineraryId]
+  );
+  if (!rows.length) throw new Error('Itinerary not found');
+  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  await p.query(`UPDATE itineraries SET plan_markdown = $1 WHERE id = $2`, [planMarkdown, itineraryId]);
 };
 
 export const createItineraryRecord = async (
@@ -7858,7 +7877,7 @@ export const createItineraryRecord = async (
   const { rows } = await p.query(
     `INSERT INTO itineraries (id, trip_id, destination, days, budget)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, trip_id as "tripId", destination, days, budget, created_at as "createdAt",
+     RETURNING id, trip_id as "tripId", destination, days, budget, plan_markdown as "planMarkdown", created_at as "createdAt",
                (SELECT name FROM trips WHERE id = $2) as "tripName"`,
     [randomUUID(), tripId, destination.trim(), Math.max(1, Math.round(days)), budget ?? null]
   );
@@ -7911,7 +7930,7 @@ export const updateItineraryRecord = async (
     `UPDATE itineraries
      SET destination = $1, days = $2, budget = $3
      WHERE id = $4
-     RETURNING id, trip_id as "tripId", destination, days, budget, created_at as "createdAt",
+     RETURNING id, trip_id as "tripId", destination, days, budget, plan_markdown as "planMarkdown", created_at as "createdAt",
                (SELECT name FROM trips WHERE id = trip_id) as "tripName"`,
     [destination.trim(), Math.max(1, Math.round(days)), budget ?? null, itineraryId]
   );

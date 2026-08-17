@@ -13,6 +13,7 @@ import { ActivityIndicator, Alert, Linking,
   useWindowDimensions, } from 'react-native';
 import { addDaysToIso, computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
+import { buildBookingPriorities, BookingPriorityItem, BookingPriorityUrgency } from '../utils/bookingPriorities';
 import {
   buildOverviewRows,
   type DetailItem,
@@ -489,6 +490,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
+  const [itineraryPlanMarkdown, setItineraryPlanMarkdown] = useState<string | null>(null);
+  const [showItineraryPlanNotes, setShowItineraryPlanNotes] = useState(false);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
@@ -653,6 +656,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (!trip?.id) {
         setItineraryDetails([]);
         setItineraryId(null);
+        setItineraryPlanMarkdown(null);
         return;
       }
       setItineraryLoading(true);
@@ -661,6 +665,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         if (!res.ok) {
           setItineraryDetails([]);
           setItineraryId(null);
+          setItineraryPlanMarkdown(null);
           return;
         }
         const data = await res.json();
@@ -668,6 +673,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         if (!records.length) {
           setItineraryDetails([]);
           setItineraryId(null);
+          setItineraryPlanMarkdown(null);
           return;
         }
         // Use the most-recently-updated record per trip, falling back to createdAt
@@ -677,6 +683,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           new Date((r?.updatedAt ?? r?.createdAt) ?? 0).getTime();
         const latest = [...records].sort((a, b) => recordTs(b) - recordTs(a))[0];
         setItineraryId(latest.id ?? null);
+        setItineraryPlanMarkdown(typeof latest.planMarkdown === 'string' && latest.planMarkdown.trim() ? latest.planMarkdown : null);
         const detailsRes = await fetch(`${backendUrl}/api/itineraries/${latest.id}/details`, { headers });
         if (!detailsRes.ok) {
           setItineraryDetails([]);
@@ -687,6 +694,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       } catch {
         setItineraryDetails([]);
         setItineraryId(null);
+        setItineraryPlanMarkdown(null);
       } finally {
         setItineraryLoading(false);
       }
@@ -708,6 +716,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         return 0;
       }),
     [itineraryDetails]
+  );
+
+  // P2 (docs/implementation_plans/itinerary-narrative-depth-and-validation.md): deterministic,
+  // client-computed "what to book now" list — no LLM involved, derived from data already loaded
+  // and validated elsewhere on this tab.
+  const bookingPriorities = useMemo(
+    () => buildBookingPriorities({ flights, lodgings, activities: tours, carRentals }),
+    [flights, lodgings, tours, carRentals]
   );
 
   const refreshItineraryDetails = async () => {
@@ -2486,6 +2502,84 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     />
   );
 
+  // P0 (docs/implementation_plans/itinerary-narrative-depth-and-validation.md): the AI generation
+  // pipeline's render stage already produces a fuller markdown write-up (destination narratives,
+  // day-by-day prose, "why this fits your group" explanations) than the structured
+  // flights/lodgings/activities/details the rest of this tab surfaces. Previously that markdown
+  // was generated and then discarded; now it's persisted as `itinerary.planMarkdown` and shown
+  // here, collapsed by default so it doesn't compete with the structured views.
+  const renderItineraryPlanNotes = () => {
+    if (!itineraryPlanMarkdown) return null;
+    return (
+      <View style={[styles.card, responsiveCardStyle]} testID="overview-plan-notes-card">
+        <TouchableOpacity
+          testID="overview-plan-notes-toggle"
+          style={[styles.row, { justifyContent: 'space-between' }]}
+          onPress={() => setShowItineraryPlanNotes((prev) => !prev)}
+        >
+          <Text style={styles.sectionTitle}>Trip Notes</Text>
+          <Text style={styles.helperText}>{showItineraryPlanNotes ? 'Hide' : 'Show'}</Text>
+        </TouchableOpacity>
+        {showItineraryPlanNotes ? (
+          <View testID="overview-plan-notes-body">
+            {renderRichTextBlocks(itineraryPlanMarkdown, {
+              base: styles.bodyText,
+              bold: styles.headerText,
+              italic: styles.helperText,
+              link: styles.linkText ?? styles.buttonText,
+              listItem: styles.helperText,
+              heading2: styles.sectionTitle,
+              heading3: styles.headerText,
+            })}
+          </View>
+        ) : (
+          <Text style={styles.helperText}>AI-written trip write-up, including destination background and day-by-day notes.</Text>
+        )}
+      </View>
+    );
+  };
+
+  const bookingPriorityUrgencyLabel: Record<BookingPriorityUrgency, string> = {
+    overdue: 'Past due',
+    soon: 'Book soon',
+    upcoming: 'Upcoming',
+    unscheduled: 'No date yet',
+  };
+  const bookingPriorityKindLabel: Record<BookingPriorityItem['kind'], string> = {
+    flight: 'Flight',
+    lodging: 'Lodging',
+    activity: 'Activity',
+    carRental: 'Car rental',
+  };
+  const bookingPriorityUrgencyStyle: Record<BookingPriorityUrgency, any> = {
+    overdue: styles.dangerButtonText ?? styles.helperText,
+    soon: styles.headerText,
+    upcoming: styles.helperText,
+    unscheduled: styles.helperText,
+  };
+
+  const renderBookingPriorities = () => {
+    if (!bookingPriorities.length) return null;
+    return (
+      <View style={[styles.card, responsiveCardStyle]} testID="overview-booking-priorities-card">
+        <Text style={styles.sectionTitle}>What to book now</Text>
+        {bookingPriorities.slice(0, 6).map((item) => (
+          <View key={`${item.kind}-${item.id}`} style={[styles.row, { justifyContent: 'space-between' }]} testID={`overview-booking-priority-${item.kind}-${item.id}`}>
+            <Text style={styles.bodyText}>
+              {bookingPriorityKindLabel[item.kind]}: {item.label}
+              {item.date ? ` (${item.date})` : ''}
+            </Text>
+            <Text style={bookingPriorityUrgencyStyle[item.urgency]}>
+              {bookingPriorityUrgencyLabel[item.urgency]}
+              {item.urgency === 'overdue' && item.daysUntil !== null ? ` · ${Math.abs(item.daysUntil)}d ago` : ''}
+              {item.urgency === 'soon' && item.daysUntil !== null ? ` · ${item.daysUntil}d` : ''}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderDayBar = (activeDate: string | null) => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
       <TouchableOpacity
@@ -3132,6 +3226,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           ) : null}
 
+          {renderBookingPriorities()}
+
+          {renderItineraryPlanNotes()}
+
           {renderDayBar(null)}
 
           <View style={{ gap: 12 }}>
@@ -3196,6 +3294,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </Text>
         ) : null}
         {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
+
+        {renderBookingPriorities()}
+
+        {renderItineraryPlanNotes()}
 
         {isEditing ? (
           <>
