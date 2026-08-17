@@ -29,6 +29,24 @@ describe('Metro config parity (root EAS config vs. app local config)', () => {
   const rootConfig: any = loadConfig('metro.config.cjs');
   const appConfig: any = loadConfig('app/metro.config.js');
 
+  it('keeps image-size-safe as a workspace instead of a broken file override', () => {
+    const rootPackage = JSON.parse(
+      fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8'),
+    );
+    const rootLock = JSON.parse(
+      fs.readFileSync(path.join(workspaceRoot, 'package-lock.json'), 'utf8'),
+    );
+
+    expect(rootPackage.workspaces).toContain('packages/image-size-safe');
+    expect(rootPackage.overrides?.['image-size']).toBeUndefined();
+    expect(rootLock.packages?.['node_modules/image-size']?.resolved).toBe(
+      'packages/image-size-safe',
+    );
+    expect(rootLock.packages?.['node_modules/metro/node_modules/image-size']?.version).toBe(
+      '1.2.1',
+    );
+  });
+
   it('both configs leave resolverMainFields to Expo defaults (platform-aware)', () => {
     // Expo's default is an array. We just want to confirm neither config
     // replaced it with the flat ['react-native', 'browser', ...] override
