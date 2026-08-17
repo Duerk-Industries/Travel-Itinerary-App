@@ -147,6 +147,7 @@ interface AccountTabProps {
   activePage: string;
   onNavigate?: (page: AccountPage) => void;
   accountProfile: AccountProfile;
+  plaidEnabled?: boolean;
   setAccountProfile: Setter<AccountProfile>;
   familyRelationships: any[];
   setFamilyRelationships: Setter<any[]>;
@@ -190,6 +191,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   activePage,
   onNavigate = () => undefined,
   accountProfile,
+  plaidEnabled = false,
   setAccountProfile,
   familyRelationships,
   setFamilyRelationships,
@@ -320,6 +322,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         userToken={userToken}
         activePage={activePage}
         accountProfile={accountProfile}
+        plaidEnabled={plaidEnabled}
         setAccountProfile={setAccountProfile}
         setUserToken={setUserToken}
         setUserName={setUserName}

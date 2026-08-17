@@ -641,6 +641,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // actually on — matches each flag's own fail-open default at the real API gate.
   const [featureItineraryReactions, setFeatureItineraryReactions] = useState(true);
   const [featureItineraryItemKinds, setFeatureItineraryItemKinds] = useState(true);
+  const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -656,6 +657,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureQuickStartTripWizard(Boolean(data.featureQuickStartTripWizard));
           setFeatureItineraryReactions(Boolean(data.featureItineraryReactions));
           setFeatureItineraryItemKinds(Boolean(data.featureItineraryItemKinds));
+          setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
         }
       })
       .catch(() => undefined);
@@ -3012,6 +3014,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     styles={styles}
                     onNavigate={handleHomeNavigate}
                     onAssignmentApplied={handleIngestionAssignmentApplied}
+                    userRole={userRole}
                   />
                 </Suspense>
               )
@@ -3118,6 +3121,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   activePage={activePage}
                   onNavigate={(page) => requestPageChange(page)}
                   accountProfile={accountProfile}
+                  plaidEnabled={featureExpenseImportPlaid}
                   setAccountProfile={setAccountProfile}
                   familyRelationships={familyRelationships}
                   setFamilyRelationships={setFamilyRelationships}

@@ -103,6 +103,7 @@ interface AccountProfileManagementProps {
   userToken: string | null;
   activePage: string;
   accountProfile: AccountProfile;
+  plaidEnabled?: boolean;
   setAccountProfile: Setter<AccountProfile>;
   setUserToken: Setter<string | null>;
   setUserName: Setter<string | null>;
@@ -126,6 +127,7 @@ const AccountProfileManagement = ({
   userToken,
   activePage,
   accountProfile,
+  plaidEnabled = false,
   setAccountProfile,
   setUserToken,
   setUserName,
@@ -694,20 +696,25 @@ const AccountProfileManagement = ({
         </>
       )}
 
-      <View style={styles.divider} />
-      <Text style={styles.modalLabel}>Financial Connections</Text>
-      <Text style={styles.helperText}>
-        Connect your bank or credit card accounts to securely import recent transactions as trip expenses.
-      </Text>
-      <PlaidLinkButton
-        theme={theme}
-        backendUrl={backendUrl}
-        jsonHeaders={jsonHeaders}
-        onSuccess={(itemId) => {
-          Alert.alert('Connected', 'Your bank account has been connected. Recent transactions will be available to import in the expenses tab.');
-        }}
-        style={{ marginTop: spacing.sm }}
-      />
+      {plaidEnabled ? (
+        <>
+          <View style={styles.divider} />
+          <Text style={styles.modalLabel}>Financial Connections</Text>
+          <Text style={styles.helperText}>
+            Connect your bank or credit card accounts to securely import recent transactions as trip expenses.
+          </Text>
+          <PlaidLinkButton
+            theme={theme}
+            backendUrl={backendUrl}
+            jsonHeaders={jsonHeaders}
+            onSuccess={(itemId) => {
+              void itemId;
+              Alert.alert('Connected', 'Your bank account has been connected. Recent transactions will be available to import in the expenses tab.');
+            }}
+            style={{ marginTop: spacing.sm }}
+          />
+        </>
+      ) : null}
 
       <View style={styles.divider} />
       <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>

@@ -257,3 +257,80 @@ describe('IngestionTab', () => {
     });
   });
 });
+
+describe('IngestionTab role-based view', () => {
+  const baseConfig = {
+    tierKey: 'premium',
+    quotas: { monthlyUploads: 50, gmailLookbackDays: 30, llmEscalations: 'SMALL_ONLY' },
+    forwarding: {
+      provider: 'mailgun',
+      currentAddress: 'travel.docs@wander-bunnies.com',
+      instructions: 'Forward travel confirmations to the Mailgun-backed inbox.',
+      adminManagedNote: 'Changing the destination inbox may require an admin update and provider redeploy.',
+    },
+    gmail: { scope: 'https://www.googleapis.com/auth/gmail.readonly', inboxOnly: true, dryRunSupported: true, connection: { connected: false } },
+  };
+
+  const mockLoad = (config: Record<string, unknown>) => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/api/ingestion/config')) return createJsonResponse(config);
+      if (url.endsWith('/api/ingestion/review-items')) return createJsonResponse({ items: [] });
+      if (url.endsWith('/api/ingestion/jobs')) return createJsonResponse({ jobs: [] });
+      if (url.endsWith('/api/ingestion/assignment/trips')) return createJsonResponse({ trips: [] });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+  };
+
+  beforeEach(() => {
+    (global as any).fetch = jest.fn();
+  });
+
+  it('shows only the forwarding address, Manual Upload, and lists for a regular user — no admin filters, and Gmail Import hidden while its flag is off', async () => {
+    mockLoad({ ...baseConfig, features: { manualUpload: true, forwardedMailbox: true, gmailImport: false } });
+
+    const { findByText, queryByText, queryByPlaceholderText } = render(
+      <IngestionTab backendUrl={backendUrl} headers={headers} styles={styles} onNavigate={jest.fn()} />
+    );
+
+    expect(await findByText('travel.docs@wander-bunnies.com')).toBeTruthy();
+    expect(await findByText('Manual Upload')).toBeTruthy();
+    expect(await findByText('Queued Items')).toBeTruthy();
+    expect(await findByText('Recent Jobs')).toBeTruthy();
+
+    expect(queryByPlaceholderText('Search provider or confirmation')).toBeNull();
+    expect(queryByPlaceholderText('Status or ALL')).toBeNull();
+    expect(queryByText('Forwarding')).toBeNull();
+    expect(queryByText(/adminManagedNote|provider redeploy/)).toBeNull();
+    expect(queryByText('Gmail Import')).toBeNull();
+  });
+
+  it('shows a simplified Gmail Import section for a regular user when the flag is enabled', async () => {
+    mockLoad({ ...baseConfig, features: { manualUpload: true, forwardedMailbox: true, gmailImport: true } });
+
+    const { findByText, queryByText } = render(
+      <IngestionTab backendUrl={backendUrl} headers={headers} styles={styles} onNavigate={jest.fn()} />
+    );
+
+    expect(await findByText('Gmail Import')).toBeTruthy();
+    expect(await findByText('Connect Gmail')).toBeTruthy();
+    expect(await findByText('Dry Run')).toBeTruthy();
+    expect(await findByText('Import Gmail')).toBeTruthy();
+    expect(queryByText(/Scope review/)).toBeNull();
+    expect(queryByText(/Inbox only/)).toBeNull();
+  });
+
+  it('keeps the full admin view (filters, forwarding detail, and the Gmail-disabled message) for admins', async () => {
+    mockLoad({ ...baseConfig, features: { manualUpload: true, forwardedMailbox: true, gmailImport: false } });
+
+    const { findByText, findByPlaceholderText } = render(
+      <IngestionTab backendUrl={backendUrl} headers={headers} styles={styles} onNavigate={jest.fn()} userRole="admin" />
+    );
+
+    expect(await findByPlaceholderText('Search provider or confirmation')).toBeTruthy();
+    expect(await findByPlaceholderText('Status or ALL')).toBeTruthy();
+    expect(await findByText('Forwarding')).toBeTruthy();
+    expect(await findByText('Gmail import is currently disabled.')).toBeTruthy();
+  });
+});

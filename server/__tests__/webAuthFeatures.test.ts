@@ -60,4 +60,20 @@ describe('GET /api/auth/features', () => {
     expect(enabledRes.body.featureItineraryReactions).toBe(true);
     expect(enabledRes.body.featureItineraryItemKinds).toBe(true);
   });
+
+  it('reports Plaid as unavailable unless both Plaid rollout flags are enabled', async () => {
+    await setFeatureFlag('expense_import_plaid', false, null);
+    await setFeatureFlag('expense_import_plaid_link', false, null);
+    clearFeatureFlagCacheForTesting();
+
+    const disabledRes = await request(app).get('/api/auth/features');
+    expect(disabledRes.body.featureExpenseImportPlaid).toBe(false);
+
+    await setFeatureFlag('expense_import_plaid', true, null);
+    await setFeatureFlag('expense_import_plaid_link', true, null);
+    clearFeatureFlagCacheForTesting();
+
+    const enabledRes = await request(app).get('/api/auth/features');
+    expect(enabledRes.body.featureExpenseImportPlaid).toBe(true);
+  });
 });

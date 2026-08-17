@@ -272,6 +272,8 @@ router.get('/features', async (_req, res) => {
     // have accepted the request.
     itineraryReactions,
     itineraryItemKinds,
+    plaidMaster,
+    plaidLink,
   ] = await Promise.all([
     getFeatureFlag('feature_grid_editing'),
     getFeatureFlag('feature_grid_editing_clipboard'),
@@ -281,6 +283,8 @@ router.get('/features', async (_req, res) => {
     getFeatureFlag('feature_quick_start_trip_wizard'),
     isFeatureEnabled('itinerary_reactions'),
     isFeatureEnabled('itinerary_item_kinds'),
+    isFeatureEnabled('expense_import_plaid'),
+    isFeatureEnabled('expense_import_plaid_link'),
   ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
@@ -295,6 +299,7 @@ router.get('/features', async (_req, res) => {
     featureQuickStartTripWizard: quickStartTripWizard?.enabled === true,
     featureItineraryReactions: itineraryReactions === true,
     featureItineraryItemKinds: itineraryItemKinds === true,
+    featureExpenseImportPlaid: plaidMaster === true && plaidLink === true,
   });
 });
 
