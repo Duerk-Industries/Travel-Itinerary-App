@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
+import pLimit from 'p-limit';
 import { authenticate } from '../auth';
 import { getTripById, getWebUserProfile, listTraitsForGroupTrip, listFlights } from '../db';
 import { logError, logInfo } from '../logger';
@@ -258,6 +259,53 @@ router.get('/images', async (req, res) => {
     logError('[itinerary] image fetch error', err);
     res.json({ url: PLACEHOLDER_IMAGE, cached: false, provider: 'placeholder', fallbackUsed: true });
   }
+});
+
+router.post('/images/batch', async (req, res) => {
+  const rawDays = Array.isArray(req.body?.days) ? req.body.days.slice(0, 31) : [];
+  const requests = rawDays
+    .map((entry: any) => ({
+      date: String(entry?.date ?? '').trim(),
+      location: String(entry?.location ?? '').trim(),
+      context: String(entry?.context ?? '').trim(),
+    }))
+    .filter((entry: { date: string; location: string }) => entry.date && entry.location);
+  if (!requests.length) {
+    res.json({ images: [] });
+    return;
+  }
+
+  const limit = pLimit(4);
+  const images = await Promise.all(
+    requests.map((entry: { date: string; location: string; context: string }) =>
+      limit(async () => {
+        try {
+          const result = await getItineraryImage({
+            locationName: entry.location,
+            day: entry.date,
+            contextText: entry.context || undefined,
+          });
+          return {
+            date: entry.date,
+            url: result.url || PLACEHOLDER_IMAGE,
+            cached: result.cached,
+            provider: result.url ? result.provider : 'placeholder',
+            fallbackUsed: result.url ? result.fallbackUsed : true,
+          };
+        } catch (err) {
+          logError(`[itinerary] batch image fetch error date=${entry.date}`, err);
+          return {
+            date: entry.date,
+            url: PLACEHOLDER_IMAGE,
+            cached: false,
+            provider: 'placeholder',
+            fallbackUsed: true,
+          };
+        }
+      })
+    )
+  );
+  res.json({ images });
 });
 
 router.post('/weather/overview', async (req, res) => {

@@ -20,6 +20,13 @@ const getUrlLookupTtlMs = (): number => {
   return 10 * 60 * 1000;
 };
 
+const getNegativeUrlLookupTtlMs = (): number => {
+  const configured = getApiCacheSetting('unsplash', 'negativeUrlLookupTtlMs');
+  return Number.isFinite(configured) && (configured as number) > 0
+    ? configured as number
+    : 24 * 60 * 60 * 1000;
+};
+
 const urlLookupCache = createTtlCache<string | null>({
   defaultTtlMs: getUrlLookupTtlMs(),
   metricName: 'unsplash.url_lookup',
@@ -83,7 +90,13 @@ const fetchUnsplashImage = async (
       return url;
     },
     getUrlLookupTtlMs()
-  );
+  ).then((url) => {
+    // A negative lookup is stable enough to retain for a day, while positive
+    // results keep the shorter configured TTL. This avoids retrying a missing
+    // destination photo on every overview refresh.
+    if (url === null) urlLookupCache.set(key, null, getNegativeUrlLookupTtlMs());
+    return url;
+  });
 };
 
 export const fetchUnsplashImageForLocation = async (

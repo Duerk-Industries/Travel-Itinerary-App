@@ -259,6 +259,7 @@ if [[ "${#secret_map[@]}" -gt 0 ]]; then
   done
   env_pairs=("${filtered_env_pairs[@]}")
 fi
+env_pairs+=("NODE_OPTIONS=--max-old-space-size=1536" "GIT_SHA=$(git -C "$REPO_ROOT" rev-parse HEAD)")
 env_keys=()
 for pair in "${env_pairs[@]}"; do
   env_keys+=("${pair%%=*}")
@@ -317,6 +318,8 @@ fi
 gcloud run deploy "$SERVICE_NAME" \
   --source "$SOURCE_DIR" \
   --region "$REGION" \
+  --memory 2Gi \
+  --cpu 1 \
   --session-affinity \
   --max-instances 1 \
   ${env_arg:+--update-env-vars "$env_arg"} \

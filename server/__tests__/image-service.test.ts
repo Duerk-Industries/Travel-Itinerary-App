@@ -95,12 +95,10 @@ describe('image-service', () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
-  it('retries the destination when a detailed itinerary query has no photos', async () => {
-    (axios.get as jest.Mock)
-      .mockResolvedValueOnce({ data: { results: [] } })
-      .mockResolvedValueOnce({
-        data: { results: [{ urls: { regular: 'https://images.example.com/osaka.jpg' } }] },
-      });
+  it('uses a stable destination-only query for detailed itinerary cards', async () => {
+    (axios.get as jest.Mock).mockResolvedValueOnce({
+      data: { results: [{ urls: { regular: 'https://images.example.com/osaka.jpg' } }] },
+    });
 
     const result = await getItineraryImage({
       locationName: 'Osaka',
@@ -110,7 +108,7 @@ describe('image-service', () => {
 
     expect(result).toMatchObject({ provider: 'unsplash', fallbackUsed: false });
     expect(result.url).toBe('https://images.example.com/osaka.jpg');
-    expect(axios.get).toHaveBeenCalledTimes(2);
-    expect((axios.get as jest.Mock).mock.calls[1][0]).toContain('query=Osaka');
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect((axios.get as jest.Mock).mock.calls[0][0]).toContain('query=Osaka');
   });
 });

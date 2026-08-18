@@ -14,7 +14,7 @@ $PSNativeCommandUseErrorActionPreference = $false
 $ServiceName = if ($env:SERVICE_NAME) { $env:SERVICE_NAME } else { 'travel-itinerary-app' }
 $Region = if ($env:REGION) { $env:REGION } else { 'us-east5' }
 $SourceDir = if ($env:SOURCE_DIR) { $env:SOURCE_DIR } else { 'server' }
-$Memory = if ($env:MEMORY) { $env:MEMORY } else { '1Gi' }
+$Memory = if ($env:MEMORY) { $env:MEMORY } else { '2Gi' }
 $EnvFile = if ($env:ENV_FILE) { $env:ENV_FILE } else { '' }
 $SecretsFile = if ($env:SECRETS_FILE) { $env:SECRETS_FILE } else { '' }
 $Secrets = if ($env:SECRETS) { $env:SECRETS } else { '' }
@@ -348,6 +348,10 @@ if ($SecretsFile -and (Test-Path -LiteralPath $SecretsFile)) {
   }
 }
 
+$gitSha = (& git -C $Script:RepoRoot rev-parse HEAD).Trim()
+$envPairs += "NODE_OPTIONS=--max-old-space-size=1536"
+$envPairs += "GIT_SHA=$gitSha"
+
 $hasAuthSecretMapping = $secretMap.ContainsKey('AUTH_SECRET')
 $hasSafeAuthSecretEnv = -not [string]::IsNullOrWhiteSpace($authSecretFromEnv) -and $authSecretFromEnv.Trim() -ne 'development-secret'
 if (-not $hasAuthSecretMapping -and -not $hasSafeAuthSecretEnv) {
@@ -408,7 +412,7 @@ if ($secretsToRemove.Count -gt 0) {
   foreach ($key in $secretsToRemove) { Write-Host "  $key" }
 }
 
-$cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region, '--session-affinity', '--max-instances', '1')
+$cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region, '--cpu', '1', '--session-affinity', '--max-instances', '1')
 $cmd += @('--memory', $Memory)
 if ($envFlagsFile) { $cmd += "--flags-file=$envFlagsFile" }
 if ($secretsArg) { $cmd += @('--update-secrets', $secretsArg) }

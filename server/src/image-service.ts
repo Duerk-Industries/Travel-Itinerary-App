@@ -256,13 +256,13 @@ export async function getItineraryImage(params: {
     const accessKey = getUnsplashAccessKeyOrThrow();
     const unsplash = await fetchAndCache(unsplashPath, async () => {
       const destinationQuery = String(params.locationName ?? '').trim();
-      const queries = queryText && queryText.toLowerCase() !== destinationQuery.toLowerCase()
-        ? [queryText, destinationQuery]
-        : [destinationQuery];
-      for (const query of queries) {
-        const imageUrl = await fetchUnsplashImageForItinerary(accessKey, query);
-        if (imageUrl) return imageUrl;
-      }
+      // Decorative day images should share a stable destination cache key.
+      // Activity names made the previous primary query unique per day, causing
+      // a live Unsplash request for every card. Keep context for API
+      // compatibility, but deliberately do not use it as a search key.
+      void queryText;
+      const imageUrl = await fetchUnsplashImageForItinerary(accessKey, destinationQuery);
+      if (imageUrl) return imageUrl;
       logInfo(`[unsplash] no itinerary photo found for location="${destinationQuery || 'unknown'}"; using placeholder`);
       return '';
     });

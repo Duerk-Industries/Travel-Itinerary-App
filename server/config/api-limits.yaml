@@ -580,6 +580,8 @@ caching:
     redirectPerDayPerAccount: 300
   unsplash:
     dnsLogTtlMs: 300000
+    urlLookupTtlMs: 600000
+    negativeUrlLookupTtlMs: 86400000
   frankfurter:
     rateCacheTtlMinutes: 1440
   weather:

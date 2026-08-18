@@ -4,13 +4,22 @@ on:
   push:
     branches:
       - main
+  # Lets scripts/deploy-hosting.ps1 and scripts/deploy-hosting.sh trigger this same pipeline
+  # (via `gh workflow run`) when deploying from a branch other than main — e.g. an emergency
+  # fix that hasn't been merged yet. GitHub only offers workflow_dispatch for a workflow file
+  # once this trigger exists on the *default* branch, so this addition needs to reach main once
+  # before dispatching against other branches will work.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
 
 jobs:
   deploy-api:
-    if: github.ref == 'refs/heads/main'
+    # push events still only deploy from main (unchanged); workflow_dispatch is allowed from any
+    # branch, since the whole point of dispatching by hand is to deploy something that isn't on
+    # main yet.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -55,15 +64,23 @@ jobs:
           gcloud run deploy travel-itinerary-app \
             --source . \
             --region us-east5 \
+            --memory 2Gi \
+            --cpu 1 \
             --session-affinity \
             --max-instances 1 \
             --allow-unauthenticated \
             --service-account "travel-itinerary-app-sa@travel-itinerary-app-483623.iam.gserviceaccount.com" \
-            --update-env-vars "WEB_URL=https://wander-bunnies.com,BACKEND_URL=https://wander-bunnies.com,GOOGLE_CALLBACK_URL=https://wander-bunnies.com/api/auth/google/callback,APPLE_CALLBACK_URL=https://wander-bunnies.com/api/auth/apple/callback" \
+            --update-labels "app-git-sha=${GITHUB_SHA}" \
+            --update-env-vars "WEB_URL=https://wander-bunnies.com,BACKEND_URL=https://wander-bunnies.com,GOOGLE_CALLBACK_URL=https://wander-bunnies.com/api/auth/google/callback,APPLE_CALLBACK_URL=https://wander-bunnies.com/api/auth/apple/callback,GIT_SHA=${GITHUB_SHA},NODE_OPTIONS=--max-old-space-size=1536" \
             --project "$GCLOUD_PROJECT_ID"
           gcloud run services update-traffic travel-itinerary-app \
             --region us-east5 \
             --to-latest \
             --project "$GCLOUD_PROJECT_ID"
+          echo "Deployed API metadata: sha=${GITHUB_SHA}"
+          gcloud run services describe travel-itinerary-app \
+            --region us-east5 \
+            --project "$GCLOUD_PROJECT_ID" \
+            --format='yaml(status.latestReadyRevisionName,spec.template.spec.containers[0].resources.limits.memory,spec.template.spec.containers[0].env)'
         env:
           GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}

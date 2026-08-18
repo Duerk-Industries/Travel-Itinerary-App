@@ -132,4 +132,30 @@ describe('TtlCache', () => {
     expect(cache.get('short')).toBeUndefined();
     expect(cache.get('long')).toBe(2);
   });
+
+  it('evicts the least-recently-used entry at the entry cap', () => {
+    const { createTtlCache } = require('../src/utils/ttlCache');
+    const cache = createTtlCache<number>({ maxEntries: 2, defaultTtlMs: 60_000 });
+    cache.set('a', 1);
+    cache.set('b', 2);
+    expect(cache.get('a')).toBe(1); // make a the most recently used key
+    cache.set('c', 3);
+    expect(cache.get('a')).toBe(1);
+    expect(cache.get('b')).toBeUndefined();
+    expect(cache.get('c')).toBe(3);
+  });
+
+  it('evicts by resident byte budget', () => {
+    const { createTtlCache } = require('../src/utils/ttlCache');
+    const cache = createTtlCache<string>({
+      maxSizeBytes: 5,
+      sizeOf: (value: string) => value.length,
+      defaultTtlMs: 60_000,
+    });
+    cache.set('a', '1234');
+    cache.set('b', 'xyz');
+    expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('b')).toBe('xyz');
+    expect(cache.sizeBytes()).toBe(3);
+  });
 });

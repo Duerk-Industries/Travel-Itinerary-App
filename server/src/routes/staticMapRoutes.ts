@@ -34,6 +34,8 @@ const getMaxTripDayPoints = (): number => {
 const mapCache = createTtlCache<CachedMap>({
   defaultTtlMs: getCacheTtlMs(),
   metricName: 'google_static_maps',
+  maxSizeBytes: 32 * 1024 * 1024,
+  sizeOf: (value) => value.body.byteLength,
 });
 
 export const clearStaticMapCacheForTests = (): void => mapCache.clear();

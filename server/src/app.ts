@@ -267,7 +267,11 @@ app.get('/api/diagnostics/apple-client-id', (_req, res) => {
 });
 
 app.get('/api/healthz', (_req, res) => {
-  res.status(200).json({ ok: true });
+  res.status(200).json({
+    ok: true,
+    sha: getEnvValue('GIT_SHA') ?? null,
+    revision: getEnvValue('K_REVISION') ?? null,
+  });
 });
 
 if (!hasWebApp) {

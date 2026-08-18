@@ -59,6 +59,7 @@ import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
 import { getGetYourGuideObservabilitySnapshot } from '../services/getYourGuideObservability';
 import { invalidatePackingPresetCatalogCache, parsePackingPresetDirectory, parsePresetMarkdown } from '../services/packingListCatalogService';
+import { exportAttractionsCatalogCsvMirror } from '../services/attractionsCatalogService';
 import { normalizePackingLabel } from '../utils/packingListNormalize';
 import { getGetYourGuideApiCircuitStatus } from '../apis/getYourGuideApi';
 import { listLocalAiCaptures } from '../ai/analytics/captureBrowser';
@@ -2078,6 +2079,27 @@ router.post('/attractions/duration-metadata/invalidate', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to invalidate attraction duration metadata cache', err);
     res.status(500).json({ error: 'Failed to invalidate attraction duration metadata cache' });
+  }
+});
+
+router.post('/attractions/csv-mirror/export', async (req, res) => {
+  try {
+    const result = await exportAttractionsCatalogCsvMirror();
+    const actorId = (req as any).user ? ((req as any).user as TokenPayload).userId : null;
+    try {
+      await writeAuditLog({
+        actorUserId: actorId,
+        action: 'ATTRACTIONS_CSV_MIRROR_EXPORTED' as any,
+        afterState: result,
+        reason: 'Republish bundled attractions catalog CSV to the configured mirror',
+      });
+    } catch (err) {
+      logError('[admin] audit write failed on attractions CSV mirror export', err);
+    }
+    res.json(result);
+  } catch (err) {
+    logError('[admin] failed to export attractions CSV mirror', err);
+    res.status(500).json({ error: 'Failed to export attractions CSV mirror' });
   }
 });
 

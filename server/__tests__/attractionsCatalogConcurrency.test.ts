@@ -141,7 +141,7 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
     expect(mockedDb.upsertAttractionShortlistBlob).not.toHaveBeenCalled();
   });
 
-  it('syncs cached destination rows to CSV without forcing discovery refresh', async () => {
+  it('does not touch the CSV mirror on a cached destination hit', async () => {
     const previousNodeEnv = process.env.NODE_ENV;
     const previousCsvPath = process.env.ATTRACTIONS_CSV_LOCAL_PATH;
     const previousE2eMode = process.env.E2E_MODE;
@@ -175,7 +175,7 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
     });
 
     expect(mockedAxios.get).not.toHaveBeenCalled();
-    expect(writeSpy).toHaveBeenCalled();
+    expect(writeSpy).not.toHaveBeenCalled();
 
     mkdirSpy.mockRestore();
     writeSpy.mockRestore();

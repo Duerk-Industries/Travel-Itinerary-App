@@ -1442,53 +1442,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     let active = true;
-    const fetchOneImage = async (card: DayCard): Promise<[string, string] | null> => {
-      const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
-      const activities = itineraryDetails
-        .filter((detail) => detail.day === dayNumber)
-        .map((detail) => detail.activity)
-        .filter(Boolean);
-      const tourNames = tours
-        .filter((tour) => tour.date === card.date)
-        .map((tour) => tour.name)
-        .filter(Boolean);
-      const contextParts = [...activities, ...tourNames].filter(Boolean);
-      const context = contextParts.join(' | ').slice(0, 200);
-      try {
-        const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
-        const query = [
-          `location=${encodeURIComponent(baseLocation)}`,
-          `day=${encodeURIComponent(card.date)}`,
-          context ? `context=${encodeURIComponent(context)}` : '',
-        ]
-          .filter(Boolean)
-          .join('&');
-        const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
-        const data = await res.json().catch(() => ({}));
-        return data?.url ? [card.date, data.url] : null;
-      } catch {
-        return null;
-      }
-    };
     const fetchImages = async () => {
       if (!dayCards.length) return;
       const missingCards = dayCards.filter((card) => !blogDayImages[card.date] && !dayImages[card.date]);
       if (!missingCards.length) return;
-      const results = await Promise.all(missingCards.map(fetchOneImage));
-      if (!active) return;
-      const next: Record<string, string> = {};
-      results.forEach((entry) => {
-        if (entry) next[entry[0]] = entry[1];
-      });
-      if (Object.keys(next).length) {
-        setDayImages((prev) => ({ ...prev, ...next }));
+      const days = missingCards.map((card) => ({
+        date: card.date,
+        location: card.location || tripLocationLabel || trip?.destination || 'travel',
+      }));
+      try {
+        const res = await fetch(`${backendUrl}/api/itinerary/images/batch`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ days }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !Array.isArray(data?.images)) return;
+        const next: Record<string, string> = {};
+        data.images.forEach((entry: any) => {
+          if (entry?.date && entry?.url) next[String(entry.date)] = String(entry.url);
+        });
+        if (active && Object.keys(next).length) setDayImages((prev) => ({ ...prev, ...next }));
+      } catch {
+        return;
       }
     };
     fetchImages().catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [backendUrl, headers, blogDayImages, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
+  }, [backendUrl, headers, blogDayImages, dayCards, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {

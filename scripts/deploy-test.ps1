@@ -58,11 +58,13 @@ if (-not $DryRun) {
   & gcloud run deploy $env:TEST_SERVICE_NAME `
     --image $backendDigest `
     --region $env:TEST_REGION `
+    --memory 2Gi `
+    --cpu 1 `
     --session-affinity `
     --max-instances 1 `
     --service-account $env:TEST_RUNTIME_SERVICE_ACCOUNT `
     --update-labels "app-git-sha=$manifestGitSha" `
-    --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:TEST_DOMAIN),BACKEND_URL=$($env:TEST_DOMAIN),GOOGLE_CALLBACK_URL=$($env:TEST_DOMAIN)/api/auth/google/callback,APPLE_CALLBACK_URL=$($env:TEST_DOMAIN)/api/auth/apple/callback,FIRESTORE_DATABASE_ID=$($env:TEST_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:TEST_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase" `
+    --update-env-vars "GCLOUD_PROJECT_ID=$($env:GCLOUD_PROJECT_ID),WEB_URL=$($env:TEST_DOMAIN),BACKEND_URL=$($env:TEST_DOMAIN),GOOGLE_CALLBACK_URL=$($env:TEST_DOMAIN)/api/auth/google/callback,APPLE_CALLBACK_URL=$($env:TEST_DOMAIN)/api/auth/apple/callback,FIRESTORE_DATABASE_ID=$($env:TEST_FIRESTORE_DATABASE_ID),AI_CAPTURE_BUCKET=$($env:TEST_AI_CAPTURE_BUCKET),DB_PROVIDER=firebase,GIT_SHA=$manifestGitSha,NODE_OPTIONS=--max-old-space-size=1536" `
     --set-secrets $secretDeploy.Argument `
     --remove-env-vars $secretDeploy.Keys
   if ($LASTEXITCODE -ne 0) { Fail 'gcloud run deploy failed for test service' }
