@@ -80,6 +80,7 @@ import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
+import ItineraryDocumentImport from '../components/ItineraryDocumentImport';
 // AsyncStorage is loaded lazily (see getAsyncStorage below) so the day-card
 // cache import doesn't add @react-native-async-storage/async-storage to the
 // module-evaluation graph of every tab that ends up importing this file.
@@ -115,6 +116,7 @@ type Trip = {
   groupId: string;
   name: string;
   description?: string | null;
+  notes?: string | null;
   destination?: string | null;
   locationIds?: string[];
   startDate?: string | null;
@@ -235,6 +237,7 @@ type OverviewTabProps = {
   onFlightDataChanged: () => void;
   onLodgingDataChanged: () => void;
   onTourDataChanged: () => void;
+  onCarRentalDataChanged?: () => void;
   onAddCarRental: (rental: CarRental) => void;
   onUpdateCarRental?: (id: string, draft?: CarRentalDraft) => boolean | void | Promise<boolean | void>;
   openFlightInFlightsTab: (flightId: string) => void;
@@ -255,6 +258,7 @@ type OverviewTabProps = {
   // while the real value is still loading is "keep working," not "briefly go inert."
   featureItineraryReactions?: boolean;
   featureItineraryItemKinds?: boolean;
+  userTier?: string | null;
 };
 
 type DayCard = {
@@ -453,6 +457,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onFlightDataChanged,
   onLodgingDataChanged,
   onTourDataChanged,
+  onCarRentalDataChanged,
   onAddCarRental,
   onUpdateCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
@@ -463,6 +468,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureCoverPhotoFallbackV2 = true,
   featureItineraryReactions = true,
   featureItineraryItemKinds = true,
+  userTier,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -499,6 +505,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
   const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [notesDraft, setNotesDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [dateDraft, setDateDraft] = useState({
@@ -604,6 +611,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const resetDrafts = () => {
     if (!trip) return;
     setDescriptionDraft(trip.description ?? '');
+    setNotesDraft(trip.notes ?? '');
     if (trip.startDate || trip.endDate) {
       setDateDraft({
         mode: 'range',
@@ -1557,7 +1565,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const saveOverviewEdits = async () => {
     if (!trip?.id) return;
     setEditingDetailId(null);
-    const { shouldSkipTripSave } = getOverviewSaveFlags(trip, descriptionDraft, dateDraft, pendingRemovalIds);
+    const { shouldSkipTripSave } = getOverviewSaveFlags(trip, descriptionDraft, dateDraft, pendingRemovalIds, notesDraft);
     if (shouldSkipTripSave) {
       setIsEditing(false);
       await refreshItineraryDetails();
@@ -1577,6 +1585,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     const payload: any = {
       description: descriptionDraft,
+      notes: notesDraft,
       dateMode: dateDraft.mode,
     };
     if (dateDraft.mode === 'range') {
@@ -2501,7 +2510,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           style={[styles.row, { justifyContent: 'space-between' }]}
           onPress={() => setShowItineraryPlanNotes((prev) => !prev)}
         >
-          <Text style={styles.sectionTitle}>Trip Notes</Text>
+          <Text style={styles.sectionTitle}>Trip Guide</Text>
           <Text style={styles.helperText}>{showItineraryPlanNotes ? 'Hide' : 'Show'}</Text>
         </TouchableOpacity>
         {showItineraryPlanNotes ? (
@@ -2522,6 +2531,56 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       </View>
     );
   };
+
+  const renderTripNotes = () => (
+    <View style={{ gap: 6 }} testID="overview-trip-notes">
+      <Text style={styles.headerText}>Notes</Text>
+      {isEditing ? (
+        <TextInput
+          testID="overview-trip-notes-input"
+          style={[styles.input, { minHeight: 120, textAlignVertical: 'top' }]}
+          multiline
+          placeholder="Add general notes for this trip"
+          value={notesDraft}
+          onChangeText={setNotesDraft}
+        />
+      ) : trip?.notes ? (
+        <View>
+          {renderRichTextBlocks(trip.notes, {
+            base: styles.bodyText,
+            bold: styles.headerText,
+            italic: styles.helperText,
+            link: styles.linkText ?? styles.buttonText,
+            listItem: styles.helperText,
+            heading2: styles.sectionTitle,
+            heading3: styles.headerText,
+          })}
+        </View>
+      ) : (
+        <Text style={styles.helperText}>No notes yet.</Text>
+      )}
+    </View>
+  );
+
+  const renderDocumentImporter = () => trip?.id ? (
+    <ItineraryDocumentImport
+      backendUrl={backendUrl}
+      headers={headers}
+      tripId={trip.id}
+      userTier={userTier}
+      styles={styles}
+      readOnly={readOnly}
+      onImported={async () => {
+        await Promise.all([
+          Promise.resolve(onRefreshTrips()),
+          Promise.resolve(onFlightDataChanged()),
+          Promise.resolve(onLodgingDataChanged()),
+          Promise.resolve(onTourDataChanged()),
+          Promise.resolve(onCarRentalDataChanged?.()),
+        ]);
+      }}
+    />
+  ) : null;
 
   const bookingPriorityUrgencyLabel: Record<BookingPriorityUrgency, string> = {
     overdue: 'Past due',
@@ -3212,6 +3271,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           ) : null}
 
+          {renderTripNotes()}
+          {renderDocumentImporter()}
+
           {renderBookingPriorities()}
 
           {renderItineraryPlanNotes()}
@@ -3315,6 +3377,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           </>
         ) : null}
+
+        {renderTripNotes()}
+        {renderDocumentImporter()}
 
         <View style={[styles.row, { alignItems: 'flex-start' }]}>
           <Text style={styles.headerText}>Trip Dates</Text>

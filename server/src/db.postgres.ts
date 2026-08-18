@@ -635,6 +635,7 @@ export const initDb = async (): Promise<void> => {
       group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       description TEXT,
+      notes TEXT,
       destination TEXT,
       location_ids JSONB DEFAULT '[]'::jsonb,
       must_see_attractions JSONB DEFAULT '[]'::jsonb,
@@ -649,6 +650,7 @@ export const initDb = async (): Promise<void> => {
     );
   `);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS notes TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS location_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS must_see_attractions JSONB DEFAULT '[]'::jsonb;`);
@@ -1541,6 +1543,7 @@ export const initDb = async (): Promise<void> => {
     ['cost_tracking',           'Expense and cost tracking',          true],
     ['multiple_groups',         'Create more than one group',         true],
     ['trip_creation',           'Create new trips',                   true],
+    ['itinerary_document_import', 'Import itinerary documents',       true],
   ];
   for (const [key, description, defaultEnabled] of featureSeedRows) {
     await p.query(
@@ -1567,6 +1570,9 @@ export const initDb = async (): Promise<void> => {
     ['free', 'cost_tracking', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
+    ['free', 'itinerary_document_import', false],
+    ['premium', 'itinerary_document_import', true],
+    ['pro', 'itinerary_document_import', true],
     ['premium', 'cost_tracking', true],
     ['pro', 'cost_tracking', true],
   ];
@@ -3807,6 +3813,7 @@ export const updateTripDetails = async (
   tripId: string,
   updates: {
     description?: string | null;
+    notes?: string | null;
     destination?: string | null;
     locationIds?: string[];
     mustSeeAttractions?: string[];
@@ -3822,10 +3829,13 @@ export const updateTripDetails = async (
   const p = getPool();
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) throw new Error('Not authorized to update this trip');
+  const hasDescription = Object.prototype.hasOwnProperty.call(updates, 'description');
+  const hasNotes = Object.prototype.hasOwnProperty.call(updates, 'notes');
 
   const { rows } = await p.query<Trip>(
     `UPDATE trips
-     SET description = COALESCE($1, description),
+     SET description = CASE WHEN $13::boolean THEN $1::text ELSE description END,
+         notes = CASE WHEN $14::boolean THEN $15::text ELSE notes END,
          destination = COALESCE($2, destination),
          location_ids = COALESCE($3::jsonb, location_ids),
          start_date = CASE WHEN $7 = 'range' THEN $4::date WHEN $7 = 'month' THEN NULL ELSE start_date END,
@@ -3840,6 +3850,7 @@ export const updateTripDetails = async (
        group_id as "groupId",
        name,
        description,
+       notes,
        destination,
        COALESCE(location_ids, '[]'::jsonb) as "locationIds",
        COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
@@ -3864,6 +3875,9 @@ export const updateTripDetails = async (
       updates.durationDays ?? null,
       updates.currency ?? null,
       Array.isArray(updates.mustSeeAttractions) ? JSON.stringify(updates.mustSeeAttractions) : null,
+      hasDescription,
+      hasNotes,
+      updates.notes ?? null,
     ]
   );
   if (!rows.length) throw new Error('Trip not found');
@@ -6118,6 +6132,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               t.group_id as "groupId",
               t.name,
               t.description,
+              t.notes,
               t.destination,
               COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
               COALESCE(t.must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
@@ -6145,6 +6160,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.group_id as "groupId",
             t.name,
             t.description,
+            t.notes,
             t.destination,
             COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
             COALESCE(t.must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
@@ -6176,6 +6192,7 @@ export const createTrip = async (
   name: string,
   details?: {
     description?: string | null;
+    notes?: string | null;
     destination?: string | null;
     locationIds?: string[];
     mustSeeAttractions?: string[];
@@ -6212,12 +6229,13 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by, must_see_attractions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING id,
                group_id as "groupId",
                name,
                description,
+               notes,
                destination,
                COALESCE(location_ids, '[]'::jsonb) as "locationIds",
                COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
@@ -6234,6 +6252,7 @@ export const createTrip = async (
       groupId,
       name,
       details?.description ?? null,
+      details?.notes ?? null,
       details?.destination ?? null,
       JSON.stringify(Array.isArray(details?.locationIds) ? details?.locationIds : []),
       details?.startDate ?? null,
@@ -6419,6 +6438,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   ownerId: string;
   tripName: string;
   description?: string | null;
+  notes?: string | null;
   destination?: string | null;
   locationIds?: string[];
   mustSeeAttractions?: string[];
@@ -6481,12 +6501,13 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO trips (id, group_id, name, description, notes, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, must_see_attractions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING id,
                  group_id as "groupId",
                  name,
                  description,
+                 notes,
                  destination,
                  COALESCE(location_ids, '[]'::jsonb) as "locationIds",
                  COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",
@@ -6502,6 +6523,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         groupId,
         payload.tripName,
         payload.description ?? null,
+        payload.notes ?? null,
         payload.destination ?? null,
         JSON.stringify(Array.isArray(payload.locationIds) ? payload.locationIds : []),
         payload.startDate ?? null,
@@ -8722,6 +8744,7 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
             group_id as "groupId",
             name,
             description,
+            notes,
             destination,
             COALESCE(location_ids, '[]'::jsonb) as "locationIds",
             COALESCE(must_see_attractions, '[]'::jsonb) as "mustSeeAttractions",

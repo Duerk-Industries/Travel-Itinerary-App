@@ -3390,11 +3390,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onFlightDataChanged={handleFlightsDataChanged}
                   onLodgingDataChanged={handleLodgingsDataChanged}
                   onTourDataChanged={handleToursDataChanged}
+                  onCarRentalDataChanged={fetchCarRentals}
                   onAddCarRental={addCarRentalFromOverview}
                   onUpdateCarRental={updateCarRental}
                   openFlightInFlightsTab={openFlightInFlightsTab}
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
                   theme={theme}
+                  userTier={accountProfile.tierKey}
                   readOnly={isFollowingMode}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}

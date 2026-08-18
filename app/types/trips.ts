@@ -23,6 +23,7 @@ export interface Trip {
   groupName: string;
   name: string;
   description?: string | null;
+  notes?: string | null;
   destination?: string | null;
   locationIds?: string[];
   startDate?: string | null;

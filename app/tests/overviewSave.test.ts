@@ -46,4 +46,27 @@ describe('Overview save behavior', () => {
     expect(result.shouldSkipTripSave).toBe(false);
     expect(result.hasTripEdits).toBe(true);
   });
+
+  test('saves when trip notes were edited', () => {
+    const trip = {
+      description: 'Test',
+      notes: 'Original notes',
+      startDate: '2026-01-01',
+      endDate: '2026-01-05',
+      startMonth: null,
+      startYear: null,
+      durationDays: null,
+    };
+    const dateDraft = {
+      mode: 'range' as const,
+      startDate: '2026-01-01',
+      endDate: '2026-01-05',
+      startMonth: '',
+      startYear: '',
+      durationDays: '',
+    };
+    const result = getOverviewSaveFlags(trip, 'Test', dateDraft, [], 'Updated notes');
+    expect(result.shouldSkipTripSave).toBe(false);
+    expect(result.hasTripEdits).toBe(true);
+  });
 });

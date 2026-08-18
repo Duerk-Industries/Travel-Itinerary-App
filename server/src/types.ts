@@ -368,6 +368,7 @@ export interface Trip {
   groupId: string;
   name: string;
   description?: string | null;
+  notes?: string | null;
   destination?: string | null;
   locationIds?: string[];
   mustSeeAttractions?: string[];

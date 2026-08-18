@@ -6,6 +6,7 @@ import { normalizeTimeInput } from './normalizeTimeInput';
 
 type TripSnapshot = {
   description?: string | null;
+  notes?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -26,10 +27,12 @@ export const getOverviewSaveFlags = (
   trip: TripSnapshot | null,
   descriptionDraft: string,
   dateDraft: DateDraft,
-  pendingRemovalIds: string[]
+  pendingRemovalIds: string[],
+  notesDraft?: string
 ) => {
   const originalDescription = trip?.description ?? '';
   const hasDescriptionEdit = descriptionDraft !== originalDescription;
+  const hasNotesEdit = notesDraft !== undefined && notesDraft !== (trip?.notes ?? '');
   const hasDateEdit =
     (dateDraft.mode === 'range' &&
       (dateDraft.startDate !== (trip?.startDate ?? '') || dateDraft.endDate !== (trip?.endDate ?? ''))) ||
@@ -37,7 +40,7 @@ export const getOverviewSaveFlags = (
       (dateDraft.startMonth !== (trip?.startMonth ? String(trip?.startMonth) : '') ||
         dateDraft.startYear !== (trip?.startYear ? String(trip?.startYear) : '') ||
         dateDraft.durationDays !== (trip?.durationDays ? String(trip?.durationDays) : '')));
-  const hasTripEdits = hasDescriptionEdit || hasDateEdit;
+  const hasTripEdits = hasDescriptionEdit || hasNotesEdit || hasDateEdit;
   const hasGroupEdits = pendingRemovalIds.length > 0;
   return {
     hasTripEdits,
