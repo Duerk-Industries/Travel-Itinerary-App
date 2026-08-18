@@ -22,7 +22,7 @@ let imageCacheDisableLogged = false;
 
 const gcsSignedUrlCache = createTtlCache<string | null>({
   defaultTtlMs: SIGNED_URL_TTL_MS,
-  metricName: 'image.gcs_bytes',
+  metricName: 'image.gcs_signed_url',
 });
 
 export const clearImageServiceCachesForTests = (): void => {
@@ -247,19 +247,22 @@ export async function getItineraryImage(params: {
   contextText?: string;
 }): Promise<{ url: string; cached: boolean; provider: 'unsplash' | 'placeholder'; fallbackUsed: boolean }> {
   void params.placeId;
-  const dayKey = String(params.day ?? '').trim() || 'day';
-  const cacheSuffix = sanitizeFilename(`${params.locationName}-${dayKey}`);
   const queryText = String(params.contextText ?? '').trim();
 
   try {
+    // Decorative day images should share a stable destination cache key.
+    // Activity names made the previous primary query unique per day, causing
+    // a live Unsplash request for every card. Keep context for API
+    // compatibility, but deliberately do not use it as a search key.
+    //
+    // Removing the day suffix from the cache key ensures that a multi-day
+    // trip to the same destination shares exactly one GCS file and one
+    // Unsplash lookup, rather than redundant storage/checks per date.
+    const cacheSuffix = sanitizeFilename(params.locationName || 'unknown');
     const unsplashPath = `unsplash/${cacheSuffix}.jpg`;
     const accessKey = getUnsplashAccessKeyOrThrow();
     const unsplash = await fetchAndCache(unsplashPath, async () => {
       const destinationQuery = String(params.locationName ?? '').trim();
-      // Decorative day images should share a stable destination cache key.
-      // Activity names made the previous primary query unique per day, causing
-      // a live Unsplash request for every card. Keep context for API
-      // compatibility, but deliberately do not use it as a search key.
       void queryText;
       const imageUrl = await fetchUnsplashImageForItinerary(accessKey, destinationQuery);
       if (imageUrl) return imageUrl;
