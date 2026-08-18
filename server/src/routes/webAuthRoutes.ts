@@ -272,6 +272,7 @@ router.get('/features', async (_req, res) => {
     // have accepted the request.
     itineraryReactions,
     itineraryItemKinds,
+    itineraryDocumentImport,
     plaidMaster,
     plaidLink,
   ] = await Promise.all([
@@ -283,6 +284,7 @@ router.get('/features', async (_req, res) => {
     getFeatureFlag('feature_quick_start_trip_wizard'),
     isFeatureEnabled('itinerary_reactions'),
     isFeatureEnabled('itinerary_item_kinds'),
+    isFeatureEnabled('itinerary_document_import'),
     isFeatureEnabled('expense_import_plaid'),
     isFeatureEnabled('expense_import_plaid_link'),
   ]);
@@ -299,6 +301,7 @@ router.get('/features', async (_req, res) => {
     featureQuickStartTripWizard: quickStartTripWizard?.enabled === true,
     featureItineraryReactions: itineraryReactions === true,
     featureItineraryItemKinds: itineraryItemKinds === true,
+    featureItineraryDocumentImport: itineraryDocumentImport === true,
     featureExpenseImportPlaid: plaidMaster === true && plaidLink === true,
   });
 });

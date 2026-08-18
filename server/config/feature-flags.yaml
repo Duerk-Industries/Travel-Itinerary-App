@@ -53,7 +53,7 @@ flags:
     enabled: true
     description: "Enable LLM-based flight parser from text/emails"
   itinerary_document_import:
-    enabled: false
+    enabled: true
     description: "Allow Premium and Pro users to preview and import itinerary documents"
   itinerary_reactions:
     enabled: true

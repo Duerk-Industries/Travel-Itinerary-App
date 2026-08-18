@@ -1,6 +1,6 @@
 # Itinerary Document Import — Implementation Plan
 
-**Status:** Implemented (feature flag defaults off pending rollout validation).
+**Status:** Implemented.
 **Last updated:** 2026-08-18
 **Authors:** assistant, in collaboration with @bryanduerk
 **Related:** [itinerary-narrative-depth-and-validation.md](itinerary-narrative-depth-and-validation.md) (the reverse

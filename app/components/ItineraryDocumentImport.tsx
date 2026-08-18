@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 
 type PreviewItem = { type: string; id: string | null; summary: string };
 type ImportResult = {
@@ -15,15 +16,27 @@ type Props = {
   headers: Record<string, string>;
   tripId: string;
   userTier?: string | null;
+  featureEnabled: boolean;
   styles: Record<string, any>;
   readOnly?: boolean;
+  theme?: AppTheme;
   onImported: () => void | Promise<void>;
 };
 
 const WebFileInput = 'input' as any;
 
+export const canShowItineraryDocumentImport = (params: {
+  featureEnabled: boolean;
+  userTier?: string | null;
+  platform: string;
+  readOnly?: boolean;
+}): boolean => params.featureEnabled
+  && params.platform === 'web'
+  && !params.readOnly
+  && ['premium', 'pro'].includes(String(params.userTier ?? '').toLowerCase());
+
 export const ItineraryDocumentImport: React.FC<Props> = ({
-  backendUrl, headers, tripId, userTier, styles, readOnly = false, onImported,
+  backendUrl, headers, tripId, userTier, featureEnabled, styles, readOnly = false, theme, onImported,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [documentText, setDocumentText] = useState('');
@@ -31,16 +44,21 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  if (Platform.OS !== 'web' || readOnly || !['premium', 'pro'].includes(String(userTier ?? '').toLowerCase())) {
+  if (!canShowItineraryDocumentImport({ featureEnabled, userTier, platform: Platform.OS, readOnly })) {
     return null;
   }
 
   const submit = async (dryRun: boolean) => {
     if (!selectedFile && !documentText.trim()) {
-      Alert.alert('Paste itinerary text or choose a document first.');
+      setErrorMessage('Paste itinerary text or choose a document first.');
       return;
     }
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    if (dryRun) setPreview(null);
     setBusy(true);
     try {
       let body: BodyInit;
@@ -61,20 +79,32 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
         method: 'POST', headers: requestHeaders, body,
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Unable to import this document');
+      if (!response.ok) {
+        const message = data.code === 'FEATURE_DISABLED'
+          ? 'Document import is currently disabled by its feature flag. Enable itinerary_document_import in Admin, then try again.'
+          : data.error || `Unable to import this document (HTTP ${response.status})`;
+        throw new Error(message);
+      }
       setPreview(data);
       if (!dryRun) {
         await onImported();
         setDocumentText('');
         setSelectedFile(null);
-        Alert.alert('Document imported', `${data.added?.length ?? 0} item(s) added.`);
+        const message = `Document imported: ${data.added?.length ?? 0} item(s) added.`;
+        setSuccessMessage(message);
+        if (Platform.OS !== 'web') Alert.alert('Document imported', message);
       }
     } catch (error) {
-      Alert.alert((error as Error).message);
+      setErrorMessage((error as Error).message || 'Unable to import this document.');
     } finally {
       setBusy(false);
     }
   };
+
+  const fileInputColor = theme?.colors.text
+    ?? StyleSheet.flatten(styles.bodyText)?.color
+    ?? StyleSheet.flatten(styles.helperText)?.color
+    ?? '#ffffff';
 
   return (
     <View testID="itinerary-document-import" style={{ gap: 10 }}>
@@ -97,11 +127,15 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
             data-testid="itinerary-import-file"
             type="file"
             accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain"
+            aria-label="Choose itinerary document"
+            style={{ color: fileInputColor, colorScheme: theme?.mode ?? 'light' }}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               const file = event.target.files?.[0] ?? null;
               setSelectedFile(file);
               if (file) setSourceFilename(file.name);
               setPreview(null);
+              setErrorMessage(null);
+              setSuccessMessage(null);
             }}
           />
           {selectedFile ? <Text style={styles.helperText}>Selected: {selectedFile.name}</Text> : null}
@@ -111,9 +145,20 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
             style={[styles.button, styles.smallButton, busy ? { opacity: 0.6 } : null]}
             onPress={() => submit(true)}
           >
-            <Text style={styles.buttonText}>Preview import</Text>
+            <Text style={styles.buttonText}>{busy ? 'Analyzing document…' : 'Preview import'}</Text>
           </TouchableOpacity>
-          {busy ? <ActivityIndicator /> : null}
+          {busy ? (
+            <View accessibilityLiveRegion="polite" style={{ alignItems: 'center', gap: 6 }}>
+              <ActivityIndicator color={fileInputColor} />
+              <Text style={styles.helperText}>Extracting itinerary items. Large PDFs can take up to a minute.</Text>
+            </View>
+          ) : null}
+          {errorMessage ? (
+            <View testID="itinerary-import-error" accessibilityRole="alert" style={{ paddingVertical: 8 }}>
+              <Text style={styles.dangerButtonText ?? styles.bodyText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+          {successMessage ? <Text testID="itinerary-import-success" style={styles.bodyText}>{successMessage}</Text> : null}
           {preview ? (
             <View testID="itinerary-import-preview-results" style={{ gap: 6 }}>
               <Text style={styles.headerText}>Preview</Text>

@@ -76,4 +76,16 @@ describe('GET /api/auth/features', () => {
     const enabledRes = await request(app).get('/api/auth/features');
     expect(enabledRes.body.featureExpenseImportPlaid).toBe(true);
   });
+
+  it('reports the itinerary document import rollout flag', async () => {
+    await setFeatureFlag('itinerary_document_import', false, null);
+    clearFeatureFlagCacheForTesting();
+    const disabledRes = await request(app).get('/api/auth/features');
+    expect(disabledRes.body.featureItineraryDocumentImport).toBe(false);
+
+    await setFeatureFlag('itinerary_document_import', true, null);
+    clearFeatureFlagCacheForTesting();
+    const enabledRes = await request(app).get('/api/auth/features');
+    expect(enabledRes.body.featureItineraryDocumentImport).toBe(true);
+  });
 });

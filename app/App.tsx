@@ -642,6 +642,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // actually on — matches each flag's own fail-open default at the real API gate.
   const [featureItineraryReactions, setFeatureItineraryReactions] = useState(true);
   const [featureItineraryItemKinds, setFeatureItineraryItemKinds] = useState(true);
+  const [featureItineraryDocumentImport, setFeatureItineraryDocumentImport] = useState(false);
   const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -658,6 +659,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureQuickStartTripWizard(Boolean(data.featureQuickStartTripWizard));
           setFeatureItineraryReactions(Boolean(data.featureItineraryReactions));
           setFeatureItineraryItemKinds(Boolean(data.featureItineraryItemKinds));
+          setFeatureItineraryDocumentImport(Boolean(data.featureItineraryDocumentImport));
           setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
         }
       })
@@ -3402,6 +3404,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
                   featureItineraryReactions={featureItineraryReactions}
                   featureItineraryItemKinds={featureItineraryItemKinds}
+                  featureItineraryDocumentImport={featureItineraryDocumentImport}
                 />
               )
             : null}

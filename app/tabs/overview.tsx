@@ -258,6 +258,7 @@ type OverviewTabProps = {
   // while the real value is still loading is "keep working," not "briefly go inert."
   featureItineraryReactions?: boolean;
   featureItineraryItemKinds?: boolean;
+  featureItineraryDocumentImport?: boolean;
   userTier?: string | null;
 };
 
@@ -468,6 +469,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureCoverPhotoFallbackV2 = true,
   featureItineraryReactions = true,
   featureItineraryItemKinds = true,
+  featureItineraryDocumentImport = false,
   userTier,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
@@ -2568,7 +2570,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       headers={headers}
       tripId={trip.id}
       userTier={userTier}
+      featureEnabled={featureItineraryDocumentImport}
       styles={styles}
+      theme={theme}
       readOnly={readOnly}
       onImported={async () => {
         await Promise.all([
