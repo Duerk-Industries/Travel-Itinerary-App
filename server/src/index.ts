@@ -109,15 +109,13 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     logInfo('[attractions] startup CSV import disabled');
   }
 
-  // Previously this defaulted to `!isCloudRunRuntime` (skipped on Cloud Run)
-  // because the rebuild was a synchronous, blocking parse of ~154k CSV rows
-  // that was too expensive to risk on every cold start. Now that the
-  // dataset loads from a pre-processed JSON mirror in Cloud Storage with a
-  // chunked/yielding index build (see destinationAttractionAutocompleteService),
-  // it's safe to warm on every environment, including Cloud Run — that's
-  // what closes the gap where the first request on a freshly scaled
-  // instance used to pay the full parse cost inline.
-  const runAutocompleteRefresh = getEnvFlag('AUTOCOMPLETE_PREWARM', { defaultValue: true });
+  // Keep Cloud Run instances lazy by default. The autocomplete index contains
+  // roughly 154k rows and rebuilding it can temporarily retain both the old
+  // and new indexes; doing that on every scaled instance caused the process to
+  // abort under the service memory limit (and left unrelated requests as 503s).
+  // Operators can explicitly opt in with AUTOCOMPLETE_PREWARM=true when the
+  // deployed instance has sufficient memory.
+  const runAutocompleteRefresh = getEnvFlag('AUTOCOMPLETE_PREWARM', { defaultValue: !isCloudRunRuntime });
   if (runAutocompleteRefresh) {
     startAutocompleteCacheRefreshScheduler();
   } else {

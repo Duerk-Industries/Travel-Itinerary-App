@@ -573,33 +573,34 @@ export const clearDestinationAttractionAutocompleteCache = (): void => {
  * doesn't pay the cost of parsing ~154k CSV rows.
  */
 export const prewarmAutocompleteCache = async (): Promise<void> => {
-  await Promise.all([getDestinationDataset(), getAttractionDataset()]);
+  // The attraction dataset depends on the destination index. Build them in
+  // sequence so the two large downloads/parses do not peak together during a
+  // cold start or a refresh.
+  await getDestinationDataset();
+  await getAttractionDataset();
 };
 
 let refreshHandle: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Warms the autocomplete dataset immediately, then keeps refreshing it
- * proactively — at 80% of the cache TTL — for as long as the process runs.
- *
- * This closes the two gaps that caused a production incident (multi-second
- * event-loop stalls, correlated failures on unrelated concurrent requests,
- * and eventually an OOM abort): the dataset rebuild used to only happen
- * either at startup (skipped by default on Cloud Run, see AUTOCOMPLETE_PREWARM
- * in index.ts) or lazily inline on whichever real request happened to land
- * first after the TTL lapsed. Proactively refreshing here means a rebuild
- * never has to happen on a real request's critical path — combined with the
- * storage-JSON + chunked/yielding build in buildDestinationDataset /
- * buildAttractionDataset, even a rebuild that does happen inline is now
- * cheap and non-blocking.
+ * Warms the autocomplete dataset immediately, then optionally keeps
+ * refreshing it proactively at 80% of the cache TTL. Periodic refresh is
+ * deliberately opt-in on Cloud Run because a rebuild temporarily retains the
+ * old and new indexes together; see AUTOCOMPLETE_CACHE_REFRESH_ENABLED below.
+ * The storage JSON mirror and chunked/yielding index build keep an explicitly
+ * enabled refresh responsive without blocking the event loop.
  *
  * Idempotent — calling twice without stopping keeps the original handle.
  */
 export const startAutocompleteCacheRefreshScheduler = (): boolean => {
   if (refreshHandle) return false;
   if (process.env.NODE_ENV === 'test') return false;
-  if (!getEnvFlag('AUTOCOMPLETE_CACHE_REFRESH_ENABLED', { defaultValue: true })) {
-    logInfo('[autocomplete] background refresh disabled by AUTOCOMPLETE_CACHE_REFRESH_ENABLED=false');
+  // A refresh allocates a second copy of the large index before the old copy
+  // can be collected. Keep periodic refreshes opt-in on Cloud Run; the initial
+  // warm-up can still be enabled independently with AUTOCOMPLETE_PREWARM=true.
+  const refreshDefault = !getEnvValue('K_SERVICE');
+  if (!getEnvFlag('AUTOCOMPLETE_CACHE_REFRESH_ENABLED', { defaultValue: refreshDefault })) {
+    logInfo('[autocomplete] background refresh disabled (set AUTOCOMPLETE_CACHE_REFRESH_ENABLED=true to enable)');
     return false;
   }
   const intervalMs = Math.max(60_000, Math.floor(datasetTtlMs() * 0.8));
