@@ -25,7 +25,9 @@ import {
   listPackingPresetsV2, syncPackingPresetCatalogV2, removePackingPresetV2, reactivatePackingPresetV2, updatePackingPresetV2,
   deleteAttractionDurationMetadata,
   countItineraryCacheBlocksByLocation,
+  getItineraryGenerationMetrics,
 } from '../db';
+import { ITINERARY_QUALITY_BASELINE_SETTING_KEY } from '../services/itineraryQualityGateService';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
 import { getRegisteredAiProviders } from '../ai/registry/aiProviderRegistry';
@@ -286,6 +288,74 @@ router.patch('/itinerary-cache/active-release', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to set active corpus release', err);
     res.status(500).json({ error: 'Failed to set active corpus release' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Itinerary quality gate — pinned baseline (docs/implementation_plans/
+// itinerary-narrative-depth-and-validation.md: "quality gate has no caller anywhere in the live
+// app"). evaluateItineraryQualityGate (itineraryQualityGateService.ts) was correctly implemented
+// and unit-tested but nothing ever called it outside its own test. This gives it a real caller:
+// an admin pins a known-good generation's evaluation metrics as the baseline here, and every
+// itinerary generated afterward is compared against it (itineraryPromptPlanService.ts, fail-open,
+// best-effort — never blocks generation, just surfaces a signal in generation metrics).
+// ---------------------------------------------------------------------------
+
+router.get('/itinerary-cache/quality-baseline', async (_req, res) => {
+  try {
+    const setting = await getAdminSetting(ITINERARY_QUALITY_BASELINE_SETTING_KEY);
+    let baseline: unknown = null;
+    if (setting?.value) {
+      try {
+        baseline = JSON.parse(setting.value);
+      } catch {
+        baseline = null;
+      }
+    }
+    res.json({ baseline, updatedBy: setting?.updatedBy ?? null, updatedAt: setting?.updatedAt ?? null });
+  } catch (err) {
+    logError('[admin] failed to load itinerary quality baseline', err);
+    res.status(500).json({ error: 'Failed to load itinerary quality baseline' });
+  }
+});
+
+router.patch('/itinerary-cache/quality-baseline', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  const generationId = typeof req.body?.generationId === 'string' ? req.body.generationId.trim() : '';
+  if (!generationId) {
+    res.status(400).json({ error: 'generationId is required' });
+    return;
+  }
+  try {
+    const metrics = await getItineraryGenerationMetrics(generationId);
+    if (!metrics?.evaluation) {
+      res.status(404).json({ error: 'No stored evaluation metrics found for that generationId' });
+      return;
+    }
+    const actorId = getActorId(req);
+    const before = await getAdminSetting(ITINERARY_QUALITY_BASELINE_SETTING_KEY);
+    const updated = await setAdminSetting({
+      key: ITINERARY_QUALITY_BASELINE_SETTING_KEY,
+      value: JSON.stringify(metrics.evaluation),
+      updatedBy: actorId,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'ADMIN_SETTING_UPDATED',
+      beforeState: before ? { ...before } : null,
+      afterState: { ...updated, sourceGenerationId: generationId },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ setting: updated, baseline: metrics.evaluation });
+  } catch (err) {
+    logError('[admin] failed to pin itinerary quality baseline', err);
+    res.status(500).json({ error: 'Failed to pin itinerary quality baseline' });
   }
 });
 

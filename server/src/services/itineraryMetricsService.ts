@@ -22,6 +22,7 @@ export const persistItineraryGenerationMetrics = (input: {
   tokenUsage: ItineraryGenerationMetrics['tokenUsage'];
   stages: ItineraryStageCapture[];
   evaluation?: ItineraryBaselineMetrics | null;
+  qualityGate?: Record<string, unknown> | null;
   cacheUsage?: Record<string, unknown> | null;
   fallbackUsed?: boolean;
   avoidedInference?: {
@@ -88,6 +89,7 @@ export const persistItineraryGenerationMetrics = (input: {
       parseFailure: Boolean(stage.parseError),
     })),
     evaluation: input.evaluation ? { ...input.evaluation } : null,
+    qualityGate: input.qualityGate ?? null,
     cacheUsage: input.cacheUsage ?? null,
     avoidedInference: avoidedInferenceMetrics,
     fallbackUsed: Boolean(input.fallbackUsed),

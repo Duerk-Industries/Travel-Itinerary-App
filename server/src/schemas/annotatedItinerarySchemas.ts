@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ItineraryConfidenceSchema } from './itineraryConfidenceSchema';
 
 const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -7,7 +8,27 @@ export const ItineraryEvidenceSchema = z.object({
   sourceLabel: z.string().max(200).nullable(),
   sourceUrl: z.string().max(2000).nullable(),
   verifiedAt: z.string().max(80).nullable(),
-  confidence: z.enum(['verified', 'provisional', 'unknown']),
+  confidence: ItineraryConfidenceSchema,
+}).strict();
+
+// Surfaces LocationZoneSchema.lodging (itineraryCacheSchemas.ts) at the itinerary level — the
+// corpus already models district suitability, station access, and a named alternative; this is
+// what lets that data reach `route.bases[].lodgingZone` instead of dead-ending in the corpus.
+// Nullable because it's corpus-dependent enrichment: a destination with no LocationProfile zones
+// on record (or one whose bases were matched heuristically) simply omits it rather than
+// fabricating a district recommendation with no corpus backing.
+export const LodgingZoneGuidanceSchema = z.object({
+  zoneName: z.string().min(1).max(120),
+  zoneNameLocal: z.string().max(120).nullable(),
+  whyItFits: z.string().max(400).nullable(),
+  stations: z.array(z.string().max(120)).max(6),
+  transitAdvantage: z.string().max(300).nullable(),
+  costBand: z.enum(['budget', 'mid', 'luxury']).nullable(),
+  alternative: z.object({
+    zoneName: z.string().min(1).max(120),
+    reason: z.string().min(1).max(300),
+  }).strict().nullable(),
+  confidence: ItineraryConfidenceSchema,
 }).strict();
 
 export const AnnotatedActivitySchema = z.object({
@@ -43,7 +64,7 @@ export const AnnotatedActivitySchema = z.object({
   }).strict(),
   alternatives: z.array(z.string().max(300)).max(8),
   evidence: z.array(ItineraryEvidenceSchema).max(8),
-  confidence: z.enum(['verified', 'provisional', 'unknown']),
+  confidence: ItineraryConfidenceSchema,
 }).strict();
 
 export const AnnotatedDaySchema = z.object({
@@ -57,7 +78,7 @@ export const AnnotatedDaySchema = z.object({
   contingencies: z.array(z.object({
     condition: z.enum(['rain', 'fatigue', 'closure', 'reservation']),
     recommendation: z.string().min(1).max(500),
-    confidence: z.enum(['verified', 'provisional', 'unknown']),
+    confidence: ItineraryConfidenceSchema,
   }).strict()).max(8),
 }).strict();
 
@@ -68,7 +89,7 @@ export const ItineraryActionSchema = z.object({
   date: IsoDateSchema.nullable(),
   label: z.string().min(1).max(500),
   reason: z.string().min(1).max(700),
-  confidence: z.enum(['verified', 'provisional', 'unknown']),
+  confidence: ItineraryConfidenceSchema,
 }).strict();
 
 export const AnnotatedItinerarySchema = z.object({
@@ -85,13 +106,14 @@ export const AnnotatedItinerarySchema = z.object({
       nights: z.number().int().min(0).max(365),
       rationale: z.string().min(1).max(700),
       dayTrips: z.array(z.string().max(200)).max(12),
+      lodgingZone: LodgingZoneGuidanceSchema.nullable(),
     }).strict()).max(32),
     fragileConnections: z.array(z.object({
       date: IsoDateSchema,
       from: z.string().min(1).max(200),
       to: z.string().min(1).max(200),
       reason: z.string().min(1).max(500),
-      confidence: z.enum(['verified', 'estimated', 'unknown']),
+      confidence: ItineraryConfidenceSchema,
     }).strict()).max(16),
   }).strict(),
   days: z.array(AnnotatedDaySchema).max(366),
@@ -122,3 +144,4 @@ export const AnnotatedItinerarySchema = z.object({
 export type AnnotatedItinerary = z.infer<typeof AnnotatedItinerarySchema>;
 export type AnnotatedActivity = z.infer<typeof AnnotatedActivitySchema>;
 export type ItineraryEvidence = z.infer<typeof ItineraryEvidenceSchema>;
+export type LodgingZoneGuidance = z.infer<typeof LodgingZoneGuidanceSchema>;

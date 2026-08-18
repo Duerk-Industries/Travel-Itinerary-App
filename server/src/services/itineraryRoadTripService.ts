@@ -298,7 +298,7 @@ const estimateLegMinutes = (from: BaseStay, to: BaseStay, input: RoadTripPlanner
   // No corridor and no coordinates for at least one endpoint — there is genuinely no signal to
   // estimate from. Surface this as the lowest confidence tier per the plan (§5), not silently as
   // if it were a real distance-based number.
-  return { minutes: DEFAULT_HEURISTIC_MINUTES, source: 'heuristic', confidence: 'low', mode: 'drive' };
+  return { minutes: DEFAULT_HEURISTIC_MINUTES, source: 'heuristic', confidence: 'needs_confirmation', mode: 'drive' };
 };
 
 const findSuppliedTransfer = (from: BaseStay, to: BaseStay, transfers: RoadTripTransferInput[]): RoadTripTransferInput | undefined => {
@@ -426,7 +426,7 @@ const buildTimedRouteDays = (bases: BaseStay[], legs: TravelLeg[], input: RoadTr
       result.push({ date, ...(hardDeadline ? { hardDeadline } : {}), requiredSlackMinutes, checkpoints: boundedCheckpoints });
     }
     if (dayLegs.length) {
-      driving.push({ date, legIds: dayLegs.map((leg) => leg.legId), bufferedMinutes: dayLegs.reduce((sum, leg) => sum + Math.ceil(leg.estimatedMinutes * leg.bufferMultiplier), 0), requiredSlackMinutes, confidence: dayLegs.some((leg) => leg.confidence === 'low') ? 'low' : dayLegs.some((leg) => leg.confidence === 'estimated') ? 'estimated' : 'verified' });
+      driving.push({ date, legIds: dayLegs.map((leg) => leg.legId), bufferedMinutes: dayLegs.reduce((sum, leg) => sum + Math.ceil(leg.estimatedMinutes * leg.bufferMultiplier), 0), requiredSlackMinutes, confidence: dayLegs.some((leg) => leg.confidence === 'needs_confirmation') ? 'needs_confirmation' : dayLegs.some((leg) => leg.confidence === 'estimated') ? 'estimated' : 'verified' });
     }
   }
   return { days: result, driving };

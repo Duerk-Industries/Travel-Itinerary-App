@@ -1,11 +1,14 @@
 import type { AttractionCatalogEntry, AttractionDurationMetadata } from '../types';
-import type { ActivityBlock } from '../schemas/itineraryCacheSchemas';
+import type { ActivityBlock, LocationProfile, LocationZone } from '../schemas/itineraryCacheSchemas';
 import {
   AnnotatedItinerarySchema,
   type AnnotatedActivity,
   type AnnotatedItinerary,
   type ItineraryEvidence,
+  type LodgingZoneGuidance,
 } from '../schemas/annotatedItinerarySchemas';
+import { type ItineraryConfidence, ITINERARY_CONFIDENCE_RANK } from '../schemas/itineraryConfidenceSchema';
+import { normalizeDestinationKey } from './attractionsCatalogService';
 
 type RouteRationaleInput = {
   thesis?: string;
@@ -42,6 +45,7 @@ export type BuildAnnotatedItineraryInput = {
   durationMetadataByName: Map<string, AttractionDurationMetadata>;
   whyFitsByName: Map<string, string>;
   activityBlocks?: ActivityBlock[];
+  locationProfiles?: LocationProfile[];
   validationRepairs?: string[];
 };
 
@@ -67,11 +71,9 @@ const daysBetween = (start: string, end: string): number => {
   return Math.max(0, Math.round((endMs - startMs) / 86_400_000));
 };
 
-const confidenceRank = { unknown: 0, provisional: 1, verified: 2 } as const;
-
-const strongestConfidence = (evidence: ItineraryEvidence[]): 'verified' | 'provisional' | 'unknown' =>
-  evidence.reduce<'verified' | 'provisional' | 'unknown'>((best, item) =>
-    confidenceRank[item.confidence] > confidenceRank[best] ? item.confidence : best, 'unknown');
+const strongestConfidence = (evidence: ItineraryEvidence[]): ItineraryConfidence =>
+  evidence.reduce<ItineraryConfidence>((best, item) =>
+    ITINERARY_CONFIDENCE_RANK[item.confidence] > ITINERARY_CONFIDENCE_RANK[best] ? item.confidence : best, 'needs_confirmation');
 
 const evidenceFor = (
   entry: AttractionCatalogEntry | undefined,
@@ -80,11 +82,11 @@ const evidenceFor = (
 ): ItineraryEvidence[] => {
   const evidence: ItineraryEvidence[] = [];
   if (block) {
-    const blockConfidence = block.source === 'llm_draft'
-      ? 'unknown'
-      : block.last_verified
-        ? 'verified'
-        : 'provisional';
+    // Both an LLM-drafted block and a curated/partner block with no verification date are
+    // equally "we have content, but it isn't confirmed yet" — source no longer needs to gate
+    // this the way it did under the old three-state vocabulary, where 'unknown' and
+    // 'provisional' were two different literals for the same underlying claim.
+    const blockConfidence: ItineraryConfidence = block.last_verified ? 'verified' : 'needs_confirmation';
     evidence.push({
       sourceType: block.source,
       sourceLabel: block.source === 'curated' ? 'Curated itinerary corpus' : block.source === 'partner' ? 'Travel partner corpus' : 'LLM-authored draft corpus',
@@ -99,7 +101,7 @@ const evidenceFor = (
       sourceLabel: boundedText(entry.sourceLabel ?? 'Attractions catalog', 200),
       sourceUrl: entry.sourceUrl ? boundedText(entry.sourceUrl, 2000) : null,
       verifiedAt: entry.updatedAt ? boundedText(entry.updatedAt, 80) : null,
-      confidence: 'provisional',
+      confidence: 'needs_confirmation',
     });
   }
   if (metadata?.description && metadata.descriptionSource === 'wikipedia') {
@@ -129,6 +131,74 @@ const actionTiming = (leadDays: number | undefined, risk: 'low' | 'medium' | 'hi
 };
 
 const slug = (value: string): string => normalize(value).replace(/\s+/g, '-').slice(0, 100) || 'item';
+
+/**
+ * Surfaces LocationZoneSchema.lodging (itineraryCacheSchemas.ts) — district suitability, station
+ * access, cost band, and a named alternative — at the base level, closing the gap where that data
+ * already existed in the corpus but never reached a rendered itinerary. Picks the zone the base's
+ * OWN scheduled activities actually cluster in (by block count) when that zone is lodging-suitable,
+ * falling back to the nearest lodging-suitable zone via the corpus's own adjacency graph, and only
+ * as a last resort the first lodging-suitable zone on record — never fabricates a recommendation
+ * when the corpus has no lodging-flagged zone for this location at all.
+ */
+const computeLodgingZoneGuidance = (
+  blocksInBase: ActivityBlock[],
+  profile: LocationProfile | undefined,
+): LodgingZoneGuidance | null => {
+  if (!profile) return null;
+  const suitableZones = profile.zones.filter((zone) => zone.lodging?.suitable);
+  if (!suitableZones.length) return null;
+  const zoneById = new Map(profile.zones.map((zone) => [zone.zone_id, zone] as const));
+
+  const visitCounts = new Map<string, number>();
+  for (const block of blocksInBase) {
+    visitCounts.set(block.zone_id, (visitCounts.get(block.zone_id) ?? 0) + 1);
+  }
+  const mostVisitedZoneId = Array.from(visitCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const mostVisitedZone = mostVisitedZoneId ? zoneById.get(mostVisitedZoneId) : undefined;
+
+  let chosen: LocationZone;
+  if (mostVisitedZone?.lodging?.suitable) {
+    chosen = mostVisitedZone;
+  } else if (mostVisitedZone) {
+    // The base's activities cluster somewhere not flagged lodging-suitable (a museum/market
+    // district, say) — recommend the nearest suitable zone by the corpus's own adjacency
+    // minutes rather than an arbitrary one.
+    const nearestSuitable = mostVisitedZone.adjacency
+      .filter((edge) => zoneById.get(edge.zone_id)?.lodging?.suitable)
+      .sort((a, b) => a.minutes - b.minutes)[0];
+    chosen = (nearestSuitable && zoneById.get(nearestSuitable.zone_id)) || suitableZones[0];
+  } else {
+    chosen = suitableZones[0];
+  }
+
+  const lodging = chosen.lodging!;
+  const stations = boundedUnique(
+    chosen.adjacency.flatMap((edge) => [edge.from_stop, edge.to_stop]).filter((stop): stop is string => Boolean(stop)),
+    6,
+    120,
+  );
+  const alternativeZone = lodging.alternative_zone_id ? zoneById.get(lodging.alternative_zone_id) : undefined;
+
+  return {
+    zoneName: chosen.name,
+    zoneNameLocal: chosen.name_local,
+    whyItFits: boundedText(Object.values(lodging.rationale_by_trip_shape ?? {})[0] ?? '', 400) || null,
+    stations,
+    transitAdvantage: lodging.access_note ? boundedText(lodging.access_note, 300) : null,
+    costBand: lodging.cost_band ?? null,
+    alternative: alternativeZone
+      ? {
+          zoneName: alternativeZone.name,
+          reason: boundedText(lodging.alternative_reason, 300) || `A recommended alternative to ${chosen.name}.`,
+        }
+      : null,
+    // LocationProfile carries no per-row source/last_verified field the way ActivityBlock does
+    // (see itineraryCacheSchemas.ts), so there is no live signal to call this 'verified' against
+    // — it's honest corpus content, not yet confirmed against a current authoritative source.
+    confidence: 'needs_confirmation',
+  };
+};
 
 export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): AnnotatedItinerary => {
   const entryByName = new Map(input.catalogEntries.map((entry) => [normalize(entry.name), entry]));
@@ -185,10 +255,13 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
         date: transfer.date,
         label: `Verify ${transfer.mode.toLowerCase()} logistics from ${transfer.from} to ${transfer.to}`,
         reason: transfer.note,
-        confidence: 'unknown',
+        confidence: 'needs_confirmation',
       });
     }
   }
+
+  const profileByLocationId = new Map((input.locationProfiles ?? []).map((profile) => [profile.location_id, profile] as const));
+  const blocksByBaseLocation = new Map<string, ActivityBlock[]>();
 
   const annotatedDays = input.days.map((day) => {
     const dayBlocks: ActivityBlock[] = [];
@@ -201,7 +274,7 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
       const evidence = evidenceFor(entry, metadata, block);
       const blockAvailability = block?.availability;
       const bookingRequired = blockAvailability?.ticket_required ?? metadata?.requiresPreOrderTickets ?? null;
-      const scheduleConfidence = blockAvailability?.operating_schedule?.confidence ?? 'unknown';
+      const scheduleConfidence = blockAvailability?.operating_schedule?.confidence ?? 'needs_confirmation';
       const verificationRequired = bookingRequired === true && scheduleConfidence !== 'verified';
       const alternatives = boundedUnique(block?.relations?.substitutes_for.map((id) => blockById.get(id)?.title ?? id) ?? [], 8, 300);
       const confidence = strongestConfidence(evidence);
@@ -230,7 +303,7 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
           date: day.date,
           label: `Confirm hours and ticket availability for ${activity.name}`,
           reason: 'The activity may require booking, but no currently verified operating schedule is attached.',
-          confidence: 'unknown',
+          confidence: 'needs_confirmation',
         });
       }
 
@@ -280,7 +353,7 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
         date: day.date,
         label: note,
         reason: 'This operational note affects the feasibility of the scheduled day.',
-        confidence: 'unknown',
+        confidence: 'needs_confirmation',
       });
     }
 
@@ -294,7 +367,7 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
         contingencies.push({
           condition: 'rain',
           recommendation: `Use ${indoorAlternative.title} as the poor-weather replacement.`,
-          confidence: indoorAlternative.last_verified ? 'verified' : indoorAlternative.source === 'llm_draft' ? 'unknown' : 'provisional',
+          confidence: indoorAlternative.last_verified ? 'verified' : 'needs_confirmation',
         });
       }
     }
@@ -303,7 +376,7 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
       contingencies.push({
         condition: 'fatigue',
         recommendation: `Treat ${highEnergyActivities[highEnergyActivities.length - 1].name} as optional if the group needs recovery time.`,
-        confidence: 'provisional',
+        confidence: 'needs_confirmation',
       });
     }
 
@@ -313,6 +386,9 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
         ? 'light'
         : 'balanced';
     const anchorNames = activities.slice(0, 2).map((activity) => activity.name);
+    if (dayBlocks.length) {
+      blocksByBaseLocation.set(day.base, [...(blocksByBaseLocation.get(day.base) ?? []), ...dayBlocks]);
+    }
     return {
       day: day.day,
       date: day.date,
@@ -339,7 +415,7 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
       from: boundedText(transfer.from, 200),
       to: boundedText(transfer.to, 200),
       reason: boundedText(transfer.note, 500) || `Long transfer estimated at about ${transfer.durationHours} hours; protect the arrival window with additional slack.`,
-      confidence: transfer.note ? 'unknown' as const : 'estimated' as const,
+      confidence: transfer.note ? 'needs_confirmation' as const : 'estimated' as const,
     }));
   const allActivities = annotatedDays.flatMap((day) => day.activities);
   const hikes = annotatedDays.flatMap((day) => day.activities
@@ -379,6 +455,10 @@ export const buildAnnotatedItinerary = (input: BuildAnnotatedItineraryInput): An
           700,
         ),
         dayTrips: boundedUnique(base.dayTrips ?? [], 12, 200),
+        lodgingZone: computeLodgingZoneGuidance(
+          blocksByBaseLocation.get(base.location) ?? [],
+          profileByLocationId.get(normalizeDestinationKey(base.location)),
+        ),
       })),
       fragileConnections,
     },
@@ -493,6 +573,16 @@ export const renderAnnotatedItineraryMarkdown = (annotation: AnnotatedItinerary)
   lines.push('', '### Base rationale');
   annotation.route.bases.forEach((base) => {
     lines.push(`- **${base.location} (${base.nights} night${base.nights === 1 ? '' : 's'})**: ${base.rationale}`);
+    const zone = base.lodgingZone;
+    if (zone) {
+      const stations = zone.stations.length ? ` Near ${zone.stations.join(', ')}.` : '';
+      const transit = zone.transitAdvantage ? ` ${zone.transitAdvantage}` : '';
+      const fit = zone.whyItFits ? ` ${zone.whyItFits}` : '';
+      lines.push(`  - Stay in **${zone.zoneName}**.${fit}${stations}${transit}`);
+      if (zone.alternative) {
+        lines.push(`  - More affordable/convenient alternative: **${zone.alternative.zoneName}** — ${zone.alternative.reason}`);
+      }
+    }
   });
   if (annotation.route.fragileConnections.length) {
     lines.push('', '### Connections to verify');

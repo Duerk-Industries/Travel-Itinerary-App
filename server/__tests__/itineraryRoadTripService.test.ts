@@ -128,7 +128,7 @@ describe('itinerary road-trip-lite planner', () => {
     });
 
     expect(result.travelLegs).toHaveLength(1);
-    expect(result.travelLegs[0]).toMatchObject({ source: 'heuristic', confidence: 'low', estimatedMinutes: 120 });
+    expect(result.travelLegs[0]).toMatchObject({ source: 'heuristic', confidence: 'needs_confirmation', estimatedMinutes: 120 });
   });
 
   it('truncates a day past the checkpoint cap deterministically instead of throwing', () => {

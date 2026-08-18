@@ -2,7 +2,7 @@
 /// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier, upsertAiAbTestMetric, setFeatureFlag } from '../src/db';
+import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier, upsertAiAbTestMetric, setFeatureFlag, recordItineraryGenerationMetrics } from '../src/db';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 import fs from 'fs';
@@ -1304,6 +1304,97 @@ describe('Admin routes', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
       expect(status.body.activeCorpusReleaseId).toBe('release-route-test');
+    });
+  });
+
+  describe('Itinerary quality gate baseline routes', () => {
+    it('GET returns a null baseline when nothing has been pinned yet', async () => {
+      const res = await request(app)
+        .get('/api/admin/itinerary-cache/quality-baseline')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(res.body).toEqual(expect.objectContaining({ baseline: null }));
+    });
+
+    it('rejects pinning with no reason', async () => {
+      await request(app)
+        .patch('/api/admin/itinerary-cache/quality-baseline')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ generationId: 'gen-missing-reason' })
+        .expect(400);
+    });
+
+    it('rejects pinning with no generationId', async () => {
+      await request(app)
+        .patch('/api/admin/itinerary-cache/quality-baseline')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'Should be rejected' })
+        .expect(400);
+    });
+
+    it('404s when the referenced generation has no stored evaluation', async () => {
+      await request(app)
+        .patch('/api/admin/itinerary-cache/quality-baseline')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ generationId: 'gen-does-not-exist', reason: 'Attempt with unknown generation' })
+        .expect(404);
+    });
+
+    it('lets an admin pin a generation\'s evaluation as the baseline, with audit logging, and GET reflects it', async () => {
+      const generationId = `gen-quality-baseline-test-${Date.now()}`;
+      await recordItineraryGenerationMetrics({
+        generationId,
+        tripId: null,
+        userId: adminUserId,
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        outcome: 'success',
+        tokenUsage: { promptTokens: 100, completionTokens: 100, totalTokens: 200 },
+        estimatedCostMicros: null,
+        stageMetrics: [],
+        evaluation: {
+          version: 'itinerary-eval-v1',
+          mustSeeCoverage: 1,
+          weightedInterestCoverage: 1,
+          duplicateRate: 0,
+          freeOrLowCostShare: 0.5,
+          hardConstraintViolations: null,
+          estimatedTravelMinutesPerActivityDay: 100,
+          scheduleWindowViolations: 0,
+          arrivalDepartureFeasible: null,
+          unsupportedFactRate: 0.1,
+          llmCalls: 4,
+          promptTokens: 100,
+          completionTokens: 100,
+          totalTokens: 200,
+          latencyP50Ms: 100,
+          latencyP95Ms: 200,
+          groupCohesionScore: null,
+          unavailableReasons: [],
+        } as any,
+        cacheUsage: null,
+        avoidedInference: null,
+        fallbackUsed: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      const reason = `Pin quality baseline ${Date.now()}`;
+      const patchRes = await request(app)
+        .patch('/api/admin/itinerary-cache/quality-baseline')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ generationId, reason })
+        .expect(200);
+      expect(patchRes.body.setting).toEqual(expect.objectContaining({ key: 'ITINERARY_QUALITY_BASELINE_METRICS' }));
+      expect(patchRes.body.baseline).toEqual(expect.objectContaining({ unsupportedFactRate: 0.1 }));
+
+      const audit = await listAuditLog({ action: 'ADMIN_SETTING_UPDATED' as any });
+      expect(audit.entries.some((entry) => entry.actorUserId === adminUserId && entry.reason === reason)).toBe(true);
+
+      const getRes = await request(app)
+        .get('/api/admin/itinerary-cache/quality-baseline')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(getRes.body.baseline).toEqual(expect.objectContaining({ unsupportedFactRate: 0.1 }));
     });
   });
 

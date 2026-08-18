@@ -14,6 +14,16 @@
 - The prompt-plan response now also carries `annotated-itinerary-v1`: route rationale, evidence/confidence, booking and verification actions, pace/contingency notes, and validation results. Verified ActivityBlock closures and operating windows are enforced in code; provisional and `llm_draft` facts remain explicitly unverified.
 - Exact entry rules, transit quirks, trail metrics, and translations are still never invented. Those fields are omitted or turned into verification actions unless trusted source data is present.
 
+## Implementation update — 2026-08-17 (audit fixes)
+
+Following an architecture audit of the annotated-itinerary pipeline against this plan, four gaps were closed:
+
+- **Day-trip/base-city conflict is now deterministic.** `enforceDayTripBaseCityConsistency` (itineraryPromptPlanService.ts) replaces what used to be a p3_validate.md prompt instruction asking the LLM to police its own day-trip placement — the exact failure mode this plan's hybrid-generation section exists to prevent. It only removes an item when the attractions catalog proves it's physically in the base city on a day the itinerary already committed to a named day trip elsewhere.
+- **Lodging-zone guidance now reaches the rendered itinerary.** `AnnotatedItinerary.route.bases[].lodgingZone` surfaces LocationZoneSchema's district suitability, station access, transit note, cost band, and named alternative — previously modeled in the corpus but dead-ending there. Picked via the base's own scheduled activities (by ActivityBlock zone) and the corpus's adjacency graph, never fabricated when no lodging-suitable zone is on record.
+- **The quality gate has a live caller.** `runItineraryQualityGateAgainstPinnedBaseline` (itineraryQualityGateService.ts) compares every generation's evaluation metrics against an admin-pinned baseline (`PATCH /api/admin/itinerary-cache/quality-baseline`, mirroring the existing `ACTIVE_CORPUS_RELEASE_ID` pattern) and records the result in generation metrics. Fail-open and non-blocking by design — an operational signal, not a hard gate on the request path — using looser continuous-monitoring thresholds than the strict A/B-comparison defaults.
+- **One confidence vocabulary.** `ItineraryConfidenceSchema` (`verified | historical_pattern | estimated | needs_confirmation | user_supplied`) replaces three enums that had drifted independently (`verified/provisional/unknown`, `verified/estimated/unknown`, `verified/estimated/low`) across evidence, contingencies, actions, fragile connections, and road-trip travel legs.
+- `itineraryEvaluationService.ts`'s `unsupportedFactRate`/`scheduleWindowViolations` were also found permanently null despite the annotation stage already computing the data (a prior-session bug, fixed the same day this plan's P0–P4 items shipped) — now wired through.
+
 ---
 
 ## 1. Prompt for this analysis

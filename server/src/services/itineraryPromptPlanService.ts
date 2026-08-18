@@ -36,6 +36,7 @@ import {
   type NormalizedPreferenceContract,
 } from './itineraryPreferenceContract';
 import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
+import { runItineraryQualityGateAgainstPinnedBaseline } from './itineraryQualityGateService';
 import { decideItineraryEscalation } from './itineraryEscalationService';
 import { chooseSafeItineraryMarkdown } from './itineraryDegradedFallbackService';
 import { persistItineraryGenerationMetrics } from './itineraryMetricsService';
@@ -54,7 +55,7 @@ import {
   renderRoadTripSummaryMarkdown,
   type RoadTripPlannerInput,
 } from './itineraryRoadTripService';
-import type { ActivityBlock, TripLogisticsOverlay } from '../schemas/itineraryCacheSchemas';
+import type { ActivityBlock, LocationProfile, TripLogisticsOverlay } from '../schemas/itineraryCacheSchemas';
 import {
   ITINERARY_STRUCTURE_VALIDATOR_VERSION,
   validateAndRepairItineraryStructure,
@@ -85,7 +86,7 @@ import {
 } from './getYourGuideItineraryEnrichmentService';
 import type { GetYourGuideCandidate } from '../utils/getYourGuideEligibility';
 import type { AnnotatedItinerary } from '../schemas/annotatedItinerarySchemas';
-import { getAdminSetting, listItineraryCacheBlocksForLocation } from '../db';
+import { getAdminSetting, getItineraryCacheLocationProfile, listItineraryCacheBlocksForLocation } from '../db';
 import {
   buildAnnotatedItinerary,
   repairActivitiesForVerifiedAvailability,
@@ -1243,6 +1244,40 @@ const loadActivityBlocksForAnnotation = async (
   }
 };
 
+// Loads LocationProfile.zones (district/lodging-zone metadata) for every destination in the
+// trip, so buildAnnotatedItinerary can attach a real district recommendation to each base instead
+// of leaving `route.bases[].lodgingZone` null. Mirrors loadActivityBlocksForAnnotation's gating
+// (capabilities, active release, usage reservation) — same corpus, same admission path — but reads
+// LocationProfile rows instead of ActivityBlock rows, and unlike ActivityBlocks (which are read
+// per-release via listItineraryCacheBlocksForLocation), getItineraryCacheLocationProfile keeps a
+// single current row per location_id, so no releaseId is threaded into the read itself.
+const loadLocationProfilesForAnnotation = async (
+  destinations: string[],
+  userId?: string,
+): Promise<LocationProfile[]> => {
+  if (!userId) return [];
+  try {
+    const capabilities = await resolveItineraryCacheCapabilities(userId);
+    if (!capabilities.reads) return [];
+    const releaseSetting = await getAdminSetting('ACTIVE_CORPUS_RELEASE_ID');
+    const releaseId = String(releaseSetting?.value ?? '').trim();
+    if (!releaseId) return [];
+    await reserveApiUsageOrThrow({
+      provider: 'ITINERARY_CACHE_STORAGE',
+      caller: 'BINDING_READ',
+      units: 1,
+      requireConfiguredLimit: true,
+    });
+    await recordProviderRequestCost({ provider: 'ITINERARY_CACHE_STORAGE', costPerRequestUsd: 0 });
+    const locationIds = Array.from(new Set(destinations.map((destination) => normalizeDestinationKey(destination)).filter(Boolean)));
+    const profiles = await Promise.all(locationIds.map((locationId) => getItineraryCacheLocationProfile(locationId)));
+    return profiles.filter((profile): profile is LocationProfile => Boolean(profile));
+  } catch (err) {
+    logError('[itinerary] location-profile annotation enrichment failed; continuing without lodging-zone guidance', err);
+    return [];
+  }
+};
+
 export const renderActivityBlocksForPrompt = (blocks: ActivityBlock[]): string => {
   if (!blocks.length) return 'none';
   return JSON.stringify(blocks.slice(0, 40).map((block) => ({
@@ -2096,6 +2131,76 @@ const enforceAttractionDestinationConsistency = (
   }
 
   return itinerary;
+};
+
+/**
+ * Deterministic counterpart to what used to be a p3_validate.md prompt instruction ("if a day's
+ * items include a day trip naming a different town than the base, remove any item that day
+ * naming a specific attraction physically located back in the base city") — see
+ * docs/implementation_plans/itinerary-narrative-depth-and-validation.md: a base name and its day
+ * trip name(s) are both known, structured strings by validation time (route.b[].l / .dn), so
+ * there is no reason to ask the model to police its own itinerary for this. Uses the same
+ * catalog-grounded verification as enforceAttractionDestinationConsistency (its deterministic
+ * sibling, a few hundred lines above) rather than guessing from free text, so it only ever fires
+ * on a provably real conflict: an item whose name the attractions catalog places in the base
+ * city's own destinationKey, scheduled on a day that itinerary itself already committed to a day
+ * trip elsewhere. A traveler cannot be in both places the same day without an explicit transfer
+ * accounting for it, and day.it items carry no such accounting.
+ */
+export const enforceDayTripBaseCityConsistency = (
+  itinerary: PromptItinerary,
+  route: PromptRoute,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+): { itinerary: PromptItinerary; conflicts: string[] } => {
+  const conflicts: string[] = [];
+  const allEntries = Object.values(shortlistByDestination ?? {}).flat();
+  if (!allEntries.length) return { itinerary, conflicts };
+
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+  if (!entryByName.size) return { itinerary, conflicts };
+
+  const baseByLocation = new Map(route.b.map((base) => [base.l, base] as const));
+  const mentionsDayTrip = (text: string, dayTripNames: string[]): boolean =>
+    dayTripNames.some((tripName) => tripName && (text.includes(tripName) || tripName.includes(text)));
+
+  for (const day of itinerary.dy) {
+    const base = baseByLocation.get(day.b);
+    const dayTripNames = (base?.dn ?? []).map((name) => normalizeText(name).toLowerCase()).filter(Boolean);
+    if (!dayTripNames.length) continue;
+    const hasDayTripItem = day.it.some((item) => mentionsDayTrip(normalizeText(item[2]).toLowerCase(), dayTripNames));
+    if (!hasDayTripItem) continue;
+
+    const baseKey = normalizeDestinationKey(day.b);
+    const keptItems: PromptDay['it'] = [];
+    for (const item of day.it) {
+      const text = normalizeText(item[2]);
+      const lowerText = text.toLowerCase();
+      if (mentionsDayTrip(lowerText, dayTripNames)) {
+        keptItems.push(item);
+        continue;
+      }
+      const entry = entryByName.get(lowerText);
+      const entryDestinationKey = entry?.destinationKey ? normalizeDestinationKey(entry.destinationKey) : '';
+      // Only a catalog-verified match to the HOME base's own destinationKey is a provable
+      // conflict — anything not in the catalog, or grounded elsewhere, is left alone rather than
+      // guessed at.
+      if (!entry || entryDestinationKey !== baseKey) {
+        keptItems.push(item);
+        continue;
+      }
+      conflicts.push(
+        `${day.dt}: removed "${text}" — a verified ${day.b} attraction can't be visited the same day as the ${day.b} day trip.`
+      );
+      logInfo(`[itinerary] dropped "${text}" from ${day.dt} (${day.b}) — conflicts with same-day day trip`);
+    }
+    day.it = keptItems;
+  }
+
+  return { itinerary, conflicts };
 };
 
 const isMajorMuseumName = (name: string): boolean =>
@@ -3413,6 +3518,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const activityBlocks = await loadActivityBlocksForAnnotation(promptRequest.d, input.userId);
   const activityBlocksPromptBlock = renderActivityBlocksForPrompt(activityBlocks);
   const verifiedClosedWeekdaysByActivity = buildVerifiedClosedWeekdays(activityBlocks);
+  const locationProfiles = await loadLocationProfilesForAnnotation(promptRequest.d, input.userId);
 
   const shortlistCoverage = (() => {
     const entries = Object.values(shortlistByDestination).flat();
@@ -3673,6 +3779,12 @@ const runGenerateItineraryViaPromptPlan = async (
     logisticsFacts,
     closedWeekdaysByActivity: verifiedClosedWeekdaysByActivity,
   }).itinerary;
+  const dayTripConsistency = enforceDayTripBaseCityConsistency(filteredItinerary, route, shortlistByDestination);
+  filteredItinerary = validateAndRepairItineraryStructure({
+    itinerary: dayTripConsistency.itinerary,
+    logisticsFacts,
+    closedWeekdaysByActivity: verifiedClosedWeekdaysByActivity,
+  }).itinerary;
   const profile = mapProfile(normalized);
   const fragmentInjected = injectMustSeesIntoCachedFragments({
     itinerary: filteredItinerary,
@@ -3702,6 +3814,7 @@ const runGenerateItineraryViaPromptPlan = async (
   const availabilityRepairs = new Set([
     ...preScheduleAvailabilityRepair.repairs,
     ...postPolishAvailabilityRepair.repairs,
+    ...dayTripConsistency.conflicts,
   ]);
   let { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
@@ -3941,6 +4054,7 @@ const runGenerateItineraryViaPromptPlan = async (
     durationMetadataByName,
     whyFitsByName,
     activityBlocks,
+    locationProfiles,
     validationRepairs: Array.from(availabilityRepairs),
   });
 
@@ -4063,6 +4177,7 @@ const runGenerateItineraryViaPromptPlan = async (
     evidenceCoverage: annotations.validation.evidenceCoverage,
     scheduleWindowViolations: annotations.validation.repairs.length,
   });
+  const qualityGateResult = await runItineraryQualityGateAgainstPinnedBaseline(evaluation);
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${safeRender.fallbackUsed ? 'yes' : 'no'}`
   );
@@ -4089,6 +4204,7 @@ const runGenerateItineraryViaPromptPlan = async (
       carRentalsCount: items.carRentals.length,
       usedRenderFallback: safeRender.fallbackUsed,
       evaluation,
+      qualityGate: qualityGateResult,
       fatigueIssues: fatigueManaged.issues,
       roadTripEnabled: Boolean(roadTrip),
       roadTripConflictCount: roadTrip?.conflicts.length ?? 0,
@@ -4108,6 +4224,7 @@ const runGenerateItineraryViaPromptPlan = async (
       totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
     },
     evaluation,
+    qualityGate: qualityGateResult as unknown as Record<string, unknown> | null,
     cacheUsage: cacheUsage as unknown as Record<string, unknown>,
     fallbackUsed: safeRender.fallbackUsed,
   });

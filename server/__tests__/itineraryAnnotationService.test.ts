@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-import type { ActivityBlock } from '../src/schemas/itineraryCacheSchemas';
+import type { ActivityBlock, LocationProfile } from '../src/schemas/itineraryCacheSchemas';
 import type { AttractionCatalogEntry, AttractionDurationMetadata } from '../src/types';
 import {
   buildAnnotatedItinerary,
@@ -193,7 +193,7 @@ describe('itinerary annotation service', () => {
       whatItIs: null,
       insiderTip: null,
       evidence: [],
-      confidence: 'unknown',
+      confidence: 'needs_confirmation',
     });
     expect(annotation.validation.unsupportedActivities).toEqual(['Unverified Secret Garden']);
     expect(annotation.validation.evidenceCoverage).toBe(0);
@@ -251,5 +251,115 @@ describe('itinerary annotation service', () => {
       '2026-11-30: removed Mountain Trail because verified availability marks it closed.',
       '2026-12-01: moved City Museum from M to D to fit its verified operating window.',
     ]);
+  });
+
+  describe('lodging-zone guidance', () => {
+    const kyotoProfile: LocationProfile = {
+      location_id: 'kyoto',
+      name: 'Kyoto',
+      location_type: 'city',
+      country_code: 'JP',
+      timezone: 'Asia/Tokyo',
+      zones: [
+        {
+          zone_id: 'east',
+          name: 'Higashiyama',
+          name_local: '東山',
+          centroid: null,
+          traversal: 'walk',
+          terrain_note: null,
+          adjacency: [{ zone_id: 'central', minutes: 12, mode: 'walk' }],
+          // Deliberately no `lodging` block — this zone is where the day's activities cluster,
+          // but it isn't itself recommendable for lodging.
+        },
+        {
+          zone_id: 'central',
+          name: 'Kyoto Station Area',
+          name_local: '京都駅周辺',
+          centroid: null,
+          traversal: 'transit',
+          terrain_note: null,
+          adjacency: [
+            { zone_id: 'east', minutes: 12, mode: 'walk', from_stop: 'Kyoto Station', to_stop: 'Gion-Shijo' },
+          ],
+          lodging: {
+            suitable: true,
+            rationale_by_trip_shape: { default: 'Central hub with direct transit to every base in the itinerary.' },
+            access_note: 'Every JR and subway line converges here.',
+            cost_band: 'mid',
+            alternative_zone_id: 'north',
+            alternative_reason: 'Quieter and roughly 20% cheaper, at the cost of a longer commute.',
+          },
+        },
+        {
+          zone_id: 'north',
+          name: 'Kitayama',
+          name_local: '北山',
+          centroid: null,
+          traversal: 'transit',
+          terrain_note: null,
+          adjacency: [],
+          lodging: { suitable: true, access_note: null, cost_band: 'budget', alternative_zone_id: null, alternative_reason: null },
+        },
+      ],
+      season_windows: [],
+      default_day_template_id: null,
+    };
+
+    const baseInput = {
+      route: {
+        eh: 'KIX',
+        xh: 'NRT',
+        bases: [{ location: 'Kyoto', checkIn: '2026-11-27', checkOut: '2026-12-03', dayTrips: [] }],
+        transfers: [],
+      },
+      days: [{
+        day: 1,
+        date: '2026-11-27',
+        base: 'Kyoto',
+        activities: [{ name: 'Mountain Trail', activityType: 'Hike' }],
+      }],
+      catalogEntries: [],
+      durationMetadataByName: new Map(),
+      whyFitsByName: new Map(),
+      activityBlocks: [hikeBlock], // hikeBlock.zone_id === 'east', hikeBlock.location_id === 'kyoto'
+    };
+
+    it('recommends the nearest lodging-suitable zone via the adjacency graph when activities cluster somewhere not lodging-suitable', () => {
+      const annotation = buildAnnotatedItinerary({ ...baseInput, locationProfiles: [kyotoProfile] });
+      expect(annotation.route.bases[0].lodgingZone).toMatchObject({
+        zoneName: 'Kyoto Station Area',
+        zoneNameLocal: '京都駅周辺',
+        whyItFits: 'Central hub with direct transit to every base in the itinerary.',
+        transitAdvantage: 'Every JR and subway line converges here.',
+        costBand: 'mid',
+        alternative: { zoneName: 'Kitayama', reason: 'Quieter and roughly 20% cheaper, at the cost of a longer commute.' },
+        confidence: 'needs_confirmation',
+      });
+      expect(annotation.route.bases[0].lodgingZone?.stations).toEqual(
+        expect.arrayContaining(['Kyoto Station', 'Gion-Shijo'])
+      );
+    });
+
+    it('is null when no LocationProfile is supplied for the destination — never fabricates a recommendation', () => {
+      const annotation = buildAnnotatedItinerary(baseInput);
+      expect(annotation.route.bases[0].lodgingZone).toBeNull();
+    });
+
+    it('is null when the corpus has no lodging-suitable zone at all for this location', () => {
+      const noSuitableProfile: LocationProfile = {
+        ...kyotoProfile,
+        zones: kyotoProfile.zones.map((zone) => ({ ...zone, lodging: undefined })),
+      };
+      const annotation = buildAnnotatedItinerary({ ...baseInput, locationProfiles: [noSuitableProfile] });
+      expect(annotation.route.bases[0].lodgingZone).toBeNull();
+    });
+
+    it('renders the lodging zone and its alternative into the markdown', () => {
+      const annotation = buildAnnotatedItinerary({ ...baseInput, locationProfiles: [kyotoProfile] });
+      const markdown = renderAnnotatedItineraryMarkdown(annotation);
+      expect(markdown).toContain('Stay in **Kyoto Station Area**');
+      expect(markdown).toContain('More affordable/convenient alternative: **Kitayama**');
+    });
   });
 });

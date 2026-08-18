@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ItineraryConfidenceSchema } from './itineraryConfidenceSchema';
 
 export const InterestWeightsSchema = z.object({
   outdoors: z.number().int().min(1).max(10),
@@ -72,7 +73,7 @@ export const ActivityBlockSchema = z.object({
       })).default([]),
       evidence_id: z.string().max(160).optional(),
       verified_at: z.string().datetime().optional(),
-      confidence: z.enum(['verified', 'provisional', 'unknown']).default('unknown'),
+      confidence: ItineraryConfidenceSchema.default('needs_confirmation'),
     }).optional(),
     booking_lead_days: z.number().int().min(0).max(365).optional(),
     ticket_required: z.boolean().optional(),
@@ -194,7 +195,7 @@ export const TravelLegSchema = z.object({
   latestArrival: IsoDateTimeSchema.optional(),
   hardDeadline: z.object({ at: IsoDateTimeSchema, reasonCode: z.string().max(80) }).optional(),
   source: z.enum(['supplied_transfer', 'static_corridor', 'heuristic', 'provider']),
-  confidence: z.enum(['verified', 'estimated', 'low']),
+  confidence: ItineraryConfidenceSchema,
 }).strict();
 
 // 'activity_block' and 'travel_leg' checkpoints resolve checkpointId against data the renderer
@@ -255,7 +256,7 @@ export const TripLogisticsOverlaySchema = z.object({
     legIds: z.array(z.string()),
     bufferedMinutes: z.number().int().min(0).max(24 * 60),
     requiredSlackMinutes: z.number().int().min(0).max(24 * 60),
-    confidence: z.enum(['verified', 'estimated', 'low']),
+    confidence: ItineraryConfidenceSchema,
   }).strict()).max(31),
 }).strict();
 

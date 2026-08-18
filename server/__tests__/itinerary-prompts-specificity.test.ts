@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parseInstructionMarkdown, type ItineraryInstructionPhase } from '../src/services/itineraryInstructionService';
+import { enforceDayTripBaseCityConsistency } from '../src/services/itineraryPromptPlanService';
 
 // Parses the same .md files itineraryInstructionService.ts actually loads at runtime (the
 // prompts/prompts/*.json siblings were an unused, stale duplicate of this content and were
@@ -86,13 +87,42 @@ describe('itinerary prompt specificity guardrails', () => {
     // Regression guard: the same trip scheduled a Lillehammer day trip (a ~180km,
     // multi-hour round trip) on the same day as separate Oslo attractions (Akershus
     // Fortress, the Botanical Garden) — physically impossible in one day.
+    //
+    // p2's generation-time nudge (below) is a preventive hint, not the enforcement mechanism —
+    // the model is not trusted to police its own itinerary for this. p3_validate.md previously
+    // also asked the LLM to repair the conflict at validation time; that instruction was removed
+    // in favor of enforceDayTripBaseCityConsistency, a deterministic, catalog-grounded repair
+    // pass (see docs/implementation_plans/itinerary-narrative-depth-and-validation.md's
+    // hybrid-generation section on why letting a model "validate" its own hallucination is the
+    // exact failure mode to avoid). This test now guards both halves: the surviving generation
+    // hint, and that the deterministic repair actually removes the conflicting item.
     const p2 = readPrompt('p2', 'p2_days.md');
-    const p3 = readPrompt('p3', 'p3_validate.md');
-
     expect(p2.usr).toContain('day trip or excursion away from the base city');
     expect(p2.usr.toLowerCase()).toContain('lillehammer');
-    expect(p3.usr).toContain('Day-trip/base-city overlap');
-    expect(p3.usr.toLowerCase()).toContain('lillehammer');
+
+    const catalogEntry = {
+      id: 'cat-oslo-akershus', destinationKey: 'oslo norway', destinationDisplayName: 'Oslo',
+      name: 'Akershus Fortress', rank: 1, activityType: 'Sight' as const, interestTags: ['culture' as const],
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    };
+    const itinerary = {
+      dy: [{
+        d: 1, dt: '2026-09-02', b: 'Oslo, Norway',
+        it: [['M', 'A', 'Day trip toward Lillehammer'], ['D', 'A', 'Akershus Fortress']],
+      }],
+    };
+    const route = {
+      eh: 'OSL', xh: 'OSL',
+      b: [{ l: 'Oslo, Norway', ci: '2026-09-01', co: '2026-09-05', dn: ['Lillehammer'] }],
+      x: [], rc: null, w: {}, a: [],
+    };
+    const result = enforceDayTripBaseCityConsistency(
+      itinerary as any,
+      route as any,
+      { 'Oslo, Norway': [catalogEntry] }
+    );
+    expect(result.itinerary.dy[0].it).toEqual([['M', 'A', 'Day trip toward Lillehammer']]);
+    expect(result.conflicts).toHaveLength(1);
   });
 
   it('requires outdoor/photography items to respect the real daylight window when provided', () => {

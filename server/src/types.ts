@@ -755,6 +755,14 @@ export interface ItineraryGenerationMetrics {
     parseFailure: boolean;
   }>;
   evaluation?: Record<string, unknown> | null;
+  /**
+   * Result of evaluateItineraryQualityGate (itineraryQualityGateService.ts) run against the
+   * admin-pinned baseline (admin_settings key ITINERARY_QUALITY_BASELINE_METRICS), when one is
+   * configured. Null when no baseline is pinned yet — the gate is fail-open by design (see
+   * runItineraryQualityGateAgainstPinnedBaseline), so a missing baseline never blocks generation,
+   * it just means nothing was compared for this run.
+   */
+  qualityGate?: Record<string, unknown> | null;
   cacheUsage?: Record<string, unknown> | null;
   fallbackUsed?: boolean;
   /** Tokens and estimated cost saved by cache hits or Tier 1 lightweight binding. */
