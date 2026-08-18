@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 
 export type ChecklistSubmit = {
   day: number;
@@ -12,6 +13,7 @@ export type ChecklistInputDialogProps = {
   defaultDay?: number;
   onSubmit: (payload: ChecklistSubmit) => void;
   onCancel: () => void;
+  theme?: AppTheme;
 };
 
 const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
@@ -19,10 +21,12 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
   defaultDay,
   onSubmit,
   onCancel,
+  theme,
 }) => {
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<string[]>(['', '']);
   const [error, setError] = useState('');
+  const colors = theme?.colors;
 
   const updateItem = (idx: number, value: string) =>
     setItems((prev) => prev.map((v, i) => (i === idx ? value : v)));
@@ -64,29 +68,31 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
       <Pressable style={styles.overlay} onPress={handleCancel} testID="checklist-dialog-overlay">
         <Pressable
-          style={styles.dialog}
+          style={[styles.dialog, colors && { backgroundColor: colors.surface }]}
           onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
           accessibilityRole={'dialog' as any}
           accessibilityLabel="Add a checklist"
           testID="checklist-dialog"
         >
-          <Text style={styles.title}>Add a checklist</Text>
-          <Text style={styles.label}>Title</Text>
+          <Text style={[styles.title, colors && { color: colors.text }]}>Add a checklist</Text>
+          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Title</Text>
           <TextInput
             testID="checklist-dialog-title"
-            style={styles.input}
+            style={[styles.input, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            placeholderTextColor={colors?.textMuted}
             value={title}
             onChangeText={setTitle}
             placeholder="e.g. Packing list"
             autoFocus
           />
-          <Text style={[styles.label, { marginTop: 8 }]}>Items</Text>
+          <Text style={[styles.label, { marginTop: 8 }, colors && { color: colors.textMuted }]}>Items</Text>
           <ScrollView style={styles.itemsScroll} keyboardShouldPersistTaps="handled">
             {items.map((value, idx) => (
               <View key={idx} style={styles.itemRow}>
                 <TextInput
                   testID={`checklist-dialog-item-${idx}`}
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, { flex: 1 }, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+                  placeholderTextColor={colors?.textMuted}
                   value={value}
                   onChangeText={(v: string) => updateItem(idx, v)}
                   placeholder={`Item ${idx + 1}`}
@@ -113,7 +119,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable testID="checklist-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
-              <Text style={styles.btnGhostText}>Cancel</Text>
+              <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
             </Pressable>
             <Pressable testID="checklist-dialog-submit" style={styles.btnPrimary} onPress={handleSubmit}>
               <Text style={styles.btnPrimaryText}>Add checklist</Text>

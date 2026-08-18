@@ -9,6 +9,8 @@ const HorizontalTableScroll = ({ children, ...props }: HorizontalTableScrollProp
     horizontal
     nestedScrollEnabled
     showsHorizontalScrollIndicator
+    alwaysBounceHorizontal
+    keyboardShouldPersistTaps="handled"
     directionalLockEnabled
   >
     {children}

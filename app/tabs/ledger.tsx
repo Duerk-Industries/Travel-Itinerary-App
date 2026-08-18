@@ -155,37 +155,6 @@ const renderLedgerTable = ({
   </HorizontalTableScroll>
 );
 
-const ledgerCardStyles = {
-  card: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    backgroundColor: '#ffffff',
-  } as const,
-  overallCard: {
-    borderWidth: 1,
-    borderColor: '#9ca3af',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    backgroundColor: '#f3f4f6',
-  } as const,
-  nameRow: {
-    marginBottom: 6,
-  } as const,
-  statsRow: {
-    flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
-    columnGap: 12,
-    rowGap: 4,
-  } as const,
-  statLabel: {
-    fontWeight: '600' as const,
-  } as const,
-};
-
 const renderLedgerCards = ({
   memberIds,
   memberNameMap,
@@ -199,7 +168,7 @@ const renderLedgerCards = ({
 }: LedgerRenderParams) => {
   if (!memberIds.length) {
     return (
-      <View style={ledgerCardStyles.card} testID="ledger-empty">
+      <View style={[styles.card, { marginBottom: 8 }]} testID="ledger-empty">
         <Text style={styles.helperText}>No travelers available.</Text>
       </View>
     );
@@ -209,41 +178,41 @@ const renderLedgerCards = ({
       {memberIds.map((memberId) => (
         <View
           key={memberId}
-          style={ledgerCardStyles.card}
+          style={[styles.card, { marginBottom: 8 }]}
           testID={`ledger-row-${memberId}`}
         >
-          <View style={ledgerCardStyles.nameRow}>
-            <Text style={[styles.cellText, ledgerCardStyles.statLabel]}>
+          <View style={{ marginBottom: 6 }}>
+            <Text style={[styles.cellText, { fontWeight: '600' }]}>
               {memberNameMap.get(memberId) ?? 'Traveler'}
             </Text>
           </View>
-          <View style={ledgerCardStyles.statsRow}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 4 }}>
             <Text style={styles.cellText}>
-              <Text style={ledgerCardStyles.statLabel}>Paid: </Text>
+              <Text style={{ fontWeight: '600' }}>Paid: </Text>
               {formatMoney(paidTotals[memberId] ?? 0)}
             </Text>
             <Text style={styles.cellText}>
-              <Text style={ledgerCardStyles.statLabel}>Used: </Text>
+              <Text style={{ fontWeight: '600' }}>Used: </Text>
               {formatMoney(usedTotals[memberId] ?? 0)}
             </Text>
           </View>
         </View>
       ))}
-      <View style={ledgerCardStyles.overallCard} testID="ledger-overall-row">
-        <View style={ledgerCardStyles.nameRow}>
-          <Text style={[styles.headerText, ledgerCardStyles.statLabel]}>Overall</Text>
+      <View style={[styles.card, styles.tableHeader, { marginBottom: 8 }]} testID="ledger-overall-row">
+        <View style={{ marginBottom: 6 }}>
+          <Text style={[styles.headerText, { fontWeight: '600' }]}>Overall</Text>
         </View>
-        <View style={ledgerCardStyles.statsRow}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 4 }}>
           <Text style={styles.headerText}>
-            <Text style={ledgerCardStyles.statLabel}>Paid: </Text>
+            <Text style={{ fontWeight: '600' }}>Paid: </Text>
             {formatMoney(overallPaid)}
           </Text>
           <Text style={styles.headerText}>
-            <Text style={ledgerCardStyles.statLabel}>Used: </Text>
+            <Text style={{ fontWeight: '600' }}>Used: </Text>
             {formatMoney(overallUsed)}
           </Text>
           <Text style={styles.headerText}>
-            <Text style={ledgerCardStyles.statLabel}>Total: </Text>
+            <Text style={{ fontWeight: '600' }}>Total: </Text>
             {formatMoney(overallTotal)}
           </Text>
         </View>
@@ -527,15 +496,25 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           return (
             <View
               key={`payment-${payment.id}`}
-              style={[styles.row, { alignItems: 'center', gap: 8 }]}
+              style={[
+                styles.row,
+                {
+                  alignItems: isNarrowLayout ? 'stretch' : 'center',
+                  flexDirection: isNarrowLayout ? 'column' : 'row',
+                  flexWrap: 'nowrap',
+                  gap: 8,
+                },
+              ]}
               testID={`payment-row-${payment.id}`}
             >
-              <Text style={[styles.cellText, { flex: 1 }]}>
+              <Text
+                style={[styles.cellText, { flex: 1, minWidth: 0, flexShrink: 1 }]}
+              >
                 {payment.paymentDate} — {label}
               </Text>
               {!readOnly ? (
                 <TouchableOpacity
-                  style={[styles.button, styles.smallButton, styles.dangerButton]}
+                  style={[styles.button, styles.smallButton, styles.dangerButton, isNarrowLayout && { alignSelf: 'flex-start' }]}
                   onPress={() => setPendingDeleteId(payment.id)}
                   testID={`payment-delete-${payment.id}`}
                 >

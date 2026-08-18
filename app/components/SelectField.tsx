@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from './DropdownOptionButton';
 
 export type SelectFieldOption = {
@@ -89,16 +89,23 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
       </TouchableOpacity>
       {open ? (
         <View style={[styles.dropdownList, listStyle]}>
-          {options.map((option) => (
-            <DropdownOptionButton
-              key={option.value}
-              styles={styles}
-              onPress={() => selectValue(option.value)}
-              accessibilityLabel={`Select ${option.label}`}
-            >
-              <Text style={styles.cellText}>{option.label}</Text>
-            </DropdownOptionButton>
-          ))}
+          <ScrollView
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+            contentContainerStyle={{ flexGrow: 1 }}
+          >
+            {options.map((option) => (
+              <DropdownOptionButton
+                key={option.value}
+                styles={styles}
+                onPress={() => selectValue(option.value)}
+                accessibilityLabel={`Select ${option.label}`}
+              >
+                <Text style={styles.cellText}>{option.label}</Text>
+              </DropdownOptionButton>
+            ))}
+          </ScrollView>
         </View>
       ) : null}
     </View>

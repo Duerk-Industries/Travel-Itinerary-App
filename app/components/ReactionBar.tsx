@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 
 export type ReactionValue = 1 | -1;
 
@@ -17,6 +18,7 @@ export type ReactionBarProps = {
   onCast: (detailId: string, value: ReactionValue) => Promise<ReactionSummary>;
   onClear: (detailId: string) => Promise<ReactionSummary>;
   onError?: (message: string) => void;
+  theme?: AppTheme;
 };
 
 const computeOptimisticSummary = (
@@ -44,6 +46,7 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
   onCast,
   onClear,
   onError,
+  theme,
 }) => {
   const [localSummary, setLocalSummary] = useState<ReactionSummary>(summary);
   const [pending, setPending] = useState(false);
@@ -84,6 +87,12 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
   const downActive = localSummary.userValue === -1;
   const disabled = !canReact || pending;
 
+  const themedStyles = theme ? {
+    count: { color: theme.colors.textMuted },
+    countActive: { color: theme.colors.text },
+    score: { color: theme.colors.textMuted },
+  } : null;
+
   return (
     <View style={styles.row} accessibilityRole="toolbar" testID={`reaction-bar-${detailId}`}>
       <Pressable
@@ -96,9 +105,9 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
         style={[styles.button, upActive && styles.buttonActiveUp, disabled && styles.buttonDisabled]}
       >
         <Text style={[styles.glyph, upActive && styles.glyphActive]}>{'👍'}</Text>
-        <Text style={[styles.count, upActive && styles.countActive]}>{localSummary.upCount}</Text>
+        <Text style={[styles.count, themedStyles?.count, upActive && (themedStyles?.countActive ?? styles.countActive)]}>{localSummary.upCount}</Text>
       </Pressable>
-      <Text style={styles.score} testID={`reaction-score-${detailId}`}>
+      <Text style={[styles.score, themedStyles?.score]} testID={`reaction-score-${detailId}`}>
         {localSummary.score > 0 ? `+${localSummary.score}` : `${localSummary.score}`}
       </Text>
       <Pressable
@@ -111,7 +120,7 @@ const ReactionBarBase: React.FC<ReactionBarProps> = ({
         style={[styles.button, downActive && styles.buttonActiveDown, disabled && styles.buttonDisabled]}
       >
         <Text style={[styles.glyph, downActive && styles.glyphActive]}>{'👎'}</Text>
-        <Text style={[styles.count, downActive && styles.countActive]}>{localSummary.downCount}</Text>
+        <Text style={[styles.count, themedStyles?.count, downActive && (themedStyles?.countActive ?? styles.countActive)]}>{localSummary.downCount}</Text>
       </Pressable>
     </View>
   );
@@ -126,7 +135,8 @@ const propsAreEqual = (prev: ReactionBarProps, next: ReactionBarProps): boolean 
   prev.summary.userValue === next.summary.userValue &&
   prev.onCast === next.onCast &&
   prev.onClear === next.onClear &&
-  prev.onError === next.onError;
+  prev.onError === next.onError &&
+  prev.theme === next.theme;
 
 const ReactionBar = React.memo(ReactionBarBase, propsAreEqual);
 

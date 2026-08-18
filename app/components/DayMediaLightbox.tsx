@@ -69,14 +69,12 @@ const DayMediaLightbox = ({ visible, items, onClose, dayDate, styles, textColor,
           </View>
         </ScrollView>
       )}
-      <TouchableOpacity accessibilityRole="button" onPress={close} style={[styles?.button, { marginTop: 12, backgroundColor: styles?.buttonSecondary?.backgroundColor ?? '#e5e7eb' }]}>
-        {/* This button's background is a fixed light gray (styles.buttonSecondary is never
-            actually defined anywhere, so it always falls back to '#e5e7eb') regardless of app
-            theme — it does not follow dark mode. The `textColor` prop, by contrast, *does*
-            follow the theme (it's theme.colors.text, light/near-white in dark mode), so pairing
-            it with this button produced invisible near-white-on-light-gray text in dark mode.
-            Use a fixed dark color to match the fixed light background instead of the themed one. */}
-        <Text style={[styles?.buttonText, { color: '#111827' }]}>Close</Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={close}
+        style={[styles?.button, { marginTop: 12, backgroundColor: styles?.buttonSecondary?.backgroundColor ?? styles?.card?.backgroundColor ?? backgroundColor }]}
+      >
+        <Text style={[styles?.buttonText, { color: textColor ?? styles?.buttonText?.color }]}>Close</Text>
       </TouchableOpacity>
     </DialogShell>
   );

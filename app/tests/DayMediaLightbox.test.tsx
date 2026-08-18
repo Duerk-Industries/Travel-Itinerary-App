@@ -13,11 +13,7 @@ const ITEMS = [
 ];
 
 describe('DayMediaLightbox', () => {
-  it('renders the Close button with a dark, fixed text color regardless of the (dark-mode) themed textColor prop', () => {
-    // Reproduces the reported bug: the Close button's background is a fixed light gray
-    // (styles.buttonSecondary is never actually defined, so it always falls back to '#e5e7eb'),
-    // but the button previously used the ambient theme's text color — near-white in dark mode —
-    // making the label invisible against the light background.
+  it('uses the active theme text color for the Close button', () => {
     const { getByText } = render(
       <DayMediaLightbox
         visible
@@ -33,7 +29,6 @@ describe('DayMediaLightbox', () => {
 
     const closeLabel = getByText('Close');
     const flattenedColor = [closeLabel.props.style].flat().find((s: any) => s?.color)?.color;
-    expect(flattenedColor).toBe('#111827');
-    expect(flattenedColor).not.toBe('#f5f5f5');
+    expect(flattenedColor).toBe('#f5f5f5');
   });
 });

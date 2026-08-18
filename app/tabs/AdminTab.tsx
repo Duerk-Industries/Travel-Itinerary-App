@@ -977,9 +977,8 @@ const TiersSection: React.FC<{
   backendUrl: string;
   headers: Record<string, string>;
   onTiersLoaded: (tiers: Tier[]) => void;
-}> = ({ backendUrl, headers, onTiersLoaded }) => {
-  const colorScheme = useColorScheme();
-  const theme = getAppTheme('auto', colorScheme);
+  theme: AppTheme;
+}> = ({ backendUrl, headers, onTiersLoaded, theme }) => {
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -3448,7 +3447,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
           />
         );
       case 'packing-defaults':
-        return <View style={{ gap: 24 }}><PackingListTable backendUrl={backendUrl} headers={headers} variant="admin" title="Universal packing defaults" /><PackingPresetAdminSection backendUrl={backendUrl} headers={headers} theme={theme} /></View>;
+        return <View style={{ gap: 24 }}><PackingListTable backendUrl={backendUrl} headers={headers} theme={theme} variant="admin" title="Universal packing defaults" /><PackingPresetAdminSection backendUrl={backendUrl} headers={headers} theme={theme} /></View>;
       case 'users':
         return <UsersSection backendUrl={backendUrl} headers={headers} tiers={loadedTiers} onViewUser={handleViewUser} theme={theme} />;
       case 'user-detail':
@@ -3463,7 +3462,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
           />
         ) : null;
       case 'tiers':
-        return <TiersSection backendUrl={backendUrl} headers={headers} onTiersLoaded={setLoadedTiers} />;
+        return <TiersSection backendUrl={backendUrl} headers={headers} onTiersLoaded={setLoadedTiers} theme={theme} />;
       case 'user-data':
         return <UserDataSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'audit-log':

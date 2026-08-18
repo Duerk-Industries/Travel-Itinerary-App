@@ -2915,6 +2915,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             headers={headers}
                             activity={tour}
                             destination={trip?.destination}
+                            theme={theme}
                             testID={`day-details-getyourguide-${tour.id}`}
                           />
                         </View>
@@ -3072,6 +3073,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                               canReact={featureItineraryReactions}
                               onCast={castReactionForDetail}
                               onClear={clearReactionForDetail}
+                              theme={theme}
                             />
                           </View>
                         ) : null}
@@ -3789,6 +3791,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     headers={headers}
                     activity={tour}
                     destination={trip?.destination}
+                    theme={theme}
                     testID={`overview-getyourguide-${tour.id}`}
                   />
                 </View>
@@ -3849,7 +3852,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (
         <View style={[styles.card, { borderColor: '#fecaca', borderWidth: 1, marginBottom: 10, paddingVertical: 8 }]}>
-          <Text style={[styles.helperText, { color: '#7f1d1d' }]}>
+          <Text
+            style={[styles.helperText, { color: theme.colors.error }]}
+          >
             AI itinerary generation failed: {aiItineraryFailedMessage}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
@@ -3976,6 +3981,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           visible
           onSelect={handlePopoverSelect}
           onClose={() => setAddPopoverOpen(false)}
+          theme={theme}
           hiddenKinds={featureItineraryItemKinds ? undefined : ['place', 'note', 'checklist']}
         />
       ) : null}
@@ -3989,6 +3995,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           selectedLocationNames={locationNames}
           onSubmit={handleAddPlace}
           onCancel={closeAllAddDialogs}
+          theme={theme}
         />
       ) : null}
       {activeAddDialog === 'note' ? (
@@ -3997,6 +4004,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           defaultDay={addPopoverDay ?? 1}
           onSubmit={handleAddNote}
           onCancel={closeAllAddDialogs}
+          theme={theme}
         />
       ) : null}
       {activeAddDialog === 'checklist' ? (
@@ -4005,6 +4013,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           defaultDay={addPopoverDay ?? 1}
           onSubmit={handleAddChecklist}
           onCancel={closeAllAddDialogs}
+          theme={theme}
         />
       ) : null}
       {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}

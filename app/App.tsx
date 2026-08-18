@@ -128,6 +128,7 @@ import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
 import ChatOverlay from './components/ChatOverlay';
 import HorizontalTableScroll from './components/HorizontalTableScroll';
+import CostReportTable from './components/CostReportTable';
 import { connectSocket, disconnectSocket } from './utils/socket';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
@@ -3056,60 +3057,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
-              <HorizontalTableScroll
-                style={styles.tableScroll}
-                contentContainerStyle={styles.tableScrollContent}
-              >
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                      <Text style={styles.headerText}>Category</Text>
-                    </View>
-                    {reportableMembers.map((m) => (
-                      <View key={m.id} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                        <Text style={styles.headerText}>{formatMemberName(m)}</Text>
-                      </View>
-                    ))}
-                    <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
-                      <Text style={styles.headerText}>Total</Text>
-                    </View>
-                  </View>
-                  {costReportRows.map((row, idx, arr) => (
-                    <View key={row.label} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>{row.label}</Text>
-                      </View>
-                      {reportableMembers.map((m) => {
-                        const share = row.shares[m.id] ?? 0;
-                        return (
-                          <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                            <Text style={styles.cellText}>${share.toFixed(2)}</Text>
-                          </View>
-                        );
-                      })}
-                      <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
-                        <Text style={styles.cellText}>${row.total.toFixed(2)}</Text>
-                      </View>
-                    </View>
-                  ))}
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                      <Text style={styles.headerText}>Overall</Text>
-                    </View>
-                    {reportableMembers.map((m) => {
-                      const total = ledgerPaidTotals[m.id] ?? 0;
-                      return (
-                        <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                          <Text style={styles.headerText}>${total.toFixed(2)}</Text>
-                        </View>
-                      );
-                    })}
-                    <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
-                      <Text style={styles.headerText}>${overallCost.toFixed(2)}</Text>
-                    </View>
-                  </View>
-                </View>
-              </HorizontalTableScroll>
+              <CostReportTable
+                rows={costReportRows}
+                members={reportableMembers}
+                overallShares={ledgerPaidTotals}
+                overallCost={overallCost}
+                styles={styles}
+                formatMemberName={formatMemberName}
+              />
             </View>
           ) : null}
 
@@ -3187,6 +3142,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             <PackingListTable
               backendUrl={backendUrl}
               headers={headers}
+              theme={theme}
               tripId={(activeTripForHome ?? activeTrip)?.id ?? activeTripId}
               variant="trip"
               title={`${(activeTripForHome ?? activeTrip)?.name ?? 'Trip'} packing list`}
@@ -5291,9 +5247,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   planBox: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
   },
   itineraryDropdown: {

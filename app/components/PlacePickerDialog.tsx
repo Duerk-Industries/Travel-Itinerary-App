@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 
 export type PlacePickerSubmit = {
   day: number;
@@ -23,6 +24,7 @@ export type PlacePickerDialogProps = {
   selectedLocationNames?: string[];
   onSubmit: (payload: PlacePickerSubmit) => void;
   onCancel: () => void;
+  theme?: AppTheme;
 };
 
 const MIN_QUERY_CHARS = 2;
@@ -38,6 +40,7 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
   selectedLocationNames = [],
   onSubmit,
   onCancel,
+  theme,
 }) => {
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
@@ -45,6 +48,7 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const colors = theme?.colors;
   const cacheRef = useRef<Map<string, { ts: number; results: PlaceSuggestion[] }>>(new Map());
   const lastSelectedRef = useRef<string | null>(null);
 
@@ -151,19 +155,20 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
       <Pressable style={styles.overlay} onPress={handleCancel} testID="place-dialog-overlay">
         <Pressable
-          style={styles.dialog}
+          style={[styles.dialog, colors && { backgroundColor: colors.surface }]}
           onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
           accessibilityRole={'dialog' as any}
           accessibilityLabel="Add a place"
           testID="place-dialog"
         >
-          <Text style={styles.title}>Add a place</Text>
-          <Text style={styles.label}>Place name</Text>
+          <Text style={[styles.title, colors && { color: colors.text }]}>Add a place</Text>
+          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Place name</Text>
           <View style={styles.autocompleteWrap}>
             <View style={styles.autocompleteInputRow}>
               <TextInput
                 testID="place-dialog-name"
-                style={[styles.input, styles.autocompleteInput]}
+                style={[styles.input, styles.autocompleteInput, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+                placeholderTextColor={colors?.textMuted}
                 value={name}
                 placeholder="e.g. Hagia Sophia"
                 onChangeText={handleNameChange}
@@ -174,40 +179,42 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
               ) : null}
             </View>
             {showDropdown ? (
-              <View style={styles.dropdownList} testID="place-dialog-suggestions">
+              <ScrollView style={[styles.dropdownList, colors && { backgroundColor: colors.surface, borderColor: colors.border }]} nestedScrollEnabled keyboardShouldPersistTaps="handled" testID="place-dialog-suggestions">
                 {suggestions.map((item) => (
                   <Pressable
                     key={`place-suggestion-${item.id}`}
                     testID={`place-dialog-suggestion-${item.id}`}
-                    style={({ pressed }: { pressed: boolean }) => [styles.dropdownOption, pressed && styles.dropdownOptionPressed]}
+                    style={({ pressed }: { pressed: boolean }) => [styles.dropdownOption, colors && { borderColor: colors.border }, pressed && styles.dropdownOptionPressed]}
                     onPress={() => handleSelectSuggestion(item)}
                   >
-                    <Text style={styles.dropdownOptionText}>{item.name}</Text>
+                    <Text style={[styles.dropdownOptionText, colors && { color: colors.text }]}>{item.name}</Text>
                     {item.destinationName ? (
-                      <Text style={styles.dropdownOptionHelper}>{item.destinationName}</Text>
+                      <Text style={[styles.dropdownOptionHelper, colors && { color: colors.textMuted }]}>{item.destinationName}</Text>
                     ) : null}
                   </Pressable>
                 ))}
-              </View>
+              </ScrollView>
             ) : null}
           </View>
           {!canSearch ? (
-            <Text style={styles.searchHint}>
+            <Text style={[styles.searchHint, colors && { color: colors.textMuted }]}>
               Add a destination to this trip to search suggested places, or type a custom name below.
             </Text>
           ) : null}
-          <Text style={styles.label}>Time (optional)</Text>
+          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Time (optional)</Text>
           <TextInput
             testID="place-dialog-time"
-            style={styles.input}
+            style={[styles.input, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            placeholderTextColor={colors?.textMuted}
             value={time}
             placeholder="e.g. 09:00"
             onChangeText={setTime}
           />
-          <Text style={styles.label}>Notes (optional)</Text>
+          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Notes (optional)</Text>
           <TextInput
             testID="place-dialog-notes"
-            style={[styles.input, styles.textarea]}
+            style={[styles.input, styles.textarea, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            placeholderTextColor={colors?.textMuted}
             value={notes}
             placeholder="Add details for this location"
             onChangeText={setNotes}
@@ -217,7 +224,7 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable testID="place-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
-              <Text style={styles.btnGhostText}>Cancel</Text>
+              <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
             </Pressable>
             <Pressable testID="place-dialog-submit" style={styles.btnPrimary} onPress={handleSubmit}>
               <Text style={styles.btnPrimaryText}>Add place</Text>

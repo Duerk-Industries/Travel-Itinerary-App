@@ -244,9 +244,9 @@ const LandingPage: React.FC<LandingPageProps> = ({
           marginTop: spacing.xxl,
           padding: spacing.xl,
           borderRadius: 12,
-          backgroundColor: '#f0f7ff',
+          backgroundColor: colors.surface,
           borderWidth: 1,
-          borderColor: '#bae6fd',
+          borderColor: colors.border,
         }}
         testID="landing-data-use"
       >
@@ -255,14 +255,14 @@ const LandingPage: React.FC<LandingPageProps> = ({
           style={{
             fontSize: typography.h3,
             fontWeight: typography.weightBold,
-            color: '#0369a1',
+            color: colors.text,
             marginBottom: spacing.md,
             textAlign: 'center',
           }}
         >
           Google User Data Disclosure
         </SemanticHeading>
-        <Text style={{ fontSize: typography.small, color: '#0c4a6e', marginBottom: 16, lineHeight: 22 }}>
+        <Text style={{ fontSize: typography.small, color: colors.textMuted, marginBottom: 16, lineHeight: 22 }}>
           WanderBunnies requests specific permissions from your Google Account to provide its core functionality.
           We adhere to the{' '}
           <PublicLink
@@ -275,21 +275,21 @@ const LandingPage: React.FC<LandingPageProps> = ({
         </Text>
 
         <View style={{ gap: 12 }}>
-          <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
-            <Text style={{ fontSize: typography.small, color: '#0c4a6e', lineHeight: 20 }}>
-              <Text style={{ fontWeight: 'bold', color: '#0369a1' }}>Google Identity:</Text> We use your Google profile (name and email) to uniquely identify you within your travel groups and to provide a secure, password-less sign-in experience.
+          <View style={{ backgroundColor: colors.surfaceMuted, padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: typography.small, color: colors.textMuted, lineHeight: 20 }}>
+              <Text style={{ fontWeight: 'bold', color: colors.text }}>Google Identity:</Text> We use your Google profile (name and email) to uniquely identify you within your travel groups and to provide a secure, password-less sign-in experience.
             </Text>
           </View>
 
-          <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
-            <Text style={{ fontSize: typography.small, color: '#0c4a6e', lineHeight: 20 }}>
-              <Text style={{ fontWeight: 'bold', color: '#0369a1' }}>Data Privacy:</Text> Your Google data is used exclusively for the features you authorize. We do not sell your data, use it for advertising, or allow any third-party access except as required to provide the service.
+          <View style={{ backgroundColor: colors.surfaceMuted, padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: typography.small, color: colors.textMuted, lineHeight: 20 }}>
+              <Text style={{ fontWeight: 'bold', color: colors.text }}>Data Privacy:</Text> Your Google data is used exclusively for the features you authorize. We do not sell your data, use it for advertising, or allow any third-party access except as required to provide the service.
             </Text>
           </View>
         </View>
 
-        <View style={{ marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: '#bae6fd' }}>
-          <Text style={{ fontSize: typography.small, color: '#0369a1', textAlign: 'center' }}>
+        <View style={{ marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+          <Text style={{ fontSize: typography.small, color: colors.textMuted, textAlign: 'center' }}>
             Full details are available in our{' '}
             <PublicLink
               href={PUBLIC_PRIVACY_URL}

@@ -948,6 +948,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                     headers={jsonHeaders}
                     activity={t}
                     destination={destination}
+                    theme={theme}
                   />
                 ) : null}
               </View>

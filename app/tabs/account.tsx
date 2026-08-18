@@ -367,6 +367,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       {activePage === 'account-packing-list' ? <PackingListTable
         backendUrl={backendUrl}
         headers={headers}
+        theme={theme}
         variant="user"
         title="Personal packing list"
       /> : null}
