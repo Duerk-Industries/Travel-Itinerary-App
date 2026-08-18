@@ -105,6 +105,45 @@ describe('itinerary Phase 0A baseline evaluation', () => {
     expect(result.estimatedTravelMinutesPerActivityDay).toBeNull();
   });
 
+  test('unsupportedFactRate and scheduleWindowViolations stay null (and flagged unavailable) when annotation data is not supplied', () => {
+    const result = evaluateItineraryBaseline({
+      activities: [], transfers: [], mustSees: [], weights, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    });
+    expect(result.unsupportedFactRate).toBeNull();
+    expect(result.scheduleWindowViolations).toBeNull();
+    expect(result.unavailableReasons).toEqual(expect.arrayContaining([
+      'Schedule-window metrics require per-item opening hours/reservation metadata.',
+      'Unsupported-fact scoring requires evidence provenance.',
+    ]));
+  });
+
+  test('unsupportedFactRate is derived from evidenceCoverage (the inverse) when the annotation stage supplies it', () => {
+    const result = evaluateItineraryBaseline({
+      activities: [], transfers: [], mustSees: [], weights, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      evidenceCoverage: 0.75,
+      scheduleWindowViolations: 3,
+    });
+    expect(result.unsupportedFactRate).toBeCloseTo(0.25);
+    expect(result.scheduleWindowViolations).toBe(3);
+    expect(result.unavailableReasons).not.toEqual(expect.arrayContaining([
+      'Schedule-window metrics require per-item opening hours/reservation metadata.',
+      'Unsupported-fact scoring requires evidence provenance.',
+    ]));
+  });
+
+  test('evidenceCoverage of 0 (fully unsupported) is distinct from "not measured" and yields unsupportedFactRate 1', () => {
+    const result = evaluateItineraryBaseline({
+      activities: [], transfers: [], mustSees: [], weights, comfort: 'B',
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      evidenceCoverage: 0,
+      scheduleWindowViolations: 0,
+    });
+    expect(result.unsupportedFactRate).toBe(1);
+    expect(result.scheduleWindowViolations).toBe(0);
+  });
+
   test('reports groupCohesionScore correctly when provided', () => {
     const result = evaluateItineraryBaseline({
       activities: [], transfers: [], mustSees: [], weights, comfort: 'B',

@@ -1243,15 +1243,22 @@ const loadActivityBlocksForAnnotation = async (
   }
 };
 
-const renderActivityBlocksForPrompt = (blocks: ActivityBlock[]): string => {
+export const renderActivityBlocksForPrompt = (blocks: ActivityBlock[]): string => {
   if (!blocks.length) return 'none';
   return JSON.stringify(blocks.slice(0, 40).map((block) => ({
     id: block.block_id,
     location: block.location_id,
     zone: block.zone_id,
     title: block.title,
+    // `name_local` is the canonical native-script name; `name_script` is its romanization/
+    // transliteration, NOT a second translated display name — mislabeling it as a "traveler
+    // language" name previously fed the LLM a field that looked like a translation when it was
+    // actually the same name spelled in Latin characters (see
+    // docs/implementation_plans/itinerary-narrative-depth-and-validation.md's multilingual-names
+    // recommendation for why conflating the two is a real hazard: a translated name can be
+    // mistaken for the name a local taxi driver or map search expects).
     localName: block.name_local,
-    travelerLanguageName: block.name_script,
+    romanizedName: block.name_script,
     role: block.role,
     category: block.category,
     durationMinutes: block.duration_minutes,
@@ -4053,6 +4060,8 @@ const runGenerateItineraryViaPromptPlan = async (
     stageLatenciesMs: captureStages.map((stage) => stage.latencyMs),
     transferMinutesByDay,
     groupCohesionScore: groundedResult.groupCohesionScore,
+    evidenceCoverage: annotations.validation.evidenceCoverage,
+    scheduleWindowViolations: annotations.validation.repairs.length,
   });
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${safeRender.fallbackUsed ? 'yes' : 'no'}`
