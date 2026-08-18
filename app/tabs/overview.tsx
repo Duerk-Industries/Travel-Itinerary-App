@@ -1448,6 +1448,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (!missingCards.length) return;
       const days = missingCards.map((card) => ({
         date: card.date,
+        dayIndex: dayCards.findIndex((candidate) => candidate.date === card.date) + 1,
         location: card.location || tripLocationLabel || trip?.destination || 'travel',
       }));
       try {

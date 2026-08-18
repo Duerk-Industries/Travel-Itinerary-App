@@ -92,4 +92,24 @@ describe('/api/itinerary/images', () => {
     expect(res.body.images).toHaveLength(31);
     expect(imageService.getItineraryImage).toHaveBeenCalledTimes(31);
   });
+
+  it('passes the stable day index to the image service', async () => {
+    (imageService.getItineraryImage as jest.Mock).mockResolvedValue({
+      url: 'https://mock-service-url.com/img.jpg',
+      cached: false,
+      provider: 'unsplash',
+      fallbackUsed: false,
+    });
+
+    await request(app)
+      .post('/api/itinerary/images/batch')
+      .send({ days: [{ date: '2030-01-01', dayIndex: 2, location: 'Tokyo' }] })
+      .expect(200);
+
+    expect(imageService.getItineraryImage).toHaveBeenCalledWith({
+      locationName: 'Tokyo',
+      day: '2',
+      contextText: undefined,
+    });
+  });
 });

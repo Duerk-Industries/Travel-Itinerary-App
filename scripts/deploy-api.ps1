@@ -348,7 +348,8 @@ if ($SecretsFile -and (Test-Path -LiteralPath $SecretsFile)) {
   }
 }
 
-$gitSha = (& git -C $Script:RepoRoot rev-parse HEAD).Trim()
+$repoRootPath = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$gitSha = (& git -C $repoRootPath rev-parse HEAD).Trim()
 $envPairs += "NODE_OPTIONS=--max-old-space-size=1536"
 $envPairs += "GIT_SHA=$gitSha"
 

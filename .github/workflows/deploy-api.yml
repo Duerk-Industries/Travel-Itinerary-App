@@ -78,9 +78,20 @@ jobs:
             --to-latest \
             --project "$GCLOUD_PROJECT_ID"
           echo "Deployed API metadata: sha=${GITHUB_SHA}"
-          gcloud run services describe travel-itinerary-app \
+          if verification_json="$(gcloud run services describe travel-itinerary-app \
             --region us-east5 \
             --project "$GCLOUD_PROJECT_ID" \
-            --format='yaml(status.latestReadyRevisionName,spec.template.spec.containers[0].resources.limits.memory,spec.template.spec.containers[0].env)'
+            --format=json 2>/dev/null)"; then
+            if verification_summary="$(printf '%s' "$verification_json" | jq -r '
+              "memory=" + (.spec.template.spec.containers[0].resources.limits.memory // "<missing>"),
+              "git_sha=" + (([.spec.template.spec.containers[0].env[]? | select(.name == "GIT_SHA") | .value] | first) // "<missing>")
+            ' 2>/dev/null)"; then
+              printf 'Deployment verification: %s\n' "$verification_summary"
+            else
+              echo '::warning::Deployment succeeded, but verification output could not be parsed.'
+            fi
+          else
+            echo '::warning::Deployment succeeded, but Cloud Run verification was unavailable.'
+          fi
         env:
           GCLOUD_PROJECT_ID: ${{ secrets.GCLOUD_PROJECT_ID }}

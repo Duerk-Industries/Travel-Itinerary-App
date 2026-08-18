@@ -266,6 +266,10 @@ router.post('/images/batch', async (req, res) => {
   const requests = rawDays
     .map((entry: any) => ({
       date: String(entry?.date ?? '').trim(),
+      dayIndex:
+        Number.isInteger(Number(entry?.dayIndex)) && Number(entry.dayIndex) > 0
+          ? Number(entry.dayIndex)
+          : undefined,
       location: String(entry?.location ?? '').trim(),
       context: String(entry?.context ?? '').trim(),
     }))
@@ -277,12 +281,12 @@ router.post('/images/batch', async (req, res) => {
 
   const limit = pLimit(4);
   const images = await Promise.all(
-    requests.map((entry: { date: string; location: string; context: string }) =>
+    requests.map((entry: { date: string; dayIndex?: number; location: string; context: string }) =>
       limit(async () => {
         try {
           const result = await getItineraryImage({
             locationName: entry.location,
-            day: entry.date,
+            day: entry.dayIndex ? String(entry.dayIndex) : entry.date,
             contextText: entry.context || undefined,
           });
           return {

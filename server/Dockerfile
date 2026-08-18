@@ -12,8 +12,6 @@ RUN npm prune --omit=dev
 FROM node:20-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
-ARG GIT_SHA=unknown
-ENV GIT_SHA=$GIT_SHA
 WORKDIR /app
 
 # Premium trip-blog video processing invokes ffmpeg. Keep it in the runtime

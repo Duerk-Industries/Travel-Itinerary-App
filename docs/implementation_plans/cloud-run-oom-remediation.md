@@ -171,13 +171,15 @@ limit and env var. Container start log should no longer be followed by SIGABRT u
 
 ### Step 3 — Make deploys self-verifying
 
-**Files:** `server/src/app.ts` (`/api/healthz`, line ~269), `server/Dockerfile`, `.github/workflows/deploy-api.yml`
+**Files:** `server/src/app.ts` (`/api/healthz`, line ~269), `.github/workflows/deploy-api.yml`
 
-1. Add a build arg to `server/Dockerfile` (`ARG GIT_SHA` → `ENV GIT_SHA=$GIT_SHA`) and pass
-   `--build-arg` / `--set-env-vars` from the workflow. Cloud Run already sets `K_REVISION` itself.
+1. Set `GIT_SHA` as a runtime environment variable in every deploy path; do not bake it into the
+   image because the source deploy does not pass a Docker build argument. Cloud Run sets
+   `K_REVISION` itself.
 2. Extend `/api/healthz` to return `{ ok, sha, revision }` reading `GIT_SHA` and `K_REVISION` via
    `getEnvValue` (never `process.env` directly — see CLAUDE.md).
-3. Echo the deployed revision in the workflow's final step so the Actions log is self-evidencing.
+3. Echo only the deployed SHA and memory in the workflow's final step. Make the optional
+   verification lookup non-fatal after traffic has already moved to the new revision.
 
 This must precede step 4, or there is no way to prove step 4 actually shipped — which is precisely
 the confusion that cost a day on this incident.
@@ -230,9 +232,9 @@ generation is already at peak heap.
    an array, `slice(0, 31)`s it, and answers in one round trip. Thirty requests become one.
 2. **Bound concurrency inside that handler** (4–6), where it is enforced once rather than trusted to
    every caller.
-3. **Stop using raw per-day `contextText` as the primary Unsplash query** (§3.1). Either drop it and
-   key on destination + day-of-trip, or normalize it to a small stable token set. These images are
-   decorative; a unique-per-day query buys very little and costs an API call every time.
+3. **Stop using raw per-day `contextText` as the primary Unsplash query** (§3.1). The implementation
+   uses three stable theme variants and keys on destination + variant. These images are decorative;
+   a unique-per-day query buys very little and costs an API call every time.
 4. **Lengthen the negative TTL for "no result"** from 10 minutes to ~24h. A location with no Unsplash
    photo now will not have one in ten minutes.
 
@@ -242,6 +244,15 @@ semaphore and preferring visible days first.
 **Verify:** Network panel shows one batch request per overview load. Unsplash call volume in the
 metrics counters drops proportionally to trip length.
 **Rollback:** Keep the batch route (additive) and revert the client to per-day GETs.
+
+### Photo variation recommendation — implemented
+
+Itinerary images now use three stable theme variants (`culture`, `food`, and `outdoors`). Numeric day
+indexes cycle through the variants; ISO dates and other day labels use a stable hash so the selection
+does not change between requests or Cloud Run instances. GCS and Unsplash lookup keys include both
+the normalized destination and variant (for example, `unsplash/tokyo-food.jpg`). `per_page` remains
+`1`, so each destination can create at most three image variants while preserving shared cache hits,
+predictable Unsplash usage, and a bounded memory/API footprint.
 
 ### Step 6 — Bound `TtlCache`
 

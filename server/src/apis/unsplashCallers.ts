@@ -9,6 +9,14 @@ const UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY = 'IMAGE_SERVICE_ITINERARY_IMAGE';
 const UNSPLASH_CALLER_IMAGE_SERVICE_GOOGLE_PLACE_FALLBACK = 'IMAGE_SERVICE_GOOGLE_PLACE_FALLBACK';
 const UNSPLASH_CALLER_HEALTH_CHECK = 'UNSPLASH_HEALTH_CHECK';
 
+export type ItineraryImageVariant = 'culture' | 'food' | 'outdoors';
+
+const itineraryVariantQueries: Record<ItineraryImageVariant, string> = {
+  culture: 'culture landmarks',
+  food: 'local food',
+  outdoors: 'nature outdoors',
+};
+
 const firstRegularUrl = (data: Awaited<ReturnType<typeof searchUnsplashPhotos>>): string | null => {
   const url = data?.results?.[0]?.urls?.regular;
   return typeof url === 'string' && url.trim().length > 0 ? url : null;
@@ -107,9 +115,14 @@ export const fetchUnsplashImageForLocation = async (
 
 export const fetchUnsplashImageForItinerary = async (
   accessKey: string,
-  locationName: string
+  locationName: string,
+  variant?: ItineraryImageVariant
 ): Promise<string | null> =>
-  fetchUnsplashImage(UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY, accessKey, locationName);
+  fetchUnsplashImage(
+    UNSPLASH_CALLER_IMAGE_SERVICE_ITINERARY,
+    accessKey,
+    variant ? `${locationName} ${itineraryVariantQueries[variant]}` : locationName
+  );
 
 export const fetchUnsplashImageForGooglePlaceFallback = async (
   accessKey: string,
