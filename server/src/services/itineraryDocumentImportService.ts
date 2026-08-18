@@ -16,10 +16,23 @@ import { resolveProvider } from '../ai/registry/aiProviderRegistry';
 import type { AiCallContext } from '../ai/types/aiChat';
 import { getActiveAiProvider, getConfiguredProviderApiKey } from './aiProviderConfigService';
 import { estimateAiCostMicros } from '../apis/providerBudgeting';
+import { createTtlCache } from '../utils/ttlCache';
+import { createHash } from 'crypto';
 
 export const ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY = 'itinerary_document_import';
 const CALLER_ID = 'ITINERARY_DOCUMENT_IMPORT';
 const MAX_DOCUMENT_CHARS = 40_000;
+
+const extractionCache = createTtlCache<ExtractedItineraryDocument>({
+  defaultTtlMs: 15 * 60 * 1000, // 15 minutes to allow for preview -> confirm
+  maxEntries: 100,
+});
+
+/** @internal - export for tests only */
+export const __clearExtractionCache = (): void => extractionCache.clear();
+
+const getDocumentHash = (text: string, userId: string): string =>
+  createHash('sha256').update(`${userId}:${text}`).digest('hex');
 
 export type ItineraryDocumentCandidateType =
   | 'flight'
@@ -60,7 +73,7 @@ export type ItineraryDocumentCandidate = {
   endDate?: string | null;
   location?: string | null;
   sourceExcerpt?: string;
-  flight?: { departureLocation: string | null; arrivalLocation: string | null; carrier: string | null };
+  flight?: { departureLocation: string | null; arrivalLocation: string | null; carrier: string | null; transferType?: string | null };
   hotel?: { address: string | null };
   carRental?: { pickupLocation: string | null; dropoffLocation: string | null; vendor: string | null };
   activity?: { activityType: string | null; startLocation: string | null };
@@ -94,7 +107,7 @@ export type ItineraryDocumentImportResult = ImportDocumentResult;
 
 const SYSTEM_PROMPT = `Extract travel reservations and itinerary items from the supplied document.
 Return only one JSON object with this shape:
-{"candidates":[{"type":"flight|rail|ferry_bus_transfer|hotel|car_rental|tour_activity","name":"text","date":"YYYY-MM-DD or null","endDate":"YYYY-MM-DD or null","location":"text or null","notes":"text or null","sourceExcerpt":"source lines","flight":{"departureLocation":null,"arrivalLocation":null,"carrier":null},"hotel":{"address":null},"carRental":{"pickupLocation":null,"dropoffLocation":null,"vendor":null},"activity":{"activityType":null,"startLocation":null}}],"unassignedNotes":"clean markdown"}
+{"candidates":[{"type":"flight|rail|ferry_bus_transfer|hotel|car_rental|tour_activity","name":"text","date":"YYYY-MM-DD or null","endDate":"YYYY-MM-DD or null","location":"text or null","notes":"text or null","sourceExcerpt":"source lines","flight":{"departureLocation":null,"arrivalLocation":null,"carrier":null,"transferType":"Flight|Train|Bus|Ferry|Other"},"hotel":{"address":null},"carRental":{"pickupLocation":null,"dropoffLocation":null,"vendor":null},"activity":{"activityType":"Class|Concert/Show|Day Trip|Event|Food & Drink|Fun & Games|Hike|Nightlife|Open Access|Outdoor Activity|Reservation|Shopping|Sights & Landmarks|Spa/Wellness|Ticketed Attraction|Tour","startLocation":null}}],"unassignedNotes":"clean markdown"}
 
 For each candidate, include only values explicitly supported by the document. Useful fields are name,
 providerVendor, confirmationNumber, totalCost, departureDate, arrivalDate, departureLocation,
@@ -142,6 +155,7 @@ const parseExtraction = (raw: string, usage: ExtractedItineraryDocument['usage']
             departureLocation: asString((source.flight as any).departureLocation),
             arrivalLocation: asString((source.flight as any).arrivalLocation),
             carrier: asString((source.flight as any).carrier),
+            transferType: asString((source.flight as any).transferType),
           } : undefined,
           hotel: source.hotel && typeof source.hotel === 'object' ? { address: asString((source.hotel as any).address) } : undefined,
           carRental: source.carRental && typeof source.carRental === 'object' ? {
@@ -172,6 +186,11 @@ export const extractItineraryDocumentCandidates = async (params: {
   const documentText = params.documentText.trim();
   if (!documentText) throw new Error('Document text is required');
   if (documentText.length > MAX_DOCUMENT_CHARS) throw new Error(`Document text exceeds the ${MAX_DOCUMENT_CHARS}-character limit`);
+
+  const cacheKey = getDocumentHash(documentText, params.userId);
+  const cached = extractionCache.get(cacheKey);
+  if (cached) return cached;
+
   const active = await getActiveAiProvider(ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY);
   const apiKey = getConfiguredProviderApiKey(active.provider);
   if (!apiKey) throw new Error(`No API key is configured for ${active.provider}`);
@@ -205,7 +224,9 @@ export const extractItineraryDocumentCandidates = async (params: {
     const promptTokens = response.usage?.prompt_tokens ?? 0;
     const completionTokens = response.usage?.completion_tokens ?? 0;
     const estimatedMicros = estimateAiCostMicros({ provider: provider.id, model, promptTokens, completionTokens });
-    return parseExtraction(content, { promptTokens, completionTokens, estimatedCostUsd: (estimatedMicros ?? 0) / 1_000_000 });
+    const result = parseExtraction(content, { promptTokens, completionTokens, estimatedCostUsd: (estimatedMicros ?? 0) / 1_000_000 });
+    extractionCache.set(cacheKey, result);
+    return result;
   } catch {
     throw new Error('The document extractor returned invalid JSON');
   }
@@ -329,12 +350,13 @@ export const importItineraryDocument = async (params: {
       const nights = Math.max(1, Math.round(dayDistance(checkInDate, checkOutDate)));
       created = await insertLodging({ userId: params.userId, tripId: params.tripId, status: 'Proposed', name: candidate.name!, checkInDate, checkOutDate, rooms: candidate.rooms ?? 1, totalCost: candidate.totalCost ?? 0, costPerNight: (candidate.totalCost ?? 0) / nights, address: candidate.address ?? candidate.hotel?.address ?? candidate.location ?? '', paid_by: [], traveler_ids: [] });
     } else if (candidate.type === 'tour_activity') {
-      created = await insertActivity({ userId: params.userId, tripId: params.tripId, status: 'Proposed', activityType: 'Tour', date: candidate.activityDate ?? candidate.date!, name: candidate.name!, startLocation: candidate.activity?.startLocation ?? candidate.location ?? candidate.address ?? '', startTime: candidate.activityTime ?? '', duration: candidate.duration ?? '', cost: candidate.totalCost ?? 0, bookedOn: '', reference: candidate.confirmationNumber ?? '', notes: candidate.notes ?? '', paidBy: [], travelerIds: [] });
+      const activityType = (candidate.activity?.activityType as any) || 'Tour';
+      created = await insertActivity({ userId: params.userId, tripId: params.tripId, status: 'Proposed', activityType, date: candidate.activityDate ?? candidate.date!, name: candidate.name!, startLocation: candidate.activity?.startLocation ?? candidate.location ?? candidate.address ?? '', startTime: candidate.activityTime ?? '', duration: candidate.duration ?? '', cost: candidate.totalCost ?? 0, bookedOn: '', reference: candidate.confirmationNumber ?? '', notes: candidate.notes ?? '', paidBy: [], travelerIds: [] });
     } else if (candidate.type === 'car_rental') {
       const pickupDate = candidate.pickupDate ?? candidate.date!;
       created = await insertCarRental({ userId: params.userId, tripId: params.tripId, status: 'Proposed', pickupLocation: candidate.pickupLocation ?? candidate.carRental?.pickupLocation ?? candidate.location!, pickupDate, dropoffLocation: candidate.dropoffLocation ?? candidate.carRental?.dropoffLocation ?? '', dropoffDate: candidate.dropoffDate ?? candidate.endDate ?? pickupDate, reference: candidate.confirmationNumber ?? '', vendor: candidate.providerVendor ?? candidate.carRental?.vendor ?? '', prepaid: '', cost: candidate.totalCost ?? 0, model: candidate.vehicleType ?? '', notes: candidate.notes ?? '', paidBy: [], travelerIds: [] });
     } else {
-      const transferType = candidate.type === 'flight' ? 'Flight' : candidate.type === 'rail' ? 'Train' : 'Other';
+      const transferType = (candidate.flight?.transferType as any) || (candidate.type === 'flight' ? 'Flight' : candidate.type === 'rail' ? 'Train' : 'Other');
       const departureDate = candidate.departureDate ?? candidate.date!;
       created = await insertFlight({ userId: params.userId, tripId: params.tripId, status: 'Proposed', transferType, passengerName: '', passengerIds: [], departureDate, arrivalDate: candidate.arrivalDate ?? candidate.endDate ?? departureDate, departureLocation: candidate.departureLocation ?? candidate.flight?.departureLocation ?? candidate.location!, departureTime: candidate.departureTime ?? '', arrivalLocation: candidate.arrivalLocation ?? candidate.flight?.arrivalLocation!, arrivalTime: candidate.arrivalTime ?? '', cost: candidate.totalCost ?? 0, carrier: candidate.carrier ?? candidate.flight?.carrier ?? candidate.providerVendor ?? '', flightNumber: candidate.flightNumber ?? '', bookingReference: candidate.confirmationNumber ?? '', paidBy: [] });
     }
