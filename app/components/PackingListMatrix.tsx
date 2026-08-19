@@ -163,7 +163,7 @@ const PackingListMatrixNative: React.FC<Props> = ({ items, travelers, onToggle, 
         <ScrollView ref={leftBodyRef} style={styles.nativeLeftBody} showsVerticalScrollIndicator={false} scrollEventThrottle={16} onScroll={(event) => sync.syncY(event.nativeEvent.contentOffset.y)}>
           {items.map((item) => <View key={`left-${item.id}`} style={[styles.itemCell, item.isCategory ? styles.sectionCell : null, { borderColor: colors.border, backgroundColor: item.isCategory ? colors.backgroundAlt : colors.surface }]}><Text style={[styles.itemText, item.isCategory ? styles.sectionText : null, { color: colors.text }]}>{item.label}</Text></View>)}
         </ScrollView>
-        <ScrollView ref={matrixRef} style={styles.nativeMatrixScroll} horizontal showsHorizontalScrollIndicator scrollEventThrottle={16} onScroll={(event) => sync.syncX(event.nativeEvent.contentOffset.x)}>
+        <ScrollView ref={matrixRef} style={styles.nativeMatrixScroll} horizontal nestedScrollEnabled showsHorizontalScrollIndicator scrollEventThrottle={16} onScroll={(event) => sync.syncX(event.nativeEvent.contentOffset.x)}>
           <ScrollView ref={matrixBodyRef} style={styles.nativeMatrixBody} nestedScrollEnabled showsVerticalScrollIndicator scrollEventThrottle={16} onScroll={(event) => sync.syncY(event.nativeEvent.contentOffset.y)}>
             {items.map((item) => <View key={`row-${item.id}`} style={styles.horizontalRow}>
               {travelers.map((traveler) => {
