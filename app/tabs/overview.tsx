@@ -80,7 +80,7 @@ import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
-import ItineraryDocumentImport from '../components/ItineraryDocumentImport';
+import ItineraryDocumentImport, { canShowItineraryDocumentImport } from '../components/ItineraryDocumentImport';
 // AsyncStorage is loaded lazily (see getAsyncStorage below) so the day-card
 // cache import doesn't add @react-native-async-storage/async-storage to the
 // module-evaluation graph of every tab that ends up importing this file.
@@ -507,6 +507,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
   const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [documentImportOpen, setDocumentImportOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
@@ -2574,6 +2575,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       styles={styles}
       theme={theme}
       readOnly={readOnly}
+      expanded={documentImportOpen}
+      onExpandedChange={setDocumentImportOpen}
+      hideTrigger
       onImported={async () => {
         await Promise.all([
           Promise.resolve(onRefreshTrips()),
@@ -2584,6 +2588,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ]);
       }}
     />
+  ) : null;
+
+  const showDocumentImport = canShowItineraryDocumentImport({
+    featureEnabled: featureItineraryDocumentImport,
+    userTier,
+    platform: Platform.OS,
+    readOnly,
+  });
+
+  const renderDocumentImportButton = () => showDocumentImport ? (
+    <TouchableOpacity
+      testID="overview-import-itinerary"
+      style={[styles.button, styles.smallButton]}
+      onPress={() => setDocumentImportOpen((open) => !open)}
+    >
+      <Text style={styles.buttonText}>{documentImportOpen ? 'Close Import' : 'Import Itinerary'}</Text>
+    </TouchableOpacity>
   ) : null;
 
   const bookingPriorityUrgencyLabel: Record<BookingPriorityUrgency, string> = {
@@ -3253,6 +3274,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0, width: '100%' } : null]}>
+              {renderDocumentImportButton()}
               <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
                 <Text style={styles.buttonText}>Print itinerary</Text>
               </TouchableOpacity>
@@ -3261,6 +3283,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </TouchableOpacity>
             </View>
           </View>
+          {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
 
           {trip.description ? (
@@ -3276,7 +3299,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ) : null}
 
           {renderTripNotes()}
-          {renderDocumentImporter()}
 
           {renderBookingPriorities()}
 
@@ -3328,14 +3350,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={styles.buttonText}>Edit</Text>
-            </TouchableOpacity>
+            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
+              {renderDocumentImportButton()}
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
+        {renderDocumentImporter()}
         <Text style={styles.flightTitle}>{trip.name}</Text>
         {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
         {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
@@ -3383,7 +3406,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : null}
 
         {renderTripNotes()}
-        {renderDocumentImporter()}
 
         <View style={[styles.row, { alignItems: 'flex-start' }]}>
           <Text style={styles.headerText}>Trip Dates</Text>

@@ -141,11 +141,11 @@ export const extractItineraryDocumentCandidates = async (params: {
 }>
 ```
 
-- **One pass, not chunked.** These documents run 2,000–5,000 words. A single call to a 128k-context model
-  handles it whole; chunking would break the cross-day context that makes extraction reliable (the lodging
-  table's `Nights`/`District` columns, "Kyoto holds 7 nights," the booking-order list at the bottom). Cap input
-  at ~40k chars — generous for a multi-week itinerary — and reject with a clear error beyond that, rather than
-  silently truncating mid-day.
+- **Primary pass plus bounded activity recovery.** The primary whole-document call preserves cross-day context
+  for transfers, lodging, rentals, and trip-wide notes. A deterministic day-section parser then sends bounded
+  groups of dated days through a dedicated activity pass so large activity tables cannot exhaust the primary
+  response budget. Every detected day must produce an activity or day note. Input is capped at 60k characters,
+  which covers the reviewed Romania and Japan PDFs without silently truncating them.
 - **Prompt asks for the mixed array directly**, not `llmExtractor.ts`'s single-`itemType` shape. System prompt
   enumerates all six candidate types with the fields above. Same "never invent a date, name, or address that
   isn't in the text" discipline as `p3_validate.md` elsewhere in this codebase — a wrong import that silently

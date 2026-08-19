@@ -21,6 +21,9 @@ type Props = {
   readOnly?: boolean;
   theme?: AppTheme;
   onImported: () => void | Promise<void>;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+  hideTrigger?: boolean;
 };
 
 const WebFileInput = 'input' as any;
@@ -37,8 +40,15 @@ export const canShowItineraryDocumentImport = (params: {
 
 export const ItineraryDocumentImport: React.FC<Props> = ({
   backendUrl, headers, tripId, userTier, featureEnabled, styles, readOnly = false, theme, onImported,
+  expanded: controlledExpanded, onExpandedChange, hideTrigger = false,
 }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const expanded = controlledExpanded ?? internalExpanded;
+  const setExpanded = (value: boolean | ((current: boolean) => boolean)) => {
+    const next = typeof value === 'function' ? value(expanded) : value;
+    setInternalExpanded(next);
+    onExpandedChange?.(next);
+  };
   const [documentText, setDocumentText] = useState('');
   const [sourceFilename, setSourceFilename] = useState('pasted itinerary.txt');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -108,9 +118,11 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
 
   return (
     <View testID="itinerary-document-import" style={{ gap: 10 }}>
-      <TouchableOpacity style={[styles.button, styles.smallButton, { alignSelf: 'flex-start' }]} onPress={() => setExpanded((value) => !value)}>
-        <Text style={styles.buttonText}>{expanded ? 'Close document import' : 'Import from document'}</Text>
-      </TouchableOpacity>
+      {!hideTrigger ? (
+        <TouchableOpacity style={[styles.button, styles.smallButton, { alignSelf: 'flex-start' }]} onPress={() => setExpanded((value) => !value)}>
+          <Text style={styles.buttonText}>{expanded ? 'Close itinerary import' : 'Import Itinerary'}</Text>
+        </TouchableOpacity>
+      ) : null}
       {expanded ? (
         <View style={[styles.card, { gap: 10, padding: 12 }]}>
           <Text style={styles.headerText}>Import itinerary document</Text>
