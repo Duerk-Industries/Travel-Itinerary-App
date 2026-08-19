@@ -4074,7 +4074,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           onSave={saveRental}
           onCancel={closeRentalModal}
           isNew={!editingRentalId}
-          members={userMembers}
+          members={groupMembers}
           styles={styles}
           theme={theme}
         />
