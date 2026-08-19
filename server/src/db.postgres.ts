@@ -3421,6 +3421,38 @@ export const listTripShareInvites = async (
   return rows;
 };
 
+export const listTripFollowers = async (userId: string, tripId: string) => {
+  const p = getPool();
+  const context = await getTripOwnerContext(p, tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const { rows } = await p.query(
+    `SELECT tf.follower_user_id as "userId",
+            COALESCE(wu.first_name, '') as "firstName",
+            COALESCE(wu.last_name, '') as "lastName",
+            u.email,
+            tf.created_at as "createdAt"
+     FROM trip_followers tf
+     JOIN users u ON u.id = tf.follower_user_id
+     LEFT JOIN web_users wu ON wu.id = tf.follower_user_id
+     WHERE tf.trip_id = $1
+     ORDER BY tf.created_at DESC`,
+    [tripId]
+  );
+  return rows;
+};
+
+export const removeTripFollower = async (userId: string, tripId: string, followerUserId: string): Promise<void> => {
+  const p = getPool();
+  const context = await getTripOwnerContext(p, tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const removed = await p.query(
+    `DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`,
+    [tripId, followerUserId]
+  );
+  if (!removed.rowCount) throw new Error('Follower not found');
+  await writeActivity(tripId, userId, 'FOLLOW_REMOVED', 'Follower removed', 'A trip owner removed a follower.', { followerUserId });
+};
+
 export const createTripShareInvite = async (
   inviterId: string,
   tripId: string,

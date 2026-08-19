@@ -5221,6 +5221,42 @@ export const listTripPayments = async (userId: string, tripId: string): Promise<
   return rows;
 };
 
+export const listTripFollowers = async (userId: string, tripId: string) => {
+  const db = getDb();
+  const context = await getTripOwnerContextFirebase(tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const snapshot = await db.collection('trip_followers').where('tripId', '==', tripId).get();
+  const rows = await Promise.all(snapshot.docs.map(async (doc) => {
+    const data = doc.data() as any;
+    const followerUserId = String(data.followerUserId ?? '').trim();
+    const [userDoc, profileDoc] = await Promise.all([
+      followerUserId ? db.collection('users').doc(followerUserId).get() : Promise.resolve(null),
+      followerUserId ? db.collection('web_users').doc(followerUserId).get() : Promise.resolve(null),
+    ]);
+    const user = userDoc?.exists ? userDoc.data() as any : {};
+    const profile = profileDoc?.exists ? profileDoc.data() as any : {};
+    return {
+      userId: followerUserId,
+      firstName: String(profile.firstName ?? ''),
+      lastName: String(profile.lastName ?? ''),
+      email: String(user.email ?? profile.email ?? ''),
+      createdAt: data.createdAt ?? null,
+    };
+  }));
+  return rows;
+};
+
+export const removeTripFollower = async (userId: string, tripId: string, followerUserId: string): Promise<void> => {
+  const db = getDb();
+  const context = await getTripOwnerContextFirebase(tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const snapshot = await db.collection('trip_followers').where('tripId', '==', tripId).where('followerUserId', '==', followerUserId).get();
+  if (snapshot.empty) throw new Error('Follower not found');
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()));
+  await rebuildTripAccessForTrip(tripId);
+  await writeActivity(tripId, userId, 'FOLLOW_REMOVED', 'Follower removed', 'A trip owner removed a follower.', { followerUserId });
+};
+
 export const insertTripPayment = async (payment: {
   tripId: string;
   groupId: string;
