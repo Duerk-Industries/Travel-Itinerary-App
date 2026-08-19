@@ -2663,9 +2663,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </Text>
           </TouchableOpacity>
           {quickStartMode ? (
-            <TouchableOpacity style={[styles.button, { flex: 1 }, !quickStartReady && { opacity: 0.6 }]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
-              <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
-            </TouchableOpacity>
+            <View style={[styles.row, { flex: 1, marginBottom: 0, flexWrap: 'nowrap' }]}>
+              <TouchableOpacity style={[styles.button, { flex: 1 }, !quickStartReady && { opacity: 0.6 }]} onPress={submitWizard} disabled={!quickStartReady || isSubmitting} testID="quick-start-create">
+                <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
+              </TouchableOpacity>
+              <View
+                accessibilityLabel="Beta feature"
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: theme?.colors.border ?? '#385266',
+                  backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
+                }}
+              >
+                <Text style={{ color: theme?.colors.text ?? '#111827', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+              </View>
+            </View>
           ) : stepIndex < totalSteps - 1 ? (
             <>
               <TouchableOpacity
@@ -2686,9 +2701,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               ) : null}
             </>
           ) : (
-            <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={submitWizard} disabled={isSubmitting}>
-              <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
-            </TouchableOpacity>
+            <View style={[styles.row, { flex: 1, marginBottom: 0, flexWrap: 'nowrap' }]}>
+              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={submitWizard} disabled={isSubmitting}>
+                <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
+              </TouchableOpacity>
+              <View
+                accessibilityLabel="Beta feature"
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: theme?.colors.border ?? '#385266',
+                  backgroundColor: theme?.mode === 'dark' ? '#35516A' : '#E8F0F6',
+                }}
+              >
+                <Text style={{ color: theme?.colors.text ?? '#111827', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+              </View>
+            </View>
           )}
         </View>
       </View>
