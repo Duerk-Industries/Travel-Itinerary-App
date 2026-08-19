@@ -4,6 +4,7 @@ import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ExpenseCovering from './ExpenseCovering';
 import PaymentDialog from '../components/PaymentDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import type { AppTheme } from '../theme/theme';
 import {
   buildSettlementMatrix,
   formatCents,
@@ -46,6 +47,7 @@ type LedgerTabProps = {
   paidTotals: Record<string, number>;
   usedTotals: Record<string, number>;
   styles: Record<string, any>;
+  theme?: AppTheme;
   downloadCsv: (content: string, fileName: string) => void;
   findActiveTrip: () => Trip | undefined;
   onNavigate: (page: 'cost') => void;
@@ -228,6 +230,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   paidTotals,
   usedTotals,
   styles,
+  theme,
   downloadCsv,
   findActiveTrip,
   onNavigate,
@@ -612,6 +615,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           payerName={payerName}
           saveCoveredBy={saveCoveredBy}
           styles={styles}
+          theme={theme}
         />
       )}
 

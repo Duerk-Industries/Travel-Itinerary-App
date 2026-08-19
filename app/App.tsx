@@ -2967,6 +2967,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   paidTotals={ledgerPaidTotals}
                   usedTotals={ledgerUsedTotals}
                   styles={styles}
+                  theme={theme}
                   onNavigate={requestPageChange}
                   downloadCsv={downloadCsv}
                   findActiveTrip={getActiveTrip}
