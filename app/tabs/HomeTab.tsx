@@ -25,6 +25,9 @@ type HomeTabProps = {
   trips: Trip[];
   followedTrips: FollowedTrip[];
   userRole?: 'user' | 'admin';
+  // Drives the Ingest tile's visibility below — Free users don't get it, Premium/Pro do.
+  // Purely a UX gate; every ingestion endpoint re-checks tier server-side independently.
+  userTier?: string;
   activeTripOverride?: Trip | null;
   styles: Record<string, any>;
   onSelectTrip: (tripId: string) => void;
@@ -57,6 +60,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   trips,
   followedTrips,
   userRole = 'user',
+  userTier = 'free',
   activeTripOverride,
   styles,
   onSelectTrip,
@@ -154,6 +158,12 @@ const HomeTab: React.FC<HomeTabProps> = ({
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
   const regularUserHiddenHomePages = new Set(['trips', 'account', 'following']);
+  // Ingest (manual upload + forwarded-mailbox import) is Premium/Pro only, same as the
+  // server-side tier check in ingestionRoutes.ts/ingestionWebhookRoutes.ts — Free users
+  // don't get the tile. Gmail import specifically stays hidden for everyone regardless of
+  // tier via feature_ingest_gmail_import (see ingestion.tsx's config.features.gmailImport)
+  // since it's untested; remove that flag check once Gmail import is ready to ship.
+  const canAccessIngest = userRole === 'admin' || userTier === 'premium' || userTier === 'pro';
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
   const navItems = [
@@ -169,6 +179,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
     { key: 'ingest', label: 'Ingest', icon: '📥' },
   ]
     .filter((item) => userRole === 'admin' || !regularUserHiddenHomePages.has(item.key))
+    .filter((item) => item.key !== 'ingest' || canAccessIngest)
     .filter((item) => !hiddenPages?.has(item.key));
 
   const submitFollowCode = async () => {

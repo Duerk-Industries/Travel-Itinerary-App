@@ -677,6 +677,19 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('add-item-option-activity')).toBeTruthy();
   });
 
+  test('with featureItineraryItemKinds disabled, the popover only offers "Add a custom activity" (the only kind that never 403s)', async () => {
+    const { findByTestId, queryByTestId } = await renderOverview(
+      <OverviewTab {...baseProps} featureItineraryItemKinds={false} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-item-button'));
+    expect(await findByTestId('add-item-popover')).toBeTruthy();
+    expect(await findByTestId('add-item-option-activity')).toBeTruthy();
+    expect(queryByTestId('add-item-option-place')).toBeNull();
+    expect(queryByTestId('add-item-option-note')).toBeNull();
+    expect(queryByTestId('add-item-option-checklist')).toBeNull();
+  });
+
   test('custom activity add item opens the activity dialog and saves a real activity', async () => {
     const onTourDataChanged = jest.fn();
     const { findByTestId, getByPlaceholderText } = await renderOverview(

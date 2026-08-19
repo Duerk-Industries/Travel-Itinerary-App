@@ -15,6 +15,7 @@ import {
   listGroupMembers,
   listItineraries,
   listItineraryDetails,
+  setItineraryPlanMarkdown,
   upsertExpenseForSource,
 } from '../db';
 import { logError, logInfo } from '../logger';
@@ -68,6 +69,7 @@ export type AsyncItineraryJob = {
     activitiesCount: number;
     carRentalsCount: number;
     roadTrip?: ItineraryPromptPlanResult['roadTrip'];
+    annotations?: ItineraryPromptPlanResult['annotations'];
   };
 };
 
@@ -893,6 +895,14 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       generatedItems: result.generatedItems,
       currentUserPreferredAirport: fallbackAirport || null,
     });
+    // Best-effort — a failed save here must not fail a generation that otherwise succeeded;
+    // the structured details/generatedItems above are the itinerary's core data, this is
+    // supplementary narrative content (see itinerary-narrative-depth-and-validation.md §4, P0).
+    try {
+      await setItineraryPlanMarkdown(input.userId, itineraryId, result.planMarkdown || null);
+    } catch (err) {
+      logError(`[itinerary][async] failed to persist plan markdown job=${jobId} itinerary=${itineraryId}`, err);
+    }
     // Keep optional affiliate work off the generation critical path. The
     // persisted itinerary is complete even if this best-effort task fails.
     scheduleGetYourGuideDescriptorEnrichment(result.getYourGuideCandidates ?? []);
@@ -900,7 +910,12 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     job.status = 'completed';
     job.updatedAt = nowIso();
     job.etaSeconds = 0;
-    job.result = { itineraryId, ...persisted, ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}) };
+    job.result = {
+      itineraryId,
+      ...persisted,
+      annotations: result.annotations,
+      ...(result.roadTrip ? { roadTrip: result.roadTrip } : {}),
+    };
     jobs.set(jobId, job);
     // Nudge the ETA heuristic toward how long this job actually took, so later
     // jobs' remaining-time estimates track real server/provider performance

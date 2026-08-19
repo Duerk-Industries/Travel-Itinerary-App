@@ -27,6 +27,7 @@ import {
   getAttractionDurationMetadataBatch,
   inferRequiresPreOrderTickets,
   formatMinutesAsDuration,
+  MAX_VERIFIED_DESCRIPTION_SENTENCES,
 } from './attractionDurationEstimationService';
 import { getTransferEstimator, HeuristicTransferEstimator, type TransferEstimator, type TransferMode as LocalTransferMode } from './transferEstimationService';
 import { getItineraryPromptTemplates, type ItineraryPromptTemplate } from './itineraryInstructionService';
@@ -35,6 +36,7 @@ import {
   type NormalizedPreferenceContract,
 } from './itineraryPreferenceContract';
 import { evaluateItineraryBaseline, type ItineraryBaselineMetrics } from './itineraryEvaluationService';
+import { runItineraryQualityGateAgainstPinnedBaseline } from './itineraryQualityGateService';
 import { decideItineraryEscalation } from './itineraryEscalationService';
 import { chooseSafeItineraryMarkdown } from './itineraryDegradedFallbackService';
 import { persistItineraryGenerationMetrics } from './itineraryMetricsService';
@@ -53,7 +55,7 @@ import {
   renderRoadTripSummaryMarkdown,
   type RoadTripPlannerInput,
 } from './itineraryRoadTripService';
-import type { TripLogisticsOverlay } from '../schemas/itineraryCacheSchemas';
+import type { ActivityBlock, LocationProfile, TripLogisticsOverlay } from '../schemas/itineraryCacheSchemas';
 import {
   ITINERARY_STRUCTURE_VALIDATOR_VERSION,
   validateAndRepairItineraryStructure,
@@ -65,6 +67,7 @@ import {
   buildPromptFingerprint,
   buildTripSignature,
   readItineraryPlanCache,
+  resolveItineraryCacheCapabilities,
   stableHash,
   writeItineraryPlanCache,
 } from './itineraryPlanCacheService';
@@ -76,11 +79,19 @@ import {
   THIN_DAY_MIN_ITEMS,
 } from './dayFillService';
 import { buildDestinationLogistics, calculateTransferBuffer, compareOpenJawLogistics, resolveCoarseHomeRegion, type CoarseHomeRegion, type LogisticsMobility } from './destinationLogisticsService';
+import { getDestinationNarratives, renderDestinationNarrativesMarkdown } from './destinationNarrativeService';
 import {
   buildGetYourGuideItineraryCandidates,
   selectGetYourGuideItineraryCandidates,
 } from './getYourGuideItineraryEnrichmentService';
 import type { GetYourGuideCandidate } from '../utils/getYourGuideEligibility';
+import type { AnnotatedItinerary } from '../schemas/annotatedItinerarySchemas';
+import { getAdminSetting, getItineraryCacheLocationProfile, listItineraryCacheBlocksForLocation } from '../db';
+import {
+  buildAnnotatedItinerary,
+  repairActivitiesForVerifiedAvailability,
+  renderAnnotatedItineraryMarkdown,
+} from './itineraryAnnotationService';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
@@ -144,6 +155,13 @@ type PromptBase = {
   ci: string;
   co: string;
   dn: string[];
+  r?: string;
+};
+
+type PromptRouteRationale = {
+  t: string;
+  f: string[];
+  tr: string[];
 };
 
 type PromptTransfer = {
@@ -164,6 +182,7 @@ type PromptRoute = {
   rc: { pu: string; do: string; r: string } | null;
   w: PromptWeights;
   a: string[];
+  rt?: PromptRouteRationale;
 };
 
 type PromptDay = {
@@ -282,6 +301,7 @@ export type ItineraryPromptPlanResult = {
   preferenceContract: NormalizedPreferenceContract;
   evaluation: ItineraryBaselineMetrics;
   cacheUsage: { routeHit: boolean; dayHit: boolean };
+  annotations: AnnotatedItinerary;
   roadTrip?: TripLogisticsOverlay;
   /** Bounded, deterministic candidates for post-response affiliate enrichment. */
   getYourGuideCandidates?: GetYourGuideCandidate[];
@@ -450,7 +470,7 @@ const DEFAULT_WEIGHTS: PromptWeights = {
   iconic_landmarks: 7,
 };
 
-export const ITINERARY_PIPELINE_VERSION = 'itinerary-pipeline-v8';
+export const ITINERARY_PIPELINE_VERSION = 'itinerary-pipeline-v9';
 const MAX_ITEMS_PER_DAY = 5;
 
 const scaleItineraryTokenBudget = (base: number): number => {
@@ -521,7 +541,7 @@ export const applyTemplate = (template: string, replacements: Record<string, str
   for (const [key, value] of Object.entries(replacements)) {
     output = replaceAll(output, key, value);
   }
-  return output.replace(/\{\{(?:ATTRACTION_PODS|LOGISTICS_FACTS|DAY_RANGE|USED_ATTRACTION_IDS|NARRATIVE_CONTINUITY_CONTEXT)\}\}/g, 'none');
+  return output.replace(/\{\{(?:ATTRACTION_PODS|ACTIVITY_BLOCKS|LOGISTICS_FACTS|DAY_RANGE|USED_ATTRACTION_IDS|NARRATIVE_CONTINUITY_CONTEXT)\}\}/g, 'none');
 };
 
 const parseModelJson = <T>(raw: string): T => {
@@ -758,6 +778,21 @@ const GENERIC_ACTIVITY_PATTERNS: RegExp[] = [
   /\btour a historical site\b/i,
   /\benjoy a cultural performance\b/i,
   /\battend (a )?local (event|festival)\b/i,
+  // Listicle/roundup article titles ("5 Things to Do in La Fortuna", "10 Best Restaurants in
+  // Oslo", "Top 10 Attractions", "Ultimate Guide to X") are not activities — they're the title
+  // of a web page, one the itinerary doesn't even link. The model produces these when it falls
+  // back to summarizing a source article by its headline instead of naming one specific,
+  // visitable place from it. Route them through the same specific-fallback machinery as any
+  // other generic text rather than showing an unclickable article title as a "1.5h" stop.
+  /^\s*(the\s+)?(top|best)\s+\d+\b/i,
+  /\b\d+\s+(things|places|reasons|tips|ways|spots|activities|attractions)\s+to\s+(do|see|visit|try|explore)\b/i,
+  /\bthings to do\b/i,
+  /\bplaces to (visit|see|go|eat)\b/i,
+  /\bbest (things|places|restaurants|spots|activities|attractions|bars|beaches|hikes)\s+(to|in|near)\b/i,
+  /\bwhat to do (in|near)\b/i,
+  /\bhow to spend (a|your|one|two|three)\s+(day|days|weekend)\b/i,
+  /\b(travel|complete|ultimate|essential)\s+guide\s+to\b/i,
+  /\b(day trip|weekend) guide\b/i,
 ];
 const SPECIFICITY_ANCHORS: Array<{
   match: RegExp;
@@ -784,7 +819,7 @@ const SPECIFICITY_ANCHORS: Array<{
     },
   },
 ];
-const sanitizeActivityText = (
+export const sanitizeActivityText = (
   inputText: string,
   params: { base: string; activityCode: PromptActivityCode }
 ): { text: string; activityCode: PromptActivityCode } => {
@@ -1055,6 +1090,7 @@ const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRo
             )
             .filter(Boolean)
         : [],
+      r: typeof base?.r === 'string' ? String(base.r).trim().slice(0, 700) || undefined : undefined,
     }))
     .filter((base: PromptBase) => Boolean(base.l));
   if (!bases.length) bases.push(defaultBase);
@@ -1155,7 +1191,151 @@ const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRo
         : null,
     w: weights,
     a: Array.isArray((raw as any)?.a) ? (raw as any).a.map((line: any) => String(line)).filter(Boolean) : [],
+    rt:
+      raw && typeof (raw as any)?.rt === 'object' && String((raw as any).rt?.t ?? '').trim()
+        ? {
+            t: String((raw as any).rt.t).trim().slice(0, 1200),
+            f: Array.isArray((raw as any).rt?.f)
+              ? (raw as any).rt.f.map((line: any) => String(line).trim()).filter(Boolean).slice(0, 12)
+              : [],
+            tr: Array.isArray((raw as any).rt?.tr)
+              ? (raw as any).rt.tr.map((line: any) => String(line).trim()).filter(Boolean).slice(0, 8)
+              : [],
+          }
+        : undefined,
   };
+};
+
+/**
+ * Best-effort bridge from the authored ActivityBlock corpus into the live
+ * prompt-plan result. The existing p0-p4 planner remains available when the
+ * corpus is disabled, incomplete, or temporarily unreadable; when enabled,
+ * matching blocks add local names, operating evidence, booking lead times,
+ * effort, etiquette, and contingency relationships to the annotation layer.
+ */
+const loadActivityBlocksForAnnotation = async (
+  destinations: string[],
+  userId?: string,
+): Promise<ActivityBlock[]> => {
+  if (!userId) return [];
+  try {
+    const capabilities = await resolveItineraryCacheCapabilities(userId);
+    if (!capabilities.reads) return [];
+    const releaseSetting = await getAdminSetting('ACTIVE_CORPUS_RELEASE_ID');
+    const releaseId = String(releaseSetting?.value ?? '').trim();
+    if (!releaseId) return [];
+    await reserveApiUsageOrThrow({
+      provider: 'ITINERARY_CACHE_STORAGE',
+      caller: 'BINDING_READ',
+      units: 1,
+      requireConfiguredLimit: true,
+    });
+    await recordProviderRequestCost({ provider: 'ITINERARY_CACHE_STORAGE', costPerRequestUsd: 0 });
+    const groups = await Promise.all(
+      Array.from(new Set(destinations.map((destination) => normalizeDestinationKey(destination)).filter(Boolean)))
+        .map((locationId) => listItineraryCacheBlocksForLocation(locationId, releaseId))
+    );
+    const byId = new Map<string, ActivityBlock>();
+    groups.flat().forEach((block) => byId.set(block.block_id, block));
+    return Array.from(byId.values());
+  } catch (err) {
+    logError('[itinerary] activity-block annotation enrichment failed; continuing without corpus annotations', err);
+    return [];
+  }
+};
+
+// Loads LocationProfile.zones (district/lodging-zone metadata) for every destination in the
+// trip, so buildAnnotatedItinerary can attach a real district recommendation to each base instead
+// of leaving `route.bases[].lodgingZone` null. Mirrors loadActivityBlocksForAnnotation's gating
+// (capabilities, active release, usage reservation) — same corpus, same admission path — but reads
+// LocationProfile rows instead of ActivityBlock rows, and unlike ActivityBlocks (which are read
+// per-release via listItineraryCacheBlocksForLocation), getItineraryCacheLocationProfile keeps a
+// single current row per location_id, so no releaseId is threaded into the read itself.
+const loadLocationProfilesForAnnotation = async (
+  destinations: string[],
+  userId?: string,
+): Promise<LocationProfile[]> => {
+  if (!userId) return [];
+  try {
+    const capabilities = await resolveItineraryCacheCapabilities(userId);
+    if (!capabilities.reads) return [];
+    const releaseSetting = await getAdminSetting('ACTIVE_CORPUS_RELEASE_ID');
+    const releaseId = String(releaseSetting?.value ?? '').trim();
+    if (!releaseId) return [];
+    await reserveApiUsageOrThrow({
+      provider: 'ITINERARY_CACHE_STORAGE',
+      caller: 'BINDING_READ',
+      units: 1,
+      requireConfiguredLimit: true,
+    });
+    await recordProviderRequestCost({ provider: 'ITINERARY_CACHE_STORAGE', costPerRequestUsd: 0 });
+    const locationIds = Array.from(new Set(destinations.map((destination) => normalizeDestinationKey(destination)).filter(Boolean)));
+    const profiles = await Promise.all(locationIds.map((locationId) => getItineraryCacheLocationProfile(locationId)));
+    return profiles.filter((profile): profile is LocationProfile => Boolean(profile));
+  } catch (err) {
+    logError('[itinerary] location-profile annotation enrichment failed; continuing without lodging-zone guidance', err);
+    return [];
+  }
+};
+
+export const renderActivityBlocksForPrompt = (blocks: ActivityBlock[]): string => {
+  if (!blocks.length) return 'none';
+  return JSON.stringify(blocks.slice(0, 40).map((block) => ({
+    id: block.block_id,
+    location: block.location_id,
+    zone: block.zone_id,
+    title: block.title,
+    // `name_local` is the canonical native-script name; `name_script` is its romanization/
+    // transliteration, NOT a second translated display name — mislabeling it as a "traveler
+    // language" name previously fed the LLM a field that looked like a translation when it was
+    // actually the same name spelled in Latin characters (see
+    // docs/implementation_plans/itinerary-narrative-depth-and-validation.md's multilingual-names
+    // recommendation for why conflating the two is a real hazard: a translated name can be
+    // mistaken for the name a local taxi driver or map search expects).
+    localName: block.name_local,
+    romanizedName: block.name_script,
+    role: block.role,
+    category: block.category,
+    durationMinutes: block.duration_minutes,
+    energyCost: block.energy_cost,
+    timing: block.timing,
+    booking: block.availability ? {
+      ticketRequired: block.availability.ticket_required,
+      bookingLeadDays: block.availability.booking_lead_days,
+      sellsOutRisk: block.availability.sells_out_risk,
+      closedDays: block.availability.closed_days,
+      operatingSchedule: block.availability.operating_schedule,
+    } : undefined,
+    alternatives: block.relations?.substitutes_for ?? [],
+    source: block.source,
+    lastVerified: block.last_verified,
+  })));
+};
+
+const closedWeekdayNumber = (value: string): number | null => {
+  const key = String(value ?? '').trim().toLowerCase();
+  const names: Record<string, number> = {
+    sunday: 0, sun: 0, monday: 1, mon: 1, tuesday: 2, tue: 2,
+    wednesday: 3, wed: 3, thursday: 4, thu: 4, friday: 5, fri: 5,
+    saturday: 6, sat: 6,
+  };
+  return Object.prototype.hasOwnProperty.call(names, key) ? names[key] : null;
+};
+
+const buildVerifiedClosedWeekdays = (blocks: ActivityBlock[]): Record<string, number[]> => {
+  const result: Record<string, number[]> = {};
+  for (const block of blocks) {
+    const availability = block.availability;
+    if (!availability || block.source === 'llm_draft') continue;
+    const scheduleVerified = availability.operating_schedule?.confidence === 'verified';
+    if (!block.last_verified && !scheduleVerified) continue;
+    const days = availability.closed_days
+      .map(closedWeekdayNumber)
+      .filter((day): day is number => day !== null);
+    const normalizedTitle = block.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (days.length && normalizedTitle) result[normalizedTitle] = Array.from(new Set(days));
+  }
+  return result;
 };
 
 const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm, req: PromptReq): PromptItinerary => {
@@ -1953,6 +2133,76 @@ const enforceAttractionDestinationConsistency = (
   return itinerary;
 };
 
+/**
+ * Deterministic counterpart to what used to be a p3_validate.md prompt instruction ("if a day's
+ * items include a day trip naming a different town than the base, remove any item that day
+ * naming a specific attraction physically located back in the base city") — see
+ * docs/implementation_plans/itinerary-narrative-depth-and-validation.md: a base name and its day
+ * trip name(s) are both known, structured strings by validation time (route.b[].l / .dn), so
+ * there is no reason to ask the model to police its own itinerary for this. Uses the same
+ * catalog-grounded verification as enforceAttractionDestinationConsistency (its deterministic
+ * sibling, a few hundred lines above) rather than guessing from free text, so it only ever fires
+ * on a provably real conflict: an item whose name the attractions catalog places in the base
+ * city's own destinationKey, scheduled on a day that itinerary itself already committed to a day
+ * trip elsewhere. A traveler cannot be in both places the same day without an explicit transfer
+ * accounting for it, and day.it items carry no such accounting.
+ */
+export const enforceDayTripBaseCityConsistency = (
+  itinerary: PromptItinerary,
+  route: PromptRoute,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+): { itinerary: PromptItinerary; conflicts: string[] } => {
+  const conflicts: string[] = [];
+  const allEntries = Object.values(shortlistByDestination ?? {}).flat();
+  if (!allEntries.length) return { itinerary, conflicts };
+
+  const entryByName = new Map<string, AttractionCatalogEntry>();
+  for (const entry of allEntries) {
+    const key = normalizeText(entry.name).toLowerCase();
+    if (key && !entryByName.has(key)) entryByName.set(key, entry);
+  }
+  if (!entryByName.size) return { itinerary, conflicts };
+
+  const baseByLocation = new Map(route.b.map((base) => [base.l, base] as const));
+  const mentionsDayTrip = (text: string, dayTripNames: string[]): boolean =>
+    dayTripNames.some((tripName) => tripName && (text.includes(tripName) || tripName.includes(text)));
+
+  for (const day of itinerary.dy) {
+    const base = baseByLocation.get(day.b);
+    const dayTripNames = (base?.dn ?? []).map((name) => normalizeText(name).toLowerCase()).filter(Boolean);
+    if (!dayTripNames.length) continue;
+    const hasDayTripItem = day.it.some((item) => mentionsDayTrip(normalizeText(item[2]).toLowerCase(), dayTripNames));
+    if (!hasDayTripItem) continue;
+
+    const baseKey = normalizeDestinationKey(day.b);
+    const keptItems: PromptDay['it'] = [];
+    for (const item of day.it) {
+      const text = normalizeText(item[2]);
+      const lowerText = text.toLowerCase();
+      if (mentionsDayTrip(lowerText, dayTripNames)) {
+        keptItems.push(item);
+        continue;
+      }
+      const entry = entryByName.get(lowerText);
+      const entryDestinationKey = entry?.destinationKey ? normalizeDestinationKey(entry.destinationKey) : '';
+      // Only a catalog-verified match to the HOME base's own destinationKey is a provable
+      // conflict — anything not in the catalog, or grounded elsewhere, is left alone rather than
+      // guessed at.
+      if (!entry || entryDestinationKey !== baseKey) {
+        keptItems.push(item);
+        continue;
+      }
+      conflicts.push(
+        `${day.dt}: removed "${text}" — a verified ${day.b} attraction can't be visited the same day as the ${day.b} day trip.`
+      );
+      logInfo(`[itinerary] dropped "${text}" from ${day.dt} (${day.b}) — conflicts with same-day day trip`);
+    }
+    day.it = keptItems;
+  }
+
+  return { itinerary, conflicts };
+};
+
 const isMajorMuseumName = (name: string): boolean =>
   /\bmuseum\b/i.test(name) || /\b(musée|museo|gallery|aquarium)\b/i.test(name);
 
@@ -2087,6 +2337,66 @@ const enforceDescriptionBasedDestinationConsistency = (
       }
     }
     day.it = keptItems;
+  }
+};
+
+// Activity types that require a specific physical feature the destination may simply not have —
+// a real reported failure: "Surf Lesson" scheduled in Monteverde (a Costa Rican cloud-forest
+// mountain town, nowhere near the coast) and "Hot Springs" scheduled in Manuel Antonio (a Pacific
+// beach town with no geothermal activity). Unlike enforceDescriptionBasedDestinationConsistency
+// above (which catches a hallucinated place NAME), this catches a plausible place paired with an
+// implausible activity TYPE for it. `corroborationPattern` is checked only against a *verified*
+// signal: a real curated-catalog match, or a live description that survived
+// wikipediaGeocodingService's own topical-relevance gate (see isPlausibleMatch there) — so an
+// uncorroborated match here means neither source found real-world evidence the feature exists at
+// this destination, not just that the LLM failed to mention it.
+const GEO_RISK_CATEGORIES: Array<{ label: string; activityPattern: RegExp; corroborationPattern: RegExp }> = [
+  {
+    label: 'coastal/ocean water sport',
+    activityPattern: /\b(surf(ing)?|surf lesson|bodyboard(ing)?|kitesurf(ing)?|windsurf(ing)?|snorkel(l?ing)?|scuba|reef dive|paddleboard(ing)?|paddle boarding)\b/i,
+    corroborationPattern: /\b(coast|coastline|beach|ocean|pacific|atlantic|caribbean|gulf of|bay of|seashore|surf)\b/i,
+  },
+  {
+    label: 'hot springs / geothermal',
+    activityPattern: /\b(hot springs?|thermal springs?|geothermal (pool|spa|area)s?|mud baths?)\b/i,
+    corroborationPattern: /\b(hot spring|thermal|geotherm|volcan|geyser)\b/i,
+  },
+  {
+    label: 'snow / alpine skiing',
+    activityPattern: /\b(ski(ing)?|snowboard(ing)?|ski resort|chairlift)\b/i,
+    corroborationPattern: /\b(ski|alpine|mountain|snow|glacier|elevation)\b/i,
+  },
+  {
+    label: 'whale/marine wildlife watching',
+    activityPattern: /\bwhale watching\b/i,
+    corroborationPattern: /\b(coast|ocean|whale|marine|bay|sea)\b/i,
+  },
+];
+
+export const enforceGeographicActivityPlausibility = (
+  itinerary: PromptItinerary,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  durationMetadataByName: Map<string, AttractionDurationMetadata>
+): void => {
+  const catalogNames = new Set(
+    Object.values(shortlistByDestination ?? {}).flat().map((entry) => normalizeText(entry.name).toLowerCase())
+  );
+  for (const day of itinerary.dy) {
+    day.it = day.it.map((item) => {
+      const text = normalizeText(item[2]);
+      const category = GEO_RISK_CATEGORIES.find((candidate) => candidate.activityPattern.test(text));
+      if (!category) return item;
+      // A real entry in the destination's own curated attraction catalog is verified data —
+      // trust it regardless of whether a description happens to be cached yet.
+      if (catalogNames.has(text.toLowerCase())) return item;
+      const description = durationMetadataByName.get(text.toLowerCase())?.description ?? '';
+      if (category.corroborationPattern.test(description)) return item;
+      logError(
+        `[itinerary] replaced geographically implausible "${category.label}" activity "${text}" in "${day.b}" — no catalog match and no corroborating description`
+      );
+      const fallback = sanitizeActivityText('', { base: day.b, activityCode: item[1] });
+      return [item[0], fallback.activityCode, fallback.text] as PromptDay['it'][number];
+    });
   }
 };
 
@@ -2490,7 +2800,9 @@ const attachAttractionMetadata = async (
       .replace(/\s+/g, ' ')
       .trim();
     if (!raw || /^top\s+(museum|attraction|activity)$/i.test(raw)) return null;
-    return trimToSentences(raw, 2) || null;
+    // Every entry here is a real destination-catalog attraction (this loop iterates
+    // shortlistByDestination directly) — verified data, so it gets the longer extract.
+    return trimToSentences(raw, MAX_VERIFIED_DESCRIPTION_SENTENCES) || null;
   };
 
   // Seed from already-fetched catalog data for every caller, including preview
@@ -2559,6 +2871,9 @@ const attachAttractionMetadata = async (
         // sentence (see extractAttractionSearchPhrase); the cache key and
         // duration/pre-order heuristics still use the full `name` above.
         wikipediaSearchTerm: extractAttractionSearchPhrase(cleanText, destinationDisplayName),
+        // A real match in the destination's curated catalog (not an LLM-invented "wild"
+        // activity) earns a longer Wikipedia extract — see MAX_VERIFIED_DESCRIPTION_SENTENCES.
+        isCatalogVerified: Boolean(entry),
       };
     });
 
@@ -2568,12 +2883,13 @@ const attachAttractionMetadata = async (
           userId,
           destinationKey,
           destinationDisplayName,
-          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary, allowDescriptionLookup, wikipediaSearchTerm }) => ({
+          entries: dayEntries.map(({ name, activityType, cachedWikipediaSummary, allowDescriptionLookup, wikipediaSearchTerm, isCatalogVerified }) => ({
             name,
             activityType,
             cachedWikipediaSummary,
             allowDescriptionLookup,
             wikipediaSearchTerm,
+            isCatalogVerified,
           })),
         });
         for (const [key, metadata] of batch) {
@@ -2687,7 +3003,9 @@ export const mapItems = (
       const notes = [
         description,
         accessibilityNote.trim(),
-        durationMetadata?.requiresPreOrderTickets ? 'Tickets may need to be pre-ordered.' : '',
+        durationMetadata?.requiresPreOrderTickets
+          ? durationMetadata.preOrderNotes?.trim() || 'Tickets may need to be pre-ordered; confirm current availability before finalizing the day.'
+          : '',
         fit ? `This stop suits your group because ${fit.replace(/[.。]+$/, '')}.` : '',
       ]
         .filter(Boolean)
@@ -2780,15 +3098,11 @@ export const rescopeDayTripCarRental = (
 
 const buildDetails = (
   itinerary: PromptItinerary,
-  preferenceWeights: PromptWeights,
   transferNotesByDay?: Map<number, TransferNote[]>,
-  durationMetadataByName?: Map<string, AttractionDurationMetadata>,
-  whyFitsByName?: Map<string, string>,
   destinationTransferTimingByDate?: Map<string, DestinationTransferTiming>
 ): ItineraryGeneratedDetail[] =>
   itinerary.dy.flatMap((day) => {
     const destinationTransfer = destinationTransferTimingByDate?.get(day.dt);
-    const schedule = computeDayItemSchedule(day, preferenceWeights, durationMetadataByName, transferNotesByDay?.get(day.d), destinationTransfer);
     const notesByFromName = new Map<string, TransferNote>();
     for (const note of transferNotesByDay?.get(day.d) ?? []) {
       notesByFromName.set(note.fromName.toLowerCase(), note);
@@ -2805,16 +3119,15 @@ const buildDetails = (
         }]
       : [];
 
-    day.it.forEach(([, _activityCode, text], index) => {
-      const fit = whyFitsByName?.get(normalizeText(text).toLowerCase());
-      details.push({
-        day: day.d,
-        time: schedule[index].startTime,
-        activity: text,
-        cost: null,
-        kind: 'place',
-        noteBody: fit ? `This stop suits your group because ${fit.replace(/[.。]+$/, '')}.` : undefined,
-      });
+    day.it.forEach(([, _activityCode, text]) => {
+      // A `kind: 'place'` detail for this stop used to be pushed here on every activity — but
+      // mapItems() (above) already creates a full Activity/tours record for the exact same stop,
+      // at the same time, with the exact same "This stop suits your group because ..." reasoning
+      // folded into its own description (see the `fit` handling there). That made "Locations,
+      // notes & checklists" a 1:1 mirror of "Activities" for every generated itinerary — pure
+      // duplication, not additional information. Only genuinely distinct entries (inter-
+      // destination transfer reserves, inter-activity travel segments, day logistics notes)
+      // belong in this list.
       // Insert the travel segment to the NEXT activity right after this one,
       // between the two activities it connects, rather than lumped at the
       // end of the day.
@@ -2831,8 +3144,23 @@ const buildDetails = (
       }
     });
 
-    // Add logistics notes at the end of the day
-    (day.ln ?? []).forEach((note) => {
+    // Add logistics notes at the end of the day — except ones that just restate a transfer
+    // fact already surfaced above (the destination-transfer reserve, or a same-day travel
+    // segment). Those get written into day.ln too (for the raw itinerary/markdown-fallback
+    // consumers of that field), but showing the identical fact a second time in this list
+    // would be exactly the redundancy this function otherwise avoids.
+    const coveredTransferNotes = new Set<string>();
+    if (destinationTransfer) {
+      coveredTransferNotes.add(
+        `${destinationTransfer.mode} transfer ${destinationTransfer.from} → ${destinationTransfer.to}: reserve about ${destinationTransfer.minutes} minutes before activities.`
+      );
+    }
+    for (const note of transferNotesByDay?.get(day.d) ?? []) {
+      coveredTransferNotes.add(
+        `Estimated ${describeTransferMode(note.mode).toLowerCase()} transfer: ${note.fromName} → ${note.toName}, about ${note.minutes} min (${note.distanceKm.toFixed(1)} km).`
+      );
+    }
+    (day.ln ?? []).filter((note) => !coveredTransferNotes.has(note)).forEach((note) => {
       details.push({
         day: day.d,
         time: null,
@@ -3187,6 +3515,10 @@ const runGenerateItineraryViaPromptPlan = async (
   const attractionPodsBlock = Object.entries(attractionPodsByDestination)
     .map(([destination, pods]) => `Destination: ${destination}\n${renderAttractionPods(pods)}`)
     .join('\n') || 'none';
+  const activityBlocks = await loadActivityBlocksForAnnotation(promptRequest.d, input.userId);
+  const activityBlocksPromptBlock = renderActivityBlocksForPrompt(activityBlocks);
+  const verifiedClosedWeekdaysByActivity = buildVerifiedClosedWeekdays(activityBlocks);
+  const locationProfiles = await loadLocationProfilesForAnnotation(promptRequest.d, input.userId);
 
   const shortlistCoverage = (() => {
     const entries = Object.values(shortlistByDestination).flat();
@@ -3288,7 +3620,10 @@ const runGenerateItineraryViaPromptPlan = async (
   const logisticsFactsBlock = `${renderLogisticsFactBlock(logisticsFacts)}${timingPreferenceNote}${input.groupTraits.length > 4 ? '\nGroup size >4: verify a group-size-appropriate transfer mode and reservation capacity.' : ''}${homeTerminalNote ? `\n${homeTerminalNote}` : ''}${destinationClimatologyBlock ? `\n${destinationClimatologyBlock}` : ''}${holidayAwarenessNote ? `\n${holidayAwarenessNote}` : ''}`;
   const dayDependency = buildPromptFingerprint({
     pipeline: ITINERARY_PIPELINE_VERSION, p2: bundle.p2, p3: bundle.p3, schema: bundle.step2Schema, catalogFingerprint, route: stableHash(route),
-    attractionPodsBlock, logisticsFactsBlock, structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
+    attractionPodsBlock,
+    activityBlocks: stableHash(activityBlocksPromptBlock),
+    logisticsFactsBlock,
+    structureValidator: ITINERARY_STRUCTURE_VALIDATOR_VERSION,
   });
   input.onStageChange?.('days');
   let cachedDay: PromptItinerary | null = null;
@@ -3336,6 +3671,7 @@ const runGenerateItineraryViaPromptPlan = async (
           STEP2_SCHEMA_MIN: bundle.step2Schema,
           ATTRACTION_SHORTLIST: attractionContextBlock,
           ATTRACTION_PODS: attractionPodsBlock,
+          ACTIVITY_BLOCKS: activityBlocksPromptBlock,
           LOGISTICS_FACTS: logisticsFactsBlock,
           DAY_RANGE: `${range.start}..${range.end}`,
           USED_ATTRACTION_IDS: usedAttractionNames.join(', ') || 'none',
@@ -3382,7 +3718,11 @@ const runGenerateItineraryViaPromptPlan = async (
     ? mergeChunkedItineraries(dayItineraries, route)
     : (dayItineraries[0] ?? sanitizeItinerary({}, route, normalized, promptRequest));
   const dayItinerary = ensureFullDateCoverage(mergedDayItinerary, normalized.sd, normalized.ed, route);
-  const mechanicallyValidated = validateAndRepairItineraryStructure({ itinerary: dayItinerary, logisticsFacts });
+  const mechanicallyValidated = validateAndRepairItineraryStructure({
+    itinerary: dayItinerary,
+    logisticsFacts,
+    closedWeekdaysByActivity: verifiedClosedWeekdaysByActivity,
+  });
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS} days=${dayItinerary.dy.length} transfers=${dayItinerary.x.length}`
   );
@@ -3401,6 +3741,7 @@ const runGenerateItineraryViaPromptPlan = async (
       replacements: {
         STEP2_JSON: JSON.stringify(mechanicallyValidated.itinerary),
         STEP2_SCHEMA_MIN: bundle.step2Schema,
+        ACTIVITY_BLOCKS: activityBlocksPromptBlock,
       },
       maxTokens: scaleItineraryTokenBudget(1400),
       fallbackValue: mechanicallyValidated.itinerary,
@@ -3417,7 +3758,11 @@ const runGenerateItineraryViaPromptPlan = async (
     await writeItineraryPlanCache({ stage: 'day', signature: daySignature, dependencyFingerprint: dayDependency, payload: filteredItinerary, fragments: buildDayFragments(filteredItinerary.dy, 3), ttlDays: Number(getApiCacheSetting('itineraryPlan', 'dayCacheTtlDays')) || 30 });
   } catch (err) { logError('[itinerary] day cache write failed; continuing', err); }
   }
-  filteredItinerary = validateAndRepairItineraryStructure({ itinerary: filteredItinerary, logisticsFacts }).itinerary;
+  filteredItinerary = validateAndRepairItineraryStructure({
+    itinerary: filteredItinerary,
+    logisticsFacts,
+    closedWeekdaysByActivity: verifiedClosedWeekdaysByActivity,
+  }).itinerary;
   input.onStageChange?.('render');
   // Shared day-cache hits contain only generic, validated content. Re-run the
   // cheap grounding, destination, and logistics checks after every read so a
@@ -3432,6 +3777,13 @@ const runGenerateItineraryViaPromptPlan = async (
   filteredItinerary = validateAndRepairItineraryStructure({
     itinerary: enforceAttractionDestinationConsistency(filteredItinerary, shortlistByDestination),
     logisticsFacts,
+    closedWeekdaysByActivity: verifiedClosedWeekdaysByActivity,
+  }).itinerary;
+  const dayTripConsistency = enforceDayTripBaseCityConsistency(filteredItinerary, route, shortlistByDestination);
+  filteredItinerary = validateAndRepairItineraryStructure({
+    itinerary: dayTripConsistency.itinerary,
+    logisticsFacts,
+    closedWeekdaysByActivity: verifiedClosedWeekdaysByActivity,
   }).itinerary;
   const profile = mapProfile(normalized);
   const fragmentInjected = injectMustSeesIntoCachedFragments({
@@ -3447,11 +3799,23 @@ const runGenerateItineraryViaPromptPlan = async (
     normalized.c,
     normalizedMustSee.map((item) => item.name)
   );
-  const scheduledItinerary = scheduleItineraryDaysDeterministically(budgetCoherentItinerary, shortlistByDestination, logisticsFacts);
-  const polishedItinerary = enforceMuseumHalfDayClear(
+  const preScheduleAvailabilityRepair = repairActivitiesForVerifiedAvailability(budgetCoherentItinerary, activityBlocks);
+  const scheduledItinerary = scheduleItineraryDaysDeterministically(preScheduleAvailabilityRepair.itinerary, shortlistByDestination, logisticsFacts);
+  const polishedCandidate = enforceMuseumHalfDayClear(
     polishItineraryFinalPass(scheduledItinerary, shortlistByDestination, attractionPodsByDestination),
     new Set(logisticsFacts.filter((fact) => fact.maxActivities === 0).map((fact) => fact.date))
   );
+  // The final polish can deliberately change a time bucket (for example, a
+  // photography stop moved to evening), so enforce verified windows once more
+  // after that pass. This prevents an aesthetic optimization from overriding a
+  // confirmed closure or last-entry constraint.
+  const postPolishAvailabilityRepair = repairActivitiesForVerifiedAvailability(polishedCandidate, activityBlocks);
+  const polishedItinerary = postPolishAvailabilityRepair.itinerary;
+  const availabilityRepairs = new Set([
+    ...preScheduleAvailabilityRepair.repairs,
+    ...postPolishAvailabilityRepair.repairs,
+    ...dayTripConsistency.conflicts,
+  ]);
   let { durationMetadataByName, transferNotesByDay } = await attachAttractionMetadata(
     polishedItinerary,
     normalized,
@@ -3460,6 +3824,7 @@ const runGenerateItineraryViaPromptPlan = async (
     input.groupTraits.length
   );
   enforceDescriptionBasedDestinationConsistency(polishedItinerary, promptRequest.d, durationMetadataByName);
+  enforceGeographicActivityPlausibility(polishedItinerary, shortlistByDestination, durationMetadataByName);
   const destinationTransferTimingByDate = deriveDestinationTransferTiming(polishedItinerary);
 
   const fatigueManaged = enforceFatigueManagement(
@@ -3558,6 +3923,13 @@ const runGenerateItineraryViaPromptPlan = async (
     zeroActivityDayDates: lightDayDatesFromLogisticsFacts(logisticsFacts, THIN_DAY_MIN_ITEMS),
   });
 
+  // Fill, LLM repair, and pacing can all introduce or relocate activities.
+  // This is the final calendar gate before metadata and persisted artifacts are
+  // built, so no later planning mutation can reintroduce a verified conflict.
+  const finalAvailabilityRepair = repairActivitiesForVerifiedAvailability(finalItinerary, activityBlocks);
+  finalItinerary = finalAvailabilityRepair.itinerary;
+  finalAvailabilityRepair.repairs.forEach((repair) => availabilityRepairs.add(repair));
+
   // Day-fill/repair and pacing passes can add or rename activities after the
   // initial enrichment pass. Refresh metadata against the final activity list
   // so mapItems cannot lose verified descriptions for those activities.
@@ -3582,6 +3954,11 @@ const runGenerateItineraryViaPromptPlan = async (
 
   // Surface the same derived transfer estimates used for scheduling so the
   // traveler can understand why activities are grouped and paced this way.
+  // (Kept on day.ln for the raw itinerary/markdown-fallback consumers of this
+  // field — buildDetails() below independently derives its own equivalent
+  // `note`-kind detail entries from the same source data and filters these
+  // exact day.ln strings back out before rendering, so the user-facing
+  // "Locations, notes & checklists" list doesn't show the same transfer twice.)
   for (const day of finalItinerary.dy) {
     const transferNotes = transferNotesByDay.get(day.d) ?? [];
     if (!transferNotes.length) continue;
@@ -3610,41 +3987,6 @@ const runGenerateItineraryViaPromptPlan = async (
     }
   }
 
-  const activityContext = Array.from(durationMetadataByName.entries()).map(([name, metadata]) => ({
-    name, description: metadata.description ?? undefined,
-    whyThisFits: whyFitsByName.get(name),
-    requiresPreOrderTickets: metadata.requiresPreOrderTickets,
-  }));
-
-  const render = await runRenderStage({
-    apiKey: input.apiKey,
-    aiProvider: input.aiProvider,
-    template: bundle.p4,
-    replacements: {
-      FINAL_JSON: JSON.stringify({ itinerary: finalItinerary, activityContext }),
-    },
-    acc: tokenAcc,
-    captureStages,
-    usageContext,
-  });
-  const renderedMarkdown = String(render ?? '')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .trim();
-  logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
-  const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
-  const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
-  let planMarkdown = safeRender.markdown;
-  const details = buildDetails(finalItinerary, normalized.w as any, transferNotesByDay, durationMetadataByName, whyFitsByName, destinationTransferTimingByDate);
-  const safeDetails = details.length
-    ? details
-    : [
-        {
-          day: 1,
-          time: '13:00',
-          activity: 'Travel day: no activities scheduled',
-          cost: null,
-        },
-      ];
   const allEntries = Object.values(shortlistByDestination).flat();
   const entryByName = new Map<string, AttractionCatalogEntry>();
   for (const entry of allEntries) {
@@ -3664,6 +4006,127 @@ const runGenerateItineraryViaPromptPlan = async (
   items.carRentals = items.carRentals.map((rental) =>
     rescopeDayTripCarRental(rental, finalItinerary, normalized.car, entryByName)
   );
+  const activitiesByDateAndName = new Map(
+    items.activities.map((activity) => [`${activity.date}|${normalizeText(activity.name).toLowerCase()}`, activity] as const)
+  );
+  const annotations = buildAnnotatedItinerary({
+    route: {
+      eh: route.eh,
+      xh: route.xh,
+      rationale: route.rt ? {
+        thesis: route.rt.t,
+        organizingFactors: route.rt.f,
+        tradeoffs: route.rt.tr,
+      } : undefined,
+      assumptions: route.a,
+      bases: route.b.map((base) => ({
+        location: base.l,
+        checkIn: base.ci,
+        checkOut: base.co,
+        dayTrips: base.dn,
+        rationale: base.r,
+      })),
+      transfers: route.x.map((transfer) => ({
+        date: transfer.dt,
+        mode: transfer.m,
+        from: transfer.fr,
+        to: transfer.to,
+        durationHours: transfer.td,
+        note: transfer.n,
+      })),
+    },
+    days: finalItinerary.dy.map((day) => ({
+      day: day.d,
+      date: day.dt,
+      base: day.b,
+      logisticsNotes: day.ln,
+      activities: day.it.map(([, code, name]) => {
+        const generated = activitiesByDateAndName.get(`${day.dt}|${normalizeText(name).toLowerCase()}`);
+        return {
+          name,
+          activityType: generated?.activityType ?? ACTIVITY_CODE_TO_LONG[code],
+          startTime: generated?.startTime ?? null,
+          duration: generated?.duration ?? null,
+        };
+      }),
+    })),
+    catalogEntries: allEntries,
+    durationMetadataByName,
+    whyFitsByName,
+    activityBlocks,
+    locationProfiles,
+    validationRepairs: Array.from(availabilityRepairs),
+  });
+
+  const annotatedActivityByName = new Map(
+    annotations.days.flatMap((day) => day.activities.map((activity) => [normalizeText(activity.name).toLowerCase(), activity] as const))
+  );
+
+  const activityContext = Array.from(durationMetadataByName.entries()).map(([name, metadata]) => ({
+    name, description: metadata.description ?? undefined,
+    whyThisFits: whyFitsByName.get(name),
+    requiresPreOrderTickets: metadata.requiresPreOrderTickets,
+    durationMinutes: metadata.estimatedDurationMinutes,
+    annotation: (() => {
+      const activity = annotatedActivityByName.get(normalizeText(name).toLowerCase());
+      if (!activity) return undefined;
+      return {
+        names: activity.names,
+        whatItIs: activity.whatItIs,
+        insiderTip: activity.insiderTip,
+        etiquette: activity.etiquette,
+        priority: activity.priority,
+        timing: activity.timing,
+        booking: activity.booking,
+        alternatives: activity.alternatives,
+        confidence: activity.confidence,
+      };
+    })(),
+  }));
+
+  const render = await runRenderStage({
+    apiKey: input.apiKey,
+    aiProvider: input.aiProvider,
+    template: bundle.p4,
+    replacements: {
+      FINAL_JSON: JSON.stringify({ itinerary: finalItinerary, activityContext }),
+    },
+    acc: tokenAcc,
+    captureStages,
+    usageContext,
+  });
+  const renderedMarkdown = String(render ?? '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+  logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
+  const fallbackMarkdown = renderMarkdownFallback(finalItinerary, profile);
+  const safeRender = chooseSafeItineraryMarkdown(renderedMarkdown, fallbackMarkdown);
+  const annotationMarkdown = renderAnnotatedItineraryMarkdown(annotations);
+  let planMarkdown = `${annotationMarkdown}\n\n${safeRender.markdown}`.trim();
+  // A short "why this place" paragraph per unique destination, in visiting order — deterministic
+  // assembly of cached, plausibility-gated Wikipedia content (see destinationNarrativeService.ts),
+  // not LLM-generated structure. Best-effort: a lookup failure here must never fail generation.
+  try {
+    const destinationOrder = finalItinerary.dy.map((day) => day.b).filter(Boolean);
+    if (destinationOrder.length) {
+      const narrativesByName = await getDestinationNarratives(destinationOrder);
+      const narrativesSection = renderDestinationNarrativesMarkdown(destinationOrder, narrativesByName);
+      if (narrativesSection) planMarkdown = `${narrativesSection}\n\n${planMarkdown}`.trim();
+    }
+  } catch (err) {
+    logError('[itinerary] destination narrative assembly failed; continuing without it', err);
+  }
+  const details = buildDetails(finalItinerary, transferNotesByDay, destinationTransferTimingByDate);
+  const safeDetails = details.length
+    ? details
+    : [
+        {
+          day: 1,
+          time: '13:00',
+          activity: 'Travel day: no activities scheduled',
+          cost: null,
+        },
+      ];
   const roadTrip = await buildRoadTripOverlayIfEnabled(input, items);
   if (roadTrip) {
     const roadTripSummary = renderRoadTripSummaryMarkdown(roadTrip);
@@ -3711,7 +4174,10 @@ const runGenerateItineraryViaPromptPlan = async (
     stageLatenciesMs: captureStages.map((stage) => stage.latencyMs),
     transferMinutesByDay,
     groupCohesionScore: groundedResult.groupCohesionScore,
+    evidenceCoverage: annotations.validation.evidenceCoverage,
+    scheduleWindowViolations: annotations.validation.repairs.length,
   });
+  const qualityGateResult = await runItineraryQualityGateAgainstPinnedBaseline(evaluation);
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${safeRender.fallbackUsed ? 'yes' : 'no'}`
   );
@@ -3738,6 +4204,7 @@ const runGenerateItineraryViaPromptPlan = async (
       carRentalsCount: items.carRentals.length,
       usedRenderFallback: safeRender.fallbackUsed,
       evaluation,
+      qualityGate: qualityGateResult,
       fatigueIssues: fatigueManaged.issues,
       roadTripEnabled: Boolean(roadTrip),
       roadTripConflictCount: roadTrip?.conflicts.length ?? 0,
@@ -3757,6 +4224,7 @@ const runGenerateItineraryViaPromptPlan = async (
       totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
     },
     evaluation,
+    qualityGate: qualityGateResult as unknown as Record<string, unknown> | null,
     cacheUsage: cacheUsage as unknown as Record<string, unknown>,
     fallbackUsed: safeRender.fallbackUsed,
   });
@@ -3778,6 +4246,7 @@ const runGenerateItineraryViaPromptPlan = async (
     preferenceContract,
     evaluation,
     cacheUsage,
+    annotations,
     ...(roadTrip ? { roadTrip } : {}),
     ...(selectedGetYourGuide.selected.length ? { getYourGuideCandidates: selectedGetYourGuide.selected } : {}),
   };

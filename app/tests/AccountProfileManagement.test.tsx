@@ -124,6 +124,20 @@ describe('AccountProfileManagement', () => {
     expect(getByText('Delete account?')).toBeTruthy();
   });
 
+  it('hides Financial Connections when Plaid is disabled', () => {
+    const { queryByText } = render(<AccountProfileManagement {...defaultProps} plaidEnabled={false} />);
+
+    expect(queryByText('Financial Connections')).toBeNull();
+    expect(queryByText('Connect Bank Account')).toBeNull();
+  });
+
+  it('shows Financial Connections when Plaid is enabled', () => {
+    const { getByText } = render(<AccountProfileManagement {...defaultProps} plaidEnabled />);
+
+    expect(getByText('Financial Connections')).toBeTruthy();
+    expect(getByText('Connect Bank Account')).toBeTruthy();
+  });
+
   it('uses airport autocomplete suggestions for preferred airport', async () => {
     const onSearchAirports = jest.fn();
     const setAccountProfile = jest.fn();

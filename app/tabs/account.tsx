@@ -27,6 +27,7 @@ export interface AccountProfile {
   entitlements?: {
     costTracking?: boolean;
   };
+  tierKey?: string;
 }
 
 export interface FellowTraveler {
@@ -94,6 +95,7 @@ export const fetchAccountProfile = async ({
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
       temperatureUnit,
       entitlements: data.entitlements ?? prev.entitlements,
+      tierKey: data.tierKey ?? prev.tierKey,
     }));
     setUserName(fullName);
     setUserEmail(data.email ?? null);
@@ -145,6 +147,7 @@ interface AccountTabProps {
   activePage: string;
   onNavigate?: (page: AccountPage) => void;
   accountProfile: AccountProfile;
+  plaidEnabled?: boolean;
   setAccountProfile: Setter<AccountProfile>;
   familyRelationships: any[];
   setFamilyRelationships: Setter<any[]>;
@@ -188,6 +191,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
   activePage,
   onNavigate = () => undefined,
   accountProfile,
+  plaidEnabled = false,
   setAccountProfile,
   familyRelationships,
   setFamilyRelationships,
@@ -318,6 +322,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         userToken={userToken}
         activePage={activePage}
         accountProfile={accountProfile}
+        plaidEnabled={plaidEnabled}
         setAccountProfile={setAccountProfile}
         setUserToken={setUserToken}
         setUserName={setUserName}
@@ -362,6 +367,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       {activePage === 'account-packing-list' ? <PackingListTable
         backendUrl={backendUrl}
         headers={headers}
+        theme={theme}
         variant="user"
         title="Personal packing list"
       /> : null}

@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from './DropdownOptionButton';
 
 export type SelectFieldOption = {
@@ -53,18 +53,31 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
   );
 
   if (Platform.OS === 'web') {
+    // Native HTML controls do not inherit React Native's Text styles.  Always
+    // provide the same themed foreground/background/border as the shared
+    // input style so selects remain readable in either appearance mode.
+    const themedWebStyle = {
+      ...(styles.input ?? {}),
+      ...(webStyle ?? {}),
+      color: webStyle?.color ?? styles.cellText?.color ?? styles.input?.color,
+      backgroundColor: webStyle?.backgroundColor ?? styles.input?.backgroundColor,
+      borderColor: webStyle?.borderColor ?? styles.input?.borderColor,
+      colorScheme: styles.input?.backgroundColor === '#243647' ? 'dark' : undefined,
+    };
     return (
       <select
-        style={webStyle}
+        style={themedWebStyle}
         title={title ?? placeholder}
         value={value}
         disabled={disabled}
         data-testid={testID}
         onChange={(event) => onChange(event.currentTarget.value)}
       >
-        <option value="">{placeholder}</option>
+        <option value="" style={{ color: themedWebStyle.color, backgroundColor: themedWebStyle.backgroundColor }}>
+          {placeholder}
+        </option>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} style={{ color: themedWebStyle.color, backgroundColor: themedWebStyle.backgroundColor }}>
             {option.label}
           </option>
         ))}
@@ -89,16 +102,23 @@ const SelectFieldComponent: React.FC<SelectFieldProps> = ({
       </TouchableOpacity>
       {open ? (
         <View style={[styles.dropdownList, listStyle]}>
-          {options.map((option) => (
-            <DropdownOptionButton
-              key={option.value}
-              styles={styles}
-              onPress={() => selectValue(option.value)}
-              accessibilityLabel={`Select ${option.label}`}
-            >
-              <Text style={styles.cellText}>{option.label}</Text>
-            </DropdownOptionButton>
-          ))}
+          <ScrollView
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+            contentContainerStyle={{ flexGrow: 1 }}
+          >
+            {options.map((option) => (
+              <DropdownOptionButton
+                key={option.value}
+                styles={styles}
+                onPress={() => selectValue(option.value)}
+                accessibilityLabel={`Select ${option.label}`}
+              >
+                <Text style={styles.cellText}>{option.label}</Text>
+              </DropdownOptionButton>
+            ))}
+          </ScrollView>
         </View>
       ) : null}
     </View>

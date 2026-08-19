@@ -52,9 +52,6 @@ const landingHtml = `
       <div style="background: #fff; padding: 12px; border-radius: 8px;">
         <p style="font-size: 14px; margin: 0;"><strong>Google Identity:</strong> We use your Google profile to identify you within your groups.</p>
       </div>
-      <div style="background: #fff; padding: 12px; border-radius: 8px;">
-        <p style="font-size: 14px; margin: 0;"><strong>Gmail API (Optional):</strong> Read-only access to travel confirmation emails to populate itineraries.</p>
-      </div>
     </div>
     <p style="font-size: 14px; color: #0369a1; text-align: center; margin-top: 24px; border-top: 1px solid #bae6fd; padding-top: 16px;">
       Full details are available in our <a href="https://wander-bunnies.com/privacy.html" style="font-weight: bold; text-decoration: underline;">Privacy Policy</a>.
@@ -80,16 +77,13 @@ const noscriptHtml = `
     <p>
       WanderBunnies is a collaborative trip-planning application that helps
       friends, families and travel groups create shared itineraries, organize
-      flights and lodging, track expenses, maintain packing lists and
-      optionally import travel confirmations from Gmail.
+      flights and lodging, track expenses, and maintain packing lists.
     </p>
 
     <h2>Google account integration</h2>
 
     <p>
-      Google Sign-In is used to authenticate your account. Optional Gmail
-      access is used to identify travel confirmations and add itinerary
-      details when you enable the Email Import feature.
+      Google Sign-In is used to authenticate your account.
     </p>
 
     <p>

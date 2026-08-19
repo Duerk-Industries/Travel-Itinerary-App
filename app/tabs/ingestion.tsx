@@ -72,6 +72,13 @@ type IngestionTabProps = {
   styles: Record<string, any>;
   onNavigate: (page: string) => void;
   onAssignmentApplied?: (params: { itemType: string; tripId: string }) => void | Promise<void>;
+  // Admins get the full operational view (search/status/source/type/date/confidence filters,
+  // forwarding provider/instructions detail, bulk select+assign+delete, and the Gmail section's
+  // disabled state spelled out). Everyone else gets the simplified page below: the forwarding
+  // address, Manual Upload, Queued Items, Recent Jobs, and Gmail Import only when it's actually
+  // enabled. Defaults to the simplified view — a caller that forgets to pass a role should never
+  // land a regular user on the admin/debug surface by accident.
+  userRole?: 'user' | 'admin';
 };
 
 const prettyDate = (value?: string | null): string => {
@@ -100,7 +107,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   styles,
   onNavigate,
   onAssignmentApplied,
+  userRole = 'user',
 }) => {
+  const isAdmin = userRole === 'admin';
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [jobs, setJobs] = useState<ImportJob[]>([]);
@@ -474,7 +483,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
         <Text style={styles.helperText}>Auto-refreshing while uploads process so pending jobs do not appear stuck.</Text>
       ) : null}
       <View style={styles.row}>
-        <TextInput style={[styles.input, { flex: 1, minWidth: 220 }]} value={search} onChangeText={setSearch} placeholder="Search provider or confirmation" />
+        {isAdmin ? (
+          <TextInput style={[styles.input, { flex: 1, minWidth: 220 }]} value={search} onChangeText={setSearch} placeholder="Search provider or confirmation" />
+        ) : null}
         <TouchableOpacity style={styles.button} onPress={load}>
           <Text style={styles.buttonText}>Refresh</Text>
         </TouchableOpacity>
@@ -484,68 +495,116 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
           </TouchableOpacity>
         ) : null}
       </View>
-      <View style={styles.row}>
-        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={statusFilter} onChangeText={setStatusFilter} placeholder="Status or ALL" />
-        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={sourceFilter} onChangeText={setSourceFilter} placeholder="Source or ALL" />
-        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={typeFilter} onChangeText={setTypeFilter} placeholder="Type or ALL" />
-        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={dateFilter} onChangeText={setDateFilter} placeholder="Date from (YYYY-MM-DD)" />
-        <TextInput style={[styles.input, { flex: 1, minWidth: 100 }]} value={confidenceFilter} onChangeText={setConfidenceFilter} placeholder="Min confidence" keyboardType="numeric" />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Forwarding</Text>
-        <Text style={styles.helperText}>Provider: {config.forwarding.provider || 'mailgun'}</Text>
-        <Text style={styles.helperText}>{config.forwarding.currentAddress}</Text>
-        <Text style={styles.helperText}>{config.forwarding.instructions}</Text>
-        <Text style={styles.helperText}>{config.forwarding.adminManagedNote}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Gmail Import</Text>
-        <Text style={styles.helperText}>Scope review: {config.gmail.scope}</Text>
-        <Text style={styles.helperText}>Inbox only: {config.gmail.inboxOnly ? 'Yes' : 'No'}</Text>
-        <Text style={styles.helperText}>
-          Connection: {config.gmail.connection?.connected ? `Connected${config.gmail.connection.emailAddress ? ` as ${config.gmail.connection.emailAddress}` : ''}` : 'Not connected'}
-        </Text>
-        {config.gmail.connection?.status === 'AUTH_EXPIRED' ? (
-          <Text style={styles.warningText}>Gmail access expired. Reconnect before the next sync or import.</Text>
-        ) : null}
-        {config.gmail.connection?.tokenExpiry ? (
-          <Text style={styles.helperText}>Token expiry: {prettyDate(config.gmail.connection.tokenExpiry)}</Text>
-        ) : null}
+      {isAdmin ? (
         <View style={styles.row}>
-          {config.features.gmailImport ? (
-            <>
-              <TouchableOpacity style={styles.button} onPress={connectGmail}>
-                <Text style={styles.buttonText}>{config.gmail.connection?.connected ? 'Reconnect Gmail' : 'Connect Gmail'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={runGmailDryRun} disabled={!config.gmail.connection?.connected}>
-                <Text style={styles.buttonText}>Dry Run</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={runGmailImport} disabled={!config.gmail.connection?.connected}>
-                <Text style={styles.buttonText}>Import Gmail</Text>
-              </TouchableOpacity>
-              {config.gmail.connection?.connected ? (
-                <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={disconnectGmail}>
-                  <Text style={styles.buttonText}>Disconnect</Text>
-                </TouchableOpacity>
-              ) : null}
-            </>
-          ) : (
-            <Text style={styles.helperText}>Gmail import is currently disabled.</Text>
-          )}
+          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={statusFilter} onChangeText={setStatusFilter} placeholder="Status or ALL" />
+          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={sourceFilter} onChangeText={setSourceFilter} placeholder="Source or ALL" />
+          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={typeFilter} onChangeText={setTypeFilter} placeholder="Type or ALL" />
+          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={dateFilter} onChangeText={setDateFilter} placeholder="Date from (YYYY-MM-DD)" />
+          <TextInput style={[styles.input, { flex: 1, minWidth: 100 }]} value={confidenceFilter} onChangeText={setConfidenceFilter} placeholder="Min confidence" keyboardType="numeric" />
         </View>
-        {gmailMessages.length > 0 ? (
-          <View>
-            {gmailMessages.map((message) => (
-              <View key={message.id} style={styles.flightRow}>
-                <Text style={styles.flightTitle}>{message.subject}</Text>
-                <Text style={styles.helperText}>{prettyDate(message.receivedAt)}</Text>
-              </View>
-            ))}
+      ) : null}
+
+      {isAdmin ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Forwarding</Text>
+          <Text style={styles.helperText}>Provider: {config.forwarding.provider || 'mailgun'}</Text>
+          <Text style={styles.helperText}>{config.forwarding.currentAddress}</Text>
+          <Text style={styles.helperText}>{config.forwarding.instructions}</Text>
+          <Text style={styles.helperText}>{config.forwarding.adminManagedNote}</Text>
+        </View>
+      ) : (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Forward by Email</Text>
+          <Text style={styles.helperText}>Forward travel confirmations to:</Text>
+          <Text style={styles.flightTitle}>{config.forwarding.currentAddress}</Text>
+        </View>
+      )}
+
+      {isAdmin ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Gmail Import</Text>
+          <Text style={styles.helperText}>Scope review: {config.gmail.scope}</Text>
+          <Text style={styles.helperText}>Inbox only: {config.gmail.inboxOnly ? 'Yes' : 'No'}</Text>
+          <Text style={styles.helperText}>
+            Connection: {config.gmail.connection?.connected ? `Connected${config.gmail.connection.emailAddress ? ` as ${config.gmail.connection.emailAddress}` : ''}` : 'Not connected'}
+          </Text>
+          {config.gmail.connection?.status === 'AUTH_EXPIRED' ? (
+            <Text style={styles.warningText}>Gmail access expired. Reconnect before the next sync or import.</Text>
+          ) : null}
+          {config.gmail.connection?.tokenExpiry ? (
+            <Text style={styles.helperText}>Token expiry: {prettyDate(config.gmail.connection.tokenExpiry)}</Text>
+          ) : null}
+          <View style={styles.row}>
+            {config.features.gmailImport ? (
+              <>
+                <TouchableOpacity style={styles.button} onPress={connectGmail}>
+                  <Text style={styles.buttonText}>{config.gmail.connection?.connected ? 'Reconnect Gmail' : 'Connect Gmail'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={runGmailDryRun} disabled={!config.gmail.connection?.connected}>
+                  <Text style={styles.buttonText}>Dry Run</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={runGmailImport} disabled={!config.gmail.connection?.connected}>
+                  <Text style={styles.buttonText}>Import Gmail</Text>
+                </TouchableOpacity>
+                {config.gmail.connection?.connected ? (
+                  <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={disconnectGmail}>
+                    <Text style={styles.buttonText}>Disconnect</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.helperText}>Gmail import is currently disabled.</Text>
+            )}
           </View>
-        ) : null}
-      </View>
+          {gmailMessages.length > 0 ? (
+            <View>
+              {gmailMessages.map((message) => (
+                <View key={message.id} style={styles.flightRow}>
+                  <Text style={styles.flightTitle}>{message.subject}</Text>
+                  <Text style={styles.helperText}>{prettyDate(message.receivedAt)}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : config.features.gmailImport ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Gmail Import</Text>
+          <Text style={styles.helperText}>
+            {config.gmail.connection?.connected ? `Connected${config.gmail.connection.emailAddress ? ` as ${config.gmail.connection.emailAddress}` : ''}` : 'Not connected'}
+          </Text>
+          {config.gmail.connection?.status === 'AUTH_EXPIRED' ? (
+            <Text style={styles.warningText}>Gmail access expired. Reconnect before the next sync or import.</Text>
+          ) : null}
+          <View style={styles.row}>
+            <TouchableOpacity style={styles.button} onPress={connectGmail}>
+              <Text style={styles.buttonText}>{config.gmail.connection?.connected ? 'Reconnect Gmail' : 'Connect Gmail'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={runGmailDryRun} disabled={!config.gmail.connection?.connected}>
+              <Text style={styles.buttonText}>Dry Run</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={runGmailImport} disabled={!config.gmail.connection?.connected}>
+              <Text style={styles.buttonText}>Import Gmail</Text>
+            </TouchableOpacity>
+            {config.gmail.connection?.connected ? (
+              <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={disconnectGmail}>
+                <Text style={styles.buttonText}>Disconnect</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {gmailMessages.length > 0 ? (
+            <View>
+              {gmailMessages.map((message) => (
+                <View key={message.id} style={styles.flightRow}>
+                  <Text style={styles.flightTitle}>{message.subject}</Text>
+                  <Text style={styles.helperText}>{prettyDate(message.receivedAt)}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Queued Items</Text>
@@ -556,7 +615,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
               : 'No items match the current filters. Clear a filter to see more.'}
           </Text>
         ) : null}
-        {selectedIds.size > 0 ? (
+        {isAdmin && selectedIds.size > 0 ? (
           <View
             style={styles.row}
             accessibilityRole={Platform.OS === 'web' ? ('toolbar' as any) : undefined}
@@ -602,15 +661,17 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
           const checked = selectedIds.has(item.id);
           return (
             <View key={item.id} style={[styles.row, { alignItems: 'flex-start' }]}>
-              <TouchableOpacity
-                style={[styles.button, { paddingHorizontal: 10 }]}
-                onPress={() => toggleSelected(item.id)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked }}
-                accessibilityLabel={`${checked ? 'Deselect' : 'Select'} ${item.itemType} from ${item.providerVendor || 'Unknown provider'}`}
-              >
-                <Text style={styles.buttonText}>{checked ? '☑' : '☐'}</Text>
-              </TouchableOpacity>
+              {isAdmin ? (
+                <TouchableOpacity
+                  style={[styles.button, { paddingHorizontal: 10 }]}
+                  onPress={() => toggleSelected(item.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked }}
+                  accessibilityLabel={`${checked ? 'Deselect' : 'Select'} ${item.itemType} from ${item.providerVendor || 'Unknown provider'}`}
+                >
+                  <Text style={styles.buttonText}>{checked ? '☑' : '☐'}</Text>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
                 style={[styles.flightRow, { flex: 1 }]}
                 onPress={() => {

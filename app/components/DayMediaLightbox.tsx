@@ -69,8 +69,12 @@ const DayMediaLightbox = ({ visible, items, onClose, dayDate, styles, textColor,
           </View>
         </ScrollView>
       )}
-      <TouchableOpacity accessibilityRole="button" onPress={close} style={[styles?.button, { marginTop: 12, backgroundColor: styles?.buttonSecondary?.backgroundColor ?? '#e5e7eb' }]}>
-        <Text style={[styles?.buttonText, { color: textColor }]}>Close</Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={close}
+        style={[styles?.button, { marginTop: 12, backgroundColor: styles?.buttonSecondary?.backgroundColor ?? styles?.card?.backgroundColor ?? backgroundColor }]}
+      >
+        <Text style={[styles?.buttonText, { color: textColor ?? styles?.buttonText?.color }]}>Close</Text>
       </TouchableOpacity>
     </DialogShell>
   );

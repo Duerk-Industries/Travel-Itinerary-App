@@ -4,9 +4,10 @@ import { incrementMetric } from '../metrics';
 type Entry<V> = {
   value: V;
   expiresAtMs: number;
+  sizeBytes: number;
 };
 
-export type TtlCacheOptions = {
+export type TtlCacheOptions<V = unknown> = {
   /** Default TTL applied when a caller doesn't pass one to `set` / `getOrFetch`. */
   defaultTtlMs?: number;
   /**
@@ -14,6 +15,12 @@ export type TtlCacheOptions = {
    * When omitted, no cache metrics are emitted.
    */
   metricName?: string;
+  /** Maximum number of resident entries. Entries are evicted least-recently-used first. */
+  maxEntries?: number;
+  /** Optional resident-byte budget. Requires no special value type; sizeOf defaults to 1. */
+  maxSizeBytes?: number;
+  /** Returns the approximate resident size of a value for maxSizeBytes accounting. */
+  sizeOf?: (value: V) => number;
 };
 
 export class TtlCache<V> {
@@ -21,10 +28,44 @@ export class TtlCache<V> {
   private readonly dedupeSymbol = Symbol('ttl-cache:dedupe');
   private readonly defaultTtlMs: number;
   private readonly metricName: string | undefined;
+  private readonly maxEntries: number;
+  private readonly maxSizeBytes: number | undefined;
+  private readonly sizeOf: (value: V) => number;
+  private totalSizeBytes = 0;
 
-  constructor(options: TtlCacheOptions = {}) {
+  constructor(options: TtlCacheOptions<V> = {}) {
     this.defaultTtlMs = options.defaultTtlMs ?? 5 * 60 * 1000;
     this.metricName = options.metricName;
+    this.maxEntries = Number.isFinite(options.maxEntries) && (options.maxEntries as number) > 0
+      ? Math.floor(options.maxEntries as number)
+      : 500;
+    this.maxSizeBytes = Number.isFinite(options.maxSizeBytes) && (options.maxSizeBytes as number) > 0
+      ? Math.floor(options.maxSizeBytes as number)
+      : undefined;
+    this.sizeOf = options.sizeOf ?? (() => 1);
+  }
+
+  private valueSize(value: V): number {
+    const size = Number(this.sizeOf(value));
+    return Number.isFinite(size) && size > 0 ? size : 1;
+  }
+
+  private removeEntry(key: string): void {
+    const entry = this.store.get(key);
+    if (!entry) return;
+    this.totalSizeBytes = Math.max(0, this.totalSizeBytes - entry.sizeBytes);
+    this.store.delete(key);
+  }
+
+  private enforceBounds(): void {
+    while (
+      this.store.size > this.maxEntries ||
+      (this.maxSizeBytes !== undefined && this.totalSizeBytes > this.maxSizeBytes)
+    ) {
+      const oldestKey = this.store.keys().next().value as string | undefined;
+      if (oldestKey === undefined) break;
+      this.removeEntry(oldestKey);
+    }
   }
 
   /** Read a cached value, removing it if it has expired. */
@@ -32,30 +73,42 @@ export class TtlCache<V> {
     const entry = this.store.get(key);
     if (!entry) return undefined;
     if (entry.expiresAtMs <= Date.now()) {
-      this.store.delete(key);
+      this.removeEntry(key);
       return undefined;
     }
+    // Map insertion order is our LRU order. Touch on reads so hot keys stay.
+    this.store.delete(key);
+    this.store.set(key, entry);
     return entry.value;
   }
 
   /** Overwrite the cache entry for `key` with `value` and an expiry. */
   set(key: string, value: V, ttlMs?: number): void {
     const ttl = Math.max(1, ttlMs ?? this.defaultTtlMs);
-    this.store.set(key, { value, expiresAtMs: Date.now() + ttl });
+    this.removeEntry(key);
+    const sizeBytes = this.valueSize(value);
+    this.store.set(key, { value, expiresAtMs: Date.now() + ttl, sizeBytes });
+    this.totalSizeBytes += sizeBytes;
+    this.enforceBounds();
   }
 
   /** Remove a single entry. */
   delete(key: string): void {
-    this.store.delete(key);
+    this.removeEntry(key);
   }
 
   /** Drop all cached entries. */
   clear(): void {
     this.store.clear();
+    this.totalSizeBytes = 0;
   }
 
   size(): number {
     return this.store.size;
+  }
+
+  sizeBytes(): number {
+    return this.totalSizeBytes;
   }
 
   /**
@@ -94,5 +147,5 @@ export class TtlCache<V> {
 }
 
 /** Convenience factory for callers who prefer a functional construction style. */
-export const createTtlCache = <V>(options?: TtlCacheOptions): TtlCache<V> =>
+export const createTtlCache = <V>(options?: TtlCacheOptions<V>): TtlCache<V> =>
   new TtlCache<V>(options);

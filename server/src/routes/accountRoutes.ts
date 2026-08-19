@@ -44,7 +44,7 @@ import {
 import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort, sendVerificationEmailBestEffort } from '../mailer';
 import { logError } from '../logger';
 import { getAuthFlag } from '../config/authFlags';
-import { assertUnderTravelerLimit, canUseFeature } from '../services/entitlementService';
+import { assertUnderTravelerLimit, canUseFeature, getUserTierKey } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
@@ -129,7 +129,11 @@ router.get('/', async (req, res) => {
     return;
   }
   const costTracking = await canUseFeature(userId, 'cost_tracking', role);
-  res.json({ ...profile, entitlements: { costTracking } });
+  // tierKey drives client-side upsell/entry-point gating (e.g. showing the Home
+  // page Ingest tile only to Premium/Pro) — it's not itself an authorization
+  // check. Every ingestion endpoint re-checks tier server-side independently.
+  const tierKey = await getUserTierKey(userId);
+  res.json({ ...profile, entitlements: { costTracking }, tierKey });
 });
 
 router.get('/packing-list', async (req, res) => {

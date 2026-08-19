@@ -841,6 +841,7 @@ export const initDb = async (): Promise<void> => {
     { key: 'cost_tracking',           description: 'Expense and cost tracking' },
     { key: 'multiple_groups',         description: 'Create more than one group' },
     { key: 'trip_creation',           description: 'Create new trips' },
+    { key: 'itinerary_document_import', description: 'Import itinerary documents' },
   ];
   for (const feature of featureSeeds) {
     const ref = db.collection('features').doc(feature.key);
@@ -860,6 +861,9 @@ export const initDb = async (): Promise<void> => {
     { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: false },
     { tierKey: 'free', featureKey: 'multiple_groups', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_creation', isAllowed: true },
+    { tierKey: 'free', featureKey: 'itinerary_document_import', isAllowed: false },
+    { tierKey: 'premium', featureKey: 'itinerary_document_import', isAllowed: true },
+    { tierKey: 'pro', featureKey: 'itinerary_document_import', isAllowed: true },
     { tierKey: 'premium', featureKey: 'cost_tracking', isAllowed: true },
     { tierKey: 'pro', featureKey: 'cost_tracking', isAllowed: true },
   ];
@@ -2410,6 +2414,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
         groupId: data.groupId,
         name: data.name,
         description: data.description ?? null,
+        notes: data.notes ?? null,
         destination: data.destination ?? null,
         locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
         mustSeeAttractions: Array.isArray(data.mustSeeAttractions) ? data.mustSeeAttractions : [],
@@ -2448,6 +2453,7 @@ export const createTrip = async (
     groupId,
     name,
     description: details.description ?? null,
+    notes: details.notes ?? null,
     destination: details.destination ?? null,
     locationIds: Array.isArray(details.locationIds) ? details.locationIds : [],
     mustSeeAttractions: Array.isArray(details.mustSeeAttractions) ? details.mustSeeAttractions : [],
@@ -2479,11 +2485,14 @@ export const updateTripDetails = async (
   const data = tripDoc.data() as any;
   const allowed = await ensureMembership(data.groupId, userId);
   if (!allowed) throw new Error('Not authorized to update trip');
+  const hasDescription = Object.prototype.hasOwnProperty.call(updates, 'description');
+  const hasNotes = Object.prototype.hasOwnProperty.call(updates, 'notes');
   await db
     .collection('trips')
     .doc(tripId)
     .update({
-      description: updates.description ?? data.description ?? null,
+      description: hasDescription ? updates.description ?? null : data.description ?? null,
+      notes: hasNotes ? updates.notes ?? null : data.notes ?? null,
       destination: updates.destination ?? data.destination ?? null,
       locationIds: Array.isArray(updates.locationIds) ? updates.locationIds : (Array.isArray(data.locationIds) ? data.locationIds : []),
       mustSeeAttractions: Array.isArray(updates.mustSeeAttractions) ? updates.mustSeeAttractions : (Array.isArray(data.mustSeeAttractions) ? data.mustSeeAttractions : []),
@@ -2735,6 +2744,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   ownerId: string;
   tripName: string;
   description?: string | null;
+  notes?: string | null;
   destination?: string | null;
   locationIds?: string[];
   mustSeeAttractions?: string[];
@@ -2753,6 +2763,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   );
   const trip = await createTrip(payload.ownerId, group.groupId, payload.tripName, {
     description: payload.description ?? null,
+    notes: payload.notes ?? null,
     destination: payload.destination ?? null,
     locationIds: Array.isArray(payload.locationIds) ? payload.locationIds : [],
     mustSeeAttractions: Array.isArray(payload.mustSeeAttractions) ? payload.mustSeeAttractions : [],
@@ -5552,6 +5563,18 @@ export const updateItineraryRecord = async (
   const trip = await db.collection('trips').doc(tripId).get();
   const tripName = trip.exists ? (trip.data() as Trip).name : '';
   return { ...(updated.data() as Itinerary), tripName };
+};
+
+// See db.postgres.ts's setItineraryPlanMarkdown for why this is a narrow, dedicated setter
+// rather than folded into updateItineraryRecord.
+export const setItineraryPlanMarkdown = async (userId: string, itineraryId: string, planMarkdown: string | null): Promise<void> => {
+  const db = getDb();
+  const doc = await db.collection('itineraries').doc(itineraryId).get();
+  if (!doc.exists) throw new Error('Itinerary not found');
+  const tripId = (doc.data() as any).tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  await db.collection('itineraries').doc(itineraryId).update({ planMarkdown });
 };
 
 export const listItineraryDetails = async (userId: string, itineraryId: string): Promise<ItineraryDetail[]> => {

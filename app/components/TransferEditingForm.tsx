@@ -22,6 +22,10 @@ export type FlightEditingFormProps = {
   formatAirportLabel?: (airport: { iata_code?: string; name: string; city?: string; country?: string }) => string;
   onHideAirportDropdown?: () => void;
   onSelectAirport?: (target: Exclude<AirportTarget, null>, airport: any) => void;
+  // Fired on press-in (before the field's onBlur can fire) so the parent can suppress its
+  // blur-triggered auto-select just long enough for the actual click to land — see the callsite
+  // in transfers.tsx for the full explanation.
+  onAirportOptionPressIn?: () => void;
   groupMembers: GroupMemberOption[];
   userMembers: GroupMemberOption[];
   styles: Record<string, any>;
@@ -32,6 +36,13 @@ export type FlightEditingFormProps = {
   showAirportDropdown: (target: Exclude<AirportTarget, null>, node: any, query: string) => void;
   parseLayoverDuration: (value: string | null | undefined) => { hours: string; minutes: string };
   openTimePicker: (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => void;
+  // Rendered inside this component's own Modal (see below) rather than by the caller — a native
+  // RN Modal presents in its own window above everything else, so a time picker rendered by the
+  // caller as a sibling outside this Modal would be mounted but invisible, hidden behind it.
+  timePickerTarget?: 'edit-dep' | 'edit-arr' | null;
+  timePickerValue?: Date;
+  onTimePickerChange?: (event: { type?: string } | undefined, date: Date | undefined, target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null) => void;
+  nativeDateTimePicker?: React.ComponentType<any> | null;
   onAirportEnter: (target: Exclude<AirportTarget, null>, value: string) => void;
   setFlight: React.Dispatch<React.SetStateAction<FlightEditDraft | null>>;
   setPassengerIds: (ids: string[]) => void;
@@ -54,6 +65,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   formatAirportLabel,
   onHideAirportDropdown,
   onSelectAirport,
+  onAirportOptionPressIn,
   groupMembers,
   userMembers,
   styles,
@@ -65,6 +77,10 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   showAirportDropdown,
   parseLayoverDuration,
   openTimePicker,
+  timePickerTarget,
+  timePickerValue,
+  onTimePickerChange,
+  nativeDateTimePicker: NativeDateTimePicker,
   onAirportEnter,
   setFlight,
   setPassengerIds,
@@ -510,6 +526,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               <TouchableOpacity
                 key={`${airport.iata_code ?? 'na'}-${airport.name}`}
                 style={styles.dropdownOption}
+                onPressIn={onAirportOptionPressIn}
                 onPress={() => {
                   if (onSelectAirport) onSelectAirport(activeAirportTarget, airport);
                 }}
@@ -521,6 +538,14 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             ))}
           </View>
         </View>
+      ) : null}
+      {Platform.OS !== 'web' && timePickerTarget && timePickerValue && NativeDateTimePicker ? (
+        <NativeDateTimePicker
+          value={timePickerValue}
+          mode="time"
+          display="spinner"
+          onChange={(event: { type?: string } | undefined, date: Date | undefined) => onTimePickerChange?.(event, date, timePickerTarget)}
+        />
       ) : null}
     </Modal>
   );

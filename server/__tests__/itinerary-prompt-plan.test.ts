@@ -268,6 +268,12 @@ describe('itinerary prompt plan service', () => {
     });
 
     expect(result.planMarkdown).toContain('Rendered itinerary');
+    expect(result.planMarkdown).toContain('## Route Strategy');
+    expect(result.annotations).toMatchObject({
+      schemaVersion: 'annotated-itinerary-v1',
+      validation: { bookingActionsCovered: true },
+    });
+    expect(result.annotations.days).toHaveLength(3);
     expect(result.profile.pace).toBe('Relaxed');
     expect(result.profile.comfort).toBe('Luxury');
     // Explicit account mobility is a hard constraint and must win over both
@@ -1807,6 +1813,119 @@ describe('itinerary prompt plan service', () => {
     expect(activity?.notes).not.toMatch(/plan for about/i);
   });
 
+  it('gives a real, catalog-verified attraction a longer Wikipedia extract than the 2-sentence default', async () => {
+    mockedAttractionsCatalogService.getAttractionPromptBlockForDestinations.mockResolvedValue({
+      shortlistByDestination: {
+        Boston: [
+          {
+            id: 'isg',
+            destinationKey: 'boston',
+            destinationDisplayName: 'Boston',
+            name: 'Isabella Stewart Gardner Museum',
+            rank: 1,
+            activityType: 'Ticketed Attraction',
+            interestTags: ['culture'],
+            sourceUrl: null,
+            sourceLabel: null,
+            snippet: null,
+            sourceCount: 2,
+            budgetTier: 'paid',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      promptBlock: 'Destination: Boston\n1. Isabella Stewart Gardner Museum',
+    });
+    const fiveSentenceExtract =
+      'Sentence one about the museum. Sentence two about its history. Sentence three about the courtyard. ' +
+      'Sentence four about the 1990 art theft. Sentence five about the collection today.';
+    mockedAxios.get.mockImplementation(async (_url: string, config?: any) => {
+      const search = String(config?.params?.gsrsearch ?? '');
+      if (search.includes('Isabella Stewart Gardner Museum')) {
+        return {
+          data: {
+            query: {
+              pages: {
+                '1': { pageid: 1, title: 'Isabella Stewart Gardner Museum', extract: fiveSentenceExtract },
+              },
+            },
+          },
+        };
+      }
+      return { data: { query: { pages: {} } } };
+    });
+
+    const normStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'norm1', sd: '2026-09-01', ed: '2026-09-03', p: 'B', c: 'M', mob: 'M', car: 'P', is: 'mixed',
+                w: { outdoors: 15, adventure: 10, culture: 20, food: 15, nightlife: 10, relax: 10, photography: 10, authentic_local: 5, iconic_landmarks: 5 },
+                a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const routeStage = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                $: 'r1', eh: 'BOS', xh: 'BOS',
+                b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+                x: [], rc: null, w: { o: 25, c: 25, f: 20, n: 10, r: 20 }, a: [],
+              }),
+            },
+          },
+        ],
+      },
+    };
+    const dayItineraryJson = JSON.stringify({
+      $: 'it1', eh: 'BOS', xh: 'BOS',
+      b: [{ l: 'Boston', ci: '2026-09-01', co: '2026-09-04', dn: [] }],
+      x: [], rc: null,
+      dy: [
+        { d: 1, dt: '2026-09-01', b: 'Boston', it: [['D', 'A', 'Isabella Stewart Gardner Museum']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 2, dt: '2026-09-02', b: 'Boston', it: [['D', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+        { d: 3, dt: '2026-09-03', b: 'Boston', it: [['D', 'O', 'Local evening stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Boston'", ln: [], cf: 'M' },
+      ],
+      a: [], cf: 'M',
+    });
+    const dayStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const validateStage = { data: { choices: [{ message: { content: dayItineraryJson } }] } };
+    const renderStage = { data: { choices: [{ message: { content: '## Rendered itinerary' } }] } };
+
+    mockedAxios.post
+      .mockResolvedValueOnce(normStage)
+      .mockResolvedValueOnce(routeStage)
+      .mockResolvedValueOnce(dayStage)
+      .mockResolvedValueOnce(validateStage)
+      .mockResolvedValueOnce(renderStage);
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Boston'],
+      days: 3,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-verified-longer-description',
+    });
+
+    const activity = result.generatedItems.activities.find((a) => a.name.toLowerCase() === 'isabella stewart gardner museum');
+    // The 2-sentence default would cut this off before "1990 art theft"; a catalog-verified
+    // attraction gets up to MAX_VERIFIED_DESCRIPTION_SENTENCES (4) — the 4th sentence should
+    // survive, but the 5th (beyond the cap) should not.
+    expect(activity?.notes).toMatch(/1990 art theft/i);
+    expect(activity?.notes).not.toMatch(/collection today/i);
+  });
+
   it('does not live-search a bare-word catalog entry with no verified summary, even though it is in the catalog', async () => {
     // Regression guard: catalog membership alone must not bypass the
     // specificity gate. A single-word catalog entry (e.g. a real attraction
@@ -2463,18 +2582,14 @@ describe('itinerary prompt plan service', () => {
     });
 
     const dayTwoDetails = result.details.filter((d) => d.day === 2);
-    const fromIndex = dayTwoDetails.findIndex((d) => d.activity.toLowerCase() === 'boston public garden');
-    const toIndex = dayTwoDetails.findIndex((d) => d.activity.toLowerCase() === 'boston common');
-    const travelIndex = dayTwoDetails.findIndex((d) => d.kind === 'note');
-
-    expect(fromIndex).toBeGreaterThanOrEqual(0);
-    expect(toIndex).toBeGreaterThan(fromIndex);
-    // The travel segment sits between the two activities it connects, not
-    // appended after everything else in the day.
-    expect(travelIndex).toBe(fromIndex + 1);
-    expect(travelIndex).toBeLessThan(toIndex);
-
-    const travelDetail = dayTwoDetails[travelIndex];
+    // buildDetails() no longer mirrors every attraction into its own `place` detail — that
+    // duplicated the Activities/tours records mapItems() creates for the exact same stops
+    // (including the identical "This stop suits your group because ..." reasoning in both
+    // places). The only detail entry left for this day is the travel segment between the two
+    // attractions, not a place entry per attraction.
+    expect(dayTwoDetails).toHaveLength(1);
+    const travelDetail = dayTwoDetails[0];
+    expect(travelDetail.kind).toBe('note');
     expect(travelDetail.activity).toMatch(/walk/i);
     expect(travelDetail.activity).toMatch(/boston common/i);
     expect(travelDetail.activity).toMatch(/min/i);

@@ -40,6 +40,54 @@ describe('Wikipedia Phase 1 enrichment', () => {
     expect(mockedAxios.get).toHaveBeenCalledTimes(1);
   });
 
+  // Regression: gsrsearch with gsrlimit=1 blindly trusts Wikipedia's top full-text-search hit.
+  // Searching "Surf Lesson Monteverde" (a generic AI-generated activity name plus its
+  // destination — reproduced live against Wikipedia's real search API) returns "Peruvian
+  // political crisis (2016-present)" as the #1 hit, sharing zero words with either the activity
+  // or the destination. That garbage description was then shown to the user as if it explained
+  // the "Surf Lesson" stop on their itinerary.
+  test('rejects a confidently-returned but topically unrelated match', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        query: {
+          pages: {
+            '60938753': {
+              pageid: 60938753,
+              title: 'Peruvian political crisis (2016–present)',
+              extract: 'An ongoing long-term political crisis began in Peru during the presidency of Pedro Pablo Kuczynski in late 2016.',
+              fullurl: 'https://en.wikipedia.org/wiki/Peruvian_political_crisis',
+            },
+          },
+        },
+      },
+    } as any);
+
+    const result = await fetchWikipediaEnrichment('Surf Lesson', 'Monteverde');
+
+    expect(result).toBeNull();
+  });
+
+  test('keeps a match that genuinely shares a word with the activity or destination', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        query: {
+          pages: {
+            '1': {
+              pageid: 1,
+              title: 'Surfing in Costa Rica',
+              extract: 'Costa Rica is a popular destination for surfing lessons along its Pacific coast.',
+              fullurl: 'https://en.wikipedia.org/wiki/Surfing_in_Costa_Rica',
+            },
+          },
+        },
+      },
+    } as any);
+
+    const result = await fetchWikipediaEnrichment('Surf Lesson', 'Manuel Antonio');
+
+    expect(result?.canonicalTitle).toBe('Surfing in Costa Rica');
+  });
+
   test('converts monthly pageviews to a bounded score and caches it', async () => {
     mockedAxios.get.mockResolvedValue({ data: { items: [{ views: 1000 }, { views: 9000 }] } } as any);
     const score = await fetchWikipediaPopularityScore('Louvre Museum', new Date('2026-07-12T00:00:00Z'));

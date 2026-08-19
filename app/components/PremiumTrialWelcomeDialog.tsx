@@ -11,7 +11,6 @@ type PremiumTrialWelcomeDialogProps = {
 
 const PREMIUM_FEATURES = [
   'AI itinerary generation',
-  'Email import for bookings',
   'Cost tracking and CSV exports',
   'Trip sharing and collaboration tools',
 ];

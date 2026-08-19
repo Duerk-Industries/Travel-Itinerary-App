@@ -63,6 +63,33 @@ submission of a new app record.
   > ```
   > If it recurs anyway, `EXPO_NO_CAPABILITY_SYNC=1` skips auto-sync entirely
   > (capability must then be managed by hand in the Apple Developer portal).
+  >
+  > **This bug isn't specific to `APPLE_ID_AUTH`.** It resurfaced when
+  > `expo-share-intent`'s iOS share extension started requiring **App Groups**
+  > (`com.apple.security.application-groups`, identifier
+  > `group.com.duerkindustries.travelitineraryplanner` — set explicitly via
+  > `iosAppGroupIdentifier` in [expo.config.shared.cjs](../expo.config.shared.cjs)
+  > rather than left to the plugin's implicit default). Introducing *any* new
+  > capability on a bundle ID that already has an App Store Connect app record
+  > can trigger EAS to batch that capability's `ON` together with a bogus
+  > `APPLE_ID_AUTH: OFF`, and Apple's API rejects the whole PATCH with the
+  > same misleading `... cannot be deleted. Delete all the Apps related to
+  > this bundle to proceed.` message shown above. Because this has now hit
+  > the project twice for two different capabilities, `app/eas.json` sets
+  > `EXPO_NO_CAPABILITY_SYNC=1` for every build profile as a standing policy
+  > rather than a one-off workaround. That means **every capability this app
+  > uses must be configured by hand** in the Apple Developer portal
+  > (`https://developer.apple.com/account/resources/identifiers/bundleId/edit/HMLW5FX2SP`)
+  > and stays that way going forward — EAS will not add or remove any for you:
+  > - **Sign In with Apple** — enabled on the App ID.
+  > - **App Groups** — enabled on the App ID, with the
+  >   `group.com.duerkindustries.travelitineraryplanner` container registered
+  >   under Identifiers → App Groups and attached to this App ID.
+  >
+  > When adding a *new* capability in the future (another plugin, another
+  > entitlement), add it to the portal manually first, then build — don't
+  > rely on auto-sync to catch it, and don't remove the env var expecting
+  > auto-sync to "just work" for the new one.
 - **iOS signing credentials.** Verify a valid distribution certificate and
   production provisioning profile are on file in EAS (they expire annually and
   a build can succeed locally against a cached credential that's actually

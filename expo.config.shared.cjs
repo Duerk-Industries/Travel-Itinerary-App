@@ -142,6 +142,12 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
           },
           androidIntentFilters: ['image/*', 'video/*'],
           androidMultiIntentFilters: ['image/*', 'video/*'],
+          // Explicit rather than relying on the plugin's implicit default
+          // (`group.${bundleIdentifier}`, which this happens to match) — this is
+          // the exact string that must be registered as an "App Groups" identifier
+          // in the Apple Developer portal and attached to the app's App ID; see
+          // docs/expo-deployment-checklist.md's "App Groups" callout.
+          iosAppGroupIdentifier: 'group.com.duerkindustries.travelitineraryplanner',
         },
       ],
       [

@@ -96,10 +96,13 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['free', 'flight_parser', false],
+    ['free', 'itinerary_document_import', false],
     ['premium', 'cost_tracking', true],
     ['premium', 'flight_parser', true],
+    ['premium', 'itinerary_document_import', true],
     ['pro', 'cost_tracking', true],
     ['pro', 'flight_parser', true],
+    ['pro', 'itinerary_document_import', true],
   ];
   for (const [tierKey, featureKey, isAllowed] of entitlementSeeds) {
     const tier = tierByKey.get(tierKey);
@@ -173,6 +176,12 @@ const FAIL_CLOSED_FLAGS = new Set([
   'itinerary_live_route_conditions',
   'itinerary_live_weather_variants',
   'itinerary_anchor_schedule_verification',
+  'itinerary_document_import',
+  // Explicitly "off until infra is provisioned" — see feature-flags.yaml's description
+  // (GOOGLE_STATIC_MAPS_API_KEY / GOOGLE_MAPS_API_KEY). An unseeded DB row must default
+  // to off, not on, or a deployment whose seeding pass hasn't caught up yet silently
+  // exposes the map before anyone's decided to turn it on.
+  'trip_day_map',
 ]);
 
 /**

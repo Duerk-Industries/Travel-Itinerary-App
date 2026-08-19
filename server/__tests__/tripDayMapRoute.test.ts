@@ -63,6 +63,32 @@ describe('Trip-day map proxy (GET /api/maps/trip-day)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('stays disabled when the feature_flags row has never been seeded (not just explicitly false)', async () => {
+    // Regression test: a deployment whose seed pass hasn't written this row yet (e.g. the flag
+    // was added to feature-flags.yaml after the server last started) must not silently expose
+    // the map. This is the actual bug reported in production — the YAML said `enabled: false`
+    // but the DB row didn't exist, and the generic fail-open default made it look enabled.
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
+    const { token } = await helpers.registerAndLoginWebUser({
+      firstName: 'Map',
+      lastName: 'Unseeded',
+      email: 'map-unseeded@example.com',
+      password: 'secret123',
+    });
+    const fetchMock = mockFetchOk();
+
+    // Deliberately never call db.setFeatureFlag('trip_day_map', ...) — this is the unseeded case.
+    const res = await request(app)
+      .get(`/api/maps/trip-day?points=${encodeURIComponent(JSON.stringify(points(2)))}`)
+      .set({ Authorization: `Bearer ${token}` })
+      .expect(403);
+
+    expect(res.body).toMatchObject({ code: 'FEATURE_DISABLED' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('requires authentication', async () => {
     const request = require('supertest') as typeof import('supertest');
     const { app } = require('../src/app') as typeof import('../src/app');

@@ -13,6 +13,7 @@ import { ActivityIndicator, Alert, Linking,
   useWindowDimensions, } from 'react-native';
 import { addDaysToIso, computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
+import { buildBookingPriorities, BookingPriorityItem, BookingPriorityUrgency } from '../utils/bookingPriorities';
 import {
   buildOverviewRows,
   type DetailItem,
@@ -79,6 +80,7 @@ import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
+import ItineraryDocumentImport, { canShowItineraryDocumentImport } from '../components/ItineraryDocumentImport';
 // AsyncStorage is loaded lazily (see getAsyncStorage below) so the day-card
 // cache import doesn't add @react-native-async-storage/async-storage to the
 // module-evaluation graph of every tab that ends up importing this file.
@@ -114,6 +116,7 @@ type Trip = {
   groupId: string;
   name: string;
   description?: string | null;
+  notes?: string | null;
   destination?: string | null;
   locationIds?: string[];
   startDate?: string | null;
@@ -234,6 +237,7 @@ type OverviewTabProps = {
   onFlightDataChanged: () => void;
   onLodgingDataChanged: () => void;
   onTourDataChanged: () => void;
+  onCarRentalDataChanged?: () => void;
   onAddCarRental: (rental: CarRental) => void;
   onUpdateCarRental?: (id: string, draft?: CarRentalDraft) => boolean | void | Promise<boolean | void>;
   openFlightInFlightsTab: (flightId: string) => void;
@@ -246,6 +250,16 @@ type OverviewTabProps = {
   // Initiative B). Defaults to `true`; `false` reverts to the plain empty
   // fallback tile.
   featureCoverPhotoFallbackV2?: boolean;
+  // Gate the reaction bar / checklist-item toggle interactions themselves (not just visibility)
+  // against their server-side feature flags, so a disabled flag makes the control inert instead
+  // of letting a tap reach a 403 that the global permissionDeniedInterceptor would otherwise pop
+  // as a "Permission Denied" alert. Default `true` — both flags default to on server-side, and
+  // these gate already-relied-upon controls rather than optional new UI, so the safer default
+  // while the real value is still loading is "keep working," not "briefly go inert."
+  featureItineraryReactions?: boolean;
+  featureItineraryItemKinds?: boolean;
+  featureItineraryDocumentImport?: boolean;
+  userTier?: string | null;
 };
 
 type DayCard = {
@@ -444,6 +458,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onFlightDataChanged,
   onLodgingDataChanged,
   onTourDataChanged,
+  onCarRentalDataChanged,
   onAddCarRental,
   onUpdateCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
@@ -452,6 +467,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   readOnly = false,
   featureStandardizedItemDialogs = false,
   featureCoverPhotoFallbackV2 = true,
+  featureItineraryReactions = true,
+  featureItineraryItemKinds = true,
+  featureItineraryDocumentImport = false,
+  userTier,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -479,6 +498,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
+  const [itineraryPlanMarkdown, setItineraryPlanMarkdown] = useState<string | null>(null);
+  const [showItineraryPlanNotes, setShowItineraryPlanNotes] = useState(false);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
@@ -486,6 +507,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
   const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [documentImportOpen, setDocumentImportOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [dateDraft, setDateDraft] = useState({
@@ -591,6 +614,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const resetDrafts = () => {
     if (!trip) return;
     setDescriptionDraft(trip.description ?? '');
+    setNotesDraft(trip.notes ?? '');
     if (trip.startDate || trip.endDate) {
       setDateDraft({
         mode: 'range',
@@ -643,6 +667,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (!trip?.id) {
         setItineraryDetails([]);
         setItineraryId(null);
+        setItineraryPlanMarkdown(null);
         return;
       }
       setItineraryLoading(true);
@@ -651,6 +676,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         if (!res.ok) {
           setItineraryDetails([]);
           setItineraryId(null);
+          setItineraryPlanMarkdown(null);
           return;
         }
         const data = await res.json();
@@ -658,6 +684,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         if (!records.length) {
           setItineraryDetails([]);
           setItineraryId(null);
+          setItineraryPlanMarkdown(null);
           return;
         }
         // Use the most-recently-updated record per trip, falling back to createdAt
@@ -667,6 +694,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           new Date((r?.updatedAt ?? r?.createdAt) ?? 0).getTime();
         const latest = [...records].sort((a, b) => recordTs(b) - recordTs(a))[0];
         setItineraryId(latest.id ?? null);
+        setItineraryPlanMarkdown(typeof latest.planMarkdown === 'string' && latest.planMarkdown.trim() ? latest.planMarkdown : null);
         const detailsRes = await fetch(`${backendUrl}/api/itineraries/${latest.id}/details`, { headers });
         if (!detailsRes.ok) {
           setItineraryDetails([]);
@@ -677,6 +705,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       } catch {
         setItineraryDetails([]);
         setItineraryId(null);
+        setItineraryPlanMarkdown(null);
       } finally {
         setItineraryLoading(false);
       }
@@ -698,6 +727,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         return 0;
       }),
     [itineraryDetails]
+  );
+
+  // P2 (docs/implementation_plans/itinerary-narrative-depth-and-validation.md): deterministic,
+  // client-computed "what to book now" list — no LLM involved, derived from data already loaded
+  // and validated elsewhere on this tab.
+  const bookingPriorities = useMemo(
+    () => buildBookingPriorities({ flights, lodgings, activities: tours, carRentals }),
+    [flights, lodgings, tours, carRentals]
   );
 
   const refreshItineraryDetails = async () => {
@@ -900,6 +937,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const toggleChecklistItem = useCallback(
     async (detailId: string, item: ChecklistChildRecord) => {
+      // PATCH /checklist-items/:id 403s when itinerary_item_kinds is disabled — skip the request
+      // entirely rather than let a routine checkbox tap surface the global permission-denied modal.
+      if (!featureItineraryItemKinds) return;
       const nextChecked = !item.checkedBy;
       const previous = { checkedBy: item.checkedBy ?? null, checkedAt: item.checkedAt ?? null };
       updateLocalChecklistItem(detailId, item.id, {
@@ -922,7 +962,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         updateLocalChecklistItem(detailId, item.id, previous);
       }
     },
-    [backendUrl, jsonHeaders, updateLocalChecklistItem]
+    [backendUrl, jsonHeaders, updateLocalChecklistItem, featureItineraryItemKinds]
   );
 
   // Reaction handlers — local optimistic, drive the ReactionBar component.
@@ -1413,53 +1453,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     let active = true;
-    const fetchOneImage = async (card: DayCard): Promise<[string, string] | null> => {
-      const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
-      const activities = itineraryDetails
-        .filter((detail) => detail.day === dayNumber)
-        .map((detail) => detail.activity)
-        .filter(Boolean);
-      const tourNames = tours
-        .filter((tour) => tour.date === card.date)
-        .map((tour) => tour.name)
-        .filter(Boolean);
-      const contextParts = [...activities, ...tourNames].filter(Boolean);
-      const context = contextParts.join(' | ').slice(0, 200);
-      try {
-        const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
-        const query = [
-          `location=${encodeURIComponent(baseLocation)}`,
-          `day=${encodeURIComponent(card.date)}`,
-          context ? `context=${encodeURIComponent(context)}` : '',
-        ]
-          .filter(Boolean)
-          .join('&');
-        const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
-        const data = await res.json().catch(() => ({}));
-        return data?.url ? [card.date, data.url] : null;
-      } catch {
-        return null;
-      }
-    };
     const fetchImages = async () => {
       if (!dayCards.length) return;
       const missingCards = dayCards.filter((card) => !blogDayImages[card.date] && !dayImages[card.date]);
       if (!missingCards.length) return;
-      const results = await Promise.all(missingCards.map(fetchOneImage));
-      if (!active) return;
-      const next: Record<string, string> = {};
-      results.forEach((entry) => {
-        if (entry) next[entry[0]] = entry[1];
-      });
-      if (Object.keys(next).length) {
-        setDayImages((prev) => ({ ...prev, ...next }));
+      const days = missingCards.map((card) => ({
+        date: card.date,
+        dayIndex: dayCards.findIndex((candidate) => candidate.date === card.date) + 1,
+        location: card.location || tripLocationLabel || trip?.destination || 'travel',
+      }));
+      try {
+        const res = await fetch(`${backendUrl}/api/itinerary/images/batch`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ days }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !Array.isArray(data?.images)) return;
+        const next: Record<string, string> = {};
+        data.images.forEach((entry: any) => {
+          if (entry?.date && entry?.url) next[String(entry.date)] = String(entry.url);
+        });
+        if (active && Object.keys(next).length) setDayImages((prev) => ({ ...prev, ...next }));
+      } catch {
+        return;
       }
     };
     fetchImages().catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [backendUrl, headers, blogDayImages, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
+  }, [backendUrl, headers, blogDayImages, dayCards, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -1544,7 +1568,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const saveOverviewEdits = async () => {
     if (!trip?.id) return;
     setEditingDetailId(null);
-    const { shouldSkipTripSave } = getOverviewSaveFlags(trip, descriptionDraft, dateDraft, pendingRemovalIds);
+    const { shouldSkipTripSave } = getOverviewSaveFlags(trip, descriptionDraft, dateDraft, pendingRemovalIds, notesDraft);
     if (shouldSkipTripSave) {
       setIsEditing(false);
       await refreshItineraryDetails();
@@ -1564,6 +1588,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     const payload: any = {
       description: descriptionDraft,
+      notes: notesDraft,
       dateMode: dateDraft.mode,
     };
     if (dateDraft.mode === 'range') {
@@ -2473,6 +2498,156 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     />
   );
 
+  // P0 (docs/implementation_plans/itinerary-narrative-depth-and-validation.md): the AI generation
+  // pipeline's render stage already produces a fuller markdown write-up (destination narratives,
+  // day-by-day prose, "why this fits your group" explanations) than the structured
+  // flights/lodgings/activities/details the rest of this tab surfaces. Previously that markdown
+  // was generated and then discarded; now it's persisted as `itinerary.planMarkdown` and shown
+  // here, collapsed by default so it doesn't compete with the structured views.
+  const renderItineraryPlanNotes = () => {
+    if (!itineraryPlanMarkdown) return null;
+    return (
+      <View style={[styles.card, responsiveCardStyle]} testID="overview-plan-notes-card">
+        <TouchableOpacity
+          testID="overview-plan-notes-toggle"
+          style={[styles.row, { justifyContent: 'space-between' }]}
+          onPress={() => setShowItineraryPlanNotes((prev) => !prev)}
+        >
+          <Text style={styles.sectionTitle}>Trip Guide</Text>
+          <Text style={styles.helperText}>{showItineraryPlanNotes ? 'Hide' : 'Show'}</Text>
+        </TouchableOpacity>
+        {showItineraryPlanNotes ? (
+          <View testID="overview-plan-notes-body">
+            {renderRichTextBlocks(itineraryPlanMarkdown, {
+              base: styles.bodyText,
+              bold: styles.headerText,
+              italic: styles.helperText,
+              link: styles.linkText ?? styles.buttonText,
+              listItem: styles.helperText,
+              heading2: styles.sectionTitle,
+              heading3: styles.headerText,
+            })}
+          </View>
+        ) : (
+          <Text style={styles.helperText}>AI-written trip write-up, including destination background and day-by-day notes.</Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderTripNotes = () => (
+    <View style={{ gap: 6 }} testID="overview-trip-notes">
+      <Text style={styles.headerText}>Notes</Text>
+      {isEditing ? (
+        <TextInput
+          testID="overview-trip-notes-input"
+          style={[styles.input, { minHeight: 120, textAlignVertical: 'top' }]}
+          multiline
+          placeholder="Add general notes for this trip"
+          value={notesDraft}
+          onChangeText={setNotesDraft}
+        />
+      ) : trip?.notes ? (
+        <View>
+          {renderRichTextBlocks(trip.notes, {
+            base: styles.bodyText,
+            bold: styles.headerText,
+            italic: styles.helperText,
+            link: styles.linkText ?? styles.buttonText,
+            listItem: styles.helperText,
+            heading2: styles.sectionTitle,
+            heading3: styles.headerText,
+          })}
+        </View>
+      ) : (
+        <Text style={styles.helperText}>No notes yet.</Text>
+      )}
+    </View>
+  );
+
+  const renderDocumentImporter = () => trip?.id ? (
+    <ItineraryDocumentImport
+      backendUrl={backendUrl}
+      headers={headers}
+      tripId={trip.id}
+      userTier={userTier}
+      featureEnabled={featureItineraryDocumentImport}
+      styles={styles}
+      theme={theme}
+      readOnly={readOnly}
+      expanded={documentImportOpen}
+      onExpandedChange={setDocumentImportOpen}
+      hideTrigger
+      onImported={async () => {
+        await Promise.all([
+          Promise.resolve(onRefreshTrips()),
+          Promise.resolve(onFlightDataChanged()),
+          Promise.resolve(onLodgingDataChanged()),
+          Promise.resolve(onTourDataChanged()),
+          Promise.resolve(onCarRentalDataChanged?.()),
+        ]);
+      }}
+    />
+  ) : null;
+
+  const showDocumentImport = canShowItineraryDocumentImport({
+    featureEnabled: featureItineraryDocumentImport,
+    userTier,
+    platform: Platform.OS,
+    readOnly,
+  });
+
+  const renderDocumentImportButton = () => showDocumentImport ? (
+    <TouchableOpacity
+      testID="overview-import-itinerary"
+      style={[styles.button, styles.smallButton]}
+      onPress={() => setDocumentImportOpen((open) => !open)}
+    >
+      <Text style={styles.buttonText}>{documentImportOpen ? 'Close Import' : 'Import Itinerary'}</Text>
+    </TouchableOpacity>
+  ) : null;
+
+  const bookingPriorityUrgencyLabel: Record<BookingPriorityUrgency, string> = {
+    overdue: 'Past due',
+    soon: 'Book soon',
+    upcoming: 'Upcoming',
+    unscheduled: 'No date yet',
+  };
+  const bookingPriorityKindLabel: Record<BookingPriorityItem['kind'], string> = {
+    flight: 'Flight',
+    lodging: 'Lodging',
+    activity: 'Activity',
+    carRental: 'Car rental',
+  };
+  const bookingPriorityUrgencyStyle: Record<BookingPriorityUrgency, any> = {
+    overdue: styles.dangerButtonText ?? styles.helperText,
+    soon: styles.headerText,
+    upcoming: styles.helperText,
+    unscheduled: styles.helperText,
+  };
+
+  const renderBookingPriorities = () => {
+    if (!bookingPriorities.length) return null;
+    return (
+      <View style={[styles.card, responsiveCardStyle]} testID="overview-booking-priorities-card">
+        <Text style={styles.sectionTitle}>What to book now</Text>
+        {bookingPriorities.slice(0, 6).map((item) => (
+          <View key={`${item.kind}-${item.id}`} style={[styles.row, { justifyContent: 'space-between' }]} testID={`overview-booking-priority-${item.kind}-${item.id}`}>
+            <Text style={styles.bodyText}>
+              {bookingPriorityKindLabel[item.kind]}: {item.label}
+              {item.date ? ` (${item.date})` : ''}
+            </Text>
+            <Text style={bookingPriorityUrgencyStyle[item.urgency]}>
+              {bookingPriorityUrgencyLabel[item.urgency]}
+              {item.urgency === 'overdue' && item.daysUntil !== null ? ` · ${Math.abs(item.daysUntil)}d ago` : ''}
+              {item.urgency === 'soon' && item.daysUntil !== null ? ` · ${item.daysUntil}d` : ''}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderDayBar = (activeDate: string | null) => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
       <TouchableOpacity
@@ -2824,6 +2999,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             headers={headers}
                             activity={tour}
                             destination={trip?.destination}
+                            theme={theme}
                             testID={`day-details-getyourguide-${tour.id}`}
                           />
                         </View>
@@ -2941,9 +3117,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     key={it.id}
                                     testID={`overview-checklist-toggle-${it.id}`}
                                     accessibilityRole="checkbox"
-                                    accessibilityState={{ checked }}
+                                    accessibilityState={{ checked, disabled: !featureItineraryItemKinds }}
+                                    disabled={!featureItineraryItemKinds}
                                     onPress={() => toggleChecklistItem(d.id, it)}
-                                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}
+                                    style={[
+                                      { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
+                                      !featureItineraryItemKinds && { opacity: 0.5 },
+                                    ]}
                                   >
                                     <View
                                       style={[
@@ -2974,9 +3154,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             <ReactionBar
                               detailId={d.id}
                               summary={d.reactions ?? emptyReactionSummary}
-                              canReact
+                              canReact={featureItineraryReactions}
                               onCast={castReactionForDetail}
                               onClear={clearReactionForDetail}
+                              theme={theme}
                             />
                           </View>
                         ) : null}
@@ -3093,6 +3274,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0, width: '100%' } : null]}>
+              {renderDocumentImportButton()}
               <TouchableOpacity testID="overview-print-itinerary" style={[styles.button, styles.smallButton]} onPress={handlePrintItinerary}>
                 <Text style={styles.buttonText}>Print itinerary</Text>
               </TouchableOpacity>
@@ -3101,6 +3283,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </TouchableOpacity>
             </View>
           </View>
+          {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
 
           {trip.description ? (
@@ -3114,6 +3297,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               })}
             </View>
           ) : null}
+
+          {renderTripNotes()}
+
+          {renderBookingPriorities()}
+
+          {renderItineraryPlanNotes()}
 
           {renderDayBar(null)}
 
@@ -3161,14 +3350,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={styles.buttonText}>Edit</Text>
-            </TouchableOpacity>
+            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
+              {renderDocumentImportButton()}
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setIsEditing(true)}>
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
+        {renderDocumentImporter()}
         <Text style={styles.flightTitle}>{trip.name}</Text>
         {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
         {tripAttractionsLabel ? <Text style={styles.helperText}>Must-see: {tripAttractionsLabel}</Text> : null}
@@ -3179,6 +3369,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </Text>
         ) : null}
         {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
+
+        {renderBookingPriorities()}
+
+        {renderItineraryPlanNotes()}
 
         {isEditing ? (
           <>
@@ -3210,6 +3404,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           </>
         ) : null}
+
+        {renderTripNotes()}
 
         <View style={[styles.row, { alignItems: 'flex-start' }]}>
           <Text style={styles.headerText}>Trip Dates</Text>
@@ -3686,6 +3882,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     headers={headers}
                     activity={tour}
                     destination={trip?.destination}
+                    theme={theme}
                     testID={`overview-getyourguide-${tour.id}`}
                   />
                 </View>
@@ -3746,7 +3943,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       ) : null}
       {trip && !aiItineraryPending && aiItineraryFailedMessage ? (
         <View style={[styles.card, { borderColor: '#fecaca', borderWidth: 1, marginBottom: 10, paddingVertical: 8 }]}>
-          <Text style={[styles.helperText, { color: '#7f1d1d' }]}>
+          <Text
+            style={[styles.helperText, { color: theme.colors.error }]}
+          >
             AI itinerary generation failed: {aiItineraryFailedMessage}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
@@ -3873,6 +4072,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           visible
           onSelect={handlePopoverSelect}
           onClose={() => setAddPopoverOpen(false)}
+          theme={theme}
+          hiddenKinds={featureItineraryItemKinds ? undefined : ['place', 'note', 'checklist']}
         />
       ) : null}
       {activeAddDialog === 'place' ? (
@@ -3885,6 +4086,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           selectedLocationNames={locationNames}
           onSubmit={handleAddPlace}
           onCancel={closeAllAddDialogs}
+          theme={theme}
         />
       ) : null}
       {activeAddDialog === 'note' ? (
@@ -3893,6 +4095,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           defaultDay={addPopoverDay ?? 1}
           onSubmit={handleAddNote}
           onCancel={closeAllAddDialogs}
+          theme={theme}
         />
       ) : null}
       {activeAddDialog === 'checklist' ? (
@@ -3901,6 +4104,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           defaultDay={addPopoverDay ?? 1}
           onSubmit={handleAddChecklist}
           onCancel={closeAllAddDialogs}
+          theme={theme}
         />
       ) : null}
       {featureStandardizedItemDialogs ? renderSelectedItemDialogs() : null}

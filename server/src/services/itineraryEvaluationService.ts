@@ -51,6 +51,15 @@ export const evaluateItineraryBaseline = (input: {
   stageLatenciesMs?: number[];
   transferMinutesByDay?: Map<number, number>;
   groupCohesionScore?: number | null;
+  // Evidence-backed inputs from itineraryAnnotationService.ts's buildAnnotatedItinerary — when
+  // supplied, unsupportedFactRate and scheduleWindowViolations become real, evidence-backed
+  // numbers instead of permanently-null placeholders (see
+  // docs/implementation_plans/itinerary-narrative-depth-and-validation.md's hybrid-generation
+  // recommendation: deterministic validation, not the LLM, should be the source of these facts).
+  // Omit either field (rather than passing 0) when the annotation stage didn't run at all — 0
+  // asserts "measured, zero found," which is a different claim from "not measured."
+  evidenceCoverage?: number | null;
+  scheduleWindowViolations?: number | null;
 }): ItineraryBaselineMetrics => {
   const names = input.activities.map((activity) => normalize(activity.name)).filter(Boolean);
   const uniqueNames = new Set(names);
@@ -84,9 +93,13 @@ export const evaluateItineraryBaseline = (input: {
 
   const unavailableReasons = [
     'Hard constraints are not yet represented as machine-checkable activity requirements.',
-    'Schedule-window metrics require per-item opening hours/reservation metadata.',
     'Arrival/departure feasibility requires booked/local-time travel constraints.',
-    'Unsupported-fact scoring requires evidence provenance.',
+    ...(input.scheduleWindowViolations == null
+      ? ['Schedule-window metrics require per-item opening hours/reservation metadata.']
+      : []),
+    ...(input.evidenceCoverage == null
+      ? ['Unsupported-fact scoring requires evidence provenance.']
+      : []),
   ];
 
   return {
@@ -97,9 +110,9 @@ export const evaluateItineraryBaseline = (input: {
     freeOrLowCostShare: explicitCosts.length ? freeCount / explicitCosts.length : null,
     hardConstraintViolations: null,
     estimatedTravelMinutesPerActivityDay,
-    scheduleWindowViolations: null,
+    scheduleWindowViolations: input.scheduleWindowViolations ?? null,
     arrivalDepartureFeasible: null,
-    unsupportedFactRate: null,
+    unsupportedFactRate: input.evidenceCoverage == null ? null : Math.max(0, 1 - input.evidenceCoverage),
     llmCalls: latencies.length,
     ...input.tokenUsage,
     latencyP50Ms: percentile(0.5), latencyP95Ms: percentile(0.95),

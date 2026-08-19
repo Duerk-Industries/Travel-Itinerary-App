@@ -6,6 +6,8 @@ import {
   enforceMuseumHalfDayClear,
   looksLikeSearchableAttractionName,
   extractAttractionSearchPhrase,
+  sanitizeActivityText,
+  enforceGeographicActivityPlausibility,
   rescopeDayTripCarRental,
   getNotableHolidaysInRange,
   buildHolidayAwarenessNote,
@@ -437,6 +439,110 @@ describe('extractAttractionSearchPhrase — builds a tight Wikipedia search quer
     expect(
       extractAttractionSearchPhrase('National September 11 Memorial & Museum', 'New York City')
     ).toBe('National September 11 Memorial');
+  });
+});
+
+describe('sanitizeActivityText — rejects listicle/roundup article titles as activities', () => {
+  // Regression case: a real La Fortuna itinerary showed "5 Things to do in La Fortuna" as a
+  // 1.5h "activity" with no link to whatever article it came from — an article title is not a
+  // visitable place, and the itinerary doesn't even offer the page it's summarizing.
+  test('replaces a numbered listicle title with a specific fallback', () => {
+    const result = sanitizeActivityText('5 Things to Do in La Fortuna', { base: 'La Fortuna', activityCode: 'O' });
+    expect(result.text.toLowerCase()).not.toContain('things to do');
+    expect(result.text).toContain('La Fortuna');
+  });
+
+  test.each([
+    ['10 Best Restaurants in Oslo', 'Oslo'],
+    ['Top 10 Attractions in Mexico City', 'Mexico City'],
+    ['Best places to visit in Puebla', 'Puebla'],
+    ['What to do in Monteverde', 'Monteverde'],
+    ['How to spend a day in Manuel Antonio', 'Manuel Antonio'],
+    ['Ultimate guide to Arenal Volcano', 'Arenal Volcano'],
+  ])('treats "%s" as generic filler, not a specific activity', (text, base) => {
+    const result = sanitizeActivityText(text, { base, activityCode: 'O' });
+    expect(result.text).not.toBe(text);
+  });
+
+  test('leaves a genuinely specific activity name untouched', () => {
+    const result = sanitizeActivityText('La Fortuna Waterfall', { base: 'La Fortuna', activityCode: 'O' });
+    expect(result.text).toBe('La Fortuna Waterfall');
+  });
+});
+
+describe('enforceGeographicActivityPlausibility', () => {
+  // Regression cases: real generated itineraries scheduled "Surf Lesson" in Monteverde (a Costa
+  // Rican cloud-forest mountain town nowhere near the coast) and "Hot Springs" in Manuel Antonio
+  // (a Pacific beach town with no geothermal activity) — a plausible destination paired with an
+  // activity type that place doesn't actually have.
+  const metadata = (name: string, description: string | null, opts: { catalogSourced?: boolean } = {}) => [
+    name.toLowerCase(),
+    {
+      id: opts.catalogSourced ? `catalog:${name}` : `db:${name}`,
+      destinationKey: 'monteverde', destinationDisplayName: 'Monteverde', name,
+      activityType: 'Outdoor Activity' as const, estimatedDurationMinutes: 120, durationSource: 'heuristic' as const,
+      requiresPreOrderTickets: false, preOrderNotes: null, description, descriptionSource: description ? 'wikipedia' as const : null,
+      updatedAt: '2026-01-01T00:00:00Z',
+    },
+  ] as const;
+
+  test('replaces an uncatalogued, uncorroborated coastal activity in a landlocked/mountain destination', () => {
+    const itinerary = {
+      dy: [{ d: 1, dt: '2026-07-01', b: 'Monteverde', it: [['D', 'O', 'Surf Lesson']], me: [], sl: "Lodging at 'Monteverde'", ln: [] }],
+    } as any;
+    const durationMetadataByName = new Map([metadata('Surf Lesson', null)]);
+
+    enforceGeographicActivityPlausibility(itinerary, {}, durationMetadataByName);
+
+    expect(itinerary.dy[0].it[0][2]).not.toMatch(/surf/i);
+  });
+
+  test('replaces the same activity even when a description was fetched but never actually corroborates it', () => {
+    const itinerary = {
+      dy: [{ d: 1, dt: '2026-07-01', b: 'Manuel Antonio', it: [['D', 'O', 'Hot Springs']], me: [], sl: "Lodging at 'Manuel Antonio'", ln: [] }],
+    } as any;
+    const durationMetadataByName = new Map([
+      metadata('Hot Springs', 'Manuel Antonio is a Pacific beach town known for its national park and rainforest-meets-ocean coastline.'),
+    ]);
+
+    enforceGeographicActivityPlausibility(itinerary, {}, durationMetadataByName);
+
+    expect(itinerary.dy[0].it[0][2]).not.toBe('Hot Springs');
+  });
+
+  test('keeps the activity when its description genuinely corroborates the feature', () => {
+    const itinerary = {
+      dy: [{ d: 1, dt: '2026-07-01', b: 'Tamarindo', it: [['D', 'O', 'Surf Lesson']], me: [], sl: "Lodging at 'Tamarindo'", ln: [] }],
+    } as any;
+    const durationMetadataByName = new Map([
+      metadata('Surf Lesson', 'Tamarindo is a popular surf town on the Pacific coast of Costa Rica, known for its beach breaks.'),
+    ]);
+
+    enforceGeographicActivityPlausibility(itinerary, {}, durationMetadataByName);
+
+    expect(itinerary.dy[0].it[0][2]).toBe('Surf Lesson');
+  });
+
+  test('keeps the activity when it is a real, verified entry in the destination catalog', () => {
+    const itinerary = {
+      dy: [{ d: 1, dt: '2026-07-01', b: 'Monteverde', it: [['D', 'O', 'Surf Lesson']], me: [], sl: "Lodging at 'Monteverde'", ln: [] }],
+    } as any;
+    const shortlist = { Monteverde: [entry('Surf Lesson', ['adventure'])] };
+    const durationMetadataByName = new Map([metadata('Surf Lesson', null, { catalogSourced: true })]);
+
+    enforceGeographicActivityPlausibility(itinerary, shortlist, durationMetadataByName);
+
+    expect(itinerary.dy[0].it[0][2]).toBe('Surf Lesson');
+  });
+
+  test('leaves ordinary activities with no geographic risk pattern untouched', () => {
+    const itinerary = {
+      dy: [{ d: 1, dt: '2026-07-01', b: 'Monteverde', it: [['D', 'O', 'Cloud Forest Canopy Tour']], me: [], sl: "Lodging at 'Monteverde'", ln: [] }],
+    } as any;
+
+    enforceGeographicActivityPlausibility(itinerary, {}, new Map());
+
+    expect(itinerary.dy[0].it[0][2]).toBe('Cloud Forest Canopy Tour');
   });
 });
 

@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parseInstructionMarkdown, type ItineraryInstructionPhase } from '../src/services/itineraryInstructionService';
+import { enforceDayTripBaseCityConsistency } from '../src/services/itineraryPromptPlanService';
 
 // Parses the same .md files itineraryInstructionService.ts actually loads at runtime (the
 // prompts/prompts/*.json siblings were an unused, stale duplicate of this content and were
@@ -13,6 +14,20 @@ const readPrompt = (phase: ItineraryInstructionPhase, fileName: string): { sys: 
 };
 
 describe('itinerary prompt specificity guardrails', () => {
+  it('requests route rationale and uses only appropriately trusted activity-block facts', () => {
+    const p1 = readPrompt('p1', 'p1_route.md');
+    const p2 = readPrompt('p2', 'p2_days.md');
+    const p3 = readPrompt('p3', 'p3_validate.md');
+
+    expect(p1.usr).toContain('route rationale rt');
+    expect(p1.usr).toContain('organizing thesis');
+    expect(p1.usr).toContain('one concise reason this area/base fits the route');
+    expect(p2.usr).toContain('ACTIVITY BLOCKS');
+    expect(p2.usr).toContain('Never treat source="llm_draft" as verified operational evidence');
+    expect(p3.usr).toContain('A verified closed day is a hard conflict and must be repaired');
+    expect(p3.usr).toContain('Never promote source="llm_draft" into verified evidence');
+  });
+
   it('enforces destination-specific activities and no generic events in p2/p3', () => {
     const p2 = readPrompt('p2', 'p2_days.md');
     const p3 = readPrompt('p3', 'p3_validate.md');
@@ -38,6 +53,23 @@ describe('itinerary prompt specificity guardrails', () => {
     expect(p3.usr.toLowerCase()).toContain('norway house');
   });
 
+  it('warns against activity types that are geographically infeasible at the assigned location', () => {
+    // Regression guard: real generations scheduled "Surf Lesson" in Monteverde (a Costa Rican
+    // cloud-forest mountain town with no coast) and "Hot Springs" in Manuel Antonio (a Pacific
+    // beach town with no geothermal activity) — a plausible place paired with an activity type
+    // it doesn't actually support. Both stages must instruct against this, on top of the
+    // server-side enforceGeographicActivityPlausibility check that catches what the model misses.
+    const p2 = readPrompt('p2', 'p2_days.md');
+    const p3 = readPrompt('p3', 'p3_validate.md');
+
+    expect(p2.usr).toContain('Activity-type feasibility');
+    expect(p2.usr.toLowerCase()).toContain('monteverde');
+    expect(p2.usr.toLowerCase()).toContain('manuel antonio');
+    expect(p3.usr).toContain('Activity-type feasibility');
+    expect(p3.usr.toLowerCase()).toContain('monteverde');
+    expect(p3.usr.toLowerCase()).toContain('manuel antonio');
+  });
+
   it('forbids arrival framing on any day other than the actual check-in day', () => {
     // Regression guard: a real 7-day, single-base Oslo trip had "Arrive in Oslo and
     // settle into the city rhythm" generated on Day 3 — well after the traveler had
@@ -55,13 +87,42 @@ describe('itinerary prompt specificity guardrails', () => {
     // Regression guard: the same trip scheduled a Lillehammer day trip (a ~180km,
     // multi-hour round trip) on the same day as separate Oslo attractions (Akershus
     // Fortress, the Botanical Garden) — physically impossible in one day.
+    //
+    // p2's generation-time nudge (below) is a preventive hint, not the enforcement mechanism —
+    // the model is not trusted to police its own itinerary for this. p3_validate.md previously
+    // also asked the LLM to repair the conflict at validation time; that instruction was removed
+    // in favor of enforceDayTripBaseCityConsistency, a deterministic, catalog-grounded repair
+    // pass (see docs/implementation_plans/itinerary-narrative-depth-and-validation.md's
+    // hybrid-generation section on why letting a model "validate" its own hallucination is the
+    // exact failure mode to avoid). This test now guards both halves: the surviving generation
+    // hint, and that the deterministic repair actually removes the conflicting item.
     const p2 = readPrompt('p2', 'p2_days.md');
-    const p3 = readPrompt('p3', 'p3_validate.md');
-
     expect(p2.usr).toContain('day trip or excursion away from the base city');
     expect(p2.usr.toLowerCase()).toContain('lillehammer');
-    expect(p3.usr).toContain('Day-trip/base-city overlap');
-    expect(p3.usr.toLowerCase()).toContain('lillehammer');
+
+    const catalogEntry = {
+      id: 'cat-oslo-akershus', destinationKey: 'oslo norway', destinationDisplayName: 'Oslo',
+      name: 'Akershus Fortress', rank: 1, activityType: 'Sight' as const, interestTags: ['culture' as const],
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    };
+    const itinerary = {
+      dy: [{
+        d: 1, dt: '2026-09-02', b: 'Oslo, Norway',
+        it: [['M', 'A', 'Day trip toward Lillehammer'], ['D', 'A', 'Akershus Fortress']],
+      }],
+    };
+    const route = {
+      eh: 'OSL', xh: 'OSL',
+      b: [{ l: 'Oslo, Norway', ci: '2026-09-01', co: '2026-09-05', dn: ['Lillehammer'] }],
+      x: [], rc: null, w: {}, a: [],
+    };
+    const result = enforceDayTripBaseCityConsistency(
+      itinerary as any,
+      route as any,
+      { 'Oslo, Norway': [catalogEntry] }
+    );
+    expect(result.itinerary.dy[0].it).toEqual([['M', 'A', 'Day trip toward Lillehammer']]);
+    expect(result.conflicts).toHaveLength(1);
   });
 
   it('requires outdoor/photography items to respect the real daylight window when provided', () => {

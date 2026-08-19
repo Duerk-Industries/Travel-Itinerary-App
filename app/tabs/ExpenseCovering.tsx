@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
+import type { AppTheme } from '../theme/theme';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -22,6 +23,7 @@ interface ExpenseCoveringProps {
   payerName: (id: string) => string;
   saveCoveredBy: () => Promise<void>;
   styles: Record<string, any>;
+  theme?: AppTheme;
 }
 
 const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
@@ -32,7 +34,9 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
   formatMemberName,
   saveCoveredBy,
   styles,
+  theme,
 }) => {
+  const textColor = theme?.colors.text ?? styles.cellText?.color;
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Expense Covering</Text>
@@ -47,15 +51,21 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
             .map((coveringMember) => ({ label: formatMemberName(coveringMember), value: coveringMember.id })),
         ];
         return (
-        <View key={`cover-for-${member.id}`} style={styles.row} testID={`covering-row-${member.id}`}>
-          <Text style={{width: 150}}>{formatMemberName(member)} is covered by:</Text>
+        <View
+          key={`cover-for-${member.id}`}
+          style={[styles.row, { alignItems: 'flex-start' }]}
+          testID={`covering-row-${member.id}`}
+        >
+          <Text style={[styles.cellText, textColor ? { color: textColor } : null, { flex: 1, minWidth: 0, paddingTop: 10 }]}>
+            {formatMemberName(member)} is covered by:
+          </Text>
           <SelectField
             styles={styles}
             value={coveredBy[member.id] ?? ''}
             options={options}
             placeholder="No one"
             title={`${formatMemberName(member)} covered by`}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 150 }}
             onChange={(value) => {
               if (!value) {
                 setCoveredBy((previous) => {

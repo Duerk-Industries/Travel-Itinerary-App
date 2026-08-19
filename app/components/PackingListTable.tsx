@@ -3,7 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, use
 import HorizontalTableScroll from './HorizontalTableScroll';
 import PackingListMatrix from './PackingListMatrix';
 import SelectField, { type SelectFieldOption } from './SelectField';
-import { getAppTheme } from '../theme/theme';
+import { getAppTheme, type AppTheme } from '../theme/theme';
 import { normalizePackingLabel } from '../utils/packingListNormalize';
 
 export type PackingItem = {
@@ -29,6 +29,8 @@ type Props = {
   title?: string;
   allowPrint?: boolean;
   printTitle?: string;
+  /** Reuse the app's persisted appearance choice when embedded in a screen. */
+  theme?: AppTheme;
 };
 
 type PresetOption = {
@@ -130,9 +132,9 @@ export const buildPrintablePackingListHtml = (
 </html>`;
 };
 
-const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, variant, title, allowPrint = false, printTitle }) => {
+const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, variant, title, allowPrint = false, printTitle, theme: providedTheme }) => {
   const colorScheme = useColorScheme();
-  const theme = getAppTheme('auto', colorScheme);
+  const theme = providedTheme ?? getAppTheme('auto', colorScheme);
   const [items, setItems] = useState<PackingItem[]>([]);
   const [travelers, setTravelers] = useState<Traveler[]>([]);
   const [draftItems, setDraftItems] = useState<PackingItem[]>([]);

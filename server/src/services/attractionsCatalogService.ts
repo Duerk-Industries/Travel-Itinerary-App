@@ -724,6 +724,10 @@ const readCatalogCsv = async (): Promise<AttractionCatalogEntry[]> => {
 
 const writeCatalogCsv = async (rows: AttractionCatalogEntry[]): Promise<void> => {
   const csv = stringifyAttractionCatalogCsv(rows);
+  await writeCatalogCsvText(csv);
+};
+
+const writeCatalogCsvText = async (csv: string): Promise<void> => {
   const useLocal = isLocalEnv() && !process.env.K_SERVICE;
   if (useLocal) {
     const filePath = resolveCsvFilePath();
@@ -743,11 +747,18 @@ const writeCatalogCsv = async (rows: AttractionCatalogEntry[]): Promise<void> =>
   });
 };
 
-const mergeCatalogRows = (existing: AttractionCatalogEntry[], incoming: AttractionCatalogEntry[]): AttractionCatalogEntry[] => {
-  const map = new Map<string, AttractionCatalogEntry>();
-  existing.forEach((row) => map.set(row.id, row));
-  incoming.forEach((row) => map.set(row.id, row));
-  return Array.from(map.values());
+/**
+ * Re-publish the bundled seed catalog to the configured mirror. This is an
+ * admin-only maintenance operation; it is intentionally not called from
+ * itinerary request paths.
+ */
+export const exportAttractionsCatalogCsvMirror = async (): Promise<{ rows: number; bytes: number; path: string }> => {
+  const filePath = resolveCsvFilePath();
+  if (!fs.existsSync(filePath)) throw new Error(`Attractions catalog CSV not found: ${filePath}`);
+  const csv = fs.readFileSync(filePath, 'utf8');
+  await writeCatalogCsvText(csv);
+  const rows = Math.max(0, csv.split(/\r?\n/).filter(Boolean).length - 1);
+  return { rows, bytes: Buffer.byteLength(csv, 'utf8'), path: resolveCsvBucketPath() };
 };
 
 const isCuratedRow = (row: AttractionCatalogEntry): boolean =>
@@ -792,62 +803,16 @@ const replaceDestinationRows = (
   return [...retained, ...incoming];
 };
 
-const catalogRowsEquivalent = (left: AttractionCatalogEntry[], right: AttractionCatalogEntry[]): boolean => {
-  if (left.length !== right.length) return false;
-  const toMap = (rows: AttractionCatalogEntry[]) =>
-    new Map(
-      rows.map((row) => [
-        row.id,
-        JSON.stringify({
-          id: row.id,
-          destinationKey: row.destinationKey,
-          destinationDisplayName: row.destinationDisplayName,
-          country: row.country ?? null,
-          stateProvince: row.stateProvince ?? null,
-          name: row.name,
-          rank: row.rank,
-          activityType: row.activityType,
-          interestTags: row.interestTags,
-          sourceUrl: row.sourceUrl ?? null,
-          sourceLabel: row.sourceLabel ?? null,
-          snippet: row.snippet ?? null,
-          sourceCount: Number(row.sourceCount) || 1,
-          budgetTier: row.budgetTier ?? 'paid',
-          sitelinks: row.sitelinks ?? null,
-          qid: row.qid ?? null,
-          lat: row.lat ?? null,
-          lon: row.lon ?? null,
-          updatedAt: row.updatedAt,
-        }),
-      ])
-    );
-  const a = toMap(left);
-  const b = toMap(right);
-  if (a.size !== b.size) return false;
-  for (const [id, payload] of a.entries()) {
-    if (b.get(id) !== payload) return false;
-  }
-  return true;
-};
-
-const persistCatalogRowsToCsv = async (rows: AttractionCatalogEntry[]): Promise<void> => {
-  if (!rows.length) return;
-  if (process.env.NODE_ENV === 'test') return;
-  const existing = await readCatalogCsv();
-  const merged = mergeCatalogRows(existing, rows);
-  if (catalogRowsEquivalent(existing, merged)) return;
-  await writeCatalogCsv(merged);
-};
-
 const persistDestinationCatalogRowsToCsv = async (
   destinationKey: string,
   rows: AttractionCatalogEntry[]
 ): Promise<void> => {
   if (!rows.length) return;
-  if (process.env.NODE_ENV === 'test') return;
+  // Cloud Run never reads the mirror after startup sync is disabled. Avoid
+  // downloading and diffing the full global catalog on a request path.
+  if (!(isLocalEnv() && !process.env.K_SERVICE) || process.env.NODE_ENV === 'test') return;
   const existing = await readCatalogCsv();
   const replaced = replaceDestinationRows(existing, destinationKey, rows);
-  if (catalogRowsEquivalent(existing, replaced)) return;
   await writeCatalogCsv(replaced);
 };
 
@@ -1016,13 +981,11 @@ const ensureDestinationCatalog = async (params: {
   const existing = fillRowsGeo(existingBase, destinationGeo);
   if (existing.length >= params.limit && !isStale(existing, params.refreshDays)) {
     await upsertGeoBackfilledRows(existingBase, existing);
-    await persistCatalogRowsToCsv(existing.slice(0, params.limit));
     return existing.slice(0, params.limit);
   }
   if (params.allowDiscovery === false) {
     if (existing.length) {
       await upsertGeoBackfilledRows(existingBase, existing);
-      await persistCatalogRowsToCsv(existing.slice(0, params.limit));
       return existing.slice(0, params.limit);
     }
     logInfo(`[attractions] discovery disabled for destination="${destinationDisplayName}"`);
@@ -1034,13 +997,11 @@ const ensureDestinationCatalog = async (params: {
     const current = fillRowsGeo(currentBase, destinationGeo);
     if (current.length >= params.limit && !isStale(current, params.refreshDays)) {
       await upsertGeoBackfilledRows(currentBase, current);
-      await persistCatalogRowsToCsv(current.slice(0, params.limit));
       return current.slice(0, params.limit);
     }
     if (params.allowDiscovery === false) {
       if (current.length) {
         await upsertGeoBackfilledRows(currentBase, current);
-        await persistCatalogRowsToCsv(current.slice(0, params.limit));
         return current.slice(0, params.limit);
       }
       logInfo(`[attractions] discovery disabled for destination="${destinationDisplayName}"`);

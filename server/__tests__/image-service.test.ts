@@ -6,6 +6,7 @@ import {
   getGooglePlaceImage,
   getItineraryImage,
   getUnsplashImage,
+  selectItineraryImageVariant,
 } from '../src/image-service';
 
 let mockBucket: jest.Mock;
@@ -95,12 +96,10 @@ describe('image-service', () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
-  it('retries the destination when a detailed itinerary query has no photos', async () => {
-    (axios.get as jest.Mock)
-      .mockResolvedValueOnce({ data: { results: [] } })
-      .mockResolvedValueOnce({
-        data: { results: [{ urls: { regular: 'https://images.example.com/osaka.jpg' } }] },
-      });
+  it('uses a stable destination variant query for detailed itinerary cards', async () => {
+    (axios.get as jest.Mock).mockResolvedValueOnce({
+      data: { results: [{ urls: { regular: 'https://images.example.com/osaka.jpg' } }] },
+    });
 
     const result = await getItineraryImage({
       locationName: 'Osaka',
@@ -110,7 +109,15 @@ describe('image-service', () => {
 
     expect(result).toMatchObject({ provider: 'unsplash', fallbackUsed: false });
     expect(result.url).toBe('https://images.example.com/osaka.jpg');
-    expect(axios.get).toHaveBeenCalledTimes(2);
-    expect((axios.get as jest.Mock).mock.calls[1][0]).toContain('query=Osaka');
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect((axios.get as jest.Mock).mock.calls[0][0]).toContain('query=Osaka%20');
+    expect((axios.get as jest.Mock).mock.calls[0][0]).toContain('local%20food');
+  });
+
+  it('selects one of three variants deterministically from the itinerary day', () => {
+    expect(selectItineraryImageVariant('1')).toBe('culture');
+    expect(selectItineraryImageVariant('2')).toBe('food');
+    expect(selectItineraryImageVariant('3')).toBe('outdoors');
+    expect(selectItineraryImageVariant('2026-08-12')).toBe(selectItineraryImageVariant('2026-08-12'));
   });
 });

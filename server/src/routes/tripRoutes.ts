@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
+import { randomUUID } from 'crypto';
 import { authenticate } from '../auth';
 import {
   acceptTripShareInvite,
@@ -46,6 +47,10 @@ import { sendTripInviteEmailBestEffort } from '../mailer';
 import { aggregateTripActivity } from '../services/activityFeed';
 import { assertCanUseFeature, assertUnderActiveTripLimit, getLimit, recordUsage } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
+import { manualUploadMiddleware, buildManualUploadPayloads } from '../ingestion/intake';
+import { normalizeIngestionPayload } from '../ingestion/normalization';
+import { IngestionError } from '../ingestion/shared/userFailures';
+import { importItineraryDocument, ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY } from '../services/itineraryDocumentImportService';
 import { TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
 import {
@@ -614,7 +619,7 @@ router.put('/:id/covered-by', async (req, res) => {
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const { name, groupId, description, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
+  const { name, groupId, description, notes, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
   if (!name || !groupId) {
     res.status(400).json({ error: 'name and groupId are required' });
     return;
@@ -628,6 +633,7 @@ router.post('/', async (req, res) => {
     await assertUnderActiveTripLimit(userId, role);
     const trip = await createTrip(userId, groupId, name.trim(), {
       description: typeof description === 'string' ? description.trim() || null : null,
+      notes: typeof notes === 'string' ? notes.trim() || null : null,
       destination: null,
       locationIds: normalizeLocationIds(locationIds),
       mustSeeAttractions: normalizeMustSeeAttractions(mustSeeAttractions),
@@ -657,7 +663,7 @@ router.post('/', async (req, res) => {
 router.post('/wizard', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const { name, description, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
+  const { name, description, notes, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
   if (!name || !String(name).trim()) {
     res.status(400).json({ error: 'Trip name is required' });
     return;
@@ -708,6 +714,7 @@ router.post('/wizard', async (req, res) => {
       ownerId: userId,
       tripName: String(name).trim(),
       description: typeof description === 'string' ? description.trim() || null : null,
+      notes: typeof notes === 'string' ? notes.trim() || null : null,
       destination: null,
       locationIds: normalizeLocationIds(locationIds),
       mustSeeAttractions: normalizeMustSeeAttractions(mustSeeAttractions),
@@ -790,11 +797,69 @@ router.patch('/:id/group', async (req, res) => {
   }
 });
 
+router.post('/:tripId/import-document', (req, res, next) => {
+  if (!req.is('multipart/form-data')) {
+    next();
+    return;
+  }
+  manualUploadMiddleware.single('file')(req, res, next);
+}, async (req, res) => {
+  const user = (req as any).user as TokenPayload;
+  try {
+    // Keep entitlement enforcement ahead of normalization and extraction so a denied
+    // request cannot consume provider quota.
+    await assertCanUseFeature(user.userId, ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY, user.role);
+
+    let documentText = typeof req.body?.documentText === 'string' ? req.body.documentText : '';
+    let sourceFilename = typeof req.body?.sourceFilename === 'string' ? req.body.sourceFilename.trim() : '';
+    if (req.file) {
+      const payloads = await buildManualUploadPayloads(req, user.userId);
+      const payload = payloads[0];
+      const normalized = await normalizeIngestionPayload(randomUUID(), payload);
+      documentText = normalized.normalizedText;
+      sourceFilename = payload.originalFilename;
+    }
+    if (!documentText.trim()) {
+      res.status(400).json({ error: 'Document text or a supported file is required' });
+      return;
+    }
+    const dryRunValue = req.body?.dryRun;
+    const dryRun = dryRunValue === true || dryRunValue === 'true' || dryRunValue === '1';
+    const result = await importItineraryDocument({
+      tripId: req.params.tripId,
+      userId: user.userId,
+      documentText,
+      sourceFilename: sourceFilename || 'pasted text',
+      dryRun,
+      correlationId: req.get('x-correlation-id') || undefined,
+    });
+    res.json(result);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    if (err instanceof IngestionError) {
+      res.status(err.httpStatus).json({ error: err.message, code: err.code });
+      return;
+    }
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(/character limit/i.test(message) ? 413 : 400).json({ error: message });
+  }
+});
+
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const { description, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
-  if (description == null && locationIds == null && mustSeeAttractions == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
+  const body = req.body ?? {};
+  const { description, notes, locationIds, mustSeeAttractions, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = body;
+  const hasDescription = Object.prototype.hasOwnProperty.call(body, 'description');
+  const hasNotes = Object.prototype.hasOwnProperty.call(body, 'notes');
+  if (!hasDescription && !hasNotes && locationIds == null && mustSeeAttractions == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
   }
@@ -804,7 +869,8 @@ router.patch('/:id', async (req, res) => {
       return;
     }
     const updated = await updateTripDetails(userId, req.params.id, {
-      description: typeof description === 'string' ? description : null,
+      ...(hasDescription ? { description: typeof description === 'string' ? description : null } : {}),
+      ...(hasNotes ? { notes: typeof notes === 'string' ? notes : null } : {}),
       destination: null,
       locationIds: locationIds == null ? undefined : normalizeLocationIds(locationIds),
       mustSeeAttractions: mustSeeAttractions == null ? undefined : normalizeMustSeeAttractions(mustSeeAttractions),

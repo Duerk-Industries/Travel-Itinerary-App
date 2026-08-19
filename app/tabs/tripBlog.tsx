@@ -1,10 +1,11 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
+import BlogRichTextEditor from '../components/BlogRichTextEditor';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
 import {
@@ -22,6 +23,12 @@ import {
 // share-intent "send to" upload flow — app/utils/incomingShare.ts — so neither tab file nor
 // share-intent code duplicates upload logic).
 export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTypeFromName, SUPPORTED_MIME_TYPES };
+
+// BlogRichTextEditor emits HTML (e.g. `<p></p>`) even when the user hasn't
+// typed anything, so `.trim()` alone no longer detects an empty entry the
+// way it did for the plain TextInput this replaced. Strip tags/entities and
+// check what's left.
+const isRichTextEmpty = (html) => !String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
@@ -59,16 +66,20 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       : 'https://wander-bunnies.com';
     return `${origin.replace(/\/$/, '')}/${publicPath.replace(/^\//, '')}`;
   }, [blog?.publicPath]);
+  // A read-only view inside the app is still an authenticated traveler/follower view. It should
+  // include the complete shared blog (including linked planned activities and non-public items).
+  // Only a genuinely public blog gets the public-only projection. Keeping this distinction here
+  // also means the private/pending-consent preview cannot accidentally hide content merely because
+  // the user is not currently editing.
+  const publicPreview = !editMode && blog?.visibilityState === 'public';
   const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
-    if (editMode) return day;
+    if (!publicPreview) return day;
     return {
       ...day,
-      // The private editor response can contain traveler/follower-only items. The default
-      // preview mirrors the public endpoint and only displays public-audience content.
       items: (day.items || []).filter((item) => !item.audience || item.audience === 'public'),
       activities: [],
     };
-  }), [blog?.days, editMode]);
+  }), [blog?.days, publicPreview]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -312,8 +323,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
 
   const createTextItem = async (dayDate) => {
     if (!canEdit) return;
-    const body = newBody.trim();
-    if (!body) return;
+    const body = newBody;
+    if (isRichTextEmpty(body)) return;
     setCreating(true);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
@@ -401,7 +412,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </TouchableOpacity>
           ) : null}
         </View>
-        <Text style={{ color: mutedColor, marginBottom: 12 }}>{editMode ? 'Editing mode — changes are saved to the trip blog.' : 'Public preview — only content intended for public sharing is shown.'}</Text>
+        <Text style={{ color: mutedColor, marginBottom: 12 }}>
+          {editMode
+            ? 'Editing mode — changes are saved to the trip blog.'
+            : publicPreview
+              ? 'Public preview — only content intended for public sharing is shown.'
+              : 'Traveler/follower view — all shared trip blog content is shown.'}
+        </Text>
         {canEdit ? (
           <View style={{ marginBottom: 16, padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -469,13 +486,24 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               <View key={item.id} style={{ marginTop: 8 }}>
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
                 {canEdit ? (
-                  <TextInput
-                    multiline value={drafts[item.id] ?? item.body}
-                    editable onChangeText={(value) => setDrafts((current) => ({ ...current, [item.id]: value }))}
-                    placeholder="What happened today?" placeholderTextColor={mutedColor} style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
+                  <BlogRichTextEditor
+                    key={item.id}
+                    testID={`blog-item-editor-${item.id}`}
+                    value={drafts[item.id] ?? item.body}
+                    onChangeHTML={(html) => setDrafts((current) => ({ ...current, [item.id]: html }))}
+                    borderColor={borderColor}
+                    backgroundColor={inputColor}
+                    textColor={textColor}
                   />
                 ) : (
-                  <Text style={{ color: textColor, lineHeight: 22, paddingVertical: 8 }}>{item.body || ''}</Text>
+                  <BlogRichTextEditor
+                    key={`view-${item.id}`}
+                    testID={`blog-item-view-${item.id}`}
+                    value={item.body || ''}
+                    editable={false}
+                    backgroundColor="transparent"
+                    textColor={textColor}
+                  />
                 )}
                 {canEdit ? (
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
@@ -546,7 +574,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 </>
               );
             })()}
-            {canEdit && (day.activities || []).length > 0 ? (
+            {!publicPreview && (day.activities || []).length > 0 ? (
               <View style={{ marginTop: 14 }}>
                 <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>
                 {(day.activities || []).map((activity) => (
@@ -559,12 +587,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             ) : null}
             {canEdit && addingDay === day.localDate ? (
               <View style={{ marginTop: 10 }}>
-                <TextInput
-                  multiline autoFocus value={newBody} onChangeText={setNewBody} placeholder="Write about this day…" placeholderTextColor={mutedColor}
-                  style={{ minHeight: 90, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, textAlignVertical: 'top', color: textColor, backgroundColor: inputColor }}
+                <BlogRichTextEditor
+                  key={`new-${day.localDate}`}
+                  testID={`blog-new-note-editor-${day.localDate}`}
+                  value={newBody}
+                  onChangeHTML={setNewBody}
+                  borderColor={borderColor}
+                  backgroundColor={inputColor}
+                  textColor={textColor}
                 />
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                  <TouchableOpacity style={styles.button} disabled={creating || !newBody.trim()} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.button} disabled={creating || isRichTextEmpty(newBody)} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
                   <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => setAddingDay(null)}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
                 </View>
               </View>

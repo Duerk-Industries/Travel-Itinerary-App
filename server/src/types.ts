@@ -368,6 +368,7 @@ export interface Trip {
   groupId: string;
   name: string;
   description?: string | null;
+  notes?: string | null;
   destination?: string | null;
   locationIds?: string[];
   mustSeeAttractions?: string[];
@@ -663,6 +664,11 @@ export interface Itinerary {
   days: number;
   budget?: number | null;
   createdAt: string;
+  /** Full narrative markdown from the AI generation's render stage — day-by-day prose, "why
+   * this fits" lines, and (when itineraryAsyncService persists it) prepended per-destination
+   * narrative sections. Null for itineraries created before this field existed, or created
+   * manually rather than via AI generation. */
+  planMarkdown?: string | null;
 }
 
 export type ItineraryDetailKind = 'activity' | 'place' | 'note' | 'checklist';
@@ -750,6 +756,14 @@ export interface ItineraryGenerationMetrics {
     parseFailure: boolean;
   }>;
   evaluation?: Record<string, unknown> | null;
+  /**
+   * Result of evaluateItineraryQualityGate (itineraryQualityGateService.ts) run against the
+   * admin-pinned baseline (admin_settings key ITINERARY_QUALITY_BASELINE_METRICS), when one is
+   * configured. Null when no baseline is pinned yet — the gate is fail-open by design (see
+   * runItineraryQualityGateAgainstPinnedBaseline), so a missing baseline never blocks generation,
+   * it just means nothing was compared for this run.
+   */
+  qualityGate?: Record<string, unknown> | null;
   cacheUsage?: Record<string, unknown> | null;
   fallbackUsed?: boolean;
   /** Tokens and estimated cost saved by cache hits or Tier 1 lightweight binding. */

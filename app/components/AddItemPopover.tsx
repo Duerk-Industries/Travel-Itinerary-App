@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 
 export type AddItemKind = 'activity' | 'place' | 'note' | 'checklist';
 
@@ -7,6 +8,13 @@ export type AddItemPopoverProps = {
   visible: boolean;
   onSelect: (kind: AddItemKind) => void;
   onClose: () => void;
+  // 'place' | 'note' | 'checklist' all send a `kind` to POST /api/itineraries/details, which
+  // 403s when itinerary_item_kinds is disabled server-side ('activity' never sends a kind, so
+  // it's unaffected). Rather than let picking one of those three reach that 403 — surfaced as a
+  // "Permission Denied" popup by the global interceptor — the caller hides them from this menu
+  // entirely when the flag is off, leaving only "Add a custom activity" selectable.
+  hiddenKinds?: AddItemKind[];
+  theme?: AppTheme;
 };
 
 const OPTIONS: Array<{ kind: AddItemKind; icon: string; label: string; description: string }> = [
@@ -16,7 +24,10 @@ const OPTIONS: Array<{ kind: AddItemKind; icon: string; label: string; descripti
   { kind: 'activity', icon: '🗓️', label: 'Add a custom activity', description: 'Time + activity + cost' },
 ];
 
-const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onClose }) => (
+const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onClose, hiddenKinds, theme }) => {
+  const visibleOptions = hiddenKinds?.length ? OPTIONS.filter((opt) => !hiddenKinds.includes(opt.kind)) : OPTIONS;
+  const colors = theme?.colors;
+  return (
   <Modal
     visible={visible}
     transparent
@@ -26,13 +37,13 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
   >
     <Pressable style={styles.overlay} onPress={onClose} testID="add-item-popover-overlay">
       <Pressable
-        style={styles.menu}
+        style={[styles.menu, colors && { backgroundColor: colors.surface }]}
         onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
         accessibilityRole="menu"
         testID="add-item-popover"
       >
-        <Text style={styles.title}>Add to itinerary</Text>
-        {OPTIONS.map((opt) => (
+        <Text style={[styles.title, colors && { color: colors.text }]}>Add to itinerary</Text>
+        {visibleOptions.map((opt) => (
           <Pressable
             key={opt.kind}
             testID={`add-item-option-${opt.kind}`}
@@ -43,8 +54,8 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
           >
             <Text style={styles.optionIcon}>{opt.icon}</Text>
             <View style={styles.optionTextWrap}>
-              <Text style={styles.optionLabel}>{opt.label}</Text>
-              <Text style={styles.optionDescription}>{opt.description}</Text>
+              <Text style={[styles.optionLabel, colors && { color: colors.text }]}>{opt.label}</Text>
+              <Text style={[styles.optionDescription, colors && { color: colors.textMuted }]}>{opt.description}</Text>
             </View>
           </Pressable>
         ))}
@@ -53,12 +64,13 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
           style={({ pressed }: { pressed: boolean }) => [styles.cancel, pressed && styles.cancelPressed]}
           onPress={onClose}
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={[styles.cancelText, colors && { color: colors.textMuted }]}>Cancel</Text>
         </Pressable>
       </Pressable>
     </Pressable>
   </Modal>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   overlay: {

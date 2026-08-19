@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { AppTheme } from '../theme/theme';
 
 export type NoteSubmit = {
   day: number;
@@ -12,12 +13,14 @@ export type NoteInputDialogProps = {
   defaultDay?: number;
   onSubmit: (payload: NoteSubmit) => void;
   onCancel: () => void;
+  theme?: AppTheme;
 };
 
-const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, onSubmit, onCancel }) => {
+const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, onSubmit, onCancel, theme }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
+  const colors = theme?.colors;
 
   const handleSubmit = () => {
     const t = title.trim();
@@ -48,26 +51,28 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
       <Pressable style={styles.overlay} onPress={handleCancel} testID="note-dialog-overlay">
         <Pressable
-          style={styles.dialog}
+          style={[styles.dialog, colors && { backgroundColor: colors.surface }]}
           onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
           accessibilityRole={'dialog' as any}
           accessibilityLabel="Add a note"
           testID="note-dialog"
         >
-          <Text style={styles.title}>Add a note</Text>
-          <Text style={styles.label}>Title</Text>
+          <Text style={[styles.title, colors && { color: colors.text }]}>Add a note</Text>
+          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Title</Text>
           <TextInput
             testID="note-dialog-title"
-            style={styles.input}
+            style={[styles.input, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            placeholderTextColor={colors?.textMuted}
             value={title}
             onChangeText={setTitle}
             placeholder="Short label"
             autoFocus
           />
-          <Text style={styles.label}>Body</Text>
+          <Text style={[styles.label, colors && { color: colors.textMuted }]}>Body</Text>
           <TextInput
             testID="note-dialog-body"
-            style={[styles.input, styles.textarea]}
+            style={[styles.input, styles.textarea, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
+            placeholderTextColor={colors?.textMuted}
             value={body}
             onChangeText={setBody}
             placeholder="Free-form note text. Line breaks are preserved."
@@ -77,7 +82,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable testID="note-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
-              <Text style={styles.btnGhostText}>Cancel</Text>
+              <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
             </Pressable>
             <Pressable testID="note-dialog-submit" style={styles.btnPrimary} onPress={handleSubmit}>
               <Text style={styles.btnPrimaryText}>Add note</Text>

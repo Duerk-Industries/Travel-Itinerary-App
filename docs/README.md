@@ -21,10 +21,15 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Operations and Constraints FAQ](faq/operations-and-constraints.md)
 - [Voting on Items FAQ](faq/voting-on-items.md)
 
+## App Store / App Review
+
+- [App Store Review Response Packet](app-store-review-packet.md) — answers to Apple's App Review Information requirements (screen recording, tested devices, app description, setup instructions, external services, regional differences, regulated-industry/third-party material); update before every submission.
+
 ## Deployment, Operations, and Infrastructure
 
 - [Deployment Runbook](../DEPLOYMENT-GCP-FIREBASE.md)
 - [Production Deployment Guide](production-deployment-guide.md)
+- [Cloud Run OOM (SIGABRT) Remediation Plan](implementation_plans/cloud-run-oom-remediation.md)
 - [Admin Notes](admin.md)
 - [Feature Flags](feature-flags.md)
 - [Tiers](tiers.md)
@@ -67,6 +72,9 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 
 - [Implementation Plan: Entitlements](implementation-plan-entitlements.md)
 - [Implementation Plan: UX Remediation](implementation_plans/implementation-plan-ux-remediation.md)
+- [Implementation Plan: Wanderlog Competitive Analysis](implementation_plans/implementation-plan-wanderlog-competitive-analysis.md)
+- [Implementation Plan: Itinerary Narrative Depth & Validation](implementation_plans/itinerary-narrative-depth-and-validation.md)
+- [Implementation Plan: Itinerary Document Import](implementation_plans/itinerary-document-import.md)
 - [GetYourGuide Phase 0 Partner Contract](getyourguide-phase-0-contract.md)
 - [GetYourGuide Phase 2 Server Descriptor](getyourguide-phase-2.md)
 - [GetYourGuide Phase 3 Client CTA](getyourguide-phase-3.md)

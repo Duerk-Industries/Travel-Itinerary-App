@@ -18,7 +18,13 @@ export const manualUploadMiddleware = multer({
 });
 
 const ensureFiles = (req: Request): Express.Multer.File[] => {
-  const files = ((req.files as Express.Multer.File[]) ?? []) as Express.Multer.File[];
+  const groupedFiles = req.files && !Array.isArray(req.files)
+    ? Object.values(req.files).flat()
+    : [];
+  const files = [
+    ...(Array.isArray(req.files) ? req.files : groupedFiles),
+    ...(req.file ? [req.file] : []),
+  ];
   if (!files.length) {
     throw new IngestionError('unsupported_file_type', 400, undefined, 'At least one file is required.');
   }

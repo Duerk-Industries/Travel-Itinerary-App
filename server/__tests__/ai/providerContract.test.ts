@@ -157,6 +157,7 @@ const runProviderContract = (name: string, getProvider: () => AiChatProvider) =>
           }),
           expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'test-anthropic-key' }) })
         );
+        expect(mockedAxios.post.mock.calls[0]?.[1]).not.toHaveProperty('temperature');
         return;
       }
       if (name === 'geminiProvider') {

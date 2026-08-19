@@ -192,16 +192,16 @@ const AuthForm: React.FC<AuthFormProps> = ({
     ) : null}
 
     <View style={{ marginTop: 24, alignItems: 'center', opacity: 0.7 }}>
-      <Text style={{ fontSize: 12, color: '#6B7280', textAlign: 'center' }}>
+      <Text style={[styles.helperText, { fontSize: 12, textAlign: 'center' }]}>
         By continuing, you agree to our
       </Text>
       <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
         <TouchableOpacity onPress={() => openLegal('terms.html')}>
-          <Text style={{ fontSize: 12, color: '#3B82F6', fontWeight: '600', textDecorationLine: 'underline' }}>Terms of Service</Text>
+          <Text style={[styles.linkText, { fontSize: 12, fontWeight: '600' }]}>Terms of Service</Text>
         </TouchableOpacity>
-        <Text style={{ fontSize: 12, color: '#6B7280' }}>and</Text>
+        <Text style={[styles.helperText, { fontSize: 12 }]}>and</Text>
         <TouchableOpacity onPress={() => openLegal('privacy.html')}>
-          <Text style={{ fontSize: 12, color: '#3B82F6', fontWeight: '600', textDecorationLine: 'underline' }}>Privacy Policy</Text>
+          <Text style={[styles.linkText, { fontSize: 12, fontWeight: '600' }]}>Privacy Policy</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -8,6 +8,7 @@ import {
   fetchUnsplashImageForItinerary,
   fetchUnsplashImageForLocation,
 } from './apis/unsplashCallers';
+import type { ItineraryImageVariant } from './apis/unsplashCallers';
 import { logError, logInfo } from './logger';
 
 const bucketName = process.env.LOCATION_BUCKET || 'duerk-travel-itinerary-app-location-data';
@@ -22,7 +23,7 @@ let imageCacheDisableLogged = false;
 
 const gcsSignedUrlCache = createTtlCache<string | null>({
   defaultTtlMs: SIGNED_URL_TTL_MS,
-  metricName: 'image.gcs_bytes',
+  metricName: 'image.gcs_signed_url',
 });
 
 export const clearImageServiceCachesForTests = (): void => {
@@ -63,6 +64,41 @@ const tokenize = (value: string): string[] =>
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter((token) => token && !stopwords.has(token));
+
+const ITINERARY_IMAGE_VARIANTS: readonly ItineraryImageVariant[] = ['culture', 'food', 'outdoors'];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const positiveModulo = (value: number, divisor: number): number => ((value % divisor) + divisor) % divisor;
+
+const stableStringHash = (value: string): number => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+};
+
+const getStableDayIndex = (day?: string): number => {
+  const normalized = String(day ?? '').trim();
+  if (!normalized) return 0;
+
+  const numericDay = Number(normalized);
+  if (Number.isInteger(numericDay) && numericDay > 0) return numericDay - 1;
+
+  // ISO itinerary dates are interpreted as UTC calendar days so the variant
+  // does not change with the Cloud Run instance's local timezone.
+  const isoDate = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoDate) {
+    const timestamp = Date.UTC(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]));
+    if (Number.isFinite(timestamp)) return Math.floor(timestamp / DAY_MS);
+  }
+
+  return stableStringHash(normalized);
+};
+
+export const selectItineraryImageVariant = (day?: string): ItineraryImageVariant =>
+  ITINERARY_IMAGE_VARIANTS[positiveModulo(getStableDayIndex(day), ITINERARY_IMAGE_VARIANTS.length)];
 
 export const computePlaceMatchLikelihood = (query: string, candidate: string): number => {
   const queryTokens = new Set(tokenize(query));
@@ -247,22 +283,20 @@ export async function getItineraryImage(params: {
   contextText?: string;
 }): Promise<{ url: string; cached: boolean; provider: 'unsplash' | 'placeholder'; fallbackUsed: boolean }> {
   void params.placeId;
-  const dayKey = String(params.day ?? '').trim() || 'day';
-  const cacheSuffix = sanitizeFilename(`${params.locationName}-${dayKey}`);
-  const queryText = String(params.contextText ?? '').trim();
+  void params.contextText;
+  const variant = selectItineraryImageVariant(params.day);
 
   try {
+    // Keep a small, deterministic set of destination variants. The day maps
+    // to a variant rather than to an unbounded activity query, so multi-day
+    // trips get visual variety without multiplying cache/API keys forever.
+    const cacheSuffix = `${sanitizeFilename(params.locationName || 'unknown')}-${variant}`;
     const unsplashPath = `unsplash/${cacheSuffix}.jpg`;
     const accessKey = getUnsplashAccessKeyOrThrow();
     const unsplash = await fetchAndCache(unsplashPath, async () => {
       const destinationQuery = String(params.locationName ?? '').trim();
-      const queries = queryText && queryText.toLowerCase() !== destinationQuery.toLowerCase()
-        ? [queryText, destinationQuery]
-        : [destinationQuery];
-      for (const query of queries) {
-        const imageUrl = await fetchUnsplashImageForItinerary(accessKey, query);
-        if (imageUrl) return imageUrl;
-      }
+      const imageUrl = await fetchUnsplashImageForItinerary(accessKey, destinationQuery, variant);
+      if (imageUrl) return imageUrl;
       logInfo(`[unsplash] no itinerary photo found for location="${destinationQuery || 'unknown'}"; using placeholder`);
       return '';
     });

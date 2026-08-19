@@ -52,6 +52,9 @@ flags:
   flight_parser:
     enabled: true
     description: "Enable LLM-based flight parser from text/emails"
+  itinerary_document_import:
+    enabled: true
+    description: "Allow Premium and Pro users to preview and import itinerary documents"
   itinerary_reactions:
     enabled: true
     description: "Enable up/down vote reactions on itinerary detail rows"
@@ -98,7 +101,7 @@ flags:
     enabled: true
     description: "Enable preset, provenance-aware packing lists v2"
   trip_day_map:
-    enabled: true
+    enabled: false
     description: "Show a static multi-pin map (flights/lodging/activities/car rentals) on the Overview day-detail view. Off by default until a GOOGLE_STATIC_MAPS_API_KEY / GOOGLE_MAPS_API_KEY is provisioned; see docs/implementation_plans/implementation-plan-trip-day-map.md"
   trip_blog:
     enabled: true

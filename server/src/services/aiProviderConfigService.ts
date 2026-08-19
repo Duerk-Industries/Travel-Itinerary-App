@@ -21,11 +21,13 @@ const cache = new Map<string, { value: ActiveAiProviderConfig; expiresAt: number
 const FEATURE_PROVIDER_ENV_KEYS: Record<string, string> = {
   itinerary_generation: 'AI_ITINERARY_PROVIDER',
   ingestion_llm_extract: 'AI_INGESTION_LLM_PROVIDER',
+  itinerary_document_import: 'AI_INGESTION_LLM_PROVIDER',
 };
 
 const FEATURE_MODEL_ENV_KEYS: Record<string, string> = {
   itinerary_generation: 'AI_ITINERARY_MODEL',
   ingestion_llm_extract: 'AI_INGESTION_LLM_MODEL',
+  itinerary_document_import: 'AI_INGESTION_LLM_MODEL',
 };
 
 const PROVIDER_DEFAULT_MODELS: Record<string, string> = {

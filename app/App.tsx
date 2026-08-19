@@ -128,6 +128,7 @@ import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
 import ChatOverlay from './components/ChatOverlay';
 import HorizontalTableScroll from './components/HorizontalTableScroll';
+import CostReportTable from './components/CostReportTable';
 import { connectSocket, disconnectSocket } from './utils/socket';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
@@ -631,6 +632,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureTapToEditTables, setFeatureTapToEditTables] = useState(false);
   const [featureCoverPhotoFallbackV2, setFeatureCoverPhotoFallbackV2] = useState(false);
   const [featureQuickStartTripWizard, setFeatureQuickStartTripWizard] = useState(false);
+  // Itinerary reactions / checklist-item ("kind") flags. Unlike the others above, these don't
+  // gate an isolated UI panel — the reaction thumbs-up/down and checklist checkbox toggle are
+  // both live, frequently-clicked controls whose write endpoints 403 when the flag is off. Before
+  // these were wired in, disabling either flag meant every tap silently turned into a
+  // "Permission Denied" popup (see permissionDeniedInterceptor.ts) instead of the control just
+  // not doing anything. Default to `true` (not `false` like the others) so a slow first fetch
+  // doesn't make reactions/checklist toggling look broken for the common case where the flag is
+  // actually on — matches each flag's own fail-open default at the real API gate.
+  const [featureItineraryReactions, setFeatureItineraryReactions] = useState(true);
+  const [featureItineraryItemKinds, setFeatureItineraryItemKinds] = useState(true);
+  const [featureItineraryDocumentImport, setFeatureItineraryDocumentImport] = useState(false);
+  const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -644,6 +657,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureTapToEditTables(Boolean(data.featureTapToEditTables));
           setFeatureCoverPhotoFallbackV2(Boolean(data.featureCoverPhotoFallbackV2));
           setFeatureQuickStartTripWizard(Boolean(data.featureQuickStartTripWizard));
+          setFeatureItineraryReactions(Boolean(data.featureItineraryReactions));
+          setFeatureItineraryItemKinds(Boolean(data.featureItineraryItemKinds));
+          setFeatureItineraryDocumentImport(Boolean(data.featureItineraryDocumentImport));
+          setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
         }
       })
       .catch(() => undefined);
@@ -2248,7 +2265,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'tours' ||
           sessionPage === 'expenses' ||
           sessionPage === 'ledger' ||
-          sessionPage === 'ingest' ||
+          (sessionPage === 'ingest' && restoredRole === 'admin') ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
           sessionPage === 'account-fellow-travelers' ||
@@ -2870,6 +2887,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   trips={trips}
                   followedTrips={followedTrips}
                   userRole={userRole}
+                  userTier={accountProfile.tierKey}
                   activeTripOverride={activeTripForHome}
                   styles={styles}
                   onSelectTrip={handleSelectOwnedTrip}
@@ -2949,6 +2967,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   paidTotals={ledgerPaidTotals}
                   usedTotals={ledgerUsedTotals}
                   styles={styles}
+                  theme={theme}
                   onNavigate={requestPageChange}
                   downloadCsv={downloadCsv}
                   findActiveTrip={getActiveTrip}
@@ -2999,6 +3018,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     styles={styles}
                     onNavigate={handleHomeNavigate}
                     onAssignmentApplied={handleIngestionAssignmentApplied}
+                    userRole={userRole}
                   />
                 </Suspense>
               )
@@ -3040,60 +3060,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
-              <HorizontalTableScroll
-                style={styles.tableScroll}
-                contentContainerStyle={styles.tableScrollContent}
-              >
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                      <Text style={styles.headerText}>Category</Text>
-                    </View>
-                    {reportableMembers.map((m) => (
-                      <View key={m.id} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                        <Text style={styles.headerText}>{formatMemberName(m)}</Text>
-                      </View>
-                    ))}
-                    <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
-                      <Text style={styles.headerText}>Total</Text>
-                    </View>
-                  </View>
-                  {costReportRows.map((row, idx, arr) => (
-                    <View key={row.label} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>{row.label}</Text>
-                      </View>
-                      {reportableMembers.map((m) => {
-                        const share = row.shares[m.id] ?? 0;
-                        return (
-                          <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                            <Text style={styles.cellText}>${share.toFixed(2)}</Text>
-                          </View>
-                        );
-                      })}
-                      <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
-                        <Text style={styles.cellText}>${row.total.toFixed(2)}</Text>
-                      </View>
-                    </View>
-                  ))}
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                      <Text style={styles.headerText}>Overall</Text>
-                    </View>
-                    {reportableMembers.map((m) => {
-                      const total = ledgerPaidTotals[m.id] ?? 0;
-                      return (
-                        <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                          <Text style={styles.headerText}>${total.toFixed(2)}</Text>
-                        </View>
-                      );
-                    })}
-                    <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
-                      <Text style={styles.headerText}>${overallCost.toFixed(2)}</Text>
-                    </View>
-                  </View>
-                </View>
-              </HorizontalTableScroll>
+              <CostReportTable
+                rows={costReportRows}
+                members={reportableMembers}
+                overallShares={ledgerPaidTotals}
+                overallCost={overallCost}
+                styles={styles}
+                formatMemberName={formatMemberName}
+              />
             </View>
           ) : null}
 
@@ -3105,6 +3079,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   activePage={activePage}
                   onNavigate={(page) => requestPageChange(page)}
                   accountProfile={accountProfile}
+                  plaidEnabled={featureExpenseImportPlaid}
                   setAccountProfile={setAccountProfile}
                   familyRelationships={familyRelationships}
                   setFamilyRelationships={setFamilyRelationships}
@@ -3170,6 +3145,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             <PackingListTable
               backendUrl={backendUrl}
               headers={headers}
+              theme={theme}
               tripId={(activeTripForHome ?? activeTrip)?.id ?? activeTripId}
               variant="trip"
               title={`${(activeTripForHome ?? activeTrip)?.name ?? 'Trip'} packing list`}
@@ -3417,14 +3393,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onFlightDataChanged={handleFlightsDataChanged}
                   onLodgingDataChanged={handleLodgingsDataChanged}
                   onTourDataChanged={handleToursDataChanged}
+                  onCarRentalDataChanged={fetchCarRentals}
                   onAddCarRental={addCarRentalFromOverview}
                   onUpdateCarRental={updateCarRental}
                   openFlightInFlightsTab={openFlightInFlightsTab}
                   openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
                   theme={theme}
+                  userTier={accountProfile.tierKey}
                   readOnly={isFollowingMode}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                   featureCoverPhotoFallbackV2={featureCoverPhotoFallbackV2}
+                  featureItineraryReactions={featureItineraryReactions}
+                  featureItineraryItemKinds={featureItineraryItemKinds}
+                  featureItineraryDocumentImport={featureItineraryDocumentImport}
                 />
               )
             : null}
@@ -5272,9 +5253,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   planBox: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
   },
   itineraryDropdown: {

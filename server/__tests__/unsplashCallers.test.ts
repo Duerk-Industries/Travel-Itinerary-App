@@ -101,6 +101,17 @@ describe('unsplashCallers (dedupe + TTL cache)', () => {
     expect(mockedSearch).toHaveBeenCalledTimes(2);
   });
 
+  it('adds the bounded itinerary variant to the Unsplash query', async () => {
+    mockedSearch.mockResolvedValueOnce(photoResponse('https://images.example/tokyo-food.jpg'));
+
+    await expect(fetchUnsplashImageForItinerary('key', 'Tokyo', 'food')).resolves.toBe(
+      'https://images.example/tokyo-food.jpg'
+    );
+    expect(mockedSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'Tokyo local food', perPage: 1 })
+    );
+  });
+
   it('returns null without caching for empty queries', async () => {
     const result = await fetchUnsplashImageForLocation('key', '   ');
     expect(result).toBeNull();

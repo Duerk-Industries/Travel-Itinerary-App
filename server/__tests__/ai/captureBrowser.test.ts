@@ -2,6 +2,8 @@
 /// <reference types="node" />
 
 import fs from 'fs/promises';
+import fsSync from 'fs';
+import os from 'os';
 import path from 'path';
 import zlib from 'zlib';
 import { promisify } from 'util';
@@ -9,19 +11,30 @@ import { listLocalAiCaptures } from '../../src/ai/analytics/captureBrowser';
 
 const gzip = promisify(zlib.gzip);
 
-// Matches LOCAL_CAPTURE_ROOT in captureBrowser.ts (path is not injectable).
-const CAPTURE_ROOT = path.resolve(__dirname, '../../logs/ai-capture');
-const TEST_DIR = path.join(CAPTURE_ROOT, 'test-capture-browser');
-
-const writeCapture = async (fileName: string, record: Record<string, unknown>) => {
-  const gz = await gzip(Buffer.from(JSON.stringify(record), 'utf8'));
-  await fs.mkdir(TEST_DIR, { recursive: true });
-  await fs.writeFile(path.join(TEST_DIR, fileName), gz);
-};
-
 describe('captureBrowser anonymousUserId filtering', () => {
-  afterAll(async () => {
-    await fs.rm(TEST_DIR, { recursive: true, force: true });
+  let captureRoot = '';
+  let previousCaptureRoot: string | undefined;
+
+  const writeCapture = async (fileName: string, record: Record<string, unknown>) => {
+    const gz = await gzip(Buffer.from(JSON.stringify(record), 'utf8'));
+    await fs.writeFile(path.join(captureRoot, fileName), gz);
+  };
+
+  beforeEach(() => {
+    // Isolated per-test directory rather than the real (gitignored) logs/ai-capture — a
+    // long-running local dev environment accumulates thousands of real capture files there,
+    // and scanning/gunzipping all of them made this test's result depend on however much
+    // unrelated capture data happened to already be on disk. See AI_CAPTURE_LOCAL_ROOT in
+    // captureBrowser.ts.
+    captureRoot = fsSync.mkdtempSync(path.join(os.tmpdir(), 'ai-capture-browser-'));
+    previousCaptureRoot = process.env.AI_CAPTURE_LOCAL_ROOT;
+    process.env.AI_CAPTURE_LOCAL_ROOT = captureRoot;
+  });
+
+  afterEach(async () => {
+    if (previousCaptureRoot === undefined) delete process.env.AI_CAPTURE_LOCAL_ROOT;
+    else process.env.AI_CAPTURE_LOCAL_ROOT = previousCaptureRoot;
+    await fs.rm(captureRoot, { recursive: true, force: true });
   });
 
   it('filters captures by anonymousUserId and returns it on each item', async () => {

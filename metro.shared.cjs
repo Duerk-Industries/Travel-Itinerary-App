@@ -58,6 +58,20 @@ const ENGINE_IO_NODE_STUBS = {
 };
 
 /**
+ * @10play/tentap-editor's RichText/Toolbar wrap `react-native-webview`,
+ * which has no web implementation. On web platform, swap it (and the
+ * codegenNativeComponent machinery it needs) for @10play's iframe-based
+ * shim, and swap Node's `crypto` for expo-crypto. Per the library's Expo
+ * Web setup docs: https://10play.github.io/10tap-editor/docs/setup/expoWeb
+ * Native platforms are untouched — they use the real WebView.
+ */
+const TENTAP_WEB_ALIASES = {
+  'react-native-webview': '@10play/react-native-web-webview',
+  'react-native/Libraries/Utilities/codegenNativeComponent': '@10play/react-native-web-webview/shim',
+  crypto: 'expo-crypto',
+};
+
+/**
  * @param {object} opts
  * @param {string} opts.projectRoot         Where Metro is rooted.
  * @param {string} opts.primaryNodeModules  First node_modules directory to consult.
@@ -100,6 +114,12 @@ const createSharedMetroConfig = ({
       context.originModulePath.includes('engine.io-client')
     ) {
       return context.resolveRequest(context, ENGINE_IO_NODE_STUBS[moduleName], platform);
+    }
+    if (platform === 'web' && TENTAP_WEB_ALIASES[moduleName]) {
+      return {
+        filePath: require.resolve(TENTAP_WEB_ALIASES[moduleName]),
+        type: 'sourceFile',
+      };
     }
     return context.resolveRequest(context, moduleName, platform);
   };

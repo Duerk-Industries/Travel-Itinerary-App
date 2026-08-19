@@ -10,6 +10,7 @@ import {
   type GetYourGuideClientDescriptor,
 } from '../utils/getYourGuideLinks';
 import type { GetYourGuideTravelerContext } from '../utils/getYourGuideEligibility';
+import type { AppTheme } from '../theme/theme';
 
 export type GetYourGuideCtaProps = {
   backendUrl: string;
@@ -19,6 +20,7 @@ export type GetYourGuideCtaProps = {
   context?: GetYourGuideTravelerContext;
   featureEnabled?: boolean;
   testID?: string;
+  theme?: AppTheme;
 };
 
 /**
@@ -34,6 +36,7 @@ export const GetYourGuideCta: React.FC<GetYourGuideCtaProps> = ({
   context,
   featureEnabled,
   testID,
+  theme,
 }) => {
   const [descriptor, setDescriptor] = useState<GetYourGuideClientDescriptor | null>(null);
 
@@ -76,9 +79,9 @@ export const GetYourGuideCta: React.FC<GetYourGuideCtaProps> = ({
         }}
         testID={`${testID ?? `getyourguide-cta-${activity.id}`}-link`}
       >
-        <Text style={{ color: '#2563eb', textDecorationLine: 'underline' }}>{label}</Text>
+        <Text style={{ color: theme?.colors.link ?? '#2563eb', textDecorationLine: 'underline' }}>{label}</Text>
       </TouchableOpacity>
-      <Text accessibilityRole="text" style={{ fontSize: 11, opacity: 0.75 }}>
+      <Text accessibilityRole="text" style={{ fontSize: 11, opacity: 0.75, color: theme?.colors.textMuted }}>
         {GETYOURGUIDE_DISCLOSURE_TEXT}
       </Text>
     </View>

@@ -46,7 +46,7 @@ const galleryItem = {
 const blogBody = {
   id: 'blog-1', tripId, title: 'Test Blog', subtitle: null, introduction: null, contentRevision: 1,
   visibilityState: 'private', visibilityEpoch: 0, publicPath: null,
-  days: [{ id: 'day-1', tripId, localDate: '2026-09-01', headline: null, summary: null, coverItemId: 'asset-1', coverIsExplicit: false, items: [galleryItem], activities: [] }],
+  days: [{ id: 'day-1', tripId, localDate: '2026-09-01', headline: null, summary: null, coverItemId: 'asset-1', coverIsExplicit: false, items: [galleryItem], activities: [{ id: 'activity-1', name: 'Rainier hike', activityType: 'Hike', date: '2026-09-01', startTime: null, duration: null, status: null, startLocation: null, notes: null }] }],
 };
 
 describe('TripBlogTab gallery rendering', () => {
@@ -75,6 +75,38 @@ describe('TripBlogTab gallery rendering', () => {
     await findByTestId('day-media-open-lightbox');
     expect(queryByTestId('day-media-prev')).toBeTruthy();
     expect(queryByTestId('day-media-next')).toBeTruthy();
+  });
+
+  it('shows linked activities in the authenticated traveler/follower read-only view', async () => {
+    const { findByText } = render(
+      <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} styles={styles} theme={{ colors: {} }} readOnly />
+    );
+
+    expect(await findByText('Rainier hike')).toBeTruthy();
+    expect(await findByText('Traveler/follower view — all shared trip blog content is shown.')).toBeTruthy();
+  });
+
+  it('hides linked activities from a fully public read-only preview', async () => {
+    const publicBlog = {
+      ...blogBody,
+      visibilityState: 'public',
+      days: blogBody.days.map((day) => ({ ...day, items: [{ ...galleryItem, audience: 'travelers' }] })),
+    };
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (url.includes('/blog/publication/status')) return jsonResponse({}, 404);
+      if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(publicBlog);
+      throw new Error(`Unhandled fetch: ${method} ${url}`);
+    });
+
+    const { queryByText, findByText } = render(
+      <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} styles={styles} theme={{ colors: {} }} readOnly />
+    );
+
+    expect(await findByText('Public preview — only content intended for public sharing is shown.')).toBeTruthy();
+    await waitFor(() => expect(queryByText('Rainier hike')).toBeNull());
+    expect(queryByText('Planned activities')).toBeNull();
   });
 
   it('opens the tiled lightbox on tap and shows every gallery asset as its own tile', async () => {
