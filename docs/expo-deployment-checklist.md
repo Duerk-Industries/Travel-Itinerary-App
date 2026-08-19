@@ -75,10 +75,52 @@ submission of a new app record.
   > `APPLE_ID_AUTH: OFF`, and Apple's API rejects the whole PATCH with the
   > same misleading `... cannot be deleted. Delete all the Apps related to
   > this bundle to proceed.` message shown above. Because this has now hit
-  > the project twice for two different capabilities, `app/eas.json` sets
-  > `EXPO_NO_CAPABILITY_SYNC=1` for every build profile as a standing policy
-  > rather than a one-off workaround. That means **every capability this app
-  > uses must be configured by hand** in the Apple Developer portal
+  > the project twice for two different capabilities, the standing policy is
+  > `EXPO_NO_CAPABILITY_SYNC=1` on every `eas build` invocation, every time,
+  > rather than a one-off workaround.
+  >
+  > **It resurfaced a third time (2026-08-19) even with that policy in
+  > place, because the fix was in the wrong place.** `app/eas.json` and root
+  > `eas.json` set `EXPO_NO_CAPABILITY_SYNC=1` inside `build.<profile>.env` —
+  > but per [Expo's own docs](https://docs.expo.dev/build-reference/ios-capabilities/),
+  > that variable has to be a **real shell/CI environment variable set before
+  > invoking `eas build`** (`EXPO_NO_CAPABILITY_SYNC=1 eas build ...`).
+  > `eas.json`'s `env` block reaches app-config resolution and the *remote*
+  > build worker; the capability-sync step talks to Apple's Developer API
+  > from the *local* CLI process, before any of that, so it never saw the
+  > flag. The `eas.json` entries are harmless to leave in place but do not
+  > do the job on their own — don't trust them as the fix.
+  >
+  > **Fixed in three layers now, from most to least authoritative:**
+  > 1. **`expo.config.shared.cjs`** sets `process.env.EXPO_NO_CAPABILITY_SYNC = '1'`
+  >    (if not already set) at the top of `createExpoConfig`. Expo/EAS always
+  >    evaluates this file to resolve the manifest before it can know what to
+  >    sync, so this fires early enough regardless of how `eas build` was
+  >    invoked — bare CLI, `--local`, `expo prebuild`, CI, a script that
+  >    forgot the flag. This is the one that actually can't be skipped by
+  >    accident, and is the reason to trust it over the other two.
+  > 2. `npm run build:ios` / `build:ios:local` (`app/package.json`) prefix
+  >    with `cross-env EXPO_NO_CAPABILITY_SYNC=1` for anyone invoking eas-cli
+  >    directly rather than through the config.
+  > 3. CI (`.github/workflows/eas-build.yml`) sets
+  >    `EXPO_NO_CAPABILITY_SYNC: "1"` in the build step's `env:` block.
+  >
+  > Layers 2 and 3 are redundant with layer 1 in practice, but cheap to keep
+  > as explicit, self-documenting belt-and-suspenders — a future refactor of
+  > `expo.config.shared.cjs` shouldn't be the sole thing standing between a
+  > capability change and a broken release. **`eas.json`'s `build.<profile>.env`
+  > is not one of the three layers** — per
+  > [Expo's own docs](https://docs.expo.dev/build-reference/ios-capabilities/),
+  > that variable has to be a real process env var read before the config
+  > module and the capability-sync step both run; `eas.json`'s `env` block
+  > only reaches app-config resolution and the *remote* build worker, not the
+  > *local* CLI process talking to Apple's Developer API. The entries already
+  > in both `eas.json` files are harmless to leave but were never doing the
+  > job — that's why this bug resurfaced a third time (2026-08-19) with that
+  > "fix" already in place.
+  >
+  > That means **every capability this app uses must be configured by hand**
+  > in the Apple Developer portal
   > (`https://developer.apple.com/account/resources/identifiers/bundleId/edit/HMLW5FX2SP`)
   > and stays that way going forward — EAS will not add or remove any for you:
   > - **Sign In with Apple** — enabled on the App ID.

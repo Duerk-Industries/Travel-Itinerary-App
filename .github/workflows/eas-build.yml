@@ -75,6 +75,12 @@ jobs:
           npm run export:web -- --output-dir ../public
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # Must be a real process env var for the local `eas build` CLI invocation, not
+          # eas.json's build.<profile>.env (that block only reaches app-config resolution and
+          # the remote build worker — the capability-sync step talks to Apple's Developer API
+          # from this local process, before any of that). See
+          # docs/expo-deployment-checklist.md's "Known failure mode" note.
+          EXPO_NO_CAPABILITY_SYNC: "1"
 
       - name: Skipped (no version bump)
         if: steps.version_check.outputs.changed != 'true'

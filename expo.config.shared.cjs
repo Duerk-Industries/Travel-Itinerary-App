@@ -54,6 +54,14 @@ const loadEnv = (appDir) => {
 };
 
 const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
+  // Apple capability auto-sync is intentionally disabled for this existing
+  // App ID. EAS can batch a spurious APPLE_ID_AUTH=OFF update with another
+  // capability and Apple's API rejects that request because the bundle already
+  // has an App Store Connect app. Set this before returning the config so it
+  // also applies when EAS is invoked directly (without an eas.json profile).
+  if (!process.env.EXPO_NO_CAPABILITY_SYNC) {
+    process.env.EXPO_NO_CAPABILITY_SYNC = '1';
+  }
   loadEnv(appDir);
 
   // True when this config is evaluated inside an EAS Build (cloud or `--local`).
