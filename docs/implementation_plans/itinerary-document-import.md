@@ -314,3 +314,37 @@ Full suite before merge: `npm run test:server`, `npm run test:app`, `npx tsc --n
 - Re-import / update-in-place for an item that was previously imported and has since been edited by the user —
   first pass only adds; it never modifies or removes an existing record, even one it previously created.
 - Native (non-web) file upload for this flow — scope to web first, matching where manual-upload ingestion started.
+
+---
+
+## 10. Addendum (2026-08-19): converted to an async job
+
+**Problem:** `POST /api/trips/:tripId/import-document` was implemented as a single synchronous request —
+upload/paste → normalize (OCR or PDF text extraction) → LLM extraction → DB writes, all in one HTTP
+round-trip. In production this returned `HTTP 502` to users. Root cause: `firebase.json` rewrites `/api/**` to
+Cloud Run, and Firebase Hosting enforces a **fixed ~60s timeout on that rewrite that cannot be raised**,
+independent of Cloud Run's own `timeoutSeconds` (300s here). A real document import was observed taking 121s
+end-to-end — Hosting killed the connection with its own 502 well before Cloud Run's response arrived, even
+though the import was still running successfully server-side.
+
+**Fix:** mirrors the existing async-job pattern already used for AI itinerary generation
+(`itineraryAsyncService.ts` / `POST+GET /api/itinerary/async/:jobId`):
+
+- `documentImportAsyncService.ts` — new in-memory job queue (`queued → running → completed | failed`),
+  independent from the itinerary-generation job map. `enqueueAsyncDocumentImportJob` schedules the work via
+  `setTimeout(0)` and returns immediately; the job itself runs `normalizeIngestionPayload` (only when the
+  request was a file upload — pasted text needs no normalization) followed by `importItineraryDocument`.
+- `POST /api/trips/:tripId/import-document` now does only the fast, validating work inline — entitlement
+  check, multer upload + virus scan — then enqueues and responds `202 { jobId, status: 'queued' }`. Any
+  synchronous validation failure (bad tier, bad file type, virus scan fail) still fails immediately with its
+  original status code; nothing about that error path changed.
+- `GET /api/trips/:tripId/import-document/:jobId` — new polling endpoint, scoped to `job.userId` and
+  `job.tripId` matching the request (404 otherwise). Returns `{ status, error, result }`, same shape
+  `importItineraryDocument` used to return directly.
+- `ItineraryDocumentImport.tsx` now polls this endpoint every 3s (5 min timeout) after submit, instead of
+  awaiting a single `fetch`. UX is unchanged from the user's perspective — same "Analyzing document…" busy
+  state — it just no longer times out on slow documents.
+
+Test coverage: `server/__tests__/document-import-async.test.ts` — 202-then-poll happy path, failure surfaced
+as a failed job rather than a hung/thrown request, tier-gating still fails fast pre-enqueue, and job
+ownership is enforced on the GET endpoint (404 for another user's job id).
