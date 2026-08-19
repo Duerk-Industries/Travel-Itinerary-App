@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
-import { randomUUID } from 'crypto';
 import { authenticate } from '../auth';
 import {
   acceptTripShareInvite,
@@ -48,9 +47,9 @@ import { aggregateTripActivity } from '../services/activityFeed';
 import { assertCanUseFeature, assertUnderActiveTripLimit, getLimit, recordUsage } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { manualUploadMiddleware, buildManualUploadPayloads } from '../ingestion/intake';
-import { normalizeIngestionPayload } from '../ingestion/normalization';
 import { IngestionError } from '../ingestion/shared/userFailures';
-import { importItineraryDocument, ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY } from '../services/itineraryDocumentImportService';
+import { ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY } from '../services/itineraryDocumentImportService';
+import { enqueueAsyncDocumentImportJob, getAsyncDocumentImportJob } from '../services/documentImportAsyncService';
 import { TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
 import {
@@ -797,6 +796,15 @@ router.patch('/:id/group', async (req, res) => {
   }
 });
 
+// Normalization (OCR / PDF text extraction) and LLM extraction both run in
+// the background job below rather than inline here. Firebase Hosting's
+// rewrite to Cloud Run has a fixed ~60s timeout it enforces regardless of
+// Cloud Run's own request timeout, and this pipeline routinely exceeds that
+// (observed ~121s end-to-end for a real document) -- Hosting would return its
+// own 502 to the browser well before the import finished. Only the fast,
+// validating parts (entitlement check, file upload + virus scan) run inline
+// so bad requests still fail immediately; the slow parts run as a job the
+// client polls via GET below.
 router.post('/:tripId/import-document', (req, res, next) => {
   if (!req.is('multipart/form-data')) {
     next();
@@ -812,28 +820,28 @@ router.post('/:tripId/import-document', (req, res, next) => {
 
     let documentText = typeof req.body?.documentText === 'string' ? req.body.documentText : '';
     let sourceFilename = typeof req.body?.sourceFilename === 'string' ? req.body.sourceFilename.trim() : '';
+    let payload: Awaited<ReturnType<typeof buildManualUploadPayloads>>[number] | undefined;
     if (req.file) {
       const payloads = await buildManualUploadPayloads(req, user.userId);
-      const payload = payloads[0];
-      const normalized = await normalizeIngestionPayload(randomUUID(), payload);
-      documentText = normalized.normalizedText;
+      payload = payloads[0];
       sourceFilename = payload.originalFilename;
     }
-    if (!documentText.trim()) {
+    if (!documentText.trim() && !payload) {
       res.status(400).json({ error: 'Document text or a supported file is required' });
       return;
     }
     const dryRunValue = req.body?.dryRun;
     const dryRun = dryRunValue === true || dryRunValue === 'true' || dryRunValue === '1';
-    const result = await importItineraryDocument({
+    const job = enqueueAsyncDocumentImportJob({
       tripId: req.params.tripId,
       userId: user.userId,
-      documentText,
+      documentText: payload ? undefined : documentText,
+      payload,
       sourceFilename: sourceFilename || 'pasted text',
       dryRun,
       correlationId: req.get('x-correlation-id') || undefined,
     });
-    res.json(result);
+    res.status(202).json({ jobId: job.id, tripId: req.params.tripId, status: job.status });
   } catch (err) {
     if (err instanceof EntitlementError) {
       res.status(402).json({ error: err.message, code: err.code });
@@ -850,6 +858,24 @@ router.post('/:tripId/import-document', (req, res, next) => {
     }
     res.status(/character limit/i.test(message) ? 413 : 400).json({ error: message });
   }
+});
+
+router.get('/:tripId/import-document/:jobId', async (req, res) => {
+  const user = (req as any).user as TokenPayload;
+  const job = getAsyncDocumentImportJob(req.params.jobId);
+  if (!job || job.userId !== user.userId || job.tripId !== req.params.tripId) {
+    res.status(404).json({ error: 'Import job not found' });
+    return;
+  }
+  res.json({
+    jobId: job.id,
+    tripId: job.tripId,
+    status: job.status,
+    error: job.error ?? null,
+    result: job.result ?? null,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+  });
 });
 
 router.patch('/:id', async (req, res) => {

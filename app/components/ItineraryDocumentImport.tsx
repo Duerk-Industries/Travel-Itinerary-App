@@ -61,6 +61,32 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
     return null;
   }
 
+  const JOB_POLL_INTERVAL_MS = 3000;
+  const JOB_POLL_TIMEOUT_MS = 5 * 60 * 1000;
+  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // The import (OCR / PDF extraction plus LLM extraction) routinely takes over a minute,
+  // which exceeds Firebase Hosting's fixed ~60s rewrite-to-Cloud-Run timeout -- Hosting
+  // would return its own 502 well before a synchronous request finished. The server queues
+  // the work as a background job and returns immediately; this polls for completion the
+  // same way itinerary generation's async job does (see useAsyncItineraryPolling.ts).
+  const pollJob = async (jobId: string): Promise<any> => {
+    const deadline = Date.now() + JOB_POLL_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      await delay(JOB_POLL_INTERVAL_MS);
+      const response = await fetch(`${backendUrl}/api/trips/${tripId}/import-document/${encodeURIComponent(jobId)}`, {
+        headers, cache: 'no-store',
+      } as any);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `Unable to check import status (HTTP ${response.status})`);
+      }
+      if (data.status === 'completed') return data.result;
+      if (data.status === 'failed') throw new Error(data.error || 'Unable to import this document.');
+    }
+    throw new Error('This document is taking longer than expected. Check back shortly and try again.');
+  };
+
   const submit = async (dryRun: boolean) => {
     if (!selectedFile && !documentText.trim()) {
       setErrorMessage('Paste itinerary text or choose a document first.');
@@ -88,13 +114,14 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
       const response = await fetch(`${backendUrl}/api/trips/${tripId}/import-document`, {
         method: 'POST', headers: requestHeaders, body,
       });
-      const data = await response.json().catch(() => ({}));
+      const submitData = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const message = data.code === 'FEATURE_DISABLED'
+        const message = submitData.code === 'FEATURE_DISABLED'
           ? 'Document import is currently disabled by its feature flag. Enable itinerary_document_import in Admin, then try again.'
-          : data.error || `Unable to import this document (HTTP ${response.status})`;
+          : submitData.error || `Unable to import this document (HTTP ${response.status})`;
         throw new Error(message);
       }
+      const data = await pollJob(submitData.jobId);
       setPreview(data);
       if (!dryRun) {
         await onImported();
