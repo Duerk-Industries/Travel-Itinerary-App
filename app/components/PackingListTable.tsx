@@ -180,6 +180,13 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       } else if (!t.name.trim() && t.email) {
         displayName = t.email.split('@')[0];
       }
+      // A traveler with neither a name nor an email (e.g. a guest added with
+      // no contact info yet) would otherwise fall through with an empty
+      // string here, rendering a blank column header — the checkbox column
+      // still exists, just unlabeled. Every column needs a visible label.
+      if (!displayName.trim()) {
+        displayName = 'Traveler';
+      }
 
       return { ...t, displayName };
     });
