@@ -3795,7 +3795,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   style={styles.flightRow}
                   onPress={() => openFlightEditor(flight)}
                   onLayout={(e: LayoutChangeEvent) => {
-                    setFlightRowOffsets((prev) => ({ ...prev, [flight.id]: e.nativeEvent.layout.y }));
+                    // Native can deliver a final layout callback with a null
+                    // nativeEvent while the overview switches into edit mode
+                    // and replaces the row tree. Ignore that callback rather
+                    // than crashing the root error boundary.
+                    const y = e?.nativeEvent?.layout?.y;
+                    if (typeof y !== 'number' || !Number.isFinite(y)) return;
+                    setFlightRowOffsets((prev) => ({ ...prev, [flight.id]: y }));
                   }}
                 >
                   <Text style={styles.flightTitle}>
