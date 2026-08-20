@@ -42,9 +42,10 @@ describe('Metro config parity (root EAS config vs. app local config)', () => {
     expect(rootLock.packages?.['node_modules/image-size']?.resolved).toBe(
       'packages/image-size-safe',
     );
-    expect(rootLock.packages?.['node_modules/metro/node_modules/image-size']?.version).toBe(
-      '1.2.1',
-    );
+    // npm may dedupe Metro's compatible `^1.0.2` request to the workspace
+    // safety package. It should never materialize a separate vulnerable copy.
+    const nestedMetroImageSize = rootLock.packages?.['node_modules/metro/node_modules/image-size'];
+    expect(nestedMetroImageSize == null ? '2.0.3' : nestedMetroImageSize.version).toBe('2.0.3');
   });
 
   it('both configs leave resolverMainFields to Expo defaults (platform-aware)', () => {

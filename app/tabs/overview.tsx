@@ -2841,7 +2841,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 paddingTop: isPhoneLayout ? 48 : 56,
                 paddingBottom: 24,
               }}
-              onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+              onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
               scrollEventThrottle={16}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
@@ -3149,7 +3149,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     <Text
                                       style={[
                                         styles.helperText,
-                                        checked && { textDecorationLine: 'line-through', color: '#777' },
+                                        checked && { textDecorationLine: 'line-through', color: theme.colors.textMuted },
                                       ]}
                                     >
                                       {it.label}
@@ -3277,7 +3277,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ref={scrollRef}
           style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
           contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
-          onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+          onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -3341,7 +3341,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ref={scrollRef}
         style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
         contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
-        onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+          onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

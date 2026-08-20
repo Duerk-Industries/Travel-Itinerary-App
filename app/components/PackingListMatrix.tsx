@@ -153,18 +153,18 @@ const PackingListMatrixNative: React.FC<Props> = ({ items, travelers, onToggle, 
         <View style={[styles.itemHeader, { backgroundColor: colors.backgroundAlt, borderColor: colors.border }]}>
           <Text style={[styles.headerText, { color: colors.text }]}>Item</Text>
         </View>
-        <ScrollView ref={topHeaderRef} horizontal style={styles.nativeTravelerScroll} showsHorizontalScrollIndicator={false} scrollEventThrottle={16} onScroll={(event) => sync.syncX(event.nativeEvent.contentOffset.x)}>
+        <ScrollView ref={topHeaderRef} horizontal style={styles.nativeTravelerScroll} showsHorizontalScrollIndicator={false} scrollEventThrottle={16} onScroll={(event) => { const x = event?.nativeEvent?.contentOffset?.x; if (typeof x === 'number') sync.syncX(x); }}>
           <View style={styles.horizontalRow}>
             {travelers.map((traveler) => <View key={traveler.id} style={[styles.travelerHeader, { backgroundColor: colors.backgroundAlt, borderColor: colors.border }]}><Text numberOfLines={1} style={[styles.headerText, { color: colors.text }]}>{traveler.displayName || traveler.name}</Text></View>)}
           </View>
         </ScrollView>
       </View>
       <View style={styles.bodyRow}>
-        <ScrollView ref={leftBodyRef} style={styles.nativeLeftBody} showsVerticalScrollIndicator={false} scrollEventThrottle={16} onScroll={(event) => sync.syncY(event.nativeEvent.contentOffset.y)}>
+        <ScrollView ref={leftBodyRef} style={styles.nativeLeftBody} showsVerticalScrollIndicator={false} scrollEventThrottle={16} onScroll={(event) => { const y = event?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') sync.syncY(y); }}>
           {items.map((item) => <View key={`left-${item.id}`} style={[styles.itemCell, item.isCategory ? styles.sectionCell : null, { borderColor: colors.border, backgroundColor: item.isCategory ? colors.backgroundAlt : colors.surface }]}><Text style={[styles.itemText, item.isCategory ? styles.sectionText : null, { color: colors.text }]}>{item.label}</Text></View>)}
         </ScrollView>
-        <ScrollView ref={matrixRef} style={styles.nativeMatrixScroll} horizontal nestedScrollEnabled showsHorizontalScrollIndicator scrollEventThrottle={16} onScroll={(event) => sync.syncX(event.nativeEvent.contentOffset.x)}>
-          <ScrollView ref={matrixBodyRef} style={styles.nativeMatrixBody} nestedScrollEnabled showsVerticalScrollIndicator scrollEventThrottle={16} onScroll={(event) => sync.syncY(event.nativeEvent.contentOffset.y)}>
+        <ScrollView ref={matrixRef} style={styles.nativeMatrixScroll} horizontal nestedScrollEnabled showsHorizontalScrollIndicator scrollEventThrottle={16} onScroll={(event) => { const x = event?.nativeEvent?.contentOffset?.x; if (typeof x === 'number') sync.syncX(x); }}>
+          <ScrollView ref={matrixBodyRef} style={styles.nativeMatrixBody} nestedScrollEnabled showsVerticalScrollIndicator scrollEventThrottle={16} onScroll={(event) => { const y = event?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') sync.syncY(y); }}>
             {items.map((item) => <View key={`row-${item.id}`} style={styles.horizontalRow}>
               {travelers.map((traveler) => {
                 if (item.isCategory) {
