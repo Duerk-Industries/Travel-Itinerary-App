@@ -21,6 +21,12 @@ export type GetYourGuideCtaProps = {
   featureEnabled?: boolean;
   testID?: string;
   theme?: AppTheme;
+  /** Truncate the link label to one line instead of wrapping. Opt-in so
+   * layouts with room to wrap (card views) are unaffected; a fixed-width
+   * table cell needs this to avoid the label's own text forcing the cell
+   * (and every sibling column in that row) wider than the rest of the
+   * table's rows. */
+  numberOfLines?: number;
 };
 
 /**
@@ -37,6 +43,7 @@ export const GetYourGuideCta: React.FC<GetYourGuideCtaProps> = ({
   featureEnabled,
   testID,
   theme,
+  numberOfLines,
 }) => {
   const [descriptor, setDescriptor] = useState<GetYourGuideClientDescriptor | null>(null);
 
@@ -79,7 +86,7 @@ export const GetYourGuideCta: React.FC<GetYourGuideCtaProps> = ({
         }}
         testID={`${testID ?? `getyourguide-cta-${activity.id}`}-link`}
       >
-        <Text style={{ color: theme?.colors.link ?? '#2563eb', textDecorationLine: 'underline' }}>{label}</Text>
+        <Text numberOfLines={numberOfLines} style={{ color: theme?.colors.link ?? '#2563eb', textDecorationLine: 'underline' }}>{label}</Text>
       </TouchableOpacity>
       <Text accessibilityRole="text" style={{ fontSize: 11, opacity: 0.75, color: theme?.colors.textMuted }}>
         {GETYOURGUIDE_DISCLOSURE_TEXT}

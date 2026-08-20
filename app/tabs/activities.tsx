@@ -21,6 +21,19 @@ import {
   ITINERARY_STATUSES,
 } from '../utils/itineraryStatus';
 
+// A row's flex columns must resolve to the exact same pixel widths as every
+// other row (including the header) for the columns to actually line up.
+// `flex: 1` with only a `minWidth` floor doesn't guarantee that: if one
+// row's cell content is wider than its minWidth (e.g. a long activity name
+// plus its GetYourGuideCta link), that row's flex-basis grows, and the
+// leftover space every OTHER row's `flex: 1` columns divide up shifts by a
+// different amount per row -- producing exactly the ragged, row-by-row
+// column drift this was reported for. A literal fixed `width` with growth
+// and shrink both disabled makes every row's columns identical regardless
+// of what's inside any one cell; `overflow: 'hidden'` then clips (rather
+// than pushes) any cell whose content is wider than its column.
+const fixedColumnStyle = (width: number) => ({ width, flexGrow: 0, flexShrink: 0, overflow: 'hidden' as const });
+
 export type ActivityType =
   | 'Class'
   | 'Concert/Show'
@@ -920,7 +933,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ].map((col, idx, arr) => (
               <TouchableOpacity
                 key={col.key}
-                style={[styles.cell, { minWidth: col.width, flex: 1 }, col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any), idx === arr.length - 1 && styles.lastCell]}
+                style={[styles.cell, fixedColumnStyle(col.width), col.key === 'name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any), idx === arr.length - 1 && styles.lastCell]}
                 onPress={() => sortActivityTable(col.key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Sort by ${col.label}`}
@@ -932,15 +945,15 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </View>
           {sortedTours.map((t) => (
             <TouchableOpacity key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openTourEditor(t); }} activeOpacity={0.8}>
-              <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+              <View style={[styles.cell, fixedColumnStyle(140)]}>
                 <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+              <View style={[styles.cell, fixedColumnStyle(180)]}>
                 <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 220, flex: 1 }, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+              <View style={[styles.cell, fixedColumnStyle(220), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); setSelectedTourId(t.id); }} testID={`activity-details-${t.id}`}>
-                  <Text style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
+                  <Text numberOfLines={1} style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
                 </TouchableOpacity>
                 {mode !== 'wizard' ? (
                   <GetYourGuideCta
@@ -949,19 +962,20 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                     activity={t}
                     destination={destination}
                     theme={theme}
+                    numberOfLines={1}
                   />
                 ) : null}
               </View>
-              <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+              <View style={[styles.cell, fixedColumnStyle(120)]}>
                 <Text style={styles.cellText}>{t.startTime || '-'}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+              <View style={[styles.cell, fixedColumnStyle(120)]}>
                 <Text style={styles.cellText}>{t.duration || '-'}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+              <View style={[styles.cell, fixedColumnStyle(130)]}>
                 <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
-              <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
+              <View style={[styles.cell, styles.lastCell, fixedColumnStyle(120)]}>
                 {normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
                   <Text style={styles.cellText}>{formatNetVotes(t.netRating ?? 0)}</Text>
                 ) : (
