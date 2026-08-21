@@ -349,6 +349,35 @@ export const setDayCover = async (userId: string, tripId: string, dayDate: strin
   await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
 };
 
+// Firestore equivalent of Postgres's conditional cover claim. Reading the day inside the
+// transaction prevents simultaneous uploads from both becoming the automatic cover.
+export const setDayCoverIfUnset = async (userId: string, tripId: string, dayDate: string, assetId: string): Promise<boolean> => {
+  const db = getDb();
+  const day = await getDay(tripId, dayDate);
+  const assetSnapshot = await db.collection('blog_media_assets').doc(assetId).get();
+  const asset = assetSnapshot.exists ? (assetSnapshot.data() as any) : null;
+  if (!asset
+    || String(asset.uploaderUserId) !== userId
+    || String(asset.tripId) !== tripId
+    || String(asset.dayDate) !== dayDate
+    || asset.mediaKind !== 'photo'
+    || asset.state !== 'ready') return false;
+
+  await ensureBlog(tripId);
+  const dayRef = db.collection('blog_days').doc(day.id);
+  const blogRef = db.collection('trip_blogs').doc(tripId);
+  return db.runTransaction(async (transaction) => {
+    const daySnapshot = await transaction.get(dayRef);
+    if (!daySnapshot.exists) return false;
+    const currentDay = daySnapshot.data() as any;
+    if (currentDay?.coverAssetId != null || currentDay?.coverSetAt != null) return false;
+    const now = nowIso();
+    transaction.set(dayRef, { coverAssetId: assetId, coverSetByUserId: userId, coverSetAt: now, updatedAt: now }, { merge: true });
+    transaction.set(blogRef, { contentRevision: FieldValue.increment(1), updatedAt: now }, { merge: true });
+    return true;
+  });
+};
+
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {
   const access = await ensureUserInTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');

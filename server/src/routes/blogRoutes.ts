@@ -13,6 +13,7 @@ import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
 import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
+import { logError } from '../logger';
 
 const router = Router();
 router.use(authenticate);
@@ -340,6 +341,13 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
     const asset = reallyUploaded
       ? await processMediaUpload(userId, req.params.assetId)
       : await blogMediaRepository().completeUpload(userId, req.params.assetId, Number(req.body?.physicalBytes), req.body?.checksum);
+    if (asset.mediaKind === 'photo') {
+      await blogRepository().setDayCoverIfUnset(userId, asset.tripId, asset.dayDate, asset.id).catch((err) => {
+        // The media is already committed at this point. Do not turn a cover-selection failure into
+        // a failed upload response that encourages the client to retry an already-finalized asset.
+        logError(`[blog] unable to automatically set first photo as cover assetId=${asset.id}`, err);
+      });
+    }
     const [withUrls] = await attachMediaUrls([asset]);
     res.status(200).json(withUrls);
   } catch (err) {
