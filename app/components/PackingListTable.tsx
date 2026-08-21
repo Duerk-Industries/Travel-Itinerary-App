@@ -496,13 +496,29 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       )
     );
     try {
-      await fetch(`${url}/checks`, {
+      const res = await fetch(`${url}/checks`, {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ itemId: item.id, travelerId: traveler.id, packed: !currentlyPacked }),
       });
-    } catch {
-      void load();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? 'Unable to save packing checkmark');
+      }
+    } catch (err: any) {
+      // Restore the exact cell optimistically changed above. Previously HTTP 4xx/5xx responses
+      // were treated as success, leaving a temporary checkmark that disappeared on navigation.
+      setItems((prev) => prev.map((entry) => {
+        if (entry.id !== item.id) return entry;
+        const packedBy = entry.packedBy ?? [];
+        return {
+          ...entry,
+          packedBy: currentlyPacked
+            ? Array.from(new Set([...packedBy, traveler.id]))
+            : packedBy.filter((id) => id !== traveler.id),
+        };
+      }));
+      setError(err?.message ?? 'Unable to save packing checkmark');
     }
   };
 

@@ -1224,7 +1224,17 @@ export const setTripPackingItemPacked = async (userId: string, tripId: string, i
     tripPackingCollection(tripId).doc(itemId).get(),
     getDb().collection('group_members').doc(travelerId).get(),
   ]);
-  if (!item.exists || !member.exists || (member.data() as any).groupId !== access.groupId || (member.data() as any).removedAt) {
+  const validTraveler = member.exists
+    && (member.data() as any).groupId === access.groupId
+    && !(member.data() as any).removedAt;
+  // Packing Lists v2 derives preset and personal items on demand instead of materializing them
+  // under trip_packing_lists/{tripId}/items. The old legacy-only existence check therefore
+  // rejected every v2 checkbox mutation in Firebase production. Retain the cheap legacy lookup,
+  // then validate a missing item against the same derived view returned by GET /packing-list.
+  const validV2Item = item.exists
+    ? true
+    : (await getPackingListV2(userId, tripId)).items?.some((candidate) => candidate.id === itemId) === true;
+  if (!validV2Item || !validTraveler) {
     throw new Error('Packing item or traveler not found');
   }
   const ref = tripPackingChecksCollection(tripId).doc(`${itemId}_${travelerId}`);
