@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
-import { Image, Platform, StyleSheet, View } from 'react-native';
-import { buildTripDayMapUrl, type TripMapPoint } from '../utils/googleMaps';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { buildTripDayMapUrl, type TripMapPoint, type TripMapPointKind } from '../utils/googleMaps';
 
 type TripDayMapProps = {
   points: TripMapPoint[];
@@ -8,6 +9,32 @@ type TripDayMapProps = {
   requestHeaders: Record<string, string>;
   testID?: string;
 };
+
+// Mirrors MARKER_COLOR_BY_KIND in server/src/routes/staticMapRoutes.ts (Google
+// Static Maps' named marker colors) and its display order. Keep in sync by
+// hand -- same reasoning as TripMapPoint in utils/googleMaps.ts.
+const LEGEND_ORDER: TripMapPointKind[] = ['flight', 'lodging', 'activity', 'car_rental'];
+
+const LEGEND_ENTRY: Record<TripMapPointKind, { label: string; color: string }> = {
+  flight: { label: 'Flight', color: '#4285F4' },
+  lodging: { label: 'Lodging', color: '#FB8C00' },
+  activity: { label: 'Activity', color: '#34A853' },
+  car_rental: { label: 'Car rental', color: '#9C27B0' },
+};
+
+// Small teardrop pin, same silhouette as the markers Google Static Maps draws
+// on the image itself, so the legend keys visually match what's pinned above.
+const LegendPin: React.FC<{ color: string }> = ({ color }) => (
+  <Svg width={14} height={18} viewBox="0 0 24 24">
+    <Path
+      d="M12 1.5C7.31 1.5 3.5 5.28 3.5 9.9c0 6.2 7.2 12.02 8.06 12.7a.7.7 0 0 0 .88 0c.86-.68 8.06-6.5 8.06-12.7 0-4.62-3.81-8.4-8.5-8.4z"
+      fill={color}
+      stroke="#ffffff"
+      strokeWidth={1}
+    />
+    <Circle cx={12} cy={9.9} r={2.9} fill="#ffffff" />
+  </Svg>
+);
 
 /**
  * Static, multi-pin map for one day of an itinerary (flights, lodging,
@@ -71,6 +98,11 @@ const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, re
     return { uri: mapUrl, headers: requestHeaders };
   }, [mapUrl, requestHeaders, webObjectUrl]);
 
+  const presentKinds = useMemo(() => {
+    const seen = new Set(points.map((p) => p.kind));
+    return LEGEND_ORDER.filter((kind) => seen.has(kind));
+  }, [points]);
+
   if (!mapUrl || !imageSource || failed) return null;
 
   return (
@@ -82,6 +114,27 @@ const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, re
         accessibilityLabel="Map of today's stops"
         onError={() => setFailed(true)}
       />
+      {presentKinds.length ? (
+        <View style={styles.legend} testID={testID ? `${testID}-legend` : undefined}>
+          <Text style={styles.legendTitle}>Map key</Text>
+          <View style={styles.legendRow}>
+            {presentKinds.map((kind) => {
+              const entry = LEGEND_ENTRY[kind];
+              return (
+                <View
+                  key={kind}
+                  style={styles.legendItem}
+                  accessibilityLabel={`${entry.label} pins are shown in this color`}
+                >
+                  <LegendPin color={entry.color} />
+                  <Text style={styles.legendLabel}>{entry.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+          <Text style={styles.legendNote}>Letters (A, B, C…) show the order you'll visit each stop</Text>
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -96,6 +149,44 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     aspectRatio: 640 / 400,
+  },
+  legend: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  legendTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#94a3b8',
+  },
+  legendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    rowGap: 8,
+    columnGap: 16,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#334155',
+  },
+  legendNote: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontStyle: 'italic',
   },
 });
 
