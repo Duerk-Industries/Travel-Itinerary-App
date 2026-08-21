@@ -3,12 +3,12 @@ import * as firebaseAdapter from './db.firebase';
 import { logInfo } from './logger';
 
 export type DbProvider = 'postgres' | 'memory' | 'dynamodb' | 'firebase';
-// queryBlog/setPoolFactory are postgres-internal escape hatches for the trip-blog
+// queryBlog/withBlogTransaction/setPoolFactory are postgres-internal escape hatches for the trip-blog
 // repository (see db.postgres.ts) — not part of the cross-provider contract, so
 // they're excluded here. Every other member must line up exactly across adapters;
 // keeping this a real structural type (rather than `as unknown as`) means a
 // mismatched or missing export in db.firebase.ts fails `tsc`, not just at runtime.
-export type DatabaseAdapter = Omit<typeof postgresAdapter, 'queryBlog' | 'setPoolFactory'>;
+export type DatabaseAdapter = Omit<typeof postgresAdapter, 'queryBlog' | 'withBlogTransaction' | 'setPoolFactory'>;
 
 let cachedAdapter: DatabaseAdapter | null = null;
 let cachedProvider: DbProvider | null = null;

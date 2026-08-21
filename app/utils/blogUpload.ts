@@ -82,6 +82,7 @@ export const uploadOneBlogFile = async (
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ physicalBytes: pickedFile.size }),
   });
+  if (completeRes.status === 413) return { outcome: 'quota_exceeded' };
   if (!completeRes.ok) {
     const body = await completeRes.json().catch(() => ({}));
     return { outcome: 'error', error: body.error || 'Failed to finalize upload' };

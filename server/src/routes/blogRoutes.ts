@@ -343,6 +343,8 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
     const [withUrls] = await attachMediaUrls([asset]);
     res.status(200).json(withUrls);
   } catch (err) {
+    const message = String((err as any)?.message ?? 'Unable to finalize upload');
+    if (message === 'QUOTA_EXCEEDED') { res.status(413).json({ error: message, code: message }); return; }
     errorResponse(res, err);
   }
 });

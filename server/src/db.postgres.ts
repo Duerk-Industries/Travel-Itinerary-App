@@ -299,6 +299,24 @@ export const queryBlog = async <T extends import('pg').QueryResultRow = any>(sql
   return { rows: result.rows, rowCount: result.rowCount ?? 0 };
 };
 
+// Feature repositories occasionally need several related writes to commit as one unit. Keep the
+// pool private while exposing a narrowly scoped transaction runner that shares the same adapter
+// lifecycle as queryBlog (including pg-mem in tests).
+export const withBlogTransaction = async <T>(work: (client: PoolClient) => Promise<T>): Promise<T> => {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await work(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 export const closePool = async (): Promise<void> => {
   if (pool) {
     await pool.end();

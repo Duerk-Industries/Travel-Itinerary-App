@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { ensureUserInTrip, ensureUserCanReadTrip } from '../db';
-import { queryBlog } from '../db.postgres';
+import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
@@ -159,19 +159,52 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
 };
 
 export const completeUpload = async (userId: string, assetId: string, physicalBytes: number, checksum?: string): Promise<BlogMediaAsset> => {
-  const current = await queryBlog<any>('SELECT * FROM blog_media_assets WHERE id = $1 AND uploader_user_id = $2 AND state IN (\'uploading\', \'quarantined\')', [assetId, userId]);
-  if (!current.rows[0]) throw new Error('Media upload not found');
-  const row = current.rows[0];
-  if (!Number.isSafeInteger(physicalBytes) || physicalBytes <= 0 || physicalBytes > Number(row.physical_bytes)) throw new Error('Uploaded bytes do not match the reservation');
-  await queryBlog('UPDATE blog_media_assets SET state = \'ready\', physical_bytes = $2, billable_bytes = $2, source_checksum = $3, updated_at = NOW() WHERE id = $1', [assetId, physicalBytes, checksum ?? null]);
-  await queryBlog('UPDATE blog_storage_accounts SET reserved_bytes = GREATEST(0, reserved_bytes - $2), visible_committed_bytes = visible_committed_bytes + $2, updated_at = NOW() WHERE user_id = $1', [userId, Number(row.physical_bytes)]);
-  await queryBlog('UPDATE blog_storage_reservations SET state = \'committed\' WHERE user_id = $1 AND idempotency_key = $2', [userId, row.source_ref]);
-  const updated = await queryBlog<any>(
-    `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
-     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
-    [assetId]
-  );
-  return mapAsset(updated.rows[0]);
+  if (!Number.isSafeInteger(physicalBytes) || physicalBytes <= 0) throw new Error('Uploaded bytes do not match the reservation');
+
+  return withBlogTransaction(async (client) => {
+    const current = await client.query<any>(
+      `SELECT * FROM blog_media_assets
+       WHERE id = $1 AND uploader_user_id = $2 AND state IN ('uploading', 'quarantined')
+       FOR UPDATE`,
+      [assetId, userId]
+    );
+    if (!current.rows[0]) throw new Error('Media upload not found');
+    const row = current.rows[0];
+    const reservedBytes = Number(row.physical_bytes);
+    const additionalBytes = Math.max(0, physicalBytes - reservedBytes);
+
+    // The account row update both serializes concurrent finalizations and checks only the
+    // processing overhead against capacity that was not already reserved for this upload.
+    const account = await client.query(
+      `UPDATE blog_storage_accounts
+       SET reserved_bytes = GREATEST(0, reserved_bytes - $2),
+           visible_committed_bytes = visible_committed_bytes + $3,
+           updated_at = NOW()
+       WHERE user_id = $1
+         AND GREATEST(0, included_bytes + purchased_bytes - visible_committed_bytes - reserved_bytes) >= $4
+       RETURNING user_id`,
+      [userId, reservedBytes, physicalBytes, additionalBytes]
+    );
+    if (!account.rows[0]) throw new Error('QUOTA_EXCEEDED');
+
+    await client.query(
+      `UPDATE blog_media_assets
+       SET state = 'ready', physical_bytes = $2, billable_bytes = $2, source_checksum = $3, updated_at = NOW()
+       WHERE id = $1`,
+      [assetId, physicalBytes, checksum ?? null]
+    );
+    await client.query(
+      `UPDATE blog_storage_reservations SET state = 'committed'
+       WHERE user_id = $1 AND idempotency_key = $2`,
+      [userId, row.source_ref]
+    );
+    const updated = await client.query<any>(
+      `SELECT a.*, i.id AS blog_item_id, i.kind_key, ia.position, d.local_date, FALSE AS is_highlight
+       FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
+      [assetId]
+    );
+    return mapAsset(updated.rows[0]);
+  });
 };
 
 // Internal worker lookup only (called from internalBlogWorkerRoutes.ts, which is already gated by a
