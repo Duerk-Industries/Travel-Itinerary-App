@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AI Trip Assistant — tool-calling eval (Phase 0 spike)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --pass: #22c55e;
+    --fail: #ef4444;
+    --unknown: #f59e0b;
+    --accent: #38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 24px 0 8px; color: var(--accent); }
+  p.sub { color: var(--muted); margin: 0 0 20px; font-size: 13px; max-width: 900px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  select, button {
+    background: #0f172a;
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: #0f172a; font-weight: 600; border: none; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #status { font-size: 13px; color: var(--muted); margin-top: 8px; white-space: pre-wrap; }
+  #progressBar { width: 100%; height: 6px; background: #0f172a; border-radius: 4px; overflow: hidden; margin-top: 8px; display: none; }
+  #progressFill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--panel-border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  pre { white-space: pre-wrap; word-break: break-word; margin: 0; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .tag.pass { background: rgba(34,197,94,0.15); color: var(--pass); }
+  .tag.fail { background: rgba(239,68,68,0.15); color: var(--fail); }
+  .tag.unknown { background: rgba(245,158,11,0.15); color: var(--unknown); }
+  .grade-btns button { padding: 3px 8px; font-size: 11px; margin-right: 4px; }
+  #summary { font-size: 13px; }
+  #summary b { color: var(--accent); }
+  #resultsOut { width: 100%; height: 140px; margin-top: 8px; }
+  .metric { color: var(--muted); }
+  .metric b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<h1>AI Trip Assistant — tool-calling eval</h1>
+<p class="sub">
+  Phase 0 spike harness for
+  <code>docs/implementation_plans/implementation-plan-ai-assistant.md</code>.
+  Runs a fixed set of realistic action prompts against an on-device WebLLM
+  model with the app's candidate tool schemas, and grades whether the model
+  picked the right tool with the right arguments. Needs a WebGPU-capable
+  browser (Chrome/Edge desktop). <b>Don't open this file directly
+  (<code>file://</code>)</b> — serve it locally first, e.g. from the repo
+  root: <code>npx serve scripts/spikes</code>, then open the printed
+  <code>http://localhost:...</code> URL. Model weights are fetched directly
+  from Hugging Face by WebLLM — nothing here talks to any app/server backend.
+</p>
+
+<div class="panel">
+  <div class="row">
+    <label for="modelSelect" class="metric">Model:</label>
+    <select id="modelSelect">
+      <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5-1.5B-Instruct (plan default)</option>
+      <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5-3B-Instruct (plan opt-in)</option>
+      <option value="Hermes-2-Pro-Mistral-7B-q4f16_1-MLC">Hermes-2-Pro-Mistral-7B (MLC-vetted function-calling reference)</option>
+    </select>
+    <button id="loadBtn" class="primary">Load model</button>
+    <button id="runBtn" disabled>Run eval (10 prompts)</button>
+    <button id="clearCacheBtn">Clear this model's cache</button>
+  </div>
+  <div id="progressBar"><div id="progressFill"></div></div>
+  <div id="status">Not loaded yet.</div>
+</div>
+
+<div class="panel" id="summaryPanel" style="display:none;">
+  <h2 style="margin-top:0;">Summary</h2>
+  <div id="summary"></div>
+  <textarea id="resultsOut" readonly placeholder="Click &quot;Copy results as Markdown&quot; below once graded."></textarea>
+  <div class="row" style="margin-top:8px;">
+    <button id="copyMdBtn">Copy results as Markdown</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0;">Results</h2>
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th style="width:22%">Prompt</th>
+        <th style="width:20%">Expected</th>
+        <th style="width:20%">Actual tool call(s)</th>
+        <th style="width:10%">Auto</th>
+        <th style="width:13%">Your grade</th>
+        <th style="width:15%">Perf</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+</div>
+
+<script type="module">
+  import * as webllm from "https://esm.run/@mlc-ai/web-llm@0.2.84";
+
+  // ---------------------------------------------------------------------
+  // Tool schemas -- deliberately small subsets of the real Flight/Lodging/
+  // Activity shapes in server/src/types.ts, matching the plan's §5.2/§12
+  // example action allow-list (addFlight, addLodging, addActivity,
+  // updateItineraryStatus). IDs aren't included -- the model never sees or
+  // invents record IDs; the real client-side dispatch layer (assistantTools.ts,
+  // per the plan) would resolve "the Eiffel Tower tour" to a real item itself.
+  // ---------------------------------------------------------------------
+  const TOOLS = [
+    {
+      type: "function",
+      function: {
+        name: "addFlight",
+        description: "Add a flight to the trip.",
+        parameters: {
+          type: "object",
+          properties: {
+            passengerName: { type: "string" },
+            carrier: { type: "string" },
+            flightNumber: { type: "string" },
+            departureAirportCode: { type: "string", description: "3-letter IATA code" },
+            arrivalAirportCode: { type: "string", description: "3-letter IATA code" },
+            departureDate: { type: "string", description: "YYYY-MM-DD" },
+            departureTime: { type: "string", description: "HH:MM 24h" },
+            arrivalTime: { type: "string", description: "HH:MM 24h" },
+          },
+          required: ["passengerName", "departureAirportCode", "arrivalAirportCode", "departureDate"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "addLodging",
+        description: "Add a lodging/hotel stay to the trip.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            address: { type: "string" },
+            check_in_date: { type: "string", description: "YYYY-MM-DD" },
+            check_out_date: { type: "string", description: "YYYY-MM-DD" },
+            rooms: { type: "number" },
+          },
+          required: ["name", "check_in_date", "check_out_date"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "addActivity",
+        description: "Add an activity/tour/event to the trip.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            date: { type: "string", description: "YYYY-MM-DD" },
+            startLocation: { type: "string" },
+            startTime: { type: "string", description: "HH:MM 24h" },
+            duration: { type: "string", description: "e.g. '2h'" },
+          },
+          required: ["name", "date"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "updateItineraryStatus",
+        description: "Change the status of an existing trip item (flight, lodging, or activity).",
+        parameters: {
+          type: "object",
+          properties: {
+            itemName: { type: "string", description: "How the user referred to the item, e.g. 'the Eiffel Tower tour'" },
+            status: { type: "string", enum: ["Needed", "Proposed", "Booked", "Cancelled", "Completed"] },
+          },
+          required: ["itemName", "status"],
+        },
+      },
+    },
+  ];
+
+  const SYSTEM_PROMPT =
+    "You are a trip-planning assistant embedded in a travel itinerary app. " +
+    "You can call tools to add flights, lodging, and activities, or update an item's status. " +
+    "Only call a tool when the user is clearly asking you to add or change something. " +
+    "If the user is just asking a question, or hasn't given you enough information to fill in " +
+    "the tool's required fields, do NOT call a tool and do NOT invent missing details -- respond " +
+    "with a short clarifying question or a plain answer instead. Today's date is 2026-08-21.";
+
+  // ---------------------------------------------------------------------
+  // Fixed eval set. `expectedTool: null` means the correct behavior is NOT
+  // calling a tool at all. `graded: 'auto'` cases are scored automatically
+  // (tool name + required args present/roughly matching); `graded: 'manual'`
+  // cases need a human judgment call (multi-tool, ambiguous) -- the harness
+  // still shows what the model did, you just grade it yourself.
+  // ---------------------------------------------------------------------
+  const CASES = [
+    {
+      id: "flight-clear",
+      prompt: "Add a flight for me, Alex Chen, on United flight 245 from JFK to LAX on March 3rd, departing 8:00am and arriving 11:15am.",
+      expectedTool: "addFlight",
+      expectedArgsContains: { passengerName: "alex chen", departureAirportCode: "jfk", arrivalAirportCode: "lax" },
+      graded: "auto",
+    },
+    {
+      id: "lodging-clear",
+      prompt: "Book us a stay at the Park Hyatt Kyoto from June 1 to June 5.",
+      expectedTool: "addLodging",
+      expectedArgsContains: { name: "park hyatt" },
+      graded: "auto",
+    },
+    {
+      id: "activity-clear",
+      prompt: "Add a walking food tour in Rome on April 12th starting at 10am.",
+      expectedTool: "addActivity",
+      expectedArgsContains: { date: "2026-04-12" },
+      graded: "auto",
+    },
+    {
+      id: "status-update",
+      prompt: "Mark the Eiffel Tower tour as booked.",
+      expectedTool: "updateItineraryStatus",
+      expectedArgsContains: { status: "booked" },
+      graded: "auto",
+    },
+    {
+      id: "no-tool-question",
+      prompt: "What's the best time of year to visit Kyoto?",
+      expectedTool: null,
+      graded: "auto",
+    },
+    {
+      id: "missing-info-flight",
+      prompt: "Add a flight to Tokyo.",
+      expectedTool: null,
+      note: "Correct behavior: ask for missing details (dates/airports), not invent them.",
+      graded: "auto",
+    },
+    {
+      id: "missing-info-lodging",
+      prompt: "Book me a hotel in Paris.",
+      expectedTool: null,
+      note: "Correct behavior: ask for dates, not invent them.",
+      graded: "auto",
+    },
+    {
+      id: "multi-intent",
+      prompt: "Add a hotel in Paris from June 1 to June 5, and also add a Seine river cruise activity on June 2 at 7pm.",
+      expectedTool: ["addLodging", "addActivity"],
+      note: "Two actions in one message -- may need 2 tool_calls, or the model may only do one. Grade by hand.",
+      graded: "manual",
+    },
+    {
+      id: "irrelevant-request",
+      prompt: "Can you recommend a good vegetarian restaurant near the Colosseum?",
+      expectedTool: null,
+      note: "Not an action this assistant's tools cover -- correct behavior is a plain text answer/decline, not a wrong tool call.",
+      graded: "auto",
+    },
+    {
+      id: "ambiguous-reference",
+      prompt: "Actually, cancel that activity we just talked about.",
+      expectedTool: "updateItineraryStatus",
+      note: "No prior turn in this harness, so 'that activity' is genuinely ambiguous -- correct behavior is asking which one, not guessing. Grade by hand.",
+      graded: "manual",
+    },
+  ];
+
+  // ---------------------------------------------------------------------
+  // UI wiring
+  // ---------------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const modelSelect = $("modelSelect");
+  const loadBtn = $("loadBtn");
+  const runBtn = $("runBtn");
+  const clearCacheBtn = $("clearCacheBtn");
+  const statusEl = $("status");
+  const progressBar = $("progressBar");
+  const progressFill = $("progressFill");
+  const resultsBody = $("resultsBody");
+  const summaryPanel = $("summaryPanel");
+  const summaryEl = $("summary");
+  const resultsOut = $("resultsOut");
+  const copyMdBtn = $("copyMdBtn");
+
+  let engine = null;
+  let loadedModelId = null;
+  let loadStartMs = null;
+  let loadSeconds = null;
+  const rows = new Map(); // case id -> { tr, result, manualGrade }
+
+  const setStatus = (text) => { statusEl.textContent = text; };
+
+  const renderCaseRows = () => {
+    resultsBody.innerHTML = "";
+    rows.clear();
+    for (const c of CASES) {
+      const tr = document.createElement("tr");
+      const expectedText = c.expectedTool === null
+        ? "(no tool call)"
+        : Array.isArray(c.expectedTool)
+          ? c.expectedTool.join(" + ")
+          : c.expectedTool;
+      tr.innerHTML = `
+        <td><pre>${escapeHtml(c.prompt)}</pre>${c.note ? `<div class="metric" style="margin-top:4px;">${escapeHtml(c.note)}</div>` : ""}</td>
+        <td><pre>${escapeHtml(expectedText)}</pre></td>
+        <td class="actual"><pre>pending…</pre></td>
+        <td class="auto"><span class="tag unknown">–</span></td>
+        <td class="grade-cell">
+          <div class="grade-btns">
+            <button data-grade="pass">✅ pass</button>
+            <button data-grade="fail">❌ fail</button>
+          </div>
+        </td>
+        <td class="perf metric">–</td>
+      `;
+      resultsBody.appendChild(tr);
+      rows.set(c.id, { tr, result: null, manualGrade: null });
+
+      tr.querySelectorAll("[data-grade]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          rows.get(c.id).manualGrade = btn.dataset.grade;
+          updateSummary();
+          renderGradeCell(c.id);
+        });
+      });
+    }
+  };
+
+  const escapeHtml = (s) =>
+    String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
+  const renderGradeCell = (caseId) => {
+    const row = rows.get(caseId);
+    const cell = row.tr.querySelector(".grade-cell");
+    const grade = row.manualGrade ?? row.result?.autoGrade;
+    const tagHtml = grade === "pass"
+      ? `<span class="tag pass">✅ pass</span>`
+      : grade === "fail"
+        ? `<span class="tag fail">❌ fail</span>`
+        : `<span class="tag unknown">? review</span>`;
+    cell.innerHTML = `
+      ${tagHtml}
+      <div class="grade-btns" style="margin-top:6px;">
+        <button data-grade="pass">✅</button>
+        <button data-grade="fail">❌</button>
+      </div>
+    `;
+    cell.querySelectorAll("[data-grade]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        row.manualGrade = btn.dataset.grade;
+        updateSummary();
+        renderGradeCell(caseId);
+      });
+    });
+  };
+
+  const autoGrade = (c, toolCalls) => {
+    if (c.graded === "manual") return null; // needs a human, always
+    if (c.expectedTool === null) {
+      return toolCalls.length === 0 ? "pass" : "fail";
+    }
+    if (toolCalls.length !== 1) return "fail";
+    const call = toolCalls[0];
+    if (call.name !== c.expectedTool) return "fail";
+    if (!c.expectedArgsContains) return "pass";
+    for (const [key, expected] of Object.entries(c.expectedArgsContains)) {
+      const actual = String(call.args?.[key] ?? "").toLowerCase();
+      if (!actual.includes(String(expected).toLowerCase())) return "fail";
+    }
+    return "pass";
+  };
+
+  const updateSummary = () => {
+    const graded = [...rows.values()].filter((r) => r.result);
+    const passCount = graded.filter((r) => (r.manualGrade ?? r.result.autoGrade) === "pass").length;
+    const needsReview = graded.filter((r) => (r.manualGrade ?? r.result.autoGrade) === null).length;
+    summaryPanel.style.display = graded.length ? "block" : "none";
+    summaryEl.innerHTML = `
+      Model: <b>${loadedModelId ?? "–"}</b> · Load time: <b>${loadSeconds ? loadSeconds.toFixed(1) + "s" : "–"}</b><br/>
+      Score: <b>${passCount}/${graded.length}</b> passed
+      ${needsReview ? ` (${needsReview} still need manual review)` : ""}
+    `;
+  };
+
+  const toolCallsFromMessage = (message) => {
+    if (!message?.tool_calls?.length) return [];
+    return message.tool_calls.map((tc) => {
+      let args = {};
+      try { args = JSON.parse(tc.function.arguments); } catch { /* leave empty on parse failure -- itself a real finding */ }
+      return { name: tc.function.name, args, raw: tc.function.arguments };
+    });
+  };
+
+  const runOneCase = async (c) => {
+    const row = rows.get(c.id);
+    const started = performance.now();
+    const completion = await engine.chat.completions.create({
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: c.prompt },
+      ],
+      tools: TOOLS,
+      tool_choice: "auto",
+    });
+    const elapsedMs = performance.now() - started;
+    const message = completion.choices[0].message;
+    const toolCalls = toolCallsFromMessage(message);
+    const autoGradeResult = autoGrade(c, toolCalls);
+
+    row.result = { toolCalls, message, autoGrade: autoGradeResult, elapsedMs, usage: completion.usage };
+
+    const actualCell = row.tr.querySelector(".actual");
+    actualCell.innerHTML = toolCalls.length
+      ? toolCalls.map((tc) => `<pre>${escapeHtml(tc.name)}(${escapeHtml(JSON.stringify(tc.args))})</pre>`).join("")
+      : `<pre>(no tool call)${message.content ? "\n\n" + escapeHtml(message.content) : ""}</pre>`;
+
+    const autoCell = row.tr.querySelector(".auto");
+    autoCell.innerHTML = autoGradeResult === "pass"
+      ? `<span class="tag pass">pass</span>`
+      : autoGradeResult === "fail"
+        ? `<span class="tag fail">fail</span>`
+        : `<span class="tag unknown">manual</span>`;
+
+    const perfCell = row.tr.querySelector(".perf");
+    const extra = completion.usage?.extra;
+    perfCell.innerHTML = extra
+      ? `${extra.decode_tokens_per_s.toFixed(1)} tok/s<br/>${(extra.time_to_first_token_s * 1000).toFixed(0)}ms TTFT`
+      : `${elapsedMs.toFixed(0)}ms`;
+
+    renderGradeCell(c.id);
+    updateSummary();
+  };
+
+  loadBtn.addEventListener("click", async () => {
+    const modelId = modelSelect.value;
+    loadBtn.disabled = true;
+    modelSelect.disabled = true;
+    runBtn.disabled = true;
+    progressBar.style.display = "block";
+    loadStartMs = performance.now();
+    try {
+      engine = await webllm.CreateMLCEngine(modelId, {
+        initProgressCallback: (report) => {
+          progressFill.style.width = `${Math.round(report.progress * 100)}%`;
+          setStatus(report.text);
+        },
+      });
+      loadedModelId = modelId;
+      loadSeconds = (performance.now() - loadStartMs) / 1000;
+      setStatus(`Loaded ${modelId} in ${loadSeconds.toFixed(1)}s. Ready to run eval.`);
+      runBtn.disabled = false;
+      renderCaseRows();
+      updateSummary();
+    } catch (err) {
+      setStatus(`Failed to load: ${err?.message ?? err}\n\nIf this mentions WebGPU, your browser/device likely doesn't support it -- this is exactly the "not available" case the plan (§13) already accounts for.`);
+    } finally {
+      loadBtn.disabled = false;
+      modelSelect.disabled = false;
+      progressBar.style.display = "none";
+    }
+  });
+
+  clearCacheBtn.addEventListener("click", async () => {
+    const modelId = modelSelect.value;
+    await webllm.deleteModelAllInfoInCache(modelId);
+    setStatus(`Cleared cached weights for ${modelId}. Next load will re-download.`);
+  });
+
+  runBtn.addEventListener("click", async () => {
+    runBtn.disabled = true;
+    loadBtn.disabled = true;
+    for (const c of CASES) {
+      setStatus(`Running: ${c.id}…`);
+      try {
+        await runOneCase(c);
+      } catch (err) {
+        const row = rows.get(c.id);
+        row.tr.querySelector(".actual").innerHTML = `<pre style="color:var(--fail)">ERROR: ${escapeHtml(err?.message ?? String(err))}</pre>`;
+      }
+    }
+    setStatus(`Done. Grade any "manual" rows by hand, then copy results.`);
+    runBtn.disabled = false;
+    loadBtn.disabled = false;
+  });
+
+  copyMdBtn.addEventListener("click", () => {
+    const lines = [
+      `Model: ${loadedModelId} — load time ${loadSeconds?.toFixed(1)}s`,
+      "",
+      "| Case | Expected | Actual | Grade | tok/s |",
+      "|---|---|---|---|---|",
+    ];
+    for (const c of CASES) {
+      const row = rows.get(c.id);
+      const r = row.result;
+      const expected = c.expectedTool === null ? "(none)" : Array.isArray(c.expectedTool) ? c.expectedTool.join("+") : c.expectedTool;
+      const actual = r?.toolCalls?.length ? r.toolCalls.map((tc) => `${tc.name}(${JSON.stringify(tc.args)})`).join("; ") : "(none)";
+      const grade = row.manualGrade ?? r?.autoGrade ?? "?";
+      const tps = r?.usage?.extra?.decode_tokens_per_s?.toFixed(1) ?? "-";
+      lines.push(`| ${c.id} | ${expected} | ${actual.replace(/\|/g, "\\|")} | ${grade} | ${tps} |`);
+    }
+    resultsOut.value = lines.join("\n");
+    resultsOut.select();
+    document.execCommand("copy");
+    setStatus("Results copied as Markdown (also left in the textarea above).");
+  });
+
+  renderCaseRows();
+</script>
+</body>
+</html>
