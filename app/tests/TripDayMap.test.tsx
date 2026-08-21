@@ -114,4 +114,34 @@ describe('TripDayMap', () => {
       expect(queryByTestId('day-detail-map')).toBeNull();
     });
   });
+
+  it('shows a legend entry for each kind present, in flight/lodging/activity/car_rental order', () => {
+    const { getByTestId, getByText, queryByText } = render(
+      <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+    );
+    expect(getByTestId('day-detail-map-legend')).toBeTruthy();
+    expect(getByText('Flight')).toBeTruthy();
+    expect(getByText('Lodging')).toBeTruthy();
+    // Only kinds actually present in `points` should show up.
+    expect(queryByText('Activity')).toBeNull();
+    expect(queryByText('Car rental')).toBeNull();
+  });
+
+  it('does not duplicate a legend entry when a kind appears more than once', () => {
+    const repeated = [
+      { kind: 'car_rental' as const, address: 'Pickup' },
+      { kind: 'car_rental' as const, address: 'Dropoff' },
+    ];
+    const { getAllByText } = render(
+      <TripDayMap points={repeated} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+    );
+    expect(getAllByText('Car rental')).toHaveLength(1);
+  });
+
+  it('renders no legend when there are no points', () => {
+    const { queryByTestId } = render(
+      <TripDayMap points={[]} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+    );
+    expect(queryByTestId('day-detail-map-legend')).toBeNull();
+  });
 });

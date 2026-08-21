@@ -33,6 +33,35 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify Node
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 20) throw new Error('Node 20 or newer is required');"
+
+      - run: npm ci
+
+      - name: Export web frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix app run export:web -- --output-dir ../dist
+
+      # server/public has no tracked files (git doesn't store empty directories), so a clean
+      # checkout never has it -- server/Dockerfile's `COPY --from=build /app/public ./public`
+      # fails outright without this (see scripts/build-release.sh, which has the same step for
+      # the scripted Phase 11 pipeline). app.ts also serves this directory directly
+      # (express.static), separately from the Firebase Hosting deploy of the same build.
+      - name: Populate server/public
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf server/public
+          mkdir -p server/public
+          cp -r dist/. server/public/
+
       - name: Authenticate gcloud
         shell: bash
         run: |

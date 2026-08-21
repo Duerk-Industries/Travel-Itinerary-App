@@ -96,6 +96,10 @@ type CreateTripWizardProps = {
   // `false` starts every new trip directly in the full 9-step wizard, same as
   // before this initiative shipped.
   featureQuickStartTripWizard?: boolean;
+  // Reflects the `ai_itinerary_generation` feature flag (+ tier entitlement)
+  // for the current user. When false, the AI option is hidden and the
+  // wizard is locked to manual itinerary creation.
+  aiItineraryGenerationAllowed?: boolean;
 };
 
 const steps = [
@@ -226,6 +230,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   currentUserName,
   currentUserEmail,
   featureQuickStartTripWizard = true,
+  aiItineraryGenerationAllowed = true,
 }) => {
   const destinationAttractionWizardEnabled = !['0', 'false', 'off', 'no'].includes(
     String(process.env.EXPO_PUBLIC_WIZARD_DESTINATION_ATTRACTIONS_ENABLED ?? 'true')
@@ -754,6 +759,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setManualDay(null);
     setWizardError('');
   };
+
+  // AI itinerary generation is behind the `ai_itinerary_generation` feature
+  // flag / tier entitlement. When it's off, skip the Yes/No question
+  // entirely and lock the wizard into manual itinerary creation.
+  useEffect(() => {
+    if (!aiItineraryGenerationAllowed && itineraryMode !== 'manual') {
+      selectItineraryMode('manual');
+    }
+  }, [aiItineraryGenerationAllowed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setStartDateWithRangeGuard = useCallback((value: string) => {
     const normalized = normalizeDateString(value);
@@ -1704,34 +1718,42 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         return (
           <>
             <Text style={styles.sectionTitle}>Itinerary</Text>
-            <Text style={styles.helperText}>
-              Would you like to create a base itinerary using the help of AI?
-            </Text>
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[
-                  styles.mapOptionButton ?? styles.button,
-                  itineraryMode === 'ai' && (styles.mapOptionActive ?? styles.toggleActive),
-                  { marginRight: 8 },
-                ]}
-                onPress={() => selectItineraryMode('ai')}
-              >
-                <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'ai' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
-                  Yes
+            {aiItineraryGenerationAllowed ? (
+              <>
+                <Text style={styles.helperText}>
+                  Would you like to create a base itinerary using the help of AI?
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.mapOptionButton ?? styles.button,
-                  itineraryMode === 'manual' && (styles.mapOptionActive ?? styles.toggleActive),
-                ]}
-                onPress={() => selectItineraryMode('manual')}
-              >
-                <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'manual' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
-                  No
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.row}>
+                  <TouchableOpacity
+                    style={[
+                      styles.mapOptionButton ?? styles.button,
+                      itineraryMode === 'ai' && (styles.mapOptionActive ?? styles.toggleActive),
+                      { marginRight: 8 },
+                    ]}
+                    onPress={() => selectItineraryMode('ai')}
+                  >
+                    <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'ai' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
+                      Yes
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.mapOptionButton ?? styles.button,
+                      itineraryMode === 'manual' && (styles.mapOptionActive ?? styles.toggleActive),
+                    ]}
+                    onPress={() => selectItineraryMode('manual')}
+                  >
+                    <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'manual' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
+                      No
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.helperText}>
+                AI itinerary generation is currently unavailable. You can build your itinerary manually below.
+              </Text>
+            )}
             {itineraryMode === 'ai' ? (
               <ScrollView
                 style={{ maxHeight: 520 }}
