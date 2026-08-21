@@ -13,6 +13,7 @@ export interface BlogRepository {
   updateBlogTextItem: typeof postgres.updateBlogTextItem;
   deleteBlogItem: typeof postgres.deleteBlogItem;
   setDayCover: typeof postgres.setDayCover;
+  setDayCoverIfUnset: typeof postgres.setDayCoverIfUnset;
   reorderBlogItems: typeof postgres.reorderBlogItems;
   getPublicPath: (tripId: string) => Promise<string | null>;
   isBlogPublic: (tripId: string) => Promise<boolean>;

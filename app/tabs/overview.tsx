@@ -2434,7 +2434,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return 'Free day';
   };
 
-  const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
+  const buildDayNarrative = (
+    info: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] } | undefined,
+    date?: string,
+  ) => {
     if (!info) return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) {
@@ -2448,7 +2451,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
     }
     if (info.lodgings.length) {
-      return info.lodgings.map((l) => `Check-in at ${l.name}.`);
+      const day = normalizeDateString(date ?? '');
+      return info.lodgings
+        .filter((lodging) => normalizeDateString(lodging.checkInDate) === day)
+        .map((lodging) => `Check-in at ${lodging.name}.`);
     }
     if (info.rentals.length) {
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
@@ -2654,7 +2660,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const renderDayBar = (activeDate: string | null) => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator
+      nestedScrollEnabled
+      style={{ width: '100%', maxWidth: '100%', minWidth: 0, flexGrow: 0, flexShrink: 1, alignSelf: 'stretch', marginVertical: 8 }}
+      contentContainerStyle={{ paddingRight: 8, flexGrow: 0, flexShrink: 0 }}
+      testID="overview-day-bar-scroll"
+    >
       <TouchableOpacity
         testID="overview-day-pill-overview"
         style={[styles.dayPill, !activeDate && styles.dayPillActive]}
@@ -2763,7 +2776,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const startLocation = buildDayStartLocation(activeDayInfo);
         const summary = buildDaySummary(activeDayInfo);
         const heroTitle = buildHeroTitle(startLocation, summary);
-        const narrativeLines = buildDayNarrative(activeDayInfo);
+        const narrativeLines = buildDayNarrative(activeDayInfo, activeDayCard.date);
         const flightsForDay = activeDayInfo.flights;
         const activityTimeKey = (tour: Tour) => {
           const value = String(tour.startTime ?? '').trim();
@@ -2833,7 +2846,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 paddingTop: isPhoneLayout ? 48 : 56,
                 paddingBottom: 24,
               }}
-              onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+              onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
               scrollEventThrottle={16}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
@@ -3141,7 +3154,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     <Text
                                       style={[
                                         styles.helperText,
-                                        checked && { textDecorationLine: 'line-through', color: '#777' },
+                                        checked && { textDecorationLine: 'line-through', color: theme.colors.textMuted },
                                       ]}
                                     >
                                       {it.label}
@@ -3269,7 +3282,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ref={scrollRef}
           style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
           contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
-          onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+          onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -3333,7 +3346,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ref={scrollRef}
         style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
         contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
-        onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+          onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -3787,7 +3800,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   style={styles.flightRow}
                   onPress={() => openFlightEditor(flight)}
                   onLayout={(e: LayoutChangeEvent) => {
-                    setFlightRowOffsets((prev) => ({ ...prev, [flight.id]: e.nativeEvent.layout.y }));
+                    // Native can deliver a final layout callback with a null
+                    // nativeEvent while the overview switches into edit mode
+                    // and replaces the row tree. Ignore that callback rather
+                    // than crashing the root error boundary.
+                    const y = e?.nativeEvent?.layout?.y;
+                    if (typeof y !== 'number' || !Number.isFinite(y)) return;
+                    setFlightRowOffsets((prev) => ({ ...prev, [flight.id]: y }));
                   }}
                 >
                   <Text style={styles.flightTitle}>
@@ -4068,7 +4087,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           onSave={saveRental}
           onCancel={closeRentalModal}
           isNew={!editingRentalId}
-          members={userMembers}
+          members={groupMembers}
           styles={styles}
           theme={theme}
         />

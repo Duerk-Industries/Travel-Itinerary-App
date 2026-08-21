@@ -180,6 +180,13 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       } else if (!t.name.trim() && t.email) {
         displayName = t.email.split('@')[0];
       }
+      // A traveler with neither a name nor an email (e.g. a guest added with
+      // no contact info yet) would otherwise fall through with an empty
+      // string here, rendering a blank column header — the checkbox column
+      // still exists, just unlabeled. Every column needs a visible label.
+      if (!displayName.trim()) {
+        displayName = 'Traveler';
+      }
 
       return { ...t, displayName };
     });
@@ -662,18 +669,18 @@ const localStyles = StyleSheet.create({
   addButton: { borderWidth: 1, borderRadius: 6, padding: 10, alignSelf: 'flex-start' },
   addButtonText: { fontWeight: '700' },
   meta: { fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'stretch', borderBottomWidth: StyleSheet.hairlineWidth, minHeight: 44 },
+  row: { flexDirection: 'row', alignItems: 'stretch', borderBottomWidth: StyleSheet.hairlineWidth, minHeight: 44, flexShrink: 0 },
   headerRow: { minHeight: 36 },
-  itemHeader: { width: 240, padding: 8, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  travelerHeader: { width: 110, padding: 8, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  editHeader: { width: 116, padding: 8, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  itemHeader: { width: 240, flexShrink: 0, padding: 8, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  travelerHeader: { width: 110, flexShrink: 0, padding: 8, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  editHeader: { width: 116, flexShrink: 0, padding: 8, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   categoryRow: { paddingHorizontal: 8, paddingVertical: 7, minHeight: 32 },
   categoryText: { fontWeight: '700' },
-  itemCell: { width: 240, padding: 8, gap: 6, justifyContent: 'center' },
+  itemCell: { width: 240, flexShrink: 0, padding: 8, gap: 6, justifyContent: 'center' },
   itemText: { fontSize: 15 },
-  checkCell: { width: 110, alignItems: 'center', justifyContent: 'center', borderLeftWidth: StyleSheet.hairlineWidth },
+  checkCell: { width: 110, flexShrink: 0, alignItems: 'center', justifyContent: 'center', borderLeftWidth: StyleSheet.hairlineWidth },
   checkText: { fontSize: 20, fontWeight: '700' },
-  editCell: { width: 116, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  editCell: { width: 116, flexShrink: 0, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   orderButton: { minWidth: 28, minHeight: 28, alignItems: 'center', justifyContent: 'center' },
   orderText: { fontSize: 18, fontWeight: '700' },
   categorySelectWeb: { width: '100%', minHeight: 36, borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14 },

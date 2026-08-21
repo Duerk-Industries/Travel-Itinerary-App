@@ -2,18 +2,22 @@ import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { blogMediaRepository } from '../src/blog/repository';
 
 describe('trip blog media quota lifecycle', () => {
   const owner = { firstName: 'Media', lastName: 'Uploader', email: 'blog-media@example.com', password: 'Password123!' };
   let token = '';
   let tripId = '';
+  let userId = '';
   beforeAll(async () => {
     await initDb();
     await setFeatureFlag('trip_blog', true, null);
     await setFeatureFlag('trip_blog_photo_uploads', true, null);
     await registerWebUser(owner);
     await confirmWebUser(owner.email);
-    token = (await loginWebUser(owner)).body.token;
+    const login = await loginWebUser(owner);
+    token = login.body.token;
+    userId = login.body.user.id;
     const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`).send({ name: 'Media Trip', startDate: '2026-09-01', endDate: '2026-09-01', participants: [] }).expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
   });
@@ -31,6 +35,60 @@ describe('trip blog media quota lifecycle', () => {
 
   it('rejects unsupported image formats before reserving bytes', async () => {
     await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'photo-heic').send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/heic', byteSize: 2048 }).expect(400);
+  });
+
+  it('atomically charges generated rendition bytes above the original reservation', async () => {
+    const before = await request(app).get('/api/account/blog-storage').set('Authorization', `Bearer ${token}`).expect(200);
+    const init = await request(app)
+      .post(`/api/trips/${tripId}/blog/media/upload-init`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', 'photo-rendition-overhead')
+      .send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1000 })
+      .expect(201);
+
+    const completed = await request(app)
+      .post(`/api/trips/${tripId}/blog/media/${init.body.asset.id}/complete`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ physicalBytes: 1200 })
+      .expect(200);
+
+    expect(completed.body.physicalBytes).toBe(1200);
+    expect(completed.body.billableBytes).toBe(1200);
+    const after = await request(app).get('/api/account/blog-storage').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(after.body.visibleCommittedBytes).toBe(before.body.visibleCommittedBytes + 1200);
+    expect(after.body.reservedBytes).toBe(before.body.reservedBytes);
+  });
+
+  it('leaves the reservation untouched when rendition overhead exceeds quota, then permits a smaller retry', async () => {
+    const before = await request(app).get('/api/account/blog-storage').set('Authorization', `Bearer ${token}`).expect(200);
+    await blogMediaRepository().setIncludedStorage(userId, before.body.visibleCommittedBytes + 1100);
+    const init = await request(app)
+      .post(`/api/trips/${tripId}/blog/media/upload-init`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', 'photo-rendition-overhead-quota')
+      .send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1000 })
+      .expect(201);
+
+    const reserved = await request(app).get('/api/account/blog-storage').set('Authorization', `Bearer ${token}`).expect(200);
+    await request(app)
+      .post(`/api/trips/${tripId}/blog/media/${init.body.asset.id}/complete`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ physicalBytes: 1200 })
+      .expect(413, { error: 'QUOTA_EXCEEDED', code: 'QUOTA_EXCEEDED' });
+
+    const rejected = await request(app).get('/api/account/blog-storage').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(rejected.body.visibleCommittedBytes).toBe(reserved.body.visibleCommittedBytes);
+    expect(rejected.body.reservedBytes).toBe(reserved.body.reservedBytes);
+
+    await request(app)
+      .post(`/api/trips/${tripId}/blog/media/${init.body.asset.id}/complete`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ physicalBytes: 1100 })
+      .expect(200);
+    const completed = await request(app).get('/api/account/blog-storage').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(completed.body.visibleCommittedBytes).toBe(before.body.visibleCommittedBytes + 1100);
+    expect(completed.body.reservedBytes).toBe(before.body.reservedBytes);
+    await blogMediaRepository().setIncludedStorage(userId, before.body.includedBytes);
   });
 
   it('exposes the blog_items id (not the media asset id) via GET /blog, and Remove actually removes it', async () => {

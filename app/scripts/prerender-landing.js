@@ -64,7 +64,7 @@ const landingHtml = `
       <a href="https://wander-bunnies.com/terms.html" style="color: #45B7C6; text-decoration: underline;">Terms of Service</a> ·
       <a href="https://wander-bunnies.com/cookies.html" style="color: #45B7C6; text-decoration: underline;">Cookie Policy</a>
     </nav>
-    <p>&copy; 2026 WanderBunnies · Owned and operated by Bryan Duerk</p>
+    <p>&copy; 2026 WanderBunnies · Owned and operated by Tristan Duerk, all rights reserved</p>
   </footer>
 </div>
 `;

@@ -19,6 +19,7 @@ type ShareInvite = {
   token?: string | null;
   autoApplied?: boolean;
 };
+type TripFollower = { userId: string; firstName?: string; lastName?: string; email?: string; createdAt?: string | null };
 
 type ShareTripModalProps = {
   visible: boolean;
@@ -40,6 +41,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState('');
   const [shareInviteRows, setShareInviteRows] = useState<ShareInvite[]>([]);
+  const [followers, setFollowers] = useState<TripFollower[]>([]);
   const [followCode, setFollowCode] = useState('');
   const [copyFeedback, setCopyFeedback] = useState('');
   const [inviteInput, setInviteInput] = useState('');
@@ -78,6 +80,9 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
         const code = String(metaData.followCode ?? metaData.inviteCode ?? metaData.code ?? '').trim();
         setFollowCode(code);
         setShareInviteRows(Array.isArray(metaData.invites) ? metaData.invites : []);
+        const followersRes = await fetch(`${backendUrl}/api/trips/${trip.id}/share/followers`, { headers });
+        const followersData = await readJson(followersRes);
+        setFollowers(followersRes.ok && Array.isArray(followersData.followers) ? followersData.followers : []);
         if (!code) setShareError('Share code unavailable for this trip.');
         return;
       }
@@ -92,6 +97,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
       const fallbackCode = String(followCodeData.inviteCode ?? followCodeData.followCode ?? followCodeData.code ?? '').trim();
       setFollowCode(fallbackCode);
       setShareInviteRows([]);
+      setFollowers([]);
       if (!fallbackCode) setShareError('Share code unavailable for this trip.');
     } catch (err) {
       setShareError((err as Error).message || 'Unable to load share data');
@@ -181,6 +187,21 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
     }
   };
 
+  const removeFollower = async (followerUserId: string) => {
+    if (!backendUrl || !headers || !trip?.id) return;
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/share/followers/${encodeURIComponent(followerUserId)}`, { method: 'DELETE', headers });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setInviteFeedback(data.error || 'Unable to remove follower');
+        return;
+      }
+      setFollowers((prev) => prev.filter((follower) => follower.userId !== followerUserId));
+    } catch (err) {
+      setInviteFeedback((err as Error).message || 'Unable to remove follower');
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
@@ -260,6 +281,21 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
             ) : (
               <Text style={styles.helperText}>No invites yet.</Text>
             )}
+          </ScrollView>
+          <View style={styles.divider} />
+          <Text style={styles.modalLabel}>Current followers</Text>
+          <ScrollView style={{ maxHeight: 180 }}>
+            {followers.length ? followers.map((follower) => {
+              const name = `${follower.firstName ?? ''} ${follower.lastName ?? ''}`.trim() || follower.email || 'Follower';
+              return (
+                <View key={follower.userId} style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <Text style={styles.bodyText}>{name}</Text>
+                  <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => void removeFollower(follower.userId)}>
+                    <Text style={styles.dangerButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }) : <Text style={styles.helperText}>No current followers.</Text>}
           </ScrollView>
         </View>
       </View>

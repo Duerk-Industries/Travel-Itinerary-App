@@ -473,9 +473,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                   </TouchableOpacity>
                 )}
                 {day.weather ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f9ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme?.colors?.surfaceMuted ?? '#f0f9ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
                     <Text style={{ fontSize: 16, marginRight: 4 }}>{day.weather.icon}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#0369a1' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: theme?.colors?.link ?? '#0369a1' }}>
                       {day.weather.temperatureHighC != null ? `${day.weather.temperatureHighC}°C` : ''}
                     </Text>
                   </View>

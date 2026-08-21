@@ -44,7 +44,7 @@ export type CarRentalEditFormProps = {
   onSave: () => void | Promise<void>;
   onCancel: () => void;
   isNew: boolean;
-  /** Already filtered to the members eligible to be assigned a rental (non-guest, active) — see caller. */
+  /** Group members eligible to be assigned a rental. Removed members are filtered locally. */
   members: CarRentalFormMember[];
   styles: Record<string, any>;
   theme?: AppTheme;
@@ -62,6 +62,10 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
 }) => {
   const [dateField, setDateField] = useState<CarRentalDateField | null>(null);
   const [pickerValue, setPickerValue] = useState<Date>(new Date());
+  // Keep this list in sync with lodging and activity editors: guests and
+  // pending travelers are valid trip participants, while removed members are
+  // never offered for new assignments.
+  const activeMembers = members.filter((member) => member.status !== 'removed' && !member.removedAt);
 
   const toggleBaseStyle = styles.toggleOption ?? {
     paddingHorizontal: 10,
@@ -218,7 +222,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
             />
             <Text style={styles.modalLabel}>For</Text>
             <View style={styles.payerChips}>
-              {members.map((m) => {
+              {activeMembers.map((m) => {
                 const selected = draft.travelerIds.includes(m.id);
                 const name = formatMemberDisplayName(m);
                 return (
@@ -239,7 +243,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
             </View>
             <Text style={styles.modalLabel}>Paid by</Text>
             <View style={styles.payerChips}>
-              {members.map((m) => {
+              {activeMembers.map((m) => {
                 const selected = draft.paidBy.includes(m.id);
                 const name = formatMemberDisplayName(m);
                 return (

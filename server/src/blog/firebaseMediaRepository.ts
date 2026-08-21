@@ -93,24 +93,33 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
 };
 
 export const completeUpload = async (userId: string, assetId: string, physicalBytes: number, checksum?: string): Promise<BlogMediaAsset> => {
+  if (!Number.isSafeInteger(physicalBytes) || physicalBytes <= 0) throw new Error('Uploaded bytes do not match the reservation');
+
   const db = getDb();
   const assetRef = db.collection('blog_media_assets').doc(assetId);
   const accountRef = db.collection('blog_storage_accounts').doc(userId);
+  await ensureAccount(userId);
 
   const result = await db.runTransaction(async (tx) => {
     const assetSnap = await tx.get(assetRef);
     if (!assetSnap.exists) throw new Error('Media upload not found');
     const asset = assetSnap.data() as any;
     if (asset.uploaderUserId !== userId) throw new Error('Not authorized');
-    if (physicalBytes <= 0 || physicalBytes > Number(asset.physicalBytes)) throw new Error('Uploaded bytes do not match the reservation');
+    if (!['uploading', 'quarantined'].includes(String(asset.state))) throw new Error('Media upload not found');
 
-    await ensureAccount(userId); // Ensure account exists before transaction might use it
     const accountSnap = await tx.get(accountRef);
     const account = accountSnap.data() as any;
+    const reservedBytes = Number(asset.physicalBytes);
+    const additionalBytes = Math.max(0, physicalBytes - reservedBytes);
+    const availableBytes = Math.max(0, Number(account?.includedBytes ?? 0)
+      + Number(account?.purchasedBytes ?? 0)
+      - Number(account?.visibleCommittedBytes ?? 0)
+      - Number(account?.reservedBytes ?? 0));
+    if (additionalBytes > availableBytes) throw new Error('QUOTA_EXCEEDED');
 
     tx.set(assetRef, { state: 'ready', physicalBytes, billableBytes: physicalBytes, checksum: checksum ?? null, updatedAt: nowIso() }, { merge: true });
     tx.set(accountRef, {
-      reservedBytes: Math.max(0, Number(account?.reservedBytes ?? 0) - Number(asset.physicalBytes)),
+      reservedBytes: Math.max(0, Number(account?.reservedBytes ?? 0) - reservedBytes),
       visibleCommittedBytes: Number(account?.visibleCommittedBytes ?? 0) + physicalBytes,
       updatedAt: nowIso()
     }, { merge: true });

@@ -496,6 +496,8 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           const label = `${memberNameMap.get(payment.payerId) ?? 'Someone'} paid ${
             memberNameMap.get(payment.receiverId) ?? 'someone'
           } ${formatCents(payment.amountCents, tripCurrency)}`;
+          const paymentDescription = `${memberNameMap.get(payment.payerId) ?? 'Someone'} paid ${memberNameMap.get(payment.receiverId) ?? 'someone'}`;
+          const paymentAmount = formatCents(payment.amountCents, tripCurrency);
           return (
             <View
               key={`payment-${payment.id}`}
@@ -504,17 +506,26 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
                 {
                   alignItems: isNarrowLayout ? 'stretch' : 'center',
                   flexDirection: isNarrowLayout ? 'column' : 'row',
-                  flexWrap: 'nowrap',
+                  flexWrap: isNarrowLayout ? 'wrap' : 'nowrap',
                   gap: 8,
+                  width: '100%',
+                  maxWidth: '100%',
                 },
               ]}
               testID={`payment-row-${payment.id}`}
             >
-              <Text
-                style={[styles.cellText, { flex: 1, minWidth: 0, flexShrink: 1 }]}
-              >
-                {payment.paymentDate} — {label}
-              </Text>
+              {isNarrowLayout ? (
+                <View style={{ width: '100%', minWidth: 0 }}>
+                  <Text style={[styles.cellText, { width: '100%', flexShrink: 1 }]}>
+                    {payment.paymentDate} — {paymentDescription}
+                  </Text>
+                  <Text style={[styles.cellText, { width: '100%', flexShrink: 1 }]}>{paymentAmount}</Text>
+                </View>
+              ) : (
+                <Text style={[styles.cellText, { flex: 1, minWidth: 0, flexShrink: 1 }]}>
+                  {payment.paymentDate} — {label}
+                </Text>
+              )}
               {!readOnly ? (
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.dangerButton, isNarrowLayout && { alignSelf: 'flex-start' }]}

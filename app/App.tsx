@@ -3162,7 +3162,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           carDraft={carDraft}
           setCarDraft={setCarDraft}
           isFollowingMode={isFollowingMode}
-          userMembers={userMembers}
+          userMembers={groupMembers}
           styles={styles}
           theme={theme}
           payerName={payerName}

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
-import { queryBlog } from '../db.postgres';
+import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
 import { buildNarrativeBlogBody } from './narrative';
@@ -465,6 +465,39 @@ export const setDayCover = async (userId: string, tripId: string, dayDate: strin
   );
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
 };
+
+// Called only after a photo has finalized successfully. The conditional UPDATE makes concurrent
+// uploads race-safe: exactly one ready photo can claim an unassigned day, and an existing cover
+// (whether automatic or traveler-selected) is never overwritten.
+export const setDayCoverIfUnset = async (userId: string, tripId: string, dayDate: string, assetId: string): Promise<boolean> =>
+  withBlogTransaction(async (client) => {
+    const match = await client.query<{ day_id: string }>(
+      `SELECT d.id AS day_id
+       FROM blog_media_assets a
+       JOIN blog_item_assets ia ON ia.asset_id = a.id
+       JOIN blog_items i ON i.id = ia.item_id
+       JOIN blog_days d ON d.id = i.blog_day_id
+       WHERE a.id = $1 AND a.uploader_user_id = $2 AND a.trip_id = $3
+         AND a.media_kind_key = 'photo' AND a.state = 'ready' AND d.local_date = $4::date
+       LIMIT 1`,
+      [assetId, userId, tripId, dayDate]
+    );
+    if (!match.rows[0]) return false;
+
+    const updated = await client.query(
+      `UPDATE blog_days
+       SET cover_asset_id = $2, cover_set_by_user_id = $3, cover_set_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND cover_asset_id IS NULL AND cover_set_at IS NULL
+       RETURNING id`,
+      [match.rows[0].day_id, assetId, userId]
+    );
+    if (!updated.rows[0]) return false;
+    await client.query(
+      'UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1',
+      [tripId]
+    );
+    return true;
+  });
 
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {
   const access = await ensureUserInTrip(tripId, userId);

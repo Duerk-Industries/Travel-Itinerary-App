@@ -40,28 +40,28 @@ describe('trip blog day cover selection', () => {
     return { assetId, itemId: item.id };
   };
 
-  it('falls back to the most-recently-uploaded photo when no cover is explicitly set', async () => {
+  it('automatically sets the first uploaded photo as the cover without replacing it on later uploads', async () => {
     const first = await uploadReadyPhoto('2026-09-10', 'cover-fallback-1');
     const second = await uploadReadyPhoto('2026-09-10', 'cover-fallback-2');
     const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
     const day = blog.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
-    expect(day.coverIsExplicit).toBe(false);
-    expect(day.coverItemId).toBe(second.itemId);
+    expect(day.coverIsExplicit).toBe(true);
+    expect(day.coverItemId).toBe(first.itemId);
     expect(first.itemId).not.toBe(second.itemId);
   });
 
   it('lets a traveler set an explicit day cover, reflected on the next GET /blog', async () => {
-    const first = await uploadReadyPhoto('2026-09-10', 'cover-explicit-1');
-    await uploadReadyPhoto('2026-09-10', 'cover-explicit-2');
+    await uploadReadyPhoto('2026-09-10', 'cover-explicit-1');
+    const second = await uploadReadyPhoto('2026-09-10', 'cover-explicit-2');
     await request(app)
       .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ assetId: first.assetId })
+      .send({ assetId: second.assetId })
       .expect(204);
     const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
     const day = blog.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
     expect(day.coverIsExplicit).toBe(true);
-    expect(day.coverItemId).toBe(first.itemId);
+    expect(day.coverItemId).toBe(second.itemId);
   });
 
   it('rejects setting a cover to an asset that belongs to a different day', async () => {
@@ -124,5 +124,12 @@ describe('trip blog day cover selection', () => {
     const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
     const day = blog.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
     expect(day.coverIsExplicit).toBe(false);
+
+    // Clearing is an intentional user choice; a later upload must not silently assign a new
+    // automatic cover. Only a day that has never had its cover set gets the first-photo default.
+    await uploadReadyPhoto('2026-09-10', 'cover-after-clear');
+    const afterUpload = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
+    const dayAfterUpload = afterUpload.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
+    expect(dayAfterUpload.coverIsExplicit).toBe(false);
   });
 });

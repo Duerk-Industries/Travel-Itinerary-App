@@ -299,6 +299,24 @@ export const queryBlog = async <T extends import('pg').QueryResultRow = any>(sql
   return { rows: result.rows, rowCount: result.rowCount ?? 0 };
 };
 
+// Feature repositories occasionally need several related writes to commit as one unit. Keep the
+// pool private while exposing a narrowly scoped transaction runner that shares the same adapter
+// lifecycle as queryBlog (including pg-mem in tests).
+export const withBlogTransaction = async <T>(work: (client: PoolClient) => Promise<T>): Promise<T> => {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await work(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 export const closePool = async (): Promise<void> => {
   if (pool) {
     await pool.end();
@@ -3419,6 +3437,38 @@ export const listTripShareInvites = async (
     [tripId]
   );
   return rows;
+};
+
+export const listTripFollowers = async (userId: string, tripId: string) => {
+  const p = getPool();
+  const context = await getTripOwnerContext(p, tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const { rows } = await p.query(
+    `SELECT tf.follower_user_id as "userId",
+            COALESCE(wu.first_name, '') as "firstName",
+            COALESCE(wu.last_name, '') as "lastName",
+            u.email,
+            tf.created_at as "createdAt"
+     FROM trip_followers tf
+     JOIN users u ON u.id = tf.follower_user_id
+     LEFT JOIN web_users wu ON wu.id = tf.follower_user_id
+     WHERE tf.trip_id = $1
+     ORDER BY tf.created_at DESC`,
+    [tripId]
+  );
+  return rows;
+};
+
+export const removeTripFollower = async (userId: string, tripId: string, followerUserId: string): Promise<void> => {
+  const p = getPool();
+  const context = await getTripOwnerContext(p, tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const removed = await p.query(
+    `DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`,
+    [tripId, followerUserId]
+  );
+  if (!removed.rowCount) throw new Error('Follower not found');
+  await writeActivity(tripId, userId, 'FOLLOW_REMOVED', 'Follower removed', 'A trip owner removed a follower.', { followerUserId });
 };
 
 export const createTripShareInvite = async (

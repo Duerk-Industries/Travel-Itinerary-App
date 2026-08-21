@@ -38,7 +38,7 @@ describe('ExpenseCovering', () => {
   const groupMembers = [
     { id: 'm1', firstName: 'Alex', lastName: 'Rider', status: 'active' as const },
     { id: 'm2', firstName: 'Blair', lastName: 'Lee', status: 'active' as const },
-    { id: 'm3', guestName: 'Casey', status: 'active' as const },
+    { id: 'm3', firstName: 'Casey', lastName: 'Guest', status: 'active' as const },
   ];
 
   const defaultProps = {
@@ -73,6 +73,14 @@ describe('ExpenseCovering', () => {
     await waitFor(() => fireEvent.press(getAllByText('Blair Lee')[0]));
 
     expect(mockSetCoveredBy).toHaveBeenCalled();
+  });
+
+  it('keeps a covered traveler available as a covering option when it would not create a cycle', async () => {
+    const { getByTestId, getAllByText } = render(
+      <ExpenseCovering {...defaultProps} coveredBy={{ m3: 'm2' }} reportableMembers={groupMembers.filter((member) => member.id !== 'm3')} />
+    );
+    fireEvent.press(within(getByTestId('covering-row-m1')).getByText('No one'));
+    await waitFor(() => expect(getAllByText('Casey Guest')[0]).toBeTruthy());
   });
 
   it('calls saveCoveredBy when the save button is pressed', () => {
