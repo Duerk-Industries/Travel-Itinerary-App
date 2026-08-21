@@ -227,6 +227,10 @@ type OverviewTabProps = {
   aiItineraryFailedMessage?: string | null;
   onRetryAiItinerary?: (tripId: string) => void;
   onDismissAiItineraryError?: (tripId: string) => void;
+  // Reflects the `ai_itinerary_generation` feature flag (+ tier entitlement)
+  // for the current user. When false, the Retry button is hidden since a
+  // retry would just 402 again.
+  aiItineraryGenerationAllowed?: boolean;
   editSignal?: number;
   goToDay1Signal?: number;
   onUpdateCurrency?: (tripId: string, currency: string) => void;
@@ -448,6 +452,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   aiItineraryFailedMessage,
   onRetryAiItinerary,
   onDismissAiItineraryError,
+  aiItineraryGenerationAllowed = true,
   editSignal,
   goToDay1Signal,
   onUpdateCurrency,
@@ -3949,19 +3954,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             AI itinerary generation failed: {aiItineraryFailedMessage}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              disabled={retryingAiItineraryTripId === trip.id}
-              onPress={() => {
-                setRetryingAiItineraryTripId(trip.id);
-                onRetryAiItinerary?.(trip.id);
-              }}
-              testID="ai-itinerary-retry-button"
-            >
-              <Text style={styles.buttonText}>
-                {retryingAiItineraryTripId === trip.id ? 'Retrying…' : 'Retry'}
-              </Text>
-            </TouchableOpacity>
+            {aiItineraryGenerationAllowed ? (
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton]}
+                disabled={retryingAiItineraryTripId === trip.id}
+                onPress={() => {
+                  setRetryingAiItineraryTripId(trip.id);
+                  onRetryAiItinerary?.(trip.id);
+                }}
+                testID="ai-itinerary-retry-button"
+              >
+                <Text style={styles.buttonText}>
+                  {retryingAiItineraryTripId === trip.id ? 'Retrying…' : 'Retry'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={[styles.button, styles.smallButton, styles.dangerButton]}
               onPress={() => onDismissAiItineraryError?.(trip.id)}

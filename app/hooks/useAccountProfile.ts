@@ -22,6 +22,7 @@ export type AccountProfile = {
   mapPreference?: MapApp;
   entitlements?: {
     costTracking?: boolean;
+    aiItineraryGeneration?: boolean;
   };
   tierKey?: string;
 };

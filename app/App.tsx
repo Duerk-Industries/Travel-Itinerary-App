@@ -680,6 +680,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearAccountProfile,
   } = useAccountProfile();
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
+  const aiItineraryGenerationAllowed = accountProfile.entitlements?.aiItineraryGeneration === true;
   const logoutRef = useRef<() => void>(() => undefined);
   const handleUnauthorized = useCallback(() => logoutRef.current(), []);
 
@@ -3381,6 +3382,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   }
                   onRetryAiItinerary={retryAiItinerary}
                   onDismissAiItineraryError={dismissAiItineraryError}
+                  aiItineraryGenerationAllowed={aiItineraryGenerationAllowed}
                   editSignal={overviewEditSignal}
                   goToDay1Signal={goToDay1Signal}
                   onUpdateCurrency={updateTripCurrency}
@@ -3626,6 +3628,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               currentUserName={userName}
               currentUserEmail={userEmail}
               featureQuickStartTripWizard={featureQuickStartTripWizard}
+              aiItineraryGenerationAllowed={aiItineraryGenerationAllowed}
             />
           </View>
         </View>

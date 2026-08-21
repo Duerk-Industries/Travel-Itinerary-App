@@ -128,12 +128,15 @@ router.get('/', async (req, res) => {
     res.status(401).json({ error: 'User not found' });
     return;
   }
-  const costTracking = await canUseFeature(userId, 'cost_tracking', role);
   // tierKey drives client-side upsell/entry-point gating (e.g. showing the Home
   // page Ingest tile only to Premium/Pro) — it's not itself an authorization
   // check. Every ingestion endpoint re-checks tier server-side independently.
-  const tierKey = await getUserTierKey(userId);
-  res.json({ ...profile, entitlements: { costTracking }, tierKey });
+  const [costTracking, aiItineraryGeneration, tierKey] = await Promise.all([
+    canUseFeature(userId, 'cost_tracking', role),
+    canUseFeature(userId, 'ai_itinerary_generation', role),
+    getUserTierKey(userId),
+  ]);
+  res.json({ ...profile, entitlements: { costTracking, aiItineraryGeneration }, tierKey });
 });
 
 router.get('/packing-list', async (req, res) => {
