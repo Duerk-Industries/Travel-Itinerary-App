@@ -1577,3 +1577,160 @@ shape.
   never cached and trusted from an earlier evaluation.
 - **Moderation actions write `audit_log`**, matching the existing admin-mutation convention.
 - **PII in notifications is minimised**: display names, not emails; snippets, not bodies.
+
+---
+
+## 16. Late-added features (A12, B13–B16)
+
+These five arrived in the PRD after §§1–15 were written and had **no design and no plan tasks**. Each
+one turns out to carry a cost, scale or schema implication that is not obvious from its one-line
+summary, which is why they are designed here rather than waved through as "UI polish".
+
+### 16.1 B15 Collaborative Star Curation — needs a schema change, not reuse
+
+The PRD implies this is a light feature. It cannot be built on the existing table.
+
+`blog_item_highlights` (shipped, `20260723_add_trip_blog_media.sql`) is:
+
+```sql
+CREATE TABLE blog_item_highlights (
+  item_id UUID PRIMARY KEY REFERENCES blog_items(id) ON DELETE CASCADE,
+  starred_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+`item_id` is the **primary key**, so an item can hold exactly one star. `setHighlight` in
+`postgresMediaRepository.ts` confirms the behaviour: it upserts with
+`ON CONFLICT (item_id) DO UPDATE SET starred_by_user_id`, so a second traveler starring an item
+**silently replaces the first traveler's star**, and `DELETE … WHERE item_id = $1` lets any traveler
+clear a star they did not set. That is a single-user bookmark, and "collaborative curation" is the
+opposite of it.
+
+Two changes required:
+
+1. **Primary key becomes `(item_id, starred_by_user_id)`** so stars accumulate per user. Delete
+   becomes scoped to the calling user. This is a **breaking change to a shipped table** and needs a
+   migration that preserves existing rows (they migrate cleanly — each becomes the sole star).
+2. **Photos need an asset-level target.** A gallery member has no `blog_items` row of its own — it is
+   one asset inside a `core.gallery` item (see the flattening in `blogRoutes.ts`). Starring "a photo"
+   therefore cannot use `item_id` at all. Rather than inventing a third addressing scheme, B15 reuses
+   the **same polymorphic target** the engagement tables already use (§3.1), replacing
+   `blog_item_highlights` with:
+
+```sql
+CREATE TABLE IF NOT EXISTS blog_curation_stars (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  target_kind TEXT NOT NULL CHECK (target_kind IN ('item','asset')),
+  blog_item_id UUID REFERENCES blog_items(id) ON DELETE CASCADE,
+  asset_id UUID REFERENCES blog_media_assets(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CHECK ( /* exactly-one-target, as §3.1 */ )
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_curation_star_item  ON blog_curation_stars(blog_item_id, user_id) WHERE blog_item_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_curation_star_asset ON blog_curation_stars(asset_id, user_id)     WHERE asset_id     IS NOT NULL;
+```
+
+`blog_item_highlights` is migrated into it and dropped. The existing
+`POST /:tripId/blog/items/:itemId/highlight` route is kept as a **compatibility shim** that writes
+the new table (it is already shipped and a native client may still call it), and a new
+`PUT /:tripId/blog/:targetKind/:targetId/star` becomes the real endpoint. Stars resolve through
+`resolveEngagementTarget` like everything else — a curation star is an engagement act and must not
+get its own authorization path.
+
+**Interaction with B7 and C7.** Stars are *explicit curation*; reactions are *popularity*. The recap's
+Top Highlights takes starred items first, then fills from reaction counts. That ordering is the whole
+point of B15 — it lets a group promote the meaningful photo over the merely popular one.
+
+### 16.2 B13 Memory Lane — the highest-risk item in the set
+
+A one-line PRD entry that is, architecturally, an **unbounded scheduled fanout to an audience that
+did not opt in on that day**. Four problems, all solvable, none free:
+
+1. **Burst shape.** Anniversaries are date-aligned. Every trip that started on 14 May fires on 14 May.
+   Notification volume is not smooth — it spikes, and it spikes hardest in the months that were
+   popular travel months a year ago.
+2. **Follower fanout.** A trip with 40 followers is 41 notifications from one trip-day. Volume scales
+   with `trip_followers`, which has no cap.
+3. **Stale consent.** A blog published a year ago may since have been revoked (§4.2 makes revocation
+   unilateral and immediate). Resurfacing it to followers a year later would defeat that revocation.
+4. **A new scheduled job**, inheriting every problem in `horizontal-scaling-requirements.md` rows 9
+   and 15a/15b — N instances means N copies of every anniversary notification.
+
+Design:
+
+- Runs as a **leased daily job** using the §12.2 / register §3.3 claim pattern. Never per-request.
+- **Re-checks publication state at send time, not at enqueue time.** A revoked or private blog
+  produces no follower notification, ever. Travelers still get theirs — it is their own trip.
+- **Followers are opt-in for Memory Lane specifically**, as a distinct notification category
+  (`blog_memory_lane`) defaulting **off** for followers and **on** for travelers. A year-old trip is a
+  fond memory to the people who took it and unsolicited mail to everyone else.
+- **Capped and smoothed**: `memoryLaneNotificationsPerDay` bounds the global daily fanout; overflow
+  defers to the next day rather than dropping, since an anniversary is not time-critical to the hour.
+- **Only for trips with real engagement** — a trip with no published days and no reactions produces
+  nothing. Reviving a dead trip is not a memory, it is spam.
+
+```yaml
+# api-limits.yaml — tripBlog
+  memoryLaneNotificationsPerDay: 2000
+  memoryLaneMinEngagementScore: 5
+  memoryLanePerUserPerYear: 12
+```
+
+### 16.3 B16 Engagement Milestones — derive from the counter, never scan
+
+The naive implementation queries counts to test thresholds, which puts a read on the reaction write
+path and fires the toast once **per viewer** rather than once per milestone.
+
+- The counter update in `blogEngagementService` already returns the new total. A milestone crossing is
+  therefore detectable as `previousTotal < threshold <= newTotal` — **no extra query**.
+- Crossings are recorded in `notifications` with
+  `dedupe_key = trip:{id}:milestone:{threshold}`, so the `UNIQUE (user_id, dedupe_key)` constraint
+  (§13.2) makes "fire once" a database guarantee rather than application luck — and it stays correct
+  across instances (register row 15c).
+- Milestones are celebratory, so they are **in-app only, never push**. A push notification saying
+  "50 hearts!" is the kind of thing that gets an app's notification permission revoked.
+- Thresholds come from config, not code: `milestoneThresholds: [10, 50, 100, 500]`.
+
+### 16.4 B14 Reaction Bursts — accessibility and a storm cap
+
+- **`prefers-reduced-motion` is respected unconditionally.** With it set, the burst is replaced by an
+  instant count change. This is not optional polish; an animation triggered by *other people's*
+  actions is exactly the class of motion that causes harm.
+- **Socket-triggered bursts are capped.** A popular photo receiving twenty reactions in ten seconds
+  must not animate twenty times. Coalesce to at most one burst per target per 3 seconds, and never
+  animate a target that is off-screen.
+- The burst is purely local presentation. It reads the reaction event that B4 already delivers and
+  adds no endpoint, no storage and no cost.
+
+### 16.5 A12 Group Journaling Prompts — shares the nudge budget
+
+A rotating, personally addressed prompt ("Sam, what was the best thing you ate today?") is a *nudge*
+wearing different clothes. Left unmodelled, it becomes a second, uncapped notification channel that
+quietly defeats FR-B6.1's 72-hour cap.
+
+- A12 and B6 draw from **one shared per-user budget**. The cap is on nudges as a class, not per
+  feature.
+- Rotation state lives in a small table keyed `(trip_id, local_date)` recording which traveler was
+  asked and which prompt was used, so the rotation is fair, does not repeat a prompt within a trip,
+  and is idempotent under a re-run of the job (register 15a/15b again).
+- Prompts are **suppressed for a day that already has content from that traveler** — asking someone
+  to write about a day they already wrote about is the fastest way to train people to ignore the
+  channel.
+- Prompt text is a static, reviewed, localizable list. No generation, no cost, consistent with the
+  Day Starter decision in §8.
+
+### 16.6 Flags and gating for these five
+
+| Flag | Gates | Fail-closed |
+|---|---|---|
+| `trip_blog_curation_stars` | B15 | Yes — it writes |
+| `trip_blog_memory_lane` | B13 | **Yes** — it sends to followers |
+| `trip_blog_milestones` | B16 | No — in-app presentation only |
+| `trip_blog_reaction_bursts` | B14 | No — pure presentation |
+| `trip_blog_group_prompts` | A12 | Yes — it notifies |
+
+All default off. B13 additionally requires `notifications_push` and the per-category preference, so
+turning it on cannot bypass a user's notification choices.

@@ -409,6 +409,45 @@ a unique DB window so multiple instances cannot enqueue duplicates.
 
 ---
 
+## Phase 6b — Late-added features (B15, B16, B14, A12, B13)
+
+**Objective:** the five features the PRD added after the original phasing was written. Designed in
+architecture §16. They are grouped here rather than scattered because three of them share the
+notification budget and two share a schema change, so building them separately would mean building
+the same plumbing three times.
+
+Ordered cheapest-and-safest first. **B13 is last on purpose** — it is the only one that sends
+unsolicited mail to followers.
+
+| # | Task | Size | Detail |
+|---|---|---|---|
+| B14 | Reaction burst animation | S | Reads the B4 socket event; no endpoint, no storage, no cost. **`prefers-reduced-motion` respected unconditionally** — with it set, the count changes instantly and nothing animates. Coalesce to ≤1 burst per target per 3s; never animate off-screen targets. §16.4 |
+| B16 | Engagement milestones | M | Detect crossings from the counter delta already returned by the write (`previousTotal < threshold <= newTotal`) — **no extra query on the reaction path**. Dedupe via `notifications.dedupe_key = trip:{id}:milestone:{n}`, so "fire once" is a DB constraint, not application luck. **In-app only, never push.** Thresholds from config. §16.3 |
+| B15 | Migration: `blog_curation_stars` | M | **Breaking change to a shipped table.** `blog_item_highlights.item_id` is a PRIMARY KEY, so it holds exactly one star per item and `setHighlight` silently overwrites another traveler's. Migrate existing rows (each becomes the sole star), then drop. New table uses the §3.1 polymorphic target so a *gallery photo* — which has no `blog_items` row of its own — can be starred. §16.1 |
+| B15 | Star endpoint + compat shim | M | `PUT /:tripId/blog/:targetKind/:targetId/star` resolving through `resolveEngagementTarget`. Keep `POST /blog/items/:itemId/highlight` as a shim writing the new table — it is shipped and native clients may still call it. Scope `DELETE` to the calling user. |
+| B15 | Recap Top Highlights ordering | S | Starred first, then reaction counts. This ordering *is* the feature — it lets a group promote the meaningful photo over the merely popular one. |
+| A12 | Rotation state + prompt job | M | Table keyed `(trip_id, local_date)` recording who was asked and which prompt, so rotation is fair, non-repeating and idempotent under job re-run. **Shares the B6 nudge budget** — one cap for nudges as a class, or A12 becomes a second uncapped channel that defeats FR-B6.1. Suppress for a day that traveler already wrote. Static reviewed prompt list, no generation. §16.5 |
+| B13 | Memory Lane job | L | Leased daily job. **Re-check publication state at send time, not enqueue** — a blog revoked since the trip must never resurface to followers. Followers opt *in* (`blog_memory_lane` defaults off for followers, on for travelers). Global daily cap with next-day deferral; skip trips below `memoryLaneMinEngagementScore`. §16.2 |
+
+### Tests
+
+- **B15 migration**: existing single stars survive as that user's star; a second traveler starring no
+  longer displaces the first; one traveler cannot clear another's star.
+- **B15 targets**: a gallery-member photo (no own item id) can be starred and unstarred.
+- **B16**: 200 reactions crossing a threshold produce exactly **one** notification row, not one per
+  viewer and not one per reaction; and no additional query is issued on the reaction write path.
+- **B14**: with `prefers-reduced-motion` set, no animation runs; 20 socket reactions in 10s produce
+  ≤4 bursts.
+- **A12**: prompt job re-run on the same day is a no-op; a traveler who already wrote that day is not
+  prompted; A12 + B6 together respect a single per-user cap.
+- **B13**: a trip published then revoked produces zero follower notifications and still notifies
+  travelers; two instances running the job produce one notification per recipient (register 15b).
+
+**Exit criteria:** the shared nudge cap holds with A12 and B6 both enabled; B13 runs a full cycle on
+internal trips with follower notifications observed to respect opt-in and revocation.
+
+---
+
 ## Phase 7 — Follow-on (A9, A10, A11, B9, B10, C6, C8, C9)
 
 Voice notes, quick capture, offline queue, blog presence, Trip Awards, places index, search UI,

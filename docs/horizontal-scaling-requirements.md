@@ -67,6 +67,8 @@ Severity: **P0** = breaks correctness or user-visible behaviour across instances
 | 14 | `services/gmailPollingService.ts` | Polling loop per instance. | P1 | Duplicate ingestion of the same mailbox. |
 | 15a | Blog counter reconciliation job (planned) | Scheduled job, same class as row 9. | P1 | Concurrent runs recomputing the same counters. Idempotent, so not incorrect — but wasteful, and it obscures genuine drift detection. |
 | 15b | Blog day-map render job (planned, `trip-blog-social-architecture.md` §14.1) | Triggered render + upload. | P1 | Without a claim lease, N instances render and upload the same map, paying N× for one artifact. Cheap to avoid by design: the job is keyed `(tripDay, pointsHash)` onto a deterministic object key, so a lease plus an existence check suffices. |
+| 15d | Memory Lane anniversary job (planned, `trip-blog-social-architecture.md` §16.2) | Leased daily job. | P1 | Without a lease, N instances send N copies of every anniversary notification — to followers, a year after the fact. The **worst-feeling** duplicate in the product. Volume is also date-spiked rather than smooth, so a bad day is very bad. |
+| 15e | Group journaling prompt job (planned, §16.5) | Leased daily job. | P1 | Same class. Mitigated by rotation state keyed `(trip_id, local_date)`, which makes a duplicate run a no-op regardless of instance count — the preferred shape (see 15c). |
 | 15c | Notification dedupe (planned) | **None — safe by construction.** `UNIQUE (user_id, dedupe_key)` is enforced by the database. | — | Closed. Recorded because it is the template for fixing rows 9, 10, 15a and 15b: push uniqueness into a constraint rather than relying on only one process running. |
 | 15 | `redirects.ts` native auth exchange codes | One-time OAuth/native exchange codes live in an in-process `Map`. | P0 | Code created on instance A and consumed on B fails login; retry may be unsafe/confusing. Store hashed, single-use, TTL-bound codes durably. |
 | 16 | Postgres connection pool | Each instance creates its own pool; aggregate connections grow as `instances × pool max`. | P0 | A scale-out can exhaust Postgres before CPU. Define a total connection budget, per-instance max, headroom and connection-proxy decision before raising instances. Firebase has separate SDK/channel quotas that need the same multiplication check. |
@@ -108,7 +110,7 @@ Job state must leave the process. Options, cheapest first:
 Option 1 is the recommendation — it matches how the rest of this codebase already works, and neither
 job is high-throughput.
 
-### 3.3 Scheduled jobs (rows 8, 9, 10, 14) — P1
+### 3.3 Scheduled jobs (rows 8, 9, 10, 14, 15a, 15b, 15d, 15e) — P1
 
 Leader election, or a scheduler that is not the application. Cheapest workable answer: a
 `scheduled_job_runs` table with an advisory lock or a unique `(job_key, window_start)` row, so only
@@ -194,5 +196,6 @@ is not sufficient if the shared-infrastructure floor costs more than the traffic
 
 | Date | Change |
 |---|---|
+| 2026-08-22 | Split row 11 into 11/11a: an in-process cache in front of a *paid* API is a cost multiplier, not an inefficiency. Added planned-job rows 15a/15b/15d/15e and the safe-by-construction 15c. |
 | 2026-08-22 | Created. Seeded from the single-instance dependencies found while designing the trip blog social layer (`trip-blog-social-architecture.md` §12.2), plus an audit of existing in-process state. Rows 4, 5 and 10 are planned-but-unbuilt; the rest are live today. |
 | 2026-08-22 | Review update: added native auth exchange, connection-budget, metrics and duplicate-work gaps; required new blog jobs/outbox/recap to be lease-safe from launch; added follower/chat isolation and a cost gate. |

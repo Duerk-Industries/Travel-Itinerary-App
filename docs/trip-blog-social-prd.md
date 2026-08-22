@@ -165,7 +165,7 @@ program. **P2** = follow-on.
 | # | Feature | Pri | Summary |
 |---|---|---|---|
 | C1 | **Day fact strip** | P0 | Compact chips under the day headline: weather (exists), distance travelled, places visited, spend, first/last photo time, photo/video counts. |
-| C2 | **Day map** | P0 | Static map of the day's geotagged photos and itinerary points, reusing `TripDayMap.tsx` and `staticMapRoutes.ts`. Photo geotags are opt-in per trip and stripped from public renditions. |
+| C2 | **Day map** | P0 | Static map of the day's geotagged photos and itinerary points. Rendered **once** by a background job and stored as an artifact, *not* fetched per request — a per-request design exceeds the `GOOGLE_STATIC_MAPS` monthly budget by ~5× (architecture §14.1). `TripDayMap.tsx` stays as-is for the planning surface. Photo geotags are opt-in per trip and excluded from the public artifact. |
 | C3 | **Actual timeline rail** | P1 | Chronological merge of transfers, lodging check-in/out, car pickups, activities and photo clusters into a single vertical rail, interleaved with the written entries. |
 | C4 | **Spend summary** | P1 | Per-day and per-trip spend from `expenses`, using the existing client-side `costs.ts` / `exchangeRates.ts`. Defaults to `travelers` audience — money is never public by default. |
 | C5 | **Planned vs. actual** | P1 | Uses the existing `Needed → Proposed → Booked → Completed \| Cancelled` lifecycle to show what was planned, what happened, and what was skipped. |
