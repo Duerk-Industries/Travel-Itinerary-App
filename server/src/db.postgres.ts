@@ -2660,7 +2660,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
         `
         SELECT user_id as "userId"
         FROM group_members
-        WHERE group_id = $1 AND user_id IS NOT NULL AND user_id <> $2
+        WHERE group_id = $1 AND user_id <> $2
         ORDER BY created_at ASC
         LIMIT 1
       `,
@@ -2718,7 +2718,6 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
         SELECT COUNT(*)::text as "count"
         FROM group_members
         WHERE group_id = $1
-          AND user_id IS NOT NULL
           AND user_id <> $2
       `,
         [membership.groupId, userId]
@@ -2742,9 +2741,78 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
 
     await client.query(`DELETE FROM fellow_travelers WHERE owner_id = $1`, [userId]);
 
+    // Phase 4 of docs/trip-blog-social-implementation-plan.md — scrub this user's authored comment
+    // bodies before the author_user_id FK (ON DELETE SET NULL, see the blog engagement migration)
+    // anonymizes them below, so free-text PII typed into a comment does not survive account
+    // deletion under an anonymous byline. The row itself is preserved as a tombstone (deleted_at
+    // set, the same rendering path a self-service delete already uses) rather than removed, so any
+    // threaded replies don't orphan. This only ever reaches comments on trips that are NOT already
+    // gone via the DELETE FROM trips above — that cascade already took their comments, reactions
+    // and counters with it via trip_id, so the query below naturally returns nothing for them.
+    // Reaction rows (blog_reactions.user_id, ON DELETE CASCADE) disappear entirely when the user
+    // row is deleted a few lines down — matching "delete reactions" rather than anonymizing them,
+    // since a reaction carries no free text to scrub. Both kinds of rows are collected here, before
+    // they change, so their (trip, target, audience) counters can be recomputed once the deletion
+    // below actually lands — recomputeCounterRow itself lives in blog/postgresEngagementRepository.ts,
+    // which imports queryBlog/withBlogTransaction from this file, so it is inlined here rather than
+    // imported back in to avoid a circular import.
+    const targetColumnFor = (kind: string) => (kind === 'day' ? 'blog_day_id' : kind === 'item' ? 'blog_item_id' : 'asset_id');
+    const { rows: affectedFromReactions } = await client.query<{ trip_id: string; target_kind: string; target_id: string; audience: string }>(
+      `SELECT trip_id, target_kind, COALESCE(blog_day_id, blog_item_id, asset_id)::text AS target_id, audience FROM blog_reactions WHERE user_id = $1`,
+      [userId]
+    );
+    const { rows: affectedFromComments } = await client.query<{ trip_id: string; target_kind: string; target_id: string; audience: string }>(
+      `SELECT trip_id, target_kind, COALESCE(blog_day_id, blog_item_id, asset_id)::text AS target_id, audience FROM blog_comments WHERE author_user_id = $1`,
+      [userId]
+    );
+    // Excludes any target on a trip this same call is about to hard-delete via the `DELETE FROM
+    // trips` above (a solo-member trip) — that cascade already removes the target's counter row
+    // entirely, so recomputing it here would either be wasted work or, worse, a write against a
+    // trip_id that no longer exists. Filtered in JS (not `trip_id <> ALL($n::uuid[])`) since
+    // pg-mem does not reliably support ANY/ALL over a uuid[] parameter (see project notes).
+    const deletedTripIds = new Set(tripIds);
+    const affectedCounterTargets = new Map<string, { tripId: string; targetKind: string; targetId: string; audience: string }>();
+    for (const row of [...affectedFromReactions, ...affectedFromComments]) {
+      if (deletedTripIds.has(row.trip_id)) continue;
+      affectedCounterTargets.set(`${row.target_kind}:${row.target_id}:${row.audience}`, { tripId: row.trip_id, targetKind: row.target_kind, targetId: row.target_id, audience: row.audience });
+    }
+    await client.query(
+      `UPDATE blog_comments SET body = NULL, deleted_at = COALESCE(deleted_at, NOW()) WHERE author_user_id = $1`,
+      [userId]
+    );
+
     // Remove auth rows last so cascades clean up related data.
     await client.query(`DELETE FROM web_users WHERE id = $1`, [userId]);
     await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+    // Recompute counters for every target this user had reacted to or commented on, now that the
+    // reaction rows are actually gone and the comment bodies are scrubbed — the same aggregate
+    // queries recomputeCounterRow runs, kept in sync manually since it can't be imported here.
+    for (const target of affectedCounterTargets.values()) {
+      const column = targetColumnFor(target.targetKind);
+      const reactionRows = await client.query(
+        `SELECT emoji, COUNT(*)::int AS count FROM blog_reactions WHERE ${column} = $1 AND audience = $2 GROUP BY emoji`,
+        [target.targetId, target.audience]
+      );
+      const counts: Record<string, number> = {};
+      let total = 0;
+      for (const row of reactionRows.rows as { emoji: string; count: number }[]) {
+        counts[row.emoji] = Number(row.count);
+        total += Number(row.count);
+      }
+      const commentRows = await client.query(
+        `SELECT COUNT(*)::int AS count FROM blog_comments WHERE ${column} = $1 AND audience = $2 AND deleted_at IS NULL AND hidden_at IS NULL`,
+        [target.targetId, target.audience]
+      );
+      const commentCount = Number((commentRows.rows[0] as { count: number } | undefined)?.count ?? 0);
+      await client.query(
+        `INSERT INTO blog_engagement_counters (target_kind, target_id, trip_id, audience, reaction_counts, reaction_total, comment_count, updated_at)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, NOW())
+         ON CONFLICT (target_kind, target_id, audience) DO UPDATE
+           SET reaction_counts = $5::jsonb, reaction_total = $6, comment_count = $7, updated_at = NOW()`,
+        [target.targetKind, target.targetId, target.tripId, target.audience, JSON.stringify(counts), total, commentCount]
+      );
+    }
 
     await client.query('COMMIT');
   } catch (err) {
@@ -3074,6 +3142,20 @@ export const ensureUserFollowsTrip = async (tripId: string, userId: string): Pro
   const p = getPool();
   const { rows } = await p.query(
     `SELECT 1 FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2 LIMIT 1`,
+    [tripId, userId]
+  );
+  return rows.length > 0;
+};
+
+// Phase 4 of docs/trip-blog-social-implementation-plan.md — moderation (hide/unhide a comment) is
+// a trip-owner-or-admin action, not a membership-based one (architecture §4: "Admin access is
+// deliberately narrower than trip-owner access... The moderation endpoint... cannot be used to
+// react, comment, set covers or publish"). Ownership is the group's owner_id, not group
+// membership — a group can have several members but exactly one owner.
+export const ensureUserOwnsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT 1 FROM trips t JOIN groups g ON g.id = t.group_id WHERE t.id = $1 AND g.owner_id = $2 LIMIT 1`,
     [tripId, userId]
   );
   return rows.length > 0;

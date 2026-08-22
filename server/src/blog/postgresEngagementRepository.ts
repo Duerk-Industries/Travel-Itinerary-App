@@ -140,7 +140,11 @@ export const recomputeCounterRow = async (
     total += n;
   }
   const commentRows = await client.query(
-    `SELECT COUNT(*)::int AS count FROM blog_comments WHERE ${column} = $1 AND audience = $2 AND deleted_at IS NULL`,
+    // A hidden comment is deliberately excluded here (Phase 4) — the same visibility rule
+    // listTopLevelCommentsForDay/listReplies already apply. Before hiding existed (Phase 2/3) no
+    // comment was ever hidden, so this gap was latent; a moderator's hide must actually lower the
+    // visible count, not just remove the comment from the list while the number still says N.
+    `SELECT COUNT(*)::int AS count FROM blog_comments WHERE ${column} = $1 AND audience = $2 AND deleted_at IS NULL AND hidden_at IS NULL`,
     [targetId, audience]
   );
   const commentCount = Number(commentRows.rows[0]?.count ?? 0);
@@ -310,12 +314,28 @@ export const createComment = async (input: {
   authorRole: BlogCommentAuthorRole;
   body: string;
   parentCommentId?: string | null;
+  // Architecture §5.1: "Idempotency-Key required, matching the convention in
+  // blogSocialRoutes.ts." Unlike that route, this is actually enforced — a retried POST with the
+  // same key returns the original comment rather than creating a duplicate (uq_blog_comments_author_idempotency).
+  idempotencyKey?: string | null;
+  // NFR-12's automated spam check runs *before* this call in blogEngagementService.ts and passes
+  // its verdict in — the repository never re-derives it, so there is exactly one place a comment
+  // is judged. `null` for hiddenByUserId (not this trip's author or any moderator) marks it as an
+  // automated hide, distinguishable from a human one in the audit trail.
+  autoHiddenReason?: string | null;
 }): Promise<BlogComment> => {
   const body = String(input.body ?? '').trim();
   if (body.length < 1 || body.length > COMMENT_MAX_LENGTH) {
     throw new Error(`Comment must be between 1 and ${COMMENT_MAX_LENGTH} characters`);
   }
   return withBlogTransaction(async (client) => {
+    if (input.idempotencyKey) {
+      const existing = await client.query<CommentRow>(
+        'SELECT * FROM blog_comments WHERE author_user_id = $1 AND idempotency_key = $2',
+        [input.authorUserId, input.idempotencyKey]
+      );
+      if (existing.rows[0]) return mapComment(existing.rows[0]);
+    }
     const column = targetColumn(input.targetKind);
     if (input.parentCommentId) {
       const parent = await client.query<{ id: string; deleted_at: Date | null }>(
@@ -325,15 +345,18 @@ export const createComment = async (input: {
       if (!parent.rows[0] || parent.rows[0].deleted_at) throw new Error('Parent comment not found');
     }
     const id = randomUUID();
+    const isAutoHidden = Boolean(input.autoHiddenReason);
     const inserted = await client.query<CommentRow>(
-      `INSERT INTO blog_comments (id, trip_id, target_kind, ${column}, parent_comment_id, author_user_id, author_role, body, audience)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO blog_comments (id, trip_id, target_kind, ${column}, parent_comment_id, author_user_id, author_role, body, audience, idempotency_key, hidden_at, hidden_by_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${isAutoHidden ? 'NOW()' : 'NULL'}, NULL)
        RETURNING *`,
-      [id, input.tripId, input.targetKind, input.targetId, input.parentCommentId ?? null, input.authorUserId, input.authorRole, body, input.audience]
+      [id, input.tripId, input.targetKind, input.targetId, input.parentCommentId ?? null, input.authorUserId, input.authorRole, body, input.audience, input.idempotencyKey ?? null]
     );
     if (input.parentCommentId) {
       await client.query('UPDATE blog_comments SET reply_count = reply_count + 1, updated_at = NOW() WHERE id = $1', [input.parentCommentId]);
     }
+    // A comment created already-hidden must not count toward the visible comment_count — the same
+    // reasoning as the Phase 4 fix to the count query below.
     await recomputeCounterRow(client, input.tripId, input.targetKind, input.targetId, input.audience);
     return mapComment(inserted.rows[0]);
   });
@@ -386,21 +409,40 @@ export const softDeleteComment = async (commentId: string, authorUserId: string)
 // Reversible — never a delete. The strike-increment side effect (FR-B11.3) is applied by the
 // caller (blogEngagementService in Phase 3/4), which also knows whether this is the user's first,
 // second or third hide on this trip; the repository only performs the hide itself here.
-export const hideComment = async (commentId: string, hiddenByUserId: string): Promise<BlogComment | null> => {
-  const updated = await queryBlog<CommentRow>(
-    'UPDATE blog_comments SET hidden_at = NOW(), hidden_by_user_id = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING *',
-    [commentId, hiddenByUserId]
-  );
-  return updated.rows[0] ? mapComment(updated.rows[0]) : null;
-};
+// `hiddenByUserId` is nullable — an automated spam-hide at creation time (checkSpam in
+// blogModerationService.ts) has no human moderator to attribute it to. The `WHERE hidden_at IS
+// NULL` guard makes a repeat hide a genuine no-op (idempotent replay — hide/unhide test) rather
+// than double-decrementing the counter; the comment is fetched separately when already hidden so
+// the caller still gets a row back instead of null.
+export const hideComment = async (commentId: string, hiddenByUserId: string | null): Promise<BlogComment | null> =>
+  withBlogTransaction(async (client) => {
+    const updated = await client.query<CommentRow>(
+      'UPDATE blog_comments SET hidden_at = NOW(), hidden_by_user_id = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL AND hidden_at IS NULL RETURNING *',
+      [commentId, hiddenByUserId]
+    );
+    if (updated.rows[0]) {
+      const row = updated.rows[0];
+      await recomputeCounterRow(client, String(row.trip_id), row.target_kind as BlogEngagementTargetKind, targetIdFromRow(row), row.audience as BlogAudience);
+      return mapComment(row);
+    }
+    const existing = await client.query<CommentRow>('SELECT * FROM blog_comments WHERE id = $1 AND deleted_at IS NULL', [commentId]);
+    return existing.rows[0] ? mapComment(existing.rows[0]) : null;
+  });
 
-export const unhideComment = async (commentId: string): Promise<BlogComment | null> => {
-  const updated = await queryBlog<CommentRow>(
-    'UPDATE blog_comments SET hidden_at = NULL, hidden_by_user_id = NULL, updated_at = NOW() WHERE id = $1 RETURNING *',
-    [commentId]
-  );
-  return updated.rows[0] ? mapComment(updated.rows[0]) : null;
-};
+export const unhideComment = async (commentId: string): Promise<BlogComment | null> =>
+  withBlogTransaction(async (client) => {
+    const updated = await client.query<CommentRow>(
+      'UPDATE blog_comments SET hidden_at = NULL, hidden_by_user_id = NULL, updated_at = NOW() WHERE id = $1 AND hidden_at IS NOT NULL RETURNING *',
+      [commentId]
+    );
+    if (updated.rows[0]) {
+      const row = updated.rows[0];
+      await recomputeCounterRow(client, String(row.trip_id), row.target_kind as BlogEngagementTargetKind, targetIdFromRow(row), row.audience as BlogAudience);
+      return mapComment(row);
+    }
+    const existing = await client.query<CommentRow>('SELECT * FROM blog_comments WHERE id = $1', [commentId]);
+    return existing.rows[0] ? mapComment(existing.rows[0]) : null;
+  });
 
 // FR-B11.1: every comment exposes a report action to every viewer except its author. UNIQUE
 // (comment_id, reporter_user_id) makes a second report from the same user a no-op collision
@@ -448,9 +490,41 @@ export const incrementStrike = async (tripId: string, userId: string): Promise<B
   return { strikeCount: nextCount, blockedAt: blocked ? new Date().toISOString() : null };
 };
 
+// Reverses one strike — used when a hide is reversed (unhideCommentAsModerator in
+// blogModerationService.ts), so a mistaken hide doesn't leave a permanent mark on the author.
+// Un-blocks the user the moment their count drops back under the threshold; never goes negative.
+export const decrementStrike = async (tripId: string, userId: string): Promise<BlogCommentStrikeState> => {
+  const existing = await queryBlog<{ strike_count: number; blocked_at: Date | null }>(
+    'SELECT strike_count, blocked_at FROM blog_comment_strikes WHERE trip_id = $1 AND user_id = $2',
+    [tripId, userId]
+  );
+  const currentCount = Number(existing.rows[0]?.strike_count ?? 0);
+  const nextCount = Math.max(0, currentCount - 1);
+  const blocked = nextCount >= HIDE_STRIKES_BEFORE_BLOCK;
+  const existingBlockedAt = existing.rows[0]?.blocked_at ? new Date(existing.rows[0].blocked_at).toISOString() : null;
+  if (existing.rows[0]) {
+    await queryBlog(
+      'UPDATE blog_comment_strikes SET strike_count = $3, blocked_at = CASE WHEN $4 THEN blocked_at ELSE NULL END, updated_at = NOW() WHERE trip_id = $1 AND user_id = $2',
+      [tripId, userId, nextCount, blocked]
+    );
+  }
+  return { strikeCount: nextCount, blockedAt: blocked ? existingBlockedAt : null };
+};
+
 // Day-level comment fetch (architecture §5.1): one request per day, not one per target. Returns
 // top-level comments only, newest-first; replies are fetched separately per thread
 // (getReplies below) so a day with many short threads doesn't pull every reply eagerly.
+// Phase 4 client surface (PRD §6.6) — both list paths below join `users` for a display name,
+// the one field mapComment/CommentRow never carried (comments never needed identity for the
+// authorization spine, only for rendering). A LEFT JOIN, not INNER: an anonymized tombstone's
+// author_user_id is already NULL (account-deletion scrub), and must render with no name rather
+// than vanishing from the join.
+type CommentRowWithAuthor = CommentRow & { first_name: string | null; last_name: string | null; email: string | null };
+const mapCommentWithAuthor = (row: CommentRowWithAuthor): BlogComment => ({
+  ...mapComment(row),
+  authorDisplayName: row.author_user_id == null ? null : displayNameFromRow(row),
+});
+
 export const listTopLevelCommentsForDay = async (
   tripId: string,
   dayId: string,
@@ -459,32 +533,34 @@ export const listTopLevelCommentsForDay = async (
 ): Promise<BlogComment[]> => {
   const limit = Math.min(50, Math.max(1, options.limit ?? 20));
   const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 3}`).join(',');
-  const cursorClause = options.cursor ? `AND created_at < (SELECT created_at FROM blog_comments WHERE id = $${visibleAudiences.length + 3})` : '';
+  const cursorClause = options.cursor ? `AND c.created_at < (SELECT created_at FROM blog_comments WHERE id = $${visibleAudiences.length + 3})` : '';
   const params: unknown[] = [tripId, dayId, ...visibleAudiences];
   if (options.cursor) params.push(options.cursor);
-  const result = await queryBlog<CommentRow>(
-    `SELECT * FROM blog_comments
-     WHERE trip_id = $1
-       AND (blog_day_id = $2 OR blog_item_id IN (SELECT id FROM blog_items WHERE blog_day_id = $2) OR asset_id IN (SELECT id FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id WHERE i.blog_day_id = $2))
-       AND parent_comment_id IS NULL
-       AND deleted_at IS NULL
-       AND hidden_at IS NULL
-       AND audience IN (${audiencePlaceholders})
+  const result = await queryBlog<CommentRowWithAuthor>(
+    `SELECT c.*, u.first_name, u.last_name, u.email FROM blog_comments c
+     LEFT JOIN users u ON u.id = c.author_user_id
+     WHERE c.trip_id = $1
+       AND (c.blog_day_id = $2 OR c.blog_item_id IN (SELECT id FROM blog_items WHERE blog_day_id = $2) OR c.asset_id IN (SELECT a.id FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id WHERE i.blog_day_id = $2))
+       AND c.parent_comment_id IS NULL
+       AND c.deleted_at IS NULL
+       AND c.hidden_at IS NULL
+       AND c.audience IN (${audiencePlaceholders})
        ${cursorClause}
-     ORDER BY created_at DESC, id DESC
+     ORDER BY c.created_at DESC, c.id DESC
      LIMIT ${limit}`,
     params
   );
-  return result.rows.map(mapComment);
+  return result.rows.map(mapCommentWithAuthor);
 };
 
 export const listReplies = async (parentCommentId: string, visibleAudiences: BlogAudience[], options: { limit?: number } = {}): Promise<BlogComment[]> => {
   const limit = Math.min(50, Math.max(1, options.limit ?? 20));
   const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 2}`).join(',');
-  const result = await queryBlog<CommentRow>(
-    `SELECT * FROM blog_comments
-     WHERE parent_comment_id = $1 AND audience IN (${audiencePlaceholders}) AND hidden_at IS NULL
-     ORDER BY created_at ASC, id ASC
+  const result = await queryBlog<CommentRowWithAuthor>(
+    `SELECT c.*, u.first_name, u.last_name, u.email FROM blog_comments c
+     LEFT JOIN users u ON u.id = c.author_user_id
+     WHERE c.parent_comment_id = $1 AND c.audience IN (${audiencePlaceholders}) AND c.hidden_at IS NULL
+     ORDER BY c.created_at ASC, c.id ASC
      LIMIT ${limit}`,
     [parentCommentId, ...visibleAudiences]
   );
@@ -492,5 +568,5 @@ export const listReplies = async (parentCommentId: string, visibleAudiences: Blo
   // here, since `deleted_at IS NOT NULL` on a reply just means an empty body, not an absence.
   // A *hidden* reply is filtered out, same as a hidden top-level comment: hiding suppresses
   // visibility from ordinary readers regardless of nesting depth.
-  return result.rows.map(mapComment);
+  return result.rows.map(mapCommentWithAuthor);
 };

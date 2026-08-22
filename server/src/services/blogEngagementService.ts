@@ -3,6 +3,7 @@ import { queryBlog } from '../db.postgres';
 import { blogRepository } from '../blog/repository';
 import { blogEngagementRepository } from '../blog/engagementRepository';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { checkSpam } from './blogModerationService';
 import { BlogAudience } from '../blog/types';
 import {
   BlogCommentAuthorRole,
@@ -13,45 +14,20 @@ import {
   ResolvedComment,
   ResolvedEngagementTarget,
 } from '../blog/engagementTypes';
+import { BlogEngagementUnauthorizedError, BlogTargetNotFoundError } from './blogEngagementErrors';
 
-// Phase 2 of docs/trip-blog-social-implementation-plan.md — the authorization spine. Ships dark:
-// nothing in server/src/routes/ calls this yet (that's Phase 3/4). Its only caller in this phase
-// is the authorization matrix test, exercising every function here directly — exactly what the
-// plan's exit criteria asks for ("the authorization matrix test compiles and passes against a
-// service with no routes attached").
-//
-// See docs/trip-blog-social-architecture.md §4 for the authorization table and the 8-step
-// resolution order this file implements. Two steps are deliberately NOT implemented here, and
-// are called out at each function below rather than faked:
-//   - Step 4 (automated spam filtering via blogModerationService.checkSpam) — that service
-//     doesn't exist yet; it is a Phase 3/4 deliverable alongside the comment routes and the hide
-//     endpoint it's paired with. Building spam heuristics now, with no moderation UI to act on
-//     their output, would be scope creep past "ships dark infrastructure."
+export { BlogEngagementUnauthorizedError, BlogTargetNotFoundError };
+
+// Phase 2 of docs/trip-blog-social-implementation-plan.md — the authorization spine. Phase 4 adds
+// the comment write path (postComment below) and its automated spam check; hide/unhide are a
+// trip-owner/admin action and live in blogModerationService.ts instead, since they answer a
+// different authorization question than everything else in this file (see that file's header
+// comment). See docs/trip-blog-social-architecture.md §4 for the authorization table and the
+// 8-step resolution order. One step is still deliberately not implemented here:
 //   - Step 7 (per-request rate limiting via httpRateLimitService) — that needs request/IP context
 //     this service layer doesn't have. It belongs on the route, the same way isFeatureEnabled and
 //     ensureUserInTrip are already called inline in every existing blogRoutes.ts handler rather
-//     than through a generic middleware wrapper (see e.g. blogSocialRoutes.ts). The Phase 3/4
-//     routes that call into this file are expected to apply it before doing so.
-
-export class BlogEngagementUnauthorizedError extends Error {
-  constructor(message = 'Not authorized on this trip') {
-    super(message);
-    this.name = 'BlogEngagementUnauthorizedError';
-  }
-}
-
-// Distinguishes "target does not exist, or isn't visible to this actor" from "actor has no
-// relationship to this trip at all" (BlogEngagementUnauthorizedError above). The two map to
-// different HTTP statuses at the route layer — 404 vs 403 — which is exactly the distinction
-// architecture §4 step 3 requires ("the endpoint does not confirm the item exists"). Declared here
-// rather than near its first use further down: a `class` declaration is not hoisted the way a
-// `function` declaration is, and several functions in this file reference it.
-export class BlogTargetNotFoundError extends Error {
-  constructor(message = 'That day, note, photo or video was not found on this trip') {
-    super(message);
-    this.name = 'BlogTargetNotFoundError';
-  }
-}
+//     than through a generic middleware wrapper (see e.g. blogSocialRoutes.ts).
 
 export type EngagementMembership = 'traveler' | 'follower';
 
@@ -251,7 +227,8 @@ export const postComment = async (
   targetKind: BlogEngagementTargetKind,
   targetId: string,
   body: string,
-  parentCommentId?: string | null
+  parentCommentId?: string | null,
+  idempotencyKey?: string | null
 ): Promise<BlogComment> => {
   const membership = await resolveActorMembership(tripId, actorUserId);
   const target = await resolveEngagementTarget(tripId, actorUserId, membership, targetKind, targetId);
@@ -262,9 +239,19 @@ export const postComment = async (
   await assertNotStrikeBlocked(tripId, actorUserId);
   await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_COMMENT_WRITE', requireConfiguredLimit: true });
   const authorRole: BlogCommentAuthorRole = membership;
+  // NFR-12: automated spam filtering applies only to public-audience comments from a follower —
+  // a traveler's comment is never checked (Phase 4's own test list is explicit: "traveler comment
+  // with same keywords is NOT hidden, as travelers are trusted"). Flagged comments are still
+  // created — the author sees their own comment — but hidden immediately, with no strike (a
+  // strike is reserved for a human moderator's decision, per FR-B11.3; an automated false
+  // positive should not silently march someone toward being blocked from commenting at all).
+  const shouldCheckSpam = authorRole === 'follower' && target.effectiveAudience === 'public';
+  const spamResult = shouldCheckSpam ? checkSpam(body) : { isSpam: false, reason: null };
   return blogEngagementRepository().createComment({
     tripId, targetKind, targetId, audience: target.effectiveAudience,
     authorUserId: actorUserId, authorRole, body, parentCommentId: parentCommentId ?? null,
+    idempotencyKey: idempotencyKey ?? null,
+    autoHiddenReason: spamResult.isSpam ? spamResult.reason : null,
   });
 };
 
@@ -307,4 +294,40 @@ export const reportCommentByActor = async (
   // otherwise let an author generate a "report" that reads as third-party.
   if (resolved.comment.authorUserId === actorUserId) throw new BlogEngagementUnauthorizedError('You cannot report your own comment');
   await blogEngagementRepository().reportComment(commentId, actorUserId, reason, detail ?? null);
+};
+
+const REPLY_PREVIEW_COUNT = 3; // architecture §5.1: "up to 3 preview replies"
+
+// Day-level comment fetch (architecture §5.1): one HTTP request per day, not one per target — a
+// day with 23 photos, 3 notes and a day-level thread must not become 27 requests. Internally this
+// is still bounded, not a single query: one query for the day's top-level comments, then up to
+// `commentPageSize` more (one per top-level comment) for their reply previews — the requirement is
+// about round-trips from the client, not eliminating every internal query.
+export const listCommentsForDay = async (
+  tripId: string,
+  actorUserId: string,
+  dayDate: string,
+  options: { cursor?: string; limit?: number } = {}
+): Promise<Array<BlogComment & { replies: BlogComment[] }>> => {
+  const membership = await resolveActorMembership(tripId, actorUserId);
+  const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, dayDate]);
+  if (!dayRow.rows[0]) throw new BlogTargetNotFoundError('That day was not found on this trip');
+  const visibleAudiences = visibleAudiencesForMembership(membership);
+  const topLevel = await blogEngagementRepository().listTopLevelCommentsForDay(tripId, dayRow.rows[0].id, visibleAudiences, options);
+  return Promise.all(topLevel.map(async (comment) => ({
+    ...comment,
+    replies: await blogEngagementRepository().listReplies(comment.id, visibleAudiences, { limit: REPLY_PREVIEW_COUNT }),
+  })));
+};
+
+export const listRepliesForComment = async (
+  tripId: string,
+  actorUserId: string,
+  commentId: string,
+  options: { cursor?: string; limit?: number } = {}
+): Promise<BlogComment[]> => {
+  const membership = await resolveActorMembership(tripId, actorUserId);
+  const resolved = await resolveComment(tripId, actorUserId, membership, commentId);
+  if (!resolved) throw new BlogTargetNotFoundError('That comment was not found');
+  return blogEngagementRepository().listReplies(commentId, visibleAudiencesForMembership(membership), options);
 };

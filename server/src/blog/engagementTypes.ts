@@ -52,6 +52,13 @@ export interface BlogComment {
   parentCommentId: string | null;
   authorUserId: string | null;
   authorRole: BlogCommentAuthorRole;
+  // Phase 4 client surface (BlogCommentThread.tsx, PRD §6.6) — resolved only by the two read paths
+  // the thread UI actually renders from (listTopLevelCommentsForDay, listReplies), via a join/lookup
+  // against users. `undefined` (not present on the object at all) from every other call site that
+  // doesn't resolve it (createComment/updateCommentBody/getCommentById), so callers that don't care
+  // about a display name don't pay for the extra query. `null` once resolved but the author has no
+  // name on file, or the comment is an anonymous tombstone (authorUserId already null).
+  authorDisplayName?: string | null;
   body: string | null;
   audience: BlogAudience;
   editedAt: string | null;

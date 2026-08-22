@@ -191,6 +191,7 @@ const FAIL_CLOSED_FLAGS = new Set([
   'trip_blog_reactions',
   'trip_blog_comments',
   'trip_blog_mentions',
+  'trip_blog_public_engagement',
 ]);
 
 /**

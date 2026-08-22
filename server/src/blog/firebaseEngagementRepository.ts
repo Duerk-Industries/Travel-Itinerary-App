@@ -207,16 +207,35 @@ export const createComment = async (input: {
   authorRole: BlogCommentAuthorRole;
   body: string;
   parentCommentId?: string | null;
+  idempotencyKey?: string | null;
+  autoHiddenReason?: string | null;
 }): Promise<BlogComment> => {
   const body = String(input.body ?? '').trim();
   if (body.length < 1 || body.length > COMMENT_MAX_LENGTH) {
     throw new Error(`Comment must be between 1 and ${COMMENT_MAX_LENGTH} characters`);
   }
   const db = getDb();
+  // Same idempotency guarantee as the Postgres adapter's unique (author_user_id, idempotency_key)
+  // index — a query rather than a deterministic doc ID, since comments already use random UUIDs
+  // elsewhere (parentCommentId references) and switching that scheme is out of scope here. This
+  // read happens outside the transaction below, same as getEngagementSummaries' own-reaction
+  // lookup elsewhere in this file; a race between the check and the write is a rare double-post
+  // under true concurrency, not a security or data-integrity issue (Postgres's unique index is the
+  // adapter that actually prevents it under a race; this one just avoids the common case).
+  if (input.idempotencyKey) {
+    const existing = await db.collection('blog_comments')
+      .where('authorUserId', '==', input.authorUserId)
+      .where('idempotencyKey', '==', input.idempotencyKey)
+      .limit(1)
+      .get();
+    if (!existing.empty) return mapComment(existing.docs[0].id, existing.docs[0].data());
+  }
+
   const id = randomUUID();
   const commentRef = db.collection('blog_comments').doc(id);
   const counterRef = db.collection('blog_engagement_counters').doc(counterDocId(input.targetKind, input.targetId, input.audience));
   const parentRef = input.parentCommentId ? db.collection('blog_comments').doc(input.parentCommentId) : null;
+  const isAutoHidden = Boolean(input.autoHiddenReason);
 
   return db.runTransaction(async (transaction) => {
     if (parentRef) {
@@ -229,13 +248,17 @@ export const createComment = async (input: {
       [targetField(input.targetKind)]: input.targetId,
       parentCommentId: input.parentCommentId ?? null,
       authorUserId: input.authorUserId, authorRole: input.authorRole,
-      body, audience: input.audience,
-      editedAt: null, deletedAt: null, hiddenAt: null, hiddenByUserId: null,
+      body, audience: input.audience, idempotencyKey: input.idempotencyKey ?? null,
+      editedAt: null, deletedAt: null,
+      hiddenAt: isAutoHidden ? now : null, hiddenByUserId: null,
       replyCount: 0, createdAt: now, updatedAt: now,
     };
     transaction.set(commentRef, data);
     if (parentRef) transaction.set(parentRef, { replyCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
-    transaction.set(counterRef, { targetKind: input.targetKind, targetId: input.targetId, tripId: input.tripId, audience: input.audience, commentCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
+    // A comment created already-hidden must not count toward the visible comment_count.
+    if (!isAutoHidden) {
+      transaction.set(counterRef, { targetKind: input.targetKind, targetId: input.targetId, tripId: input.tripId, audience: input.audience, commentCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
+    }
     return mapComment(id, data);
   });
 };
@@ -283,23 +306,35 @@ export const softDeleteComment = async (commentId: string, authorUserId: string)
   });
 };
 
-export const hideComment = async (commentId: string, hiddenByUserId: string): Promise<BlogComment | null> => {
-  const ref = getDb().collection('blog_comments').doc(commentId);
+// `hiddenByUserId` is nullable — an automated spam-hide at creation time (checkSpam in
+// blogModerationService.ts) has no human moderator to attribute it to. Adjusts the target's
+// counter (Phase 4 fix — previously commentCount included hidden comments, since no comment was
+// ever hidden before this phase existed).
+export const hideComment = async (commentId: string, hiddenByUserId: string | null): Promise<BlogComment | null> => {
+  const db = getDb();
+  const ref = db.collection('blog_comments').doc(commentId);
   const snap = await ref.get();
   const data = snap.exists ? (snap.data() as any) : null;
   if (!data || data.deletedAt) return null;
+  if (data.hiddenAt) return mapComment(commentId, data); // already hidden — idempotent no-op, no double-decrement
   const now = nowIso();
   await ref.set({ hiddenAt: now, hiddenByUserId, updatedAt: now }, { merge: true });
+  const counterRef = db.collection('blog_engagement_counters').doc(counterDocId(data.targetKind, data.targetId, data.audience));
+  await counterRef.set({ commentCount: FieldValue.increment(-1), updatedAt: now }, { merge: true });
   return mapComment(commentId, { ...data, hiddenAt: now, hiddenByUserId, updatedAt: now });
 };
 
 export const unhideComment = async (commentId: string): Promise<BlogComment | null> => {
-  const ref = getDb().collection('blog_comments').doc(commentId);
+  const db = getDb();
+  const ref = db.collection('blog_comments').doc(commentId);
   const snap = await ref.get();
   const data = snap.exists ? (snap.data() as any) : null;
   if (!data) return null;
+  if (!data.hiddenAt) return mapComment(commentId, data); // already visible — idempotent no-op
   const now = nowIso();
   await ref.set({ hiddenAt: null, hiddenByUserId: null, updatedAt: now }, { merge: true });
+  const counterRef = db.collection('blog_engagement_counters').doc(counterDocId(data.targetKind, data.targetId, data.audience));
+  await counterRef.set({ commentCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
   return mapComment(commentId, { ...data, hiddenAt: null, hiddenByUserId: null, updatedAt: now });
 };
 
@@ -342,11 +377,45 @@ export const incrementStrike = async (tripId: string, userId: string): Promise<B
   });
 };
 
+// Mirrors incrementStrike above — used when a hide is reversed, so a mistaken hide doesn't leave
+// a permanent mark. Un-blocks the moment the count drops back under the threshold.
+export const decrementStrike = async (tripId: string, userId: string): Promise<BlogCommentStrikeState> => {
+  const db = getDb();
+  const ref = db.collection('blog_comment_strikes').doc(`${tripId}:${userId}`);
+  return db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(ref);
+    const current = snap.exists ? Number((snap.data() as any).strikeCount ?? 0) : 0;
+    const nextCount = Math.max(0, current - 1);
+    const blocked = nextCount >= HIDE_STRIKES_BEFORE_BLOCK;
+    const existingBlockedAt = snap.exists ? (snap.data() as any).blockedAt : null;
+    transaction.set(ref, {
+      strikeCount: nextCount,
+      blockedAt: blocked ? existingBlockedAt : null,
+      updatedAt: nowIso(),
+    }, { merge: true });
+    return { strikeCount: nextCount, blockedAt: blocked ? existingBlockedAt : null };
+  });
+};
+
 // Day-level fetch (architecture §5.1) — Firestore can't do the Postgres version's join through
 // blog_items/blog_item_assets to resolve which comments belong to a day's items/assets, so
 // blogItemId/assetId documents would need their own dayId denormalized to support this query
 // efficiently. Not required for Phase 2 (no routes call this yet); flagged here rather than
 // silently shipping a version that only handles day-level targets correctly.
+// Phase 4 client surface (PRD §6.6) — mirrors postgresEngagementRepository.ts's
+// mapCommentWithAuthor. Firestore has no join, so this resolves display names with one lookup per
+// distinct author across the whole page rather than per comment, following the same batching
+// pattern getContributorsForDays already uses. Reuses displayNameFromUserDoc, already defined
+// above for listReactors.
+const attachAuthorNames = async (comments: BlogComment[]): Promise<BlogComment[]> => {
+  const authorIds = [...new Set(comments.map((c) => c.authorUserId).filter((id): id is string => Boolean(id)))];
+  if (!authorIds.length) return comments;
+  const db = getDb();
+  const userDocs = await Promise.all(authorIds.map(async (id) => [id, await db.collection('users').doc(id).get()] as const));
+  const names = new Map(userDocs.map(([id, snap]) => [id, snap.exists ? displayNameFromUserDoc(snap.data()) : 'A traveler']));
+  return comments.map((c) => ({ ...c, authorDisplayName: c.authorUserId ? (names.get(c.authorUserId) ?? null) : null }));
+};
+
 export const listTopLevelCommentsForDay = async (
   tripId: string,
   dayId: string,
@@ -366,15 +435,16 @@ export const listTopLevelCommentsForDay = async (
     .filter((c: BlogComment) => !options.cursor || c.createdAt < options.cursor)
     .sort((a: BlogComment, b: BlogComment) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
-  return rows;
+  return attachAuthorNames(rows);
 };
 
 export const listReplies = async (parentCommentId: string, visibleAudiences: BlogAudience[], options: { limit?: number } = {}): Promise<BlogComment[]> => {
   const limit = Math.min(50, Math.max(1, options.limit ?? 20));
   const snap = await getDb().collection('blog_comments').where('parentCommentId', '==', parentCommentId).get();
-  return snap.docs
+  const rows = snap.docs
     .map((doc: any) => mapComment(doc.id, doc.data()))
     .filter((c: BlogComment) => !c.hiddenAt && visibleAudiences.includes(c.audience))
     .sort((a: BlogComment, b: BlogComment) => a.createdAt.localeCompare(b.createdAt))
     .slice(0, limit);
+  return attachAuthorNames(rows);
 };

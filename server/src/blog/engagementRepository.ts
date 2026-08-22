@@ -19,6 +19,7 @@ export interface BlogEngagementRepository {
   reportComment: typeof postgres.reportComment;
   getStrikeState: typeof postgres.getStrikeState;
   incrementStrike: typeof postgres.incrementStrike;
+  decrementStrike: typeof postgres.decrementStrike;
   listTopLevelCommentsForDay: typeof postgres.listTopLevelCommentsForDay;
   listReplies: typeof postgres.listReplies;
 }

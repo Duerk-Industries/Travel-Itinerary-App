@@ -640,3 +640,5 @@ caching:
     replyPreviewCount: 3
     commentEditWindowSeconds: 900
     hideStrikesBeforeBlock: 3
+    publicEngagementReadsPerMinutePerIp: 60
+    publicEngagementCommentsPageSize: 20

@@ -6,10 +6,12 @@ import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
 import { useBlogEngagement } from '../utils/useBlogEngagement';
+import { useBlogComments } from '../utils/useBlogComments';
 import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
 import BlogConflictBanner, { type BlogConflictLatest } from '../components/BlogConflictBanner';
 import BlogReactionBar from '../components/BlogReactionBar';
 import BlogContributorStrip from '../components/BlogContributorStrip';
+import BlogCommentThread from '../components/BlogCommentThread';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
@@ -35,7 +37,7 @@ export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTy
 // check what's left.
 const isRichTextEmpty = (html) => !String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false }) => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -77,6 +79,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const canEdit = !readOnly && editMode;
   const engagement = useBlogEngagement(backendUrl, headers, activeTripId);
   const handleEngagementError = (message) => Alert.alert('Trip blog', message || 'Unable to save your reaction');
+  // Phase 4 (B2/B11) — day-level comment threads, loaded lazily per day the first time it's
+  // rendered (see the effect below), separate from the blog document's own GET/engagement fetch
+  // (architecture §5.1: "one request per day, not one per target").
+  const comments = useBlogComments(backendUrl, headers, activeTripId);
+  const handleCommentError = (message) => Alert.alert('Trip blog', message || 'Something went wrong');
+  const loadedCommentDays = useRef(new Set());
 
   const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
   const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
@@ -114,6 +122,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       activities: [],
     };
   }), [blog?.days, publicPreview]);
+
+  // Fetches each visible day's comment thread once, the first time that day is rendered — never
+  // in the public in-app preview, which mirrors the BlogContributorStrip/day-engagement gating
+  // just above (no authenticated session's own identity to attach a comment to there).
+  useEffect(() => { loadedCommentDays.current.clear(); }, [activeTripId]);
+  useEffect(() => {
+    if (publicPreview) return;
+    for (const day of visibleDays) {
+      if (loadedCommentDays.current.has(day.localDate)) continue;
+      loadedCommentDays.current.add(day.localDate);
+      comments.loadDay(day.localDate).catch(() => { loadedCommentDays.current.delete(day.localDate); });
+    }
+  }, [visibleDays, publicPreview]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -790,6 +811,35 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 size="compact"
               />
             ) : null}
+            {!publicPreview && day.engagement ? (
+              <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
+                <BlogCommentThread
+                  testID={`blog-day-comments-${day.localDate}`}
+                  comments={comments.getDayState(day.localDate).comments.filter((c) => c.targetKind === 'day' && c.targetId === day.id)}
+                  targetKind="day"
+                  targetId={day.id}
+                  audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
+                  currentUserId={currentUserId}
+                  canModerate={isTripOwnerOrAdmin}
+                  canEngage={canEngage}
+                  onPostTopLevel={(body) => comments.postComment(day.localDate, 'day', day.id, body)}
+                  onReply={(parentCommentId, body) => comments.postComment(day.localDate, 'day', day.id, body, parentCommentId)}
+                  onEdit={(commentId, body) => comments.editComment(day.localDate, commentId, body)}
+                  onDelete={(commentId) => comments.deleteComment(day.localDate, commentId)}
+                  onReport={(commentId, reason) => comments.reportComment(commentId, reason)}
+                  onHide={(commentId) => comments.hideComment(day.localDate, commentId)}
+                  onUnhide={(commentId) => comments.unhideComment(day.localDate, commentId)}
+                  onShowEarlierReplies={(commentId) => comments.loadMoreReplies(day.localDate, commentId)}
+                  onError={handleCommentError}
+                  textColor={textColor}
+                  mutedColor={mutedColor}
+                  borderColor={borderColor}
+                  backgroundColor={inputColor}
+                  styles={styles}
+                  theme={theme}
+                />
+              </View>
+            ) : null}
             {(day.items || []).filter((item) => !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
               <View key={item.id} style={{ marginTop: 8 }}>
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
@@ -922,6 +972,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     onToggleReaction={engagement.toggle}
                     onReactionError={handleEngagementError}
                     theme={theme}
+                    currentUserId={currentUserId}
+                    canModerate={isTripOwnerOrAdmin}
+                    audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
+                    getComments={(assetId) => comments.getCommentsForTarget(day.localDate, 'asset', assetId)}
+                    onPostComment={(assetId, body, parentCommentId) => comments.postComment(day.localDate, 'asset', assetId, body, parentCommentId)}
+                    onEditComment={(commentId, body) => comments.editComment(day.localDate, commentId, body)}
+                    onDeleteComment={(commentId) => comments.deleteComment(day.localDate, commentId)}
+                    onReportComment={(commentId, reason) => comments.reportComment(commentId, reason)}
+                    onHideComment={(commentId) => comments.hideComment(day.localDate, commentId)}
+                    onUnhideComment={(commentId) => comments.unhideComment(day.localDate, commentId)}
+                    onShowEarlierReplies={(commentId) => comments.loadMoreReplies(day.localDate, commentId)}
+                    onCommentError={handleCommentError}
                   />
                 </>
               );

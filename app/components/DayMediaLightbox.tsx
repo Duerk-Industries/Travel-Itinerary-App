@@ -3,10 +3,11 @@
 // Tapping a photo tile enlarges it inline; tapping a video tile plays it inline (via the same
 // platform-conditional BlogMediaPreview branch the default view already uses).
 import React, { useState } from 'react';
-import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import DialogShell from './DialogShell';
 import { BlogMediaPreview } from './BlogMediaPreview';
 import BlogReactionBar from './BlogReactionBar';
+import BlogCommentThread from './BlogCommentThread';
 
 type DayMediaLightboxProps = {
   visible: boolean;
@@ -25,13 +26,37 @@ type DayMediaLightboxProps = {
   onToggleReaction?: (targetKind: 'asset', targetId: string, emoji: string) => Promise<void>;
   onReactionError?: (message: string) => void;
   theme?: any;
+  // Phase 4 (B2) — the comment rail (PRD §6.5: "a right rail on wide screens and a bottom sheet
+  // on narrow ones"). All of this is optional so a caller that hasn't wired up useBlogComments yet
+  // simply gets no rail at all, the same additive-only contract the engagement props above use.
+  currentUserId?: string | null;
+  canModerate?: boolean;
+  audienceLabel?: string | null;
+  getComments?: (assetId: string) => any[];
+  onPostComment?: (assetId: string, body: string, parentCommentId?: string | null) => Promise<any>;
+  onEditComment?: (commentId: string, body: string) => Promise<void>;
+  onDeleteComment?: (commentId: string) => Promise<void>;
+  onReportComment?: (commentId: string, reason: 'spam' | 'harassment' | 'private_info' | 'other') => Promise<void>;
+  onHideComment?: (commentId: string) => Promise<void>;
+  onUnhideComment?: (commentId: string) => Promise<void>;
+  onShowEarlierReplies?: (commentId: string) => Promise<void>;
+  onCommentError?: (message: string) => void;
 };
+
+// PRD §6.5's breakpoint is expressed elsewhere in this feature as "mobile (< 700px)" (§6.9) — reused
+// here rather than inventing a second breakpoint for the same rail/sheet decision.
+const WIDE_LAYOUT_MIN_WIDTH = 700;
 
 const DayMediaLightbox = ({
   visible, items, onClose, dayDate, styles, textColor, mutedColor, borderColor = '#ccd4df', backgroundColor,
   canEngage = false, getEngagementSummary, onToggleReaction, onReactionError, theme,
+  currentUserId = null, canModerate = false, audienceLabel = null, getComments,
+  onPostComment, onEditComment, onDeleteComment, onReportComment, onHideComment, onUnhideComment,
+  onShowEarlierReplies, onCommentError,
 }: DayMediaLightboxProps) => {
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const { width } = useWindowDimensions();
+  const wideLayout = width >= WIDE_LAYOUT_MIN_WIDTH;
 
   const close = () => {
     setExpandedIndex(null);
@@ -50,26 +75,65 @@ const DayMediaLightbox = ({
       cardStyle={{ maxWidth: 720, width: '92%', maxHeight: '85%' }}
     >
       {expandedItem ? (
-        <View>
-          <TouchableOpacity accessibilityRole="button" onPress={() => setExpandedIndex(null)} style={{ marginBottom: 8 }}>
-            <Text style={{ color: textColor, fontWeight: '700' }}>‹ Back to all photos</Text>
-          </TouchableOpacity>
-          <BlogMediaPreview item={expandedItem} backgroundColor={backgroundColor} />
-          {expandedItem.caption ? <Text style={{ color: mutedColor, marginTop: 6 }}>{expandedItem.caption}</Text> : null}
-          {getEngagementSummary && onToggleReaction ? (
-            <View style={{ marginTop: 6 }}>
-              <BlogReactionBar
-                testID={`lightbox-reactions-${expandedItem.assetId}`}
-                targetKind="asset"
-                targetId={expandedItem.assetId}
-                summary={getEngagementSummary(expandedItem.assetId)}
-                canEngage={canEngage}
-                onToggle={onToggleReaction}
-                onError={onReactionError}
-                textColor={textColor}
-                mutedColor={mutedColor}
-                theme={theme}
-              />
+        <View style={{ flexDirection: wideLayout ? 'row' : 'column', gap: 12 }}>
+          <View style={{ flex: wideLayout ? 3 : undefined }}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => setExpandedIndex(null)} style={{ marginBottom: 8 }}>
+              <Text style={{ color: textColor, fontWeight: '700' }}>‹ Back to all photos</Text>
+            </TouchableOpacity>
+            <BlogMediaPreview item={expandedItem} backgroundColor={backgroundColor} />
+            {expandedItem.caption ? <Text style={{ color: mutedColor, marginTop: 6 }}>{expandedItem.caption}</Text> : null}
+            {getEngagementSummary && onToggleReaction ? (
+              <View style={{ marginTop: 6 }}>
+                <BlogReactionBar
+                  testID={`lightbox-reactions-${expandedItem.assetId}`}
+                  targetKind="asset"
+                  targetId={expandedItem.assetId}
+                  summary={getEngagementSummary(expandedItem.assetId)}
+                  canEngage={canEngage}
+                  onToggle={onToggleReaction}
+                  onError={onReactionError}
+                  textColor={textColor}
+                  mutedColor={mutedColor}
+                  theme={theme}
+                />
+              </View>
+            ) : null}
+          </View>
+          {getComments ? (
+            <View
+              testID="lightbox-comment-rail"
+              style={[
+                { flex: wideLayout ? 2 : undefined, borderColor, paddingTop: wideLayout ? 0 : 10 },
+                wideLayout ? { borderLeftWidth: 1, paddingLeft: 12 } : { borderTopWidth: 1 },
+              ]}
+            >
+              <ScrollView style={{ maxHeight: wideLayout ? 420 : 260 }}>
+                <BlogCommentThread
+                  testID={`lightbox-comments-${expandedItem.assetId}`}
+                  comments={getComments(expandedItem.assetId)}
+                  targetKind="asset"
+                  targetId={expandedItem.assetId}
+                  audienceLabel={audienceLabel}
+                  currentUserId={currentUserId}
+                  canModerate={canModerate}
+                  canEngage={canEngage}
+                  onPostTopLevel={(body) => onPostComment?.(expandedItem.assetId, body)}
+                  onReply={(parentCommentId, body) => onPostComment?.(expandedItem.assetId, body, parentCommentId)}
+                  onEdit={(commentId, body) => onEditComment?.(commentId, body) ?? Promise.resolve()}
+                  onDelete={(commentId) => onDeleteComment?.(commentId) ?? Promise.resolve()}
+                  onReport={(commentId, reason) => onReportComment?.(commentId, reason) ?? Promise.resolve()}
+                  onHide={(commentId) => onHideComment?.(commentId) ?? Promise.resolve()}
+                  onUnhide={(commentId) => onUnhideComment?.(commentId) ?? Promise.resolve()}
+                  onShowEarlierReplies={onShowEarlierReplies}
+                  onError={onCommentError ?? (() => {})}
+                  textColor={textColor}
+                  mutedColor={mutedColor}
+                  borderColor={borderColor}
+                  backgroundColor={backgroundColor}
+                  styles={styles}
+                  theme={theme}
+                />
+              </ScrollView>
             </View>
           ) : null}
         </View>

@@ -185,6 +185,9 @@ flags:
   trip_blog_mentions:
     enabled: false
     description: "Phase 4 @mentions in comments, trip-scoped autocomplete"
+  trip_blog_public_engagement:
+    enabled: false
+    description: "Phase 4 unauthenticated public engagement endpoint (counts + public comments) on the public blog page"
   expense_import_plaid:
     enabled: false
     description: "Master switch for Plaid bank-link and transaction import"

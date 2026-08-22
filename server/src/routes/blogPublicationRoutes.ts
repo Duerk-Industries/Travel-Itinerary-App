@@ -91,7 +91,9 @@ router.get('/:tripId/blog/publication/status', authenticate, async (req: any, re
     res.json({
       epoch: Number(epoch.epoch),
       state: epoch.state,
-      requestedBy: String(epoch.requested_by),
+      // requested_by is nullable since 20260901_add_blog_publication_requested_by_nullable.sql
+      // (ON DELETE SET NULL) — the requesting account may since have been deleted.
+      requestedBy: epoch.requested_by == null ? null : String(epoch.requested_by),
       expiresAt: epoch.expires_at,
       userDecision: consent.rows[0]?.decision ?? null,
       pendingCount: Number(pending.rows[0]?.count ?? 0),

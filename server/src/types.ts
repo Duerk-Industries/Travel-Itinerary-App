@@ -267,7 +267,9 @@ export type AuditAction =
   | 'DEPLOY_CUTOVER'
   | 'DEPLOY_DIRECT_PROD'
   | 'DEPLOY_ROLLBACK'
-  | 'DEPLOY_TEARDOWN';
+  | 'DEPLOY_TEARDOWN'
+  | 'BLOG_COMMENT_HIDDEN'
+  | 'BLOG_COMMENT_UNHIDDEN';
 
 export interface AuditLogEntry {
   id: string;

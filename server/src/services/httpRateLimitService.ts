@@ -133,6 +133,19 @@ export const reserveBlogReactionRateLimit = async (
   });
 };
 
+// Phase 4 — same shape as reserveBlogReactionRateLimit above, reading commentsPerMinutePerUser.
+export const reserveBlogCommentRateLimit = async (
+  userId: string,
+  ip: string | null | undefined,
+): Promise<void> => {
+  await reserveRequestRateLimits({
+    name: 'blog_comment',
+    identities: [`user:${userId}`, ip ? `ip:${ip}` : null],
+    limit: testSafeDefault(Number(getApiCacheSetting('tripBlog', 'commentsPerMinutePerUser') ?? 10)),
+    windowMs: 60_000,
+  });
+};
+
 export const reserveDataTransferRateLimit = async (
   userId: string,
   ip: string | null | undefined,

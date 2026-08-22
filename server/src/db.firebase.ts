@@ -1885,6 +1885,37 @@ export const isPasswordSetupRequired = async (userId: string): Promise<boolean> 
   return Boolean(data.passwordSetupRequired);
 };
 
+// Phase 4 of docs/trip-blog-social-implementation-plan.md — mirrors the scrub-then-recompute logic
+// added to db.postgres.ts's deleteWebUserAndCleanup. Firebase has no FK cascade, so both the
+// reaction deletion and the comment-body scrub are explicit here rather than falling out of a
+// `DELETE FROM users`. Doc ids (`${targetKind}:${targetId}:${userId}` for reactions,
+// `${targetKind}:${targetId}:${audience}` for counters) are re-derived rather than imported from
+// firebaseEngagementRepository.ts, which does not export them — they are a stable, documented
+// convention (see that file), not private implementation detail.
+const scrubBlogEngagementForDeletedUser = async (userId: string): Promise<void> => {
+  const db = getDb();
+  const [reactions, comments] = await Promise.all([
+    db.collection('blog_reactions').where('userId', '==', userId).get(),
+    db.collection('blog_comments').where('authorUserId', '==', userId).get(),
+  ]);
+  const now = new Date().toISOString();
+  for (const doc of reactions.docs) {
+    const data = doc.data() as any;
+    const counterRef = db.collection('blog_engagement_counters').doc(`${data.targetKind}:${data.targetId}:${data.audience}`);
+    await doc.ref.delete();
+    await counterRef.set({ reactionTotal: FieldValue.increment(-1), reactionCounts: { [data.emoji]: FieldValue.increment(-1) }, updatedAt: now }, { merge: true });
+  }
+  for (const doc of comments.docs) {
+    const data = doc.data() as any;
+    const alreadyTombstoned = Boolean(data.deletedAt);
+    await doc.ref.set({ body: null, deletedAt: data.deletedAt ?? now, updatedAt: now }, { merge: true });
+    if (!alreadyTombstoned && !data.hiddenAt) {
+      const counterRef = db.collection('blog_engagement_counters').doc(`${data.targetKind}:${data.targetId}:${data.audience}`);
+      await counterRef.set({ commentCount: FieldValue.increment(-1), updatedAt: now }, { merge: true });
+    }
+  }
+};
+
 export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
   const db = getDb();
   const [
@@ -1906,6 +1937,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('user_emails').where('userId', '==', userId).get(),
     db.collection('billing_subscriptions').where('userId', '==', userId).get(),
   ]);
+  await scrubBlogEngagementForDeletedUser(userId);
   const refs = [
     db.collection('users').doc(userId),
     db.collection('web_users').doc(userId),
@@ -3106,6 +3138,18 @@ export const ensureUserFollowsTrip = async (tripId: string, userId: string): Pro
     .limit(1)
     .get();
   return !snap.empty;
+};
+
+// Mirrors db.postgres.ts's ensureUserOwnsTrip — trip ownership is the group's ownerId, not group
+// membership (architecture §4's moderation-action gate).
+export const ensureUserOwnsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const db = getDb();
+  const trip = await db.collection('trips').doc(tripId).get();
+  if (!trip.exists) return false;
+  const groupId = (trip.data() as any)?.groupId;
+  if (!groupId) return false;
+  const group = await db.collection('groups').doc(groupId).get();
+  return group.exists && (group.data() as any)?.ownerId === userId;
 };
 
 export const getTripFollowCode = async (
