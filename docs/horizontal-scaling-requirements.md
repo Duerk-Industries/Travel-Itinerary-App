@@ -69,6 +69,7 @@ Severity: **P0** = breaks correctness or user-visible behaviour across instances
 | 17 | Process-local metrics (`metrics.ts`) | Counters/gauges represent one instance and `/metrics` scraping does not produce a global view by itself. | P1 | Dashboards/alerts can undercount or double-sum gauges. Export per-instance labeled metrics and aggregate with correct counter/gauge semantics. |
 | 18 | In-flight dedupe and refresh locks (`utils/inflightDedupe.ts`, provider/cache service Maps, `blog/syncCoordination.ts`) | Duplicate suppression is per process. | P2 | Correctness remains durable, but N instances can multiply provider calls, syncs and cache fills. Provider caps remain DB-atomic; add distributed single-flight only where measured cost justifies it. |
 | 19 | Notification outbox and recap snapshots (planned) | **None by design.** Claim/lease state is durable and adapter-native. | — | Closed when conformance tests prove only one worker owns a lease and expired leases recover after a crash. |
+| 20 | Blog engagement counter contention | High-frequency reactions can create lock contention on the single `blog_engagement_counters` row. | P1 | For extreme viral scenarios, use Redis-backed write-behind counters. v1 uses DB-atomic increment and is safe for normal trip volume. |
 
 Rows 10, 12, 13 and 19 are designed or verified safe — API limits already enforce
 through the atomic DB path rather than process memory. They are listed rather than omitted because

@@ -154,6 +154,9 @@ program. **P2** = follow-on.
 | B10 | **Trip Awards recap card** | P2 | End of trip: most-loved photo, most photos contributed, most-commented day. Computed from B1/B2 data, shareable. |
 | B11 | **Report & moderate** | P0 | Report action on every comment; trip owner can hide any comment on their trip; reports route into the existing abuse pipeline. Ships *with* comments, never after. |
 | B12 | **Activity inbox & notification controls** | P1 | Durable in-app inbox for mentions, replies and bounded contribution nudges, with per-category push/email preferences, thread mute and reaction digests off by default. Collaboration has no retention value if people cannot find their way back to it. |
+| B13 | **Memory Lane** | P1 | On the anniversary of a trip (or specific high-engagement days), notify travelers and followers of a published blog with a "Year ago today" recap link. High retention value for the Returner persona. |
+| B14 | **Reaction Bursts** | P2 | Visual UI "burst" animation when a user reacts or when a new reaction is received via socket. Enhances the "Fun" and "Collaboration" objectives. |
+| B15 | **Collaborative Star Curation** | P1 | Travelers can "Star" specific photos or items to explicitly include them in the "Top Highlights" section of the public Recap, even if they aren't the most reacted. |
 
 ### Theme C — More informative about what happened
 
@@ -317,6 +320,9 @@ testable.
 - **NFR-11** Product/performance events are schema-versioned and contain no prose, comment body,
   caption, device token, signed URL, spend or coordinates. They record flag cohort, actor class,
   platform, latency/outcome and bounded counts so §2 metrics and rollout gates are measurable.
+- **NFR-12** **Automated Spam Detection**: Every public-audience comment is scanned for spam/scam
+  patterns before being visible to others. High-confidence spam is automatically hidden and flagged
+  for trip-owner review.
 
 ### 5.5 Privacy and policy
 

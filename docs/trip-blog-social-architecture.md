@@ -89,8 +89,8 @@ are treated: as inputs.
                     │
                     ▼
    server/src/services/
-     blogEngagementService.ts   NEW   reactions, comments, counters, authz
-     blogModerationService.ts   NEW   report, hide, strike count
+     blogEngagementService.ts   NEW   reactions, comments, counters, authz, spam check
+     blogModerationService.ts   NEW   report, hide, strike count, automated filtering
      blogDayStarterService.ts   NEW   draft assembly (A1)
      blogDayFactsService.ts     NEW   fact strip + timeline + distance (C1/C3)
      blogRecapService.ts        NEW   trip recap aggregation (C7)
@@ -401,7 +401,10 @@ Resolution order for every engagement write, in `blogEngagementService`:
 3. **Target reachability** — the target must exist, not be soft-deleted, and be visible to this actor
    under the same projection the read path applies. A follower cannot react to a `travelers`-audience
    item, and attempting it returns `404`, not `403`, so the endpoint does not confirm the item exists.
-4. **Trip-level toggles** — `follower_comments_enabled` for follower comment creation.
+4. **Automated Filtering** — For public comments, `blogEngagementService` invokes
+   `blogModerationService.checkSpam(body)` before persistence. High-confidence spam is marked
+   `hidden_at` immediately and logged as an automated strike.
+5. **Trip-level toggles** — `follower_comments_enabled` for follower comment creation.
 5. **Strike block** — `blog_comment_strikes.blocked_at` for comment creation.
 6. **Actor/IP rate limit** — `httpRateLimitService.ts`, keyed per NFR-5.
 7. **Aggregate reservation** — reserve the named `TRIP_BLOG_SOCIAL_API` and, for writes, storage
@@ -499,6 +502,10 @@ Facts are a **separate request from the blog document**, not folded into `GET /:
 draw on transfers, lodgings, activities, car rentals and expenses — five more table reads — and they
 are not needed for first paint. The day card renders headline, entries and gallery immediately and
 fills the fact strip and map in as they arrive. This is what keeps NFR-1 achievable.
+
+The cache key for facts includes the `content_revision` of the trip blog. Any change to activities,
+transfers, or the blog meta (headline/summary) increments the revision, ensuring the fact strip
+remains accurate without manual invalidation.
 
 ### 5.3 `blogAuthoringRoutes.ts`
 
@@ -1283,6 +1290,7 @@ caching:
     outboxMaxAttempts: 4
     outboxMaxAgeHours: 24
     outboxConcurrency: 2
+    maxNotificationsPerUserPerDay: 50
     maxPerUserPerHour: 20
     inboxPageSize: 30
     inboxPageSizeMax: 50

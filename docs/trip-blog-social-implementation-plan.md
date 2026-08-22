@@ -196,6 +196,7 @@ drift is within the agreed tolerance, and reaction write/error volume stays insi
 | Tombstone rule (FR-B2.4) | S | Soft delete with replies → tombstone; without → gone |
 | 15-minute edit window | S | Server-enforced, not client-enforced |
 | Report + hide endpoints, strike escalation | M | `blogModerationService.ts` |
+| `POST /:tripId/blog/comments/spam-check` | Internal-only LLM-backed spam filter (NFR-12). |
 | Public engagement endpoint | M | Separate post-first-paint public counters/comments payload keyed by `engagementRevision`; never invalidate the public blog document |
 | Rate/admission limiting | S | actor/IP/day/retained-row ceilings plus internal API/storage reservations |
 
@@ -212,6 +213,8 @@ drift is within the agreed tolerance, and reaction write/error volume stays insi
 
 ### Tests
 
+- **Spam Filtering Test**: Public comment with known spam keywords is automatically hidden; traveler
+  comment with same keywords is NOT hidden (as travelers are trusted).
 - Audience inheritance: a private comment stays private after publication; a public comment
   disappears on revoke; public counters never include private-audience rows.
 - Tombstone rendering with and without replies.
