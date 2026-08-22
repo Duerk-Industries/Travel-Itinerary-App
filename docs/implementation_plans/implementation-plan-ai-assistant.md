@@ -2,7 +2,13 @@
 
 ## Status
 
-Proposal, Phase 0 spike underway (see findings below). This plan reflects
+Phase 1 (guide/FAQ chat) built, tested, and manually verified working
+end-to-end behind the `ai_assistant_guide` flag (default off). Phase 2
+(conversation persistence) is also built and tested — see "Phase 2
+status" below for a real deviation from this plan's original design
+(client-side only, not the server DB table originally specified). Phase 0's
+findings below still stand as background; Phase 1's own findings are
+below that. Phase 3 (actions) has not been started. This plan reflects
 scoping decisions the product owner made up front (see "Scoping decisions"
 below), most recently revised to make the **entire** feature — guide *and*
 actions — run on-device with $0 marginal cost.
@@ -69,26 +75,295 @@ it through this repo's actual tooling (not simulated):
   inject only a few relevant snippets (not the whole corpus) and
   conversation history needs active pruning, not just a message-count cap.
 - ⚠️ **Tool-calling risk is now concretely confirmed, not just
-  theoretical.** WebLLM's OpenAI-compatible API genuinely supports
-  `tools`/`tool_choice` and real grammar/JSON-schema-constrained decoding
-  (`response_format: { type: "grammar", grammar }`) for any model — but
-  MLC's own explicitly-vetted `functionCallingModelIds` list contains only
-  larger 7–8B Hermes-family fine-tunes, and **does not include Qwen2.5 at
-  all**. Constrained decoding still forces syntactically valid JSON
-  regardless of model, but *tool-call accuracy* (right tool, right
-  arguments) is unverified for our chosen default and is now the single
-  most important thing to test before Phase 3 is greenlit — see the
-  updated §13. This also surfaces a real fallback option worth recording:
-  **Hermes-2-Pro-Mistral-7B-q4f16_1-MLC** is Apache-2.0 (Mistral-based, not
-  Llama-based) and is on MLC's vetted function-calling list — a candidate
-  "bigger model just for action mode" if Qwen2.5's tool accuracy proves
-  insufficient (~7B, ~4–5GB download, opt-in only).
+  theoretical — and worse than first assumed.** WebLLM's OpenAI-compatible
+  `tools`/`tool_choice` parameter is **hard-gated to an allowlist**
+  (`functionCallingModelIds`), which contains only larger 7–8B
+  Hermes-family fine-tunes and does **not** include Qwen2.5 at all. This
+  was originally (incorrectly) recorded above as "constrained decoding
+  still forces syntactically valid JSON regardless of model" — that is
+  **wrong**. Running the eval harness against Qwen2.5-1.5B confirmed the
+  real behavior: passing `tools` for a non-allowlisted model throws
+  client-side ("is not supported for ChatCompletionRequest.tools") before
+  the model is even invoked. There is no degraded-but-working mode for
+  small models via this API — it's a hard reject, not a reliability
+  spectrum. *Tool-call accuracy* for our chosen default is therefore not
+  just "unverified," it's **untestable via the native `tools` API at all**.
+  This is now the single most important thing to resolve before Phase 3
+  is greenlit — see the updated §13, which now also exercises a manual
+  JSON-in-prompt fallback strategy for non-allowlisted models (describe
+  the tool schemas as text, ask for a raw JSON object back, parse by
+  hand) so Qwen2.5's actual tool-calling capability — via *some* strategy
+  — can be measured at all. This also surfaces a real fallback option
+  worth recording: **Hermes-2-Pro-Mistral-7B-q4f16_1-MLC** is Apache-2.0
+  (Mistral-based, not Llama-based) and *is* on MLC's vetted
+  function-calling list — a candidate "bigger model just for action mode"
+  if Qwen2.5's tool accuracy (via either strategy) proves insufficient
+  (~7B, ~4–5GB download, opt-in only).
+- ⚠️ **First real accuracy run (Qwen2.5-1.5B, manual JSON-in-prompt
+  strategy) completed — score is weak, and not just on edge cases.** All
+  10 prompts ran to completion (no more hard `tools`-API errors). Of the
+  8 auto-graded cases, only **3/8 passed**: it correctly answered a plain
+  question with no tool call, and correctly filled a clear flight-booking
+  request and a clear lodging request. It **failed the other 5**,
+  including the two most safety-relevant behaviors for anything that will
+  eventually execute a real mutation: asked to "add a flight to Tokyo" or
+  "book me a hotel in Paris" with no dates/details given, it invented
+  plausible-sounding values (a fake carrier, fake dates) and called the
+  tool anyway, instead of asking a clarifying question — exactly the
+  failure mode §4 flagged as the reason mandatory confirmation-before-
+  execution can't be treated as sufficient on its own. It also called
+  `addActivity` for "recommend a vegetarian restaurant," a request outside
+  the tool set entirely, and called `addActivity` instead of
+  `updateItineraryStatus` for "mark the Eiffel Tower tour as booked" —
+  a wrong-tool-selection error. Separately (not counted in the 3/8, since
+  auto-grading doesn't check date fields it isn't told to): when a prompt
+  didn't specify a year, it filled in `2023` rather than the system
+  prompt's stated current date (2026) — a grounding failure worth tracking
+  even where it didn't change the auto-grade verdict. The two
+  `graded: "manual"` cases (multi-intent, ambiguous-reference) still need
+  a human look, but a **3/8 auto-graded pass rate, with 2 of the 5
+  failures being "invents details instead of asking," is a real signal
+  that Qwen2.5-1.5B is not yet trustworthy for action mode** even behind
+  confirmation. Next: run the same 10 prompts against
+  **Hermes-2-Pro-Mistral-7B** (native `tools` strategy) as the comparison
+  point before deciding between "Hermes-only for actions" and "narrow the
+  tool set further and re-test Qwen2.5."
+  - **Harness bug found and fixed alongside this run:** the manual-mode
+    parser used a single `JSON.parse` over the whole response, so when the
+    model answered a multi-intent prompt with two back-to-back JSON
+    objects (valid individually, invalid as one blob), the parser silently
+    dropped both and the reviewer saw raw unparsed text instead of the
+    model's actual two tool calls. Fixed by adding a string-aware
+    brace-matching scan (`extractTopLevelJsonObjects`) that recovers each
+    top-level JSON object separately when the whole response doesn't parse
+    as a single value; also handles a well-behaved model that wraps
+    multiple calls in a JSON array. Verified against the exact multi-object
+    output from this run plus single-object, markdown-fenced, plain-text,
+    unknown-tool-name, and array-of-calls cases before trusting it.
+- ⚠️ **Second harness bug found when actually attempting the Hermes
+  comparison run: `CustomSystemPromptError`.** Confirmed in WebLLM's own
+  source (`node_modules/@mlc-ai/web-llm/lib/index.js`): when `tools` is
+  set for a Hermes-2-Pro/Hermes-3 model, WebLLM hardcodes and injects its
+  *own* system message — it bakes the tool schemas into Hermes's official
+  function-calling prompt template — and throws if the request already has
+  a `role: "system"` message anywhere. The harness was unconditionally
+  sending `SYSTEM_PROMPT` as a system message for every model, which broke
+  the native path specifically. **Fixed:** for the native strategy only,
+  `SYSTEM_PROMPT` now travels inside the single `user` message instead
+  (`` `${SYSTEM_PROMPT}\n\n---\n\n${c.prompt}` ``) — WebLLM's own injected
+  system message still supplies the tool schemas. **This is a real Phase 3
+  design constraint, not just a harness quirk:** if action mode ever uses
+  Hermes's native `tools` API, app-specific guidance (today's date,
+  "don't invent missing fields," anything else the guide-mode system
+  prompt currently carries) cannot live in a system message — it has to be
+  folded into the user turn on every request. Worth remembering if Phase 3
+  ends up mixing strategies (native for Hermes, system-prompt-based manual
+  for Qwen2.5) — the two paths need different message-construction code,
+  not just a different `tools` argument.
+- ⚠️ **Hermes-2-Pro-Mistral-7B failed to load on the actual test machine
+  with `DXGI_ERROR_DEVICE_REMOVED`** — a Windows GPU driver crash/reset
+  (VRAM exhaustion or a driver timeout), not a "WebGPU unsupported" error.
+  Telling sign: Qwen2.5's 1.5B/3B models loaded and ran fine on the same
+  browser/hardware; only the ~7B model triggered this. Once it happens,
+  the GPU device is unrecoverable for the rest of that page's life — a
+  retried "Load model" failed identically, and mid-run failures cascaded
+  into all 10 prompts erroring identically ("model not loaded"), which was
+  its own harness bug (see fix below). **This directly threatens the
+  fallback plan recorded earlier** ("use Hermes-2-Pro-Mistral-7B for action
+  mode if Qwen2.5's accuracy is too low") — if the reference model for
+  measuring Qwen2.5 against can't reliably load on real hardware, it's not
+  a realistic fallback for end users either, and the comparison run itself
+  is still blocked. Needs a retry after a full page refresh (not yet done)
+  to know if this was one bad load or a consistent hardware ceiling; if
+  consistent, the "bigger opt-in model for actions" option may not be
+  viable at all on constrained hardware, which would leave "narrow the
+  tool set and re-test Qwen2.5" as the only real path.
+  - **Harness bug found and fixed alongside this:** a lost/removed GPU
+    device is fatal for the rest of the page — no in-page retry can
+    recover it — but the harness kept letting "Load model" be re-clicked
+    (failing identically each time) and, worse, the eval-run loop kept
+    calling all 10 cases after the very first one hit the same fatal
+    engine error, producing 10 identical, misleading "model not loaded"
+    rows instead of one clear diagnosis. Fixed: added `isFatalDeviceError`
+    detection (matches "device...removed/lost" and WebLLM's "model not
+    loaded" engine-state error); on a fatal error, the run loop now stops
+    immediately, marks remaining prompts "skipped" instead of repeating
+    the failure, and both buttons are permanently disabled with a status
+    message explaining a page refresh is required. The load-failure
+    message was also corrected — it no longer claims "your device likely
+    doesn't support WebGPU" for a crash/reset (misleading — WebGPU clearly
+    works, since Qwen2.5 already proved that), instead naming the actual
+    likely cause (VRAM/driver timeout on a larger model) and the actual
+    fix (refresh the page).
 - **Incidental, unrelated finding — flagged, not fixed here:**
   `app/tests/metroConfigParity.test.ts`'s "keeps image-size-safe as a
   workspace instead of a broken file override" assertion is already
   failing on `main`, independent of anything in this spike (verified via
   a clean `git stash` + test run). Worth a separate look, but out of scope
   for this plan.
+
+## Phase 1 findings so far
+
+Phase 1 (guide/FAQ chat) is built and was verified end-to-end: flag on →
+account entitlement → button renders (web only) → model loads → a real
+conversation works. One thing found through actually *using* it, not
+through any automated test:
+
+- ⚠️ **Small-model faithfulness to reference material is a real,
+  observed risk — not just a Phase 3 (tool-calling) concern.** Asked
+  "how do I add a flight," Qwen2.5-1.5B answered "click the Flights tab,"
+  even though the retrieved corpus entry correctly said "Transfers tab."
+  The model substituted a more generic, plausible-sounding name for a
+  typical travel app over the app's actual (and correctly retrieved) tab
+  name. This is the same class of risk §4's "Tool-calling reliability"
+  section flagged for Phase 3 — it turns out plain grounded Q&A isn't
+  immune either, just lower-stakes when it happens (a wrong answer, not a
+  wrong mutation).
+  - **Fix applied, not just noted:** three changes, each targeting a
+    different layer of the problem, all now covered by regression tests
+    (`assistantGuideCorpus.test.ts`, `assistantPrompt.test.ts`):
+    1. System prompt (`assistantPrompt.ts`) now explicitly instructs the
+       model to copy tab/button/screen names verbatim from the reference
+       material, and specifically warns against substituting a more
+       "familiar" name.
+    2. The `transfers` corpus entry was rewritten to name and directly
+       rule out the exact wrong guess ("there is no separate 'Flights'
+       tab"), not just state the correct name and hope it's salient
+       enough.
+    3. Generation temperature dropped from WebLLM's default to `0.2`
+       (`ASSISTANT_TEMPERATURE` in `assistantLocalModel.ts`) — this is a
+       grounded-answer guide, not creative writing, and lower temperature
+       measurably reduces this kind of confident-but-wrong drift.
+  - **Not fully closed by this fix.** These three changes address the
+    *specific* observed failure; they're a mitigation pattern, not proof
+    the model won't drift on some other feature name in some other
+    phrasing. Before this flag defaults on for real users, the corpus
+    should get a deliberate pass checking every entry for other
+    "plausible-but-wrong" names an on-device model might reach for
+    instead of this app's actual terminology, and spot-checking a few
+    real conversations again after the fix (not just re-reading the
+    prompt and assuming it generalizes).
+
+- ⚠️ **The panel's original fixed bottom-left position was a real usability
+  problem, not a preference.** Manual testing reported "it blocks the
+  screen and you can't move it" — the panel sat over whatever content
+  happened to be underneath it, with no way to reposition it out of the
+  way. This was never a Metro/CSS bug (ruled out earlier: `KeyboardAvoidingView`
+  is a plain `View` on web, the panel had an explicit bounded size, and
+  the app's nav bar is top-anchored so there was no geometric overlap) —
+  the panel genuinely just wasn't movable. §5.2/§11 (usability) previously
+  had nothing to say about this; it should have.
+  - **Fix:** the panel is now draggable by its header (`app/utils/draggablePanelPosition.ts`
+    for the pure position/clamping math, wired into `AssistantChatPanel.tsx`
+    via the raw RN responder props — `onResponderGrant/Move/Release` directly
+    on the header title, not `PanResponder`, specifically so the drag math
+    is unit-testable without simulating real touch gesture sequences).
+    Dragging is clamped so the panel can never be moved fully off-screen,
+    and re-clamped on window resize. Because the panel already stays
+    mounted across close/reopen (the earlier "chat doesn't persist" fix),
+    the dragged position persists too, for free — closing and reopening
+    keeps it wherever it was left, it doesn't snap back to the corner.
+  - Covered by tests: 8 pure position/clamping cases
+    (`draggablePanelPosition.test.ts`) plus 3 component-level tests
+    exercising the actual drag interaction, clamping, and position
+    persistence across visibility toggles (`AssistantChatPanel.test.tsx`).
+  - Native (Phase 4, not yet reachable) still uses the full-screen
+    `panelMobile` layout, where "position" isn't a meaningful concept —
+    dragging is web/`panelDesktop`-only by design, not an oversight.
+
+- ⚠️ **"Loading takes too long every time" — diagnosed, not just fixed
+  blindly.** Confirmed via the progress text itself (not guessed): model
+  *download* is already cached and fast on repeat sessions, exactly as
+  designed. What's slow is WebGPU shader/pipeline compilation, which
+  happens fresh every browser session regardless of caching and scales
+  with model size — §6's caching discussion previously only covered the
+  download step, not this.
+  - **Fix, then reverted — kept for the diagnosis, not the UI.** Added (and
+    then removed at the product owner's request, "not relevant right now")
+    a third, smaller candidate model as an explicit user choice —
+    `FAST_MODEL_ID` (Qwen2.5-0.5B-Instruct) alongside the existing default
+    (1.5B) and opt-in-quality (3B, still unwired in any UI) tiers from
+    §4's model table, surfaced as a "Default"/"Fast" toggle on the idle
+    screen with the choice remembered via `localStorage`. All of that —
+    the constant, `assistantModelPreference.ts`, the toggle UI, and its
+    tests — has been deleted again; `app/components/AssistantChatPanel.tsx`
+    now just loads `DEFAULT_MODEL_ID` unconditionally, same as before this
+    finding. The idle-screen copy correction (this cost is once-per-
+    session, not once-per-message) stayed, since that's independently
+    correct regardless of whether a model choice exists.
+  - **What compile-time narrowing doesn't fix, and still applies if this
+    is revisited:** compile time itself, for whichever model is used, is a
+    genuine WebGPU/browser-level cost this app doesn't control — there's
+    no cache-bypass or precompilation trick available at the WebLLM API
+    level today. A smaller model narrows the cost, it doesn't eliminate
+    it. If a fast-model option is reintroduced later, re-measure actual
+    compile-time deltas on real hardware before claiming a specific
+    speedup number anywhere user-facing — that was never done before this
+    was pulled back either.
+
+## Phase 2 status: conversation persistence — built, deliberately deviated from this plan's original design
+
+The original plan (§5.3, written before Phase 1 existed) specified a
+server-side `assistant_messages` table behind a new `ai_assistant_chat_history`
+feature flag, framed as "privacy-conscious opt-in." Once Phase 1 actually
+shipped and was tested, that design no longer fit: Phase 1's whole
+positioning — restated to users on the idle screen itself — is "nothing you
+ask ever leaves your device." Writing the conversation to a server table
+would have quietly broken that promise the first time this shipped, not
+just bent it.
+
+**What was built instead: client-side-only persistence via `localStorage`**
+(`app/utils/assistantChatHistoryStorage.ts`), scoped per `userId` (same
+trust boundary the auth token itself already lives in) so two accounts on
+one shared browser don't see each other's questions. No new DB table, no
+new server flag, no new server route — this is a pure client-side addition:
+
+- Conversation restores automatically on mount if this device has a stored
+  one for the logged-in user.
+- Persisted once a reply *settles* (`engineState !== 'generating'`), not on
+  every streamed token — avoids a localStorage write per token during
+  generation.
+- A "🗑" clear button appears in the panel header once a conversation
+  exists, wiping both in-memory state and the stored copy.
+- No feature flag gates this — unlike Phase 1's guide/actions flags (which
+  exist to control a real cost/reliability rollout), this is a zero-cost,
+  zero-risk client-side enhancement with nothing to stage a rollout for.
+
+**Trade-off, stated plainly:** this only persists on the same browser/
+device. Clearing browser data, using a different browser, or switching
+devices loses it — there is no cross-device sync, and there deliberately
+isn't a path to add one without revisiting the privacy positioning first.
+If cross-device history is ever actually requested, that is a new decision
+to make explicitly, not a quiet upgrade of this implementation.
+
+Covered by tests: 9 storage-layer cases (`assistantChatHistoryStorage.test.ts`
+— round-trip, per-user scoping, corrupted-data handling, storage-failure
+handling) plus 6 hook-level cases (`useAssistantChat.test.tsx` — restore on
+mount, per-user isolation, persist-on-settle vs. not-during-streaming,
+`clearConversation`, no-op when no `userId`, and the bug below) plus 2
+component-level cases (`AssistantChatPanel.test.tsx` — clear button
+visibility and behavior).
+
+⚠️ **Real bug found and fixed via manual testing, not caught by the
+initial test suite above:** a reload appeared to silently lose the
+conversation even though it had been written correctly in the prior
+session. Root cause: `userId` starts `null` in this app and is only
+populated once session restore finishes decoding the stored token — a
+genuine async gap, not always available on the very first render. The
+hook's initial `messages` state loaded from storage via a `useState` lazy
+initializer keyed on `userId`, which only ever runs once, at mount. If
+`userId` was still `null` at that instant, the lazy load correctly (per
+its own contract) came back empty — but the *persist*-on-settle effect
+still re-ran every time `userId` later changed, and did so with
+`messages` still stuck at that stale empty value, silently overwriting
+the real stored conversation with `[]`. Fixed with a second effect that
+re-hydrates `messages` whenever `userId` transitions to a real value it
+hasn't already loaded for, gated by a ref so it never re-fires (and never
+clobbers an in-progress conversation) for a `userId` it's already handled
+-- and the persist effect now itself checks that same ref before writing,
+so it can never fire with pre-hydration data. Locked in by a regression
+test that seeds storage, mounts with `userId: null`, then rerenders with
+a real `userId` and asserts the seeded data survives untouched.
 
 ## 1. Summary
 
@@ -205,12 +480,22 @@ than frontier cloud models. Since this plan drops the server-mediated
 option, that risk is *accepted*, not avoided — and mitigated three ways
 instead of sidestepped:
 
-1. **Grammar/JSON-schema-constrained decoding.** WebLLM's underlying MLC
-   engine supports constrained generation, so the model is forced to
-   produce syntactically valid output matching the active tool's schema —
-   it cannot emit malformed JSON or invent a field, though it can still
-   pick the *wrong* tool or *wrong* argument values, which constrained
-   decoding doesn't fix.
+1. **Grammar/JSON-schema-constrained decoding — allowlisted models only.**
+   ~~WebLLM's underlying MLC engine supports constrained generation ... for
+   any model~~ — **confirmed wrong by running the eval harness.** WebLLM's
+   `tools`/`tool_choice` convenience API hard-rejects (throws, before
+   invoking the model) any model outside its own `functionCallingModelIds`
+   allowlist, which does not include Qwen2.5. For our chosen default,
+   there is currently no constrained-decoding safety net at all via that
+   API — malformed JSON, wrong tool, and wrong arguments are all possible
+   failure modes, not just the latter two. Mitigation for non-allowlisted
+   models falls back to a manual strategy instead: describe tool schemas
+   as plain text in the system prompt, ask for a raw JSON object back, and
+   parse defensively (unknown tool name or unparseable output ⇒ treated as
+   "no tool call," same as a declined native call) — see the harness
+   update in §13. This is a strictly weaker guarantee than real constrained
+   decoding, which is exactly why real measured accuracy (not an assumed
+   syntax guarantee) is the gate for greenlighting Phase 3 with Qwen2.5.
 2. **Small, explicit tool allow-list**, starting with the lowest-risk
    actions only (§12).
 3. **Mandatory confirmation before execution**, every time, no exceptions
@@ -303,9 +588,11 @@ resource to track, because nothing new is being metered.
   one, attributed to the same user. If a specific action type's endpoint
   doesn't already emit an activity-feed event, that's a pre-existing gap
   in that endpoint, not something this feature needs to newly solve.
-- **Phase 2 (optional chat history)**, only if pursued: one new table,
-  e.g. `assistant_messages` (userId, tripId, role, content, createdAt).
-  Itself behind the `ai_assistant_chat_history` flag, default OFF.
+- **Phase 2 (chat history persistence) — built; revised from this
+  original design.** No new table. See "Phase 2 status" near the top of
+  this doc for why: it's client-side-only (`localStorage`), which is what
+  actually keeps the "nothing leaves your device" promise true instead of
+  quietly breaking it the first time a real server table shipped.
 
 ### 5.4 Feature flags
 
@@ -316,7 +603,11 @@ Following `server/config/feature-flags.yaml` conventions exactly:
 | `ai_assistant_guide` | off → on after staged rollout | Master switch for the on-device guide chat UI (web) |
 | `ai_assistant_guide_native` | off | Reserved for when native on-device guide exists (Phase 4) |
 | `ai_assistant_actions` | off | Master switch for on-device tool-calling/action-taking, independently toggleable from the guide flag |
-| `ai_assistant_chat_history` | off | Optional persistence of chat history across sessions (privacy-conscious opt-in) |
+
+Conversation persistence (Phase 2) has no flag — see "Phase 2 status": it's
+a zero-cost, zero-risk client-side addition with nothing to stage a
+rollout for, unlike the flags above, which each gate a real cost/
+reliability surface.
 
 Each flag is a genuine kill switch, checked client-side before the
 relevant UI affordance even renders — there's no server enforcement layer
@@ -509,8 +800,9 @@ ingestion, etc.).
    default off; staged rollout to internal/admin accounts first (same
    dogfood-then-flip pattern already used for `trip_day_map`), then
    general availability, to every tier.
-3. **Phase 2 — optional chat history**, only if Phase 1 usage/feedback
-   clearly asks for continuity across sessions. `ai_assistant_chat_history`.
+3. **Phase 2 — conversation persistence — done.** Built once real usage
+   asked for it (a page reload losing the conversation). Client-side only,
+   no flag — see "Phase 2 status."
 4. **Phase 3 — action-taking**, on-device, all tiers, gated only by
    `ai_assistant_actions` and the Phase 0 accuracy checkpoint. Starts with
    the smallest, lowest-risk tool allow-list (e.g. "add an activity,"
@@ -537,9 +829,14 @@ ingestion, etc.).
   confirmed rather than theoretical** (see "Phase 0 findings" at the top).
   WebLLM's own maintainers only formally vouch for function-calling
   accuracy on larger (7–8B) Hermes-family models — Qwen2.5 isn't on that
-  list. Constrained decoding still guarantees syntactically valid JSON
-  from Qwen2.5, but *correctness* (right tool, right arguments) is
-  unverified. **Eval harness built:**
+  list. ~~Constrained decoding still guarantees syntactically valid JSON
+  from Qwen2.5~~ — **confirmed wrong by actually running the harness.**
+  Passing `tools`/`tool_choice` for Qwen2.5-1.5B doesn't produce
+  lower-quality output, it throws immediately, client-side, for every
+  single prompt (`"...is not supported for ChatCompletionRequest.tools"`),
+  before the model is invoked at all. There is no constrained-decoding
+  safety net for non-allowlisted models via this API — none. **Eval
+  harness built, then extended after this finding:**
   `scripts/spikes/ai-assistant-tool-calling-eval.html` — a standalone,
   no-build-step page (imports WebLLM from a CDN) that runs a fixed set of
   10 realistic action prompts against a chosen model with the plan's
@@ -552,17 +849,42 @@ ingestion, etc.).
   as still unmeasured. The grading logic itself is unit-tested against synthetic
   model outputs (correct call, wrong tool, wrong args, hallucinated call
   when it should have asked a question, etc.) so the harness's verdicts
-  can be trusted before spending GPU time on it. **This needs a real
-  WebGPU browser to actually run — serve `scripts/spikes/` locally
-  (e.g. `npx serve scripts/spikes`) and open it in Chrome/Edge; opening
-  the file directly (`file://`) won't work reliably.** Compare
-  Qwen2.5-1.5B (and 3B) against **Hermes-2-Pro-Mistral-7B-q4f16_1-MLC**
-  (Apache-2.0, MLC-vetted for function calling) as a reference point. If Qwen2.5's accuracy is too low
-  even with constraints + confirmation, the fallback is *not* "add a
-  server call" (that would undo the whole point of this revision) — it's
-  either narrowing the tool allow-list further, or using the larger
+  can be trusted before spending GPU time on it. **The harness now picks a
+  strategy per model automatically**, matching what a real Phase 3
+  implementation would have to do: models on WebLLM's
+  `functionCallingModelIds` allowlist (Hermes-2-Pro-Mistral-7B) use the
+  native `tools`/`tool_choice` path; everything else (Qwen2.5-1.5B/3B)
+  falls back to a manual strategy — the tool schemas are described as
+  plain text in the system prompt, the model is asked to reply with a raw
+  JSON object (`{"tool": ..., "args": {...}}`) or plain text if no tool
+  applies, and the response is parsed defensively (markdown-fenced JSON is
+  unwrapped; an unparseable or unrecognized-tool response is scored as "no
+  tool call," the same outcome as a declined native call). This is a
+  strictly weaker guarantee than real constrained decoding — a small model
+  can still emit broken JSON — which is exactly why it needs a real
+  accuracy run, not an assumption, before Phase 3 is designed around it.
+  The results panel and markdown export both now report which strategy
+  produced a given score, so a run against Qwen2.5 (manual) and one
+  against Hermes (native) aren't mistaken for an apples-to-apples
+  comparison. **This needs a real WebGPU browser to actually run — serve
+  `scripts/spikes/` locally (e.g. `npx serve scripts/spikes`) and open it
+  in Chrome/Edge; opening the file directly (`file://`) won't work
+  reliably.** Compare Qwen2.5-1.5B (and 3B), via the manual strategy,
+  against **Hermes-2-Pro-Mistral-7B-q4f16_1-MLC** (Apache-2.0, MLC-vetted,
+  native strategy) as a reference point. If Qwen2.5's accuracy is too low
+  even with the manual-JSON strategy + confirmation, the fallback is *not*
+  "add a server call" (that would undo the whole point of this revision)
+  — it's either narrowing the tool allow-list further, or using the larger
   Hermes model specifically for action mode (bigger opt-in-only download,
   still $0, still on-device) while keeping Qwen2.5-1.5B for guide mode.
+  **Update: the Qwen2.5-1.5B / manual-strategy run is done** — see "First
+  real accuracy run" in the Phase 0 findings above (3/8 auto-graded pass,
+  with the failures concentrated in "invents details instead of asking").
+  **Still pending: the Hermes-2-Pro-Mistral-7B / native-strategy
+  comparison run**, to know whether the native `tools` API's constrained
+  decoding actually buys back the accuracy Qwen2.5 is losing, or whether
+  tool-call *selection* and *judgment* errors persist regardless of
+  strategy.
 - ~~Lazy-load bundle-splitting~~ — **resolved.** Confirmed working via
   `React.lazy()`, matching this codebase's existing `AdminTab`/
   `IngestionTab` pattern (see "Phase 0 findings" and the revised §6). The

@@ -211,6 +211,119 @@
     },
   ];
 
+  // ---------------------------------------------------------------------
+  // Strategy selection. WebLLM's `tools`/`tool_choice` API *hard-rejects*
+  // (throws, never calls the model) any model not on its own vetted
+  // `functionCallingModelIds` list -- confirmed empirically, not assumed:
+  // Qwen2.5-1.5B threw "is not supported for ChatCompletionRequest.tools"
+  // instead of attempting the call at all. So for any non-vetted model,
+  // fall back to a manual strategy: describe the tools in the system
+  // prompt and ask for a plain JSON object back, parsed by hand. This is
+  // a strictly harder test than constrained decoding would be (no syntax
+  // guarantee at all), which is exactly the point -- it's what Phase 3
+  // would actually have to do if it used a non-Hermes model.
+  // ---------------------------------------------------------------------
+  const isNativeFunctionCallingModel = (modelId) =>
+    Array.isArray(webllm.functionCallingModelIds) && webllm.functionCallingModelIds.includes(modelId);
+
+  const buildManualToolsPrompt = () => {
+    const lines = TOOLS.map((t) => {
+      const props = Object.entries(t.function.parameters.properties)
+        .map(([key, schema]) => {
+          const enumNote = schema.enum ? ` (one of: ${schema.enum.join(", ")})` : "";
+          const descNote = schema.description ? ` -- ${schema.description}` : "";
+          return `${key}${enumNote}${descNote}`;
+        })
+        .join("; ");
+      const required = t.function.parameters.required?.join(", ") || "none";
+      return `- ${t.function.name}(${props}) -- ${t.function.description} Required: ${required}.`;
+    }).join("\n");
+    return (
+      "You also have access to these actions. To perform one, respond with ONLY a single JSON " +
+      'object (no other text, no markdown code fences) in exactly this form: {"tool": "<action ' +
+      'name>", "args": { ... }}\n\n' +
+      "If none of these actions apply, or the user hasn't given enough information to fill in an " +
+      "action's required fields, respond with plain text instead -- do not guess at missing fields, " +
+      "and do not wrap plain text in JSON.\n\nActions:\n" + lines
+    );
+  };
+
+  // Brace-matching scan for top-level `{...}` chunks, string-aware so a `{`
+  // or `}` inside a quoted arg value (or an escaped quote) doesn't throw the
+  // depth count off. Needed because a small model asked to perform two
+  // actions often emits two valid JSON objects back-to-back with no
+  // separator or enclosing array -- invalid as one JSON.parse, but each
+  // chunk is individually parseable.
+  const extractTopLevelJsonObjects = (text) => {
+    const chunks = [];
+    let depth = 0;
+    let start = -1;
+    let inString = false;
+    let escapeNext = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inString) {
+        if (escapeNext) escapeNext = false;
+        else if (ch === "\\") escapeNext = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+      } else if (ch === "{") {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (ch === "}") {
+        depth--;
+        if (depth === 0 && start !== -1) {
+          chunks.push(text.slice(start, i + 1));
+          start = -1;
+        }
+      }
+    }
+    return chunks;
+  };
+
+  // Forgiving on purpose -- a real client would need to tolerate the same
+  // things a small, non-tool-tuned model actually does: wrapping JSON in a
+  // markdown fence, inventing a tool name that doesn't exist, emitting
+  // multiple tool calls back-to-back instead of in an array, etc. Anything
+  // that doesn't resolve to a known tool is dropped (treated as "no tool
+  // call" / a plain-text answer), same as the native path's absence of
+  // tool_calls.
+  const parseManualToolCall = (text) => {
+    if (!text) return [];
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    const knownNames = TOOLS.map((t) => t.function.name);
+    const toCall = (parsed) => {
+      if (!parsed || typeof parsed !== "object" || typeof parsed.tool !== "string") return null;
+      if (!knownNames.includes(parsed.tool)) return null;
+      return { name: parsed.tool, args: parsed.args ?? {}, raw: JSON.stringify(parsed) };
+    };
+
+    // Fast path: the whole response is exactly one JSON value -- either a
+    // single tool call, or (a well-behaved model) an array of them.
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) return parsed.map(toCall).filter(Boolean);
+      const single = toCall(parsed);
+      if (single) return [single];
+    } catch {
+      // Not one JSON value -- fall through to scanning for multiple loose
+      // top-level objects below.
+    }
+
+    return extractTopLevelJsonObjects(cleaned)
+      .map((chunk) => {
+        try {
+          return toCall(JSON.parse(chunk));
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  };
+
   const SYSTEM_PROMPT =
     "You are a trip-planning assistant embedded in a travel itinerary app. " +
     "You can call tools to add flights, lodging, and activities, or update an item's status. " +
@@ -407,9 +520,15 @@
     const graded = [...rows.values()].filter((r) => r.result);
     const passCount = graded.filter((r) => (r.manualGrade ?? r.result.autoGrade) === "pass").length;
     const needsReview = graded.filter((r) => (r.manualGrade ?? r.result.autoGrade) === null).length;
+    const strategyLabel = loadedModelId
+      ? isNativeFunctionCallingModel(loadedModelId)
+        ? "native tools API"
+        : "manual JSON-in-prompt (not on WebLLM's vetted tool-calling list)"
+      : "–";
     summaryPanel.style.display = graded.length ? "block" : "none";
     summaryEl.innerHTML = `
       Model: <b>${loadedModelId ?? "–"}</b> · Load time: <b>${loadSeconds ? loadSeconds.toFixed(1) + "s" : "–"}</b><br/>
+      Strategy: <b>${strategyLabel}</b><br/>
       Score: <b>${passCount}/${graded.length}</b> passed
       ${needsReview ? ` (${needsReview} still need manual review)` : ""}
     `;
@@ -427,20 +546,35 @@
   const runOneCase = async (c) => {
     const row = rows.get(c.id);
     const started = performance.now();
-    const completion = await engine.chat.completions.create({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: c.prompt },
-      ],
-      tools: TOOLS,
-      tool_choice: "auto",
-    });
+    const useNative = isNativeFunctionCallingModel(loadedModelId);
+    // WebLLM hardcodes its own system message for Hermes-2-Pro/Hermes-3
+    // when `tools` is set (it bakes the tool schemas into a template per
+    // Hermes's official function-calling prompt format) and throws
+    // CustomSystemPromptError if the request also has a role:"system"
+    // message -- confirmed by hitting exactly that error. So for the
+    // native path, our own guidance (don't invent missing fields, ask a
+    // clarifying question instead, etc.) has to travel inside the user
+    // turn instead of a system message.
+    const completion = useNative
+      ? await engine.chat.completions.create({
+          messages: [
+            { role: "user", content: `${SYSTEM_PROMPT}\n\n---\n\n${c.prompt}` },
+          ],
+          tools: TOOLS,
+          tool_choice: "auto",
+        })
+      : await engine.chat.completions.create({
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT + "\n\n" + buildManualToolsPrompt() },
+            { role: "user", content: c.prompt },
+          ],
+        });
     const elapsedMs = performance.now() - started;
     const message = completion.choices[0].message;
-    const toolCalls = toolCallsFromMessage(message);
+    const toolCalls = useNative ? toolCallsFromMessage(message) : parseManualToolCall(message.content);
     const autoGradeResult = autoGrade(c, toolCalls);
 
-    row.result = { toolCalls, message, autoGrade: autoGradeResult, elapsedMs, usage: completion.usage };
+    row.result = { toolCalls, message, autoGrade: autoGradeResult, elapsedMs, usage: completion.usage, strategy: useNative ? "native" : "manual" };
 
     const actualCell = row.tr.querySelector(".actual");
     actualCell.innerHTML = toolCalls.length
@@ -464,6 +598,25 @@
     updateSummary();
   };
 
+  // A lost/removed GPU device (DXGI_ERROR_DEVICE_REMOVED, or WebGPU's own
+  // "device lost") is fatal for the rest of this page's life -- observed
+  // firsthand loading Hermes-2-Pro-Mistral-7B, where it's a VRAM/driver-
+  // timeout crash under a larger model's load, not a "WebGPU unsupported"
+  // case (smaller Qwen2.5 models loaded fine in the same browser). No
+  // in-page retry (reload, new engine) can recover from this; the GPU
+  // context genuinely needs a full page refresh to get a new adapter.
+  const isFatalDeviceError = (err) => {
+    const msg = String(err?.message ?? err ?? "");
+    return /device.*(removed|lost)|model not loaded|not loaded before trying/i.test(msg);
+  };
+
+  const disableAllControlsPermanently = () => {
+    loadBtn.disabled = true;
+    modelSelect.disabled = true;
+    runBtn.disabled = true;
+    clearCacheBtn.disabled = true;
+  };
+
   loadBtn.addEventListener("click", async () => {
     const modelId = modelSelect.value;
     loadBtn.disabled = true;
@@ -480,16 +633,34 @@
       });
       loadedModelId = modelId;
       loadSeconds = (performance.now() - loadStartMs) / 1000;
-      setStatus(`Loaded ${modelId} in ${loadSeconds.toFixed(1)}s. Ready to run eval.`);
+      const strategyNote = isNativeFunctionCallingModel(modelId)
+        ? "native tools API"
+        : "manual JSON-in-prompt fallback (not on WebLLM's vetted tool-calling list)";
+      setStatus(`Loaded ${modelId} in ${loadSeconds.toFixed(1)}s. Strategy: ${strategyNote}. Ready to run eval.`);
       runBtn.disabled = false;
-      renderCaseRows();
-      updateSummary();
-    } catch (err) {
-      setStatus(`Failed to load: ${err?.message ?? err}\n\nIf this mentions WebGPU, your browser/device likely doesn't support it -- this is exactly the "not available" case the plan (§13) already accounts for.`);
-    } finally {
       loadBtn.disabled = false;
       modelSelect.disabled = false;
       progressBar.style.display = "none";
+      renderCaseRows();
+      updateSummary();
+    } catch (err) {
+      progressBar.style.display = "none";
+      const msg = err?.message ?? String(err);
+      if (isFatalDeviceError(err)) {
+        disableAllControlsPermanently();
+        setStatus(
+          `Failed to load: ${msg}\n\nThis is a GPU device loss/reset, not "WebGPU unsupported" -- ` +
+          `Qwen2.5's smaller models can load fine in the same browser while a larger model (like this ` +
+          `~7B one) trips a driver timeout or runs out of VRAM. The GPU context cannot recover in this ` +
+          `tab -- retrying "Load model" without refreshing will keep failing exactly like this. ` +
+          `Refresh the page before trying again; if it recurs, try closing other GPU-heavy tabs/apps ` +
+          `first, or fall back to a smaller model.`
+        );
+        return;
+      }
+      loadBtn.disabled = false;
+      modelSelect.disabled = false;
+      setStatus(`Failed to load: ${msg}\n\nIf this mentions WebGPU, your browser/device likely doesn't support it -- this is exactly the "not available" case the plan (§13) already accounts for.`);
     }
   });
 
@@ -502,23 +673,44 @@
   runBtn.addEventListener("click", async () => {
     runBtn.disabled = true;
     loadBtn.disabled = true;
+    let aborted = false;
     for (const c of CASES) {
+      if (aborted) {
+        const row = rows.get(c.id);
+        row.tr.querySelector(".actual").innerHTML = `<pre>(skipped -- run stopped after a fatal engine error below)</pre>`;
+        continue;
+      }
       setStatus(`Running: ${c.id}…`);
       try {
         await runOneCase(c);
       } catch (err) {
         const row = rows.get(c.id);
         row.tr.querySelector(".actual").innerHTML = `<pre style="color:var(--fail)">ERROR: ${escapeHtml(err?.message ?? String(err))}</pre>`;
+        if (isFatalDeviceError(err)) {
+          aborted = true;
+          disableAllControlsPermanently();
+          setStatus(
+            `Stopped early: the engine hit a fatal error ("${err?.message ?? err}") partway through -- ` +
+            `almost always a GPU device lost/removed mid-run, which cannot recover in this tab. ` +
+            `Remaining prompts were skipped rather than repeating the same failure 10 times. ` +
+            `Refresh the page, reload the model, and try again.`
+          );
+        }
       }
     }
-    setStatus(`Done. Grade any "manual" rows by hand, then copy results.`);
-    runBtn.disabled = false;
-    loadBtn.disabled = false;
+    if (!aborted) {
+      setStatus(`Done. Grade any "manual" rows by hand, then copy results.`);
+      runBtn.disabled = false;
+      loadBtn.disabled = false;
+    }
   });
 
   copyMdBtn.addEventListener("click", () => {
+    const strategyNote = loadedModelId && isNativeFunctionCallingModel(loadedModelId)
+      ? "native tools API"
+      : "manual JSON-in-prompt fallback";
     const lines = [
-      `Model: ${loadedModelId} — load time ${loadSeconds?.toFixed(1)}s`,
+      `Model: ${loadedModelId} — load time ${loadSeconds?.toFixed(1)}s — strategy: ${strategyNote}`,
       "",
       "| Case | Expected | Actual | Grade | tok/s |",
       "|---|---|---|---|---|",

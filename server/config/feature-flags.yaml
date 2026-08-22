@@ -7,6 +7,9 @@ flags:
   ai_itinerary_generation:
     enabled: true
     description: "Enable AI-powered itinerary generation via OpenAI"
+  ai_assistant_guide:
+    enabled: false
+    description: "On-device (WebLLM/WebGPU) chat assistant that answers questions about how to use app features. Runs entirely in the browser; no server LLM calls, no cost. Off by default pending staged rollout -- see docs/implementation_plans/implementation-plan-ai-assistant.md"
   csv_export:
     enabled: true
     description: "Enable CSV export of trip data"
