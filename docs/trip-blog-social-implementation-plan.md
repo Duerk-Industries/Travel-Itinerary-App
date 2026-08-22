@@ -202,8 +202,7 @@ drift is within the agreed tolerance, and reaction write/error volume stays insi
 | Report + hide endpoints, strike escalation | M | `blogModerationService.ts`. Reports never auto-hide (threat S8); hiding is always a human action. |
 | `resolveComment(actor, tripId, commentId)` | M | The second mandatory resolver. Comment-id routes bypass `resolveEngagementTarget` entirely — this is the likeliest IDOR in the feature (threat S3). Extend the matrix test to comment-id routes with a foreign trip's comment id. |
 | **Public engagement endpoint** | M | `GET /api/public/:username/:tripSlug/engagement`, separate from the public blog payload so a new comment never invalidates the page cache (NFR-6, architecture §14.7). Own flag `trip_blog_public_engagement`, own IP-hashed rate limit, counts and public-audience comments only, never author ids. Unauthenticated — the most abusable surface in the feature. |
-| `POST /:tripId/blog/comments/spam-check` | Internal-only LLM-backed spam filter (NFR-12). |
-| Public engagement endpoint | M | Separate post-first-paint public counters/comments payload keyed by `engagementRevision`; never invalidate the public blog document |
+| Automated spam check | M | Invoke `blogModerationService.checkSpam()` inside public-audience comment creation before persistence (NFR-12); use deterministic in-process rules in v1, with no separate client-callable endpoint or uncapped provider call. Any future external classifier requires its own disabled-by-default flag, finite caller limit and cost-model entry before activation. |
 | Rate/admission limiting | S | actor/IP/day/retained-row ceilings plus internal API/storage reservations |
 
 ### App
