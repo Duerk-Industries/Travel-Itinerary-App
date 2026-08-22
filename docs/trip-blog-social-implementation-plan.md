@@ -362,7 +362,6 @@ disabled independently without affecting writes; audience isolation has a review
 | Planned-vs-actual markers | S | Reuse `utils/itineraryStatus.ts` |
 | End-of-day review | M | Quick actions call existing source-record update routes/status lifecycle; no duplicate blog “actual” records |
 | Fact correction links | S | Deep-link authorized travelers to existing activity/transfer/lodging/car-rental editor |
-| Spend chip | M | Compute only in the traveler client from authorized expenses using existing `costs.ts`, `coveredBy.ts`, `exchangeRates.ts`; never add expenses to facts/public payload |
 
 **The photo-first composer is the largest single client task in the program.** It reuses the existing
 `upload-init` → `complete` flow and the existing quota modal (FR-A2.4) — the new work is bucketing

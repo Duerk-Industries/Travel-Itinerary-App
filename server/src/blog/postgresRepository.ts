@@ -18,6 +18,7 @@ type BlogRow = {
   content_revision: string | number;
   visibility_state: BlogDocument['visibilityState'];
   visibility_epoch: string | number;
+  photo_location_enabled?: boolean;
 };
 
 const formatDate = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -88,7 +89,7 @@ const mapItem = (row: any): BlogTextItem => ({
   languageTag: row.language_tag == null ? null : String(row.language_tag),
   createdAt: new Date(row.created_at).toISOString(),
   updatedAt: new Date(row.updated_at).toISOString(),
-  sourceType: row.source_type == null ? null : String(row.source_type) as 'itinerary_detail',
+  sourceType: row.source_type == null ? null : String(row.source_type) as 'itinerary_detail' | 'day_starter',
   sourceId: row.source_id == null ? null : String(row.source_id),
   sourceDetached: Boolean(row.source_detached),
 });
@@ -225,7 +226,8 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   const dayIds = daysResult.rows.map(r => String(r.id));
   const placeholders = dayIds.map((_, i) => `$${i + 2}`).join(',');
   const itemsResult = dayIds.length ? await queryBlog<any>(
-    `SELECT i.*, t.body, t.language_tag, d.local_date, sl.source_type, sl.source_id, sl.detached AS source_detached
+    `SELECT i.*, t.body, t.language_tag, d.local_date,
+            COALESCE(sl.source_type, i.source_type) AS source_type, sl.source_id, sl.detached AS source_detached
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      LEFT JOIN blog_text_contents t ON t.item_id = i.id
@@ -307,6 +309,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     contentRevision: Number(blog?.content_revision ?? 0),
     visibilityState: blog?.visibility_state ?? 'private',
     visibilityEpoch: Number(blog?.visibility_epoch ?? 0),
+    photoLocationEnabled: Boolean(blog?.photo_location_enabled),
     days,
   };
 };
@@ -333,9 +336,9 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   const id = randomUUID();
   const sortKey = `${Date.now().toString().padStart(16, '0')}-${id}`;
   await queryBlog(
-    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
-     VALUES ($1, $2, $3, 'core.text', 1, $4, $5, $6, $6)`,
-    [id, tripId, dayId, input.audience ?? 'public', sortKey, userId]
+    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, source_type)
+     VALUES ($1, $2, $3, 'core.text', 1, $4, $5, $6, $6, $7)`,
+    [id, tripId, dayId, input.audience ?? 'public', sortKey, userId, input.sourceType ?? null]
   );
   await queryBlog(
     `INSERT INTO blog_text_contents (item_id, body, language_tag) VALUES ($1, $2, $3)`,
@@ -608,6 +611,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
      SET title = CASE WHEN $2 THEN $3 ELSE title END,
          subtitle = CASE WHEN $4 THEN $5 ELSE subtitle END,
          introduction = CASE WHEN $6 THEN $7 ELSE introduction END,
+         photo_location_enabled = CASE WHEN $8 THEN $9 ELSE photo_location_enabled END,
          updated_at = NOW()
      WHERE trip_id = $1
      RETURNING *`,
@@ -616,6 +620,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
       patch.title !== undefined, patch.title ?? '',
       patch.subtitle !== undefined, patch.subtitle ?? null,
       patch.introduction !== undefined, patch.introduction ?? null,
+      patch.photoLocationEnabled !== undefined, patch.photoLocationEnabled ?? false,
     ]
   );
   const row = updated.rows[0];
@@ -628,6 +633,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
     contentRevision: Number(row.content_revision ?? 0),
     visibilityState: row.visibility_state,
     visibilityEpoch: Number(row.visibility_epoch ?? 0),
+    photoLocationEnabled: Boolean(row.photo_location_enabled),
     days: [],
   };
 };

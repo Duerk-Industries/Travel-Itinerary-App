@@ -47,6 +47,7 @@ import blogIndexingRoutes from './routes/blogIndexingRoutes';
 import blogSitemapRoutes from './routes/blogSitemapRoutes';
 import blogSocialRoutes from './routes/blogSocialRoutes';
 import blogModalityRoutes from './routes/blogModalityRoutes';
+import blogInsightRoutes from './routes/blogInsightRoutes';
 import { privacyPolicyHtml } from './legal/privacyPolicyHtml';
 import dataTransferRoutes from './routes/dataTransferRoutes';
 
@@ -593,6 +594,7 @@ app.use('/api/trips', blogPublicationRoutes);
 app.use('/api/trips', blogIndexingRoutes);
 app.use('/api/trips', blogSocialRoutes);
 app.use('/api/trips', blogModalityRoutes);
+app.use('/api/trips', blogInsightRoutes);
 app.use('/public/blog', publicBlogRoutes);
 app.use('/', blogSitemapRoutes);
 app.use('/api/itinerary', itineraryRoutes);

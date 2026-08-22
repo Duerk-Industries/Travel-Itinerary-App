@@ -40,7 +40,7 @@ export interface BlogTextItem {
   languageTag: string | null;
   createdAt: string;
   updatedAt: string;
-  sourceType?: 'itinerary_detail' | null;
+  sourceType?: 'itinerary_detail' | 'day_starter' | null;
   sourceId?: string | null;
   sourceDetached?: boolean;
 }
@@ -114,6 +114,8 @@ export interface BlogDocument {
   contentRevision: number;
   visibilityState: 'private' | 'pending_consent' | 'public';
   visibilityEpoch: number;
+  // Phase 5 (C2, PR-3) — off by default; see BlogMastheadPatch.photoLocationEnabled.
+  photoLocationEnabled: boolean;
   days: BlogDay[];
 }
 
@@ -134,6 +136,10 @@ export interface BlogTextInput {
   body: string;
   languageTag?: string | null;
   audience?: BlogAudience;
+  // Phase 5 (A1) — stamped 'day_starter' when this item was accepted from the Day Starter
+  // suggestion, so its acceptance rate is measurable (architecture §8's stage-2 rollout gate
+  // depends on this existing). Unset for every other authoring path.
+  sourceType?: string | null;
 }
 
 export interface BlogTextPatch {
@@ -164,4 +170,9 @@ export interface BlogMastheadPatch {
   title?: string;
   subtitle?: string | null;
   introduction?: string | null;
+  // Phase 5 (C2, PR-3) — the trip-level geotag toggle. Not retroactive: turning this on does not
+  // backfill lat/lng onto assets already uploaded while it was off (see initUpload in
+  // postgresMediaRepository.ts/firebaseMediaRepository.ts, which reads the current value at
+  // upload time only).
+  photoLocationEnabled?: boolean;
 }

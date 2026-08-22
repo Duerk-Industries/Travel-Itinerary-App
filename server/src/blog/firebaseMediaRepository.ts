@@ -11,7 +11,11 @@ import { getDb } from '../db.firebase';
 const config = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; } })();
 const included = (tier: string) => Number(config.tiers?.[tier]?.includedBytes ?? config.tiers?.free?.includedBytes ?? 0);
 const nowIso = () => new Date().toISOString();
-const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, caption: data.caption ?? null, altText: data.altText ?? null, createdAt: data.createdAt ?? undefined, isHighlight: Boolean(data.isHighlight), parentKindKey: data.parentKindKey ?? undefined, position: data.position != null ? Number(data.position) : undefined });
+const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, capturedLat: data.capturedLat == null ? null : Number(data.capturedLat), capturedLng: data.capturedLng == null ? null : Number(data.capturedLng), caption: data.caption ?? null, altText: data.altText ?? null, createdAt: data.createdAt ?? undefined, isHighlight: Boolean(data.isHighlight), parentKindKey: data.parentKindKey ?? undefined, position: data.position != null ? Number(data.position) : undefined });
+
+// Phase 5 — mirrors postgresMediaRepository.ts's isFiniteLat/isFiniteLng.
+const isFiniteLat = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90;
+const isFiniteLng = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180;
 
 const ensureAccount = async (userId: string): Promise<any> => {
   const ref = getDb().collection('blog_storage_accounts').doc(userId);
@@ -81,7 +85,11 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
   const parentKindKey = input.galleryItemId ? 'core.gallery' : (input.mediaKind === 'photo' ? 'media.photo' : 'media.video');
   const position = input.galleryItemId ? galleryAssetCount : 0;
-  const data = { tripId: input.tripId, blogItemId, dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, parentKindKey, position, createdAt: nowIso(), updatedAt: nowIso() };
+  const blogDoc = await db.collection('trip_blogs').doc(input.tripId).get();
+  const locationEnabled = blogDoc.exists && (blogDoc.data() as any)?.photoLocationEnabled === true;
+  const capturedLat = locationEnabled && isFiniteLat(input.capturedLat) ? input.capturedLat : null;
+  const capturedLng = locationEnabled && isFiniteLng(input.capturedLng) ? input.capturedLng : null;
+  const data = { tripId: input.tripId, blogItemId, dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, capturedLat, capturedLng, caption: input.caption ?? null, altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, parentKindKey, position, createdAt: nowIso(), updatedAt: nowIso() };
   await db.collection('blog_media_assets').doc(assetId).set(data);
   if (!input.galleryItemId) {
     await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: input.dayDate, localDate: input.dayDate, kindKey: parentKindKey, schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });

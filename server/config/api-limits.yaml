@@ -207,6 +207,11 @@ providers:
       # just when a user opens a lodging dialog, so it's the higher-volume
       # caller. Raise only after watching real usage/cost for a week.
       TRIP_DAY_MAP: 300
+      # Phase 5 of docs/trip-blog-social-implementation-plan.md, architecture §14.1/§14.2 — the
+      # blog's day-map render job only, never a request path. Bounded by the number of trip-days
+      # that ever exist (render-once-and-store), not by page views, instances or crawlers, so 200/
+      # day is generous headroom rather than a real ceiling in practice.
+      BLOG_DAY_MAP_RENDER: 200
 
   NOMINATIM:
     window: hour
@@ -425,6 +430,9 @@ providers:
     callers:
       BLOG_REACTION_WRITE: 15000
       BLOG_COMMENT_WRITE: 5000
+      # Phase 5 — day facts (C1/C3/C5) and Day Starter/media-grouping writes (A1/A2).
+      BLOG_DAY_FACTS_READ: 10000
+      BLOG_AUTHORING_WRITE: 5000
 
 budgeting:
   OPENAI:
@@ -642,3 +650,10 @@ caching:
     hideStrikesBeforeBlock: 3
     publicEngagementReadsPerMinutePerIp: 60
     publicEngagementCommentsPageSize: 20
+    # Phase 5 — architecture §7.1: facts are computed per request and cached in-process, keyed by
+    # trip/day/audience class/source revisions; never persisted (every input already is elsewhere).
+    factsCacheTtlMs: 60000
+    # Phase 5 — architecture §14.1: a day map re-renders only when its points hash changes, and even
+    # then at most this often per trip-day, so an itinerary edited several times in one afternoon
+    # doesn't re-trigger the render job on every save.
+    dayMapRerenderMinIntervalHours: 24

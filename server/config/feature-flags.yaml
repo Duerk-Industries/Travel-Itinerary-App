@@ -188,6 +188,27 @@ flags:
   trip_blog_public_engagement:
     enabled: false
     description: "Phase 4 unauthenticated public engagement endpoint (counts + public comments) on the public blog page"
+  # Phase 5 of docs/trip-blog-social-implementation-plan.md — "what actually happened" (C1, C2, C3,
+  # C5, C10, C11, A1, A2). trip_blog_authoring_assist is the parent surface for the Day Starter and
+  # photo-first composer, per architecture §9.1's flag table; the two children below still apply.
+  trip_blog_authoring_assist:
+    enabled: false
+    description: "Parent flag for Day Starter (A1) and the photo-first composer (A2)"
+  trip_blog_day_starter:
+    enabled: false
+    description: "A1/A6 — deterministic day-starter template (Use/Rewrite/Not now), never an LLM call itself"
+  trip_blog_photo_composer:
+    enabled: false
+    description: "A2 — photo-first composer with day buckets, an Unassigned bucket and pre-commit storage headroom"
+  trip_blog_day_facts:
+    enabled: false
+    description: "C1, C3, C5 — the day fact strip and timeline rail; C2 (day map) additionally requires the existing trip_day_map flag"
+  # Fail-closed (see entitlementService.ts's FAIL_CLOSED_FLAGS) — architecture §9.1: "the only new
+  # externally-billed call in the feature set." A day map is rendered once per (trip-day,
+  # points-hash) by a background job, never on a request path (architecture §14.1).
+  trip_blog_day_map_render:
+    enabled: false
+    description: "Background day-map render job (§14.1) — writes a stored PNG via Google Static Maps once per (trip-day, points-hash); no request path ever calls out"
   expense_import_plaid:
     enabled: false
     description: "Master switch for Plaid bank-link and transaction import"

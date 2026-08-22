@@ -52,7 +52,14 @@ export const setIncludedStorage = async (userId: string, includedBytes: number):
   );
 };
 
-const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, caption: row.caption ?? null, altText: row.alt_text ?? null, createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
+const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, capturedLat: row.captured_lat == null ? null : Number(row.captured_lat), capturedLng: row.captured_lng == null ? null : Number(row.captured_lng), caption: row.caption ?? null, altText: row.alt_text ?? null, createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
+
+// Phase 5 of docs/trip-blog-social-implementation-plan.md — PR-3: a geotag is only ever persisted
+// when the trip's photo_location_enabled toggle is on *at upload time*; turning it on later does
+// not backfill assets already uploaded while it was off (architecture §3.3). Range-validated so a
+// malformed client payload can't wedge a bogus coordinate into the day-map/facts pipeline.
+const isFiniteLat = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90;
+const isFiniteLng = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180;
 
 const ensureMediaDays = async (tripId: string): Promise<void> => {
   const trip = await queryBlog<{ start_date: string | null; end_date: string | null }>('SELECT start_date, end_date FROM trips WHERE id = $1 LIMIT 1', [tripId]);
@@ -113,6 +120,10 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     if (!day) throw new Error('The selected day is outside the trip range');
   }
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
+  const locationToggle = await queryBlog<{ photo_location_enabled: boolean }>('SELECT photo_location_enabled FROM trip_blogs WHERE trip_id = $1', [input.tripId]);
+  const locationEnabled = Boolean(locationToggle.rows[0]?.photo_location_enabled);
+  const capturedLat = locationEnabled && isFiniteLat(input.capturedLat) ? input.capturedLat : null;
+  const capturedLng = locationEnabled && isFiniteLng(input.capturedLng) ? input.capturedLng : null;
   const reservation = await queryBlog<any>(
     `UPDATE blog_storage_accounts SET reserved_bytes = reserved_bytes + $2, updated_at = NOW()
      WHERE user_id = $1 AND entitlement_active = TRUE AND included_bytes + purchased_bytes - visible_committed_bytes - reserved_bytes >= $2
@@ -133,9 +144,9 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     );
   }
   await queryBlog(
-    `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, physical_bytes, billable_bytes, source_mime_type, captured_at, caption, alt_text, source_ref, object_key, created_at, updated_at)
-     VALUES ($1, $2, $3, $3, $4, 'uploading', $5, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-    [assetId, input.tripId, userId, input.mediaKind, input.byteSize, input.mimeType.toLowerCase(), input.capturedAt ?? null, input.caption ?? null, input.altText ?? null, input.idempotencyKey, objectKey]
+    `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, physical_bytes, billable_bytes, source_mime_type, captured_at, captured_lat, captured_lng, caption, alt_text, source_ref, object_key, created_at, updated_at)
+     VALUES ($1, $2, $3, $3, $4, 'uploading', $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())`,
+    [assetId, input.tripId, userId, input.mediaKind, input.byteSize, input.mimeType.toLowerCase(), input.capturedAt ?? null, capturedLat, capturedLng, input.caption ?? null, input.altText ?? null, input.idempotencyKey, objectKey]
   );
   const position = input.galleryItemId ? galleryAssetCount : 0;
   const role = input.galleryItemId ? 'gallery_member' : 'primary';

@@ -369,6 +369,11 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
       mimeType: String(req.body?.mimeType ?? ''),
       byteSize: Number(req.body?.byteSize),
       capturedAt: req.body?.capturedAt ?? null,
+      // Phase 5 (C2, PR-3) — client-supplied EXIF geotag; the repository decides whether to
+      // actually persist it (only when the trip's photo_location_enabled toggle is on). Server
+      // never parses EXIF itself.
+      capturedLat: typeof req.body?.capturedLat === 'number' ? req.body.capturedLat : null,
+      capturedLng: typeof req.body?.capturedLng === 'number' ? req.body.capturedLng : null,
       caption: req.body?.caption ?? null,
       altText: req.body?.altText ?? null,
       idempotencyKey,
