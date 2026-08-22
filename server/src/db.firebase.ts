@@ -4114,6 +4114,8 @@ const normalizeLodgingRecord = (data: any) => ({
   refundBy: data.refundBy ?? data.refund_by,
   totalCost: data.totalCost ?? data.total_cost ?? 0,
   costPerNight: data.costPerNight ?? data.cost_per_night ?? 0,
+  notes: data.notes ?? null,
+  features: Array.isArray(data.features) ? data.features : [],
   paidBy: Array.isArray(data.paidBy) ? data.paidBy : Array.isArray(data.paid_by) ? data.paid_by : [],
   travelerIds: Array.isArray(data.travelerIds) ? data.travelerIds : Array.isArray(data.traveler_ids) ? data.traveler_ids : [],
   placeId: data.placeId ?? data.place_id ?? '',
@@ -4227,6 +4229,8 @@ export const upsertLocation = async (data: {
   place_id: string;
   name: string;
   address?: string;
+  notes?: string | null;
+  features?: string[];
   lat?: number;
   lng?: number;
   types?: string[];
@@ -4684,6 +4688,8 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  notes?: string | null;
+  features?: string[];
   place_id?: string;
   placeId?: string;
   paid_by?: string[];
@@ -4713,6 +4719,8 @@ export const insertLodging = async (lodging: {
     total_cost: lodging.totalCost,
     cost_per_night: lodging.costPerNight,
     address: lodging.address ?? '',
+    notes: lodging.notes ?? null,
+    features: lodging.features ?? [],
     place_id: lodging.place_id ?? lodging.placeId ?? '',
     paid_by: lodging.paid_by ?? [],
     traveler_ids: lodging.traveler_ids ?? lodging.paid_by ?? [],

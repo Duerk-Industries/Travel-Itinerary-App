@@ -8,6 +8,7 @@ export type ActivityType =
   | 'Fun & Games'
   | 'Hike'
   | 'Nightlife'
+  | 'Other'
   | 'Open Access'
   | 'Outdoor Activity'
   | 'Reservation'
@@ -597,6 +598,8 @@ export interface Lodging {
   total_cost: number;
   cost_per_night: number;
   address: string;
+  notes?: string | null;
+  features?: string[];
   paid_by: string[];
   traveler_ids?: string[];
   imageUrl?: string;

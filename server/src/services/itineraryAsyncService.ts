@@ -275,6 +275,7 @@ const validActivityType = (value: unknown): ActivityType => {
       'Fun & Games',
       'Hike',
       'Nightlife',
+      'Other',
       'Open Access',
       'Outdoor Activity',
       'Reservation',

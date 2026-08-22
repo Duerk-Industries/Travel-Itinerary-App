@@ -46,6 +46,7 @@ import blogSitemapRoutes from './routes/blogSitemapRoutes';
 import blogSocialRoutes from './routes/blogSocialRoutes';
 import blogModalityRoutes from './routes/blogModalityRoutes';
 import { privacyPolicyHtml } from './legal/privacyPolicyHtml';
+import dataTransferRoutes from './routes/dataTransferRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -178,6 +179,7 @@ app.use((req, res, next) => {
   }
   cors(corsOptions)(req, res, next);
 });
+app.use('/api', dataTransferRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

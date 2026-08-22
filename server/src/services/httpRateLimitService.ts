@@ -116,6 +116,18 @@ export const reserveActivitiesBulkSaveRateLimit = async (
   });
 };
 
+export const reserveDataTransferRateLimit = async (
+  userId: string,
+  ip: string | null | undefined,
+): Promise<void> => {
+  await reserveRequestRateLimits({
+    name: 'activity_lodging_csv_import',
+    identities: [`user:${userId}`, ip ? `ip:${ip}` : null],
+    limit: parsePositiveInt(process.env.ACTIVITY_LODGING_IMPORT_RATE_LIMIT_MAX, testSafeDefault(10)),
+    windowMs: parsePositiveInt(process.env.ACTIVITY_LODGING_IMPORT_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1000),
+  });
+};
+
 export const authLoginRateLimit: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
   const identifier = String(req.body?.identifier ?? req.body?.email ?? '').trim().toLowerCase();
   try {

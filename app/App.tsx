@@ -644,6 +644,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureItineraryItemKinds, setFeatureItineraryItemKinds] = useState(true);
   const [featureItineraryDocumentImport, setFeatureItineraryDocumentImport] = useState(false);
   const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
+  const [featureActivityLodgingCsvImport, setFeatureActivityLodgingCsvImport] = useState(false);
+  const [featureActivityLodgingCsvExport, setFeatureActivityLodgingCsvExport] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -661,6 +663,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureItineraryItemKinds(Boolean(data.featureItineraryItemKinds));
           setFeatureItineraryDocumentImport(Boolean(data.featureItineraryDocumentImport));
           setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
+          setFeatureActivityLodgingCsvImport(Boolean(data.featureActivityLodgingCsvImport));
+          setFeatureActivityLodgingCsvExport(Boolean(data.featureActivityLodgingCsvExport));
         }
       })
       .catch(() => undefined);
@@ -2932,9 +2936,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode}
                   defaultActivityDate={activeTrip?.startDate ?? null}
+                  tripEndDate={activeTrip?.endDate ?? null}
                   destination={activeTrip?.destination ?? null}
                   featureGridEditing={featureGridEditing}
                   featureGridEditingClipboard={featureGridEditingClipboard}
+                  featureActivityLodgingCsvImport={featureActivityLodgingCsvImport}
+                  featureActivityLodgingCsvExport={featureActivityLodgingCsvExport}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                   featureTapToEditTables={featureTapToEditTables}
                 />
@@ -3137,6 +3144,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               readOnly={isFollowingMode}
               featureStandardizedItemDialogs={featureStandardizedItemDialogs}
               featureTapToEditTables={featureTapToEditTables}
+              featureActivityLodgingCsvImport={featureActivityLodgingCsvImport}
+              featureActivityLodgingCsvExport={featureActivityLodgingCsvExport}
             />
           )
         : null}

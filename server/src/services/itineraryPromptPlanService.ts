@@ -2668,6 +2668,7 @@ const ALL_ACTIVITY_TYPES: ActivityType[] = [
   'Fun & Games',
   'Hike',
   'Nightlife',
+  'Other',
   'Open Access',
   'Outdoor Activity',
   'Reservation',

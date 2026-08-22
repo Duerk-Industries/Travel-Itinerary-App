@@ -375,6 +375,14 @@ providers:
       ACTIVITIES_ACTIVITY_ROW_WRITE: 20000
       ACTIVITIES_ACTIVITY_ROW_DELETE: 5000
 
+  DATA_TRANSFER_API:
+    window: day
+    windowHours: 24
+    overall: 20000
+    callers:
+      ACTIVITY_IMPORT_ROWS: 15000
+      LODGING_IMPORT_ROWS: 5000
+
   ITINERARY_CACHE_STORAGE:
     window: day
     windowHours: 24

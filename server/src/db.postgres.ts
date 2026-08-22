@@ -973,6 +973,8 @@ export const initDb = async (): Promise<void> => {
       total_cost NUMERIC NOT NULL DEFAULT 0,
       cost_per_night NUMERIC NOT NULL DEFAULT 0,
       address TEXT,
+      notes TEXT,
+      features JSONB NOT NULL DEFAULT '[]'::jsonb,
       place_id TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
       traveler_ids JSONB DEFAULT '[]'::jsonb,
@@ -4236,6 +4238,8 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
              l.address,
+             l.notes,
+             COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
              COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
              COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4285,6 +4289,8 @@ export const getLodgingById = async (lodgingId: string): Promise<(Lodging & { tr
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
              l.address,
+             l.notes,
+             COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
              COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
              COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4321,6 +4327,8 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  notes?: string | null;
+  features?: string[];
   place_id?: string;
   paid_by?: string[];
   traveler_ids?: string[];
@@ -4337,9 +4345,9 @@ export const insertLodging = async (lodging: {
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, status, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
+        id, user_id, trip_id, status, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, notes, features, place_id, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      VALUES ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -4352,6 +4360,8 @@ export const insertLodging = async (lodging: {
                 total_cost as "totalCost",
                 cost_per_night as "costPerNight",
                 address,
+                notes,
+                COALESCE(features, '[]'::jsonb) as features,
                 place_id as "placeId",
                 COALESCE(paid_by, '[]'::jsonb) as "paid_by",
                 COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4371,6 +4381,8 @@ export const insertLodging = async (lodging: {
       lodging.totalCost,
       lodging.costPerNight,
       lodging.address ?? '',
+      lodging.notes ?? null,
+      JSON.stringify(lodging.features ?? []),
       lodging.place_id ?? null,
       JSON.stringify(lodging.paid_by ?? []),
       JSON.stringify(lodging.traveler_ids ?? []),
@@ -4450,6 +4462,8 @@ export const updateLodging = async (
     updates.total_cost ?? null,
     updates.cost_per_night ?? null,
     updates.address ?? null,
+    Object.prototype.hasOwnProperty.call(updates, 'notes') ? updates.notes : null,
+    Object.prototype.hasOwnProperty.call(updates, 'features') ? JSON.stringify(updates.features ?? []) : null,
     updates.place_id ?? null,
     updates.imageUrl ?? null,
     typeof updates.paid_by !== 'undefined' ? JSON.stringify(updates.paid_by ?? []) : null,
@@ -4471,11 +4485,13 @@ export const updateLodging = async (
           total_cost = COALESCE($9, total_cost),
           cost_per_night = COALESCE($10, cost_per_night),
           address = COALESCE($11, address),
-          place_id = COALESCE($12, place_id),
-          image_url = COALESCE($13, image_url),
-          paid_by = COALESCE($14::jsonb, paid_by),
-          traveler_ids = COALESCE($15::jsonb, traveler_ids),
-          trip_id = COALESCE($16, trip_id)
+          notes = COALESCE($12, notes),
+          features = COALESCE($13::jsonb, features),
+          place_id = COALESCE($14, place_id),
+          image_url = COALESCE($15, image_url),
+          paid_by = COALESCE($16::jsonb, paid_by),
+          traveler_ids = COALESCE($17::jsonb, traveler_ids),
+          trip_id = COALESCE($18, trip_id)
         WHERE id = $1
         RETURNING
           id,
@@ -4490,6 +4506,8 @@ export const updateLodging = async (
           total_cost as "totalCost",
           cost_per_night as "costPerNight",
           address,
+          notes,
+          COALESCE(features, '[]'::jsonb) as features,
           place_id as "placeId",
           COALESCE(paid_by, '[]'::jsonb) as "paid_by",
           COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4508,14 +4526,16 @@ export const updateLodging = async (
           total_cost = COALESCE($9, l.total_cost),
           cost_per_night = COALESCE($10, l.cost_per_night),
           address = COALESCE($11, l.address),
-          place_id = COALESCE($12, l.place_id),
-          image_url = COALESCE($13, l.image_url),
-          paid_by = COALESCE($14::jsonb, l.paid_by),
-          traveler_ids = COALESCE($15::jsonb, l.traveler_ids),
-          trip_id = COALESCE($16, l.trip_id)
+          notes = COALESCE($12, l.notes),
+          features = COALESCE($13::jsonb, l.features),
+          place_id = COALESCE($14, l.place_id),
+          image_url = COALESCE($15, l.image_url),
+          paid_by = COALESCE($16::jsonb, l.paid_by),
+          traveler_ids = COALESCE($17::jsonb, l.traveler_ids),
+          trip_id = COALESCE($18, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($16, l.trip_id)
+          AND t.id = COALESCE($18, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
@@ -4531,6 +4551,8 @@ export const updateLodging = async (
           l.total_cost as "totalCost",
           l.cost_per_night as "costPerNight",
           l.address,
+          l.notes,
+          COALESCE(l.features, '[]'::jsonb) as features,
           l.place_id as "placeId",
           COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
           COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",

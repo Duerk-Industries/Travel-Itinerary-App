@@ -10,6 +10,12 @@ flags:
   csv_export:
     enabled: true
     description: "Enable CSV export of trip data"
+  activity_lodging_csv_import:
+    enabled: false
+    description: "Enable reviewed CSV imports for Activities and Lodging"
+  activity_lodging_csv_export:
+    enabled: false
+    description: "Enable canonical CSV exports for Activities and Lodging"
   car_rentals:
     enabled: true
     description: "Enable car rental booking integration"

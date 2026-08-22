@@ -10,6 +10,7 @@ import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import CsvTransferControls from '../components/CsvTransferControls';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import type { AppTheme } from '../theme/theme';
@@ -20,7 +21,7 @@ type LodgingTabProps = {
   backendUrl: string;
   jsonHeaders: Record<string, string>,
   requestHeaders: Record<string, string>,
-  trip: { id: string, startDate?: string | null } | null;
+  trip: { id: string, startDate?: string | null, endDate?: string | null } | null;
   lodgings: Lodging[];
   groupMembers: any[];
   defaultPayerId: string | null;
@@ -32,6 +33,8 @@ type LodgingTabProps = {
   theme?: AppTheme;
   readOnly?: boolean;
   featureStandardizedItemDialogs?: boolean;
+  featureActivityLodgingCsvImport?: boolean;
+  featureActivityLodgingCsvExport?: boolean;
   // Kill switch for row-tap-to-edit + sticky identity/actions columns
   // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
   featureTapToEditTables?: boolean;
@@ -66,6 +69,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   theme,
   readOnly = false,
   featureStandardizedItemDialogs = false,
+  featureActivityLodgingCsvImport = false,
+  featureActivityLodgingCsvExport = false,
   featureTapToEditTables = true,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -314,6 +319,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="lodging-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
             </> : null}
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add"><Text style={styles.buttonText}>+</Text></TouchableOpacity> : null}
+            {!tableEditing ? <CsvTransferControls entity="lodgings" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={lodgings} styles={styles} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onRefreshLodgings} /> : null}
           </View>
         ) : null}
       </View>
