@@ -346,6 +346,7 @@ disabled independently without affecting writes; audience isolation has a review
 | Facts in-process cache | M | Revision/audience-class key + local single-flight; cache is never an authorization boundary |
 | **Day-map render job** | L | Background render → PNG → `blogStorageClient` under a reserved platform prefix, keyed `(tripDay, pointsHash)`. Debounced to `dayMapRerenderMinIntervalHours`. Two artifacts when photo geotags are on: traveler (with photo pins) and public (itinerary points only) — threat S14. **No request path may reach Google Static Maps.** Architecture §14.1. |
 | Reserved-prefix exclusion in reconciliation | S | `blogStorageReconciliationService.ts` must exclude platform artifacts from uploader totals, or generated maps get billed to whoever's id is in the object key (§14.4) |
+| **Platform-artifact reaping** | M | The exclusion above creates a storage leak — reconciliation is what deletes orphans, so a skipped prefix grows forever. Delete a trip's artifacts on trip deletion (prefix delete by `tripId`, upholding the existing "deleting a trip deletes its blog content" guarantee), delete the superseded object when a re-render promotes a new points-hash, and add a second reconciliation pass over the platform prefix only. §14.4 |
 | `BLOG_DAY_MAP_RENDER` caller + budget check | S | `api-limits.yaml`; assert budget exhaustion degrades the card rather than erroring the page |
 | Fact provenance | M | `sourceTypes[]`, `confidence`, `asOf`; filter sources before derivation |
 
@@ -425,7 +426,7 @@ unsolicited mail to followers.
 |---|---|---|---|
 | B14 | Reaction burst animation | S | Reads the B4 socket event; no endpoint, no storage, no cost. **`prefers-reduced-motion` respected unconditionally** — with it set, the count changes instantly and nothing animates. Coalesce to ≤1 burst per target per 3s; never animate off-screen targets. §16.4 |
 | B16 | Engagement milestones | M | Detect crossings from the counter delta already returned by the write (`previousTotal < threshold <= newTotal`) — **no extra query on the reaction path**. Dedupe via `notifications.dedupe_key = trip:{id}:milestone:{n}`, so "fire once" is a DB constraint, not application luck. **In-app only, never push.** Thresholds from config. §16.3 |
-| B15 | Migration: `blog_curation_stars` | M | **Breaking change to a shipped table.** `blog_item_highlights.item_id` is a PRIMARY KEY, so it holds exactly one star per item and `setHighlight` silently overwrites another traveler's. Migrate existing rows (each becomes the sole star), then drop. New table uses the §3.1 polymorphic target so a *gallery photo* — which has no `blog_items` row of its own — can be starred. §16.1 |
+| B15 | Migration: `blog_curation_stars` (**expand only**) | M | **Breaking change to a shipped table — expand/contract, do not drop here.** Create, backfill, dual-write; the drop of `blog_item_highlights` is a *later* migration after the rollback window, or a server rollback hits a missing table. §16.1. `blog_item_highlights.item_id` is a PRIMARY KEY, so it holds exactly one star per item and `setHighlight` silently overwrites another traveler's. Migrate existing rows (each becomes the sole star), then drop. New table uses the §3.1 polymorphic target so a *gallery photo* — which has no `blog_items` row of its own — can be starred. §16.1 |
 | B15 | Star endpoint + compat shim | M | `PUT /:tripId/blog/:targetKind/:targetId/star` resolving through `resolveEngagementTarget`. Keep `POST /blog/items/:itemId/highlight` as a shim writing the new table — it is shipped and native clients may still call it. Scope `DELETE` to the calling user. |
 | B15 | Recap Top Highlights ordering | S | Starred first, then reaction counts. This ordering *is* the feature — it lets a group promote the meaningful photo over the merely popular one. |
 | A12 | Rotation state + prompt job | M | Table keyed `(trip_id, local_date)` recording who was asked and which prompt, so rotation is fair, non-repeating and idempotent under job re-run. **Shares the B6 nudge budget** — one cap for nudges as a class, or A12 becomes a second uncapped channel that defeats FR-B6.1. Suppress for a day that traveler already wrote. Static reviewed prompt list, no generation. §16.5 |
@@ -435,6 +436,9 @@ unsolicited mail to followers.
 
 - **B15 migration**: existing single stars survive as that user's star; a second traveler starring no
   longer displaces the first; one traveler cannot clear another's star.
+- **B15 rollback**: with `blog_curation_stars` created and dual-writing, the *previous* server binary
+  still functions against `blog_item_highlights`. This is the test that makes expand/contract real
+  rather than aspirational.
 - **B15 targets**: a gallery-member photo (no own item id) can be starred and unstarred.
 - **B16**: 200 reactions crossing a threshold produce exactly **one** notification row, not one per
   viewer and not one per reaction; and no additional query is issued on the reaction write path.

@@ -283,6 +283,10 @@ ALTER TABLE blog_media_assets ADD COLUMN IF NOT EXISTS captured_lat NUMERIC;
 ALTER TABLE blog_media_assets ADD COLUMN IF NOT EXISTS captured_lng NUMERIC;
 ALTER TABLE blog_media_assets ADD COLUMN IF NOT EXISTS is_decorative BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- §4.05: optimistic concurrency for day headline/summary, matching the item autosave contract.
+-- Without this column §4.05's 409 VERSION_CONFLICT contract cannot be honoured.
+ALTER TABLE blog_days ADD COLUMN IF NOT EXISTS update_version INTEGER NOT NULL DEFAULT 1;
+
 -- B11.3: three hides on a trip ends commenting there for that user.
 CREATE TABLE IF NOT EXISTS blog_comment_strikes (
   trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -728,7 +732,12 @@ where this design consumes them:
 | `trip_blog_recap` | C7, B10 |
 | existing `trip_blog_ai_highlights` | Explicit Day Starter rewrite only |
 | `trip_blog_caption_ai` | A8 caption/alt suggestions; Premium/Pro |
-| `notifications_outbox_enabled` | Master kill-switch for the delivery worker (§13.3) | Yes |
+| `notifications_outbox_enabled` | Master kill-switch for the notification delivery worker (§13.3) |
+| `trip_blog_curation_stars` | B15 collaborative stars (§16.1) |
+| `trip_blog_memory_lane` | B13 anniversary resurfacing (§16.2) |
+| `trip_blog_milestones` | B16 engagement milestones (§16.3) |
+| `trip_blog_reaction_bursts` | B14 burst animation (§16.4) |
+| `trip_blog_group_prompts` | A12 rotating journaling prompts (§16.5) |
 | existing `trip_blog_audio` | A9 capture modality only |
 | `trip_blog_audio_transcription` | A9 provider transcription; Premium/Pro |
 | `trip_blog_nudges` | B6 |
@@ -744,7 +753,8 @@ untestable configuration matrix. The following new write/external-cost flags are
 `entitlementService.ts`'s existing `FAIL_CLOSED_FLAGS`: `trip_blog_social_layer`,
 `trip_blog_comments`, `trip_blog_mentions`, `trip_blog_caption_ai`,
 `trip_blog_audio_transcription`, `trip_blog_public_engagement`, `trip_blog_day_map_render`,
-`notifications_push` and
+`trip_blog_curation_stars`, `trip_blog_memory_lane`, `trip_blog_group_prompts`,
+`notifications_outbox_enabled`, `notifications_push` and
 `notifications_web_push`, plus `notifications_in_app`. The general entitlement convention remains fail-open; these explicit
 rollout exceptions match existing provider-backed exceptions such as `trip_day_map`. CI asserts that
 every flag named here exists in YAML and the database seeding test.
@@ -978,6 +988,9 @@ redacts IDs and bodies at instrumentation time rather than relying on a log scru
   round-tripping as literal text through a comment *and* through AI-suggested alt text (S1/S2); a
   foreign trip's comment id returning `404` on every comment-id route (S3); and a member removed
   mid-session receiving no further socket events (S12).
+- **Storage leak** — delete a trip and assert its day-map and recap artifacts are gone from blob
+  storage; re-render a day map and assert the superseded object is removed rather than orphaned. The
+  platform prefix is excluded from the uploader reconciliation pass, so nothing else would catch this.
 - **Cost containment** — assert no request-path code reaches `GOOGLE_STATIC_MAPS`; assert every new
   external call site passes a caller key registered in `api-limits.yaml`; assert an exhausted
   provider budget degrades the surface rather than erroring the page.
@@ -1487,6 +1500,22 @@ reserved storage prefix excluded from `blogStorageReconciliationService` totals 
 explicit exclusion**, or reconciliation will attribute generated maps to whichever user id appears in
 the object key.
 
+**Excluding them from reconciliation means nothing reaps them.** That exclusion solves the billing
+problem and creates a leak: reconciliation is what currently walks blob storage and deletes orphans,
+so a prefix it skips accumulates forever. Two rules close it:
+
+- **Trip deletion deletes the trip's platform artifacts.** The existing guarantee in
+  `travel-blog-architecture.md` — deleting a trip permanently deletes that trip's blog content — must
+  cover generated day maps and recap snapshots, which are derived from that trip and meaningless
+  without it. Artifacts are keyed by `tripId` precisely so this is a prefix delete, not a scan.
+- **A superseded artifact is deleted when its replacement is written.** A day map re-rendered on a
+  points-hash change orphans the previous hash's object. The render job deletes the old key in the
+  same operation that promotes the new one.
+
+A second reconciliation pass covers the platform prefix on its own schedule: it reaps artifacts whose
+`tripId` no longer exists and artifacts whose points-hash is no longer current. It never touches
+uploader-charged objects, and it never writes to `blog_storage_ledger`.
+
 ### 14.5 Cost-driven feature gating
 
 Resolving PRD open question 2:
@@ -1641,7 +1670,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_curation_star_item  ON blog_curation_stars(
 CREATE UNIQUE INDEX IF NOT EXISTS uq_curation_star_asset ON blog_curation_stars(asset_id, user_id)     WHERE asset_id     IS NOT NULL;
 ```
 
-`blog_item_highlights` is migrated into it and dropped. The existing
+`blog_item_highlights` is migrated into it and eventually dropped — but **not in the same
+migration**. Dropping a shipped table in the migration that replaces it makes a server rollback
+unrecoverable: the previous binary still reads `blog_item_highlights` and would fail on a table that
+no longer exists. Use expand/contract instead:
+
+1. **Expand** (Phase 6b): create `blog_curation_stars`, backfill from `blog_item_highlights`, and
+   dual-write both tables. Reads come from the new table.
+2. **Contract** (a later phase, after the rollback window has passed and no client is calling the
+   shim): stop dual-writing, then drop `blog_item_highlights` in its own migration with its own
+   rollback file.
+
+The existing
 `POST /:tripId/blog/items/:itemId/highlight` route is kept as a **compatibility shim** that writes
 the new table (it is already shipped and a native client may still call it), and a new
 `PUT /:tripId/blog/:targetKind/:targetId/star` becomes the real endpoint. Stars resolve through
@@ -1700,7 +1740,13 @@ path and fires the toast once **per viewer** rather than once per milestone.
   across instances (register row 15c).
 - Milestones are celebratory, so they are **in-app only, never push**. A push notification saying
   "50 hearts!" is the kind of thing that gets an app's notification permission revoked.
-- Thresholds come from config, not code: `milestoneThresholds: [10, 50, 100, 500]`.
+- Thresholds come from config, not code, in the `tripBlog` block alongside every other limit:
+
+```yaml
+# api-limits.yaml — tripBlog
+  milestoneThresholds: [10, 50, 100, 500]
+  milestoneToastsPerTripPerDay: 3
+```
 
 ### 16.4 B14 Reaction Bursts — accessibility and a storm cap
 
