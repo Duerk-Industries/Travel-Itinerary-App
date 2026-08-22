@@ -11,8 +11,10 @@ authorization matrix. If a task here disagrees with it, the architecture documen
 document is wrong. Reconcile before each phase starts rather than carrying a stale field name
 forward.
 
-**Every phase ships behind flags defaulting to off** (§9.1 of the architecture). No phase is "done"
-until its flag can be turned on for an internal trip and turned off again without a deploy.
+**Every major independently releasable capability ships behind flags defaulting to off** (§9.1 of
+the architecture). Bug fixes and small presentation changes may share the parent flag or ship
+unflagged. A flagged phase is not done until it can be enabled internally and disabled without a
+deploy.
 
 ---
 
@@ -27,21 +29,30 @@ The order is not the PRD's priority order. It is driven by three dependencies:
    with nothing on top of it, so the matrix test exists before the first surface that can leak.
 3. **Reactions before comments.** Most of the engagement value, a fraction of the moderation risk,
    and it produces the signal B7 and B10 consume.
+4. **Durable notifications before mentions.** Comment core can ship without mentions; mention/reply
+   delivery cannot ship until inbox, preferences, outbox and privacy-safe payloads exist.
 
 ---
 
 ## Phase 0 — Spikes and prerequisites
 
-**Objective:** de-risk the four assumptions the rest of the plan rests on. Output is measurements and
-short notes, not production code.
+**Objective:** de-risk the assumptions the rest of the plan rests on, and start anything with
+external lead time. Output is measurements, short notes and credentials — not production code, with
+the exceptions of capture-metadata plumbing, shared DB lease primitives and limit/cost configuration,
+which are real prerequisites that must land first.
 
 | Task | Size | Detail |
 |---|---|---|
 | pg-mem compatibility spike | S | Verify partial unique indexes with `WHERE`, the multi-branch `CHECK`, and `ON CONFLICT … DO UPDATE` on the counters table all run under pg-mem. Architecture §3.4 lists the known limitations; confirm which actually bite. **Blocks Phase 2.** |
-| EXIF geotag benchmark | S | Add lat/lng extraction to a copy of `blogMediaProcessingService.ts` and measure the delta on the existing upload path. Architecture Q4. **Blocks Phase 5.** |
+| ~~EXIF geotag benchmark~~ | — | **Resolved without a spike, architecture §12.4.** Extraction moves client-side, so there is no server-cost question to benchmark. Replaced by the row below. |
+| **Capture metadata plumbing** | M | `captured_at` is read from `req.body?.capturedAt` at `upload-init` and **`app/utils/blogUpload.ts` has never sent it — the column is NULL for every asset in existence.** Add `capturedAt` / `capturedLat` / `capturedLng` extraction to the client picker paths (native: `expo-image-picker` with `exif: true`; web: a small EXIF reader over the `File`), send them at `upload-init`, and validate server-side. **Blocks Phase 5** — A2's bucketing and C1's time-span chip both read this field and are inert without it. Existing assets cannot be backfilled (sharp already discarded the metadata) and fall into the composer's "Unassigned" bucket. |
 | Read-path baseline | S | Instrument `GET /:tripId/blog` query count and p95 on a seeded 14-day / 300-asset trip. This is the NFR-1 baseline; without it "no more than 15% regression" is unenforceable. **Blocks Phase 2.** |
-| Socket role caching spike | S | Confirm `authMiddleware.ts` + `chatHandler.ts` can carry `{ role }` on the socket at join time for per-socket audience filtering (architecture §6 rule 2). **Blocks Phase 4.** |
-| Cost-model entries | S | `BLOG_CAPTION_SUGGEST`, `BLOG_STARTER_REWRITE` in `server/config/cost-model.yaml` and `api-limits.yaml`. **Blocks Phase 6.** |
+| Whole-trip media fanout audit | S | Record assets read, signed URLs minted and peak signer concurrency for a one-page blog request. Current `listMedia()` + unbounded `Promise.all` touches the whole trip. **Blocks the Phase 1 bounded-read fix.** |
+| Audience-room socket spike | S | Prove `BLOG_SUBSCRIBE` can authorize travelers/followers into separate `blog:<tripId>:travelers|followers` rooms without admitting followers to `trip:<tripId>` chat. **Blocks Phase 4.6.** |
+| Limit + cost-model contract | M | Add every §9.2 provider/caller, operation unit, retained-KiB `reserveCapacityOrThrow` lifecycle, tier quota and §9.3 low/base/high/cap-driven estimator dimension/test. A missing finite cap or price keeps the related flag off. **Blocks the phase that introduces that caller, not merely Phase 6.** |
+| Cloud Run `--max-instances=1` | S | Not blog work, but adjacent and cheap. Cloud Run can autoscale today and nothing in the app is multi-instance safe; pin it and record the pin in `docs/production-deployment-guide.md`. See `docs/horizontal-scaling-requirements.md` §1. |
+| Push credentials | M | APNs key + FCM config in EAS credentials; `EXPO_ACCESS_TOKEN` and versioned token encryption/hash keys through `_FILE`-capable server env. **Blocks real push canary.** Start external setup in Phase 0. |
+| DB lease primitive | M | Implement/test the adapter-neutral claim/lease contract used by recap snapshots, notification outbox and new scheduled jobs. Postgres uses transactional row locking; Firebase uses a document transaction. **Blocks Phases 2, 4.5 and 6.** |
 
 **Exit criteria:** each spike has a written answer, and any schema change the pg-mem spike forces is
 folded into the Phase 2 migration before it is written.
@@ -63,6 +74,8 @@ capabilities with no UI*. That is the cheapest work in the whole program.
 | Repository methods `updateBlogDayMeta`, `updateBlogMeta` in all three adapters | S | `blog/postgresRepository.ts`, `blog/firebaseRepository.ts`; memory inherits |
 | Extend the `BlogRepository` interface | S | `blog/repository.ts` |
 | Length validation per FR-A3.1 (120 / 500) | S | route-level, Zod |
+| Page-first media read + bounded signer pool | M | `blogRoutes.ts` + media repositories: fetch media only for returned day IDs, cursor the lightbox, cap signed-URL concurrency from config |
+| Early conditional GET | M | Cheap auth/revision/audience lookup evaluates `If-None-Match` before media URLs, counters or contributors; ETag includes audience class, flag generation and opaque caller digest |
 
 ### App
 
@@ -72,8 +85,10 @@ capabilities with no UI*. That is the cheapest work in the whole program.
 | Headline replaces the ISO date as day title in read mode (FR-A3.2) | S | same |
 | Blog masthead editing (A4) | S | same, the card header |
 | **Autosave** — debounce 1.5s, on blur, on tab change (FR-A5.1) | M | new `app/utils/useAutosave.ts`; wire into the `save(item)` path |
+| Split tab state into focused hooks | M | Keep fetch helpers co-located with `tripBlog.tsx`; move document/autosave cancellation and normalized drafts into `useBlogDocument`/`useBlogAutosave` before social state arrives |
 | Save-state indicator (FR-A5.2) | S | `tripBlog.tsx` |
-| **Conflict banner** replacing the `409` `Alert.alert` (FR-A5.3) | M | new `app/components/blog/ConflictBanner.tsx`; the current alert is at the `response.status === 409` branch in `save()` |
+| **Conflict banner + server contract** replacing the `409` `Alert.alert` (FR-A5.3) | L | Architecture §5.5: bounded Keep mine, Use theirs, idempotent Show both; current alert is in `save()` |
+| Scoped draft recovery | M | account/trip/item namespaced persistent draft, 7-day TTL, clear on save/logout/account deletion, redacted from telemetry |
 | Photo/video counts + time-span chips (the two C1 facts derivable with no new query) | S | `tripBlog.tsx` — computed from the `allMedia` flatMap that already exists |
 | Authoring-time instrumentation | S | tab-open → first successful save, per PRD §2 |
 
@@ -82,6 +97,8 @@ capabilities with no UI*. That is the cheapest work in the whole program.
 - `app/tests/` — autosave debounce fires once per burst; conflict banner preserves the local draft
   across all three resolution choices.
 - `server/__tests__/` — headline/summary length validation; follower gets `403` on both PATCH routes.
+- Performance fixture — a one-day page from a 300-asset trip reads/signs only that page's assets and
+  never exceeds configured signer concurrency.
 
 **Exit criteria:** median authoring time is measurable and has a recorded baseline; a day can be
 titled; no code path can discard a user's typing on conflict.
@@ -99,16 +116,17 @@ ships dark.
 | Task | Size | Detail |
 |---|---|---|
 | Migration `20260901_add_blog_engagement.sql` + rollback | M | Architecture §3.2 verbatim. All five tables. |
-| Migration `20260901_add_blog_authoring.sql` + rollback | S | Architecture §3.3. Includes `engagement_revision` on `trip_blogs`. |
+| Migration `20260901_add_blog_authoring.sql` + rollback | M | Architecture §3.3. Includes `engagement_revision` and durable recap snapshots. |
 | `blog/engagementRepository.ts` — interface + provider selection | S | Mirror the shape of `blog/repository.ts` exactly |
 | `blog/postgresEngagementRepository.ts` | L | Upserts, batched counter reads (`IN (…)`, not array params), soft delete, tombstone rule |
-| `blog/firebaseEngagementRepository.ts` | L | Native atomic increment for counters (architecture Q1) |
+| `blog/firebaseEngagementRepository.ts` | L | Native Firestore transaction/increment behavior from architecture §§3.5, 12.1 |
+| Firestore indexes + deny-direct rules | M | Architecture §3.5; emulator proves only server adapter access and bounded cursor/lease queries |
 | `services/blogEngagementService.ts` — `resolveEngagementTarget` | L | The single target-resolution function every route must use. Architecture §4 step 3. |
 | `ensureUserFollowsTrip(tripId, userId)` | S | `db.ts` facade + all three adapters, reading `trip_followers` |
-| Feature flag rows | S | `server/config/feature-flags.yaml`, all default false |
+| New feature flag rows + fail-closed set | S | `server/config/feature-flags.yaml`, new rows default false; high-risk keys added to `FAIL_CLOSED_FLAGS` per architecture §9.1 |
 | Limit entries | S | `server/config/api-limits.yaml` under `tripBlog`, architecture §9.2 |
 | **Authorization matrix test** | L | Table-driven over actor × target × action. Architecture §11 bullet 1. Written **before** Phase 3's routes. |
-| Counter reconciliation job | M | Extend the `blogStorageReconciliationService.ts` scheduling pattern |
+| Counter reconciliation job | M | Reuse the storage reconciliation shape but require a unique DB-backed `(job_key, window_start)` lease; never start another uncoordinated per-process job |
 | Adapter parity suite | M | Same repository tests against `postgres`, `firebase`, `memory` |
 
 **Exit criteria:** all three adapters pass an identical repository suite; the authorization matrix
@@ -129,17 +147,17 @@ is far harder to write retroactively against routes that already exist.
 
 | Task | Size | Files |
 |---|---|---|
-| `routes/blogEngagementRoutes.ts` — the four reaction endpoints | M | Architecture §5.1 rows 1–3 |
-| `services/blogModerationService.ts` — strikes, hide, `audit_log` write | M | new; `hide` is needed now because reactions are cheap to abuse via spam accounts even before comments exist |
-| Batched `engagement` block on `GET /:tripId/blog` | M | `blogRoutes.ts` — one counters read per page, joined in memory. Do **not** add a per-item query. |
+| `routes/blogEngagementRoutes.ts` — the three reaction endpoints | M | Architecture §5.1 rows 1–3; `PUT` sets, `DELETE` clears, so replay never toggles state |
+| Batched `engagement` block on `GET /:tripId/blog` | M | `blogRoutes.ts` — audience-counter batch + caller-reaction batch, joined in memory. Do **not** add a per-item query. |
 | `contributors` per day | M | `blog/postgresRepository.ts` — distinct authors of non-deleted items + assets, ordered by count |
-| Rate limiting | S | `httpRateLimitService.ts`, 60/min/user |
+| Rate/admission limiting | S | actor/IP limits plus `TRIP_BLOG_SOCIAL_API` and storage-unit reservations from architecture §9.2 |
 
 ### App
 
 | Task | Size | Files |
 |---|---|---|
 | `app/components/blog/BlogReactionBar.tsx` | M | Copy the optimistic-update shape from `ReactionBar.tsx`'s `computeOptimisticSummary`; emoji set instead of ±1 |
+| `useBlogEngagement` normalized store | M | Key by `targetKind:targetId`; own optimistic mutation, rollback, socket/REST reconciliation and request cancellation outside the tab render tree |
 | `app/components/blog/ContributorStrip.tsx` | S | Reuse `colorForUser` / `initialsForName` from `packages/messaging` and the `PresenceAvatars.tsx` avatar treatment |
 | Reaction badges on gallery tiles | S | `DayMediaGallery.tsx` |
 | Reaction rail in the lightbox | M | `DayMediaLightbox.tsx` |
@@ -154,18 +172,20 @@ every current `readOnly` usage in `tripBlog.tsx` against the §4 matrix.
 ### Tests
 
 - Matrix test extended to the live routes.
-- Property test: N random reaction operations → counters equal a recomputed aggregate.
+- Property test: N random reaction operations → per-audience counters equal a recomputed aggregate;
+  a replayed `PUT` is idempotent.
 - Public projection snapshot: counts present, reactor names absent (FR-B1.5).
 - E2E: react → reload → persists.
 
 **Exit criteria:** `trip_blog_reactions` on for internal trips; reactions per published day
 measurable; no read-path regression beyond NFR-1.
 
-**Gate to Phase 4:** abuse reports per 1,000 published days below threshold at 5% rollout.
+**Gate to Phase 4:** authorization violations are zero in canary telemetry, counter reconciliation
+drift is within the agreed tolerance, and reaction write/error volume stays inside configured caps.
 
 ---
 
-## Phase 4 — Comments, mentions, realtime, full moderation (B2, B3, B4, B11)
+## Phase 4 — Comment core and full moderation (B2, B11)
 
 ### Server
 
@@ -175,41 +195,133 @@ measurable; no read-path regression beyond NFR-1.
 | Day-level comment fetch (one request per day, not per target) | M | The shape decision in §5.1 — a 23-photo day must not produce 27 requests |
 | Tombstone rule (FR-B2.4) | S | Soft delete with replies → tombstone; without → gone |
 | 15-minute edit window | S | Server-enforced, not client-enforced |
-| Mentions: `blog_comment_mentions`, `GET /blog/mentionable` | M | Trip-scoped only (FR-B3.1, PR-7) |
 | Report + hide endpoints, strike escalation | M | `blogModerationService.ts` |
-| Mention notification via `smtpCallers.ts` | M | One per mention, on creation only (FR-B3.2) |
-| `socket/blogEngagementHandler.ts` | L | Per-socket audience filtering (architecture §6 rule 2) |
-| New event constants | S | `packages/messaging` |
-| Rate limiting | S | 10/min/user/trip |
+| Public engagement endpoint | M | Separate post-first-paint public counters/comments payload keyed by `engagementRevision`; never invalidate the public blog document |
+| Rate/admission limiting | S | actor/IP/day/retained-row ceilings plus internal API/storage reservations |
 
 ### App
 
 | Task | Size | Files |
 |---|---|---|
 | `BlogCommentThread.tsx`, `BlogCommentComposer.tsx` | L | Two-level threads, 3 reply previews, "show earlier" |
-| Mention autocomplete | M | Trip-scoped; renders as a chip, stores as a user id |
 | Comment rail in the lightbox | M | `DayMediaLightbox.tsx` — right rail wide, bottom sheet narrow |
 | Report / edit / delete / hide affordances | M | Overflow menu per comment |
-| Realtime subscription | M | `app/utils/socket.ts`; refetch-on-reconnect reconciliation |
 | Follower ring + "Following" chip | S | Per UI §6.6 |
 | "Visible to travelers" chip on non-public comments | S | The PR-2 consequence made visible |
+| “Visible publicly” submit disclosure | S | Persistent label when the new comment will inherit `public` (PR-8) |
 
 ### Tests
 
-- Audience inheritance: comment created private stays private after publication; comment created
-  public disappears on revoke (PR-2, PR-4).
+- Audience inheritance: a private comment stays private after publication; a public comment
+  disappears on revoke; public counters never include private-audience rows.
 - Tombstone rendering with and without replies.
 - Strike escalation blocks the fourth comment after three hides.
-- E2E: comment as follower in a second browser context → owner hides → gone for both.
+- Hide/unhide replay is idempotent; a reversed hide removes exactly one strike and does not expose a
+  now-inaccessible target.
+- Account deletion scrubs body/author, preserves a required tombstone, deletes reactions and adjusts
+  counters transactionally.
+- E2E: comment as follower in a second browser context → owner hides → gone for both after refresh.
 - No-HTML assertion on the public page payload (NFR-8).
 
-**Exit criteria:** comments on for 5% of trips; moderation path exercised end to end at least once on
-a real report; `trip_blog_comments` can be turned off cleanly with existing comments intact but
-hidden.
+**Exit criteria:** comments progress from 1% to 5% only while abuse reports per 1,000 published days,
+moderation queue age and response SLA stay within Trust & Safety's signed-off thresholds; the
+moderation path is exercised end to end at least once on a real report; `trip_blog_comments` can be
+turned off cleanly with existing comments intact but hidden.
 
 ---
 
-## Phase 5 — What actually happened (C1, C2, C3, C5, A1, A2)
+## Phase 4.5 — Notification service (app-wide infrastructure)
+
+**Objective:** build the notification service specified in `trip-blog-social-architecture.md` §13.
+This is **not blog-specific** — it is app-wide infrastructure that the blog happens to be the first
+consumer of, and it should be built and reviewed on those terms.
+
+It sits between comment core and Phase 4.6 because mentions (B3) are the first real consumer, and
+because it must exist before nudges (B6, Phase 6) rather than after — building an email-only nudge
+path first is work that gets unwound.
+
+**Prerequisite for push canary:** push credentials from Phase 0. Schema, inbox, preferences, outbox
+and fake-provider tests may start without production credentials; no real push flag may turn on.
+
+### Server
+
+| Task | Size | Files |
+|---|---|---|
+| Migration `20260901_add_notifications.sql` + rollback | L | Architecture §13.2 — notifications, encrypted device tokens, preferences, thread mutes and durable outbox |
+| `services/notificationService.ts` — transactional `notify()` | L | The single entry point. Resolve explicit preference → category default → off, apply thread mute, and write inbox/outbox without provider I/O. |
+| `services/notificationOutboxWorker.ts` | L | DB claim/lease, bounded batch/concurrency/backoff, dead letter; safe with multiple instances |
+| `apis/expoPushApi.ts` + `apis/expoPushCallers.ts` | M | Follows the existing `apis/` + callers split; batch 100; handle `DeviceNotRegistered` by disabling the device row |
+| `routes/notificationRoutes.ts` | M | Inbox, read, preference, thread-mute and device endpoints, §13.3 |
+| Repository methods across all three adapters | L | `db.postgres.ts`, `db.firebase.ts`; memory inherits |
+| Socket `NOTIFICATION_CREATED` emit | S | Per-user emit; new constant in `packages/messaging` |
+| Retention pruning | M | DB-leased pruning by `retentionDays` and `retainedRowsMaxPerUser` |
+| Flags + limits + cost units | M | Architecture §§9.2, 9.3, 13.7; EXPO_PUSH/SMTP/internal API/storage reservations |
+
+### App
+
+| Task | Size | Files |
+|---|---|---|
+| `expo-notifications` dependency + plugin entry | M | `app/package.json`, `expo.config.shared.cjs` alongside `expo-image-picker` |
+| `app/utils/notificationPermissions.ts` | M | Pre-prompt, platform-specific re-prompt rules, foreground re-check — §13.5. Includes `Linking.openSettings()`, the only reliable recovery path across platforms. |
+| Android channel reconciliation | M | Read live channel state so the preferences UI can show "blocked in system settings" rather than a toggle that lies. OS authoritative for delivery, our table for intent — §13.5. |
+| Provisional authorization evaluation | S | iOS 12+ quiet delivery with no prompt at all. Decide per category before committing to the pre-prompt flow — plausibly the better fit for mentions. §13.5. |
+| `app/utils/notifications.ts` | M | Token registration on login, re-register on change, delete on logout |
+| `NotificationBell.tsx` + `NotificationPanel.tsx` | L | Model on `ChatButton.tsx` / `ChatPanel.tsx` — that pair already solves badge-plus-panel against a socket |
+| Preferences UI | M | `app/tabs/account.tsx`, per-category toggles |
+| Deep-link routing | M | `app/App.tsx` — tapped notification → trip + tab + anchor |
+
+### Tests
+
+- Preference resolution: explicit row → checked-in known-category default → off; unknown category is
+  fully off and thread mute overrides every channel.
+- `dedupe_key` collapses duplicates; twenty reactions on one photo produce one digest row.
+- `notify()` performs no provider call; a crash after commit leaves a claimable outbox row. Two
+  workers cannot own the same live lease; crash-after-provider-accept may redeliver, and the client
+  suppresses the stable `notificationId`; retry/dead-letter behavior is bounded.
+- Permission denied → in-app inbox still works; email fires only when that category is explicitly
+  enabled; no repeat prompting; settings deep link remains reachable.
+- Android: channel disabled in OS settings while our row says `push = true` → preferences UI shows
+  blocked, and we do not silently rewrite our own table.
+- Adapter parity across all three providers.
+- Device token ciphertext/hash never appears in logs or API reads; account deletion and logout scrub
+  it. Push payload snapshots contain no comment text, trip spend or precise location.
+- User export includes notification history/preferences but excludes every device-token/encryption
+  field; deletion removes inbox/outbox/devices and releases retained capacity.
+
+**Exit criteria:** a synthetic notification event produces exactly one permitted push and one durable
+inbox row; permission denial degrades cleanly; `notifications_push` can be turned off without breaking
+the inbox. Phase 4.6 proves the real mention integration.
+
+**Rollback posture:** `notifications_in_app` off hides the bell and stops creation of new inbox rows;
+existing rows are retained/pruned normally. `notifications_push` off stops new push outbox rows while
+the inbox continues. Disabling either channel never deletes user history or bypasses preferences.
+
+---
+
+## Phase 4.6 — Mentions, replies and realtime integration (B3, B4, B12)
+
+**Objective:** connect comments to the durable notification service and add live delivery without
+crossing the traveler/follower audience boundary.
+
+| Task | Size | Detail |
+|---|---|---|
+| Mentions + mentionable endpoint | M | `blog_comment_mentions`, trip-scoped autocomplete only; at most 10 mentions/comment |
+| Mention/reply dispatch | M | Call transactional `notify()` once on creation, with dedupe keys and thread mutes; never on edit |
+| `BLOG_SUBSCRIBE` + segmented rooms | L | Travelers/followers join separate blog rooms; followers never join `trip:<id>` chat |
+| Blog event constants/client reconciliation | M | `packages/messaging`, `app/utils/socket.ts`; REST refetch on reconnect remains authoritative |
+| Mention UI + notification deep links | M | Mention chips, inbox link to trip/day/comment, inaccessible target degrades to the trip blog |
+| Two-instance contract test | M | Runs when Redis adapter work is available; until then asserts same-instance isolation and keeps Cloud Run pinned to one instance |
+
+**Tests:** traveler chat is never delivered to a follower blog subscriber; audience-specific blog
+events reach only allowed rooms; mention edits do not notify; a muted thread does not enqueue; socket
+loss/reconnect reconciles through REST; removal/unfollow revokes the room immediately.
+
+**Exit criteria:** a mention produces one inbox row and at most one provider delivery; realtime can be
+disabled independently without affecting writes; audience isolation has a reviewed security test.
+
+---
+
+## Phase 5 — What actually happened (C1, C2, C3, C5, C10, C11, A1, A2)
 
 ### Server
 
@@ -217,12 +329,13 @@ hidden.
 |---|---|---|
 | `services/blogDayFactsService.ts` | XL | Architecture §7.1 — one service, two projections (facts + timeline) |
 | `routes/blogInsightRoutes.ts` — `GET …/days/:dayDate/facts` | M | Separate request from the blog document, per §5.2 |
-| EXIF lat/lng extraction | M | `blogMediaProcessingService.ts`, gated read by `photo_location_enabled` |
+| Capture-metadata integration | S | Consume the Phase 0 client-supplied `capturedAt`; accept lat/lng only when `photo_location_enabled`, never parse EXIF server-side |
 | `services/blogDayStarterService.ts` | L | Deterministic template, reusing `blog/narrative.ts` |
 | Starter endpoints (get / accept / dismiss) | M | `blogAuthoringRoutes.ts` |
 | `source_type = 'day_starter'` on accepted items | S | So acceptance rate is measurable — the stage gate depends on it |
 | `services/blogMediaGroupingService.ts` + `POST /blog/media/group` | M | Stateless bucketing; no writes, no storage reservation |
-| Facts in-process cache | S | `factsCacheTtlMs` |
+| Facts in-process cache | M | Revision/audience-class key + local single-flight; cache is never an authorization boundary |
+| Fact provenance | M | `sourceTypes[]`, `confidence`, `asOf`; filter sources before derivation |
 
 ### App
 
@@ -235,6 +348,9 @@ hidden.
 | `PhotoFirstComposer.tsx` | XL | Day buckets, Unassigned bucket, out-of-range confirm, headroom line before commit |
 | Storage headroom before commit | S | `GET /blog-storage` — already exists |
 | Planned-vs-actual markers | S | Reuse `utils/itineraryStatus.ts` |
+| End-of-day review | M | Quick actions call existing source-record update routes/status lifecycle; no duplicate blog “actual” records |
+| Fact correction links | S | Deep-link authorized travelers to existing activity/transfer/lodging/car-rental editor |
+| Spend chip | M | Compute only in the traveler client from authorized expenses using existing `costs.ts`, `coveredBy.ts`, `exchangeRates.ts`; never add expenses to facts/public payload |
 
 **The photo-first composer is the largest single client task in the program.** It reuses the existing
 `upload-init` → `complete` flow and the existing quota modal (FR-A2.4) — the new work is bucketing
@@ -247,6 +363,10 @@ UI, the Unassigned flow, and moving the quota conversation before commit instead
 - Bucketing: no-`captured_at` items land in Unassigned and are never auto-assigned (FR-A2.2).
 - Facts omit undeliverable rows entirely rather than emitting zeros.
 - Public projection contains no geotags (FR-C2.2, PR-3).
+- Server rejects client-supplied coordinates when the trip toggle is off; enabling later does not
+  backfill old assets.
+- Fact provenance never names or links a source hidden from the current audience.
+- End-of-day review updates the canonical source record and respects its existing authorization.
 
 **Exit criteria:** Day Starter acceptance rate > 30% on internal trips; fact strip renders ≥3 facts
 on 80% of days with itinerary data.
@@ -257,20 +377,22 @@ on 80% of days with itinerary data.
 
 | Task | Size | Files |
 |---|---|---|
-| `services/blogRecapService.ts` + `GET /blog/recap` | L | Cache keyed on `(tripId, contentRevision, engagementRevision)`; `202` + retry on slow generation |
+| `services/blogRecapService.ts` + `GET /blog/recap` | L | Durable, leased snapshot keyed on `(tripId, contentRevision, engagementRevision, audienceClass)`; `202` while pending; retain three revisions/trip |
 | `TripRecapCards.tsx` | L | Screenshot-first layout per UI §6.8 |
 | Spend summary | M | Reuse `utils/costs.ts` + `exchangeRates.ts`; `travelers` audience default (FR-C4.1) |
 | Writing prompts | S | Static rotating set; seeds the editor with a heading |
 | Drag-to-reorder UI | M | Wire the existing `POST /blog/items/reorder` |
-| AI caption / alt text | L | On demand only; `reserveApiUsageOrThrow` with `BLOG_CAPTION_SUGGEST`; every string labelled as suggested |
+| AI caption / alt text | L | Premium/Pro, on demand only; reserve tier quota plus active-provider `BLOG_CAPTION_SUGGEST`; manual alt text remains available to all; every suggestion labelled |
+| Alt-text publication readiness | M | Manual editor for all tiers; new publication validates text or explicit decorative mark; legacy public blogs get non-blocking remediation |
 | Photo of the day proposal | S | Proposes from reaction counts; a traveler confirms (FR-B7.1) |
-| Contribution nudges | M | Scheduled job + `smtpCallers.ts`; 72h cap, 30-day-post-trip suppression, opt-out |
+| Contribution nudges | M | DB-leased scheduled job → `notify()`; 72h dedupe, 30-day-post-trip suppression, opt-out; suppress before mentions/replies under backlog |
 
-**Blocked on PRD open question 2** (is AI captioning Premium-only?) before the caption flag goes past
-internal trips.
+AI captioning/rewrite/transcription is resolved as Premium/Pro. Both customer monthly quota and
+aggregate provider/cost-budget reservations are required. A provider/model switch must carry the same
+caller names and limits, and a missing price keeps the flag off.
 
-**Blocked on architecture question 5** (where nudges dispatch from) before B6 starts — if an in-app
-notification inbox is coming, an email-only nudge path is work that gets unwound.
+Nudges use the Phase 4.5 notification service and its durable outbox. The scheduled scan itself claims
+a unique DB window so multiple instances cannot enqueue duplicates.
 
 **Exit criteria:** GA. All PRD §2 measures reporting.
 
@@ -301,11 +423,18 @@ Two notes worth carrying forward:
 - [ ] `authenticate` middleware applied
 - [ ] Feature flag checked via `isFeatureEnabled` (no admin bypass)
 - [ ] Target resolved **only** through `resolveEngagementTarget`
-- [ ] Rate limit applied from `api-limits.yaml`, not hardcoded
+- [ ] Actor/IP limit plus named DB-atomic API and storage-unit reservations applied from
+      `api-limits.yaml` before work; no route-local or process-local enforcement counter
+- [ ] Persistent rows reserve/finalize/release worst-case retained KiB idempotently through
+      `reserveCapacityOrThrow`; deletion/retention tests prove capacity is reclaimed
+- [ ] Payload/list/batch caps validated server-side and stable cursor pagination used
+- [ ] Idempotency behavior documented and replay-tested for every write
 - [ ] `logInfo` / `logError` from `logger.ts` — never `console.log`
 - [ ] Env access via `getEnvValue` / `getEnvFlag` only
 - [ ] Implemented in `db.postgres.ts`, `db.firebase.ts`, and verified under pg-mem
 - [ ] Non-existent-but-invisible targets return `404`, not `403`
+- [ ] Cost dimensions and request outcome metrics recorded without logging bodies, tokens or precise
+      location
 
 ### Every new client component
 
@@ -315,16 +444,25 @@ Two notes worth carrying forward:
 - [ ] `testID` in `{entity}-{action}[-{id}]` format
 - [ ] Renders correctly for: traveler, traveler-in-edit-mode, follower, public preview
 - [ ] Degrades cleanly with the feature flag off (absent, not disabled)
+- [ ] Keyboard/screen-reader labels, focus restoration, reduced motion and 200% text sizing verified
+- [ ] Long lists are virtualized/lazy; off-screen threads, facts and signed URLs are not prefetched
 
 ### Definition of done, per phase
 
 1. All three DB adapters pass the same tests.
 2. `npm run test:server` and `npm run test:app` green.
-3. The authorization matrix test covers every new action.
-4. Feature flags default off and toggle cleanly both directions without a deploy.
-5. Public projection snapshot updated and reviewed — **manually reviewed, not just regenerated.**
-6. `GET /:tripId/blog` p95 within 15% of the Phase 0 baseline.
-7. Docs reconciled: if implementation diverged from the architecture document, the architecture
+3. New modules meet ≥90% changed-line and ≥85% branch coverage without lowering repository
+   thresholds; every auth/limit/privacy branch has a direct test.
+4. The authorization matrix test covers every new action.
+5. Applicable new feature flags default off and toggle cleanly both directions without a deploy.
+6. Public projection snapshot updated and reviewed — **manually reviewed, not just regenerated.**
+7. `GET /:tripId/blog` p95 within 15% of the Phase 0 baseline.
+8. Cost estimator shows low/base/high and cap-driven totals; every new caller/storage dimension has a
+   finite cap, active-adapter test and price/price-source entry.
+9. New jobs/outbox paths pass lease-takeover/idempotency tests and add no unregistered in-process
+   state to `horizontal-scaling-requirements.md`.
+10. Logs/metrics/traces contain no comment bodies, device tokens, coordinates, spend or signed URLs.
+11. Docs reconciled: if implementation diverged from the architecture document, the architecture
    document is updated in the same PR.
 
 ---
@@ -333,11 +471,19 @@ Two notes worth carrying forward:
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Read-path regression from engagement counts | Medium | High | Denormalized counters, one batched read, benchmark in the DoD |
+| Read-path regression from engagement counts | Medium | High | Audience-aware counters plus a fixed set of bounded batch reads; query-count/payload benchmark in the DoD |
 | Privacy leak via audience mismatch | Low | Severe | Single `resolveEngagementTarget`; matrix test written before routes (Phase 2) |
 | Moderation demand exceeds capacity | Medium | High | PR-1 keeps the public read-only; strikes auto-block; staged rollout with an abuse-rate gate |
 | pg-mem rejects the schema | Medium | Medium | Phase 0 spike; fallbacks identified in architecture §3.4 |
-| Realtime silently breaks when scaled horizontally | Medium | Medium | Documented as accepted risk (architecture Q2); REST degrades gracefully |
-| Fail-open flags open commenting on a schema gap | Low | High | Comment routes additionally require non-fail-open checks (`follower_comments_enabled`, strikes) |
-| AI caption cost scales with photo count | High | Medium | Per-day/user caps; on demand only; Premium gate decision before stage 5 |
+| Realtime silently breaks when scaled horizontally | Medium | Medium | Cloud Run pinned to one instance; segmented rooms now; Redis adapter + two-instance test required before raising the pin |
+| Follower blog subscription leaks traveler chat | Low | Severe | Separate blog audience rooms; followers never join `trip:<id>`; explicit isolation test |
+| Fail-open flags open commenting/provider writes on a schema gap | Low | High | Major social/comment/provider flags added to the existing fail-closed rollout set; YAML/seed parity asserted in CI |
+| AI caption cost scales with photo count | High | Medium | Premium/Pro monthly quota, per-day cap, aggregate caller/budget, on demand only, estimator hard-cap scenario |
 | Phase 2 gets merged into Phase 3 under schedule pressure | **High** | **Severe** | Named here explicitly so it is a visible decision rather than a quiet one |
+| `captured_at` never gets populated, silently gutting A2 and C1 | Medium | High | Promoted to a Phase 0 prerequisite. The field looks implemented (column exists, API accepts it) which is exactly why it is easy to miss that nothing sends it. |
+| Push permission prompt spent badly on first launch | Medium | High | §13.5 rules; pre-prompt before the OS dialog. iOS gives one chance per install. |
+| Notification preferences resolved fail-open, spamming users | Medium | High | Explicit row → known-category default → off; unknown category off; thread mute overrides all channels |
+| Provider send occurs in request or is duplicated across instances | Medium | High | Transactional outbox, DB lease, bounded retries/dead letter; `notify()` performs no provider I/O |
+| Public counts leak private engagement | Low | Severe | Counters partitioned by audience; public endpoint reads `public` rows only; projection snapshot/property tests |
+| Account deletion breaks threads or leaks deleted text | Medium | High | Nullable author FK, scrubbed body tombstones, transactional reaction/counter cleanup, deletion/export tests |
+| Cost estimate omits “free” internal/storage work | Medium | High | Every route and DB operation uses named units; estimator contract fails when caller/dimension/price is absent |

@@ -58,6 +58,31 @@ source of the engagement that pulls travelers back in.
 
 ---
 
+## 1a. Confirmed product decisions
+
+Ratified. These are settled inputs to the design, not proposals — the same status as the confirmed
+decisions in `docs/travel-blog-architecture.md`. Reopening any of them requires the stated condition,
+not merely a preference.
+
+- **The public page is read-only for the public.** Reactions and comments are authenticated-only
+  (travelers and followers). Anonymous visitors see counts and public-audience comments but cannot
+  create either. Reopening requires a moderation staffing answer first. Specified as **PR-1**.
+- **Comments carry their own audience, inherited from their target at creation time.** Publication
+  never retroactively makes an existing private comment public, and revocation hides engagement in
+  the same operation as content. Specified as **PR-2** / **PR-4**, mechanism in
+  `trip-blog-social-architecture.md` §4.1. The accepted consequence — threads written before and
+  after publication sitting on one item with different public visibility — is surfaced in the UI by
+  a "visible to travelers" chip rather than hidden.
+- **Day Starter drafts are a deterministic template, not a generated one.** Free, fast,
+  provider-outage-safe, identical output for identical inputs, and structurally unable to invent a place the
+  group never went. Generation is confined to the explicit, rate-limited "Rewrite" action behind the
+  already-registered `trip_blog_ai_highlights` flag. Specified as **FR-A1.1–A1.4**, rationale in
+  `trip-blog-social-architecture.md` §8.
+
+Section 8 records the remaining launch validation; none of the three decisions above is open.
+
+---
+
 ## 2. Objectives and success measures
 
 | Objective | Measure | Target (90 days post-GA) |
@@ -128,6 +153,7 @@ program. **P2** = follow-on.
 | B9 | **Blog presence** | P2 | "Alex is writing Day 3…" using the existing `presenceManager`. |
 | B10 | **Trip Awards recap card** | P2 | End of trip: most-loved photo, most photos contributed, most-commented day. Computed from B1/B2 data, shareable. |
 | B11 | **Report & moderate** | P0 | Report action on every comment; trip owner can hide any comment on their trip; reports route into the existing abuse pipeline. Ships *with* comments, never after. |
+| B12 | **Activity inbox & notification controls** | P1 | Durable in-app inbox for mentions, replies and bounded contribution nudges, with per-category push/email preferences, thread mute and reaction digests off by default. Collaboration has no retention value if people cannot find their way back to it. |
 
 ### Theme C — More informative about what happened
 
@@ -142,6 +168,8 @@ program. **P2** = follow-on.
 | C7 | **Trip recap** | P1 | A generated summary card set: days, distance, places, photos, top contributors, top photo. The artifact people actually share. |
 | C8 | **Blog search UI** | P2 | UI for the existing `GET /blog/search`. |
 | C9 | **Keepsake export** | P2 | Print/PDF layout via the registered-but-unused `core.export` kind. |
+| C10 | **End-of-day review** | P1 | A two-minute checklist lets travelers confirm completed/skipped activities, correct times and add an unplanned stop before facts and recap are presented as “what happened.” It updates the existing source records rather than creating a competing blog truth. |
+| C11 | **Fact provenance & correction links** | P1 | Tapping a fact explains whether it came from photos, activities, transfers or expenses and deep-links an authorized traveler to the existing edit surface. Approximate and incomplete facts are visibly labelled. |
 
 ---
 
@@ -173,10 +201,16 @@ testable.
 - **FR-A5.2** Save state is always visible: `Saving…`, `Saved HH:MM`, or `Not saved — retrying`.
 - **FR-A5.3** On a `409`, the user's text is never discarded. A banner offers "Keep mine" /
   "Use theirs" / "Show both", with the local draft preserved through all three.
+- **FR-A5.4** Unsaved drafts are scoped to account + trip + item, restored after a crash, removed after
+  successful save, cleared on logout/account deletion, and expire after 7 days. Draft bodies never
+  enter analytics, logs or crash reports.
 - **FR-A8.1** Caption / alt-text suggestions are generated on demand, never automatically on upload,
   and never for more assets than are currently on screen.
 - **FR-A8.2** Every AI-suggested string is labelled as suggested and is editable before it is saved.
 - **FR-A8.3** AI suggestion calls go through `reserveApiUsageOrThrow` with a dedicated caller key.
+- **FR-A8.4** Manual alt-text editing is available without AI. Publication validation identifies
+  informative images with missing alt text and requires text or an explicit “mark decorative” choice;
+  existing already-published blogs receive a non-blocking remediation prompt rather than being revoked.
 
 ### 5.2 Collaboration
 
@@ -196,6 +230,8 @@ testable.
   the thread stays coherent; a deleted comment with no replies disappears entirely.
 - **FR-B2.5** Comments paginate at 20 per request — newest-first at the day level, oldest-first
   inside a thread.
+- **FR-B2.6** A reply's parent must be a visible, non-deleted top-level comment on the same target and
+  trip. The server rejects cross-target parents and replies-to-replies.
 - **FR-B3.1** Mention autocomplete resolves only against travelers and followers of the current trip.
 - **FR-B3.2** A mention notifies the mentioned user once, on comment creation, never on edit.
 - **FR-B4.1** New comments and reactions broadcast to the trip's existing Socket.IO room.
@@ -209,10 +245,20 @@ testable.
   `cover_asset_id` without a traveler confirming.
 - **FR-B8.1** Followers may create reactions and comments. Every authoring, edit, delete, cover and
   publication endpoint remains denied to them.
-- **FR-B11.1** Every comment exposes a report action to every user who can see it, except its author.
+- **FR-B11.1** Every comment exposes a report action to every authenticated traveler/follower who can
+  see it, except its author. Anonymous public readers remain read-only under PR-1.
 - **FR-B11.2** A trip owner may hide any comment on their trip. Hiding is reversible and written to
   `audit_log`.
 - **FR-B11.3** A user hidden three times on a trip cannot comment on that trip again.
+- **FR-B11.4** Reversing an erroneous hide reverses its strike exactly once and restores the comment
+  only if its target/audience is still visible. Hide/unhide is idempotent and audited.
+- **FR-B12.1** Mentions and direct replies create one durable in-app notification per logical event;
+  reactions are digest-only and default off.
+- **FR-B12.2** A user can mute a thread and independently disable in-app, push and email delivery by
+  category. Muting affects future delivery, not the visibility of the conversation.
+- **FR-B12.3** Notification provider delivery is asynchronous. Push/email failure or delivery-budget
+  exhaustion never makes a comment or reaction fail; retries are bounded and idempotent. Ordinary DB
+  transaction failure follows the write endpoint's normal retry semantics.
 
 ### 5.3 Informativeness
 
@@ -228,22 +274,49 @@ testable.
 - **FR-C4.1** Spend rendering respects the existing `travelers` audience and never appears on the
   public page unless a traveler explicitly changes that item's audience.
 - **FR-C7.1** The recap is generated on demand and cached. It is never computed during a page render.
+- **FR-C10.1** The end-of-day review writes corrections to the existing activity, transfer, lodging
+  or car-rental record using its existing authorization and status lifecycle; it does not persist a
+  second “actual” copy inside the blog.
+- **FR-C10.2** A day is never labelled complete merely because its scheduled end time passed. The UI
+  distinguishes traveler-confirmed, source-status-derived and unknown outcomes.
+- **FR-C11.1** Every derived fact carries `sourceTypes[]`, `confidence` (`confirmed | derived |
+  approximate`) and `asOf`; the UI can explain the value without exposing a source the viewer cannot
+  access.
 
 ### 5.4 Non-functional
 
 - **NFR-1** `GET /:tripId/blog` p95 must not regress by more than 15% with reactions, comments and
   facts included. Counts are read from denormalized counters, never aggregated per request.
 - **NFR-2** All new endpoints behave identically on the `postgres`, `firebase` and `memory` adapters.
-- **NFR-3** All new limits live in `server/config/api-limits.yaml` under `tripBlog`, never hardcoded.
-- **NFR-4** Every feature above ships behind its own flag in `server/config/feature-flags.yaml`,
-  default off, fail-open per the existing entitlement convention.
-- **NFR-5** Comment write rate limit 10/min/user/trip; reaction write rate limit 60/min/user.
-- **NFR-6** Comment and reaction counts on the public page are served from cache with the existing
-  `cdnCacheTtlSeconds`. A new comment must not invalidate the whole public page.
+- **NFR-3** Every new HTTP/provider/storage operation has a named finite caller in
+  `server/config/api-limits.yaml` and reserves through the existing DB-atomic
+  `reserveApiUsageOrThrow` path before work begins. Persistent rows/bytes use the existing
+  idempotent `reserveCapacityOrThrow` finalize/release lifecycle. UX/configuration values live under
+  `caching.tripBlog`; they are not substitutes for enforceable provider/caller caps.
+- **NFR-4** Major independently releasable components ship behind server-enforced flags in
+  `server/config/feature-flags.yaml`, default off. High-risk write or external-cost flags are added to
+  the platform's fail-closed rollout set; small presentation details may share their parent flag.
+- **NFR-5** Comment writes are limited to 10/min/user/trip and 100/day/user; reaction writes to
+  60/min/user and 500/day/user. Aggregate caller limits, per-trip retained-row ceilings and request
+  payload/page-size limits apply in addition to these actor limits.
+- **NFR-6** Public engagement is fetched after first paint from a separate, bounded endpoint and
+  cached independently from the public blog document. A new comment changes the engagement revision,
+  not the content revision, and never purges the whole public page.
 - **NFR-7** New tables carry `ON DELETE CASCADE` from `trips`, so trip deletion stays a single
   operation consistent with the deletion guarantee in `travel-blog-architecture.md`.
 - **NFR-8** All comment and reaction text is rendered as text. No path exists from user input to HTML
   on the public page.
+- **NFR-9** The cost estimator reports incremental social/recap cost for low/base/high usage and a
+  hard-cap ceiling using the active database adapter. It includes Cloud Run requests, database
+  reads/writes/deletes and retained/index bytes, static-map cache fills, AI tokens, push/email,
+  notification retention, media growth, object operations and delivery egress. A missing price or
+  finite cap keeps the affected flag off.
+- **NFR-10** Lists use stable cursor pagination and bounded initial payloads. The app virtualizes long
+  day/comment/media lists and never mounts every lightbox thread or mints every signed media URL at
+  first paint.
+- **NFR-11** Product/performance events are schema-versioned and contain no prose, comment body,
+  caption, device token, signed URL, spend or coordinates. They record flag cohort, actor class,
+  platform, latency/outcome and bounded counts so §2 metrics and rollout gates are measurable.
 
 ### 5.5 Privacy and policy
 
@@ -263,6 +336,18 @@ testable.
 - **PR-6** Account deletion soft-deletes that user's comments to tombstones. It does not cascade-
   delete other users' threads.
 - **PR-7** Mention autocomplete must not become a user-directory leak — trip-scoped only (FR-B3.1).
+- **PR-8** Before an authenticated user submits a comment that will be public, the composer says
+  “Visible publicly.” Submitting is consent for that comment only; later publication never widens an
+  older comment's audience.
+- **PR-9** Shared/public recap cards exclude spend, exact photo times/locations and follower identity
+  by default. Spend can be added only through an explicit traveler action to a private export; it is
+  never inferred into the public recap.
+- **PR-10** Push lock-screen copy is privacy-minimal by default (for example, “Maya mentioned you in
+  a trip”) and does not include comment text, spend, precise location or a private trip name unless
+  the recipient explicitly enables previews.
+- **PR-11** User export includes authored comments/reactions plus notification history/preferences.
+  It never exports push tokens, token hashes, encryption metadata or other users' private payloads.
+  Account deletion removes device/outbox/notification rows and follows PR-6 for comment tombstones.
 
 ---
 
@@ -386,7 +471,7 @@ conflict.')`, and the user's typing is stranded behind a modal that offers no wa
 │                                          │  ──────────────────────────  │
 │                                          │  ● Sam                       │
 │              [  photo  ]                 │    The light here was unreal │
-│                                          │    2h ago      ❤️ 1  Reply   │
+│                                          │    2h ago           Reply   │
 │                                          │                              │
 │                                          │    ● Maya                    │
 │                                          │      you took 40 of these    │
@@ -401,16 +486,21 @@ conflict.')`, and the user's typing is stranded behind a modal that offers no wa
 The attribution line (`📷 Maya · 13:42 · place`) is new and does double duty: it credits the
 Shutterbug and answers "what happened" at the same time.
 
+The place and exact capture time appear only for authorized travelers when photo location is enabled.
+Followers receive the target's allowed projection; the public lightbox never receives coordinates or
+exact capture time. A public comment composer carries the persistent “Visible publicly” label from
+PR-8 next to the submit action.
+
 ### 6.6 Comment thread
 
 ```
   ● Dad                                                    ⋯ report
     Is that the same square from your last trip?
-    3 May, 19:12                                    ❤️ 2   Reply
+    3 May, 19:12                                           Reply
     │
     ├─ ● Maya                                              ⋯ edit · delete
     │   @Dad yes! same bar, same waiter                    ← B3 mention chip
-    │   3 May, 19:20  (edited)                      ❤️ 1   Reply
+    │   3 May, 19:20  (edited)                             Reply
     │
     └─ ● Sam
         he remembered us
@@ -454,7 +544,7 @@ A full-bleed card stack, one screen, built to be screenshotted:
 │                                          │
 │           ITALY · 12 DAYS                │
 │                                          │
-│     4 cities   ·   612 km   ·   €2,140   │
+│     4 cities   ·   612 km   ·   384 photos│
 │     384 photos ·  3 travelers            │
 │                                          │
 │   ┌────────────────────────────────┐     │
@@ -469,6 +559,10 @@ A full-bleed card stack, one screen, built to be screenshotted:
 │   [ Share ]   [ Open the blog ]          │
 └──────────────────────────────────────────┘
 ```
+
+In the private traveler view, spend may appear as an additional card. It is excluded from the
+shareable/public projection by default (PR-9). Awards name only consenting travelers; follower
+participation may be shown as an aggregate such as “8 friends joined the conversation.”
 
 ### 6.9 Mobile (< 700px)
 
@@ -487,6 +581,22 @@ the keyboard. The photo-first composer becomes a full-screen sheet with day grou
 | Follower viewing | Authoring controls absent; reaction and comment controls present. |
 | Socket disconnected | Static content; a small "Reconnecting…" chip on the comment composer only. |
 | Media still processing | Existing processing placeholder; no reaction control until state is `ready`. |
+| Fact is approximate or stale | Show `Approx.` / `Updated …`; tapping opens provenance and, for authorized travelers, a correction link. |
+| Notification permission denied | In-app inbox remains available; no repeated OS prompt; preferences offer the system-settings recovery link. |
+
+### 6.11 Accessibility and interaction quality
+
+- Reaction buttons announce emoji, total count and selected state (for example, “Heart, 4 reactions,
+  selected”); count changes are not noisy live regions.
+- Comment threads preserve logical reading order, expose reply relationships, and return focus to the
+  invoking comment when a modal/menu closes. Every action is keyboard reachable on web.
+- Emoji, follower rings, confidence and planned/actual state always have text/icon labels; color is
+  never the only distinction.
+- Lightbox, composer and recap support 200% text, safe-area/keyboard avoidance, reduced motion and
+  screen rotation. Focus is trapped only while a modal is open and returns to the originating tile.
+- Manual caption and alt-text editing is available to every traveler even when AI is unavailable or
+  not entitled. Decorative recap imagery uses empty alt text; informative photos require useful alt
+  text before public publication or an explicit “mark decorative” choice.
 
 ---
 
@@ -496,9 +606,9 @@ the keyboard. The photo-first composer becomes a full-screen sheet with day grou
 |---|---|---|
 | 1 | A3, A5, C1 | Internal trips. Authoring-time metric instrumented and baselined. |
 | 2 | A1, A2, C2 | Day Starter acceptance rate > 30% on internal trips. |
-| 3 | B1, B5, B8, B11 | Reactions + moderation together. 5% of trips. |
-| 4 | B2, B3, B4 | Comments. Abuse reports per 1,000 days below threshold at stage 3. |
-| 5 | C3, C4, C5, C7, A4, A6, A7, A8, B6, B7 | GA. |
+| 3 | B1, B5, B8, B11 primitives | Reactions at 5%; authorization/counter/report/strike foundations stay dark until comments. |
+| 4 | B2, B3, B4, B11, B12 | Comments + moderation + durable inbox. Roll forward only while abuse reports and response time stay below the Trust & Safety gate. |
+| 5 | C3, C4, C5, C7, C10, C11, A4, A6, A7, A8, B6, B7 | GA. |
 | 6 | A9, A10, A11, B9, B10, C6, C8, C9 | Follow-on. |
 
 Reactions ship before comments deliberately: they carry most of the engagement value at a fraction of
@@ -506,18 +616,23 @@ the moderation risk, and they generate the signal that B7 and B10 depend on.
 
 ---
 
-## 8. Open questions
+## 8. Decisions and remaining validation
 
-1. **Follower comment defaults.** On by default per trip, or opt-in by the trip owner?
-   Recommendation: **on by default, owner can disable per trip.** An opt-in default would leave the
-   feature unused on most trips, which is the failure mode that kills social features.
-2. **AI caption cost.** A8/A9 volume is per-photo and trips produce hundreds. Needs a per-tier cap in
-   `api-limits.yaml` before stage 5, and a decision on whether it is Premium-only.
-3. **Comment retention after trip deletion.** NFR-7 cascades comments away with the trip. Confirm
-   with legal that this satisfies the deletion guarantee already made in
-   `travel-blog-architecture.md`, given comments may be authored by non-travelers.
-4. **Distance methodology.** Straight-line between geocoded points is cheap and wrong for road trips;
-   routed distance costs a Directions API call per day. Recommendation: straight-line, labelled
-   "approx.", revisit if users complain.
-5. **Public reaction counts.** PR-1 shows counts publicly. Confirm this does not itself need to fall
-   under the publication-consent vote — counts reveal engagement volume but no identities.
+Decided for this proposal:
+
+1. **Follower comments are on by default; the trip owner can disable them.** Existing comments remain
+   readable according to audience when creation is disabled.
+2. **AI captioning, rewriting and voice transcription are Premium/Pro capabilities.** Manual captions
+   and alt text, deterministic Day Starter, comments and reactions are not paywalled. Tier quotas and
+   aggregate provider budgets both apply; no AI flag leaves internal rollout without a price and cap.
+3. **Distance is straight-line/haversine and labelled approximate.** Routed distance is not called by
+   this feature.
+4. **Public counts are derived metadata included in the publication preview and consent.** They carry
+   no identities and include public-audience engagement only.
+
+Remaining validation before comments leave the canary:
+
+- Legal must confirm that deleting a trip also deletes follower-authored comments. The UI and terms
+  must tell followers that their contribution belongs to that trip and is removed with it.
+- Trust & Safety must own the abuse-rate threshold, report queue and response SLA before the 5%
+  comments rollout. Automatic strikes are an abuse brake, not a substitute for review.
