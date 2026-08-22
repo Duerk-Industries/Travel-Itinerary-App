@@ -221,12 +221,32 @@ router.patch('/:tripId/blog/items/:itemId', async (req, res) => {
       return;
     }
     const patch = { version, body: req.body?.body === undefined ? undefined : String(req.body.body), languageTag: req.body?.languageTag, audience: validAudience(req.body?.audience) ? req.body.audience : undefined };
-    const item = await blogRepository().updateBlogTextItem(userIdOf(req), req.params.itemId, patch);
-    if (!item) {
+    const result = await blogRepository().updateBlogTextItem(userIdOf(req), req.params.itemId, patch);
+    if (!result) {
+      // Item not found or already deleted — distinct from a version conflict, but the client's
+      // conflict banner (architecture §5.5) has no useful "latest" to show either way, so this
+      // stays a plain 409 as before.
       res.status(409).json({ error: 'The blog item changed; reload and resolve the conflict', code: 'VERSION_CONFLICT' });
       return;
     }
-    res.json(item);
+    if ('conflict' in result) {
+      // §5.5's autosave conflict contract: the 409 body carries the latest authorized
+      // { version, body, updatedAt, lastEditor } so the client can offer Keep mine / Use theirs /
+      // Show both without a second round-trip. Never logs either body (errorResponse's own
+      // console.error path is not hit on this branch).
+      res.status(409).json({
+        error: 'Someone else edited this while you were writing',
+        code: 'VERSION_CONFLICT',
+        latest: result.latest ? {
+          version: result.latest.version,
+          body: result.latest.body,
+          updatedAt: result.latest.updatedAt,
+          lastEditorUserId: result.latest.lastEditorUserId,
+        } : null,
+      });
+      return;
+    }
+    res.json(result);
   } catch (err) {
     errorResponse(res, err);
   }

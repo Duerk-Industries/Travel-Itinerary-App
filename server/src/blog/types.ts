@@ -86,6 +86,11 @@ export interface BlogDay {
   coverAssetId?: string | null;
   coverItemId?: string | null;
   coverIsExplicit?: boolean;
+  // Optimistic-concurrency counter for headline/summary edits (architecture §4.05, FR-A3.3).
+  // Every PATCH to a day's headline/summary must echo this value back; a mismatch means someone
+  // else edited the day first and the write is rejected with 409 VERSION_CONFLICT rather than
+  // silently overwritten — the same contract blog_items.version already gives text items.
+  updateVersion?: number;
 }
 
 export interface BlogActivity {
@@ -136,4 +141,27 @@ export interface BlogTextPatch {
   languageTag?: string | null;
   audience?: BlogAudience;
   version: number;
+}
+
+// Returned instead of `null` specifically for a version mismatch, so the route can shape a 409
+// body carrying the latest authorized state (architecture §5.5's autosave conflict contract) —
+// as opposed to a bare `null`, which still means "item not found or already deleted" and keeps
+// today's plain 409 with no state attached.
+export type BlogTextUpdateResult = BlogTextItem | { conflict: true; latest: BlogTextItem | null } | null;
+
+// Phase 1 (A3/A4): day headline/summary and blog masthead editing. Both PATCH shapes are
+// partial — an omitted field is left unchanged — so a client editing only the headline never
+// has to round-trip the summary it isn't touching.
+export interface BlogDayMetaPatch {
+  headline?: string | null;
+  summary?: string | null;
+  updateVersion: number;
+}
+
+export type BlogDayMetaUpdateResult = BlogDay | { conflict: true; latest: BlogDay | null } | null;
+
+export interface BlogMastheadPatch {
+  title?: string;
+  subtitle?: string | null;
+  introduction?: string | null;
 }

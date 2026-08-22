@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
-import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
+import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogTextUpdateResult, BlogActivity, BlogGalleryItem, BlogDayMetaPatch, BlogDayMetaUpdateResult, BlogMastheadPatch } from './types';
 import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
 import { markSynced, shouldSkipSync } from './syncCoordination';
@@ -214,7 +214,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   else if (options.cursor) filterParams.push(options.cursor);
 
   const daysResult = await queryBlog<any>(
-    `SELECT id, trip_id, local_date, headline, summary, cover_asset_id
+    `SELECT id, trip_id, local_date, headline, summary, cover_asset_id, update_version
      FROM blog_days WHERE trip_id = $1 ${dateFilter} ${cursorFilter}
      ORDER BY local_date ASC LIMIT $${filterParams.length + 1}`,
     [...filterParams, limit]
@@ -285,6 +285,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       headline: row.headline == null ? null : String(row.headline),
       summary: row.summary == null ? null : String(row.summary),
       coverAssetId: row.cover_asset_id == null ? null : String(row.cover_asset_id),
+      updateVersion: Number(row.update_version ?? 1),
       items: byDay.get(String(row.id)) ?? [],
       activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
@@ -396,7 +397,7 @@ export const getGalleryItemsMeta = async (tripId: string, itemIds: string[]): Pr
   return out;
 };
 
-export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextItem | null> => {
+export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextUpdateResult> => {
   const current = await queryBlog<any>(
     `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id
@@ -415,7 +416,20 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
      WHERE id = $1 AND version = $5 AND deleted_at IS NULL RETURNING *`,
     [itemId, nextVersion, patch.audience ?? null, userId, patch.version]
   );
-  if (!updated.rows[0]) return null;
+  if (!updated.rows[0]) {
+    // Version mismatch, not a missing item (already ruled out above). Architecture §5.5's
+    // autosave conflict contract requires the 409 to carry the latest authorized state so the
+    // client's conflict banner can offer "Keep mine" (retry against this exact version) and
+    // "Use theirs" (adopt it) without a second round-trip. Re-select rather than trust `row`,
+    // which is now stale by definition.
+    const latestRow = await queryBlog<any>(
+      `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
+       JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id
+       WHERE i.id = $1 AND i.deleted_at IS NULL`,
+      [itemId]
+    );
+    return { conflict: true, latest: latestRow.rows[0] ? mapItem(latestRow.rows[0]) : null };
+  }
   await queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [itemId]);
   await queryBlog('UPDATE blog_text_contents SET body = $2, language_tag = $3 WHERE item_id = $1', [itemId, body, patch.languageTag ?? row.language_tag ?? null]);
   await queryBlog(
@@ -498,6 +512,123 @@ export const setDayCoverIfUnset = async (userId: string, tripId: string, dayDate
     );
     return true;
   });
+
+// Minimal BlogDay projection for the day-meta update path: only the fields the conflict banner
+// and the headline-editing UI actually need (architecture §5.5, §4.05). `items`/`activities`
+// are intentionally empty rather than re-running the full getBlog joins — a day-meta PATCH
+// response is not the place to reconstruct the whole day.
+const mapDayMeta = (row: any): BlogDay => ({
+  id: String(row.id),
+  tripId: String(row.trip_id),
+  localDate: formatDate(row.local_date),
+  headline: row.headline == null ? null : String(row.headline),
+  summary: row.summary == null ? null : String(row.summary),
+  items: [],
+  updateVersion: Number(row.update_version ?? 1),
+});
+
+// A6, FR-A3.1: caller-facing display length. Enforced here (not only client-side) because this
+// is the same route both the app and any future integration will call.
+const MAX_DAY_HEADLINE_LENGTH = 120;
+const MAX_DAY_SUMMARY_LENGTH = 500;
+
+export const updateBlogDayMeta = async (
+  userId: string,
+  tripId: string,
+  dayDate: string,
+  patch: BlogDayMetaPatch
+): Promise<BlogDayMetaUpdateResult> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  if (patch.headline != null && patch.headline.length > MAX_DAY_HEADLINE_LENGTH) {
+    throw new Error(`Headline must be ${MAX_DAY_HEADLINE_LENGTH} characters or fewer`);
+  }
+  if (patch.summary != null && patch.summary.length > MAX_DAY_SUMMARY_LENGTH) {
+    throw new Error(`Summary must be ${MAX_DAY_SUMMARY_LENGTH} characters or fewer`);
+  }
+  const dayId = await getDayId(tripId, dayDate);
+  const current = await queryBlog<any>(
+    'SELECT id, trip_id, local_date, headline, summary, update_version FROM blog_days WHERE id = $1',
+    [dayId]
+  );
+  if (!current.rows[0]) return null;
+  const nextVersion = Number(current.rows[0].update_version ?? 1) + 1;
+  const updated = await queryBlog<any>(
+    `UPDATE blog_days
+     SET headline = CASE WHEN $3 THEN $4 ELSE headline END,
+         summary = CASE WHEN $5 THEN $6 ELSE summary END,
+         update_version = $2, updated_at = NOW()
+     WHERE id = $1 AND update_version = $7
+     RETURNING id, trip_id, local_date, headline, summary, update_version`,
+    [
+      dayId, nextVersion,
+      patch.headline !== undefined, patch.headline ?? null,
+      patch.summary !== undefined, patch.summary ?? null,
+      patch.updateVersion,
+    ]
+  );
+  if (!updated.rows[0]) {
+    // Same reasoning as the item-conflict path above: re-select rather than trust `current`,
+    // which is stale by the time the conditional UPDATE has already failed.
+    const latestRow = await queryBlog<any>(
+      'SELECT id, trip_id, local_date, headline, summary, update_version FROM blog_days WHERE id = $1',
+      [dayId]
+    );
+    return { conflict: true, latest: latestRow.rows[0] ? mapDayMeta(latestRow.rows[0]) : null };
+  }
+  await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+  return mapDayMeta(updated.rows[0]);
+};
+
+// A4: blog masthead (title/subtitle/introduction). No optimistic concurrency here — unlike a
+// day's headline, which several travelers edit in parallel while actively writing that day, the
+// masthead is edited rarely and by whoever happens to be curating the trip; the architecture and
+// PRD documents specify a version contract only for §4.05's day metadata, not the masthead.
+const MAX_BLOG_TITLE_LENGTH = 200;
+const MAX_BLOG_SUBTITLE_LENGTH = 300;
+const MAX_BLOG_INTRODUCTION_LENGTH = 5000;
+
+export const updateBlogMeta = async (userId: string, tripId: string, patch: BlogMastheadPatch): Promise<BlogDocument> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  if (patch.title != null && patch.title.length > MAX_BLOG_TITLE_LENGTH) {
+    throw new Error(`Title must be ${MAX_BLOG_TITLE_LENGTH} characters or fewer`);
+  }
+  if (patch.subtitle != null && patch.subtitle.length > MAX_BLOG_SUBTITLE_LENGTH) {
+    throw new Error(`Subtitle must be ${MAX_BLOG_SUBTITLE_LENGTH} characters or fewer`);
+  }
+  if (patch.introduction != null && patch.introduction.length > MAX_BLOG_INTRODUCTION_LENGTH) {
+    throw new Error(`Introduction must be ${MAX_BLOG_INTRODUCTION_LENGTH} characters or fewer`);
+  }
+  await ensureBlog(tripId);
+  const updated = await queryBlog<BlogRow>(
+    `UPDATE trip_blogs
+     SET title = CASE WHEN $2 THEN $3 ELSE title END,
+         subtitle = CASE WHEN $4 THEN $5 ELSE subtitle END,
+         introduction = CASE WHEN $6 THEN $7 ELSE introduction END,
+         updated_at = NOW()
+     WHERE trip_id = $1
+     RETURNING *`,
+    [
+      tripId,
+      patch.title !== undefined, patch.title ?? '',
+      patch.subtitle !== undefined, patch.subtitle ?? null,
+      patch.introduction !== undefined, patch.introduction ?? null,
+    ]
+  );
+  const row = updated.rows[0];
+  return {
+    id: String(row.id),
+    tripId,
+    title: String(row.title ?? ''),
+    subtitle: row.subtitle == null ? null : String(row.subtitle),
+    introduction: row.introduction == null ? null : String(row.introduction),
+    contentRevision: Number(row.content_revision ?? 0),
+    visibilityState: row.visibility_state,
+    visibilityEpoch: Number(row.visibility_epoch ?? 0),
+    days: [],
+  };
+};
 
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {
   const access = await ensureUserInTrip(tripId, userId);

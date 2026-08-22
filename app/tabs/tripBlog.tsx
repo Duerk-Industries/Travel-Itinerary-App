@@ -1,10 +1,12 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+import { useAutosave } from '../utils/useAutosave';
 import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
+import BlogConflictBanner, { type BlogConflictLatest } from '../components/BlogConflictBanner';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
@@ -33,7 +35,6 @@ const isRichTextEmpty = (html) => !String(html || '').replace(/<[^>]*>/g, '').re
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false }) => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [drafts, setDrafts] = useState({});
@@ -51,6 +52,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [editMode, setEditMode] = useState(false);
   const [settingCoverForDay, setSettingCoverForDay] = useState(null);
   const [lightboxDay, setLightboxDay] = useState(null);
+  // Phase 1 authoring (A3/A4/A5): headline/summary editing, blog masthead editing, and the
+  // autosave + conflict-banner replacement for the old Save-button/Alert flow. `drafts` above
+  // (item body HTML) stays as-is; these are the parallel per-field draft stores it didn't need
+  // until autosave and day/masthead editing existed.
+  const autosave = useAutosave();
+  // Keyed by localDate. Only populated once a traveler starts editing that day's headline or
+  // summary — { headline, summary, baseVersion }. `baseVersion` starts at the day's current
+  // updateVersion and is kept in sync with the server's response after every successful save, so
+  // the next save in the same session never has to wait on a fresh GET /blog to know what version
+  // to send (architecture §4.05).
+  const [dayMetaDrafts, setDayMetaDrafts] = useState({});
+  const [dayMetaConflicts, setDayMetaConflicts] = useState({});
+  // Blog masthead (title/subtitle/introduction) has no optimistic-concurrency contract — see the
+  // comment on updateBlogMeta in postgresRepository.ts — so it needs no conflict state, only a
+  // draft, initialized lazily the same way.
+  const [mastheadDraft, setMastheadDraft] = useState(null);
+  // Item-body conflicts, keyed by item.id — the autosave-era replacement for the single
+  // `Alert.alert` the old save() threw on any 409, regardless of which item.
+  const [itemConflicts, setItemConflicts] = useState({});
   const canEdit = !readOnly && editMode;
 
   const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
@@ -191,6 +211,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         setAddingDay(null);
         setNewBody('');
         setDrafts({});
+        setDayMetaDrafts({});
+        setDayMetaConflicts({});
+        setMastheadDraft(null);
+        setItemConflicts({});
+        // FR-A5.1's "on tab change" flush — leaving edit mode is the in-tab equivalent of
+        // switching away, so anything still debouncing gets one last chance to land rather than
+        // being silently cancelled by the draft-state clears above.
+        void autosave.flushAll();
       }
       return !current;
     });
@@ -292,7 +320,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
 
   useEffect(() => {
+    // Best-effort flush before clearing — a debounced save's closure already captured the
+    // *previous* activeTripId at schedule time, so this still lands against the trip the user was
+    // actually editing, not wherever they've just navigated to.
+    void autosave.flushAll();
     setDrafts({});
+    setDayMetaDrafts({});
+    setDayMetaConflicts({});
+    setMastheadDraft(null);
+    setItemConflicts({});
     setCursor(null);
     setEditMode(false);
     setAddingDay(null);
@@ -306,19 +342,158 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
   };
 
-  const save = async (item) => {
-    if (!canEdit) return;
-    setSaving(true);
+  // FR-A5.1–A5.3: the item body's autosave. Every value the request needs (`html`, `version`) is
+  // passed in explicitly rather than read from component state inside the function body — the
+  // closure `useAutosave` holds onto fires up to 1.5s after it was created, by which point several
+  // renders (and several state updates) may have happened, so reading `drafts[item.id]` or
+  // `itemConflicts[item.id]` *inside* this function would silently send a stale value. The one
+  // piece of state this legitimately reads-then-writes is `itemConflicts`, and only to record a
+  // *new* conflict — never to decide what to send.
+  const saveItemBody = async (item, html, version) => {
+    const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${item.id}`, {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: html, version }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 409) {
+      setItemConflicts((current) => ({ ...current, [item.id]: data.latest ?? null }));
+      throw new Error(data.error || 'Someone else edited this while you were writing');
+    }
+    if (!response.ok) throw new Error(data.error || 'Unable to save');
+    setItemConflicts((current) => ({ ...current, [item.id]: null }));
+    await load();
+  };
+
+  // Called on every keystroke from the rich text editor. Reads `itemConflicts[item.id]`
+  // synchronously here — not inside a later-firing closure — which is the one place in this flow
+  // where reading current state is actually safe, because `scheduleItemSave` itself always runs
+  // synchronously inside the event that triggered it.
+  const scheduleItemSave = (item, html) => {
+    setDrafts((current) => ({ ...current, [item.id]: html }));
+    const version = itemConflicts[item.id]?.version ?? item.version;
+    autosave.schedule(`item-${item.id}`, () => saveItemBody(item, html, version));
+  };
+
+  const keepMineItem = async (item) => {
+    // Retry once against the exact version the conflict told us was latest — never an unbounded
+    // force-write. If someone changed it again in the meantime, this produces a fresh conflict
+    // rather than silently overwriting (architecture §5.5). Calls saveItemBody directly rather
+    // than autosave.flush(): once a scheduled save has already fired and failed, the scheduler has
+    // nothing left queued to flush.
+    const latest = itemConflicts[item.id];
+    if (!latest) return;
     try {
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${item.id}`, {
-        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json', 'If-Match': String(item.version) },
-        body: JSON.stringify({ body: drafts[item.id] ?? '', version: item.version }),
-      });
-      if (response.status === 409) throw new Error('Someone else edited this block. Reload to resolve the conflict.');
-      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save');
-      await load();
+      await saveItemBody(item, drafts[item.id] ?? '', latest.version);
     } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to save'); }
-    finally { setSaving(false); }
+  };
+
+  const useTheirsItem = (item) => {
+    const latest = itemConflicts[item.id];
+    if (!latest) return;
+    setDrafts((current) => ({ ...current, [item.id]: latest.body ?? '' }));
+    setItemConflicts((current) => ({ ...current, [item.id]: null }));
+    autosave.cancel(`item-${item.id}`);
+  };
+
+  // "Show both" keeps the server's item untouched and creates one new adjacent core.text item
+  // from the local draft — it does not try to merge the two HTML bodies automatically.
+  const showBothItem = async (item) => {
+    const localBody = drafts[item.id] ?? '';
+    setItemConflicts((current) => ({ ...current, [item.id]: null }));
+    autosave.cancel(`item-${item.id}`);
+    setDrafts((current) => {
+      const next = { ...current };
+      delete next[item.id];
+      return next;
+    });
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kindKey: 'core.text', dayDate: item.localDate, body: localBody }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save your draft as a new note');
+      await load();
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to save your draft as a new note'); }
+  };
+
+  // A3/FR-A3.3: day headline/summary autosave, same explicit-parameter shape as the item-body
+  // flow above but against PATCH /:tripId/blog/days/:dayDate and blog_days.update_version.
+  const saveDayMeta = async (day, headline, summary, version) => {
+    const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${day.localDate}`, {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ headline, summary, updateVersion: version }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 409) {
+      setDayMetaConflicts((current) => ({ ...current, [day.localDate]: data.latest ?? null }));
+      throw new Error(data.error || 'Someone else edited this day while you were writing');
+    }
+    if (!response.ok) throw new Error(data.error || 'Unable to save');
+    setDayMetaConflicts((current) => ({ ...current, [day.localDate]: null }));
+    // Sync baseVersion from the server's response immediately rather than waiting on the
+    // in-flight load() below to land — the next keystroke can otherwise race a stale version.
+    setDayMetaDrafts((current) => current[day.localDate] ? { ...current, [day.localDate]: { ...current[day.localDate], baseVersion: data.updateVersion } } : current);
+    await load();
+  };
+
+  const scheduleDayMetaSave = (day, patch) => {
+    // Computed *before* setDayMetaDrafts, from state as it stands right now — not inside the
+    // setState updater callback, whose own invocation React defers to the batched-update flush
+    // rather than running inline. Reading `dayMetaDrafts[day.localDate]` here is safe because
+    // nothing in this synchronous handler has changed it yet.
+    const currentDraft = dayMetaDrafts[day.localDate];
+    const nextDraft = {
+      headline: currentDraft?.headline ?? (day.headline ?? ''),
+      summary: currentDraft?.summary ?? (day.summary ?? ''),
+      baseVersion: currentDraft?.baseVersion ?? (day.updateVersion ?? 1),
+      ...patch,
+    };
+    setDayMetaDrafts((current) => ({ ...current, [day.localDate]: nextDraft }));
+    const version = dayMetaConflicts[day.localDate]?.updateVersion ?? nextDraft.baseVersion;
+    autosave.schedule(`day-meta-${day.localDate}`, () => saveDayMeta(day, nextDraft.headline, nextDraft.summary, version));
+  };
+
+  const keepMineDayMeta = async (day) => {
+    const latest = dayMetaConflicts[day.localDate];
+    const draft = dayMetaDrafts[day.localDate];
+    if (!latest || !draft) return;
+    try {
+      await saveDayMeta(day, draft.headline, draft.summary, latest.updateVersion);
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to save'); }
+  };
+
+  const useTheirsDayMeta = (day) => {
+    const latest = dayMetaConflicts[day.localDate];
+    if (!latest) return;
+    setDayMetaDrafts((current) => ({
+      ...current,
+      [day.localDate]: { headline: latest.headline ?? '', summary: latest.summary ?? '', baseVersion: latest.updateVersion ?? 1 },
+    }));
+    setDayMetaConflicts((current) => ({ ...current, [day.localDate]: null }));
+    autosave.cancel(`day-meta-${day.localDate}`);
+  };
+
+  // A4: blog masthead autosave. No conflict path — see the comment on updateBlogMeta server-side.
+  const saveMasthead = async (patch) => {
+    const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save');
+    await load();
+  };
+
+  const scheduleMastheadSave = (patch) => {
+    // Same reasoning as scheduleDayMetaSave above: compute before the setState call, not inside
+    // its updater.
+    const nextDraft = {
+      title: mastheadDraft?.title ?? (blog?.title ?? ''),
+      subtitle: mastheadDraft?.subtitle ?? (blog?.subtitle ?? ''),
+      introduction: mastheadDraft?.introduction ?? (blog?.introduction ?? ''),
+      ...patch,
+    };
+    setMastheadDraft(nextDraft);
+    autosave.schedule('masthead', () => saveMasthead(nextDraft));
   };
 
   const createTextItem = async (dayDate) => {
@@ -388,11 +563,46 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   if (loading) return <View style={styles.card}><ActivityIndicator /></View>;
   const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
   const hasPendingConsent = publicationState === 'pending_consent' && publication?.userDecision === 'pending';
+  // FR-A5.2: a visible Saving…/Saved/Not saved state for any autosaved field, shared by the
+  // masthead, every day's headline/summary, and every item body.
+  const saveStateLabel = (key) => {
+    const state = autosave.states[key];
+    if (!state || state.status === 'idle') return null;
+    if (state.status === 'pending') return 'Editing…';
+    if (state.status === 'saving') return 'Saving…';
+    if (state.status === 'saved') return `Saved ${new Date(state.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    return 'Not saved — retrying';
+  };
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
       <View style={styles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <Text style={[styles.sectionTitle, { flex: 1 }]}>{blog?.title || 'Trip Blog'}</Text>
+          {canEdit ? (
+            <View style={{ flex: 1 }}>
+              <TextInput
+                testID="blog-masthead-title-input"
+                value={mastheadDraft?.title ?? (blog?.title ?? '')}
+                onChangeText={(text) => scheduleMastheadSave({ title: text.slice(0, 200) })}
+                placeholder="Trip Blog"
+                placeholderTextColor={mutedColor}
+                style={[styles.sectionTitle, { color: textColor, padding: 0 }]}
+              />
+              <TextInput
+                testID="blog-masthead-subtitle-input"
+                value={mastheadDraft?.subtitle ?? (blog?.subtitle ?? '')}
+                onChangeText={(text) => scheduleMastheadSave({ subtitle: text.slice(0, 300) })}
+                placeholder="Add a subtitle…"
+                placeholderTextColor={mutedColor}
+                style={{ color: mutedColor, fontSize: 14, marginTop: 2, padding: 0 }}
+              />
+              {saveStateLabel('masthead') ? <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>{saveStateLabel('masthead')}</Text> : null}
+            </View>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>{blog?.title || 'Trip Blog'}</Text>
+              {blog?.subtitle ? <Text style={{ color: mutedColor, fontSize: 14, marginTop: 2 }}>{blog.subtitle}</Text> : null}
+            </View>
+          )}
           {!readOnly ? (
             <TouchableOpacity
               accessibilityRole="button"
@@ -419,6 +629,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               ? 'Public preview — only content intended for public sharing is shown.'
               : 'Traveler/follower view — all shared trip blog content is shown.'}
         </Text>
+        {canEdit ? (
+          <TextInput
+            testID="blog-masthead-introduction-input"
+            value={mastheadDraft?.introduction ?? (blog?.introduction ?? '')}
+            onChangeText={(text) => scheduleMastheadSave({ introduction: text.slice(0, 5000) })}
+            placeholder="Add an introduction for readers of this blog…"
+            placeholderTextColor={mutedColor}
+            multiline
+            style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, marginBottom: 4, minHeight: 44, backgroundColor: inputColor }}
+          />
+        ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 12 }}>{blog.introduction}</Text> : null)}
         {canEdit ? (
           <View style={{ marginBottom: 16, padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -450,10 +671,56 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
           </View>
         ) : null}
-        {visibleDays.map((day) => (
+        {visibleDays.map((day) => {
+          const dayMetaDraft = dayMetaDrafts[day.localDate];
+          const dayMetaConflict = dayMetaConflicts[day.localDate];
+          const dayHeadline = dayMetaDraft?.headline ?? (day.headline ?? '');
+          const daySummary = dayMetaDraft?.summary ?? (day.summary ?? '');
+          return (
           <View key={day.id} style={{ marginBottom: 24, borderBottomWidth: 1, borderBottomColor: borderColor, paddingBottom: 16 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={styles.sectionTitle}>{day.localDate}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: canEdit ? 'flex-start' : 'center', marginBottom: 8 }}>
+              {canEdit ? (
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <TextInput
+                    testID={`blog-day-headline-input-${day.localDate}`}
+                    value={dayHeadline}
+                    onChangeText={(text) => scheduleDayMetaSave(day, { headline: text.slice(0, 120) })}
+                    placeholder={day.localDate}
+                    placeholderTextColor={mutedColor}
+                    style={[styles.sectionTitle, { color: textColor, padding: 0 }]}
+                  />
+                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 1 }}>{day.localDate}</Text>
+                  <TextInput
+                    testID={`blog-day-summary-input-${day.localDate}`}
+                    value={daySummary}
+                    onChangeText={(text) => scheduleDayMetaSave(day, { summary: text.slice(0, 500) })}
+                    placeholder="Add a one-line summary of this day…"
+                    placeholderTextColor={mutedColor}
+                    style={{ color: mutedColor, fontSize: 13, marginTop: 4, padding: 0 }}
+                  />
+                  {saveStateLabel(`day-meta-${day.localDate}`) ? (
+                    <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>{saveStateLabel(`day-meta-${day.localDate}`)}</Text>
+                  ) : null}
+                  {dayMetaConflict ? (
+                    <BlogConflictBanner
+                      testID={`blog-day-meta-conflict-${day.localDate}`}
+                      latest={dayMetaConflict}
+                      onKeepMine={() => keepMineDayMeta(day)}
+                      onUseTheirs={() => useTheirsDayMeta(day)}
+                      textColor={textColor}
+                      mutedColor={mutedColor}
+                      styles={styles}
+                      theme={theme}
+                    />
+                  ) : null}
+                </View>
+              ) : (
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>{day.headline || day.localDate}</Text>
+                  {day.headline ? <Text style={{ color: mutedColor, fontSize: 11 }}>{day.localDate}</Text> : null}
+                  {day.summary ? <Text style={{ color: mutedColor, fontSize: 13, marginTop: 2 }}>{day.summary}</Text> : null}
+                </View>
+              )}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 {canEdit && (
                   <TouchableOpacity
@@ -490,7 +757,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     key={item.id}
                     testID={`blog-item-editor-${item.id}`}
                     value={drafts[item.id] ?? item.body}
-                    onChangeHTML={(html) => setDrafts((current) => ({ ...current, [item.id]: html }))}
+                    onChangeHTML={(html) => scheduleItemSave(item, html)}
                     borderColor={borderColor}
                     backgroundColor={inputColor}
                     textColor={textColor}
@@ -506,10 +773,29 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                   />
                 )}
                 {canEdit ? (
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                    <TouchableOpacity style={styles.button} disabled={saving} onPress={() => save(item)}><Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
-                  </View>
+                  <>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                      {/* FR-A5.1/A5.2: the explicit Save button is gone — edits autosave 1.5s after
+                          the last keystroke, and this text is the only save-state affordance. */}
+                      {saveStateLabel(`item-${item.id}`) ? (
+                        <Text style={{ color: mutedColor, fontSize: 12 }}>{saveStateLabel(`item-${item.id}`)}</Text>
+                      ) : null}
+                      <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
+                    </View>
+                    {itemConflicts[item.id] ? (
+                      <BlogConflictBanner
+                        testID={`blog-item-conflict-${item.id}`}
+                        latest={itemConflicts[item.id]}
+                        onKeepMine={() => keepMineItem(item)}
+                        onUseTheirs={() => useTheirsItem(item)}
+                        onShowBoth={() => showBothItem(item)}
+                        textColor={textColor}
+                        mutedColor={mutedColor}
+                        styles={styles}
+                        theme={theme}
+                      />
+                    ) : null}
+                  </>
                 ) : null}
               </View>
             ))}
@@ -604,7 +890,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             ) : null}
             {canEdit && (day.items || []).length === 0 && addingDay !== day.localDate ? <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text> : null}
           </View>
-        ))}
+          );
+        })}
         {cursor ? (
           <TouchableOpacity
             style={[styles.button, { backgroundColor: '#f3f4f6', marginTop: 12 }]}
