@@ -182,6 +182,15 @@ const FAIL_CLOSED_FLAGS = new Set([
   // to off, not on, or a deployment whose seeding pass hasn't caught up yet silently
   // exposes the map before anyone's decided to turn it on.
   'trip_day_map',
+  // Phase 2 of docs/trip-blog-social-implementation-plan.md — the trip blog social layer writes
+  // user-generated content (reactions, comments, mentions) into a new schema; the general
+  // fail-open convention would let a missing DB row silently turn commenting *on* rather than
+  // off, which is the wrong default for a write surface with no moderation history yet. See
+  // docs/trip-blog-social-architecture.md §9.1.
+  'trip_blog_social_layer',
+  'trip_blog_reactions',
+  'trip_blog_comments',
+  'trip_blog_mentions',
 ]);
 
 /**

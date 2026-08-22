@@ -199,8 +199,11 @@ CREATE TABLE IF NOT EXISTS blog_comments (
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CHECK (/* exactly-one-target, as above */),
-  CHECK ((deleted_at IS NULL AND char_length(body) BETWEEN 1 AND 2000) OR
-         (deleted_at IS NOT NULL AND body IS NULL))
+  -- pg-mem has neither `char_length` nor `length` in its native function set (confirmed
+  -- empirically while implementing Phase 2) — the DB CHECK only guarantees the tombstone shape
+  -- (a live comment has a body, a deleted one doesn't); the 1-2000 char bound is enforced in
+  -- postgresEngagementRepository.ts, following the existing precedent set by blog_text_contents.
+  CHECK ((deleted_at IS NULL AND body IS NOT NULL) OR (deleted_at IS NOT NULL AND body IS NULL))
 );
 CREATE INDEX IF NOT EXISTS idx_blog_comments_day    ON blog_comments(blog_day_id, created_at DESC, id DESC) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_blog_comments_parent ON blog_comments(parent_comment_id, created_at, id);

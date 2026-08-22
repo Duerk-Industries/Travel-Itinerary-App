@@ -169,6 +169,22 @@ flags:
   trip_blog_structured_data:
     enabled: true
     description: "Schema.org public blog metadata"
+  # Phase 2 of docs/trip-blog-social-implementation-plan.md — engagement spine. Ships dark: no
+  # route in server/src/routes/ checks these yet (that's Phase 3/4). Added now, default false and
+  # fail-closed (see entitlementService.ts's FAIL_CLOSED_FLAGS), so the schema/service/flag rows
+  # land together rather than the flags trailing the code that will gate on them.
+  trip_blog_social_layer:
+    enabled: false
+    description: "Master kill switch for the trip blog social layer (reactions, comments, mentions); child flags below still apply"
+  trip_blog_reactions:
+    enabled: false
+    description: "Phase 3 emoji reactions on blog days, items and photos/videos"
+  trip_blog_comments:
+    enabled: false
+    description: "Phase 4 threaded comments; implies moderation, not separately flagged"
+  trip_blog_mentions:
+    enabled: false
+    description: "Phase 4 @mentions in comments, trip-scoped autocomplete"
   expense_import_plaid:
     enabled: false
     description: "Master switch for Plaid bank-link and transaction import"

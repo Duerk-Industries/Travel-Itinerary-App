@@ -3094,6 +3094,20 @@ export const ensureUserCanReadTrip = async (
   return null;
 };
 
+// Phase 2 — mirrors db.postgres.ts's ensureUserFollowsTrip. Queries trip_followers directly
+// rather than reading the canWrite===false proxy on the trip_access projection above: that
+// projection conflates "not a writer" with "specifically a follower," and this needs to be
+// unambiguous for blogEngagementService.resolveEngagementTarget.
+export const ensureUserFollowsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const db = getDb();
+  const snap = await db.collection('trip_followers')
+    .where('tripId', '==', tripId)
+    .where('followerUserId', '==', userId)
+    .limit(1)
+    .get();
+  return !snap.empty;
+};
+
 export const getTripFollowCode = async (
   userId: string,
   tripId: string

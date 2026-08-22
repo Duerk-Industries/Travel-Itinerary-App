@@ -411,6 +411,21 @@ providers:
       ENQUEUE_UNIT: 1000
       ATTEMPT_UNIT: 2000
 
+  # Phase 2 of docs/trip-blog-social-implementation-plan.md — the engagement spine
+  # (docs/trip-blog-social-architecture.md §9.2). Canary caps only; the full BLOG_DOCUMENT_READ /
+  # BLOG_ENGAGEMENT_READ / BLOG_RECAP_BUILD / BLOG_MODERATION_WRITE / NOTIFICATION_* callers that
+  # doc also lists are added by the phases that actually introduce those calls (Phase 3/4 routes,
+  # Phase 4.5 notifications, Phase 6 recap) — reserveApiUsageOrThrow's `requireConfiguredLimit`
+  # only demands a caller exist once code actually calls it under that name, so listing callers
+  # nothing calls yet would be dead configuration, not a safety requirement.
+  TRIP_BLOG_SOCIAL_API:
+    window: day
+    windowHours: 24
+    overall: 100000
+    callers:
+      BLOG_REACTION_WRITE: 15000
+      BLOG_COMMENT_WRITE: 5000
+
 budgeting:
   OPENAI:
     alertThresholdPercent: 80
@@ -609,3 +624,19 @@ caching:
     importItemsPerRun: 100
     translationCharactersPerMonth: 100000
     exportJobsPerMonth: 4
+    # Phase 2 — engagement spine. commentMaxLength/commentEditWindowSeconds/
+    # hideStrikesBeforeBlock are enforced today as hardcoded constants in
+    # postgresEngagementRepository.ts/firebaseEngagementRepository.ts, matching the existing
+    # precedent set by blog_text_contents' 100,000-char cap (also hardcoded in the repository, not
+    # read from config). These entries exist so the values are discoverable and so the Phase 3/4
+    # routes that add rate limiting can read commentsPerMinutePerUser/reactionsPerMinutePerUser
+    # from here rather than inventing their own constants.
+    commentMaxLength: 2000
+    commentsPerMinutePerUser: 10
+    commentsPerDayPerUser: 100
+    reactionsPerMinutePerUser: 60
+    reactionsPerDayPerUser: 500
+    commentPageSize: 20
+    replyPreviewCount: 3
+    commentEditWindowSeconds: 900
+    hideStrikesBeforeBlock: 3

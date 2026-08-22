@@ -3064,6 +3064,21 @@ export const ensureUserCanReadTrip = async (
   return rows[0] ?? null;
 };
 
+// Phase 2 of docs/trip-blog-social-implementation-plan.md — a narrower, purpose-built check than
+// ensureUserCanReadTrip's combined member/follower resolution above: "is this specifically a
+// follower of this trip" (not a member), used by blogEngagementService.resolveEngagementTarget to
+// distinguish follower-authored engagement from traveler-authored, and by the follower-only nudge
+// paths in later phases. A plain join, not the NOT EXISTS pattern ensureUserInTrip above uses —
+// followers have no equivalent "removal" record to exclude.
+export const ensureUserFollowsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT 1 FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2 LIMIT 1`,
+    [tripId, userId]
+  );
+  return rows.length > 0;
+};
+
 export const writeActivity = async (
   tripId: string,
   actorUserId: string | null,
