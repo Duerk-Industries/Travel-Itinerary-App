@@ -72,6 +72,7 @@ capabilities with no UI*. That is the cheapest work in the whole program.
 | Task | Size | Files |
 |---|---|---|
 | `blogAuthoringRoutes.ts` with `PATCH /:tripId/blog/days/:dayDate` (headline, summary) and `PATCH /:tripId/blog` (title, subtitle, introduction) | S | new route file; mount in `server/src/app.ts` under `/api/trips` |
+| **Optimistic concurrency for blog_days** | S | Add `update_version` to `blog_days`; enforce in PATCH routes |
 | Repository methods `updateBlogDayMeta`, `updateBlogMeta` in all three adapters | S | `blog/postgresRepository.ts`, `blog/firebaseRepository.ts`; memory inherits |
 | Extend the `BlogRepository` interface | S | `blog/repository.ts` |
 | Length validation per FR-A3.1 (120 / 500) | S | route-level, Zod |
@@ -396,6 +397,7 @@ on 80% of days with itinerary data.
 | AI caption / alt text | L | Premium/Pro, on demand only; reserve tier quota plus active-provider `BLOG_CAPTION_SUGGEST`; manual alt text remains available to all; every suggestion labelled |
 | Alt-text publication readiness | M | Manual editor for all tiers; new publication validates text or explicit decorative mark; legacy public blogs get non-blocking remediation |
 | Photo of the day proposal | S | Proposes from reaction counts; a traveler confirms (FR-B7.1) |
+| **Traveler Spotlight Badge** | S | UI implementation of B17 in the Contributor Strip |
 | Contribution nudges | M | DB-leased scheduled job → `notify()`; 72h dedupe, 30-day-post-trip suppression, opt-out; suppress before mentions/replies under backlog |
 
 AI captioning/rewrite/transcription is resolved as Premium/Pro. Both customer monthly quota and

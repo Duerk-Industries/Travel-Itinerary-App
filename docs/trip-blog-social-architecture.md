@@ -425,7 +425,14 @@ fails. Two functions, no third path. See threat S3 in §15.1.
 Admin access is deliberately narrower than trip-owner access. An admin does not acquire a general
 right to browse a private blog. The moderation endpoint resolves a reported comment plus the minimum
 thread context required to act, records the access/action in `audit_log`, and cannot be used to react,
-comment, set covers or publish.
+comment, set covers or publish. **Context projection**: When an admin reviews a report, the context
+(day/item) is projected without geotags or spend data, ensuring the reviewer sees only what is
+necessary to judge the comment.
+
+### 4.05 Day Metadata Concurrency
+`blog_days.headline` and `summary` updates use an `update_version` integer. Every `PATCH` request
+must include the current version. The server rejects the update with `409 VERSION_CONFLICT` if the
+database version has moved, matching the Item autosave contract in §5.5.
 
 ### 4.1 Audience inheritance
 
@@ -721,6 +728,7 @@ where this design consumes them:
 | `trip_blog_recap` | C7, B10 |
 | existing `trip_blog_ai_highlights` | Explicit Day Starter rewrite only |
 | `trip_blog_caption_ai` | A8 caption/alt suggestions; Premium/Pro |
+| `notifications_outbox_enabled` | Master kill-switch for the delivery worker (§13.3) | Yes |
 | existing `trip_blog_audio` | A9 capture modality only |
 | `trip_blog_audio_transcription` | A9 provider transcription; Premium/Pro |
 | `trip_blog_nudges` | B6 |

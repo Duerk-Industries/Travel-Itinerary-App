@@ -159,6 +159,7 @@ program. **P2** = follow-on.
 | B14 | **Reaction Bursts** | P2 | Visual UI "burst" animation when a user reacts or when a new reaction is received via socket. Enhances the "Fun" and "Collaboration" objectives. |
 | B15 | **Collaborative Star Curation** | P1 | Travelers can "Star" specific photos or items to explicitly include them in the "Top Highlights" section of the public Recap, even if they aren't the most reacted. |
 | B16 | **Engagement Milestones** | P2 | Toast notifications/celebrations when a trip hits engagement milestones (e.g., "50 hearts!"). Gamifies collaboration and encourages "Lurkers" to react. |
+| B17 | **Traveler Spotlight** | P1 | Each day's Contributor Strip highlights the uploader of the "Most Loved Photo" of the day with a badge. Drives competition and credits the "Shutterbug" persona. |
 
 ### Theme C — More informative about what happened
 
@@ -202,6 +203,9 @@ testable.
 - **FR-A3.1** Any active traveler may set a day's `headline` (≤ 120 chars) and `summary` (≤ 500).
 - **FR-A3.2** Where a headline is set it replaces the ISO date as the day's visual title; the date
   remains visible in secondary text.
+- **FR-A3.3** **Metadata Versioning**: Edits to day headline/summary use optimistic concurrency. If
+  two travelers edit the same day headline, the second saver receives a conflict banner matching
+  FR-A5.3.
 - **FR-A5.1** Text edits autosave 1.5s after the last keystroke, and on blur, and on tab change.
 - **FR-A5.2** Save state is always visible: `Saving…`, `Saved HH:MM`, or `Not saved — retrying`.
 - **FR-A5.3** On a `409`, the user's text is never discarded. A banner offers "Keep mine" /
