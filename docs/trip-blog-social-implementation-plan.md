@@ -50,6 +50,7 @@ which are real prerequisites that must land first.
 | Whole-trip media fanout audit | S | Record assets read, signed URLs minted and peak signer concurrency for a one-page blog request. Current `listMedia()` + unbounded `Promise.all` touches the whole trip. **Blocks the Phase 1 bounded-read fix.** |
 | Audience-room socket spike | S | Prove `BLOG_SUBSCRIBE` can authorize travelers/followers into separate `blog:<tripId>:travelers|followers` rooms without admitting followers to `trip:<tripId>` chat. **Blocks Phase 4.6.** |
 | Limit + cost-model contract | M | Add every §9.2 provider/caller, operation unit, retained-KiB `reserveCapacityOrThrow` lifecycle, tier quota and §9.3 low/base/high/cap-driven estimator dimension/test. A missing finite cap or price keeps the related flag off. **Blocks the phase that introduces that caller, not merely Phase 6.** |
+| **Static Maps budget re-check** | S | `GOOGLE_STATIC_MAPS` carries a **$15/month** budget and a 24h *in-process* cache. Under the original per-request day-map design the blog would have exceeded it roughly 5× (architecture §14.1). Confirm the corrected render-once volume fits, and raise the budget deliberately if not. **Blocks Phase 5.** |
 | Cloud Run `--max-instances=1` | S | Not blog work, but adjacent and cheap. Cloud Run can autoscale today and nothing in the app is multi-instance safe; pin it and record the pin in `docs/production-deployment-guide.md`. See `docs/horizontal-scaling-requirements.md` §1. |
 | Push credentials | M | APNs key + FCM config in EAS credentials; `EXPO_ACCESS_TOKEN` and versioned token encryption/hash keys through `_FILE`-capable server env. **Blocks real push canary.** Start external setup in Phase 0. |
 | DB lease primitive | M | Implement/test the adapter-neutral claim/lease contract used by recap snapshots, notification outbox and new scheduled jobs. Postgres uses transactional row locking; Firebase uses a document transaction. **Blocks Phases 2, 4.5 and 6.** |
@@ -91,6 +92,8 @@ capabilities with no UI*. That is the cheapest work in the whole program.
 | Scoped draft recovery | M | account/trip/item namespaced persistent draft, 7-day TTL, clear on save/logout/account deletion, redacted from telemetry |
 | Photo/video counts + time-span chips (the two C1 facts derivable with no new query) | S | `tripBlog.tsx` — computed from the `allMedia` flatMap that already exists |
 | Authoring-time instrumentation | S | tab-open → first successful save, per PRD §2 |
+| **Remove `@ts-nocheck` from `tripBlog.tsx`** | M | Before the file doubles in size. See "Type safety" in the cross-cutting section. |
+| Remove `@ts-nocheck` from `BlogRichTextEditor.tsx` | S | Touched by A5 autosave anyway |
 
 ### Tests
 
@@ -195,7 +198,9 @@ drift is within the agreed tolerance, and reaction write/error volume stays insi
 | Day-level comment fetch (one request per day, not per target) | M | The shape decision in §5.1 — a 23-photo day must not produce 27 requests |
 | Tombstone rule (FR-B2.4) | S | Soft delete with replies → tombstone; without → gone |
 | 15-minute edit window | S | Server-enforced, not client-enforced |
-| Report + hide endpoints, strike escalation | M | `blogModerationService.ts` |
+| Report + hide endpoints, strike escalation | M | `blogModerationService.ts`. Reports never auto-hide (threat S8); hiding is always a human action. |
+| `resolveComment(actor, tripId, commentId)` | M | The second mandatory resolver. Comment-id routes bypass `resolveEngagementTarget` entirely — this is the likeliest IDOR in the feature (threat S3). Extend the matrix test to comment-id routes with a foreign trip's comment id. |
+| **Public engagement endpoint** | M | `GET /api/public/:username/:tripSlug/engagement`, separate from the public blog payload so a new comment never invalidates the page cache (NFR-6, architecture §14.7). Own flag `trip_blog_public_engagement`, own IP-hashed rate limit, counts and public-audience comments only, never author ids. Unauthenticated — the most abusable surface in the feature. |
 | `POST /:tripId/blog/comments/spam-check` | Internal-only LLM-backed spam filter (NFR-12). |
 | Public engagement endpoint | M | Separate post-first-paint public counters/comments payload keyed by `engagementRevision`; never invalidate the public blog document |
 | Rate/admission limiting | S | actor/IP/day/retained-row ceilings plus internal API/storage reservations |
@@ -338,6 +343,9 @@ disabled independently without affecting writes; audience isolation has a review
 | `source_type = 'day_starter'` on accepted items | S | So acceptance rate is measurable — the stage gate depends on it |
 | `services/blogMediaGroupingService.ts` + `POST /blog/media/group` | M | Stateless bucketing; no writes, no storage reservation |
 | Facts in-process cache | M | Revision/audience-class key + local single-flight; cache is never an authorization boundary |
+| **Day-map render job** | L | Background render → PNG → `blogStorageClient` under a reserved platform prefix, keyed `(tripDay, pointsHash)`. Debounced to `dayMapRerenderMinIntervalHours`. Two artifacts when photo geotags are on: traveler (with photo pins) and public (itinerary points only) — threat S14. **No request path may reach Google Static Maps.** Architecture §14.1. |
+| Reserved-prefix exclusion in reconciliation | S | `blogStorageReconciliationService.ts` must exclude platform artifacts from uploader totals, or generated maps get billed to whoever's id is in the object key (§14.4) |
+| `BLOG_DAY_MAP_RENDER` caller + budget check | S | `api-limits.yaml`; assert budget exhaustion degrades the card rather than erroring the page |
 | Fact provenance | M | `sourceTypes[]`, `confidence`, `asOf`; filter sources before derivation |
 
 ### App
@@ -345,7 +353,7 @@ disabled independently without affecting writes; audience isolation has a review
 | Task | Size | Files |
 |---|---|---|
 | `DayFactStrip.tsx` | M | Elastic — absent chips, never zeros (FR-C1.1) |
-| Day map | M | Reuse `TripDayMap.tsx` + `staticMapRoutes.ts`; collapsed on mobile |
+| Day map (client) | S | Renders the **stored map artifact** by asset id through the existing signed-URL path — it does *not* call `staticMapRoutes.ts`. `TripDayMap.tsx` stays as-is for the planning surface. Collapsed on mobile. Architecture §14.1. |
 | `DayTimelineRail.tsx` | L | Side-by-side with the map ≥900px, stacked below |
 | `DayStarterCard.tsx` | M | Use / Rewrite / Not now |
 | `PhotoFirstComposer.tsx` | XL | Day buckets, Unassigned bucket, out-of-range confirm, headroom line before commit |
@@ -436,8 +444,33 @@ Two notes worth carrying forward:
 - [ ] Env access via `getEnvValue` / `getEnvFlag` only
 - [ ] Implemented in `db.postgres.ts`, `db.firebase.ts`, and verified under pg-mem
 - [ ] Non-existent-but-invisible targets return `404`, not `403`
+- [ ] Comment-id routes resolve through `resolveComment`, never `resolveEngagementTarget` (threat S3)
+- [ ] Any external call passes a caller key that exists in `api-limits.yaml`, with a price in `cost-model.yaml`
+- [ ] No user-supplied string reaches an HTML context (threats S1/S2)
 - [ ] Cost dimensions and request outcome metrics recorded without logging bodies, tokens or precise
       location
+
+### Type safety — a precondition, not a nicety
+
+**Every file this program touches most heavily has type checking switched off.**
+`app/tabs/tripBlog.tsx` opens with `// @ts-nocheck`, and so do `DayMediaGallery.tsx`,
+`DayMediaLightbox.tsx`, `BlogRichTextEditor.tsx` and `BlogMediaPreview.tsx`. The plan roughly doubles
+the size of `tripBlog.tsx` (648 lines today) and adds audience-dependent rendering to all of them —
+that is precisely the code where an untyped `item.audience` typo silently renders private content.
+
+Rules for this program:
+
+- **No new file carries `@ts-nocheck`.** New components are typed from the start.
+- **`tripBlog.tsx` loses `@ts-nocheck` in Phase 1**, before the social layer lands. Doing it later
+  means doing it against three times the code. Budget this as **M**, not S — the file prop-drills
+  loosely typed `styles`/`theme`/`headers` objects throughout.
+- **Each existing blog component loses `@ts-nocheck` in the phase that first modifies it**
+  (`DayMediaGallery`/`DayMediaLightbox` in Phase 3, `BlogRichTextEditor` in Phase 1).
+- The engagement payload types are **shared, not redeclared** — define `BlogEngagementSummary`,
+  `BlogComment` and the target-kind union once in `server/src/blog/types.ts` and import them, per the
+  repo's "use types from `types.ts`, do not redefine locally" convention.
+
+This is the highest-leverage maintainability item in the program and it is cheap only if done first.
 
 ### Every new client component
 
@@ -447,6 +480,8 @@ Two notes worth carrying forward:
 - [ ] `testID` in `{entity}-{action}[-{id}]` format
 - [ ] Renders correctly for: traveler, traveler-in-edit-mode, follower, public preview
 - [ ] Degrades cleanly with the feature flag off (absent, not disabled)
+- [ ] No `@ts-nocheck`; engagement types imported from `server/src/blog/types.ts`, not redeclared
+- [ ] Reaction/comment controls reachable and legible at 320px width (see the mobile note below)
 - [ ] Keyboard/screen-reader labels, focus restoration, reduced motion and 200% text sizing verified
 - [ ] Long lists are virtualized/lazy; off-screen threads, facts and signed URLs are not prefetched
 

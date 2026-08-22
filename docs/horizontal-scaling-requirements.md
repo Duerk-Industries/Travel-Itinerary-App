@@ -60,10 +60,14 @@ Severity: **P0** = breaks correctness or user-visible behaviour across instances
 | 8 | Startup seeding (`index.ts`: airports, attractions catalog) | Every instance runs the same seed on boot. | P1 | Idempotent, so not incorrect — but N instances do N times the work and can contend on the same rows. |
 | 9 | `services/failedRetryScheduler.ts`, `retentionService.ts`, `blogStorageReconciliationService.ts`, `ingestionMetricsService.ts`, `billing/subscriptionReconciliationService.ts`, autocomplete refresh and AI aggregation schedulers | Scheduled jobs start in every process. | P1 | N instances = N runs. Retention/reconciliation can contend; metrics can double-count; billing work must remain idempotent. Inventory every boot-started scheduler before cutover. |
 | 10 | Blog nudge/counter/notification jobs (planned) | **Designed safe:** unique window claims and leased outbox work are DB-backed. | — | Closed by design; implementation must pass lease takeover and two-worker tests before its flag is enabled. |
-| 11 | TTL caches (feature flags 60s, facts and other service caches) | Per-process. | P2 | Instances briefly disagree or duplicate cache fills. Blog recap is excluded: its planned cache/claim is durable. |
+| 11 | TTL caches with **no external call behind them** (feature flags 60s, facts and other service caches) | Per-process. | P2 | Instances briefly disagree or duplicate cache fills. Recomputation is pure DB work. Blog recap is excluded: its planned cache/claim is durable. |
+| 11a | **TTL caches that front a paid API** — `staticMapRoutes.ts` `mapCache` (`createTtlCache`, 24h) | Per-process, so the miss rate multiplies by instance count *and* by restart frequency. | **P1 — cost, not correctness** | The row most likely to be mis-triaged. It looks like row 11 but is not: every extra miss is a **billed Google Static Maps request** against a $15/month budget, so N instances ≈ N× the spend for byte-identical output. Cloud Run's short-lived instances make this worse than a long-running server would. Either move this cache to shared storage, or make the artifact durable — which is exactly what `trip-blog-social-architecture.md` §14.1 does for the blog day map. |
 | 12 | `services/httpRateLimitService.ts` | **None — verified safe.** Enforcement goes through `atomicIncrementApiUsageIfUnderLimit` in `db.ts`. | — | Closed. DB-backed and atomic, so limits hold across instances. |
 | 13 | `apis/usageLimiter.ts` (`reserveApiUsageOrThrow`, `reserveCapacityOrThrow`) | **None — verified safe.** Rolling usage and retained-capacity reservations use durable atomic DB primitives. The in-process Maps hold logging/cache state, not enforcement. | — | Closed. Per-instance duplicate *log lines* at threshold crossings are the only effect. |
 | 14 | `services/gmailPollingService.ts` | Polling loop per instance. | P1 | Duplicate ingestion of the same mailbox. |
+| 15a | Blog counter reconciliation job (planned) | Scheduled job, same class as row 9. | P1 | Concurrent runs recomputing the same counters. Idempotent, so not incorrect — but wasteful, and it obscures genuine drift detection. |
+| 15b | Blog day-map render job (planned, `trip-blog-social-architecture.md` §14.1) | Triggered render + upload. | P1 | Without a claim lease, N instances render and upload the same map, paying N× for one artifact. Cheap to avoid by design: the job is keyed `(tripDay, pointsHash)` onto a deterministic object key, so a lease plus an existence check suffices. |
+| 15c | Notification dedupe (planned) | **None — safe by construction.** `UNIQUE (user_id, dedupe_key)` is enforced by the database. | — | Closed. Recorded because it is the template for fixing rows 9, 10, 15a and 15b: push uniqueness into a constraint rather than relying on only one process running. |
 | 15 | `redirects.ts` native auth exchange codes | One-time OAuth/native exchange codes live in an in-process `Map`. | P0 | Code created on instance A and consumed on B fails login; retry may be unsafe/confusing. Store hashed, single-use, TTL-bound codes durably. |
 | 16 | Postgres connection pool | Each instance creates its own pool; aggregate connections grow as `instances × pool max`. | P0 | A scale-out can exhaust Postgres before CPU. Define a total connection budget, per-instance max, headroom and connection-proxy decision before raising instances. Firebase has separate SDK/channel quotas that need the same multiplication check. |
 | 17 | Process-local metrics (`metrics.ts`) | Counters/gauges represent one instance and `/metrics` scraping does not produce a global view by itself. | P1 | Dashboards/alerts can undercount or double-sum gauges. Export per-instance labeled metrics and aggregate with correct counter/gauge semantics. |
@@ -125,11 +129,28 @@ No work required. Both enforce via `atomicIncrementApiUsageIfUnderLimit`, which 
 database. Any *new* limiter must use the same path rather than a process-local counter — that is the
 rule this section exists to preserve.
 
-### 3.5 Caches (row 11) — P2
+### 3.5 Caches (rows 11, 11a) — split verdict
 
-Leave as is. Per-instance TTL caches are a normal, acceptable pattern; the only visible effect is
-that a feature-flag flip propagates within the existing 60s window per instance rather than globally
-at once.
+**Row 11 — leave as is (P2).** Per-instance TTL caches over pure DB work are a normal, acceptable
+pattern. The only visible effect is that a feature-flag flip propagates within the existing 60s
+window per instance rather than globally at once.
+
+**Row 11a — needs a decision before scaling (P1, cost).** A per-instance cache in front of a *billed*
+API is a different animal: it does not degrade correctness, it multiplies the bill. Three options,
+cheapest first:
+
+1. **Make the artifact durable instead of cached.** Render once, store the output in blob storage,
+   serve it forever. Removes the API from the read path entirely, so instance count stops mattering.
+   This is what `trip-blog-social-architecture.md` §14.1 does for the blog day map, and it is the
+   right answer wherever the output is stable — which, for a map of a day that has already happened,
+   it is.
+2. **Shared cache in Redis**, alongside §3.1. Only worth it if Redis is being introduced anyway.
+3. **Accept and budget for it.** Viable only with a hard `max-instances` and a monitored budget
+   alert; the existing `alertThresholdPercent: 80` gives some cover.
+
+Option 1 wherever the output is stable; option 2 for genuinely dynamic lookups. **The general rule
+worth carrying forward: an in-process cache in front of a paid API is a cost decision disguised as a
+performance decision, and it should be reviewed as one.**
 
 ### 3.6 Auth exchange and connection capacity (rows 15, 16) — P0
 

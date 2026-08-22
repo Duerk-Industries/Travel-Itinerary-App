@@ -307,6 +307,9 @@ testable.
   not the content revision, and never purges the whole public page.
 - **NFR-7** New tables carry `ON DELETE CASCADE` from `trips`, so trip deletion stays a single
   operation consistent with the deletion guarantee in `travel-blog-architecture.md`.
+- **NFR-8a** Every interactive engagement control meets `MIN_TOUCH_TARGET` (44pt) at its *point of
+  use*, not merely in its expanded state, and every action reachable by gesture is also reachable by
+  a visible control (see §6.9).
 - **NFR-8** All comment and reaction text is rendered as text. No path exists from user input to HTML
   on the public page.
 - **NFR-9** The cost estimator reports incremental social/recap cost for low/base/high usage and a
@@ -576,6 +579,21 @@ Single column in this order: headline → fact strip (horizontally scrollable ch
 map (collapsed, tap to expand) → entries → gallery → comments (collapsed, showing count). Reaction
 controls stay pinned to their content rather than a floating bar; the comment composer docks above
 the keyboard. The photo-first composer becomes a full-screen sheet with day groups as sections.
+
+**The reaction row does not fit on a small phone, and pretending otherwise is the likeliest usability
+failure in this design.** Six emoji at `MIN_TOUCH_TARGET` (44pt) is 264pt of horizontal space before
+any padding — wider than the content column on a 320px device. So the mobile reaction affordance is
+**not six buttons**:
+
+- The collapsed state is a **single tap target**: the user's own reaction if they have one, otherwise
+  a neutral "react" affordance, plus the existing counts as a compact summary (`❤️😂 6`).
+- Tapping it opens a **picker sheet** with the six emoji laid out at full touch size, which is where
+  the 44pt requirement is actually met.
+- A user changing or clearing an existing reaction does it from the same sheet — no long-press, which
+  is undiscoverable and inaccessible.
+
+Long-press-to-react is explicitly rejected: it has no keyboard or screen-reader equivalent, and the
+one-tap-to-participate promise for the Lurker persona depends on the affordance being visible.
 
 ### 6.10 Empty and degraded states
 

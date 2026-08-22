@@ -415,6 +415,13 @@ Step 3 is the load-bearing one. It is implemented as a single function,
 `{ dayId, effectiveAudience } | null`, and **every** engagement route calls it. There is no second
 path to a target.
 
+**`resolveEngagementTarget` does not cover comment-id routes, and this is the gap most likely to
+become an IDOR.** `PATCH`, `DELETE`, `report` and `hide` all take a *comment* id, not a target id, so
+they bypass the function above entirely. They use a parallel, equally mandatory
+`resolveComment(actor, tripId, commentId)` which verifies the comment belongs to `:tripId`, resolves
+its target, applies the same visibility projection, and returns `404` — never `403` — when any check
+fails. Two functions, no third path. See threat S3 in §15.1.
+
 Admin access is deliberately narrower than trip-owner access. An admin does not acquire a general
 right to browse a private blog. The moderation endpoint resolves a reported comment plus the minimum
 thread context required to act, records the access/action in `audit_log`, and cannot be used to react,
@@ -718,6 +725,8 @@ where this design consumes them:
 | `trip_blog_audio_transcription` | A9 provider transcription; Premium/Pro |
 | `trip_blog_nudges` | B6 |
 | `trip_blog_day_review` | C10/C11 correction/provenance UI |
+| `trip_blog_public_engagement` | The unauthenticated public counts/comments endpoint (§14.7). Separate from `trip_blog_comments` on purpose: it must be switchable off without un-publishing a blog or disabling authenticated commenting. |
+| `trip_blog_day_map_render` | The background day-map render job (§14.1). Gates the only new externally-billed call in the feature set, so it is fail-closed. |
 
 `trip_blog_comments` implies moderation: `blogModerationService` is not separately flagged, because
 shipping comments without it is not a configuration we want to be reachable.
@@ -726,7 +735,8 @@ Small presentation changes share the nearest parent flag; a separate flag per ch
 untestable configuration matrix. The following new write/external-cost flags are added to
 `entitlementService.ts`'s existing `FAIL_CLOSED_FLAGS`: `trip_blog_social_layer`,
 `trip_blog_comments`, `trip_blog_mentions`, `trip_blog_caption_ai`,
-`trip_blog_audio_transcription`, `notifications_push` and
+`trip_blog_audio_transcription`, `trip_blog_public_engagement`, `trip_blog_day_map_render`,
+`notifications_push` and
 `notifications_web_push`, plus `notifications_in_app`. The general entitlement convention remains fail-open; these explicit
 rollout exceptions match existing provider-backed exceptions such as `trip_day_map`. CI asserts that
 every flag named here exists in YAML and the database seeding test.
@@ -812,7 +822,8 @@ caching:
     publicEngagementCacheTtlSeconds: 15
     publicEngagementStaleWhileRevalidateSeconds: 45
     factsCacheTtlMs: 60000
-    recapCacheTtlMs: 3600000
+    # recapCacheTtlMs removed — the recap is a persisted `blog_recap_snapshots` row (§7.2),
+    # not an in-process TTL cache. Retention is governed by tripBlogRecap.persistedTtlHours (§14.2).
     recapSnapshotsPerTrip: 3
     captionSuggestionsPerDayPerUser: 10
     captionSuggestionsPerMonthPremium: 100
@@ -918,6 +929,9 @@ redacts IDs and bodies at instrumentation time rather than relying on a log scru
 | Notification outbox backlog grows | Stop provider delivery at the configured queue/concurrency cap, keep in-app rows, alert on age/depth, and suppress nudges before mentions/replies. |
 | pg-mem rejects a query | Caught by CI, since the memory adapter is what the test suite runs against. This is why the adapter matrix is NFR-2 rather than a nice-to-have. |
 | Comment on an asset that is grace-hidden | Target resolution fails → `404`. Grace-hidden assets are already absent from `items`; engagement must not resurrect them. |
+| Day-map render fails or the Static Maps budget is exhausted | The day card renders without a map, indistinguishable from a day with no geocoded points. The render job retries on the next points-hash change, never in a request path, and never blocks the page (§14.1). |
+| `trip_blog_public_engagement` disabled or rate-limited | The public page renders exactly as it does today — content without counts. Engagement is a separate fetch precisely so its failure cannot affect the page (§14.7). |
+| Storage reconciliation encounters a platform artifact | Generated day maps and recap payloads live under a reserved prefix excluded from uploader totals. Without that exclusion, reconciliation would bill a generated map to whichever user id appears in its object key (§14.4). |
 
 ---
 
@@ -951,6 +965,14 @@ redacts IDs and bodies at instrumentation time rather than relying on a log scru
 - **Export/deletion** — export contains the user's allowed social/notification records but no device
   secrets; deletion scrubs comment bodies, removes reactions/devices/outbox/inbox rows and releases
   every retained-capacity reservation.
+- **Security threat table (§15.1)** — every row S1–S14 has a named test in its own column; the table
+  is not considered reviewed until each one exists. The three most load-bearing: a `<script>` payload
+  round-tripping as literal text through a comment *and* through AI-suggested alt text (S1/S2); a
+  foreign trip's comment id returning `404` on every comment-id route (S3); and a member removed
+  mid-session receiving no further socket events (S12).
+- **Cost containment** — assert no request-path code reaches `GOOGLE_STATIC_MAPS`; assert every new
+  external call site passes a caller key registered in `api-limits.yaml`; assert an exhausted
+  provider budget degrades the surface rather than erroring the page.
 
 Coverage gate: new route/service/repository/component modules target at least 90% changed-line and
 85% branch coverage, without lowering repository thresholds. Numeric coverage does not replace the
@@ -1308,3 +1330,250 @@ email adds `BLOG_MENTION_FALLBACK`, `BLOG_REPLY_FALLBACK` and `BLOG_NUDGE_FALLBA
 existing `SMTP` aggregate cap. Storage/read/write units reserve under
 `TRIP_BLOG_SOCIAL_STORAGE`. The cost model includes provider messages even while their configured
 price is zero, so adopting a paid push/email tier is a price update rather than an estimator redesign.
+
+---
+
+## 14. Cost, quotas and caching
+
+Added after a review pass against the existing API-limiting architecture. **Every new external call
+and every new stored byte below is capped in `api-limits.yaml`, priced in `cost-model.yaml`, and has
+a named caller** — the same contract every other provider in this repo already follows
+(`GOOGLE_STATIC_MAPS`, `OPENAI`, `UNSPLASH`, `SMTP`, …). Nothing in this feature set may reach an
+external provider through an uncapped path.
+
+### 14.1 The day map was the expensive mistake — corrected
+
+An earlier draft of this document had C2 "reuse `TripDayMap.tsx` and `staticMapRoutes.ts`" directly.
+That reuse is correct for the *client*, and badly wrong for the *cost model*, for three compounding
+reasons:
+
+1. **Volume is per-day, not per-dialog.** The existing `TRIP_DAY_MAP` caller is capped at 300/day
+   against a `GOOGLE_STATIC_MAPS` budget of **$15/month** (`api-limits.yaml`). A blog day map renders
+   once per *day card*: a 14-day trip is 14 calls for one page view.
+2. **The cache is in-process.** `staticMapRoutes.ts` uses `createTtlCache` with a 24h TTL. That cache
+   dies with the instance and multiplies by instance count — so the effective call rate is
+   (unique day-maps) × (instances) × (restarts per day), not (unique day-maps).
+3. **The public page is unauthenticated and crawlable.** `publicBlogRoutes.ts` sets
+   `X-Robots-Tag: index,follow` when indexing is enabled. A crawler walking published blogs would
+   draw map renders at whatever rate it likes.
+
+Rough arithmetic: 100 published trips × 14 days = 1,400 distinct day maps. At a 24h TTL that is
+~42,000 renders/month against a budget of roughly 7,500. **The budget is exceeded by ~5× before any
+growth**, and the first symptom would be `ApiBudgetExceededError` breaking unrelated map features.
+
+**Corrected design — render once, store, never re-render.** A day map is a function of that day's
+points, which stop changing when the trip ends. So:
+
+- The map is rendered **once per (trip-day, points-hash)** by a background job, not during a request.
+- The rendered PNG is written to the **existing blog media bucket** via `blogStorageClient.ts` under
+  a reserved rendition key, and served through the existing signed-URL/CDN path that every blog photo
+  already uses.
+- Re-render happens only when the points hash changes (an activity added, a lodging moved), debounced
+  to at most once per day per trip-day.
+- The public projection serves the stored image. **No public request ever triggers a Google call.**
+
+Cost becomes bounded by *number of trip-days that ever existed*, not by views, instances, restarts or
+crawlers. It also removes the day map from the horizontal-scaling cost multiplier entirely
+(`horizontal-scaling-requirements.md` row 11).
+
+Storage impact: a 640×400 PNG is ~80 KB. 1,400 day maps ≈ 110 MB — negligible against the existing
+media footprint, and it is **platform storage, not charged to the uploader's ledger** (a generated
+artifact is not a traveler's upload; see 14.4).
+
+```yaml
+# api-limits.yaml — GOOGLE_STATIC_MAPS.callers
+      BLOG_DAY_MAP_RENDER: 200        # background render job only; never request-path
+```
+
+The client keeps `TripDayMap.tsx` for the *interactive planning* surface it already serves. The blog
+uses the stored image. This is the one place in this design where reuse was the wrong instinct.
+
+### 14.2 New provider and caller entries
+
+```yaml
+# api-limits.yaml
+providers:
+  GOOGLE_STATIC_MAPS:
+    callers:
+      BLOG_DAY_MAP_RENDER: 200
+
+  OPENAI:
+    callers:
+      BLOG_CAPTION_SUGGEST: 300       # A8, on demand only, never on upload
+      BLOG_STARTER_REWRITE: 100       # A1 "Rewrite", explicit user action
+      BLOG_AUDIO_TRANSCRIBE: 50       # A9, Phase 7
+
+  EXPO_PUSH:                          # new provider — free service, throttled anyway
+    window: hour
+    windowHours: 24
+    overall: 20000
+    callers:
+      NOTIFY_MENTION: 5000
+      NOTIFY_NUDGE: 5000
+      NOTIFY_DIGEST: 10000
+
+  SMTP:
+    callers:
+      NOTIFY_EMAIL_FALLBACK: 200      # see the warning in 14.3
+```
+
+```yaml
+# api-limits.yaml — tripBlog limits (additions to §9.2)
+  publicEngagementReadsPerMinutePerIp: 60
+  mentionAutocompletePerMinutePerUser: 20
+  reportsPerDayPerUser: 20
+  dayMapRerenderMinIntervalHours: 24
+  recapGenerationsPerDayPerTrip: 5
+```
+
+```yaml
+# api-limits.yaml — caching additions
+  tripBlogEngagement:
+    publicCountsCacheTtlSeconds: 120
+    counterBatchSize: 200
+  tripBlogRecap:
+    persistedTtlHours: 24
+```
+
+```yaml
+# cost-model.yaml — requestPricing
+  EXPO_PUSH: 0                        # genuinely free today; entry exists so it is visible
+  BLOG_DAY_MAP_RENDER: 0.002          # Google Static Maps per-request, same as STATIC_MAP_PREVIEW
+```
+
+`cost-model.yaml` `usagePerUser` additions, per tier, modelling a typical month:
+
+| Tier | `expoPush.messages` | `openai` (caption/rewrite) | `googleStaticMaps.requests` | `smtp.messages` |
+|---|---|---|---|---|
+| Basic | 20 | 0 (AI captions Premium-only — see 14.5) | 0.5 | +1 |
+| Premium | 60 | input 8,000 / output 2,000 | 1.5 | +2 |
+
+`googleStaticMaps` is fractional per user by design: renders are per trip-day, amortised across
+everyone who views that trip.
+
+### 14.3 The SMTP fallback is a real risk
+
+`SMTP` is throttled at **100/day aggregate** today, and `cost-model.yaml` already warns that 1
+message/user/month exceeds that at 10k users. Notification email fallback (§13.3) could add far more
+than that.
+
+**Rule: email fallback is not a general channel.** It fires only for `blog_mention`, only when the
+user has no enabled push device, and never for nudges or digests. `NOTIFY_EMAIL_FALLBACK` is capped
+at 200/day, and exceeding it degrades to in-app-only rather than throwing. Nudges (B6) are
+**push-and-inbox only**; a nudge is by definition low-urgency and does not justify an email.
+
+### 14.4 Storage accounting
+
+The blog already has a per-uploader ledger with grace-hiding and paid add-ons. Two new byte sources
+must be classified explicitly or they will silently land in the wrong bucket:
+
+| New bytes | Charged to | Rationale |
+|---|---|---|
+| Voice notes (A9, `media.audio`) | **Uploader's ledger**, like any other media | It is a traveler's upload; the existing quota and Premium gate apply unchanged |
+| Rendered day maps (14.1) | **Platform**, not any user | A generated artifact from data the user already stored. Charging it would make a traveler's quota depend on how many activities they logged. |
+| Persisted recap payloads (14.6) | **Platform** | Same reasoning; kilobytes of JSON |
+| Comments, reactions, notifications | **Platform** | Row storage, not media. Bounded by `retentionDays` for notifications. |
+
+`blog_storage_ledger` entries are written only for the uploader-charged row. Platform artifacts use a
+reserved storage prefix excluded from `blogStorageReconciliationService` totals — **this must be an
+explicit exclusion**, or reconciliation will attribute generated maps to whichever user id appears in
+the object key.
+
+### 14.5 Cost-driven feature gating
+
+Resolving PRD open question 2:
+
+- **AI captions and Day Starter rewrite are Premium-only.** They are the only per-photo,
+  per-external-call features in the set, and photo counts scale without bound. Gate via
+  `assertCanUseFeature(userId, 'trip_blog_caption_ai', role)`, evaluated against the **requesting**
+  account — consistent with how Premium video eligibility already works.
+- The deterministic Day Starter (§8) is **available to every tier**, because it costs nothing. This
+  is the main reason the template-not-LLM decision matters commercially, not just architecturally:
+  the highest-value authoring feature stays free.
+- Reactions, comments, facts, maps and recap are all-tier. None has a meaningful marginal cost.
+
+### 14.6 Caching strategy, corrected
+
+The original §7 put day facts and the recap in in-process TTL caches. On Cloud Run with short-lived
+instances that is close to a no-op, and it multiplies rather than reduces cost for anything with an
+external call behind it. Revised:
+
+| Surface | Strategy | Why |
+|---|---|---|
+| Day facts (C1/C3) | In-process TTL, 60s | Pure DB aggregation, no external call. Cheap to recompute; a low hit rate costs little. Keep. |
+| Day map (C2) | **Persisted artifact in blob storage**, re-rendered on points-hash change | Has an external paid call behind it. Must never be recomputed on a cache miss. See 14.1. |
+| Trip recap (C7) | **Persisted row** — `blog_recap_snapshots`, already specified in §3 and §7.2 | Expensive aggregation, changes rarely, read often, shared across viewers. Already correct; listed here for completeness. |
+| Engagement counters | No cache — read the counter table directly | The counter table *is* the cache. A second layer only adds staleness. |
+| Public engagement counts | HTTP `Cache-Control: public, max-age=120` on a **separate endpoint** | See 14.7. |
+| Blog document | Unchanged | Not made worse by this work. |
+
+### 14.7 Public page caching and NFR-6
+
+NFR-6 requires that a new comment not invalidate the whole public page. `publicBlogRoutes.ts` serves
+`Cache-Control: public, max-age=60, stale-while-revalidate=300`. Embedding engagement in that payload
+would couple comment freshness to page caching and make every comment a cache-busting event.
+
+**So engagement is not in the public blog payload at all.** It is served from a separate endpoint:
+
+```
+GET /api/public/:username/:tripSlug/engagement    →  { counts: {...}, comments: [...] }
+    Cache-Control: public, max-age=120, stale-while-revalidate=600
+    Rate limit: publicEngagementReadsPerMinutePerIp (60), by hashed IP
+```
+
+The page HTML/JSON stays cacheable and stable; engagement hydrates separately and is allowed to be up
+to two minutes stale, which is entirely acceptable for a public read-only view. This also means the
+public path shares no code with the authenticated engagement routes, so there is no way for an
+authorization change on one to silently affect the other.
+
+**This endpoint is unauthenticated and therefore the most abusable surface in the feature.** It gets
+its own rate limit (above), returns counts and public-audience comments only, never reactor or author
+user ids, and is behind its own flag `trip_blog_public_engagement` so it can be switched off without
+un-publishing anything.
+
+---
+
+## 15. Security review
+
+§4 covers *authorization* (who may act on what). This section covers everything else, and exists
+because this feature introduces the app's first **user-generated text authored by one user and
+displayed to another**, plus its first **unauthenticated write-adjacent surface**. Both are new
+attack classes for this codebase.
+
+### 15.1 Threat table
+
+| # | Threat | Surface | Mitigation | Test |
+|---|---|---|---|---|
+| S1 | Stored XSS via comment body on the public page | `blog_comments.body` | Plain text only; no HTML parse, no markdown render, no `dangerouslySetInnerHTML`. Rendered through React `<Text>` which escapes by construction. | Snapshot test asserting a `<script>` payload round-trips as literal text |
+| S2 | Stored XSS via `caption` / `alt_text` | Already exists; **A8 makes it worse** by writing AI output into `alt_text`, which lands in an HTML attribute on the public page | Strip control chars and quotes from AI-suggested alt text before persist; escape at render | Payload test through the AI-suggestion path |
+| S3 | IDOR on comment mutation | `PATCH`/`DELETE`/`report`/`hide` `/blog/comments/:commentId` | These take a *comment* id, not a target — `resolveEngagementTarget` does **not** cover them. A parallel `resolveComment(actor, tripId, commentId)` must verify the comment belongs to `:tripId` **and** is visible to the actor, returning `404` otherwise. | Matrix test extended to comment-id routes with a foreign trip's comment id |
+| S4 | User enumeration via mention autocomplete | `GET /blog/mentionable?q=` | Trip-scoped (PR-7) **plus** a rate limit (`mentionAutocompletePerMinutePerUser: 20`) and a minimum query length of 2. Returns display names and ids of trip members only. | Non-member query returns empty, not 403; rate limit enforced |
+| S5 | Open redirect / deep-link injection | `notifications.deep_link` | `deep_link` is **never** user-supplied. It is constructed server-side from an allowlisted route template plus validated ids. The client refuses any deep link not matching a known route pattern. | Client rejects an absolute URL in `deep_link` |
+| S6 | Push token theft / spoofing | `POST /notifications/devices` | Token rows are bound to the authenticated user; registering a token already owned by another user **reassigns** it (the device changed hands) rather than duplicating. Tokens are never returned by any read endpoint. | Token registered by user A then by user B belongs only to B |
+| S7 | Notification content leakage on lock screen | Push payload | Push body carries the actor's display name and a truncated snippet only — never full comment bodies, never anything from a `travelers`-audience item to a follower's device. Audience is re-checked at send time, not at enqueue time. | Follower does not receive a `travelers`-audience mention body |
+| S8 | Mass-report abuse to suppress content | `POST /comments/:id/report` | Reports never auto-hide. Hiding is always a human action by the owner or an admin (FR-B11.2). `reportsPerDayPerUser: 20`; `UNIQUE(comment_id, reporter_user_id)` prevents report stacking. | 20 reports do not change comment visibility |
+| S9 | Unauthenticated scraping / DoS of public engagement | `GET /api/public/.../engagement` | Own flag, own rate limit by hashed IP (`hashRateLimitIdentity` already exists), counts-and-public-comments only, aggressively cached (14.7). | Rate limit returns 429 with `Retry-After` |
+| S10 | Signed media URL leakage through engagement payloads | Comment/reaction responses | Engagement payloads carry **asset ids, never signed URLs**. URL minting stays exclusively in the existing `attachMediaUrls` path. | No response from an engagement route matches a signed-URL pattern |
+| S11 | Idempotency-key replay across users | `POST .../comments` | Idempotency keys are scoped `(user_id, key)`, never global. A replayed key returns the original comment, never creates a second. | Same key from a different user creates a distinct comment |
+| S12 | Socket room leakage of private engagement | `blog:comment_created` | Per-socket audience filtering (§6 rule 2). The socket's cached role must be **invalidated on membership change** — a removed traveler holding an open socket must stop receiving. | Remove a member mid-session; assert no further events |
+| S13 | Comment content in the public sitemap / structured data | `blogSitemapRoutes.ts` | Comments are excluded from sitemap and Schema.org output entirely. They are not the trip's content and should not shape its search presence. | Sitemap snapshot contains no comment text |
+| S14 | Geotag leakage via the rendered day map | 14.1 stored map artifact | Two artifacts are rendered when photo geotags are enabled: a traveler version including photo pins, and a public version with itinerary points only. The public projection can only reference the public artifact. | Public artifact key never appears alongside photo-derived points |
+
+S14 is worth calling out as a design consequence rather than just a control: because the map is now a
+*stored artifact* (14.1) rather than a per-request render, the audience decision moves from request
+time to render time. Getting it wrong bakes private location data into a cached public object, which
+is far harder to walk back than a bad response. Two artifacts, chosen by projection, is the only safe
+shape.
+
+### 15.2 Standing rules
+
+- **No user input reaches an HTML context.** Comments, captions and alt text are text nodes or
+  escaped attributes. This is asserted by test, not by review.
+- **Every new endpoint is rate limited** through `httpRateLimitService`, which is already DB-backed
+  and atomic (`atomicIncrementApiUsageIfUnderLimit`) and therefore correct across instances.
+- **Every new external call goes through `reserveApiUsageOrThrow`** with a named caller (§14.2). A
+  call site without a caller key is a review blocker.
+- **Audience is re-evaluated at every boundary** — read, socket emit, push send, public projection —
+  never cached and trusted from an earlier evaluation.
+- **Moderation actions write `audit_log`**, matching the existing admin-mutation convention.
+- **PII in notifications is minimised**: display names, not emails; snippets, not bodies.
