@@ -5,8 +5,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
+import { useBlogEngagement } from '../utils/useBlogEngagement';
 import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
 import BlogConflictBanner, { type BlogConflictLatest } from '../components/BlogConflictBanner';
+import BlogReactionBar from '../components/BlogReactionBar';
+import BlogContributorStrip from '../components/BlogContributorStrip';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
@@ -72,6 +75,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // `Alert.alert` the old save() threw on any 409, regardless of which item.
   const [itemConflicts, setItemConflicts] = useState({});
   const canEdit = !readOnly && editMode;
+  const engagement = useBlogEngagement(backendUrl, headers, activeTripId);
+  const handleEngagementError = (message) => Alert.alert('Trip blog', message || 'Unable to save your reaction');
 
   const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
   const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
@@ -92,6 +97,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // also means the private/pending-consent preview cannot accidentally hide content merely because
   // the user is not currently editing.
   const publicPreview = !editMode && blog?.visibilityState === 'public';
+  // B8/Phase 3: authoring (canEdit, unchanged) and engagement (canEngage) are deliberately
+  // different gates. `readOnly` means "this viewer is a follower of this trip" (the
+  // isFollowingMode prop from App.tsx) — historically that blocked everything, but a follower is
+  // allowed to react and comment, only never to author, edit, delete, set covers or publish. The
+  // server's authorization matrix is the real enforcement (a follower reacting to a
+  // travelers-only item still gets 404); this flag only controls whether the reaction controls
+  // render at all — hidden in the public preview, which has no authenticated session's own
+  // reaction to show and no server-side identity to attach one to.
+  const canEngage = !publicPreview;
   const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
     if (!publicPreview) return day;
     return {
@@ -114,6 +128,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         if (!nextCursor || !current) return data;
         return { ...data, days: [...current.days, ...days] };
       });
+      // Seeds the normalized engagement store from this response's embedded `engagement` fields
+      // (architecture §5.4) — never a second fetch. A no-op object when the reactions flag is
+      // off, since the field is simply absent from `data` in that case.
+      engagement.seedFromBlog(data);
       const lastDay = days[days.length - 1];
       setCursor(days.length >= limit && lastDay ? lastDay.localDate : null);
     } catch (error) {
@@ -749,6 +767,29 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 ) : null}
               </View>
             </View>
+            {!publicPreview && (day.contributors || []).length > 0 ? (
+              <BlogContributorStrip
+                testID={`blog-day-contributors-${day.localDate}`}
+                contributors={day.contributors}
+                reactionTotal={day.engagement?.reactionTotal}
+                mutedColor={mutedColor}
+              />
+            ) : null}
+            {day.engagement ? (
+              <BlogReactionBar
+                testID={`blog-day-reactions-${day.localDate}`}
+                targetKind="day"
+                targetId={day.id}
+                summary={engagement.getSummary('day', day.id)}
+                canEngage={canEngage}
+                onToggle={engagement.toggle}
+                onError={handleEngagementError}
+                textColor={textColor}
+                mutedColor={mutedColor}
+                theme={theme}
+                size="compact"
+              />
+            ) : null}
             {(day.items || []).filter((item) => !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
               <View key={item.id} style={{ marginTop: 8 }}>
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
@@ -772,6 +813,21 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     textColor={textColor}
                   />
                 )}
+                {item.engagement ? (
+                  <BlogReactionBar
+                    testID={`blog-item-reactions-${item.id}`}
+                    targetKind="item"
+                    targetId={item.id}
+                    summary={engagement.getSummary('item', item.id)}
+                    canEngage={canEngage}
+                    onToggle={engagement.toggle}
+                    onError={handleEngagementError}
+                    textColor={textColor}
+                    mutedColor={mutedColor}
+                    theme={theme}
+                    size="compact"
+                  />
+                ) : null}
                 {canEdit ? (
                   <>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
@@ -833,6 +889,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                       borderColor={borderColor}
                       backgroundColor={inputColor}
                       styles={styles}
+                      canEngage={canEngage}
+                      getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
+                      onToggleReaction={engagement.toggle}
+                      onReactionError={handleEngagementError}
+                      theme={theme}
                     />
                   ) : null}
                   {processingMedia.map((item) => (
@@ -856,6 +917,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     mutedColor={mutedColor}
                     borderColor={borderColor}
                     backgroundColor={inputColor}
+                    canEngage={canEngage}
+                    getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
+                    onToggleReaction={engagement.toggle}
+                    onReactionError={handleEngagementError}
+                    theme={theme}
                   />
                 </>
               );

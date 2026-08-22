@@ -490,6 +490,64 @@ export const reorderBlogItems = async (userId: string, tripId: string, itemIds: 
   await batch.commit();
 };
 
+// Mirrors postgresRepository.ts's getContributorsForDays. Firestore has no per-day FK on
+// blog_media_assets (assets carry `dayDate`, not a `blogDayId` — see the note on setDayCover
+// above), so this resolves each requested day's `localDate` first, then queries assets by that
+// date and maps back to the caller's day IDs.
+const displayNameFromUserDoc = (data: any): string => {
+  const combined = `${data?.firstName ?? ''} ${data?.lastName ?? ''}`.trim();
+  if (combined) return combined;
+  if (data?.email) return String(data.email);
+  return 'A traveler';
+};
+
+export const getContributorsForDays = async (dayIds: string[]): Promise<Record<string, { userId: string; displayName: string; itemCount: number; assetCount: number }[]>> => {
+  const result: Record<string, Record<string, { itemCount: number; assetCount: number }>> = {};
+  if (!dayIds.length) return {};
+  const db = getDb();
+  const dayDocs = await Promise.all(dayIds.map((id) => db.collection('blog_days').doc(id).get()));
+  const dateToDayId = new Map<string, string>();
+  dayIds.forEach((id, i) => {
+    result[id] = {};
+    const data = dayDocs[i].data() as any;
+    if (data?.localDate) dateToDayId.set(String(data.localDate), id);
+  });
+
+  const itemSnap = await db.collection('blog_items').where('kindKey', '==', 'core.text').get();
+  for (const doc of itemSnap.docs) {
+    const data = doc.data() as any;
+    if (data.deletedAt || !dayIds.includes(data.blogDayId)) continue;
+    const bucket = result[data.blogDayId];
+    const entry = bucket[data.authorUserId] ?? { itemCount: 0, assetCount: 0 };
+    entry.itemCount += 1;
+    bucket[data.authorUserId] = entry;
+  }
+
+  const assetSnap = await db.collection('blog_media_assets').where('state', '==', 'ready').get();
+  for (const doc of assetSnap.docs) {
+    const data = doc.data() as any;
+    const dayId = dateToDayId.get(String(data.dayDate));
+    if (!dayId) continue;
+    const bucket = result[dayId];
+    const entry = bucket[data.uploaderUserId] ?? { itemCount: 0, assetCount: 0 };
+    entry.assetCount += 1;
+    bucket[data.uploaderUserId] = entry;
+  }
+
+  const userIds = new Set<string>();
+  for (const bucket of Object.values(result)) Object.keys(bucket).forEach((id) => userIds.add(id));
+  const userDocs = await Promise.all(Array.from(userIds).map(async (id) => [id, await db.collection('users').doc(id).get()] as const));
+  const displayNames = new Map(userDocs.map(([id, snap]) => [id, snap.exists ? displayNameFromUserDoc(snap.data()) : 'A traveler']));
+
+  const final: Record<string, { userId: string; displayName: string; itemCount: number; assetCount: number }[]> = {};
+  for (const [dayId, bucket] of Object.entries(result)) {
+    final[dayId] = Object.entries(bucket)
+      .map(([userId, counts]) => ({ userId, displayName: displayNames.get(userId) ?? 'A traveler', ...counts }))
+      .sort((a, b) => (b.itemCount + b.assetCount) - (a.itemCount + a.assetCount));
+  }
+  return final;
+};
+
 export const getPublicPath = async (tripId: string): Promise<string | null> => {
   return getCanonicalPublicPathFirebase(tripId);
 };

@@ -13,7 +13,19 @@ import {
   BlogComment,
   BlogReaction,
   BlogReactionEmoji,
+  BlogReactor as BlogReactorRow,
 } from './engagementTypes';
+
+// Shared by listReactors and getContributorsForDays (blog/postgresRepository.ts) — server-side
+// display name formatting, since there is no shared package between app/ and server/ to reuse the
+// client's formatMemberDisplayName (app/utils/memberDisplay.ts). Same precedence: name, then
+// email, then a generic fallback — never a bare empty string.
+export const displayNameFromRow = (row: { first_name: string | null; last_name: string | null; email: string | null }): string => {
+  const combined = `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim();
+  if (combined) return combined;
+  if (row.email) return row.email;
+  return 'A traveler';
+};
 
 // Phase 2 of docs/trip-blog-social-implementation-plan.md — the engagement spine's Postgres
 // (and, by extension, memory/pg-mem — see the note in blog/repository.ts) implementation. Ships
@@ -141,7 +153,13 @@ export const recomputeCounterRow = async (
   );
 };
 
-// FR-B1.2: one reaction per user per target, changeable — re-sending the same emoji clears it.
+// FR-B1.2: one reaction per user per target, changeable. Architecture §5.1 (revised after Phase 2):
+// PUT idempotently sets/replaces the reaction and can never invert state on retry — it does NOT
+// toggle off on a repeat call with the same emoji. That decision belongs to the client, which
+// already knows the caller's current reaction from the last GET/optimistic update: re-tapping the
+// same emoji issues a DELETE (clearReaction, below), a different emoji issues another PUT. A
+// toggling PUT would make retry-after-timeout unsafe — a client that resent a dropped PUT could
+// silently un-react the user.
 export const upsertReaction = async (
   tripId: string,
   userId: string,
@@ -149,19 +167,19 @@ export const upsertReaction = async (
   targetId: string,
   emoji: BlogReactionEmoji,
   audience: BlogAudience
-): Promise<{ cleared: boolean }> =>
+): Promise<void> =>
   withBlogTransaction(async (client) => {
     const column = targetColumn(targetKind);
     const existing = await client.query<{ id: string; emoji: string }>(
       `SELECT id, emoji FROM blog_reactions WHERE ${column} = $1 AND user_id = $2`,
       [targetId, userId]
     );
-    let cleared = false;
-    if (existing.rows[0] && existing.rows[0].emoji === emoji) {
-      await client.query('DELETE FROM blog_reactions WHERE id = $1', [existing.rows[0].id]);
-      cleared = true;
-    } else if (existing.rows[0]) {
-      await client.query('UPDATE blog_reactions SET emoji = $2, updated_at = NOW() WHERE id = $1', [existing.rows[0].id, emoji]);
+    if (existing.rows[0]) {
+      if (existing.rows[0].emoji !== emoji) {
+        await client.query('UPDATE blog_reactions SET emoji = $2, updated_at = NOW() WHERE id = $1', [existing.rows[0].id, emoji]);
+      }
+      // Same emoji as already stored: no-op write, but recomputeCounterRow below still runs —
+      // harmless, and keeps this function's behavior identical whether or not the row changed.
     } else {
       await client.query(
         `INSERT INTO blog_reactions (id, trip_id, target_kind, ${column}, user_id, emoji, audience)
@@ -170,7 +188,6 @@ export const upsertReaction = async (
       );
     }
     await recomputeCounterRow(client, tripId, targetKind, targetId, audience);
-    return { cleared };
   });
 
 export const clearReaction = async (
@@ -249,6 +266,39 @@ export const getEngagementSummaries = async (
     }
   }
   return summaries;
+};
+
+// GET .../reactions — the paginated reactor list, called only when a user expands the summary
+// (architecture §5.1). Carries identity, unlike the summary above, since it's explicitly opted
+// into rather than shipped on every page load.
+export const listReactors = async (
+  targetKind: BlogEngagementTargetKind,
+  targetId: string,
+  options: { cursor?: string; limit?: number } = {}
+): Promise<BlogReactorRow[]> => {
+  const column = targetColumn(targetKind);
+  const limit = Math.min(100, Math.max(1, options.limit ?? 20));
+  const cursorClause = options.cursor ? `AND r.created_at < (SELECT created_at FROM blog_reactions WHERE id = $3)` : '';
+  const params: unknown[] = [targetId, column === 'blog_day_id' ? 'day' : column === 'blog_item_id' ? 'item' : 'asset'];
+  // targetColumn already encodes target_kind via the column choice, but blog_reactions still has
+  // its own target_kind column for the composite-index/type-safety reasons noted on the table —
+  // filter on both so the query can't be fooled by an id that happens to collide across kinds.
+  if (options.cursor) params.push(options.cursor);
+  const result = await queryBlog<{ user_id: string; first_name: string | null; last_name: string | null; email: string | null; emoji: string; created_at: Date }>(
+    `SELECT r.user_id, u.first_name, u.last_name, u.email, r.emoji, r.created_at
+     FROM blog_reactions r
+     JOIN users u ON u.id = r.user_id
+     WHERE r.${column} = $1 AND r.target_kind = $2 ${cursorClause}
+     ORDER BY r.created_at DESC
+     LIMIT ${limit}`,
+    params
+  );
+  return result.rows.map((row) => ({
+    userId: String(row.user_id),
+    displayName: displayNameFromRow(row),
+    emoji: row.emoji as BlogReactionEmoji,
+    createdAt: new Date(row.created_at).toISOString(),
+  }));
 };
 
 export const createComment = async (input: {

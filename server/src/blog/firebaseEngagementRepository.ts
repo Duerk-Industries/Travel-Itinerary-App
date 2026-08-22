@@ -11,6 +11,7 @@ import {
   BlogEngagementTargetRef,
   BlogComment,
   BlogReactionEmoji,
+  BlogReactor,
 } from './engagementTypes';
 
 // Phase 2 of docs/trip-blog-social-implementation-plan.md — the Firestore side of the engagement
@@ -67,6 +68,10 @@ const COMMENT_MAX_LENGTH = 2000;
 const EDIT_WINDOW_SECONDS = 900;
 const HIDE_STRIKES_BEFORE_BLOCK = 3;
 
+// FR-B1.2 / architecture §5.1 (revised after Phase 2): PUT idempotently sets/replaces the
+// reaction — it never toggles off on a repeat call with the same emoji. The client decides
+// DELETE vs PUT based on the caller's currently-known reaction; see the matching comment in
+// postgresEngagementRepository.ts's upsertReaction for the retry-safety reasoning.
 export const upsertReaction = async (
   tripId: string,
   userId: string,
@@ -74,42 +79,26 @@ export const upsertReaction = async (
   targetId: string,
   emoji: BlogReactionEmoji,
   audience: BlogAudience
-): Promise<{ cleared: boolean }> => {
+): Promise<void> => {
   const db = getDb();
   const reactionRef = db.collection('blog_reactions').doc(reactionDocId(targetKind, targetId, userId));
   const counterRef = db.collection('blog_engagement_counters').doc(counterDocId(targetKind, targetId, audience));
-  return db.runTransaction(async (transaction) => {
+  await db.runTransaction(async (transaction) => {
     const existing = await transaction.get(reactionRef);
     const existingEmoji = existing.exists ? (existing.data() as any).emoji : null;
-    let cleared = false;
+    if (existingEmoji === emoji) return; // already set to this emoji — no-op
     const now = nowIso();
-    if (existingEmoji === emoji) {
-      transaction.delete(reactionRef);
-      transaction.set(counterRef, {
-        targetKind, targetId, tripId, audience,
-        reactionTotal: FieldValue.increment(-1),
-        // Nested-object form, not dot-notation ('reactionCounts.heart') — both are valid syntax
-        // for a `.set(data, {merge:true})` partial update in real Firestore, and this form keeps
-        // sibling emoji counts untouched via merge's recursive-nested-object behavior, same as
-        // the dot-notation form would.
-        reactionCounts: { [emoji]: FieldValue.increment(-1) },
-        updatedAt: now,
-      }, { merge: true });
-      cleared = true;
-    } else {
-      const delta = existingEmoji ? 0 : 1; // replacing an emoji doesn't change the total, only adding one does
-      transaction.set(reactionRef, { tripId, targetKind, targetId, userId, emoji, audience, createdAt: existing.exists ? (existing.data() as any).createdAt : now, updatedAt: now }, { merge: true });
-      const reactionCounts: Record<string, unknown> = { [emoji]: FieldValue.increment(1) };
-      if (existingEmoji) reactionCounts[existingEmoji] = FieldValue.increment(-1);
-      const counterUpdate: Record<string, unknown> = {
-        targetKind, targetId, tripId, audience,
-        reactionCounts,
-        updatedAt: now,
-      };
-      if (delta) counterUpdate.reactionTotal = FieldValue.increment(1);
-      transaction.set(counterRef, counterUpdate, { merge: true });
-    }
-    return { cleared };
+    const isNew = !existing.exists;
+    transaction.set(reactionRef, { tripId, targetKind, targetId, userId, emoji, audience, createdAt: existing.exists ? (existing.data() as any).createdAt : now, updatedAt: now }, { merge: true });
+    const reactionCounts: Record<string, unknown> = { [emoji]: FieldValue.increment(1) };
+    if (existingEmoji) reactionCounts[existingEmoji] = FieldValue.increment(-1);
+    const counterUpdate: Record<string, unknown> = {
+      targetKind, targetId, tripId, audience,
+      reactionCounts,
+      updatedAt: now,
+    };
+    if (isNew) counterUpdate.reactionTotal = FieldValue.increment(1); // replacing an existing emoji doesn't change the total, only adding one does
+    transaction.set(counterRef, counterUpdate, { merge: true });
   });
 };
 
@@ -170,6 +159,43 @@ export const getEngagementSummaries = async (
     }));
   }
   return summaries;
+};
+
+// Mirrors postgresEngagementRepository.ts's displayNameFromRow — no shared package between
+// app/ and server/ to reuse the client's formatMemberDisplayName.
+const displayNameFromUserDoc = (data: any): string => {
+  const combined = `${data?.firstName ?? ''} ${data?.lastName ?? ''}`.trim();
+  if (combined) return combined;
+  if (data?.email) return String(data.email);
+  return 'A traveler';
+};
+
+export const listReactors = async (
+  targetKind: BlogEngagementTargetKind,
+  targetId: string,
+  options: { cursor?: string; limit?: number } = {}
+): Promise<BlogReactor[]> => {
+  const limit = Math.min(100, Math.max(1, options.limit ?? 20));
+  const db = getDb();
+  const snap = await db.collection('blog_reactions')
+    .where('targetKind', '==', targetKind)
+    .where(targetField(targetKind), '==', targetId)
+    .get();
+  const rows = snap.docs
+    .map((doc: any) => doc.data() as any)
+    .filter((data: any) => !options.cursor || data.createdAt < options.cursor)
+    .sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+  const withNames = await Promise.all(rows.map(async (row: any) => {
+    const userSnap = await db.collection('users').doc(row.userId).get();
+    return {
+      userId: String(row.userId),
+      displayName: userSnap.exists ? displayNameFromUserDoc(userSnap.data()) : 'A traveler',
+      emoji: row.emoji as BlogReactionEmoji,
+      createdAt: row.createdAt,
+    };
+  }));
+  return withNames;
 };
 
 export const createComment = async (input: {

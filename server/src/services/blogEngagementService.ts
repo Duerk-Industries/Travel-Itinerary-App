@@ -7,6 +7,7 @@ import { BlogAudience } from '../blog/types';
 import {
   BlogCommentAuthorRole,
   BlogComment,
+  BlogEngagementSummary,
   BlogEngagementTargetKind,
   BlogReactionEmoji,
   ResolvedComment,
@@ -187,19 +188,26 @@ const assertNotStrikeBlocked = async (tripId: string, userId: string): Promise<v
 // Full write-path orchestration for a reaction — steps 2, 3, 5 (n/a for reactions), 8, then the
 // repository write. Step 4 (spam filtering) doesn't apply to reactions at all; step 7 (rate
 // limiting) is the caller's responsibility, as noted at the top of this file.
+// The audience set a given membership level may see summed together (architecture §3.2): a
+// traveler sees everything ever posted on this trip; a follower sees only what was ever posted
+// as followers/public. Used to build the "full summary" §5.1 says PUT/DELETE must return.
+export const visibleAudiencesForMembership = (membership: EngagementMembership): BlogAudience[] =>
+  membership === 'traveler' ? ['travelers', 'followers', 'public'] : ['followers', 'public'];
+
 export const reactToTarget = async (
   tripId: string,
   actorUserId: string,
   targetKind: BlogEngagementTargetKind,
   targetId: string,
   emoji: BlogReactionEmoji
-): Promise<{ target: ResolvedEngagementTarget; cleared: boolean }> => {
+): Promise<{ target: ResolvedEngagementTarget; summary: BlogEngagementSummary }> => {
   const membership = await resolveActorMembership(tripId, actorUserId);
   const target = await resolveEngagementTarget(tripId, actorUserId, membership, targetKind, targetId);
   if (!target) throw new BlogTargetNotFoundError();
   await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_REACTION_WRITE', requireConfiguredLimit: true });
-  const result = await blogEngagementRepository().upsertReaction(tripId, actorUserId, targetKind, targetId, emoji, target.effectiveAudience);
-  return { target, ...result };
+  await blogEngagementRepository().upsertReaction(tripId, actorUserId, targetKind, targetId, emoji, target.effectiveAudience);
+  const summaries = await blogEngagementRepository().getEngagementSummaries(actorUserId, [{ targetKind, targetId }], visibleAudiencesForMembership(membership));
+  return { target, summary: summaries[`${targetKind}:${targetId}`] };
 };
 
 export const clearReactionOnTarget = async (
@@ -207,13 +215,30 @@ export const clearReactionOnTarget = async (
   actorUserId: string,
   targetKind: BlogEngagementTargetKind,
   targetId: string
-): Promise<ResolvedEngagementTarget> => {
+): Promise<{ target: ResolvedEngagementTarget; summary: BlogEngagementSummary }> => {
   const membership = await resolveActorMembership(tripId, actorUserId);
   const target = await resolveEngagementTarget(tripId, actorUserId, membership, targetKind, targetId);
   if (!target) throw new BlogTargetNotFoundError();
   await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_REACTION_WRITE', requireConfiguredLimit: true });
   await blogEngagementRepository().clearReaction(tripId, actorUserId, targetKind, targetId, target.effectiveAudience);
-  return target;
+  const summaries = await blogEngagementRepository().getEngagementSummaries(actorUserId, [{ targetKind, targetId }], visibleAudiencesForMembership(membership));
+  return { target, summary: summaries[`${targetKind}:${targetId}`] };
+};
+
+// GET .../reactions — only called when a user expands the summary, never on page load
+// (architecture §5.1). No target-resolution gate beyond membership: the reactor list for a target
+// the caller can't see would leak its existence, so this still needs resolveEngagementTarget.
+export const listReactorsForTarget = async (
+  tripId: string,
+  actorUserId: string,
+  targetKind: BlogEngagementTargetKind,
+  targetId: string,
+  options: { cursor?: string; limit?: number } = {}
+) => {
+  const membership = await resolveActorMembership(tripId, actorUserId);
+  const target = await resolveEngagementTarget(tripId, actorUserId, membership, targetKind, targetId);
+  if (!target) throw new BlogTargetNotFoundError();
+  return blogEngagementRepository().listReactors(targetKind, targetId, options);
 };
 
 // Full write-path orchestration for a comment — steps 2, 3, 5, 6, 8, then the repository write.

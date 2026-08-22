@@ -4,8 +4,9 @@ import { isFeatureEnabled } from '../services/entitlementService';
 import { getApiLimitsConfig } from '../config/apiLimits';
 import { getBlogItemDescriptor, listBlogItemDescriptors } from '../blog/registry';
 import { blogMediaRepository, blogRepository } from '../blog/repository';
+import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogAudience } from '../blog/types';
-import { ensureUserInTrip, getCurrentDbProvider } from '../db';
+import { ensureUserInTrip, ensureUserCanReadTrip, getCurrentDbProvider } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
@@ -147,6 +148,40 @@ router.get('/:tripId/blog', async (req, res) => {
         (day as any).coverIsExplicit = false;
       }
       delete (day as any).coverAssetId;
+    }
+    // Phase 3 of docs/trip-blog-social-implementation-plan.md — batched engagement + contributors
+    // (architecture §5.4). One counter/own-reaction batch and one contributor batch for every
+    // target/day on the page, not a query per item. Additive only: with the reactions flag off,
+    // no `engagement`/`contributors` field appears at all, so a client that ignores them behaves
+    // exactly as it did before this phase — the NFR-1 compatibility guarantee in §5.4.
+    if (await isFeatureEnabled('trip_blog_social_layer') && await isFeatureEnabled('trip_blog_reactions')) {
+      const membership = await ensureUserCanReadTrip(req.params.tripId, userIdOf(req));
+      const visibleAudiences: BlogAudience[] = membership?.access === 'follower' ? ['followers', 'public'] : ['travelers', 'followers', 'public'];
+
+      const targets: { targetKind: 'day' | 'item' | 'asset'; targetId: string }[] = [];
+      for (const day of blog.days) {
+        targets.push({ targetKind: 'day', targetId: (day as any).id });
+        for (const item of (day.items as any[])) {
+          if (item.kindKey === 'core.text') targets.push({ targetKind: 'item', targetId: item.id });
+        }
+        for (const entry of mediaByDay.get(day.localDate) ?? []) {
+          targets.push({ targetKind: 'asset', targetId: entry.assetId });
+        }
+      }
+      const summaries = await blogEngagementRepository().getEngagementSummaries(userIdOf(req), targets, visibleAudiences);
+      const zeroSummary = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
+      const contributorsByDay = await blogRepository().getContributorsForDays(blog.days.map((day) => (day as any).id));
+
+      for (const day of blog.days) {
+        (day as any).engagement = summaries[`day:${(day as any).id}`] ?? zeroSummary;
+        (day as any).contributors = contributorsByDay[(day as any).id] ?? [];
+        for (const item of (day.items as any[])) {
+          if (item.kindKey === 'core.text') item.engagement = summaries[`item:${item.id}`] ?? zeroSummary;
+        }
+        for (const entry of mediaByDay.get(day.localDate) ?? []) {
+          entry.engagement = summaries[`asset:${entry.assetId}`] ?? zeroSummary;
+        }
+      }
     }
     // Return the canonical public path only after publication has completed. The alias is
     // generated during the publication/consent flow, so deriving it from the display name in

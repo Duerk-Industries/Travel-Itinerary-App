@@ -17,6 +17,7 @@ export interface BlogRepository {
   updateBlogDayMeta: typeof postgres.updateBlogDayMeta;
   updateBlogMeta: typeof postgres.updateBlogMeta;
   reorderBlogItems: typeof postgres.reorderBlogItems;
+  getContributorsForDays: typeof postgres.getContributorsForDays;
   getPublicPath: (tripId: string) => Promise<string | null>;
   isBlogPublic: (tripId: string) => Promise<boolean>;
   createModalityItem: (userId: string, tripId: string, kindKey: string, schemaVersion: number, audience: string, payload: any, dayDate: string) => Promise<{ itemId: string; payload: any }>;

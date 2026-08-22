@@ -3,6 +3,8 @@ import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogTextUpdateResult, BlogActivity, BlogGalleryItem, BlogDayMetaPatch, BlogDayMetaUpdateResult, BlogMastheadPatch } from './types';
+import { BlogContributor } from './engagementTypes';
+import { displayNameFromRow } from './postgresEngagementRepository';
 import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
 import { markSynced, shouldSkipSync } from './syncCoordination';
@@ -637,6 +639,71 @@ export const reorderBlogItems = async (userId: string, tripId: string, itemIds: 
     await queryBlog('UPDATE blog_items SET sort_key = $3, updated_at = NOW(), last_editor_user_id = $4 WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL', [itemIds[index], tripId, String(index).padStart(12, '0'), userId]);
   }
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+};
+
+// Phase 3 of docs/trip-blog-social-implementation-plan.md (B5 contributor strip): distinct
+// authors of non-deleted items + assets per day, ordered by total contribution count. Two
+// queries (item authorship, asset uploads), each bounded by the caller's day-id list — not a
+// query per day, matching the "fixed query count" requirement in architecture §5.4. `IN (…)`
+// with expanded placeholders, not `= ANY($1::uuid[])`, per the pg-mem compatibility notes
+// elsewhere in this codebase.
+export const getContributorsForDays = async (dayIds: string[]): Promise<Record<string, BlogContributor[]>> => {
+  const result: Record<string, BlogContributor[]> = {};
+  if (!dayIds.length) return result;
+  const placeholders = dayIds.map((_, i) => `$${i + 1}`).join(',');
+
+  const itemCounts = await queryBlog<{ blog_day_id: string; author_user_id: string; count: number }>(
+    `SELECT blog_day_id, author_user_id, COUNT(*)::int AS count
+     FROM blog_items
+     WHERE blog_day_id IN (${placeholders}) AND deleted_at IS NULL AND kind_key = 'core.text'
+     GROUP BY blog_day_id, author_user_id`,
+    dayIds
+  );
+  const assetCounts = await queryBlog<{ blog_day_id: string; uploader_user_id: string; count: number }>(
+    `SELECT i.blog_day_id, a.uploader_user_id, COUNT(*)::int AS count
+     FROM blog_media_assets a
+     JOIN blog_item_assets ia ON ia.asset_id = a.id
+     JOIN blog_items i ON i.id = ia.item_id
+     WHERE i.blog_day_id IN (${placeholders}) AND a.state = 'ready'
+     GROUP BY i.blog_day_id, a.uploader_user_id`,
+    dayIds
+  );
+
+  // dayId -> userId -> { itemCount, assetCount }
+  const byDay = new Map<string, Map<string, { itemCount: number; assetCount: number }>>();
+  const userIds = new Set<string>();
+  for (const row of itemCounts.rows) {
+    const day = byDay.get(row.blog_day_id) ?? new Map();
+    const entry = day.get(row.author_user_id) ?? { itemCount: 0, assetCount: 0 };
+    entry.itemCount += Number(row.count);
+    day.set(row.author_user_id, entry);
+    byDay.set(row.blog_day_id, day);
+    userIds.add(row.author_user_id);
+  }
+  for (const row of assetCounts.rows) {
+    const day = byDay.get(row.blog_day_id) ?? new Map();
+    const entry = day.get(row.uploader_user_id) ?? { itemCount: 0, assetCount: 0 };
+    entry.assetCount += Number(row.count);
+    day.set(row.uploader_user_id, entry);
+    byDay.set(row.blog_day_id, day);
+    userIds.add(row.uploader_user_id);
+  }
+  if (!userIds.size) return result;
+
+  const userIdList = Array.from(userIds);
+  const userPlaceholders = userIdList.map((_, i) => `$${i + 1}`).join(',');
+  const users = await queryBlog<{ id: string; first_name: string | null; last_name: string | null; email: string | null }>(
+    `SELECT id, first_name, last_name, email FROM users WHERE id IN (${userPlaceholders})`,
+    userIdList
+  );
+  const displayNames = new Map(users.rows.map((u) => [String(u.id), displayNameFromRow(u)]));
+
+  for (const [dayId, contributors] of byDay) {
+    result[dayId] = Array.from(contributors.entries())
+      .map(([userId, counts]) => ({ userId, displayName: displayNames.get(userId) ?? 'A traveler', ...counts }))
+      .sort((a, b) => (b.itemCount + b.assetCount) - (a.itemCount + a.assetCount));
+  }
+  return result;
 };
 
 export const getPublicPath = async (tripId: string): Promise<string | null> => {

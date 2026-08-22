@@ -109,24 +109,27 @@ class FakeFirestore {
 describe('blog engagement — Firebase adapter parity', () => {
   beforeEach(() => { fakeDb = new FakeFirestore(); });
 
-  it('upsertReaction: adds, replaces, and clears on repeat — mirrors FR-B1.2 against the Postgres adapter', async () => {
-    const first = await engagement.upsertReaction('trip-1', 'user-1', 'item', 'item-1', 'heart', 'public');
-    expect(first.cleared).toBe(false);
+  it('upsertReaction: adds and replaces, but never toggles off on repeat (architecture §5.1, revised after Phase 2)', async () => {
+    await engagement.upsertReaction('trip-1', 'user-1', 'item', 'item-1', 'heart', 'public');
     let counter = fakeDb.getDocData('blog_engagement_counters', 'item:item-1:public');
     expect(counter.reactionTotal).toBe(1);
     expect(counter.reactionCounts.heart).toBe(1);
 
     // Replacing the emoji: total stays 1, the old emoji's count drops, the new one's rises.
-    const replaced = await engagement.upsertReaction('trip-1', 'user-1', 'item', 'item-1', 'fire', 'public');
-    expect(replaced.cleared).toBe(false);
+    await engagement.upsertReaction('trip-1', 'user-1', 'item', 'item-1', 'fire', 'public');
     counter = fakeDb.getDocData('blog_engagement_counters', 'item:item-1:public');
     expect(counter.reactionTotal).toBe(1);
     expect(counter.reactionCounts.heart).toBe(0);
     expect(counter.reactionCounts.fire).toBe(1);
 
-    // Re-sending the same emoji clears it.
-    const cleared = await engagement.upsertReaction('trip-1', 'user-1', 'item', 'item-1', 'fire', 'public');
-    expect(cleared.cleared).toBe(true);
+    // Re-sending the same emoji is a no-op, NOT a clear — PUT must be idempotent so a retried
+    // request can never invert state. Clearing is exclusively clearReaction's job.
+    await engagement.upsertReaction('trip-1', 'user-1', 'item', 'item-1', 'fire', 'public');
+    counter = fakeDb.getDocData('blog_engagement_counters', 'item:item-1:public');
+    expect(counter.reactionTotal).toBe(1);
+    expect(counter.reactionCounts.fire).toBe(1);
+
+    await engagement.clearReaction('trip-1', 'user-1', 'item', 'item-1', 'public');
     counter = fakeDb.getDocData('blog_engagement_counters', 'item:item-1:public');
     expect(counter.reactionTotal).toBe(0);
   });

@@ -104,3 +104,21 @@ export interface BlogCommentStrikeState {
   strikeCount: number;
   blockedAt: string | null;
 }
+
+// GET .../reactions row — the reactor list. Architecture §5.1: "Only called when a user expands
+// the summary — never on page load," so this carries identity (unlike BlogEngagementSummary,
+// which never does) precisely because it's an explicit, opt-in request rather than part of the
+// default page payload.
+export interface BlogReactor {
+  userId: string;
+  displayName: string;
+  emoji: BlogReactionEmoji;
+  createdAt: string;
+}
+
+export interface BlogContributor {
+  userId: string;
+  displayName: string;
+  itemCount: number;
+  assetCount: number;
+}

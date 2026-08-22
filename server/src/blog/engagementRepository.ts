@@ -9,6 +9,7 @@ export interface BlogEngagementRepository {
   upsertReaction: typeof postgres.upsertReaction;
   clearReaction: typeof postgres.clearReaction;
   getEngagementSummaries: typeof postgres.getEngagementSummaries;
+  listReactors: typeof postgres.listReactors;
   createComment: typeof postgres.createComment;
   getCommentById: typeof postgres.getCommentById;
   updateCommentBody: typeof postgres.updateCommentBody;

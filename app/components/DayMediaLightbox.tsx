@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DialogShell from './DialogShell';
 import { BlogMediaPreview } from './BlogMediaPreview';
+import BlogReactionBar from './BlogReactionBar';
 
 type DayMediaLightboxProps = {
   visible: boolean;
@@ -17,9 +18,19 @@ type DayMediaLightboxProps = {
   mutedColor?: string;
   borderColor?: string;
   backgroundColor?: string;
+  // Phase 3 (B1): same engagement plumbing as DayMediaGallery — a small count badge on every
+  // grid tile that has reactions, and the full interactive reaction bar once a tile is expanded.
+  canEngage?: boolean;
+  getEngagementSummary?: (assetId: string) => any;
+  onToggleReaction?: (targetKind: 'asset', targetId: string, emoji: string) => Promise<void>;
+  onReactionError?: (message: string) => void;
+  theme?: any;
 };
 
-const DayMediaLightbox = ({ visible, items, onClose, dayDate, styles, textColor, mutedColor, borderColor = '#ccd4df', backgroundColor }: DayMediaLightboxProps) => {
+const DayMediaLightbox = ({
+  visible, items, onClose, dayDate, styles, textColor, mutedColor, borderColor = '#ccd4df', backgroundColor,
+  canEngage = false, getEngagementSummary, onToggleReaction, onReactionError, theme,
+}: DayMediaLightboxProps) => {
   const [expandedIndex, setExpandedIndex] = useState(null);
 
   const close = () => {
@@ -45,11 +56,29 @@ const DayMediaLightbox = ({ visible, items, onClose, dayDate, styles, textColor,
           </TouchableOpacity>
           <BlogMediaPreview item={expandedItem} backgroundColor={backgroundColor} />
           {expandedItem.caption ? <Text style={{ color: mutedColor, marginTop: 6 }}>{expandedItem.caption}</Text> : null}
+          {getEngagementSummary && onToggleReaction ? (
+            <View style={{ marginTop: 6 }}>
+              <BlogReactionBar
+                testID={`lightbox-reactions-${expandedItem.assetId}`}
+                targetKind="asset"
+                targetId={expandedItem.assetId}
+                summary={getEngagementSummary(expandedItem.assetId)}
+                canEngage={canEngage}
+                onToggle={onToggleReaction}
+                onError={onReactionError}
+                textColor={textColor}
+                mutedColor={mutedColor}
+                theme={theme}
+              />
+            </View>
+          ) : null}
         </View>
       ) : (
         <ScrollView style={{ maxHeight: 480 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {items.map((item, index) => (
+            {items.map((item, index) => {
+              const summary = getEngagementSummary?.(item.assetId);
+              return (
               <TouchableOpacity
                 key={item.id}
                 testID={`day-media-tile-${item.id}`}
@@ -64,8 +93,18 @@ const DayMediaLightbox = ({ visible, items, onClose, dayDate, styles, textColor,
                     <Text style={{ fontSize: 24 }}>▶️</Text>
                   </View>
                 ) : null}
+                {summary && summary.reactionTotal > 0 ? (
+                  <View
+                    testID={`day-media-tile-reaction-badge-${item.id}`}
+                    style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 2 }}
+                  >
+                    <Text style={{ fontSize: 10 }}>❤️</Text>
+                    <Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>{summary.reactionTotal}</Text>
+                  </View>
+                ) : null}
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         </ScrollView>
       )}

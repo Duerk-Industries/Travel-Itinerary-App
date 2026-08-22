@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BlogMediaPreview } from './BlogMediaPreview';
+import BlogReactionBar from './BlogReactionBar';
 
 type DayMediaGalleryProps = {
   items: any[];
@@ -22,6 +23,14 @@ type DayMediaGalleryProps = {
   borderColor?: string;
   backgroundColor?: string;
   styles?: any;
+  // Phase 3 (B1): reaction bar for the active tile. `getEngagementSummary` reads from the parent's
+  // normalized engagement store (useBlogEngagement) keyed by the item's `assetId` — every entry
+  // here (gallery member or standalone) carries one, per the flattening in tripBlog.tsx.
+  canEngage?: boolean;
+  getEngagementSummary?: (assetId: string) => any;
+  onToggleReaction?: (targetKind: 'asset', targetId: string, emoji: string) => Promise<void>;
+  onReactionError?: (message: string) => void;
+  theme?: any;
 };
 
 const DayMediaGallery = ({
@@ -40,6 +49,11 @@ const DayMediaGallery = ({
   borderColor,
   backgroundColor,
   styles,
+  canEngage = false,
+  getEngagementSummary,
+  onToggleReaction,
+  onReactionError,
+  theme,
 }: DayMediaGalleryProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -68,6 +82,23 @@ const DayMediaGallery = ({
         <BlogMediaPreview item={activeItem} backgroundColor={backgroundColor} />
       </TouchableOpacity>
       {activeItem.caption ? <Text testID="day-media-caption" style={{ color: mutedColor, marginTop: 4 }}>{activeItem.caption}</Text> : null}
+      {getEngagementSummary && onToggleReaction ? (
+        <View style={{ marginTop: 4 }}>
+          <BlogReactionBar
+            testID={`day-media-reactions-${activeItem.assetId}`}
+            targetKind="asset"
+            targetId={activeItem.assetId}
+            summary={getEngagementSummary(activeItem.assetId)}
+            canEngage={canEngage}
+            onToggle={onToggleReaction}
+            onError={onReactionError}
+            textColor={textColor}
+            mutedColor={mutedColor}
+            theme={theme}
+            size="compact"
+          />
+        </View>
+      ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {items.length > 1 ? (

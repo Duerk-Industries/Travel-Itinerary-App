@@ -2,6 +2,7 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { createHash } from 'crypto';
 import { atomicIncrementApiUsageIfUnderLimit } from '../db';
 import { isLocalEnv } from '../env';
+import { getApiCacheSetting } from '../config/apiLimits';
 
 const PROVIDER = 'HTTP_RATE_LIMIT';
 
@@ -113,6 +114,22 @@ export const reserveActivitiesBulkSaveRateLimit = async (
     identities: [`user:${userId}`, ip ? `ip:${ip}` : null],
     limit: parsePositiveInt(process.env.ACTIVITIES_BULK_RATE_LIMIT_MAX, testSafeDefault(20)),
     windowMs: parsePositiveInt(process.env.ACTIVITIES_BULK_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1000),
+  });
+};
+
+// Phase 3 of docs/trip-blog-social-implementation-plan.md — architecture §4 step 7 ("Actor/IP
+// rate limit"), the one resolution step Phase 2's blogEngagementService.ts explicitly left for
+// the route layer. Reads reactionsPerMinutePerUser from caching.tripBlog (server/config/api-limits.yaml),
+// not a route-local constant, per the "route-local numeric constants are forbidden" convention.
+export const reserveBlogReactionRateLimit = async (
+  userId: string,
+  ip: string | null | undefined,
+): Promise<void> => {
+  await reserveRequestRateLimits({
+    name: 'blog_reaction',
+    identities: [`user:${userId}`, ip ? `ip:${ip}` : null],
+    limit: testSafeDefault(Number(getApiCacheSetting('tripBlog', 'reactionsPerMinutePerUser') ?? 60)),
+    windowMs: 60_000,
   });
 };
 

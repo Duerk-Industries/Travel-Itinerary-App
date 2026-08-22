@@ -145,13 +145,18 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
     it('a follower reacting to a travelers-only item gets "not found," not "forbidden"', async () => {
       await expect(reactToTarget(tripId, followerId, 'item', travelersItemId, 'heart')).rejects.toBeInstanceOf(BlogTargetNotFoundError);
     });
-    it('a traveler can react, and re-sending the same emoji clears it (FR-B1.2)', async () => {
+    it('a traveler can react; PUT is idempotent (repeat calls never invert state — architecture §5.1)', async () => {
       const first = await reactToTarget(tripId, travelerId, 'item', publicItemId, 'heart');
-      expect(first.cleared).toBe(false);
+      expect(first.summary.reactionTotal).toBe(1);
+      expect(first.summary.userReaction).toBe('heart');
+      // Replaying the same PUT must NOT toggle it off — that would make a retried request unsafe.
       const second = await reactToTarget(tripId, travelerId, 'item', publicItemId, 'heart');
-      expect(second.cleared).toBe(true);
-      const summaries = await blogEngagementRepository().getEngagementSummaries(travelerId, [{ targetKind: 'item', targetId: publicItemId }], ['travelers', 'followers', 'public']);
-      expect(summaries['item:' + publicItemId].reactionTotal).toBe(0);
+      expect(second.summary.reactionTotal).toBe(1);
+      expect(second.summary.userReaction).toBe('heart');
+      // Clearing is exclusively DELETE's job (clearReactionOnTarget).
+      const cleared = await clearReactionOnTarget(tripId, travelerId, 'item', publicItemId);
+      expect(cleared.summary.reactionTotal).toBe(0);
+      expect(cleared.summary.userReaction).toBeNull();
     });
     it('a follower can react to a public item, and counts sum correctly across the traveler+follower viewers', async () => {
       await reactToTarget(tripId, travelerId, 'item', publicItemId, 'fire');
