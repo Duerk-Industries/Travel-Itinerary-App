@@ -405,9 +405,9 @@ Resolution order for every engagement write, in `blogEngagementService`:
    `blogModerationService.checkSpam(body)` before persistence. High-confidence spam is marked
    `hidden_at` immediately and logged as an automated strike.
 5. **Trip-level toggles** — `follower_comments_enabled` for follower comment creation.
-5. **Strike block** — `blog_comment_strikes.blocked_at` for comment creation.
-6. **Actor/IP rate limit** — `httpRateLimitService.ts`, keyed per NFR-5.
-7. **Aggregate reservation** — reserve the named `TRIP_BLOG_SOCIAL_API` and, for writes, storage
+6. **Strike block** — `blog_comment_strikes.blocked_at` for comment creation.
+7. **Actor/IP rate limit** — `httpRateLimitService.ts`, keyed per NFR-5.
+8. **Aggregate reservation** — reserve the named `TRIP_BLOG_SOCIAL_API` and, for writes, storage
    operation units through `reserveApiUsageOrThrow` before repository work (§9.2).
 
 Step 3 is the load-bearing one. It is implemented as a single function,

@@ -137,6 +137,7 @@ program. **P2** = follow-on.
 | A9 | **Voice notes** | P2 | Record → upload as `media.audio` (kind already registered) → transcribe → offer the transcript as a text draft. The fastest capture path while actually travelling. |
 | A10 | **Quick capture entry point** | P1 | Promote the existing `POST /blog/share-intent` to a first-class app-level "Add to blog" action and OS share-sheet target, so capture doesn't require navigating to the tab. |
 | A11 | **Offline queue** | P2 | Entries and photos composed without signal queue locally and flush on reconnect. Travel is the offline-heavy use case by definition. |
+| A12 | **Group Journaling Prompts** | P1 | Prompts that rotate through travelers, asking for different perspectives (e.g., "Sam, what was the best thing you ate today?"). Encourages multi-author trips and reduces Chronicler burnout. |
 
 ### Theme B — More fun to collaborate
 
@@ -157,6 +158,7 @@ program. **P2** = follow-on.
 | B13 | **Memory Lane** | P1 | On the anniversary of a trip (or specific high-engagement days), notify travelers and followers of a published blog with a "Year ago today" recap link. High retention value for the Returner persona. |
 | B14 | **Reaction Bursts** | P2 | Visual UI "burst" animation when a user reacts or when a new reaction is received via socket. Enhances the "Fun" and "Collaboration" objectives. |
 | B15 | **Collaborative Star Curation** | P1 | Travelers can "Star" specific photos or items to explicitly include them in the "Top Highlights" section of the public Recap, even if they aren't the most reacted. |
+| B16 | **Engagement Milestones** | P2 | Toast notifications/celebrations when a trip hits engagement milestones (e.g., "50 hearts!"). Gamifies collaboration and encourages "Lurkers" to react. |
 
 ### Theme C — More informative about what happened
 
