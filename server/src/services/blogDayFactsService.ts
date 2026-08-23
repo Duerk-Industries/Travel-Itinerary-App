@@ -6,6 +6,7 @@ import { resolveActorMembership, visibleAudiencesForMembership } from './blogEng
 import { BlogTargetNotFoundError } from './blogEngagementErrors';
 import { createHash } from 'crypto';
 import { createBlogReadUrl } from './blogStorageClient';
+import { findBundledAirport } from './airportCatalog';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §7.1.
 // One service, two projections over the same source set: `facts` (aggregates for the strip) and
@@ -74,7 +75,7 @@ const factsCache = createTtlCache<BlogDayFactsResult>({ metricName: 'blog_day_fa
 
 export const clearDayFactsCacheForTests = (): void => factsCache.clear();
 
-type FlightRow = { id: string; departure_date: string; departure_time: string | null; arrival_time: string | null; departure_location: string | null; arrival_location: string | null; status: string | null };
+type FlightRow = { id: string; departure_date: string; departure_time: string | null; arrival_time: string | null; departure_location: string | null; arrival_location: string | null; departure_airport_code: string | null; arrival_airport_code: string | null; status: string | null };
 type LodgingRow = { id: string; name: string; check_in_date: string; check_out_date: string; address: string | null; status: string | null };
 type ActivityRow = { id: string; name: string; start_time: string | null; start_location: string | null; status: string | null };
 type CarRentalRow = { id: string; vendor: string | null; pickup_date: string; dropoff_date: string; pickup_location: string | null; dropoff_location: string | null; status: string | null };
@@ -115,96 +116,29 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
     });
   }
 
-  // Media facts — the one source set both membership levels ever see, itself still filtered to
-  // the audiences that membership level can see (architecture §3.2's own visibility rule, reused
-  // rather than re-derived).
-  const visibleAudiences = visibleAudiencesForMembership(membership);
-  const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 2}`).join(',');
-  const mediaRows = await queryBlog<MediaRow>(
-    `SELECT a.id, a.captured_at, a.captured_lat, a.captured_lng, a.media_kind_key
-     FROM blog_media_assets a
-     JOIN blog_item_assets ia ON ia.asset_id = a.id
-     JOIN blog_items i ON i.id = ia.item_id
-     WHERE i.blog_day_id = $1 AND i.deleted_at IS NULL AND i.audience IN (${audiencePlaceholders}) AND a.state = 'ready'`,
-    [dayId, ...visibleAudiences]
-  );
-  if (mediaRows.rows.length) {
-    const photoCount = mediaRows.rows.filter((r) => r.media_kind_key === 'photo').length;
-    const videoCount = mediaRows.rows.filter((r) => r.media_kind_key === 'video').length;
-    const captured = mediaRows.rows.map((r) => r.captured_at).filter((v): v is Date => v != null).map((v) => new Date(v).getTime());
-    const parts = [photoCount ? `${photoCount} photo${photoCount === 1 ? '' : 's'}` : null, videoCount ? `${videoCount} video${videoCount === 1 ? '' : 's'}` : null].filter(Boolean);
-    let value = parts.join(', ');
-    if (captured.length >= 2) {
-      const span = (Math.max(...captured) - Math.min(...captured)) / 3_600_000;
-      if (span > 0) value += ` over ${span < 1 ? '<1 hr' : `${Math.round(span)} hr${Math.round(span) === 1 ? '' : 's'}`}`;
-    }
-    if (value) {
-      facts.push({ key: 'media', label: 'Photos & videos', value, sourceTypes: ['blog_media_assets'], confidence: 'high', asOf });
-    }
-    // Distance — straight-line only, and only ever derived from geotagged photos (the one
-    // coordinate source that actually exists today; see captured_lat/captured_lng, PR-3). Omitted
-    // entirely rather than a zero when fewer than two points are geotagged.
-    const points = mediaRows.rows
-      .filter((r) => r.captured_lat != null && r.captured_lng != null && r.captured_at != null)
-      .sort((a, b) => new Date(a.captured_at!).getTime() - new Date(b.captured_at!).getTime())
-      .map((r) => ({ lat: Number(r.captured_lat), lng: Number(r.captured_lng) }));
-    if (points.length >= 2) {
-      let totalKm = 0;
-      for (let i = 1; i < points.length; i += 1) totalKm += haversineKm(points[i - 1], points[i]);
-      if (totalKm > 0) {
-        facts.push({ key: 'distance', label: 'Distance covered', value: `approx. ${totalKm < 1 ? '<1' : Math.round(totalKm)} km`, sourceTypes: ['blog_media_assets'], confidence: 'approx', asOf });
-      }
-
-      // Day Map Artifact (Phase 5)
-      const pointsData = points.map(p => `${p.lat},${p.lng}`).sort().join('|');
-      const pointsHash = createHash('md5').update(pointsData).digest('hex');
-      const artifact = await queryBlog<{ gcs_path: string }>(
-        'SELECT gcs_path FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3',
-        [tripId, dayDate, pointsHash]
-      );
-      if (artifact.rows[0]) {
-        // The stored artifact is a bare object path (blog_day_map_artifacts.gcs_path), not a
-        // fetchable URL — signed the same way every blog photo already is (architecture §14.1:
-        // "served through the existing signed-URL/CDN path"). A signing failure (object missing,
-        // credentials misconfigured) degrades this one fact away rather than failing the whole
-        // request — the day card must still render without its map, per the "assert budget
-        // exhaustion degrades the card rather than erroring the page" contract this same section
-        // sets for the render job's own failure mode.
-        const mapUrl = await createBlogReadUrl(artifact.rows[0].gcs_path).catch(() => null);
-        if (mapUrl) {
-          facts.push({
-            key: 'dayMap',
-            label: 'Day Map',
-            value: mapUrl,
-            sourceTypes: ['blog_day_map_artifacts'],
-            confidence: 'high',
-            asOf,
-          });
-        }
-      }
-    }
-    for (const row of mediaRows.rows) {
-      timeline.push({
-        id: `media:${row.id}`,
-        kind: 'media',
-        time: row.captured_at ? new Date(row.captured_at).toISOString() : null,
-        label: row.media_kind_key === 'video' ? 'Video' : 'Photo',
-        sourceTypes: ['blog_media_assets'],
-        confidence: 'high',
-        asOf,
-      });
-    }
-  }
-
-  // Itinerary-derived facts (places, planned vs. actual) and the itinerary side of the timeline
-  // are traveler-only. Flights/lodgings/activities/car rentals carry no audience column at all —
-  // there is no per-row visibility rule to apply, so the only safe choice is to exclude this
-  // entire source set for a follower rather than guess at a projection (architecture §7.1: "filtered
-  // before derivation so it cannot reveal a source the viewer is not authorized to see").
+  // Itinerary-derived facts (distance, places, planned vs. actual) and the itinerary side of the
+  // timeline are traveler-only. Flights/lodgings/activities/car rentals carry no audience column
+  // at all — there is no per-row visibility rule to apply, so the only safe choice is to exclude
+  // this entire source set for a follower rather than guess at a projection (architecture §7.1:
+  // "filtered before derivation so it cannot reveal a source the viewer is not authorized to
+  // see"). Fetched before the media block below so a traveler's distance fact can combine flight
+  // legs with photo geotags into one chronological route rather than two disconnected numbers.
+  let flights: { rows: FlightRow[] } = { rows: [] };
+  let lodgings: { rows: LodgingRow[] } = { rows: [] };
+  let activities: { rows: ActivityRow[] } = { rows: [] };
+  let carRentals: { rows: CarRentalRow[] } = { rows: [] };
+  // Flight legs resolved to real coordinates via the bundled IATA-code dataset
+  // (services/airportCatalog.ts's `data/airport_codes.json`, ~3,300 airports) — the one itinerary
+  // source that actually has a stable code to geocode from with no network call, no API budget and
+  // no per-row lat/lng column to add. Lodgings/activities/car rentals only ever store a free-text
+  // address (see staticMapRoutes.ts's own note on this), so they still can't contribute a real
+  // point without a geocoding provider this codebase doesn't have — see the Places fact below,
+  // which uses their text as-is instead of pretending to a precision they don't have.
+  const flightPoints: Array<{ lat: number; lng: number; time: number }> = [];
   if (membership === 'traveler') {
-    const [flights, lodgings, activities, carRentals] = await Promise.all([
+    [flights, lodgings, activities, carRentals] = await Promise.all([
       queryBlog<FlightRow>(
-        `SELECT id, departure_date, departure_time, arrival_time, departure_location, arrival_location, status
+        `SELECT id, departure_date, departure_time, arrival_time, departure_location, arrival_location, departure_airport_code, arrival_airport_code, status
          FROM flights WHERE trip_id = $1 AND departure_date = $2::date`,
         [tripId, dayDate]
       ),
@@ -225,6 +159,114 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
     ]);
 
     for (const row of flights.rows) {
+      const departure = findBundledAirport(row.departure_airport_code);
+      const arrival = findBundledAirport(row.arrival_airport_code);
+      const departureTime = row.departure_time ? Date.parse(`${dayDate}T${row.departure_time}`) : NaN;
+      // Arrival can land after midnight local time relative to departure — not modeled here (the
+      // dataset has no timezone per airport to compute that correctly), so arrival is always
+      // sorted just after departure rather than risking a wrong day-crossing guess.
+      const arrivalTime = Number.isFinite(departureTime) ? departureTime + 1 : Date.parse(`${dayDate}T${row.arrival_time ?? '23:59'}`);
+      if (departure?.lat != null && departure?.lng != null) {
+        flightPoints.push({ lat: departure.lat, lng: departure.lng, time: Number.isFinite(departureTime) ? departureTime : 0 });
+      }
+      if (arrival?.lat != null && arrival?.lng != null) {
+        flightPoints.push({ lat: arrival.lat, lng: arrival.lng, time: Number.isFinite(arrivalTime) ? arrivalTime : 1 });
+      }
+    }
+  }
+
+  // Media facts — the one source set both membership levels ever see, itself still filtered to
+  // the audiences that membership level can see (architecture §3.2's own visibility rule, reused
+  // rather than re-derived).
+  const visibleAudiences = visibleAudiencesForMembership(membership);
+  const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 2}`).join(',');
+  const mediaRows = await queryBlog<MediaRow>(
+    `SELECT a.id, a.captured_at, a.captured_lat, a.captured_lng, a.media_kind_key
+     FROM blog_media_assets a
+     JOIN blog_item_assets ia ON ia.asset_id = a.id
+     JOIN blog_items i ON i.id = ia.item_id
+     WHERE i.blog_day_id = $1 AND i.deleted_at IS NULL AND i.audience IN (${audiencePlaceholders}) AND a.state = 'ready'`,
+    [dayId, ...visibleAudiences]
+  );
+  const mediaPoints = mediaRows.rows
+    .filter((r) => r.captured_lat != null && r.captured_lng != null && r.captured_at != null)
+    .map((r) => ({ lat: Number(r.captured_lat), lng: Number(r.captured_lng), time: new Date(r.captured_at!).getTime() }));
+
+  if (mediaRows.rows.length) {
+    const photoCount = mediaRows.rows.filter((r) => r.media_kind_key === 'photo').length;
+    const videoCount = mediaRows.rows.filter((r) => r.media_kind_key === 'video').length;
+    const captured = mediaRows.rows.map((r) => r.captured_at).filter((v): v is Date => v != null).map((v) => new Date(v).getTime());
+    const parts = [photoCount ? `${photoCount} photo${photoCount === 1 ? '' : 's'}` : null, videoCount ? `${videoCount} video${videoCount === 1 ? '' : 's'}` : null].filter(Boolean);
+    let value = parts.join(', ');
+    if (captured.length >= 2) {
+      const span = (Math.max(...captured) - Math.min(...captured)) / 3_600_000;
+      if (span > 0) value += ` over ${span < 1 ? '<1 hr' : `${Math.round(span)} hr${Math.round(span) === 1 ? '' : 's'}`}`;
+    }
+    if (value) {
+      facts.push({ key: 'media', label: 'Photos & videos', value, sourceTypes: ['blog_media_assets'], confidence: 'high', asOf });
+    }
+    for (const row of mediaRows.rows) {
+      timeline.push({
+        id: `media:${row.id}`,
+        kind: 'media',
+        time: row.captured_at ? new Date(row.captured_at).toISOString() : null,
+        label: row.media_kind_key === 'video' ? 'Video' : 'Photo',
+        sourceTypes: ['blog_media_assets'],
+        confidence: 'high',
+        asOf,
+      });
+    }
+  }
+
+  // Distance — straight-line only (PRD Q4), never a Directions-API route. Combines geotagged
+  // photos (both memberships, when present) with resolved flight-leg airport coordinates
+  // (travelers only) into one chronological route. A flight leg alone already crosses a real
+  // distance, so this is not gated on media existing the way it used to be. Omitted entirely
+  // rather than a zero when fewer than two points are available from either source.
+  const distancePoints = [...mediaPoints, ...flightPoints].sort((a, b) => a.time - b.time);
+  if (distancePoints.length >= 2) {
+    let totalKm = 0;
+    for (let i = 1; i < distancePoints.length; i += 1) totalKm += haversineKm(distancePoints[i - 1], distancePoints[i]);
+    if (totalKm > 0) {
+      const sourceTypes = [mediaPoints.length ? 'blog_media_assets' : null, flightPoints.length ? 'flights' : null, flightPoints.length ? 'airport_dataset' : null].filter((t): t is string => t != null);
+      facts.push({ key: 'distance', label: 'Distance covered', value: `approx. ${totalKm < 1 ? '<1' : Math.round(totalKm)} km`, sourceTypes, confidence: 'approx', asOf });
+    }
+  }
+
+  // Day Map Artifact (Phase 5) — keyed on media geotags only, matching exactly what
+  // blogBackgroundWorker.ts's render job hashes (it has no flight-leg awareness), so this lookup
+  // must use the same media-only point set or it will simply never find the stored artifact.
+  if (mediaPoints.length >= 2) {
+    const pointsData = mediaPoints.map((p) => `${p.lat},${p.lng}`).sort().join('|');
+    const pointsHash = createHash('md5').update(pointsData).digest('hex');
+    const artifact = await queryBlog<{ gcs_path: string }>(
+      'SELECT gcs_path FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3',
+      [tripId, dayDate, pointsHash]
+    );
+    if (artifact.rows[0]) {
+      // The stored artifact is a bare object path (blog_day_map_artifacts.gcs_path), not a
+      // fetchable URL — signed the same way every blog photo already is (architecture §14.1:
+      // "served through the existing signed-URL/CDN path"). A signing failure (object missing,
+      // credentials misconfigured) degrades this one fact away rather than failing the whole
+      // request — the day card must still render without its map, per the "assert budget
+      // exhaustion degrades the card rather than erroring the page" contract this same section
+      // sets for the render job's own failure mode.
+      const mapUrl = await createBlogReadUrl(artifact.rows[0].gcs_path).catch(() => null);
+      if (mapUrl) {
+        facts.push({
+          key: 'dayMap',
+          label: 'Day Map',
+          value: mapUrl,
+          sourceTypes: ['blog_day_map_artifacts'],
+          confidence: 'high',
+          asOf,
+        });
+      }
+    }
+  }
+
+  if (membership === 'traveler') {
+    for (const row of flights.rows) {
       timeline.push({ id: `flight:${row.id}`, kind: 'flight', time: row.departure_time ?? null, label: `${row.departure_location ?? 'Departure'} → ${row.arrival_location ?? 'Arrival'}`, status: row.status, sourceTypes: ['flights'], confidence: 'high', asOf });
     }
     for (const row of lodgings.rows) {
@@ -240,6 +282,12 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
     }
 
     const places = new Set<string>();
+    for (const row of flights.rows) {
+      const departureLabel = findBundledAirport(row.departure_airport_code)?.label ?? row.departure_location;
+      const arrivalLabel = findBundledAirport(row.arrival_airport_code)?.label ?? row.arrival_location;
+      if (departureLabel) places.add(departureLabel.trim());
+      if (arrivalLabel) places.add(arrivalLabel.trim());
+    }
     for (const row of lodgings.rows) if (row.address) places.add(row.address.trim());
     for (const row of activities.rows) if (row.start_location) places.add(row.start_location.trim());
     for (const row of carRentals.rows) {
@@ -251,7 +299,12 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
         key: 'places',
         label: 'Places',
         value: [...places].slice(0, 5).join(', ') + (places.size > 5 ? `, +${places.size - 5} more` : ''),
-        sourceTypes: ['lodgings', 'tours', 'car_rentals'].filter((t) => (t === 'lodgings' ? lodgings.rows.some((r) => r.address) : t === 'tours' ? activities.rows.some((r) => r.start_location) : carRentals.rows.some((r) => r.pickup_location || r.dropoff_location))),
+        sourceTypes: ['flights', 'lodgings', 'tours', 'car_rentals'].filter((t) => (
+          t === 'flights' ? flights.rows.length > 0
+            : t === 'lodgings' ? lodgings.rows.some((r) => r.address)
+            : t === 'tours' ? activities.rows.some((r) => r.start_location)
+            : carRentals.rows.some((r) => r.pickup_location || r.dropoff_location)
+        )),
         confidence: 'high',
         asOf,
       });

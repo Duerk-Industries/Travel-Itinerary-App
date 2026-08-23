@@ -15,8 +15,10 @@ describe('GET /:tripId/blog/days/:dayDate/facts', () => {
   const follower = { firstName: 'Facts', lastName: 'Follower', email: 'blog-day-facts-follower@example.com', password: 'Password123!' };
 
   let travelerToken = '';
+  let travelerId = '';
   let followerToken = '';
   let tripId = '';
+  let flightTripId = '';
   const dayDate = '2027-03-05';
 
   beforeAll(async () => {
@@ -27,7 +29,9 @@ describe('GET /:tripId/blog/days/:dayDate/facts', () => {
 
     await registerWebUser(traveler);
     await confirmWebUser(traveler.email);
-    travelerToken = (await loginWebUser(traveler)).body.token;
+    const travelerLogin = await loginWebUser(traveler);
+    travelerToken = travelerLogin.body.token;
+    travelerId = travelerLogin.body.user.id;
 
     await registerWebUser(follower);
     await confirmWebUser(follower.email);
@@ -113,6 +117,109 @@ describe('GET /:tripId/blog/days/:dayDate/facts', () => {
     const res = await request(app).get(`/api/trips/${tripId}/blog/days/${dayDate}/facts`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
     expect(res.body.facts.find((f: any) => f.key === 'media')).toBeUndefined();
     expect(res.body.facts.find((f: any) => f.key === 'distance')).toBeUndefined();
+  });
+
+  it('geocodes flight legs from the bundled airport dataset into a distance fact and Places', async () => {
+    const flightDate = '2027-03-06';
+    const flightTrip = await request(app)
+      .post('/api/trips/wizard')
+      .set('Authorization', `Bearer ${travelerToken}`)
+      .send({ name: 'Flight Facts Trip', startDate: flightDate, endDate: flightDate, participants: [] })
+      .expect(201);
+    flightTripId = flightTrip.body.trip?.id ?? flightTrip.body.id;
+    await request(app).get(`/api/trips/${flightTripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+
+    await request(app)
+      .post('/api/transfers')
+      .set('Authorization', `Bearer ${travelerToken}`)
+      .send({
+        tripId: flightTripId,
+        passengerIds: [travelerId],
+        passengerName: 'Facts Passenger',
+        departureDate: flightDate,
+        departureLocation: 'New York',
+        departureAirportCode: 'JFK',
+        departureTime: '08:00',
+        arrivalLocation: 'Los Angeles',
+        arrivalAirportCode: 'LAX',
+        arrivalTime: '11:30',
+        cost: 400,
+        carrier: 'AA',
+        flightNumber: 'AA100',
+        bookingReference: 'FACTSREF',
+      })
+      .expect(201);
+
+    const res = await request(app).get(`/api/trips/${flightTripId}/blog/days/${flightDate}/facts`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+
+    const distance = res.body.facts.find((f: any) => f.key === 'distance');
+    expect(distance).toBeTruthy();
+    expect(distance.confidence).toBe('approx');
+    expect(distance.sourceTypes).toEqual(expect.arrayContaining(['flights', 'airport_dataset']));
+    // Real JFK-LAX straight-line distance is ~3,983 km; a wide tolerance keeps this robust to
+    // rounding without pinning to floating-point-exact haversine output.
+    const km = Number(String(distance.value).match(/(\d+)/)?.[1] ?? 0);
+    expect(km).toBeGreaterThan(3800);
+    expect(km).toBeLessThan(4100);
+
+    const places = res.body.facts.find((f: any) => f.key === 'places');
+    expect(places).toBeTruthy();
+    expect(places.value).toContain('New York (JFK)');
+    expect(places.value).toContain('Los Angeles (LAX)');
+    expect(places.sourceTypes).toContain('flights');
+
+    const flightEntry = res.body.timeline.find((t: any) => t.kind === 'flight');
+    expect(flightEntry).toBeTruthy();
+    expect(flightEntry.label.toUpperCase()).toBe('NEW YORK → LOS ANGELES');
+  });
+
+  it('a follower gets no distance fact from a traveler-only flight leg, even though it exists', async () => {
+    const flightDate = '2027-03-06';
+    expect(flightTripId).toBeTruthy();
+    const followerId = (await loginWebUser(follower)).body.user.id;
+    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [randomUUID(), flightTripId, followerId]);
+
+    const res = await request(app).get(`/api/trips/${flightTripId}/blog/days/${flightDate}/facts`).set('Authorization', `Bearer ${followerToken}`).expect(200);
+    expect(res.body.facts.find((f: any) => f.key === 'distance')).toBeUndefined();
+    expect(res.body.timeline.find((t: any) => t.kind === 'flight')).toBeUndefined();
+  });
+
+  it('an unresolvable airport code falls back gracefully — no distance fact, but the flight still appears in Places via free text', async () => {
+    const flightDate = '2027-03-07';
+    const trip = await request(app)
+      .post('/api/trips/wizard')
+      .set('Authorization', `Bearer ${travelerToken}`)
+      .send({ name: 'Unknown Airport Trip', startDate: flightDate, endDate: flightDate, participants: [] })
+      .expect(201);
+    const unknownTripId = trip.body.trip?.id ?? trip.body.id;
+    await request(app).get(`/api/trips/${unknownTripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+
+    await request(app)
+      .post('/api/transfers')
+      .set('Authorization', `Bearer ${travelerToken}`)
+      .send({
+        tripId: unknownTripId,
+        passengerIds: [travelerId],
+        passengerName: 'Facts Passenger',
+        departureDate: flightDate,
+        departureLocation: 'Somewhere Regional',
+        departureAirportCode: 'ZZZ',
+        departureTime: '08:00',
+        arrivalLocation: 'Nowhere Municipal',
+        arrivalAirportCode: 'ZZY',
+        arrivalTime: '09:00',
+        cost: 100,
+        carrier: 'ZZ',
+        flightNumber: 'ZZ1',
+        bookingReference: 'UNKNOWNREF',
+      })
+      .expect(201);
+
+    const res = await request(app).get(`/api/trips/${unknownTripId}/blog/days/${flightDate}/facts`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+    expect(res.body.facts.find((f: any) => f.key === 'distance')).toBeUndefined();
+    const places = res.body.facts.find((f: any) => f.key === 'places');
+    expect(places.value.toUpperCase()).toContain('SOMEWHERE REGIONAL');
+    expect(places.value.toUpperCase()).toContain('NOWHERE MUNICIPAL');
   });
 
   it('404s when the flag is off', async () => {
