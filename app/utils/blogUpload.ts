@@ -9,10 +9,13 @@ import { createIdempotencyKey } from './idempotencyKey';
 // client-side before an upload attempt, rather than only after a round trip to the server.
 export const SUPPORTED_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png'];
 export const SUPPORTED_VIDEO_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
+export const SUPPORTED_AUDIO_MIME_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/webm'];
 export const SUPPORTED_MIME_TYPES = [...SUPPORTED_PHOTO_MIME_TYPES, ...SUPPORTED_VIDEO_MIME_TYPES];
 
 export const isVideoMimeType = (mimeType?: string | null): boolean =>
   Boolean(mimeType) && SUPPORTED_VIDEO_MIME_TYPES.includes(String(mimeType));
+export const isAudioMimeType = (mimeType?: string | null): boolean =>
+  Boolean(mimeType) && SUPPORTED_AUDIO_MIME_TYPES.includes(String(mimeType));
 
 export const guessMimeTypeFromName = (name?: string | null): string | null => {
   const lower = String(name ?? '').toLowerCase();
@@ -21,6 +24,9 @@ export const guessMimeTypeFromName = (name?: string | null): string | null => {
   if (lower.endsWith('.mp4')) return 'video/mp4';
   if (lower.endsWith('.mov')) return 'video/quicktime';
   if (lower.endsWith('.webm')) return 'video/webm';
+  if (lower.endsWith('.mp3')) return 'audio/mpeg';
+  if (lower.endsWith('.m4a')) return 'audio/m4a';
+  if (lower.endsWith('.wav')) return 'audio/wav';
   return null;
 };
 
@@ -55,7 +61,7 @@ export const uploadOneBlogFile = async (
   pickedFile: PickedMediaFile,
   caption?: string | null
 ): Promise<UploadOneFileResult> => {
-  const mediaKind = isVideoMimeType(pickedFile.mimeType) ? 'video' : 'photo';
+  const mediaKind = isAudioMimeType(pickedFile.mimeType) ? 'audio' : isVideoMimeType(pickedFile.mimeType) ? 'video' : 'photo';
   const idempotencyKey = createIdempotencyKey('up');
   const initRes = await fetch(`${backendUrl}/api/trips/${tripId}/blog/media/upload-init`, {
     method: 'POST',

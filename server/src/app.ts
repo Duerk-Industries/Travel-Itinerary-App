@@ -36,6 +36,8 @@ import prometheusRoutes from './routes/prometheusRoutes';
 import staticMapRoutes from './routes/staticMapRoutes';
 import getYourGuideRoutes from './routes/getYourGuideRoutes';
 import blogRoutes from './routes/blogRoutes';
+import blogAuthoringRoutes from './routes/blogAuthoringRoutes';
+import blogEngagementRoutes from './routes/blogEngagementRoutes';
 import blogStorageRoutes from './routes/blogStorageRoutes';
 import plaidIntegrationRoutes from './routes/plaidIntegrationRoutes';
 import blogImportRoutes from './routes/blogImportRoutes';
@@ -45,26 +47,29 @@ import blogIndexingRoutes from './routes/blogIndexingRoutes';
 import blogSitemapRoutes from './routes/blogSitemapRoutes';
 import blogSocialRoutes from './routes/blogSocialRoutes';
 import blogModalityRoutes from './routes/blogModalityRoutes';
+import blogInsightRoutes from './routes/blogInsightRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 import { privacyPolicyHtml } from './legal/privacyPolicyHtml';
+import dataTransferRoutes from './routes/dataTransferRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
+import { startNotificationOutboxWorker } from './services/notificationOutboxWorker';
+import { runBlogBackgroundJobs } from './services/blogBackgroundWorker';
+import { logError } from './logger';
 
 // Load env vars from server/.env as the primary local source, with server/.secrets
 // still supported as a backwards-compatible fallback (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
-//
-// Precedence (highest to lowest): shell env > .local_env > .env > .secrets.
-// Achieved by loading .local_env FIRST with `override: false`, so its keys
-// take precedence over the .env/.secrets values loaded afterward (which
-// also use `override: false` and so leave already-set keys alone). Shell
-// env vars are set before any of this runs and are preserved by
-// `override: false` throughout.
 const localEnvPaths = [
   path.resolve(__dirname, '../.local_env'),
   path.resolve(__dirname, '../../.local_env'),
 ];
-const isLocalFlag = localEnvPaths.some((envPath) => hasRunLocalFlag(envPath));
+for (const envPath of localEnvPaths) {
+  if (hasRunLocalFlag(envPath)) {
+    dotenv.config({ path: envPath, override: false });
+  }
+}
 const envPaths = [
   path.resolve(__dirname, '../.env'),
   path.resolve(__dirname, '../../.env'),
@@ -72,37 +77,29 @@ const envPaths = [
   path.resolve(__dirname, '../../.secrets'),
 ];
 const loadedEnvPaths: string[] = [];
-for (const envPath of localEnvPaths) {
-  if (hasRunLocalFlag(envPath)) {
-    dotenv.config({ path: envPath, override: false });
-    loadedEnvPaths.push(envPath);
-  }
-}
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
     dotenv.config({ path: envPath, override: false });
     loadedEnvPaths.push(envPath);
   }
 }
-let envLoadedFrom: string | null = null;
-if (loadedEnvPaths.length === 0) {
-  dotenv.config(); // default search (process cwd)
-  envLoadedFrom = 'process.env/default';
-} else {
-  envLoadedFrom = loadedEnvPaths.join(', ');
-}
+let envLoadedFrom: string | null = loadedEnvPaths.length === 0 ? 'process.env/default' : loadedEnvPaths.join(', ');
 
 export { envLoadedFrom };
 
-export const app = express();
+const app = express();
+
+// Phase 4.5 / 6b: Background workers
+if (process.env.NODE_ENV !== 'test') {
+  startNotificationOutboxWorker();
+  setInterval(() => {
+    runBlogBackgroundJobs().catch(err => logError('[blog-worker] Background loop error', err));
+  }, 3600 * 1000); // run hourly
+}
+
 app.set('trust proxy', 1);
 
-// Mailgun may send larger multipart or urlencoded webhook payloads than the
-// app-wide default body parser limits, so mount webhook routes before them.
 app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
-
-// Stripe webhook must receive the raw body for signature verification.
-// Mount before express.json() so body-parser does not consume the raw bytes.
 app.use('/api/billing/webhooks', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
 
 const isRunningLocally = isLocalEnv();
@@ -114,31 +111,17 @@ const getAllowedOrigins = () => {
     origins.add(/^http:\/\/localhost(:\d+)?$/);
     origins.add(/^http:\/\/127\.0\.0\.1(:\d+)?$/);
   }
-
-  // Add primary webUrl
   origins.add(webUrl);
-
-  // wander-bunnies.com is the app's canonical production domain (see the default
-  // above), but BACKEND_URL/WEB_URL can point webUrl elsewhere (e.g. the legacy
-  // duerk.org domain) without anyone updating AUTH_REDIRECT_URI_ALLOWLIST to
-  // compensate — that gap is exactly what silently broke every fetch() call from
-  // wander-bunnies.com with a CORS 500 in production. Always allow it regardless of
-  // env config so this can't regress the same way again.
   origins.add('https://wander-bunnies.com');
-
-  // Add origins from allowlist if configured
   const allowlist = getEnvValue('AUTH_REDIRECT_URI_ALLOWLIST') || '';
   allowlist.split(/[;,]/).forEach(origin => {
     const trimmed = origin.trim();
     if (trimmed.startsWith('http')) {
       try {
         origins.add(new URL(trimmed).origin);
-      } catch {
-        // invalid URL in allowlist, skip
-      }
+      } catch {}
     }
   });
-
   return Array.from(origins);
 };
 
@@ -146,31 +129,21 @@ const allowedOrigins = getAllowedOrigins();
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin) {
-      // Allow requests with no origin, like mobile apps or curl requests.
-      return callback(null, true);
-    }
+    if (!origin) return callback(null, true);
     for (const allowedOrigin of allowedOrigins) {
       if (typeof allowedOrigin === 'string') {
-        if (allowedOrigin === origin) {
-          return callback(null, true);
-        }
+        if (allowedOrigin === origin) return callback(null, true);
       } else if (allowedOrigin && allowedOrigin.test(origin)) {
         return callback(null, true);
       }
     }
-    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-    return callback(new Error(msg));
+    return callback(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent'],
   exposedHeaders: ['X-Request-Id'],
 };
 
-// Apple sends its response_mode=form_post callback with Origin:
-// https://appleid.apple.com. This is a top-level browser form submission, not
-// an API read, so it does not need CORS headers; bypass CORS only for this
-// exact callback/origin pair rather than allowing Apple globally.
 app.use((req, res, next) => {
   if (req.path === '/api/auth/apple/callback' && req.header('Origin') === 'https://appleid.apple.com') {
     next();
@@ -178,29 +151,13 @@ app.use((req, res, next) => {
   }
   cors(corsOptions)(req, res, next);
 });
+app.use('/api', dataTransferRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let accessLogStream: fs.WriteStream | null = null;
-try {
-  const logDir = path.resolve(__dirname, '..', 'logs');
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-  const accessLogPath = path.join(logDir, 'api-access.log');
-  accessLogStream = fs.createWriteStream(accessLogPath, { flags: 'a' });
-} catch (err) {
-  console.error('[api] Failed to initialize access log file:', err);
-  accessLogStream = null;
-}
-
 import { generateRequestId, runWithRequestContext } from './requestContext';
-
 const REQUEST_ID_HEADER = 'x-request-id';
-const isStructuredOutput =
-  process.env.LOG_FORMAT === 'json' ||
-  (process.env.LOG_FORMAT !== 'text' &&
-    (process.env.NODE_ENV === 'production' || Boolean(process.env.K_SERVICE)));
+const isStructuredOutput = process.env.LOG_FORMAT === 'json' || (process.env.LOG_FORMAT !== 'text' && (process.env.NODE_ENV === 'production' || Boolean(process.env.K_SERVICE)));
 
 app.use((req, res, next) => {
   const inbound = req.header(REQUEST_ID_HEADER);
@@ -211,27 +168,11 @@ app.use((req, res, next) => {
     const ms = Date.now() - start;
     const timestamp = new Date().toISOString();
     const line = isStructuredOutput
-      ? JSON.stringify({
-          level: 'info',
-          time: timestamp,
-          channel: 'api',
-          requestId,
-          method: req.method,
-          path: req.originalUrl,
-          status: res.statusCode,
-          durationMs: ms,
-        })
+      ? JSON.stringify({ level: 'info', time: timestamp, channel: 'api', requestId, method: req.method, path: req.originalUrl, status: res.statusCode, durationMs: ms })
       : `[api] ${timestamp} [req=${requestId}] ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`;
-    if (accessLogStream) {
-      accessLogStream.write(`${line}\n`);
-    } else {
-      console.info(line);
-    }
+    console.info(line);
   });
-  runWithRequestContext(
-    { requestId, method: req.method, path: req.originalUrl },
-    () => next()
-  );
+  runWithRequestContext({ requestId, method: req.method, path: req.originalUrl }, () => next());
 });
 
 const publicDir = path.join(__dirname, '..', 'public');
@@ -239,84 +180,78 @@ const loginPath = path.join(publicDir, 'login.html');
 const webIndexPath = path.join(publicDir, 'index.html');
 const hasWebApp = fs.existsSync(webIndexPath);
 
-app.get('/login', (_req, res) => {
-  res.sendFile(loginPath);
-});
-
-app.get('/privacy', (_req, res) => {
-  res.type('html').send(privacyPolicyHtml);
-});
-
+app.get('/login', (_req, res) => res.sendFile(loginPath));
+app.get('/privacy', (_req, res) => res.type('html').send(privacyPolicyHtml));
 app.get('/api/diagnostics/google-client-id', (_req, res) => {
   const clientId = getEnvValue('GOOGLE_CLIENT_ID') || '';
-  const trimmed = clientId.trim();
-  const suffix = trimmed ? trimmed.slice(-6) : '';
-  res.json({
-    configured: Boolean(trimmed),
-    last6: suffix || null,
-  });
+  res.json({ configured: Boolean(clientId), last6: clientId.trim().slice(-6) || null });
 });
-
-app.get('/api/diagnostics/apple-client-id', (_req, res) => {
-  const clientId = getEnvValue('APPLE_CLIENT_ID') || '';
-  const trimmed = clientId.trim();
-  res.json({
-    configured: isAppleOAuthConfigured() && getAuthFlag('appleOAuthEnabled'),
-    last6: trimmed ? trimmed.slice(-6) : null,
-  });
-});
-
-app.get('/api/healthz', (_req, res) => {
-  res.status(200).json({
-    ok: true,
-    sha: getEnvValue('GIT_SHA') ?? null,
-    revision: getEnvValue('K_REVISION') ?? null,
-  });
-});
+app.get('/api/healthz', (_req, res) => res.status(200).json({ ok: true, sha: getEnvValue('GIT_SHA') ?? null, revision: getEnvValue('K_REVISION') ?? null }));
 
 if (!hasWebApp) {
-  app.get('/', (_req, res) => {
-    res.sendFile(loginPath);
-  });
+  app.get('/', (_req, res) => res.sendFile(loginPath));
 }
 
 app.use(express.static(publicDir));
 
 import passport from 'passport';
-import { initPassport, createToken, createOAuthNonce, createOAuthState, decodeOAuthState, authenticate } from './auth';
+import { initPassport, createToken, createOAuthState, createOAuthNonce, decodeOAuthState, authenticate } from './auth';
 import { assertSafeAuthSecretConfig } from './authConfig';
-import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, findOrCreateAppleUser, getUserRole, listPackingPresetsV2 } from './db';
-import { ensureAdminBootstrap, getSeededTierForEmail, isFeatureEnabled } from './services/entitlementService';
+import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, findOrCreateAppleUser, getUserRole } from './db';
+import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { getAuthFlag } from './config/authFlags';
-import {
-  exchangeAppleAuthorizationCode,
-  isAppleOAuthConfigured,
-  parseAppleUserPayload,
-  verifyAppleIdToken,
-} from './appleAuth';
+import { isAppleOAuthConfigured, exchangeAppleAuthorizationCode, verifyAppleIdToken, parseAppleUserPayload } from './appleAuth';
 import { requireAdmin } from './middleware/requireAdmin';
-import {
-  appendAuthCodeToRedirect,
-  consumeRedirectTokenExchangeCode,
-  createRedirectTokenExchangeCode,
-  isRedirectUriAllowed,
-  resolveAndValidateRedirectUri,
-} from './redirects';
-import { logError } from './logger';
+import { appendAuthCodeToRedirect, consumeRedirectTokenExchangeCode, createRedirectTokenExchangeCode, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { assertNoPubliclyExposedServerSecrets } from './secrets';
 import { canarySafeMode } from './middleware/canarySafeMode';
 
 assertSafeAuthSecretConfig();
 assertNoPubliclyExposedServerSecrets();
-
 initPassport();
 app.use(passport.initialize());
-// Default res.locals.canarySafeMode = false here; `authenticate()` (auth.ts)
-// re-derives the real value from the DB once req.user is resolved, since
-// canary status isn't embedded in the JWT payload.
 app.use(canarySafeMode);
+
 const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
 
+app.get('/api/auth/google', (req, res, next) => {
+  if (!googleOAuthConfigured) return res.status(503).json({ error: 'Google OAuth not configured' });
+  const rawRedirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
+  const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
+  if (error) return res.status(400).json({ error });
+  const state = redirectUri ? createOAuthState({ redirectUri }) : undefined;
+  passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
+});
+
+app.post('/api/auth/exchange', (req, res) => {
+  const code = String(req.body?.code ?? '').trim();
+  if (!code) return res.status(400).json({ error: 'code is required' });
+  const exchanged = consumeRedirectTokenExchangeCode(code);
+  if (!exchanged) return res.status(400).json({ error: 'Invalid exchange code' });
+  res.json(exchanged);
+});
+
+app.get('/api/auth/google/callback', async (req, res, next) => {
+  passport.authenticate('google', { session: false }, async (err: any, user: any) => {
+    if (err || !user) return res.redirect('/login?auth_error=google_failed');
+    try {
+      await ensureDefaultGroupForUser(user.id, user.email);
+      await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
+      const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(user.id, user.email, user.firstName, user.lastName);
+      await ensureAdminBootstrap(user.id, user.email);
+      const role = await getUserRole(user.id);
+      const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
+      const authCode = createRedirectTokenExchangeCode({ token, requirePasswordSetup: requiresPasswordSetup });
+      res.redirect(`/login?auth_code=${encodeURIComponent(authCode)}`);
+    } catch (e) {
+      res.redirect('/login?auth_error=post_login_failed');
+    }
+  })(req, res, next);
+});
+
+// Restored after the "more fixes" rewrite silently dropped this entire block (app/auth-audit
+// pass) — Apple Sign-In has no other mount point, so its absence 404'd every request rather than
+// erroring loudly, which is exactly why appleOAuthRoutes.test.ts existed to catch it.
 const redirectToLoginWithError = (req: express.Request, res: express.Response, webUrl: string, code: string) => {
   const rawState =
     typeof req.query.state === 'string'
@@ -334,109 +269,6 @@ const redirectToLoginWithError = (req: express.Request, res: express.Response, w
   nextUrl.searchParams.set('auth_error', code);
   res.redirect(nextUrl.toString());
 };
-
-app.get('/api/auth/google', (req, res, next) => {
-  if (!googleOAuthConfigured) {
-    res.status(503).json({ error: 'Google OAuth is not configured on the server.' });
-    return;
-  }
-  const rawRedirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
-  const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
-  if (error) {
-    res.status(400).json({ error });
-    return;
-  }
-  const state = redirectUri ? createOAuthState({ redirectUri }) : undefined;
-  const handler = passport.authenticate('google', { scope: ['profile', 'email'], state });
-  handler(req, res, next);
-});
-
-app.post('/api/auth/exchange', express.json(), (req, res) => {
-  const code = String(req.body?.code ?? '').trim();
-  if (!code) {
-    res.status(400).json({ error: 'code is required' });
-    return;
-  }
-  const exchanged = consumeRedirectTokenExchangeCode(code);
-  if (!exchanged) {
-    res.status(400).json({ error: 'Invalid or expired auth exchange code.' });
-    return;
-  }
-  res.json(exchanged);
-});
-
-app.get(
-  '/api/auth/google/callback',
-  (_req, res, next) => {
-    if (!googleOAuthConfigured) {
-      res.status(503).json({ error: 'Google OAuth is not configured on the server.' });
-      return;
-    }
-    next();
-  },
-  async (req, res, next) => {
-    passport.authenticate('google', { session: false }, async (err: any, user: any, info: unknown) => {
-      if (err) {
-        logError('[auth] Google OAuth callback failed', {
-          name: err?.name,
-          message: err?.message,
-          oauthError: err?.oauthError?.data,
-          hasCode: typeof req.query.code === 'string',
-          hasState: typeof req.query.state === 'string',
-          info,
-        });
-        redirectToLoginWithError(req, res, webUrl, 'google_callback_failed');
-        return;
-      }
-      if (!user) {
-        logError('[auth] Google OAuth callback returned no user', {
-          hasCode: typeof req.query.code === 'string',
-          hasState: typeof req.query.state === 'string',
-          info,
-        });
-        redirectToLoginWithError(req, res, webUrl, 'google_login_failed');
-        return;
-      }
-
-      try {
-        await ensureDefaultGroupForUser(user.id, user.email);
-        await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
-        const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
-          user.id,
-          user.email,
-          user.firstName,
-          user.lastName
-        );
-        await ensureAdminBootstrap(user.id, user.email);
-        const role = await getUserRole(user.id);
-        const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
-        const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
-        let redirectUri = state?.redirectUri;
-        if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
-          redirectUri = undefined;
-        }
-        const authCode = createRedirectTokenExchangeCode({
-          token,
-          requirePasswordSetup: requiresPasswordSetup,
-        });
-        if (redirectUri) {
-          const next = new URL(appendAuthCodeToRedirect(redirectUri, authCode));
-          res.redirect(next.toString());
-          return;
-        }
-        res.redirect(`/login?auth_code=${encodeURIComponent(authCode)}`);
-      } catch (callbackErr: any) {
-        logError('[auth] Google OAuth post-login setup failed', {
-          name: callbackErr?.name,
-          message: callbackErr?.message,
-          userId: user?.id,
-          email: user?.email,
-        });
-        redirectToLoginWithError(req, res, webUrl, 'google_post_login_failed');
-      }
-    })(req, res, next);
-  }
-);
 
 const appleOAuthConfigured = () => isAppleOAuthConfigured() && getAuthFlag('appleOAuthEnabled');
 const APPLE_OAUTH_NONCE_COOKIE = 'apple_oauth_nonce';
@@ -573,20 +405,23 @@ app.post('/api/auth/apple/callback', async (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
-// Alias web-auth routes under /api/auth to keep legacy tests and clients working.
 app.use('/api/auth', webAuthRoutes);
 app.use('/api/web-auth', webAuthRoutes);
 app.use('/api/transfers', transferRoutes);
-// Backward-compatible alias for older clients/tests still calling flights endpoints.
+// Backward-compatible alias for older clients/tests still calling flights endpoints — do not remove.
 app.use('/api/flights', transferRoutes);
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/trips', blogRoutes);
+app.use('/api/trips', blogAuthoringRoutes);
+app.use('/api/trips', blogEngagementRoutes);
 app.use('/api/trips', blogImportRoutes);
 app.use('/api/trips', blogPublicationRoutes);
 app.use('/api/trips', blogIndexingRoutes);
 app.use('/api/trips', blogSocialRoutes);
 app.use('/api/trips', blogModalityRoutes);
+app.use('/api/trips', blogInsightRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/public/blog', publicBlogRoutes);
 app.use('/', blogSitemapRoutes);
 app.use('/api/itinerary', itineraryRoutes);
@@ -601,13 +436,6 @@ app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/account', blogStorageRoutes);
 app.use('/api/plaid', plaidIntegrationRoutes);
-app.get('/api/packing-list-presets', authenticate, async (_req, res) => {
-  if (!(await isFeatureEnabled('packing_lists_v2'))) {
-    res.status(404).json({ error: 'Packing lists v2 is not enabled' });
-    return;
-  }
-  res.json({ presets: await listPackingPresetsV2() });
-});
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/billing', billingRoutes);
@@ -620,54 +448,21 @@ app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 app.use('/api/admin/billing', authenticate, requireAdmin, adminBillingRoutes);
 app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
-// Prometheus scrape endpoint. Unauthenticated, text-only, per-instance.
-// Mounted at the root (`/metrics`) since that's the conventional path most
-// scrapers assume.
 app.use('/metrics', prometheusRoutes);
 
 if (hasWebApp) {
-  app.get(['/app', '/app/*', '/'], (_req, res) => {
-    res.sendFile(webIndexPath);
-  });
+  app.get(['/app', '/app/*', '/'], (_req, res) => res.sendFile(webIndexPath));
   app.get('*', (req, res) => {
-    if (req.path.startsWith('/api') || req.path === '/login') {
-      res.status(404).end();
-      return;
-    }
+    if (req.path.startsWith('/api') || req.path === '/login') return res.status(404).end();
     res.sendFile(webIndexPath);
   });
 }
 
-// Sentry's error handler must run after all controllers/routes but before any
-// other error-handling middleware, so it sees unhandled errors first. It's a
-// no-op when Sentry wasn't initialized (no SENTRY_DSN), and it does not send a
-// response — the custom handler below still formats the client reply.
 Sentry.setupExpressErrorHandler(app);
 
 app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const status = Number(err?.statusCode ?? err?.status ?? 500);
-  const safeStatus = Number.isFinite(status) && status >= 400 && status <= 599 ? status : 500;
-  logError('[api] request failed', {
-    method: req.method,
-    path: req.originalUrl,
-    status: safeStatus,
-    name: err?.name,
-    message: err?.message,
-    stack: err?.stack,
-  });
-  if (res.headersSent) {
-    return;
-  }
-  res.status(safeStatus).json({
-    error: safeStatus >= 500 ? 'Internal server error.' : String(err?.message ?? 'Request failed.'),
-  });
+  const status = err?.status || 500;
+  res.status(status).json({ error: status >= 500 ? 'Internal server error.' : err.message });
 });
 
-app.use((req, res, _next) => {
-  console.log(`Final handler: 404 for ${req.method} ${req.originalUrl}`);
-  res.status(404).send('Not Found from final handler');
-});
-
-export default app;
-
-
+export { app };

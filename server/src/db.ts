@@ -110,6 +110,10 @@ export const ensureUserInTrip = async (...args: Parameters<ReturnType<typeof ada
   adapter().ensureUserInTrip(...args);
 export const ensureUserCanReadTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserCanReadTrip']>) =>
   adapter().ensureUserCanReadTrip(...args);
+export const ensureUserFollowsTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserFollowsTrip']>) =>
+  adapter().ensureUserFollowsTrip(...args);
+export const ensureUserOwnsTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserOwnsTrip']>) =>
+  adapter().ensureUserOwnsTrip(...args);
 export const getTripGroupId = async (...args: Parameters<ReturnType<typeof adapter>['getTripGroupId']>) =>
   adapter().getTripGroupId(...args);
 export const getTripById = async (...args: Parameters<ReturnType<typeof adapter>['getTripById']>) =>

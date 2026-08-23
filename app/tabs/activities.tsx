@@ -10,6 +10,7 @@ import GetYourGuideCta from '../components/GetYourGuideCta';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import CsvTransferControls from '../components/CsvTransferControls';
 import ActivityEditForm from '../components/ActivityEditForm';
 import { resolveMemberClipboardValue } from '../utils/clipboardGrid';
 import {
@@ -43,6 +44,7 @@ export type ActivityType =
   | 'Fun & Games'
   | 'Hike'
   | 'Nightlife'
+  | 'Other'
   | 'Open Access'
   | 'Outdoor Activity'
   | 'Reservation'
@@ -60,6 +62,7 @@ export const ACTIVITY_TYPES: ActivityType[] = [
   'Fun & Games',
   'Hike',
   'Nightlife',
+  'Other',
   'Open Access',
   'Outdoor Activity',
   'Reservation',
@@ -293,9 +296,12 @@ type TourTabProps = {
   mode?: 'live' | 'wizard';
   readOnly?: boolean;
   defaultActivityDate?: string | null;
+  tripEndDate?: string | null;
   destination?: string | null;
   featureGridEditing?: boolean;
   featureGridEditingClipboard?: boolean;
+  featureActivityLodgingCsvImport?: boolean;
+  featureActivityLodgingCsvExport?: boolean;
   featureStandardizedItemDialogs?: boolean;
   // Kill switch for row-tap-to-edit + sticky identity/actions columns
   // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
@@ -323,9 +329,12 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   mode = 'live',
   readOnly = false,
   defaultActivityDate = null,
+  tripEndDate = null,
   destination = null,
   featureGridEditing = false,
   featureGridEditingClipboard = false,
+  featureActivityLodgingCsvImport = false,
+  featureActivityLodgingCsvExport = false,
   featureStandardizedItemDialogs = false,
   featureTapToEditTables = true,
 }) => {
@@ -842,6 +851,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.buttonText}>Edit table</Text>
               </TouchableOpacity>
             ) : null}
+            {!tableEditing ? <CsvTransferControls entity="activities" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={defaultActivityDate} tripEnd={tripEndDate} rows={tours} styles={styles} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onDataChanged ?? fetchTours} /> : null}
             {tableEditing ? (
               <>
                 <TouchableOpacity

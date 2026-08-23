@@ -48,6 +48,7 @@ import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayer
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import ShareTripModal from './components/ShareTripModal';
 import IncomingShareModal from './components/IncomingShareModal';
+import { clearOfflineBlogAccount } from './utils/blogOfflineQueue';
 import AccountTab, { fetchAccountProfile, type AccountPage } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
@@ -644,6 +645,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureItineraryItemKinds, setFeatureItineraryItemKinds] = useState(true);
   const [featureItineraryDocumentImport, setFeatureItineraryDocumentImport] = useState(false);
   const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
+  const [featureActivityLodgingCsvImport, setFeatureActivityLodgingCsvImport] = useState(false);
+  const [featureActivityLodgingCsvExport, setFeatureActivityLodgingCsvExport] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -661,6 +664,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureItineraryItemKinds(Boolean(data.featureItineraryItemKinds));
           setFeatureItineraryDocumentImport(Boolean(data.featureItineraryDocumentImport));
           setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
+          setFeatureActivityLodgingCsvImport(Boolean(data.featureActivityLodgingCsvImport));
+          setFeatureActivityLodgingCsvExport(Boolean(data.featureActivityLodgingCsvExport));
         }
       })
       .catch(() => undefined);
@@ -1287,6 +1292,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const logout = useCallback(() => {
+    if (userId) void clearOfflineBlogAccount(userId);
     clearSessionState();
     clearTripsData();
     setActiveTripId(null);
@@ -1315,7 +1321,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // PresenceProvider and ChatProvider reset their state automatically when
     // userToken or activeTripId becomes null after clearSession().
     void clearSessionAsync();
-  }, [clearSessionState, clearTripsData]);
+  }, [clearSessionState, clearTripsData, userId]);
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.
@@ -2907,7 +2913,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
           {activePage === 'blog'
             ? renderSharedPageScroll(
-                <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={activeTripId} styles={styles} theme={theme} readOnly={isFollowingMode} />
+                <TripBlogTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  activeTripId={activeTripId}
+                  styles={styles}
+                  theme={theme}
+                  readOnly={isFollowingMode}
+                  currentUserId={(userId ?? null) as any}
+                  isTripOwnerOrAdmin={userRole === 'admin'}
+                  allExpenses={allExpenses}
+                  tripCurrency={activeTrip?.currency ?? 'USD'}
+                />
               )
             : null}
 
@@ -2932,9 +2949,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode}
                   defaultActivityDate={activeTrip?.startDate ?? null}
+                  tripEndDate={activeTrip?.endDate ?? null}
                   destination={activeTrip?.destination ?? null}
                   featureGridEditing={featureGridEditing}
                   featureGridEditingClipboard={featureGridEditingClipboard}
+                  featureActivityLodgingCsvImport={featureActivityLodgingCsvImport}
+                  featureActivityLodgingCsvExport={featureActivityLodgingCsvExport}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
                   featureTapToEditTables={featureTapToEditTables}
                 />
@@ -3137,6 +3157,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               readOnly={isFollowingMode}
               featureStandardizedItemDialogs={featureStandardizedItemDialogs}
               featureTapToEditTables={featureTapToEditTables}
+              featureActivityLodgingCsvImport={featureActivityLodgingCsvImport}
+              featureActivityLodgingCsvExport={featureActivityLodgingCsvExport}
             />
           )
         : null}

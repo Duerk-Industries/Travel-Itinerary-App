@@ -1,8 +1,10 @@
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
-import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogActivity, BlogGalleryItem } from './types';
+import { BlogAudience, BlogCapabilities, BlogDocument, BlogDay, BlogTextInput, BlogTextItem, BlogTextPatch, BlogTextUpdateResult, BlogActivity, BlogGalleryItem, BlogDayMetaPatch, BlogDayMetaUpdateResult, BlogMastheadPatch } from './types';
+import { BlogContributor } from './engagementTypes';
+import { displayNameFromRow } from './postgresEngagementRepository';
 import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
 import { markSynced, shouldSkipSync } from './syncCoordination';
@@ -16,9 +18,15 @@ type BlogRow = {
   content_revision: string | number;
   visibility_state: BlogDocument['visibilityState'];
   visibility_epoch: string | number;
+  photo_location_enabled?: boolean;
 };
 
 const formatDate = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
+const idForMutation = (userId: string, key?: string | null): string => {
+  if (!key) return randomUUID();
+  const hex = createHash('sha256').update(`blog-text:${userId}:${key}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 
 const ensureBlog = async (tripId: string): Promise<BlogRow> => {
   const existing = await queryBlog<BlogRow>('SELECT * FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
@@ -86,7 +94,7 @@ const mapItem = (row: any): BlogTextItem => ({
   languageTag: row.language_tag == null ? null : String(row.language_tag),
   createdAt: new Date(row.created_at).toISOString(),
   updatedAt: new Date(row.updated_at).toISOString(),
-  sourceType: row.source_type == null ? null : String(row.source_type) as 'itinerary_detail',
+  sourceType: row.source_type == null ? null : String(row.source_type) as 'itinerary_detail' | 'day_starter',
   sourceId: row.source_id == null ? null : String(row.source_id),
   sourceDetached: Boolean(row.source_detached),
 });
@@ -214,7 +222,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   else if (options.cursor) filterParams.push(options.cursor);
 
   const daysResult = await queryBlog<any>(
-    `SELECT id, trip_id, local_date, headline, summary, cover_asset_id
+    `SELECT id, trip_id, local_date, headline, summary, cover_asset_id, update_version
      FROM blog_days WHERE trip_id = $1 ${dateFilter} ${cursorFilter}
      ORDER BY local_date ASC LIMIT $${filterParams.length + 1}`,
     [...filterParams, limit]
@@ -223,7 +231,8 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   const dayIds = daysResult.rows.map(r => String(r.id));
   const placeholders = dayIds.map((_, i) => `$${i + 2}`).join(',');
   const itemsResult = dayIds.length ? await queryBlog<any>(
-    `SELECT i.*, t.body, t.language_tag, d.local_date, sl.source_type, sl.source_id, sl.detached AS source_detached
+    `SELECT i.*, t.body, t.language_tag, d.local_date,
+            sl.source_type, sl.source_id, sl.detached AS source_detached
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      LEFT JOIN blog_text_contents t ON t.item_id = i.id
@@ -285,6 +294,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       headline: row.headline == null ? null : String(row.headline),
       summary: row.summary == null ? null : String(row.summary),
       coverAssetId: row.cover_asset_id == null ? null : String(row.cover_asset_id),
+      updateVersion: Number(row.update_version ?? 1),
       items: byDay.get(String(row.id)) ?? [],
       activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
@@ -304,6 +314,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     contentRevision: Number(blog?.content_revision ?? 0),
     visibilityState: blog?.visibility_state ?? 'private',
     visibilityEpoch: Number(blog?.visibility_epoch ?? 0),
+    photoLocationEnabled: Boolean(blog?.photo_location_enabled),
     days,
   };
 };
@@ -327,12 +338,21 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   const body = String(input.body ?? '');
   if (body.length > 100_000) throw new Error('Text block is too large');
   const dayId = await getDayId(tripId, input.dayDate);
-  const id = randomUUID();
+  const id = idForMutation(userId, input.idempotencyKey);
+  if (input.idempotencyKey) {
+    const replay = await queryBlog<any>(
+      `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
+       JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id
+       WHERE i.id = $1 AND i.trip_id = $2 AND i.author_user_id = $3`,
+      [id, tripId, userId]
+    );
+    if (replay.rows[0]) return mapItem(replay.rows[0]);
+  }
   const sortKey = `${Date.now().toString().padStart(16, '0')}-${id}`;
   await queryBlog(
-    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
-     VALUES ($1, $2, $3, 'core.text', 1, $4, $5, $6, $6)`,
-    [id, tripId, dayId, input.audience ?? 'public', sortKey, userId]
+    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, origin_source_type)
+     VALUES ($1, $2, $3, 'core.text', 1, $4, $5, $6, $6, $7)`,
+    [id, tripId, dayId, input.audience ?? 'public', sortKey, userId, input.sourceType ?? null]
   );
   await queryBlog(
     `INSERT INTO blog_text_contents (item_id, body, language_tag) VALUES ($1, $2, $3)`,
@@ -345,7 +365,7 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   );
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
   const item = await queryBlog<any>(
-    `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
+    `SELECT i.*, i.origin_source_type AS source_type, t.body, t.language_tag, d.local_date FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id WHERE i.id = $1`,
     [id]
   );
@@ -396,7 +416,7 @@ export const getGalleryItemsMeta = async (tripId: string, itemIds: string[]): Pr
   return out;
 };
 
-export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextItem | null> => {
+export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextUpdateResult> => {
   const current = await queryBlog<any>(
     `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id
@@ -415,7 +435,20 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
      WHERE id = $1 AND version = $5 AND deleted_at IS NULL RETURNING *`,
     [itemId, nextVersion, patch.audience ?? null, userId, patch.version]
   );
-  if (!updated.rows[0]) return null;
+  if (!updated.rows[0]) {
+    // Version mismatch, not a missing item (already ruled out above). Architecture §5.5's
+    // autosave conflict contract requires the 409 to carry the latest authorized state so the
+    // client's conflict banner can offer "Keep mine" (retry against this exact version) and
+    // "Use theirs" (adopt it) without a second round-trip. Re-select rather than trust `row`,
+    // which is now stale by definition.
+    const latestRow = await queryBlog<any>(
+      `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
+       JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id
+       WHERE i.id = $1 AND i.deleted_at IS NULL`,
+      [itemId]
+    );
+    return { conflict: true, latest: latestRow.rows[0] ? mapItem(latestRow.rows[0]) : null };
+  }
   await queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [itemId]);
   await queryBlog('UPDATE blog_text_contents SET body = $2, language_tag = $3 WHERE item_id = $1', [itemId, body, patch.languageTag ?? row.language_tag ?? null]);
   await queryBlog(
@@ -499,6 +532,126 @@ export const setDayCoverIfUnset = async (userId: string, tripId: string, dayDate
     return true;
   });
 
+// Minimal BlogDay projection for the day-meta update path: only the fields the conflict banner
+// and the headline-editing UI actually need (architecture §5.5, §4.05). `items`/`activities`
+// are intentionally empty rather than re-running the full getBlog joins — a day-meta PATCH
+// response is not the place to reconstruct the whole day.
+const mapDayMeta = (row: any): BlogDay => ({
+  id: String(row.id),
+  tripId: String(row.trip_id),
+  localDate: formatDate(row.local_date),
+  headline: row.headline == null ? null : String(row.headline),
+  summary: row.summary == null ? null : String(row.summary),
+  items: [],
+  updateVersion: Number(row.update_version ?? 1),
+});
+
+// A6, FR-A3.1: caller-facing display length. Enforced here (not only client-side) because this
+// is the same route both the app and any future integration will call.
+const MAX_DAY_HEADLINE_LENGTH = 120;
+const MAX_DAY_SUMMARY_LENGTH = 500;
+
+export const updateBlogDayMeta = async (
+  userId: string,
+  tripId: string,
+  dayDate: string,
+  patch: BlogDayMetaPatch
+): Promise<BlogDayMetaUpdateResult> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  if (patch.headline != null && patch.headline.length > MAX_DAY_HEADLINE_LENGTH) {
+    throw new Error(`Headline must be ${MAX_DAY_HEADLINE_LENGTH} characters or fewer`);
+  }
+  if (patch.summary != null && patch.summary.length > MAX_DAY_SUMMARY_LENGTH) {
+    throw new Error(`Summary must be ${MAX_DAY_SUMMARY_LENGTH} characters or fewer`);
+  }
+  const dayId = await getDayId(tripId, dayDate);
+  const current = await queryBlog<any>(
+    'SELECT id, trip_id, local_date, headline, summary, update_version FROM blog_days WHERE id = $1',
+    [dayId]
+  );
+  if (!current.rows[0]) return null;
+  const nextVersion = Number(current.rows[0].update_version ?? 1) + 1;
+  const updated = await queryBlog<any>(
+    `UPDATE blog_days
+     SET headline = CASE WHEN $3 THEN $4 ELSE headline END,
+         summary = CASE WHEN $5 THEN $6 ELSE summary END,
+         update_version = $2, updated_at = NOW()
+     WHERE id = $1 AND update_version = $7
+     RETURNING id, trip_id, local_date, headline, summary, update_version`,
+    [
+      dayId, nextVersion,
+      patch.headline !== undefined, patch.headline ?? null,
+      patch.summary !== undefined, patch.summary ?? null,
+      patch.updateVersion,
+    ]
+  );
+  if (!updated.rows[0]) {
+    // Same reasoning as the item-conflict path above: re-select rather than trust `current`,
+    // which is stale by the time the conditional UPDATE has already failed.
+    const latestRow = await queryBlog<any>(
+      'SELECT id, trip_id, local_date, headline, summary, update_version FROM blog_days WHERE id = $1',
+      [dayId]
+    );
+    return { conflict: true, latest: latestRow.rows[0] ? mapDayMeta(latestRow.rows[0]) : null };
+  }
+  await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+  return mapDayMeta(updated.rows[0]);
+};
+
+// A4: blog masthead (title/subtitle/introduction). No optimistic concurrency here — unlike a
+// day's headline, which several travelers edit in parallel while actively writing that day, the
+// masthead is edited rarely and by whoever happens to be curating the trip; the architecture and
+// PRD documents specify a version contract only for §4.05's day metadata, not the masthead.
+const MAX_BLOG_TITLE_LENGTH = 200;
+const MAX_BLOG_SUBTITLE_LENGTH = 300;
+const MAX_BLOG_INTRODUCTION_LENGTH = 5000;
+
+export const updateBlogMeta = async (userId: string, tripId: string, patch: BlogMastheadPatch): Promise<BlogDocument> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  if (patch.title != null && patch.title.length > MAX_BLOG_TITLE_LENGTH) {
+    throw new Error(`Title must be ${MAX_BLOG_TITLE_LENGTH} characters or fewer`);
+  }
+  if (patch.subtitle != null && patch.subtitle.length > MAX_BLOG_SUBTITLE_LENGTH) {
+    throw new Error(`Subtitle must be ${MAX_BLOG_SUBTITLE_LENGTH} characters or fewer`);
+  }
+  if (patch.introduction != null && patch.introduction.length > MAX_BLOG_INTRODUCTION_LENGTH) {
+    throw new Error(`Introduction must be ${MAX_BLOG_INTRODUCTION_LENGTH} characters or fewer`);
+  }
+  await ensureBlog(tripId);
+  const updated = await queryBlog<BlogRow>(
+    `UPDATE trip_blogs
+     SET title = CASE WHEN $2 THEN $3 ELSE title END,
+         subtitle = CASE WHEN $4 THEN $5 ELSE subtitle END,
+         introduction = CASE WHEN $6 THEN $7 ELSE introduction END,
+         photo_location_enabled = CASE WHEN $8 THEN $9 ELSE photo_location_enabled END,
+         updated_at = NOW()
+     WHERE trip_id = $1
+     RETURNING *`,
+    [
+      tripId,
+      patch.title !== undefined, patch.title ?? '',
+      patch.subtitle !== undefined, patch.subtitle ?? null,
+      patch.introduction !== undefined, patch.introduction ?? null,
+      patch.photoLocationEnabled !== undefined, patch.photoLocationEnabled ?? false,
+    ]
+  );
+  const row = updated.rows[0];
+  return {
+    id: String(row.id),
+    tripId,
+    title: String(row.title ?? ''),
+    subtitle: row.subtitle == null ? null : String(row.subtitle),
+    introduction: row.introduction == null ? null : String(row.introduction),
+    contentRevision: Number(row.content_revision ?? 0),
+    visibilityState: row.visibility_state,
+    visibilityEpoch: Number(row.visibility_epoch ?? 0),
+    photoLocationEnabled: Boolean(row.photo_location_enabled),
+    days: [],
+  };
+};
+
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {
   const access = await ensureUserInTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');
@@ -506,6 +659,71 @@ export const reorderBlogItems = async (userId: string, tripId: string, itemIds: 
     await queryBlog('UPDATE blog_items SET sort_key = $3, updated_at = NOW(), last_editor_user_id = $4 WHERE id = $1 AND trip_id = $2 AND deleted_at IS NULL', [itemIds[index], tripId, String(index).padStart(12, '0'), userId]);
   }
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+};
+
+// Phase 3 of docs/trip-blog-social-implementation-plan.md (B5 contributor strip): distinct
+// authors of non-deleted items + assets per day, ordered by total contribution count. Two
+// queries (item authorship, asset uploads), each bounded by the caller's day-id list — not a
+// query per day, matching the "fixed query count" requirement in architecture §5.4. `IN (…)`
+// with expanded placeholders, not `= ANY($1::uuid[])`, per the pg-mem compatibility notes
+// elsewhere in this codebase.
+export const getContributorsForDays = async (dayIds: string[]): Promise<Record<string, BlogContributor[]>> => {
+  const result: Record<string, BlogContributor[]> = {};
+  if (!dayIds.length) return result;
+  const placeholders = dayIds.map((_, i) => `$${i + 1}`).join(',');
+
+  const itemCounts = await queryBlog<{ blog_day_id: string; author_user_id: string; count: number }>(
+    `SELECT blog_day_id, author_user_id, COUNT(*)::int AS count
+     FROM blog_items
+     WHERE blog_day_id IN (${placeholders}) AND deleted_at IS NULL AND kind_key = 'core.text'
+     GROUP BY blog_day_id, author_user_id`,
+    dayIds
+  );
+  const assetCounts = await queryBlog<{ blog_day_id: string; uploader_user_id: string; count: number }>(
+    `SELECT i.blog_day_id, a.uploader_user_id, COUNT(*)::int AS count
+     FROM blog_media_assets a
+     JOIN blog_item_assets ia ON ia.asset_id = a.id
+     JOIN blog_items i ON i.id = ia.item_id
+     WHERE i.blog_day_id IN (${placeholders}) AND a.state = 'ready'
+     GROUP BY i.blog_day_id, a.uploader_user_id`,
+    dayIds
+  );
+
+  // dayId -> userId -> { itemCount, assetCount }
+  const byDay = new Map<string, Map<string, { itemCount: number; assetCount: number }>>();
+  const userIds = new Set<string>();
+  for (const row of itemCounts.rows) {
+    const day = byDay.get(row.blog_day_id) ?? new Map();
+    const entry = day.get(row.author_user_id) ?? { itemCount: 0, assetCount: 0 };
+    entry.itemCount += Number(row.count);
+    day.set(row.author_user_id, entry);
+    byDay.set(row.blog_day_id, day);
+    userIds.add(row.author_user_id);
+  }
+  for (const row of assetCounts.rows) {
+    const day = byDay.get(row.blog_day_id) ?? new Map();
+    const entry = day.get(row.uploader_user_id) ?? { itemCount: 0, assetCount: 0 };
+    entry.assetCount += Number(row.count);
+    day.set(row.uploader_user_id, entry);
+    byDay.set(row.blog_day_id, day);
+    userIds.add(row.uploader_user_id);
+  }
+  if (!userIds.size) return result;
+
+  const userIdList = Array.from(userIds);
+  const userPlaceholders = userIdList.map((_, i) => `$${i + 1}`).join(',');
+  const users = await queryBlog<{ id: string; first_name: string | null; last_name: string | null; email: string | null }>(
+    `SELECT id, first_name, last_name, email FROM users WHERE id IN (${userPlaceholders})`,
+    userIdList
+  );
+  const displayNames = new Map(users.rows.map((u) => [String(u.id), displayNameFromRow(u)]));
+
+  for (const [dayId, contributors] of byDay) {
+    result[dayId] = Array.from(contributors.entries())
+      .map(([userId, counts]) => ({ userId, displayName: displayNames.get(userId) ?? 'A traveler', ...counts }))
+      .sort((a, b) => (b.itemCount + b.assetCount) - (a.itemCount + a.assetCount));
+  }
+  return result;
 };
 
 export const getPublicPath = async (tripId: string): Promise<string | null> => {
@@ -556,16 +774,28 @@ export const createModalityItem = async (
   return { itemId, payload: cleanPayload };
 };
 
-export const searchBlog = async (tripId: string, query: string): Promise<any[]> => {
+export const searchBlog = async (
+  tripId: string,
+  query: string,
+  audiences: string[],
+  options: { cursor?: string | null; limit?: number; scanLimit?: number } = {}
+): Promise<any[]> => {
   const q = `%${query.slice(0, 100)}%`;
+  const limit = Math.min(50, Math.max(1, Number(options.limit ?? 20)));
+  const [cursorDate, cursorId] = String(options.cursor ?? '').split('|', 2);
+  const hasCursor = /^\d{4}-\d{2}-\d{2}$/.test(cursorDate ?? '') && /^[0-9a-f-]{36}$/i.test(cursorId ?? '');
+  const cursorFilter = hasCursor ? 'AND (d.local_date, i.id) > ($4::date, $5::uuid)' : '';
+  const params = hasCursor ? [tripId, q, audiences, cursorDate, cursorId, limit + 1] : [tripId, q, audiences, limit + 1];
   const result = await queryBlog<any>(
-    `SELECT i.id, d.local_date, t.body
+    `SELECT i.id, to_char(d.local_date, 'YYYY-MM-DD') AS local_date, t.body
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      JOIN blog_text_contents t ON t.item_id = i.id
      WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND t.body ILIKE $2
-     ORDER BY d.local_date LIMIT 50`,
-    [tripId, q]
+       AND i.audience = ANY($3::text[])
+       ${cursorFilter}
+     ORDER BY d.local_date, i.id LIMIT $${hasCursor ? 6 : 4}`,
+    params
   );
-  return result.rows;
+  return result.rows.map((row) => ({ id: String(row.id), localDate: String(row.local_date), snippet: String(row.body ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240) }));
 };

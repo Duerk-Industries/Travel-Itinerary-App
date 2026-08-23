@@ -6,7 +6,7 @@ import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
+import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 
 const tierConfig = (() => {
   try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; }
@@ -52,7 +52,65 @@ export const setIncludedStorage = async (userId: string, includedBytes: number):
   );
 };
 
-const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, caption: row.caption ?? null, altText: row.alt_text ?? null, createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
+const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, capturedLat: row.captured_lat == null ? null : Number(row.captured_lat), capturedLng: row.captured_lng == null ? null : Number(row.captured_lng), caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative), createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
+
+export const getMediaAuthoringContext = async (userId: string, tripId: string, assetId: string): Promise<BlogMediaAuthoringContext | null> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const result = await queryBlog<any>(
+    `SELECT a.id, a.trip_id, d.local_date, d.headline, a.caption, a.alt_text, a.is_decorative
+       FROM blog_media_assets a
+       JOIN blog_item_assets ia ON ia.asset_id = a.id
+       JOIN blog_items i ON i.id = ia.item_id
+       JOIN blog_days d ON d.id = i.blog_day_id
+      WHERE a.id = $1 AND a.trip_id = $2 AND a.state <> 'deleted' AND i.deleted_at IS NULL LIMIT 1`,
+    [assetId, tripId]
+  );
+  const row = result.rows[0];
+  return row ? { id: String(row.id), tripId, dayDate: dateString(row.local_date), dayHeadline: row.headline ?? null, caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
+};
+
+export const updateMediaMetadata = async (userId: string, tripId: string, assetId: string, patch: BlogMediaMetadataPatch): Promise<BlogMediaAuthoringContext | null> => {
+  const current = await getMediaAuthoringContext(userId, tripId, assetId);
+  if (!current) return null;
+  const nextAltText = patch.altText !== undefined ? patch.altText : current.altText;
+  const nextDecorative = patch.isDecorative !== undefined ? patch.isDecorative : current.isDecorative;
+  if (nextDecorative && String(nextAltText ?? '').trim()) throw new Error('Decorative photos cannot also have alt text');
+  const result = await queryBlog<any>(
+    `UPDATE blog_media_assets SET
+       caption = CASE WHEN $3 THEN $4 ELSE caption END,
+       alt_text = CASE WHEN $5 THEN $6 ELSE alt_text END,
+       is_decorative = CASE WHEN $7 THEN $8 ELSE is_decorative END,
+       updated_at = NOW()
+     WHERE id = $1 AND trip_id = $2 RETURNING *`,
+    [assetId, tripId, patch.caption !== undefined, patch.caption ?? null, patch.altText !== undefined, patch.altText ?? null, patch.isDecorative !== undefined, patch.isDecorative ?? false]
+  );
+  await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+  const row = result.rows[0];
+  return row ? { ...current, caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
+};
+
+export const listPublicationAccessibilityIssues = async (userId: string, tripId: string): Promise<Array<{ assetId: string; dayDate: string }>> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const result = await queryBlog<any>(
+    `SELECT a.id, d.local_date FROM blog_media_assets a
+       JOIN blog_item_assets ia ON ia.asset_id = a.id
+       JOIN blog_items i ON i.id = ia.item_id
+       JOIN blog_days d ON d.id = i.blog_day_id
+      WHERE a.trip_id = $1 AND a.state = 'ready' AND a.media_kind_key = 'photo'
+        AND i.deleted_at IS NULL AND i.audience = 'public'
+        AND COALESCE(a.is_decorative, FALSE) = FALSE AND NULLIF(TRIM(COALESCE(a.alt_text, '')), '') IS NULL
+      ORDER BY d.local_date, a.id`,
+    [tripId]
+  );
+  return result.rows.map((row) => ({ assetId: String(row.id), dayDate: dateString(row.local_date) }));
+};
+
+// Phase 5 of docs/trip-blog-social-implementation-plan.md — PR-3: a geotag is only ever persisted
+// when the trip's photo_location_enabled toggle is on *at upload time*; turning it on later does
+// not backfill assets already uploaded while it was off (architecture §3.3). Range-validated so a
+// malformed client payload can't wedge a bogus coordinate into the day-map/facts pipeline.
+const isFiniteLat = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90;
+const isFiniteLng = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180;
 
 const ensureMediaDays = async (tripId: string): Promise<void> => {
   const trip = await queryBlog<{ start_date: string | null; end_date: string | null }>('SELECT start_date, end_date FROM trips WHERE id = $1 LIMIT 1', [tripId]);
@@ -74,9 +132,13 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     const retryUploadUrl = stillUploading ? await createBlogUploadUrl(existingObjectKey, String(existing.rows[0].source_mime_type ?? '')) : null;
     return { asset: mapAsset(existing.rows[0]), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
   }
-  const allowedMime = input.mediaKind === 'photo' ? ['image/jpeg', 'image/png'] : ['video/mp4', 'video/quicktime', 'video/webm'];
+  const allowedMime = input.mediaKind === 'photo'
+    ? ['image/jpeg', 'image/png']
+    : input.mediaKind === 'audio'
+      ? ['audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/webm']
+      : ['video/mp4', 'video/quicktime', 'video/webm'];
   if (!allowedMime.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
-  const maxBytes = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : 1024 * 1024 * 1024;
+  const maxBytes = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : input.mediaKind === 'audio' ? Number(getApiCacheSetting('tripBlog', 'audioMaxBytes') ?? 25 * 1024 * 1024) : 1024 * 1024 * 1024;
   if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > maxBytes) throw new Error('Media exceeds the configured size limit');
 
   // When joining an existing gallery, the gallery item's own day is authoritative — a stale or
@@ -113,6 +175,10 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     if (!day) throw new Error('The selected day is outside the trip range');
   }
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
+  const locationToggle = await queryBlog<{ photo_location_enabled: boolean }>('SELECT photo_location_enabled FROM trip_blogs WHERE trip_id = $1', [input.tripId]);
+  const locationEnabled = Boolean(locationToggle.rows[0]?.photo_location_enabled);
+  const capturedLat = locationEnabled && isFiniteLat(input.capturedLat) ? input.capturedLat : null;
+  const capturedLng = locationEnabled && isFiniteLng(input.capturedLng) ? input.capturedLng : null;
   const reservation = await queryBlog<any>(
     `UPDATE blog_storage_accounts SET reserved_bytes = reserved_bytes + $2, updated_at = NOW()
      WHERE user_id = $1 AND entitlement_active = TRUE AND included_bytes + purchased_bytes - visible_committed_bytes - reserved_bytes >= $2
@@ -129,13 +195,13 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     await queryBlog(
       `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
        VALUES ($1, $2, $3, $4, 1, 'public', $5, $6, $6)`,
-      [blogItemId, input.tripId, day!.id, input.mediaKind === 'photo' ? 'media.photo' : 'media.video', `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
+      [blogItemId, input.tripId, day!.id, `media.${input.mediaKind}`, `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
     );
   }
   await queryBlog(
-    `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, physical_bytes, billable_bytes, source_mime_type, captured_at, caption, alt_text, source_ref, object_key, created_at, updated_at)
-     VALUES ($1, $2, $3, $3, $4, 'uploading', $5, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-    [assetId, input.tripId, userId, input.mediaKind, input.byteSize, input.mimeType.toLowerCase(), input.capturedAt ?? null, input.caption ?? null, input.altText ?? null, input.idempotencyKey, objectKey]
+    `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, physical_bytes, billable_bytes, source_mime_type, captured_at, captured_lat, captured_lng, caption, alt_text, source_ref, object_key, created_at, updated_at)
+     VALUES ($1, $2, $3, $3, $4, 'uploading', $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())`,
+    [assetId, input.tripId, userId, input.mediaKind, input.byteSize, input.mimeType.toLowerCase(), input.capturedAt ?? null, capturedLat, capturedLng, input.caption ?? null, input.altText ?? null, input.idempotencyKey, objectKey]
   );
   const position = input.galleryItemId ? galleryAssetCount : 0;
   const role = input.galleryItemId ? 'gallery_member' : 'primary';

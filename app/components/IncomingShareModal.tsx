@@ -5,7 +5,7 @@
 // optional message, then uploads via the same app/utils/blogUpload.ts plumbing the in-tab
 // "+ Photo/Video" button uses.
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DialogShell from './DialogShell';
 import { useShareIntent, planShareUpload, normalizeShareIntentFiles } from '../utils/incomingShare';
 import { uploadOneBlogFile, uploadBlogFiles, createDayTextItem, isVideoMimeType } from '../utils/blogUpload';
@@ -70,6 +70,13 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
     setSubmitting(true);
     try {
       const context = { backendUrl, headers, tripId: selectedTripId };
+      const platform = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : '';
+      const handoff = await fetch(`${backendUrl}/api/trips/${selectedTripId}/blog/share-intent`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform }),
+      });
+      if (!handoff.ok) throw new Error((await handoff.json().catch(() => ({}))).error || 'Quick capture is not available');
       const normalized = await normalizeShareIntentFiles(files);
       if (!normalized.length) {
         Alert.alert('Send to WanderBunnies', 'Unable to read the shared photo or video. Please try sharing again.');

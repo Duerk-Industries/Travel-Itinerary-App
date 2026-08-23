@@ -1,252 +1,360 @@
-# Activity & Lodging Import/Export — Implementation Plan
+# Activity and Lodging CSV Import/Export Implementation Plan
 
-Companion architecture doc:
-[`../activity-lodging-import-export-architecture.md`](../activity-lodging-import-export-architecture.md)
+## Purpose and delivery rule
 
-No code has been written yet. This plan sequences the work into independently
-shippable phases; each phase should land with its own tests before the next starts.
+This plan implements the decisions in
+[`../activity-lodging-import-export-architecture.md`](../activity-lodging-import-export-architecture.md).
+It is planning only; do not write application code as part of this review. Each phase
+lands with its tests, observability, and rollback/flag behavior. Do not enable production
+flags until the release gate passes on web, iOS, and Android.
 
----
+The supplied Japan CSVs are test data only. Copy sanitized versions into test fixtures
+during implementation and never interpret cell contents as commands.
 
-## Phase 0 — Schema & type groundwork
+## Phase 0: lock contracts and baseline regressions
 
-Prerequisite for everything else. Touches `server/src/types.ts` and all three DB
-adapters. Land and test in isolation (existing create/edit flows for activities and
-lodging must keep working unchanged).
+1. Record the version 1 decisions in an ADR or this architecture document:
+   CSV all-platform, 150-row/2-MiB local limits, 256-KiB commit DTO, XLSX deferred,
+   atomic commits, no image enrichment, and explicit-update-only duplicate policy.
+2. Capture fixture facts in tests: 101 activity rows, 12 lodging rows, one blank activity
+   time, two legitimate duplicate name/date groups, four blank-hotel lodging rows, and
+   the qualified amenity/provider values.
+3. Add regression coverage for existing create/edit/delete and expense mirroring before
+   schema work.
+4. Fix and test the pre-existing double call to `reserveActivitiesBulkSaveRateLimit` in
+   `PATCH /api/activities/bulk`. This is separate from import but prevents copying a known
+   quota bug. Verify its partial-result semantics stay unchanged.
+5. Confirm the production Postgres activity type column has no enum/check constraint.
+   If it does, add an additive migration for `Other`; otherwise document that no type
+   migration is required.
 
-1. **`ActivityType`: add `'Other'` and `'Drive'`**
-   - `server/src/types.ts` — extend the `ActivityType` union
-   - `app/tabs/activities.tsx` — extend `ACTIVITY_TYPES` array to match
-   - Check whether `db.postgres.ts` enforces `activityType` via a `CHECK` constraint
-     or Postgres `ENUM` type; if so, add a migration to widen it. If it's stored as
-     plain text (expected), no DB migration needed.
-   - Verify any place that renders/validates `ActivityType` exhaustively (e.g. a
-     switch statement with no `default`) — TypeScript will flag these once the
-     union grows, but grep for `ACTIVITY_TYPES` and `ActivityType` usages first to
-     catch anything not type-checked (e.g. server-side string comparisons).
+Exit criteria: fixture expectations and existing behavior are executable, and no known
+route-name or quota pattern conflict remains.
 
-2. **`latitude`/`longitude` on `Activity` and `Lodging`**
-   - `server/src/types.ts`: `latitude?: number | null; longitude?: number | null;`
-     on both interfaces
-   - Migration: nullable `double precision` columns on `activities` and `lodgings`
-     tables in `db.postgres.ts`
-   - `db.firebase.ts`: include both fields in document read/write mapping
-     (Firestore has no schema, but the adapter's TS mapping functions need the
-     fields added so they don't get silently stripped)
-   - `db.memory.ts`: confirm pg-mem accepts the new columns via the inherited
-     postgres SQL (should be automatic since it spreads `...postgresAdapter`, but
-     the `CREATE TABLE` / migration statements pg-mem runs at test setup need the
-     columns too — check wherever the in-memory schema is bootstrapped)
-   - No UI exposure. No form field. Not part of import/export column lists yet.
-   - Test: round-trip a create + fetch through each adapter and assert the field
-     is `null` by default and persists a value when explicitly set (exercises the
-     column existing and being read back correctly, even with nothing writing to
-     it yet in production code paths).
+## Phase 1: minimal model and adapter groundwork
 
-3. **`Lodging.notes`**
-   - `server/src/types.ts`: `notes?: string`
-   - `db.postgres.ts` migration (nullable `text`), `db.firebase.ts` mapping,
-     `db.memory.ts` schema bootstrap
-   - Expose in `app/components/LodgingForm.tsx` as a plain multiline text input
-     (matches how `Activity`'s `notes` is edited, for consistency) — this makes
-     the field usable standalone, not just as an import target
-   - Test: create/update lodging via API with `notes` set and unset
+1. Add `Other` to the canonical server `ActivityType`, normalizer, client Activity type,
+   and `ACTIVITY_TYPES`. Preserve `Hike`; do not add `Drive` or coordinates.
+2. Add lodging `notes` and `features` to:
+   - `server/src/types.ts`
+   - create/update Zod DTOs with trimming, maximum lengths, unique tag normalization,
+     and strict unknown-key behavior where compatible
+   - `db.ts`, `db.postgres.ts`, and `db.firebase.ts` reads/writes
+   - client normalization, drafts, payload construction, form, details, and grid
+   - **Update `LodgingDetailsDialog` and `LodgingForm`** to display and edit the new
+     `notes` and `features` (tags) fields.
+3. Add a Postgres migration for `notes TEXT NULL` and
+   `features JSONB NOT NULL DEFAULT '[]'::jsonb`; update initialization idempotently.
+   Treat missing Firebase values as empty for backward compatibility. The memory adapter
+   inherits Postgres and must use the same schema path rather than a sequential fallback.
+4. Add reusable canonical field normalizers and a stable mutable-record fingerprint
+   function on the server. Mirror only deterministic display logic on the client; the
+   server implementation remains authoritative.
 
-4. **`Lodging.features: string[]`**
-   - `server/src/types.ts`: `features?: string[]`
-   - `db.postgres.ts`: `text[]` column, following the existing `paid_by` array
-     column pattern on the same table (same parameterized-array insert/update
-     style)
-   - `db.firebase.ts`: array field
-   - `db.memory.ts`: confirm `text[]` works for a second column on `lodgings`
-     (already proven by `paid_by`, but verify the memory adapter's row-mapping
-     code isn't hardcoded to a single array column)
-   - UI: tag-input control on `LodgingForm.tsx`
-     - Three preset chips: **Breakfast**, **Dinner**, **Laundry** — tap to
-       toggle on/off (add/remove from the `features` array)
-     - Free-text input to add a custom tag (short — recommend a max length,
-       e.g. 24 chars, enforced client-side); added tags render as removable
-       chips alongside the presets
-     - Preset chips should render in their toggled-on state if already present
-       in `features`, and stay available to re-add if removed
-   - Grid: add a read-only `features` column to the Lodging list view rendering
-     chips (or a comma-joined string if chip rendering in the grid is
-     disproportionate effort — decide during implementation based on how
-     `EditableDataGrid` handles other array columns like `paidBy` today)
-   - Test: form add/remove of preset and custom tags; API persistence;
-     grid rendering with 0, 1, and multiple tags
+Tests:
 
-**Phase 0 exit criteria:** existing activity/lodging create, edit, list, and
-delete flows pass unchanged; new fields persist and round-trip through all three
-adapters; `Lodging.notes` and `Lodging.features` are usable from the UI
-independent of import (since real users may want tags/notes without ever
-importing a CSV).
+- Server and client ActivityType normalization, including `Hike` and `Other`.
+- Postgres/pg-mem migration from legacy rows, create/update/read round trips, empty-array
+  default, invalid features, and Firebase adapter serialization/missing fields.
+- Existing lodging forms and API DTOs remain backward compatible.
+- Expense source behavior is unchanged by new optional fields.
 
----
+Exit criteria: model changes deploy independently and all adapters return the same
+normalized shape.
 
-## Phase 1 — Parsing utilities (no UI yet)
+## Phase 2: pure CSV schema, parsing, transforms, and export
 
-New file `app/utils/spreadsheet.ts`, pure functions, unit-testable without any
-component rendering.
+Create focused utilities rather than a single spreadsheet module:
 
-1. **CSV parser**: hand-rolled RFC4180-ish reader (quoted fields, embedded commas/
-   newlines, doubled-quote escaping) — mirrors the escaping logic already in
-   `app/utils/csv.ts`'s `escapeCsvCell`, just inverted. No dependency needed.
-2. **XLSX parser**: wrap `xlsx` (SheetJS) `read()`/`utils.sheet_to_json()` (or
-   `sheet_to_csv` piped through the CSV parser above, to keep a single row-shape
-   downstream of parsing). Import gated behind `Platform.OS === 'web'` at the call
-   site, not inside this util (keep the util platform-agnostic; the tab decides
-   whether to offer the file picker).
-3. **Header mapping**: `mapHeaders(headerRow: string[], knownColumns: ColumnDef[]): { mapping, unmapped }` —
-   case-insensitive exact match first, then a small fuzzy/synonym list per entity
-   (derived from the two sample CSVs' actual headers, e.g. `Activity Name` → `name`,
-   `Hotel` → `name`, `Cancel By` → `refund_by`). Anything left unmapped is returned
-   for the UI to prompt on, not silently dropped.
-4. **Row transforms**, one function per concern so they're independently testable:
-   - `resolveImportYear(monthDay: string, tripStart: string, tripEnd: string): { date: string } | { error: string }`
-   - `mapActivityType(raw: string): { type: ActivityType; matched: boolean }` —
-     synonym table from the architecture doc; `matched: false` when it fell back
-     to `'Other'`, so the review grid can flag it
-   - `parseCost(raw: string): number` — reuse `sanitizeCostInput` from
-     `app/utils/sanitizeCost.ts`
-   - `deriveLodgingFeatures(row): { features: string[]; warnings: string[] }` —
-     `Yes` → add preset tag; non-boolean values (`$9/per`, `Near`) → add the tag
-     anyway plus a warning, per the architecture doc's stated behavior
-   - `buildActivityNotes(row): string` / `buildLodgingNotes(row): string` — fold
-     the no-home-field columns (`Book Ahead Required?`, `Booked On`, `Suggested
-     Location`) into the notes prefix format documented in the architecture doc
-5. **Column definitions**: one shared `ACTIVITY_COLUMNS` / `LODGING_COLUMNS` array
-   (canonical header, field key, parser fn) used by both the import mapper and the
-   export writer, so the two stay in sync by construction rather than by
-   convention.
-6. **Export writer**: `toActivitiesCsv(rows)`, `toLodgingCsv(rows)` following the
-   existing `convertExpensesToCsv` shape in `csv.ts`; `toActivitiesXlsx`/
-   `toLodgingXlsx` via SheetJS `utils.json_to_sheet` + `writeFile`, web-only.
+- `app/utils/dataTransfer/csvSchema.ts`: canonical headers, explicit source aliases,
+  column limits, and entity definitions.
+- `csvParser.ts`: Papa Parse wrapper and parse diagnostics.
+- `dates.ts`: strict ISO and English month/day parsing with trip-year inference.
+- `activities.ts` and `lodgings.ts`: pure row transforms and validation.
+- `duplicates.ts`: exact and possible-match suggestions without automatic updates.
+- `csvWriter.ts`: canonical RFC 4180 output and formula-injection protection.
 
-**Tests**: this phase is almost entirely unit tests — feed the two sample CSVs
-(check them into `app/tests/fixtures/`) through the full parse → map → transform
-pipeline and assert on the resulting row objects, including the known-tricky
-cases (blank Start Time row, `Free/Buffer` type, `$9/per` breakfast value, the
-Nov→Dec year rollover in the trip range).
+Implementation tasks:
 
-**Phase 1 exit criteria:** given the two sample CSVs and a fixture trip date
-range, the pipeline produces the exact row set documented in the architecture
-doc's mapping tables, with correct warnings on the known-messy cells.
+1. Add a maintained CSV parser with TypeScript types. Confirm its package size,
+   Expo/Metro compatibility, license, and no Node-only transitive requirement. Do not
+   add SheetJS/XLSX in version 1.
+2. Define exact header aliases from the examples. Header match is trim/case-insensitive,
+   not fuzzy. Unknown non-empty columns and duplicate target mappings require user
+   acknowledgement/resolution.
+3. Enforce file, row, column, and cell limits before allocating large review structures.
+   Return indexed errors without throwing raw parser messages into the UI.
+4. Implement deterministic date inference across trip-year boundaries; do not use
+   implementation-defined parsing. Add explicit time and finite cost parsing.
+5. Implement the architecture's activity-type mapping. Preserve original unknown types
+   and all labelled source context in notes.
+6. Transform blank-hotel lodging rows into visible Needed placeholders. Calculate nights
+   from dates and use source `Days` only for mismatch warnings. Preserve amenity qualifiers
+   and `Booked On` providers in notes.
+7. Build exact fingerprints and possible-match suggestions using the freshly supplied
+   current rows. Default exact matches to Skip and all other rows to Create.
+8. Write canonical exports with ISO dates, CRLF, optional BOM, stable ordering, full CSV
+   escaping, safe filenames, and formula-injection neutralization. Import the protective
+   apostrophe literally rather than guessing whether to strip it, and recognize the
+   canonical record/fingerprint columns.
 
----
+Tests:
 
-## Phase 2 — Bulk upsert endpoints
+- Full example fixtures parse to exactly 101 and 12 review rows.
+- Quoted commas/newlines, escaped quotes, BOM, CRLF/LF, blank lines, Unicode, duplicate
+  headers, unknown headers, empty file, oversized file/row/column/cell, and malformed CSV.
+- November-to-December rollover, leap dates, ambiguous years, invalid dates, checkout
+  ordering, blank time, 12/24-hour time, and free-text durations.
+- Every source activity type, especially `Hike`, plus unknown -> `Other` warning.
+- All four blank Hotel rows are retained, `$9/per`, `Near`, and booking providers survive,
+  and cost/night derives from date difference rather than `Days`.
+- Same name/date with different time/location is not deduplicated. Exact duplicates skip;
+  possible matches never update until explicitly selected.
+- Property/table tests for CSV round trip, formula prefixes (`=`, `+`, `-`, `@`, tab,
+  carriage return), quotes, line breaks, and finite numeric serialization.
+- A performance budget test parses and transforms the 101-row fixture without repeated
+  quadratic scans; pre-index existing rows in maps and keep duplicate matching O(n + m).
 
-1. `POST /api/activities/bulk` — body: array of `{ id?: string; ...ActivityFields }`.
-   Rows with `id` update (must belong to the trip; 404/skip with per-row error if
-   not), rows without `id` insert. Single DB transaction; the endpoint returns a
-   per-row result array (`{ index, id, status: 'created'|'updated'|'error', error?
-   }`) rather than all-or-nothing, since the review grid already let the user
-   exclude bad rows — a partial failure on the server (e.g. a race with another
-   editor) shouldn't roll back the rows that succeeded.
-2. `POST /api/lodgings/bulk` — same shape for `Lodging`.
-3. Add both to `db.ts` facade + implement in `db.postgres.ts` and `db.firebase.ts`
-   per the DB-adapter convention (`db.memory.ts` inherits via spread, verify the
-   inherited transaction behavior works under pg-mem — pg-mem may not support real
-   transactions, in which case fall back to sequential awaits in the memory
-   adapter specifically, matching how other multi-step memory-adapter operations
-   already work around pg-mem limitations per existing code).
-4. Mount in `server/src/app.ts` under existing `/api/activities` and
-   `/api/lodgings` route groups.
-5. Entitlement check: bulk import could blow past `assertUnderActiveTripLimit`-
-   style per-trip item caps if such a limit exists for activities/lodgings —
-   check `entitlementService.ts` for any relevant limit key and apply it per-row
-   (reject rows beyond the limit rather than failing the whole batch) if one
-   exists; skip this if no such limit is currently enforced for these entities.
+Exit criteria: both full fixtures and canonical export round trips pass in pure Jest
+without rendering UI or calling a server.
 
-**Tests**: `server/__tests__/` — insert-only batch, update-only batch, mixed
-batch, partial-failure batch (one row references a nonexistent id), empty batch.
+## Phase 3: atomic import persistence and idempotency
 
-**Phase 2 exit criteria:** bulk endpoints work standalone via `supertest`,
-independent of any UI.
+Add shared service contracts and two routes:
 
----
+- `POST /api/activities/import`
+- `POST /api/lodgings/import`
 
-## Phase 3 — Import UI
+Do not modify the contract of existing `PATCH /api/activities/bulk`.
 
-1. **Entry point**: "Import" button in `activities.tsx` and `lodging.tsx` /
-   `LodgingTab.tsx` header, `Platform.OS === 'web'` only.
-2. **File picker**: `<input type="file" accept=".csv,.xlsx,.xls">`, read via
-   `File.text()` (CSV) or `File.arrayBuffer()` (xlsx).
-3. **Mapping step** (only shown when Phase 1's header mapping leaves unmapped
-   columns): simple modal listing unmapped source columns with a dropdown of
-   target fields (or "ignore this column").
-4. **Review grid**: new component (or a mode of `EditableDataGrid`) rendering
-   parsed rows with:
-   - a status badge per row: New / Update (matched existing row) / Warning
-     (unmapped type, low-confidence date, non-boolean feature value)
-   - per-row include/exclude checkbox, default-checked
-   - all cells editable inline before commit, reusing `EditableDataGrid`'s
-     existing cell editors where field types match (select for `activityType`,
-     text for names/notes, etc.)
-   - for Update rows, an expandable old-value diff so the user can see what
-     will change
-5. **Commit**: send the included, possibly-edited rows to the Phase 2 bulk
-   endpoint; show a summary toast/result (`N created, M updated, K skipped`);
-   refresh the tab's data.
-6. **Dedupe matching**: client-side, against the tab's already-loaded rows —
-   `(name, date)` for activities, `(name, check_in_date)` for lodging — computed
-   right after parsing, before the review grid renders, so New/Update status is
-   known up front.
+1. Define strict Zod request schemas for `tripId`, UUID `importId`, and 1-150 create/update
+   rows. Bound every string/array, reject non-finite/negative costs, duplicate source row
+   numbers, duplicate update IDs, client ownership fields, and unknown keys.
+2. Authenticate and call `assertCanUseFeature` for `activity_lodging_csv_import`; validate
+   edit membership before revealing whether target IDs exist. Validate payer/traveler IDs
+   against the trip group and dates against product rules.
+3. Add durable leased idempotency claims:
+   - Postgres unique key on user, trip, entity, import ID with payload hash, state, lease,
+     and successful response; Firebase uses a deterministic document with the same logic.
+   - Acquire only after preflight validation. Same key/hash after success returns the
+     stored response; same key/different hash is 409. An active identical request is
+     rejected/retried without quota use; a logged lease takeover recovers crashed work.
+4. Add adapter-level `importActivitiesAtomic` and `importLodgingsAtomic` operations. For
+   Postgres, pass one transaction client through entity and expense writes. For Firebase,
+   pre-read authorized records/expense targets then commit one transaction/batch. Never
+   call existing per-row methods if they create independent transactions.
+5. Recompute and compare update fingerprints immediately before the transaction writes.
+   Return all indexed 409 conflicts and write nothing.
+6. Maintain every `upsertExpenseForSource` equivalent in the same atomic unit as its
+   source entity. Add rollback tests that fail after an entity write and after an expense
+   write. Never fall back to sequential persistence in pg-mem.
+7. Do not invoke lodging image/place lookup. Preserve an existing image on update and use
+   null on create.
+8. Return normalized created/updated records and stable counts. Map errors to the documented
+   402/403/404/409/422/429 contract without leaking cross-trip data.
+9. Mount dedicated import routers with `express.json({ limit: '256kb' })` before the
+   app-wide `express.json()` middleware. A parser added inside the existing late-mounted
+   activity/lodging routers cannot override the earlier global size limit.
 
-**Tests**: component/integration test with a fixture CSV file mocked through the
-file input, asserting the review grid renders expected New/Update rows and that
-confirming calls the bulk endpoint with the expected payload. E2E (Playwright)
-smoke test for the full click-through if time allows.
+Tests with supertest and adapter suites:
 
-**Phase 3 exit criteria:** importing each of the two sample CSVs end-to-end
-through the UI produces the row set from Phase 1's fixture tests, visible in the
-tab's grid afterward.
+- Activity/lodging create-only, explicit update-only, and mixed commits.
+- Full 101-row activity fixture and 12-row lodging fixture fit under limits.
+- One invalid row, unauthorized target, stale fingerprint, duplicate target, and injected
+  trip/user field each produce zero writes to entities, expenses, and claims.
+- Mid-transaction faults roll back all writes in Postgres and Firebase emulator/adapter
+  tests; pg-mem proves transaction behavior rather than skipping it.
+- Successful retry returns the original result without duplicates; changed-payload retry
+  returns 409; concurrent same-key requests commit once and only the claim owner reserves
+  usage. Lease-expiry recovery cannot duplicate domain writes and any conservative usage
+  overcount in the reservation/crash window is observable.
+- **Firebase Batch Limit**: Verify that a 150-row import (301 writes) stays safely
+  below the 500-write ceiling in integration tests.
+- 150 entity + 150 expense + receipt remains below Firestore's batch ceiling. Row 151 and
+  body over 256 KiB are rejected before persistence.
+- Existing manual create/update and Activities bulk-grid endpoints still pass.
 
----
+Exit criteria: both adapters provide equivalent all-or-nothing, idempotent behavior with
+expense consistency.
 
-## Phase 4 — Export UI
+## Phase 4: feature flags, usage control, and observability
 
-1. **Entry point**: "Export" button (CSV + Excel options, or a small menu) in
-   both tabs, web-only, next to Import.
-2. Uses the same `ACTIVITY_COLUMNS`/`LODGING_COLUMNS` definitions and
-   `toActivitiesCsv`/`toActivitiesXlsx` (etc.) writers from Phase 1.
-3. Triggers a browser download (`Blob` + object URL `<a download>`, matching
-   whatever pattern the existing cost-report CSV export in `dailyExpenses.tsx`
-   already uses — check and reuse rather than reinventing).
+1. Seed `activity_lodging_csv_import` and `activity_lodging_csv_export` disabled. Add
+   descriptions that identify them as kill switches. Keep existing `csv_export` as the
+   master switch and expose entity export only when both export flags resolve enabled.
+2. Expose the flags from `/api/auth/features` with `isFeatureEnabled`, initialize client
+   UI state false until fetched, and pass them to Activities and Lodging tabs. Import
+   endpoints check the same flag through `assertCanUseFeature`; admins do not bypass an
+   off feature flag.
+3. Add mandatory `DATA_TRANSFER_API` configuration and callers
+   `ACTIVITY_IMPORT_ROWS`/`LODGING_IMPORT_ROWS`. Reserve exactly the number of committed
+   create/update rows once, after validation and before persistence, with
+   `requireConfiguredLimit: true`. Add explicit zero pricing if required by admin views.
+4. Add one HTTP burst reservation per commit for both user and IP (default 10/10 minutes),
+   environment-configurable through project helpers. Return 429 and `Retry-After`.
+5. Add privacy-safe structured logs and counters for entity, result code, row counts,
+   duration, platform, and payload-size bucket. Hash or omit import IDs; never log file
+   contents, row fields, filenames, addresses, notes, or auth tokens.
+6. Add an operator runbook: check flags, tier entitlements, API limit configuration,
+   422/409/429 dashboards, and rollback procedure. Alert on sustained 429 rates or
+   transaction failures, not ordinary row warnings.
 
-**Tests**: unit test on the writer functions (already covered in Phase 1);
-a thin UI test that clicking Export triggers a download with the right
-filename/content-type.
+Tests:
 
-**Phase 4 exit criteria:** exporting the current trip's activities/lodging and
-re-importing the resulting file round-trips every field losslessly (using the
-app's own canonical headers, no manual remapping needed on the way back in).
+- Enabled, disabled, and missing flag rows agree between feature response and endpoint.
+- Tier denial is 402; trip edit denial is 403; disabled endpoint is 404.
+- Usage reservations use row units once, hit caller/overall caps atomically under
+  concurrency and process restart, require configuration, and do not count parse/preview.
+- HTTP limiter is invoked once, isolates user/IP identities, and sends Retry-After.
+- Rejected preflight requests do not consume row units; documented transaction failures
+  after reservation are counted and logged without leaking data.
 
----
+Exit criteria: imports cannot bypass flags, tier rules, trip authorization, aggregate
+quota, or burst controls, and operators can distinguish each failure mode.
 
-## Sequencing summary
+## Phase 5: cross-platform file adapters
 
-| Phase | Depends on | Ships independently? |
-|---|---|---|
-| 0 — schema/types | — | Yes — usable immediately via forms even without import |
-| 1 — parsing utils | Phase 0 types | Yes — pure functions, fully unit-tested standalone |
-| 2 — bulk endpoints | Phase 0 schema | Yes — testable via supertest without any UI |
-| 3 — import UI | Phases 0–2 | No — needs all three |
-| 4 — export UI | Phase 1 (writers) | Partially — export alone doesn't need Phase 2/3, could ship first if sequencing needs to change |
+1. Add `expo-document-picker` using the Expo SDK 54-compatible `npx expo install`
+   resolution. Keep existing `expo-file-system` and `expo-sharing` versions aligned with
+   the current SDK.
+2. Define a small platform interface (`pickCsvFile`, `shareCsvFile`) and implement it in
+   `.web.ts` and `.native.ts` files so platform bundlers resolve only compatible code.
+3. Web picker: `.csv` accept hint, `File.text()`, input-value reset, cancellation handling,
+   2-MiB precheck, and cleanup. Web export: Blob/object URL, download attribute, and URL
+   revoke in `finally`.
+4. Native picker: `copyToCacheDirectory: true`, CSV MIME variants and extension fallback,
+   cancellation handling, then `new File(uri).text()` using Expo FileSystem 19. Do not use
+   the deprecated main-module `readAsStringAsync` API.
+5. Native export: create under `Paths.cache`, write UTF-8 text, verify sharing availability,
+   invoke share sheet with CSV MIME/UTI, handle user cancellation, and best-effort delete.
+6. Provide user-facing errors for unsupported sharing, inaccessible content URI, invalid
+   extension, empty file, and size limit without exposing raw platform errors.
 
-Recommended order is as listed (0 → 1 → 2 → 3 → 4), but Phase 4 (export) has no
-hard dependency on Phase 2/3 and could be pulled forward if shipping export
-alone earlier is valuable on its own.
+Tests:
 
-## Open items to resolve before/during implementation
+- Jest platform-resolution tests with mocks for document picker, FileSystem `File`/`Paths`,
+  Sharing, browser File/Blob/URL, same-file reselection, cancellation, and cleanup.
+- Typecheck both platform files. Ensure no DOM types leak into native and no native module
+  is eagerly executed by web tests.
+- Manual device checks with Files/iCloud Drive on iOS and Files/Drive providers on Android,
+  including filenames with spaces/Unicode and share-sheet cancel.
 
-- Confirm `activityType` isn't a DB-constrained enum (Phase 0, item 1)
-- Confirm pg-mem transaction support for the bulk endpoints, or fall back to
-  sequential writes in `db.memory.ts` (Phase 2)
-- Decide chip-vs-text rendering for `features` in the Lodging grid (Phase 0)
-- Confirm whether any entitlement limit applies to bulk-created activities/
-  lodgings (Phase 2)
-- Extend the header-synonym and activity-type-synonym tables as real-world
-  source spreadsheets surface column names/values not present in the two
-  sample CSVs
+Exit criteria: the same CSV can be selected/read and a canonical export can be shared on
+all three platforms without deprecated API calls or leaked temporary files.
+
+## Phase 6: import review UI
+
+1. Add Import actions to Activities and Lodging only when a trip is selected, edit mode is
+   allowed, and the import flag is enabled. Disable while trip data is loading or stale.
+2. Build the flow as explicit states: Pick -> Map -> Review -> Commit -> Result. Navigation
+   back preserves edits; closing warns about uncommitted review changes.
+3. Mapping shows source headers, explicit automatic aliases, ignored-column samples, and
+   errors for duplicate destinations. Non-empty ignored columns require acknowledgement.
+4. Review shows create/update/skip counts, blocking errors, warnings, source row numbers,
+   and before/after diffs for explicit updates. Refresh current records immediately before
+   commit and keep the server fingerprint check as the final authority.
+5. Web may use `EditableDataGrid` with virtualization. Native uses a full-screen safe-area
+   modal/screen and one `FlatList`/`SectionList` of expandable editable cards; do not nest it
+   in `ScrollView`. Memoize rows and index matches to avoid O(n^2) rerenders.
+6. Keep actions above keyboard and bottom inset, use at least 44-point targets, support
+   large text/rotation, label all controls for screen readers, restore focus after dialogs,
+   and pair warning colors with icons/text.
+7. **Show progress indicator** during the commit phase and disable the commit button.
+8. Disable double submit once pressed and reuse one `importId` for network retry. On 409,
+   refresh and return to review; on 422, focus the first bad row; on 429, show retry timing;
+   on success, refresh the tab once and show created/updated/skipped counts.
+
+Component/integration tests:
+
+- Flag/read-only/loading visibility and disabled states on both tabs.
+- Pick, mapping acknowledgement, edits, exclude/restore, explicit existing-record update,
+  cancel, double-click suppression, retry with stable import ID, and each error response.
+- 101-row virtualized review remains navigable; a same-name/date pair remains two cards.
+- Native safe-area/keyboard layout, list-not-in-ScrollView assertion, accessibility roles,
+  labels, focus, and large-text snapshot/screenshot coverage.
+- Web Playwright happy path and validation path with network interception; confirm exact
+  request shape and one post-success refresh.
+
+Exit criteria: a user can safely understand every write before committing on desktop or
+phone, and error recovery never requires reselecting the file unless desired.
+
+## Phase 7: export UI and canonical round trip
+
+1. Add Export actions under the export flag. Permit read-only users only when they can
+   already read the entity data. Refresh the selected trip list first; block with a clear
+   error if refresh fails rather than exporting an incomplete cached page.
+2. Offer `WanderBunnies CSV` only in version 1. Generate through the Phase 2 writer and
+   Phase 5 platform share adapter. Use sanitized `{trip}-{activities|lodging}-{date}.csv`.
+3. Explain that canonical CSV is re-importable and ISO-dated. Label record ID/fingerprint
+   columns as same-trip update hints and ignore them across trips.
+4. Include all approved portable fields and same-trip record ID/fingerprint hints, but no
+   owner/auth IDs, payer/traveler assignments, image URLs, votes, ratings, or other hidden
+   data. Re-import makes its payer/traveler defaults visible in review.
+5. Do not meter local export as an external/API call. Log only a privacy-safe client event
+   if the application already has an approved analytics path.
+
+Tests:
+
+- Activity and lodging canonical export -> import -> normalized equality, except that
+  formula-like text intentionally retains its export safety apostrophe.
+- Formula-injection and CSV escaping cases run through actual platform writer adapters.
+- Flag/read authorization, loading failure, empty list, sanitized filename, one refresh,
+  object URL revoke, temporary-file cleanup, and share cancellation.
+- Playwright verifies a real web download and its parsed contents; device tests verify iOS
+  and Android share sheets can hand the file to another app.
+
+Exit criteria: exported files are safe, complete, platform-shareable, and can be reviewed
+for re-import without manual header mapping.
+
+## Phase 8: build, release, and operational gate
+
+Run before enabling either flag:
+
+```bash
+cd app
+npm run typecheck
+npm test -- --runInBand
+npm run export:web
+
+cd ../server
+npm run build
+npm test -- --runInBand
+```
+
+Also require:
+
+- A production-profile EAS iOS build and Android build after adding document picker.
+- Smoke tests on Safari/Chrome/Firefox, a small supported iPhone, a large/rotated iPhone,
+  and at least one supported Android phone.
+- **Verify expense consistency**: Check that activities/lodgings with costs correctly
+  create/update expense records after a bulk import.
+- Bundle-size comparison against baseline; investigate unexpected parser/native-module
+  growth. A 101-row parse/review/commit performance trace on a lower-memory device.
+- Firebase emulator integration or a controlled staging Firebase run proving batch
+  atomicity and rules; Postgres staging migration/rollback rehearsal.
+- Security review for CSV formula injection, DTO pollution/unknown keys, cross-trip IDs,
+  log redaction, oversized input, and replay/concurrent commits.
+- Accessibility pass with keyboard-only web, VoiceOver, TalkBack, and large text.
+
+Rollout:
+
+1. Deploy schema/backend with both flags off and verify migrations, configured usage
+   limits, metrics, and admin flag visibility.
+2. Enable export for admins/staging, then import for admins/staging. Run both full fixtures
+   and verify entity/expense counts and idempotent replay.
+3. Enable a small production cohort/tier, monitor 409/422/429 and transaction latency,
+   then broaden. Either flag can be disabled independently without removing existing data.
+4. Keep XLSX out of scope. If later prioritized, write a separate design covering lazy
+   loading, web/native memory, package license/security, bundle size, sheet selection,
+   formula treatment, and an independent `activity_lodging_xlsx` flag.
+
+## Definition of done
+
+- Every architecture acceptance criterion has an automated test or named manual build/
+  device check.
+- Both supplied examples import without silent data loss and canonical files round-trip.
+- Persistence and expense mirrors are atomic and idempotent across Postgres, Firebase,
+  and pg-mem-backed tests.
+- Feature, entitlement, usage, burst, privacy, and concurrency controls are verified.
+- Web export, iOS/Android builds, native picker/share, responsive UI, and accessibility pass.
+- Documentation/runbook describes flags, limits, metrics, known CSV limits, and rollback.

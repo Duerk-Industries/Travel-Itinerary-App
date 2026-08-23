@@ -43,6 +43,8 @@ export const createLodgingDto = z.object({
   totalCost: optionalNumberOrString,
   costPerNight: optionalNumberOrString,
   address: optionalString,
+  notes: optionalString,
+  features: optionalIdArray,
   placeId: optionalString,
   paidBy: optionalIdArray,
   travelerIds: optionalIdArray,
@@ -66,12 +68,42 @@ export const updateLodgingDto = z.object({
   totalCost: patchField(z.union([z.string(), z.number()])),
   costPerNight: patchField(z.union([z.string(), z.number()])),
   address: patchField(z.string()),
+  notes: patchField(z.string()),
+  features: patchField(z.array(z.string())),
   placeId: patchField(z.string()),
   tripId: patchField(z.string()),
   paidBy: patchField(z.array(z.union([z.string(), z.number()]))),
   travelerIds: patchField(z.array(z.union([z.string(), z.number()]))),
 });
 export type UpdateLodgingDto = z.infer<typeof updateLodgingDto>;
+
+export const importLodgingsDto = z.object({
+  tripId: z.uuid('tripId must be a UUID.'),
+  importId: z.uuid('importId must be a UUID.'),
+  rows: z.array(z.object({
+    sourceRow: z.number().int().positive(),
+    action: z.enum(['create', 'update']),
+    existingId: z.string().trim().optional(),
+    expectedFingerprint: z.string().optional(),
+    fields: z.record(z.string(), z.unknown()),
+  }).strict()).min(1).max(150),
+}).strict().superRefine((value, ctx) => {
+  const allowed = new Set(['status', 'name', 'checkInDate', 'checkOutDate', 'rooms', 'refundBy', 'totalCost', 'costPerNight', 'address', 'notes', 'features', 'paidBy', 'travelerIds']);
+  const sourceRows = new Set<number>();
+  const updateIds = new Set<string>();
+  value.rows.forEach((row, index) => {
+    if (sourceRows.has(row.sourceRow)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['rows', index, 'sourceRow'], message: 'sourceRow values must be unique.' });
+    sourceRows.add(row.sourceRow);
+    if (row.action === 'update' && row.existingId) {
+      if (updateIds.has(row.existingId)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['rows', index, 'existingId'], message: 'An update target may appear only once.' });
+      updateIds.add(row.existingId);
+    }
+    Object.keys(row.fields).forEach((key) => {
+      if (!allowed.has(key)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['rows', index, 'fields', key], message: `Unknown import field: ${key}.` });
+    });
+  });
+});
+export type ImportLodgingsDto = z.infer<typeof importLodgingsDto>;
 
 // ---------------------------------------------------------------------------
 // POST /api/lodgings/:id/vote and /api/lodgings/:id/rating

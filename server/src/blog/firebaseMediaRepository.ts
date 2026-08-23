@@ -1,17 +1,63 @@
 import { randomUUID } from 'crypto';
+import { FieldValue } from 'firebase-admin/firestore';
 import fs from 'fs';
 import path from 'path';
 import { ensureUserInTrip, ensureUserCanReadTrip } from '../db.firebase';
 import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
+import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { getDb } from '../db.firebase';
 
 const config = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; } })();
 const included = (tier: string) => Number(config.tiers?.[tier]?.includedBytes ?? config.tiers?.free?.includedBytes ?? 0);
 const nowIso = () => new Date().toISOString();
-const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, caption: data.caption ?? null, altText: data.altText ?? null, createdAt: data.createdAt ?? undefined, isHighlight: Boolean(data.isHighlight), parentKindKey: data.parentKindKey ?? undefined, position: data.position != null ? Number(data.position) : undefined });
+const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, capturedLat: data.capturedLat == null ? null : Number(data.capturedLat), capturedLng: data.capturedLng == null ? null : Number(data.capturedLng), caption: data.caption ?? null, altText: data.altText ?? null, isDecorative: Boolean(data.isDecorative), createdAt: data.createdAt ?? undefined, isHighlight: Boolean(data.isHighlight), parentKindKey: data.parentKindKey ?? undefined, position: data.position != null ? Number(data.position) : undefined });
+
+export const getMediaAuthoringContext = async (userId: string, tripId: string, assetId: string): Promise<BlogMediaAuthoringContext | null> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const snap = await getDb().collection('blog_media_assets').doc(assetId).get();
+  if (!snap.exists) return null;
+  const data = snap.data() as any;
+  if (String(data.tripId) !== tripId || data.state === 'deleted') return null;
+  const daySnap = await getDb().collection('blog_days').where('tripId', '==', tripId).where('localDate', '==', String(data.dayDate)).limit(1).get();
+  const day = daySnap.empty ? null : daySnap.docs[0].data() as any;
+  return { id: assetId, tripId, dayDate: String(data.dayDate), dayHeadline: day?.headline ?? null, caption: data.caption ?? null, altText: data.altText ?? null, isDecorative: Boolean(data.isDecorative) };
+};
+
+export const updateMediaMetadata = async (userId: string, tripId: string, assetId: string, patch: BlogMediaMetadataPatch): Promise<BlogMediaAuthoringContext | null> => {
+  const current = await getMediaAuthoringContext(userId, tripId, assetId);
+  if (!current) return null;
+  const nextAltText = patch.altText !== undefined ? patch.altText : current.altText;
+  const nextDecorative = patch.isDecorative !== undefined ? patch.isDecorative : current.isDecorative;
+  if (nextDecorative && String(nextAltText ?? '').trim()) throw new Error('Decorative photos cannot also have alt text');
+  const update: Record<string, unknown> = { updatedAt: nowIso() };
+  if (patch.caption !== undefined) update.caption = patch.caption ?? null;
+  if (patch.altText !== undefined) update.altText = patch.altText ?? null;
+  if (patch.isDecorative !== undefined) update.isDecorative = Boolean(patch.isDecorative);
+  await Promise.all([
+    getDb().collection('blog_media_assets').doc(assetId).set(update, { merge: true }),
+    getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: FieldValue.increment(1), updatedAt: nowIso() }, { merge: true }),
+  ]);
+  return { ...current, caption: patch.caption !== undefined ? patch.caption ?? null : current.caption, altText: patch.altText !== undefined ? patch.altText ?? null : current.altText, isDecorative: patch.isDecorative !== undefined ? Boolean(patch.isDecorative) : current.isDecorative };
+};
+
+export const listPublicationAccessibilityIssues = async (userId: string, tripId: string): Promise<Array<{ assetId: string; dayDate: string }>> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const [mediaSnap, itemSnap] = await Promise.all([
+    getDb().collection('blog_media_assets').where('tripId', '==', tripId).get(),
+    getDb().collection('blog_items').where('tripId', '==', tripId).get(),
+  ]);
+  const publicItems = new Set(itemSnap.docs.filter((doc) => { const data = doc.data() as any; return data.deletedAt == null && (data.audience ?? 'public') === 'public'; }).map((doc) => doc.id));
+  return mediaSnap.docs.filter((doc) => {
+    const data = doc.data() as any;
+    return data.state === 'ready' && data.mediaKind === 'photo' && publicItems.has(String(data.blogItemId)) && !data.isDecorative && !String(data.altText ?? '').trim();
+  }).map((doc) => ({ assetId: doc.id, dayDate: String((doc.data() as any).dayDate) })).sort((a, b) => a.dayDate.localeCompare(b.dayDate) || a.assetId.localeCompare(b.assetId));
+};
+
+// Phase 5 — mirrors postgresMediaRepository.ts's isFiniteLat/isFiniteLng.
+const isFiniteLat = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90;
+const isFiniteLng = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180;
 
 const ensureAccount = async (userId: string): Promise<any> => {
   const ref = getDb().collection('blog_storage_accounts').doc(userId);
@@ -41,9 +87,13 @@ export const getStorageSummary = async (userId: string): Promise<BlogStorageSumm
 
 export const initUpload = async (userId: string, input: BlogUploadInitInput): Promise<BlogUploadInitResult> => {
   if (!(await ensureUserInTrip(input.tripId, userId))) throw new Error('Not authorized to edit this trip');
-  const allowed = input.mediaKind === 'photo' ? ['image/jpeg', 'image/png'] : ['video/mp4', 'video/quicktime', 'video/webm'];
+  const allowed = input.mediaKind === 'photo'
+    ? ['image/jpeg', 'image/png']
+    : input.mediaKind === 'audio'
+      ? ['audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/webm']
+      : ['video/mp4', 'video/quicktime', 'video/webm'];
   if (!allowed.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
-  const max = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : 1024 * 1024 * 1024;
+  const max = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : input.mediaKind === 'audio' ? Number(getApiCacheSetting('tripBlog', 'audioMaxBytes') ?? 25 * 1024 * 1024) : 1024 * 1024 * 1024;
   if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > max) throw new Error('Media exceeds the configured size limit');
   const db = getDb();
 
@@ -79,9 +129,13 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   const blogItemId = input.galleryItemId ?? randomUUID();
   const dayDate = galleryDayDate ?? input.dayDate;
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
-  const parentKindKey = input.galleryItemId ? 'core.gallery' : (input.mediaKind === 'photo' ? 'media.photo' : 'media.video');
+  const parentKindKey = input.galleryItemId ? 'core.gallery' : `media.${input.mediaKind}`;
   const position = input.galleryItemId ? galleryAssetCount : 0;
-  const data = { tripId: input.tripId, blogItemId, dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, caption: input.caption ?? null, altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, parentKindKey, position, createdAt: nowIso(), updatedAt: nowIso() };
+  const blogDoc = await db.collection('trip_blogs').doc(input.tripId).get();
+  const locationEnabled = blogDoc.exists && (blogDoc.data() as any)?.photoLocationEnabled === true;
+  const capturedLat = locationEnabled && isFiniteLat(input.capturedLat) ? input.capturedLat : null;
+  const capturedLng = locationEnabled && isFiniteLng(input.capturedLng) ? input.capturedLng : null;
+  const data = { tripId: input.tripId, blogItemId, dayDate, uploaderUserId: userId, storageAccountUserId: userId, mediaKind: input.mediaKind, state: 'uploading', sourceMimeType: input.mimeType.toLowerCase(), physicalBytes: input.byteSize, billableBytes: input.byteSize, capturedAt: input.capturedAt ?? null, capturedLat, capturedLng, caption: input.caption ?? null, altText: input.altText ?? null, objectKey, sourceRef: input.idempotencyKey, isHighlight: false, parentKindKey, position, createdAt: nowIso(), updatedAt: nowIso() };
   await db.collection('blog_media_assets').doc(assetId).set(data);
   if (!input.galleryItemId) {
     await db.collection('blog_items').doc(blogItemId).set({ tripId: input.tripId, blogDayId: input.dayDate, localDate: input.dayDate, kindKey: parentKindKey, schemaVersion: 1, audience: 'public', sortKey: `${Date.now()}-${blogItemId}`, authorUserId: userId, lastEditorUserId: userId, version: 1, deletedAt: null, createdAt: nowIso(), updatedAt: nowIso() });

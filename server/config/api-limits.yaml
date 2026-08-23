@@ -35,6 +35,7 @@ providers:
       LLM_SHADOW_PARSE: 100
       PARSE_FLIGHT_TEXT: 200
       LEGACY_DOCUMENT_PARSE: 100
+      BLOG_CAPTION_SUGGEST: 200
 
   ANTHROPIC:
     window: hour
@@ -54,6 +55,7 @@ providers:
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+      BLOG_CAPTION_SUGGEST: 200
 
   GEMINI:
     window: hour
@@ -73,6 +75,7 @@ providers:
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+      BLOG_CAPTION_SUGGEST: 200
       PARSE_FLIGHT_TEXT: 200
 
   ZAI:
@@ -93,6 +96,7 @@ providers:
       INGESTION_LARGE_LLM: 50
       INGESTION_LLM_EXTRACT: 100
       LLM_SHADOW_PARSE: 100
+      BLOG_CAPTION_SUGGEST: 200
 
   OPENAI_COMPATIBLE:
     window: hour
@@ -114,6 +118,7 @@ providers:
       LLM_SHADOW_PARSE: 100
       PARSE_FLIGHT_TEXT: 200
       LEGACY_DOCUMENT_PARSE: 100
+      BLOG_CAPTION_SUGGEST: 200
 
   UNSPLASH:
     window: hour
@@ -207,6 +212,11 @@ providers:
       # just when a user opens a lodging dialog, so it's the higher-volume
       # caller. Raise only after watching real usage/cost for a week.
       TRIP_DAY_MAP: 300
+      # Phase 5 of docs/trip-blog-social-implementation-plan.md, architecture §14.1/§14.2 — the
+      # blog's day-map render job only, never a request path. Bounded by the number of trip-days
+      # that ever exist (render-once-and-store), not by page views, instances or crawlers, so 200/
+      # day is generous headroom rather than a real ceiling in practice.
+      BLOG_DAY_MAP_RENDER: 200
 
   NOMINATIM:
     window: hour
@@ -375,6 +385,14 @@ providers:
       ACTIVITIES_ACTIVITY_ROW_WRITE: 20000
       ACTIVITIES_ACTIVITY_ROW_DELETE: 5000
 
+  DATA_TRANSFER_API:
+    window: day
+    windowHours: 24
+    overall: 20000
+    callers:
+      ACTIVITY_IMPORT_ROWS: 15000
+      LODGING_IMPORT_ROWS: 5000
+
   ITINERARY_CACHE_STORAGE:
     window: day
     windowHours: 24
@@ -402,6 +420,54 @@ providers:
     callers:
       ENQUEUE_UNIT: 1000
       ATTEMPT_UNIT: 2000
+
+  # Phase 2 of docs/trip-blog-social-implementation-plan.md — the engagement spine
+  # (docs/trip-blog-social-architecture.md §9.2). Canary caps only; the full BLOG_DOCUMENT_READ /
+  # BLOG_ENGAGEMENT_READ / BLOG_RECAP_BUILD / BLOG_MODERATION_WRITE / NOTIFICATION_* callers that
+  # doc also lists are added by the phases that actually introduce those calls (Phase 3/4 routes,
+  # Phase 4.5 notifications, Phase 6 recap) — reserveApiUsageOrThrow's `requireConfiguredLimit`
+  # only demands a caller exist once code actually calls it under that name, so listing callers
+  # nothing calls yet would be dead configuration, not a safety requirement.
+  TRIP_BLOG_SOCIAL_API:
+    window: day
+    windowHours: 24
+    overall: 100000
+    callers:
+      BLOG_DOCUMENT_READ: 30000
+      BLOG_REACTION_WRITE: 15000
+      BLOG_COMMENT_WRITE: 5000
+      # Phase 5 — day facts (C1/C3/C5) and Day Starter/media-grouping writes (A1/A2).
+      BLOG_DAY_FACTS_READ: 10000
+      BLOG_AUTHORING_WRITE: 5000
+      # Phase 6 — reads are cheap and separately visible; only a cache miss consumes BUILD.
+      BLOG_RECAP_READ: 10000
+      BLOG_RECAP_BUILD: 500
+      BLOG_COVER_PROPOSAL_READ: 10000
+      BLOG_CAPTION_REQUEST: 5000
+      BLOG_PUBLICATION_READINESS_READ: 5000
+      # Phase 7 — every new request path is independently visible and capped. Offline flushes use
+      # BLOG_AUTHORING_WRITE when they reach the existing item endpoint; local queue operations do
+      # not consume server capacity.
+      BLOG_SEARCH_READ: 10000
+      BLOG_PLACES_READ: 5000
+      BLOG_QUICK_CAPTURE_HANDOFF: 5000
+
+  # Every new database operation has a finite, DB-atomic unit cap. These are operation units,
+  # not retained bytes; retained recap payloads use the capacity gauge below.
+  TRIP_BLOG_SOCIAL_STORAGE:
+    window: day
+    windowHours: 24
+    overall: 610000
+    callers:
+      DATABASE_READ_UNIT: 500000
+      DATABASE_WRITE_UNIT: 100000
+      DATABASE_DELETE_UNIT: 10000
+
+  TRIP_BLOG_SOCIAL_CAPACITY:
+    overall: 4194304
+    callers:
+      RECAP_RETAINED_KIB: 2097152
+      TEXT_RETAINED_KIB: 2097152
 
 budgeting:
   OPENAI:
@@ -601,3 +667,43 @@ caching:
     importItemsPerRun: 100
     translationCharactersPerMonth: 100000
     exportJobsPerMonth: 4
+    # Phase 2 — engagement spine. commentMaxLength/commentEditWindowSeconds/
+    # hideStrikesBeforeBlock are enforced today as hardcoded constants in
+    # postgresEngagementRepository.ts/firebaseEngagementRepository.ts, matching the existing
+    # precedent set by blog_text_contents' 100,000-char cap (also hardcoded in the repository, not
+    # read from config). These entries exist so the values are discoverable and so the Phase 3/4
+    # routes that add rate limiting can read commentsPerMinutePerUser/reactionsPerMinutePerUser
+    # from here rather than inventing their own constants.
+    commentMaxLength: 2000
+    commentsPerMinutePerUser: 10
+    commentsPerDayPerUser: 100
+    reactionsPerMinutePerUser: 60
+    reactionsPerDayPerUser: 500
+    commentPageSize: 20
+    replyPreviewCount: 3
+    commentEditWindowSeconds: 900
+    hideStrikesBeforeBlock: 3
+    publicEngagementReadsPerMinutePerIp: 60
+    publicEngagementCommentsPageSize: 20
+    # Phase 5 — architecture §7.1: facts are computed per request and cached in-process, keyed by
+    # trip/day/audience class/source revisions; never persisted (every input already is elsewhere).
+    factsCacheTtlMs: 60000
+    # Phase 5 — architecture §14.1: a day map re-renders only when its points hash changes, and even
+    # then at most this often per trip-day, so an itinerary edited several times in one afternoon
+    # doesn't re-trigger the render job on every save.
+    dayMapRerenderMinIntervalHours: 24
+    recapLeaseSeconds: 60
+    recapSnapshotsPerTrip: 3
+    recapGenerationsPerDayPerTrip: 5
+    captionSuggestionsPerDayPerUser: 10
+    captionSuggestionsPerMonthPremium: 100
+    nudgeDedupeHours: 72
+    nudgeSuppressDaysAfterTrip: 30
+    searchQueryMaxLength: 100
+    searchPageSize: 20
+    searchScanMaxItems: 500
+    placesPageSize: 100
+    placesReadUnitsFirebase: 2000
+    offlineQueueMaxEntries: 25
+    offlineQueueRetentionDays: 7
+    audioMaxBytes: 26214400

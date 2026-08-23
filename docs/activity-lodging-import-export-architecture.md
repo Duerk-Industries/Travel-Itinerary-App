@@ -1,198 +1,409 @@
-# Activity & Lodging Import/Export — Architecture
+# Activity and Lodging CSV Import/Export Architecture
 
-## Status
-Design only — no code written yet. Companion implementation plan:
-[`implementation_plans/activity-lodging-import-export-implementation-plan.md`](implementation_plans/activity-lodging-import-export-implementation-plan.md)
+## Status and scope
 
-## Goal
+Design only. No application code is part of this document change. The companion
+delivery plan is
+[`implementation_plans/activity-lodging-import-export-implementation-plan.md`](implementation_plans/activity-lodging-import-export-implementation-plan.md).
 
-Let a trip's Activities and Lodging tabs import rows from a spreadsheet (CSV, and Excel
-where practical) exported from a planning doc like Google Sheets, and export the
-current trip data back out in the same shape. Reference source files used to derive
-the field mapping: `Japan Checklist - Activities-1.csv`, `Japan Checklist - Lodging.csv`.
+The two supplied Japan checklist CSVs are example data, not executable instructions.
+They define the compatibility baseline:
 
-## Schema changes (prerequisite, land first)
+- Activities: 101 rows and 9 columns. Dates omit the year, one start time is blank,
+  duration is free text, and two name/date groups are legitimate duplicates.
+- Lodging: 12 rows and 13 columns. Four rows have no hotel because they describe an
+  unbooked location need. `Booked On` contains providers rather than dates, and amenity
+  cells include qualified values such as `$9/per` and `Near`.
 
-These are small, additive, and unblock the rest of the feature. All three DB adapters
-(`db.postgres.ts`, `db.firebase.ts`, `db.memory.ts`) must stay in sync per
-`CLAUDE.md`'s database-changes convention; `db.memory.ts` spreads `...postgresAdapter`
-so it inherits new functions automatically, but new *columns* still need to round-trip
-correctly through whichever adapter builds the row object.
+Version 1 imports and exports CSV on Expo web, iOS, and Android. XLSX is deliberately
+deferred: it is not needed for the supplied files, adds bundle and memory cost, and
+requires a separate dependency/security review. XLSX may later be enabled behind its
+own flag without changing the canonical row model.
 
-### 1. `ActivityType` enum: add `'Other'` and `'Drive'`
+## Goals and non-goals
 
-Neither exists today in `app/tabs/activities.tsx` (`ACTIVITY_TYPES`). `'Drive'` covers
-CSV rows like the Magome→Tsumago walk or any point-to-point transfer-by-car activity
-that isn't a `CarRental` record; `'Other'` is the catch-all so the synonym-mapping
-fallback (see below) never has to force a bad guess onto a genuinely uncategorizable
-row.
+Goals:
 
-- `server/src/types.ts` — `ActivityType` union
-- `app/tabs/activities.tsx` — `ACTIVITY_TYPES` array (single source the UI reads from;
-  `types.ts` should mirror it exactly, alphabetized to match the existing list style)
-- No DB migration needed — `activityType` is stored as free text, not a DB-level enum
-  constraint (verify this assumption in the postgres schema during implementation;
-  if it *is* a `CHECK` constraint or Postgres `ENUM` type, that needs a migration too)
+- Import sample-shaped or similarly named CSV columns into the selected trip's
+  Activities or Lodging page.
+- Preview, validate, edit, exclude, and explicitly classify every row before a write.
+- Preserve source information even when the current data model has no exact field.
+- Commit accepted rows atomically and idempotently while preserving expense mirrors.
+- Export a canonical, re-importable WanderBunnies CSV.
+- Meter and rate-limit import commits in the same durable system used by other APIs.
+- Provide responsive, accessible workflows on web, iPhone, and Android.
 
-### 2. Hidden `latitude`/`longitude` on `Activity` and `Lodging`
+Non-goals for version 1:
 
-Naming: match the existing convention in `lodgingLocationService.ts`
-(`latitude?: number | null`, `longitude?: number | null`) rather than the `Airport`
-type's `lat`/`lng` shorthand — these are user-facing data models, not a compact
-internal cache row.
+- Executing formulas, macros, links, or instructions found in an imported file.
+- Importing XLS/XLSX, Google Sheets URLs, coordinates, images, or place enrichment.
+- Automatically overwriting a possible duplicate.
+- Whole-file atomicity beyond the 150-row request limit. Larger files must be split
+  and each part reviewed and committed separately.
 
-- `server/src/types.ts`: add `latitude?: number | null; longitude?: number | null;`
-  to both `Activity` and `Lodging`
-- `db.postgres.ts`: new nullable columns `latitude double precision`,
-  `longitude double precision` on `activities` and `lodgings` tables; migration file
-  alongside `db.postgres.ts` per convention
-- `db.firebase.ts`: add the two fields to the Firestore document mapping (read + write)
-- Not exposed in any create/edit form — populated only when a resolve step
-  (Google Places lookup via `googlePlaces.ts` / `placeService.ts`, already used
-  elsewhere for `place_id`/`placeId`) runs and returns coordinates. Nothing today
-  calls that resolve path for activities or lodging line items, so until that lands
-  these columns simply stay null. They're being added now so any future geocode/
-  "distance between today's stops" feature doesn't need another migration, and so
-  an import that *does* have coordinates in-hand (e.g. from a future Google Maps
-  export format) has somewhere to put them immediately.
-- Not part of CSV import/export in v1 — the sample CSVs have no coordinates, and
-  there's no resolve call wired up yet. Excluding from both the import mapping table
-  and the export column list; add both once a resolve call exists and is triggered.
+## Design decisions that correct the original draft
 
-### 3. Lodging `notes` field
+1. **Do not reuse `PATCH /api/activities/bulk`.** That endpoint already exists for
+   `feature_grid_editing`, accepts only updates/deletes, caps at 50 operations, returns
+   partial results, and currently invokes its HTTP rate limiter twice. Import gets
+   separate endpoints and a shared import service. The duplicate limiter invocation is
+   a pre-existing bug to fix before relying on that route's patterns, but it is not a
+   reason to couple imports to it.
+2. **Do not add `Drive` or latitude/longitude for this capability.** `Hike` is already
+   a valid activity type and must remain `Hike`; the sample contains no drive or
+   coordinate columns. Speculative schema work increases adapter and migration risk.
+3. **Add only fields needed to preserve lodging data:** optional `notes` and
+   `features: string[]`. Add `Other` as the safe ActivityType fallback. Postgres stores
+   `features` as JSONB, consistent with this table's existing `paid_by` and
+   `traveler_ids` JSONB fields; Firestore stores an array. The pg-mem adapter reuses the
+   Postgres implementation and must pass the same migrations and round-trip tests.
+4. **Never use name/date alone as an update key.** It would merge legitimate rows such
+   as two visits to the same attraction on one date. Exact duplicate suggestions and
+   possible updates are distinct review states; updates always require user selection
+   of a concrete existing record.
+5. **Atomic means all-or-nothing.** Validation or concurrency errors write no activity,
+   lodging, expense mirror, or successful import receipt. Per-row error reporting is
+   returned from preflight validation, not from partially applied writes.
+6. **CSV is supported on all app platforms.** Native uses Expo document, file, and
+   sharing APIs behind platform adapters rather than a web-only file input.
 
-Already covered by the import design below — `Breakfast?`/`Dinner?`/`Laundry?`/
-`Booked On` from the source CSV have nowhere to go without it (`Lodging` currently
-has no free-text field at all, unlike `Activity`'s `notes`).
+## Data model additions
 
-- `server/src/types.ts`: `Lodging.notes?: string`
-- `db.postgres.ts` / `db.firebase.ts` / migration, same pattern as above
+### Activity
 
-### 4. Lodging `features: string[]` (tags)
+- Add `Other` to the canonical `ActivityType` union, normalizer, UI options, and tests.
+- Keep `Hike` as `Hike`. Do not add `Drive` in this project.
+- No database migration is expected because activity type is stored as text; verify
+  there is no production check constraint before release.
 
-New multi-value tag field, distinct from `notes`. Three preset tags —
-**Breakfast**, **Dinner**, **Laundry** — plus free-form short custom text tags
-(e.g. "Pool", "Late checkout", "Walk to station"). This replaces the CSV's
-`Breakfast?`/`Dinner?`/`Laundry?` *boolean* columns with a cleaner tag-presence
-model: a tag present in `features` means "yes, this lodging has it"; absent means
-either "no" or "unknown" (the CSV's `$9/per` and `Near` values in those columns
-don't fit a strict boolean anyway — see the import mapping note below).
+### Lodging
 
-- `server/src/types.ts`: `Lodging.features?: string[]`
-- `db.postgres.ts`: new column, `text[]` (Postgres native array type, consistent
-  with existing `paid_by`/`traveler_ids` array columns on the same table)
-- `db.firebase.ts`: Firestore array field
-- `db.memory.ts` / pg-mem: verify `text[]` columns are supported by pg-mem for this
-  table already (`paid_by` already uses one, so this should be a non-issue — pg-mem
-  supports the type, just confirm insert/update queries for `features` follow the
-  same parameterization as `paid_by`)
-- UI: a small tag-input control on the lodging create/edit form
-  (`app/components/LodgingForm.tsx`) — chips for the three presets plus a text
-  input for custom tags with add/remove; likely also worth a column in the
-  Lodging grid showing tag chips read-only, matching how other multi-value
-  fields (`paidBy`) render in the grid today
-- This does **not** replace `notes` — `notes` stays as the free-text overflow
-  field for one-off details (Booked On source, cancellation nuances, etc.);
-  `features` is for short, filterable/scannable tags
+- `notes?: string | null`: free-form preserved source context.
+- `features: string[]`: normalized, unique, trimmed tags such as `Breakfast`, `Dinner`,
+  and `Laundry`.
+- Postgres migration: nullable text `notes` and `features JSONB NOT NULL DEFAULT '[]'`.
+- Firebase: tolerate missing legacy fields on read and write a native array on change.
+- Update shared types, DTOs, adapters, create/edit form, detail dialog, and grid. Limit
+  notes and tag lengths in both client and server validation.
+- **UI Integration**: New fields must be visible and editable in `LodgingDetailsDialog`
+  and `LodgingForm`. Features should be displayed as manageable tags/chips.
 
-## CSV/Excel field mapping
+No import may write user IDs, ownership, trip IDs, image URLs, place IDs, votes, or
+ratings from arbitrary CSV cells. Those values come from authenticated server context
+or an explicitly reviewed canonical field with server-side authorization.
 
-### Activities CSV → `Activity`
+## Canonical import representation
 
-| CSV column | Maps to | Notes |
+Parsing produces raw string cells. Mapping then creates an entity-independent review
+row instead of an API DTO:
+
+```ts
+type ImportReviewRow<TFields> = {
+  sourceRow: number;
+  action: 'create' | 'update' | 'skip';
+  existingId?: string;
+  expectedFingerprint?: string;
+  fields: TFields;
+  warnings: ImportIssue[];
+  errors: ImportIssue[];
+};
+```
+
+The client may suggest an action, but only the review screen changes a suggestion into
+an explicit update. The server repeats normalization, authorization, duplicate ID
+checks, field validation, and optimistic-concurrency checks; client validation is for
+feedback, not trust.
+
+## Header matching and parsing
+
+- Use a maintained RFC 4180-compatible parser such as Papa Parse, not a hand-written
+  comma splitter. Configure it for headers, quoted commas/newlines, escaped quotes,
+  UTF-8 BOM, CRLF/LF, and empty-line skipping.
+- Treat every imported value as literal data. Never evaluate spreadsheet formulas.
+- Trim header whitespace and match case-insensitively against an explicit alias table.
+  Do not use fuzzy edit-distance matching that can silently assign the wrong field.
+- Show unknown columns as **Ignored** in mapping and require acknowledgement if a
+  non-empty unknown column would be dropped.
+- Reject duplicate mapped destination columns until the user resolves them.
+- Enforce before parsing/commit: `.csv` extension or accepted MIME fallback, at most
+  2 MiB, at most 150 non-empty data rows, at most 50 columns, and bounded cell lengths.
+  MIME is advisory because Android document providers are inconsistent.
+- Parse dates without `new Date(sourceString)`. Accept strict ISO `YYYY-MM-DD` or an
+  explicit English `Mon DD`/weekday-month-day grammar. Strip the optional weekday and
+  trailing comma, enumerate candidate years intersecting the trip range, and accept
+  only one in-range result. Correctly handle year rollover such as November to December.
+  Ambiguous or out-of-range values block the row until edited.
+- Normalize times with an explicit 12/24-hour parser. Blank activity time is valid.
+  Preserve duration as bounded free text (`1h30`, `Overnight`, `Flexible`).
+- Parse currency with the existing cost sanitizer, require a finite non-negative
+  amount, and never infer a currency from `$` unless the trip currency contract does so.
+
+## Source mappings
+
+### Activities
+
+| Source header | Activity field | Rule |
 |---|---|---|
-| Date | `date` | No year in source — inferred from the trip's own start/end date range (see Import flow) |
-| Activity Type | `activityType` | Synonym table + `'Other'` fallback (was previously going to fall back to `'Sights & Landmarks'`; `'Other'` is the correct fallback now that it exists) |
-| Start Time | `startTime` | Blank allowed |
-| Duration | `duration` | Stored as free text already, no coercion |
-| Activity Name | `name` | direct |
-| Activity Notes | `notes` | direct |
-| Activity Start Address | `startLocation` | direct |
-| Lodging Location | *(dropped)* | Not an `Activity` field |
-| Book Ahead Required? | folded into `notes` | Prefixed, e.g. `[Book ahead: Yes — timed tickets] …` |
-| — | `cost`, `freeCancelBy`, `bookedOn`, `reference`, `paidBy`, `status`, `latitude`, `longitude` | Not in source; defaulted (`cost: 0`, `status: Needed`, coordinates left null) and editable in the review grid before commit |
+| `Date` | `date` | Explicit year inference against trip dates |
+| `Activity Type` | `activityType` | Alias table below; unknown becomes `Other` plus warning |
+| `Start Time` | `startTime` | Blank allowed |
+| `Duration` | `duration` | Preserve free text |
+| `Activity Name` | `name` | Required after trim |
+| `Activity Notes` | `notes` | Preserve text |
+| `Activity Start Address` | `startLocation` | Preserve text |
+| `Lodging Location` | `notes` | Append labelled source context; do not silently drop |
+| `Book Ahead Required?` | `notes` | Append labelled source context when non-empty |
 
-Updated `activityType` synonym table (see implementation plan for the full list):
-`Temple/Shrine`, `Castle`, `Garden`, `Neighborhood`, `Sightseeing` → `Sights & Landmarks`;
-`Onsen/Ryokan` → `Spa/Wellness`; `Food/Drink` → `Food & Drink`; `Hike` →
-`Outdoor Activity`; `Market` → `Shopping`; `Free/Buffer` → `Open Access`. Anything
-not in the table now falls back to **`Other`**, not a forced best-guess category.
-`Drive` has no source-CSV synonym in this sample set but exists for future imports
-(e.g. a source sheet that has explicit "Drive to X" rows) and for manual use.
+Activity type aliases:
 
-### Lodging CSV → `Lodging`
+- `Food/Drink` -> `Food & Drink`
+- `Temple/Shrine`, `Castle`, `Garden`, `Museum`, `Neighborhood`, `Sightseeing` ->
+  `Sights & Landmarks`
+- `Hike` -> `Hike`
+- `Market` -> `Shopping`
+- `Onsen/Ryokan` -> `Spa/Wellness`
+- `Free/Buffer` -> `Open Access`
+- Unknown -> `Other`, while preserving the original value in a warning and notes
 
-| CSV column | Maps to | Notes |
+Defaults are `status: Needed`, `cost: 0`, and the trip's normal payer/traveler
+defaults. All defaults are visible in review.
+
+### Lodging
+
+| Source header | Lodging field | Rule |
 |---|---|---|
-| Check In / Check Out | `check_in_date` / `check_out_date` | Same year-inference rule as activities |
-| Hotel | `name` | Blank rows (unbooked legs) are skipped on import with a warning, not imported as empty-name placeholders |
-| Booked? | `status` | `Yes` → `Booked`, blank/`No` → `Needed` |
-| Cancel By | `refund_by` | direct |
-| Cost | `total_cost` | Strip `$`, reuse `sanitizeCostInput` |
-| Address | `address` | direct |
-| Days | *(derived only)* | Used to compute `cost_per_night = total_cost / days`, not stored |
-| Suggested Location | folded into `address` prefix, or dropped | Low value once a real address is present |
-| Breakfast? / Dinner? / Laundry? | `features` tags | `Yes` → add the matching preset tag. Non-boolean values in source (`$9/per`, `Near`) can't cleanly become a tag-presence flag — import surfaces these as a warning on the row and adds the tag anyway (presence beats absence), with the original text folded into `notes` so nothing is silently lost |
-| Booked On | folded into `notes` | e.g. `Booked via Booking.com` — `Lodging` has no dedicated field for this and doesn't need one just for import |
-| Rooms | *(not in CSV)* | Defaulted to `1`, editable in review grid |
-| — | `latitude`, `longitude` | Not in source; left null |
+| `Check In`, `Check Out` | `checkInDate`, `checkOutDate` | Explicit year inference; checkout must follow check-in |
+| `Hotel` | `name` | Use directly when present |
+| `Suggested Location` | `name`, `notes` | If Hotel is blank, create `Lodging in {location}` with `Needed`; always preserve labelled location in notes |
+| `Booked?` | `status` | Yes -> `Booked`; blank/No -> `Needed`; unknown warns |
+| `Cancel By` | `refundBy` | Parse with the same explicit date rules |
+| `Cost` | `totalCost` | Finite, non-negative normalized amount |
+| `Address` | `address` | Preserve text; blank allowed for Needed rows |
+| `Days` | validation only | Compare with calculated nights and warn on mismatch; never trust it as authoritative |
+| `Breakfast?`, `Dinner?`, `Laundry?` | `features`, `notes` | Yes or a qualifier adds the tag; qualifiers such as `$9/per`/`Near` are also preserved in notes; No does not add a tag |
+| `Booked On` | `notes` | Preserve as `Booked via: {value}`; it is a provider, not a date |
 
-### Excel support
+`rooms` defaults to 1. `costPerNight` is derived from normalized dates, total cost,
+and room count using the same rule as the existing lodging form, never directly from
+the source `Days` column. This preserves all four unbooked-location rows in the example.
 
-`xlsx` (SheetJS) or `exceljs` — pure client-side parsing, no network call, so
-"external API" is not actually a blocker. Recommended scope: **web only** for v1.
-`<input type="file">` → `File.arrayBuffer()` → `xlsx.read()` works directly in the
-browser bundle. Native (`expo-document-picker` + `expo-file-system` base64 read)
-is a second code path for a feature that's realistically a desktop-planning-doc
-workflow; gate Import/Export UI behind `Platform.OS === 'web'` and revisit only if
-there's real native demand. The same library can also *write* `.xlsx`, so export
-gets an Excel option for free from the same code path as CSV export.
+## Duplicate and concurrency policy
 
-## Import flow
+The preview compares against a freshly loaded trip snapshot:
 
-1. User clicks **Import** on the Activities or Lodging tab (web only).
-2. File picked (CSV or `.xlsx`) → parsed into rows of raw string cells.
-3. Header row matched against known column names (case-insensitive, with the
-   synonym/fuzzy list baked in from the sample CSVs above) to auto-map columns to
-   fields. Any column that can't be confidently mapped is shown to the user for
-   manual mapping before proceeding — never silently dropped without a chance to
-   assign it.
-4. Row-level transforms run: date year inference (against the trip's stored start/
-   end date), activity-type synonym mapping with `'Other'` fallback, cost/number
-   parsing, `features` tag derivation for lodging.
-5. **Review grid** (reusing `EditableDataGrid`) shows every parsed row before
-   anything is written: new rows vs. matched-existing rows (see dedupe below) are
-   visually distinguished, validation warnings (unmapped type, blank required
-   field, low-confidence date) are inline and non-blocking, and every cell remains
-   editable. Rows can be individually excluded.
-6. On confirm, the reviewed rows are sent to a bulk upsert endpoint.
+- Activity exact-duplicate fingerprint: normalized name, date, start time, and start
+  location plus other material fields.
+- Lodging exact-duplicate fingerprint: normalized name, check-in, checkout, address,
+  and other material fields.
+- An exact match defaults to **Skip**.
+- A looser name/date match is **Possible existing record**, never an automatic update.
+- The user may choose **Update** and select the existing record. The preview stores a
+  fingerprint of that record's mutable fields.
+- At commit, the server verifies the ID belongs to the selected trip and that the
+  current server fingerprint matches `expectedFingerprint`. A mismatch returns 409
+  with indexed conflicts and writes nothing. The client refreshes and returns to review.
 
-### Duplicate handling
+This protects collaborative edits without requiring a speculative version column.
 
-Match key: activities on `(name, date)`, lodging on `(name, check_in_date)`.
-Matches against currently-loaded trip rows are shown as **Update** (diffed
-old → new) in the review grid; non-matches are **New**. Each is individually
-toggleable before commit. `POST /api/activities/bulk` and
-`POST /api/lodgings/bulk` accept a mixed array of `{ id?, ...fields }` — an
-`id` present means update, absent means insert — so the endpoint does a true
-upsert in one request/transaction rather than the client branching between
-create and update calls.
+## Commit API and transaction contract
 
-## Export flow
+Add import-specific authenticated routes:
 
-Mirrors import: a shared column-definition list per entity drives both the CSV/
-Excel writer and the import column-mapping defaults, so round-tripping an
-app-exported file back in requires no manual remapping. Export always emits the
-app's own canonical headers (not the source-CSV's Google-Sheets-style headers);
-import's fuzzy header matching is what makes the *original* style of CSV (like
-the two sample files) import cleanly without the user renaming columns first.
-`latitude`/`longitude` are excluded from the exported columns in v1 (see above);
-add them once populated by a resolve call.
+- `POST /api/activities/import`
+- `POST /api/lodgings/import`
 
-## Open items carried into the implementation plan
+Request shape:
 
-- Confirm whether `activityType` is a DB-level constrained type anywhere (would
-  need a migration for the `Other`/`Drive` additions beyond the TS union)
-- Exact synonym table entries beyond what's derivable from the two sample CSVs —
-  expect to extend as real-world imports surface new source values
-- Whether the Lodging grid should render `features` as chips or a comma list
+```json
+{
+  "tripId": "trip-id",
+  "importId": "client-generated-uuid",
+  "rows": [
+    {
+      "sourceRow": 2,
+      "action": "create",
+      "fields": {}
+    }
+  ]
+}
+```
+
+Skipped rows remain client-side and are not sent. Updates also include `existingId`
+and `expectedFingerprint`. Zod schemas are strict and cap 150 rows, reject unknown DTO
+keys, bound strings/arrays, validate enums and finite numbers, and reject duplicate
+source rows or target IDs. The route's JSON limit is 256 KiB even though local file
+selection allows 2 MiB; the transformed DTO is intentionally smaller. Because the app's
+global `express.json()` parser runs before ordinary entity routers, mount dedicated import
+routers with `express.json({ limit: '256kb' })` before the global parser (as is already done
+for special-body routes). Adding `bodyParser.json()` inside the existing late-mounted
+entity router would be too late to change the effective limit.
+
+Processing order:
+
+1. Authenticate; check the import feature flag and tier entitlement.
+2. Validate DTO, trip edit membership, target record ownership, traveler/payer member
+   IDs, dates, and all optimistic fingerprints.
+3. Acquire a short-lived durable idempotency claim keyed by
+   `(userId, tripId, entity, importId)`. Return a stored successful response for an exact
+   replay, reject key reuse with a different payload hash, and reject/wait on a concurrent
+   in-progress claim without consuming quota. A lease permits recovery from a crashed
+   worker; stale-lease takeover is logged.
+4. Apply the per-user and per-IP HTTP burst limit exactly once for the claim owner.
+5. Reserve `rows.length` durable API-usage units exactly once for that attempt with
+   `requireConfiguredLimit: true`.
+6. In one Postgres transaction or one Firestore transaction/batch, create/update all
+   entity rows, create/update every corresponding expense-source row, and finalize the
+   idempotency claim with its response. The Firebase implementation pre-reads needed documents and
+   stays below the 500-write batch limit: 150 entities + 150 expense mirrors + receipt
+   leaves headroom (301 total writes). Ensure `upsertExpenseForSource` logic is
+   fully integrated into these atomic bulk operations.
+7. Return a stable response with created/updated counts and normalized records.
+
+Validation failures use 422, unauthorized trip/record access 403, concurrency or
+idempotency mismatch 409, feature disabled 404, entitlement denial 402, and either
+burst or usage exhaustion 429 with `Retry-After` when available. No response exposes
+another user's record details.
+
+Preflight validation runs before claim acquisition. A failed domain transaction writes no
+entity or expense data and marks or expires only its control claim. If durable usage is
+reserved but the later database transaction or process fails, the reservation remains
+consumed as an abuse-control unit and is logged. A crash in the narrow interval between
+usage reservation and claim-state persistence may conservatively overcount a recovered
+attempt; it must never undercount or duplicate domain writes. The UI clearly distinguishes
+quota errors from row validation errors.
+
+## API usage, limits, and observability
+
+Add a configured provider to `server/config/api-limits.yaml` rather than relying on the
+limiter's fail-open behavior:
+
+```yaml
+DATA_TRANSFER_API:
+  window: day
+  windowHours: 24
+  overall: 20000
+  callers:
+    ACTIVITY_IMPORT_ROWS: 15000
+    LODGING_IMPORT_ROWS: 5000
+```
+
+The exact production numbers are operator-tunable, but configuration is mandatory.
+Each accepted create/update row is one unit; local parsing, preview, and client-side
+export use no external API and therefore consume zero API units. Add zero request
+pricing if the admin cost dashboard requires an explicit entry.
+
+Use a separate HTTP limiter, default 10 commits per user and IP per 10 minutes, with
+environment overrides read through the project's environment helpers. Do not count
+preview actions. Log structured import completion/failure events with import ID hash,
+entity, counts, duration, platform, and error code; never log CSV contents, notes,
+addresses, tokens, or raw filenames. Add metrics for attempted/accepted/skipped rows,
+422/409/429 responses, transaction latency, and file/row size buckets.
+
+No image/place API is called during import. In particular, lodging bulk commit must not
+fan out the existing synchronous `getGooglePlaceImage` fallback for every row; that
+would add latency and exhaust the metered Unsplash limit. Imported lodging images stay
+null unless already present on an explicit update. Any future enrichment is a deferred,
+bounded, separately flagged, cached, and independently metered job.
+
+## Feature flags and authorization
+
+Seed two independent flags, initially disabled until platform QA completes:
+
+- `activity_lodging_csv_import`
+- `activity_lodging_csv_export`
+
+Expose import from `/api/auth/features` using `isFeatureEnabled`. Expose export as the
+conjunction of `csv_export` (the existing master switch) and
+`activity_lodging_csv_export`, also using `isFeatureEnabled`, so the public response and
+server endpoint share the entitlement system's fail-open semantics. The app keeps
+UI defaults false until the feature response resolves, then passes them to both tabs.
+The server is authoritative for imports and uses `assertCanUseFeature`; hiding a button
+is not authorization. Import is hidden/disabled in read-only/following mode. Export is
+available only where the underlying entity list is already readable and is still UI-
+gated by its flag. Flag tests cover enabled, disabled, and missing-row behavior, including
+admin rules (feature flags have no admin bypass).
+
+The existing generic `csv_export` flag remains unchanged and is the export master switch.
+
+## Cross-platform file and UI architecture
+
+Put platform behavior behind a small interface with `.web.ts` and `.native.ts`
+implementations so Metro and webpack do not eagerly bundle incompatible code:
+
+- `pickCsvFile()` returns name, size, and text.
+- `shareCsvFile(filename, text)` downloads on web and invokes the share sheet on native.
+
+Web:
+
+- Hidden file input accepts `.csv`; reset its value after every selection so the same
+  file can be chosen twice.
+- Read with `File.text()`. Export with Blob/object URL, a sanitized filename, and always
+  revoke the URL.
+
+iOS/Android:
+
+- Install the Expo SDK 54-compatible `expo-document-picker` with `expo install`.
+- Pick with `copyToCacheDirectory: true`; allow CSV MIME variants plus extension
+  fallback. Read with the Expo FileSystem 19 `File` API (`new File(uri).text()`), not
+  the deprecated main-module `readAsStringAsync` path that throws at runtime.
+- Write a temporary file under `Paths.cache`, check `Sharing.isAvailableAsync()`, call
+  `Sharing.shareAsync()` with `text/csv` and the CSV UTI where supported, and best-effort
+  delete the temporary file. User cancellation is not shown as an error.
+
+The review UI is responsive rather than one desktop grid everywhere:
+
+- **UI Progress**: The commit phase must show a progress indicator/spinner and disable
+  the commit button to prevent double-submits. Successful imports should show a summary
+  of changes (Created/Updated/Skipped counts) before returning to the main tab.
+- Native uses a full-screen safe-area modal/screen with a single `FlatList` or
+  `SectionList`, expandable row cards, memoized rows, and a sticky summary/commit bar.
+  Do not nest a virtualized list inside `ScrollView`.
+- Keep commit controls reachable above the keyboard and device bottom inset. Support
+  rotation, small iPhones, large text, 44-point touch targets, VoiceOver/TalkBack labels,
+  focus restoration, and warning text/icons rather than color alone.
+- Parsing and transforms run once per file, not during every render. Keep only raw text
+  plus normalized review rows and avoid repeated full-array copies. The 150-row cap and
+  virtualization make the supplied 101-row activity file safe on lower-memory devices.
+
+## Export format and security
+
+The canonical CSV uses stable WanderBunnies headers and ISO dates. The same schema
+definitions drive export and automatic import aliases. Include all portable supported
+fields, including status, type, dates/times, names, locations/addresses, duration,
+costs, cancellation date, reference, notes, and lodging rooms/features. Version 1 does
+not export payer/traveler assignments because internal IDs are not portable and names
+or email addresses create ambiguity/privacy risk; re-import applies the visible trip
+defaults. Do not emit auth/owner IDs, image URLs, votes, ratings, or hidden internals.
+
+`WanderBunnies Record ID` and `WanderBunnies Record Fingerprint` columns support explicit
+same-trip update matching. Ignore them for a different trip and never trust
+them without membership/fingerprint checks. A clear warning explains that sample-style
+third-party columns may not round-trip one-for-one, while canonical exports do.
+
+Serialize RFC 4180 CSV with CRLF and optional UTF-8 BOM for Excel compatibility. Quote
+commas, quotes, and line breaks. Neutralize spreadsheet formula injection for text cells
+whose first non-whitespace character is `=`, `+`, `-`, `@`, tab, or carriage return by
+prefixing a single quote; numeric cells are emitted only after numeric validation.
+Re-import never evaluates or automatically removes that protective prefix, because doing
+so would make a literal leading apostrophe ambiguous. Sanitize filenames and include the
+entity, trip name, and export date. Export refreshes the entity list first or blocks if
+loading failed so it never silently exports a partial stale page.
+
+## Acceptance criteria
+
+- The full 101-row Activities example previews without collapsing legitimate rows; its
+  blank start time and all source activity types are handled.
+- All 12 Lodging rows preview, including four generated `Lodging in ...` Needed rows;
+  provider and qualified amenity text are preserved.
+- A validation/concurrency failure writes zero entity and expense records in Postgres,
+  Firebase, and pg-mem tests; only bounded idempotency-control state may remain after a
+  post-claim infrastructure failure.
+- Retrying a successful `importId` does not duplicate records or consume another commit
+  path; altered payload reuse is rejected.
+- Import usage units, burst limits, feature flags, entitlement denials, and Retry-After
+  behavior are tested and visible to operators.
+- Canonical export re-imports to equivalent normalized rows and is formula-injection safe;
+  intentionally neutralized formula-like text retains its safety apostrophe.
+- Web export, iOS/Android picker/share flows, keyboard/safe-area behavior, accessibility,
+  typechecks, Jest tests, Expo web export, and native release builds all pass before the
+  flags are enabled.

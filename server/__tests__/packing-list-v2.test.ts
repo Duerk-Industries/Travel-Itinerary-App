@@ -99,6 +99,31 @@ describe('packing lists v2', () => {
     expect(manual.body.groups.some((group: any) => group.items.some((item: any) => item.label === 'Trip-only item' && item.category === 'Trip notes'))).toBe(true);
   });
 
+  it('persists a checkmark on a derived v2 item after the packing list is reloaded', async () => {
+    await replaceUserPackingPreferencesV2(ownerId, ['general'], []);
+    const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'Persistent checkmark trip', members: [] });
+    const initial = await getPackingListV2(ownerId, created.trip.id);
+    const item = initial.groups.flatMap((group) => group.items)[0];
+    const traveler = initial.travelers.find((candidate) => candidate.userId === ownerId);
+    expect(item).toBeDefined();
+    expect(traveler).toBeDefined();
+
+    await request(app)
+      .patch(`/api/trips/${created.trip.id}/packing-list/checks`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ itemId: item.id, travelerId: traveler!.id, packed: true })
+      .expect(204);
+
+    const reloaded = await request(app)
+      .get(`/api/trips/${created.trip.id}/packing-list`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const reloadedItem = reloaded.body.groups
+      .flatMap((group: any) => group.items)
+      .find((candidate: any) => candidate.id === item.id);
+    expect(reloadedItem.packedBy).toContain(traveler!.id);
+  });
+
   it('retracts profile contributions when a member is removed', async () => {
     const friend = { email: 'packing-v2-friend@example.com', firstName: 'Friend', lastName: 'V2', password: 'testtest' };
     await cleanupTestUsersByEmail([friend.email]);

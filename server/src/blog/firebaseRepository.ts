@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
@@ -10,6 +10,11 @@ import { markSynced, shouldSkipSync } from './syncCoordination';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
+const idForMutation = (userId: string, key?: string | null): string => {
+  if (!key) return randomUUID();
+  const hex = createHash('sha256').update(`blog-text:${userId}:${key}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 
 const ensureBlog = async (tripId: string): Promise<any> => {
   const db = getDb();
@@ -43,7 +48,7 @@ const ensureDays = async (tripId: string): Promise<void> => {
   for (let cursor = new Date(`${start}T00:00:00.000Z`); cursor <= new Date(`${end}T00:00:00.000Z`); cursor = new Date(cursor.getTime() + 86_400_000)) {
     const localDate = cursor.toISOString().slice(0, 10);
     if (known.has(localDate)) continue;
-    await db.collection('blog_days').add({ tripId, localDate, headline: null, summary: null, createdAt: nowIso(), updatedAt: nowIso() });
+    await db.collection('blog_days').add({ tripId, localDate, headline: null, summary: null, updateVersion: 1, createdAt: nowIso(), updatedAt: nowIso() });
   }
 };
 
@@ -240,6 +245,9 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
       headline: data.headline ?? null,
       summary: data.summary ?? null,
       coverAssetId: data.coverAssetId ?? null,
+      // Existing docs written before this column existed have no `updateVersion` field at all;
+      // treat that as version 1, same starting point as a freshly created day (see ensureDays).
+      updateVersion: Number(data.updateVersion ?? 1),
       items: items.filter((item) => item.blogDayId === doc.id),
       activities: activitiesByDate.get(date) ?? [],
       weather: dayWeather ? {
@@ -250,7 +258,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
 
-  return { id: blog.id, tripId, title: blog.title ?? '', subtitle: blog.subtitle ?? null, introduction: blog.introduction ?? null, contentRevision: Number(blog.contentRevision ?? 0), visibilityState: blog.visibilityState ?? 'private', visibilityEpoch: Number(blog.visibilityEpoch ?? 0), days };
+  return { id: blog.id, tripId, title: blog.title ?? '', subtitle: blog.subtitle ?? null, introduction: blog.introduction ?? null, contentRevision: Number(blog.contentRevision ?? 0), visibilityState: blog.visibilityState ?? 'private', visibilityEpoch: Number(blog.visibilityEpoch ?? 0), photoLocationEnabled: Boolean(blog.photoLocationEnabled), days };
 };
 
 export const getBlogCapabilities = async (userId: string, tripId: string, capabilities: BlogCapabilities): Promise<BlogCapabilities> => {
@@ -271,8 +279,16 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   if (!access) throw new Error('Not authorized to edit this trip');
   if (String(input.body ?? '').length > 100_000) throw new Error('Text block is too large');
   const day = await getDay(tripId, input.dayDate);
-  const id = randomUUID();
-  const data = { id, tripId, blogDayId: day.id, localDate: day.localDate, kindKey: 'core.text', schemaVersion: 1, audience: input.audience ?? 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${id}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body: String(input.body ?? ''), languageTag: input.languageTag ?? null, createdAt: nowIso(), updatedAt: nowIso(), deletedAt: null };
+  const id = idForMutation(userId, input.idempotencyKey);
+  if (input.idempotencyKey) {
+    const replay = await getDb().collection('blog_items').doc(id).get();
+    if (replay.exists) {
+      const data = replay.data() as any;
+      if (String(data.tripId) !== tripId || String(data.authorUserId) !== userId) throw new Error('Idempotency key conflict');
+      return mapItem(replay);
+    }
+  }
+  const data = { id, tripId, blogDayId: day.id, localDate: day.localDate, kindKey: 'core.text', schemaVersion: 1, audience: input.audience ?? 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${id}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body: String(input.body ?? ''), languageTag: input.languageTag ?? null, sourceType: input.sourceType ?? null, createdAt: nowIso(), updatedAt: nowIso(), deletedAt: null };
   await getDb().collection('blog_items').doc(id).set(data);
   await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
   return mapItem({ id, data: () => data });
@@ -303,14 +319,18 @@ export const getGalleryItemsMeta = async (tripId: string, itemIds: string[]): Pr
   return out;
 };
 
-export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextItem | null> => {
+export const updateBlogTextItem = async (userId: string, itemId: string, patch: BlogTextPatch): Promise<BlogTextItem | { conflict: true; latest: BlogTextItem | null } | null> => {
   const ref = getDb().collection('blog_items').doc(itemId);
   const snapshot = await ref.get();
   if (!snapshot.exists) return null;
   const row = snapshot.data() as any;
   const access = await ensureUserInTrip(String(row.tripId), userId);
   if (!access) throw new Error('Not authorized to edit this trip');
-  if (Number(row.version ?? 1) !== patch.version) return null;
+  if (Number(row.version ?? 1) !== patch.version) {
+    // See the matching comment in postgresRepository.ts: architecture §5.5 requires the latest
+    // authorized state on a conflict, not a bare rejection.
+    return { conflict: true, latest: mapItem({ id: itemId, data: () => row }) };
+  }
   const update = { body: patch.body === undefined ? row.body : String(patch.body), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() };
   await ref.set(update, { merge: true });
   await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
@@ -378,12 +398,169 @@ export const setDayCoverIfUnset = async (userId: string, tripId: string, dayDate
   });
 };
 
+// Mirrors mapDayMeta in postgresRepository.ts — a minimal BlogDay projection for the day-meta
+// update path, not the full getBlog joins.
+const mapDayMeta = (id: string, data: any): BlogDay => ({
+  id,
+  tripId: String(data.tripId),
+  localDate: String(data.localDate),
+  headline: data.headline ?? null,
+  summary: data.summary ?? null,
+  items: [],
+  updateVersion: Number(data.updateVersion ?? 1),
+});
+
+const MAX_DAY_HEADLINE_LENGTH = 120;
+const MAX_DAY_SUMMARY_LENGTH = 500;
+
+export const updateBlogDayMeta = async (
+  userId: string,
+  tripId: string,
+  dayDate: string,
+  patch: { headline?: string | null; summary?: string | null; updateVersion: number }
+): Promise<BlogDay | { conflict: true; latest: BlogDay | null } | null> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  if (patch.headline != null && patch.headline.length > MAX_DAY_HEADLINE_LENGTH) {
+    throw new Error(`Headline must be ${MAX_DAY_HEADLINE_LENGTH} characters or fewer`);
+  }
+  if (patch.summary != null && patch.summary.length > MAX_DAY_SUMMARY_LENGTH) {
+    throw new Error(`Summary must be ${MAX_DAY_SUMMARY_LENGTH} characters or fewer`);
+  }
+  const day = await getDay(tripId, dayDate);
+  const db = getDb();
+  const dayRef = db.collection('blog_days').doc(day.id);
+  const blogRef = db.collection('trip_blogs').doc(tripId);
+  // A transaction, unlike updateBlogTextItem's plain read-then-write above, because Firestore
+  // has no SQL-style conditional `WHERE update_version = $n` — the check-and-set has to be done
+  // by hand, and only a transaction makes that atomic against a concurrent editor.
+  const result = await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(dayRef);
+    if (!snapshot.exists) return null;
+    const current = snapshot.data() as any;
+    if (Number(current.updateVersion ?? 1) !== patch.updateVersion) {
+      return { conflict: true as const, latest: mapDayMeta(day.id, current) };
+    }
+    const now = nowIso();
+    const next = {
+      ...current,
+      headline: patch.headline !== undefined ? patch.headline : current.headline ?? null,
+      summary: patch.summary !== undefined ? patch.summary : current.summary ?? null,
+      updateVersion: Number(current.updateVersion ?? 1) + 1,
+      updatedAt: now,
+    };
+    transaction.set(dayRef, next, { merge: true });
+    transaction.set(blogRef, { contentRevision: FieldValue.increment(1), updatedAt: now }, { merge: true });
+    return mapDayMeta(day.id, next);
+  });
+  return result;
+};
+
+const MAX_BLOG_TITLE_LENGTH = 200;
+const MAX_BLOG_SUBTITLE_LENGTH = 300;
+const MAX_BLOG_INTRODUCTION_LENGTH = 5000;
+
+export const updateBlogMeta = async (
+  userId: string,
+  tripId: string,
+  patch: { title?: string; subtitle?: string | null; introduction?: string | null; photoLocationEnabled?: boolean }
+): Promise<BlogDocument> => {
+  const access = await ensureUserInTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  if (patch.title != null && patch.title.length > MAX_BLOG_TITLE_LENGTH) {
+    throw new Error(`Title must be ${MAX_BLOG_TITLE_LENGTH} characters or fewer`);
+  }
+  if (patch.subtitle != null && patch.subtitle.length > MAX_BLOG_SUBTITLE_LENGTH) {
+    throw new Error(`Subtitle must be ${MAX_BLOG_SUBTITLE_LENGTH} characters or fewer`);
+  }
+  if (patch.introduction != null && patch.introduction.length > MAX_BLOG_INTRODUCTION_LENGTH) {
+    throw new Error(`Introduction must be ${MAX_BLOG_INTRODUCTION_LENGTH} characters or fewer`);
+  }
+  const blog = await ensureBlog(tripId);
+  const update: Record<string, unknown> = { updatedAt: nowIso() };
+  if (patch.title !== undefined) update.title = patch.title;
+  if (patch.subtitle !== undefined) update.subtitle = patch.subtitle ?? null;
+  if (patch.introduction !== undefined) update.introduction = patch.introduction ?? null;
+  if (patch.photoLocationEnabled !== undefined) update.photoLocationEnabled = Boolean(patch.photoLocationEnabled);
+  await getDb().collection('trip_blogs').doc(tripId).set(update, { merge: true });
+  return {
+    id: blog.id,
+    tripId,
+    title: String(update.title ?? blog.title ?? ''),
+    subtitle: (update.subtitle !== undefined ? update.subtitle : blog.subtitle ?? null) as string | null,
+    introduction: (update.introduction !== undefined ? update.introduction : blog.introduction ?? null) as string | null,
+    contentRevision: Number(blog.contentRevision ?? 0),
+    visibilityState: blog.visibilityState ?? 'private',
+    visibilityEpoch: Number(blog.visibilityEpoch ?? 0),
+    photoLocationEnabled: Boolean(update.photoLocationEnabled !== undefined ? update.photoLocationEnabled : (blog as any).photoLocationEnabled),
+    days: [],
+  };
+};
+
 export const reorderBlogItems = async (userId: string, tripId: string, itemIds: string[]): Promise<void> => {
   const access = await ensureUserInTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');
   const batch = getDb().batch();
   itemIds.forEach((itemId, index) => batch.update(getDb().collection('blog_items').doc(itemId), { sortKey: String(index).padStart(12, '0'), lastEditorUserId: userId, updatedAt: nowIso() }));
   await batch.commit();
+};
+
+// Mirrors postgresRepository.ts's getContributorsForDays. Firestore has no per-day FK on
+// blog_media_assets (assets carry `dayDate`, not a `blogDayId` — see the note on setDayCover
+// above), so this resolves each requested day's `localDate` first, then queries assets by that
+// date and maps back to the caller's day IDs.
+const displayNameFromUserDoc = (data: any): string => {
+  const combined = `${data?.firstName ?? ''} ${data?.lastName ?? ''}`.trim();
+  if (combined) return combined;
+  if (data?.email) return String(data.email);
+  return 'A traveler';
+};
+
+export const getContributorsForDays = async (dayIds: string[]): Promise<Record<string, { userId: string; displayName: string; itemCount: number; assetCount: number }[]>> => {
+  const result: Record<string, Record<string, { itemCount: number; assetCount: number }>> = {};
+  if (!dayIds.length) return {};
+  const db = getDb();
+  const dayDocs = await Promise.all(dayIds.map((id) => db.collection('blog_days').doc(id).get()));
+  const dateToDayId = new Map<string, string>();
+  dayIds.forEach((id, i) => {
+    result[id] = {};
+    const data = dayDocs[i].data() as any;
+    if (data?.localDate) dateToDayId.set(String(data.localDate), id);
+  });
+
+  const itemSnap = await db.collection('blog_items').where('kindKey', '==', 'core.text').get();
+  for (const doc of itemSnap.docs) {
+    const data = doc.data() as any;
+    if (data.deletedAt || !dayIds.includes(data.blogDayId)) continue;
+    const bucket = result[data.blogDayId];
+    const entry = bucket[data.authorUserId] ?? { itemCount: 0, assetCount: 0 };
+    entry.itemCount += 1;
+    bucket[data.authorUserId] = entry;
+  }
+
+  const assetSnap = await db.collection('blog_media_assets').where('state', '==', 'ready').get();
+  for (const doc of assetSnap.docs) {
+    const data = doc.data() as any;
+    const dayId = dateToDayId.get(String(data.dayDate));
+    if (!dayId) continue;
+    const bucket = result[dayId];
+    const entry = bucket[data.uploaderUserId] ?? { itemCount: 0, assetCount: 0 };
+    entry.assetCount += 1;
+    bucket[data.uploaderUserId] = entry;
+  }
+
+  const userIds = new Set<string>();
+  for (const bucket of Object.values(result)) Object.keys(bucket).forEach((id) => userIds.add(id));
+  const userDocs = await Promise.all(Array.from(userIds).map(async (id) => [id, await db.collection('users').doc(id).get()] as const));
+  const displayNames = new Map(userDocs.map(([id, snap]) => [id, snap.exists ? displayNameFromUserDoc(snap.data()) : 'A traveler']));
+
+  const final: Record<string, { userId: string; displayName: string; itemCount: number; assetCount: number }[]> = {};
+  for (const [dayId, bucket] of Object.entries(result)) {
+    final[dayId] = Object.entries(bucket)
+      .map(([userId, counts]) => ({ userId, displayName: displayNames.get(userId) ?? 'A traveler', ...counts }))
+      .sort((a, b) => (b.itemCount + b.assetCount) - (a.itemCount + a.assetCount));
+  }
+  return final;
 };
 
 export const getPublicPath = async (tripId: string): Promise<string | null> => {
@@ -428,16 +605,27 @@ export const createModalityItem = async (
   return { itemId, payload: cleanPayload };
 };
 
-export const searchBlog = async (tripId: string, query: string): Promise<any[]> => {
+export const searchBlog = async (
+  tripId: string,
+  query: string,
+  audiences: string[],
+  options: { cursor?: string | null; limit?: number; scanLimit?: number } = {}
+): Promise<any[]> => {
   const q = query.toLowerCase();
-  const snapshots = await getDb().collection('blog_items').where('tripId', '==', tripId).get();
-  // Simple in-memory search for parity with ILIKE
+  const limit = Math.min(50, Math.max(1, Number(options.limit ?? 20)));
+  const cursor = String(options.cursor ?? '');
+  const scanLimit = Math.min(2000, Math.max(limit + 1, Number(options.scanLimit ?? 500)));
+  const snapshots = await getDb().collection('blog_items').where('tripId', '==', tripId).limit(scanLimit).get();
+  // Firestore has no contains/full-text operator. This bounded fallback preserves adapter parity
+  // for today's trip-size ceiling; a managed search index can replace it when that ceiling grows.
   return snapshots.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
     .filter((item) => {
-      if (item.deletedAt != null || item.kindKey !== 'core.text') return false;
+      if (item.deletedAt != null || item.kindKey !== 'core.text' || !audiences.includes(String(item.audience))) return false;
       return String(item.body ?? '').toLowerCase().includes(q);
     })
-    .map((item) => ({ id: item.id, local_date: item.localDate, body: item.body }))
-    .slice(0, 50);
+    .sort((a, b) => `${a.localDate}|${a.id}`.localeCompare(`${b.localDate}|${b.id}`))
+    .filter((item) => !cursor || `${item.localDate}|${item.id}` > cursor)
+    .map((item) => ({ id: item.id, localDate: item.localDate, snippet: String(item.body ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240) }))
+    .slice(0, limit + 1);
 };

@@ -3,7 +3,7 @@
 // tripBlog.tsx (which re-exports both names for backward compatibility) so the gallery/lightbox
 // components can import it without a circular tabs<->components import.
 import React, { useEffect, useState } from 'react';
-import { Image, Platform } from 'react-native';
+import { Image, Linking, Platform, Text, TouchableOpacity, View } from 'react-native';
 import NativeVideoPlayer from './NativeVideoPlayer';
 
 export const resolveMediaAspectRatio = (width, height) => {
@@ -45,6 +45,25 @@ export const BlogMediaPreview = ({ item, backgroundColor }) => {
     // video URL as an image and silently showed nothing — expo-video plays it properly instead.
     if (!mediaUrl) return null;
     return <NativeVideoPlayer uri={mediaUrl} backgroundColor={backgroundColor} />;
+  }
+
+  if (item.kindKey === 'media.audio') {
+    if (Platform.OS === 'web') {
+      return React.createElement('audio', {
+        testID: 'blog-media-audio-web',
+        src: mediaUrl,
+        controls: true,
+        preload: 'metadata',
+        style: { width: '100%' },
+      });
+    }
+    return (
+      <View style={{ padding: 12, borderRadius: 8, backgroundColor }}>
+        <TouchableOpacity accessibilityRole="button" disabled={!mediaUrl} onPress={() => mediaUrl && Linking.openURL(mediaUrl)} style={{ minHeight: 44, justifyContent: 'center' }}>
+          <Text style={{ fontWeight: '700' }}>▶ Play voice note</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   return (

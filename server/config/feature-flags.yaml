@@ -10,6 +10,12 @@ flags:
   csv_export:
     enabled: true
     description: "Enable CSV export of trip data"
+  activity_lodging_csv_import:
+    enabled: true
+    description: "Enable reviewed CSV imports for Activities and Lodging"
+  activity_lodging_csv_export:
+    enabled: true
+    description: "Enable canonical CSV exports for Activities and Lodging"
   car_rentals:
     enabled: true
     description: "Enable car rental booking integration"
@@ -117,10 +123,10 @@ flags:
     description: "Apple Photos import"
   trip_blog_mobile_share_ios:
     enabled: true
-    description: "iOS share extension upload"
+    description: "A10 — iOS share extension and first-class quick-capture entry point"
   trip_blog_mobile_share_android:
     enabled: true
-    description: "Android share intent upload"
+    description: "A10 — Android share intent and first-class quick-capture entry point"
   trip_blog_public_sharing:
     enabled: true
     description: "Phase 4 public sharing, consent flow, and vanity URLs"
@@ -132,15 +138,18 @@ flags:
     description: "Phase 2 private photo upload, normalization, and per-uploader quota"
   trip_blog_audio:
     enabled: true
-    description: "Phase 8 audio and narration modality"
+    description: "A9 — bounded voice-note upload and playback"
+  trip_blog_audio_transcription:
+    enabled: true
+    description: "A9 — Premium/Pro provider transcription of an uploaded voice note"
   trip_blog_translation:
-    enabled: false
+    enabled: true
     description: "Phase 8 on-demand translation modality"
   trip_blog_exports:
-    enabled: false
+    enabled: true
     description: "Phase 8 asynchronous blog export"
   trip_blog_item_audiences:
-    enabled: false
+    enabled: true
     description: "Phase 8 per-item audience controls"
   trip_blog_structured_cards:
     enabled: true
@@ -149,20 +158,107 @@ flags:
     enabled: true
     description: "Phase 8 gallery parent items"
   trip_blog_panorama_media:
-    enabled: false
+    enabled: true
     description: "Phase 8 panorama and 360 degree media"
   trip_blog_ai_highlights:
-    enabled: false
+    enabled: true
     description: "Phase 8 AI-proposed highlights"
   trip_blog_public_indexing:
-    enabled: false
+    enabled: true
     description: "Phase 6 public sitemap and search indexing"
   trip_blog_search:
-    enabled: false
-    description: "Visibility-aware private blog search"
+    enabled: true
+    description: "C8 — visibility-aware, bounded private blog search UI and API"
+  trip_blog_places:
+    enabled: true
+    description: "C6 — traveler-only places index derived from existing trip records without reverse geocoding"
+  trip_blog_offline_queue:
+    enabled: true
+    description: "A11 — account/trip-scoped seven-day offline authoring queue"
+  trip_blog_trip_awards:
+    enabled: true
+    description: "B10 — Trip Awards presentation derived from the durable recap snapshot"
+  trip_blog_keepsake_export:
+    enabled: true
+    description: "C9 — local print/share keepsake renderer; no server-side export job"
   trip_blog_structured_data:
     enabled: true
     description: "Schema.org public blog metadata"
+  # Phase 2 of docs/trip-blog-social-implementation-plan.md — engagement spine. Ships dark: no
+  # route in server/src/routes/ checks these yet (that's Phase 3/4). Added now, default false and
+  # fail-closed (see entitlementService.ts's FAIL_CLOSED_FLAGS), so the schema/service/flag rows
+  # land together rather than the flags trailing the code that will gate on them.
+  trip_blog_social_layer:
+    enabled: true
+    description: "Master kill switch for the trip blog social layer (reactions, comments, mentions); child flags below still apply"
+  trip_blog_reactions:
+    enabled: true
+    description: "Phase 3 emoji reactions on blog days, items and photos/videos"
+  trip_blog_comments:
+    enabled: true
+    description: "Phase 4 threaded comments; implies moderation, not separately flagged"
+  trip_blog_mentions:
+    enabled: true
+    description: "Phase 4 @mentions in comments, trip-scoped autocomplete"
+  trip_blog_public_engagement:
+    enabled: true
+    description: "Phase 4 unauthenticated public engagement endpoint (counts + public comments) on the public blog page"
+  # Phase 5 of docs/trip-blog-social-implementation-plan.md — "what actually happened" (C1, C2, C3,
+  # C5, C10, C11, A1, A2). trip_blog_authoring_assist is the parent surface for the Day Starter and
+  # photo-first composer, per architecture §9.1's flag table; the two children below still apply.
+  trip_blog_authoring_assist:
+    enabled: true
+    description: "Parent flag for Day Starter (A1) and the photo-first composer (A2)"
+  trip_blog_day_starter:
+    enabled: true
+    true: "A1/A6 — deterministic day-starter template (Use/Rewrite/Not now), never an LLM call itself"
+  trip_blog_photo_composer:
+    enabled: true
+    description: "A2 — photo-first composer with day buckets, an Unassigned bucket and pre-commit storage headroom"
+  trip_blog_day_facts:
+    enabled: true
+    description: "C1, C3, C5 — the day fact strip and timeline rail; C2 (day map) additionally requires the existing trip_day_map flag"
+  # Fail-closed (see entitlementService.ts's FAIL_CLOSED_FLAGS) — architecture §9.1: "the only new
+  # externally-billed call in the feature set." A day map is rendered once per (trip-day,
+  # points-hash) by a background job, never on a request path (architecture §14.1).
+  trip_blog_day_map_render:
+    enabled: true
+    description: "Background day-map render job (§14.1) — writes a stored PNG via Google Static Maps once per (trip-day, points-hash); no request path ever calls out"
+  # Phase 6 — every independently releasable surface defaults off. Caption AI and nudges are
+  # fail-closed in entitlementService because they call a paid provider or contact a person.
+  trip_blog_spend_summary:
+    enabled: true
+    description: "C4 — traveler-only client-side spend summary; never included in public recap payloads"
+  trip_blog_recap:
+    enabled: true
+    description: "C7 — durable audience-scoped trip recap snapshots"
+  trip_blog_alt_text:
+    enabled: true
+    description: "A8 — manual caption/alt-text editing and new-publication accessibility readiness"
+  trip_blog_caption_ai:
+    enabled: true
+    description: "A8 — on-demand Premium/Pro caption and alt-text suggestions"
+  trip_blog_nudges:
+    enabled: true
+    description: "B6 — bounded contribution nudges; requires durable notification inbox/outbox"
+  # Phase 4.5 — architecture §9.1's notification flag table. All four are fail-closed
+  # (entitlementService.ts's FAIL_CLOSED_FLAGS) since each either contacts a person outside the
+  # app or is the kill switch for the delivery worker that would. Discovered missing entirely
+  # during the Phases 0-7 audit — notificationRoutes.ts/notificationOutboxWorker.ts referenced
+  # these by name, but with no row in this file (and no FAIL_CLOSED_FLAGS entry) they were
+  # silently fail-open, i.e. always enabled, regardless of intent.
+  notifications_in_app:
+    enabled: false
+    description: "In-app notification inbox — GET/PATCH /api/notifications/*"
+  notifications_outbox_enabled:
+    enabled: true
+    description: "Master kill switch for the durable push/email delivery worker (§13.3)"
+  notifications_push:
+    enabled: false
+    description: "Push notification delivery via Expo"
+  notifications_web_push:
+    enabled: true
+    description: "Web push notification delivery"
   expense_import_plaid:
     enabled: false
     description: "Master switch for Plaid bank-link and transaction import"

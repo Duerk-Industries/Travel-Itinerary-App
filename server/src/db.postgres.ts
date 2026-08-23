@@ -973,6 +973,8 @@ export const initDb = async (): Promise<void> => {
       total_cost NUMERIC NOT NULL DEFAULT 0,
       cost_per_night NUMERIC NOT NULL DEFAULT 0,
       address TEXT,
+      notes TEXT,
+      features JSONB NOT NULL DEFAULT '[]'::jsonb,
       place_id TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
       traveler_ids JSONB DEFAULT '[]'::jsonb,
@@ -2658,7 +2660,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
         `
         SELECT user_id as "userId"
         FROM group_members
-        WHERE group_id = $1 AND user_id IS NOT NULL AND user_id <> $2
+        WHERE group_id = $1 AND user_id <> $2
         ORDER BY created_at ASC
         LIMIT 1
       `,
@@ -2716,7 +2718,6 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
         SELECT COUNT(*)::text as "count"
         FROM group_members
         WHERE group_id = $1
-          AND user_id IS NOT NULL
           AND user_id <> $2
       `,
         [membership.groupId, userId]
@@ -2740,9 +2741,78 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
 
     await client.query(`DELETE FROM fellow_travelers WHERE owner_id = $1`, [userId]);
 
+    // Phase 4 of docs/trip-blog-social-implementation-plan.md — scrub this user's authored comment
+    // bodies before the author_user_id FK (ON DELETE SET NULL, see the blog engagement migration)
+    // anonymizes them below, so free-text PII typed into a comment does not survive account
+    // deletion under an anonymous byline. The row itself is preserved as a tombstone (deleted_at
+    // set, the same rendering path a self-service delete already uses) rather than removed, so any
+    // threaded replies don't orphan. This only ever reaches comments on trips that are NOT already
+    // gone via the DELETE FROM trips above — that cascade already took their comments, reactions
+    // and counters with it via trip_id, so the query below naturally returns nothing for them.
+    // Reaction rows (blog_reactions.user_id, ON DELETE CASCADE) disappear entirely when the user
+    // row is deleted a few lines down — matching "delete reactions" rather than anonymizing them,
+    // since a reaction carries no free text to scrub. Both kinds of rows are collected here, before
+    // they change, so their (trip, target, audience) counters can be recomputed once the deletion
+    // below actually lands — recomputeCounterRow itself lives in blog/postgresEngagementRepository.ts,
+    // which imports queryBlog/withBlogTransaction from this file, so it is inlined here rather than
+    // imported back in to avoid a circular import.
+    const targetColumnFor = (kind: string) => (kind === 'day' ? 'blog_day_id' : kind === 'item' ? 'blog_item_id' : 'asset_id');
+    const { rows: affectedFromReactions } = await client.query<{ trip_id: string; target_kind: string; target_id: string; audience: string }>(
+      `SELECT trip_id, target_kind, COALESCE(blog_day_id, blog_item_id, asset_id)::text AS target_id, audience FROM blog_reactions WHERE user_id = $1`,
+      [userId]
+    );
+    const { rows: affectedFromComments } = await client.query<{ trip_id: string; target_kind: string; target_id: string; audience: string }>(
+      `SELECT trip_id, target_kind, COALESCE(blog_day_id, blog_item_id, asset_id)::text AS target_id, audience FROM blog_comments WHERE author_user_id = $1`,
+      [userId]
+    );
+    // Excludes any target on a trip this same call is about to hard-delete via the `DELETE FROM
+    // trips` above (a solo-member trip) — that cascade already removes the target's counter row
+    // entirely, so recomputing it here would either be wasted work or, worse, a write against a
+    // trip_id that no longer exists. Filtered in JS (not `trip_id <> ALL($n::uuid[])`) since
+    // pg-mem does not reliably support ANY/ALL over a uuid[] parameter (see project notes).
+    const deletedTripIds = new Set(tripIds);
+    const affectedCounterTargets = new Map<string, { tripId: string; targetKind: string; targetId: string; audience: string }>();
+    for (const row of [...affectedFromReactions, ...affectedFromComments]) {
+      if (deletedTripIds.has(row.trip_id)) continue;
+      affectedCounterTargets.set(`${row.target_kind}:${row.target_id}:${row.audience}`, { tripId: row.trip_id, targetKind: row.target_kind, targetId: row.target_id, audience: row.audience });
+    }
+    await client.query(
+      `UPDATE blog_comments SET body = NULL, deleted_at = COALESCE(deleted_at, NOW()) WHERE author_user_id = $1`,
+      [userId]
+    );
+
     // Remove auth rows last so cascades clean up related data.
     await client.query(`DELETE FROM web_users WHERE id = $1`, [userId]);
     await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+    // Recompute counters for every target this user had reacted to or commented on, now that the
+    // reaction rows are actually gone and the comment bodies are scrubbed — the same aggregate
+    // queries recomputeCounterRow runs, kept in sync manually since it can't be imported here.
+    for (const target of affectedCounterTargets.values()) {
+      const column = targetColumnFor(target.targetKind);
+      const reactionRows = await client.query(
+        `SELECT emoji, COUNT(*)::int AS count FROM blog_reactions WHERE ${column} = $1 AND audience = $2 GROUP BY emoji`,
+        [target.targetId, target.audience]
+      );
+      const counts: Record<string, number> = {};
+      let total = 0;
+      for (const row of reactionRows.rows as { emoji: string; count: number }[]) {
+        counts[row.emoji] = Number(row.count);
+        total += Number(row.count);
+      }
+      const commentRows = await client.query(
+        `SELECT COUNT(*)::int AS count FROM blog_comments WHERE ${column} = $1 AND audience = $2 AND deleted_at IS NULL AND hidden_at IS NULL`,
+        [target.targetId, target.audience]
+      );
+      const commentCount = Number((commentRows.rows[0] as { count: number } | undefined)?.count ?? 0);
+      await client.query(
+        `INSERT INTO blog_engagement_counters (target_kind, target_id, trip_id, audience, reaction_counts, reaction_total, comment_count, updated_at)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, NOW())
+         ON CONFLICT (target_kind, target_id, audience) DO UPDATE
+           SET reaction_counts = $5::jsonb, reaction_total = $6, comment_count = $7, updated_at = NOW()`,
+        [target.targetKind, target.targetId, target.tripId, target.audience, JSON.stringify(counts), total, commentCount]
+      );
+    }
 
     await client.query('COMMIT');
   } catch (err) {
@@ -3060,6 +3130,35 @@ export const ensureUserCanReadTrip = async (
     [tripId, userId]
   );
   return rows[0] ?? null;
+};
+
+// Phase 2 of docs/trip-blog-social-implementation-plan.md — a narrower, purpose-built check than
+// ensureUserCanReadTrip's combined member/follower resolution above: "is this specifically a
+// follower of this trip" (not a member), used by blogEngagementService.resolveEngagementTarget to
+// distinguish follower-authored engagement from traveler-authored, and by the follower-only nudge
+// paths in later phases. A plain join, not the NOT EXISTS pattern ensureUserInTrip above uses —
+// followers have no equivalent "removal" record to exclude.
+export const ensureUserFollowsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT 1 FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2 LIMIT 1`,
+    [tripId, userId]
+  );
+  return rows.length > 0;
+};
+
+// Phase 4 of docs/trip-blog-social-implementation-plan.md — moderation (hide/unhide a comment) is
+// a trip-owner-or-admin action, not a membership-based one (architecture §4: "Admin access is
+// deliberately narrower than trip-owner access... The moderation endpoint... cannot be used to
+// react, comment, set covers or publish"). Ownership is the group's owner_id, not group
+// membership — a group can have several members but exactly one owner.
+export const ensureUserOwnsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT 1 FROM trips t JOIN groups g ON g.id = t.group_id WHERE t.id = $1 AND g.owner_id = $2 LIMIT 1`,
+    [tripId, userId]
+  );
+  return rows.length > 0;
 };
 
 export const writeActivity = async (
@@ -4236,6 +4335,8 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
              l.address,
+             l.notes,
+             COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
              COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
              COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4285,6 +4386,8 @@ export const getLodgingById = async (lodgingId: string): Promise<(Lodging & { tr
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
              l.address,
+             l.notes,
+             COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
              COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
              COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4321,6 +4424,8 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  notes?: string | null;
+  features?: string[];
   place_id?: string;
   paid_by?: string[];
   traveler_ids?: string[];
@@ -4337,9 +4442,9 @@ export const insertLodging = async (lodging: {
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, status, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
+        id, user_id, trip_id, status, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, notes, features, place_id, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      VALUES ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -4352,6 +4457,8 @@ export const insertLodging = async (lodging: {
                 total_cost as "totalCost",
                 cost_per_night as "costPerNight",
                 address,
+                notes,
+                COALESCE(features, '[]'::jsonb) as features,
                 place_id as "placeId",
                 COALESCE(paid_by, '[]'::jsonb) as "paid_by",
                 COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4371,6 +4478,8 @@ export const insertLodging = async (lodging: {
       lodging.totalCost,
       lodging.costPerNight,
       lodging.address ?? '',
+      lodging.notes ?? null,
+      JSON.stringify(lodging.features ?? []),
       lodging.place_id ?? null,
       JSON.stringify(lodging.paid_by ?? []),
       JSON.stringify(lodging.traveler_ids ?? []),
@@ -4450,6 +4559,8 @@ export const updateLodging = async (
     updates.total_cost ?? null,
     updates.cost_per_night ?? null,
     updates.address ?? null,
+    Object.prototype.hasOwnProperty.call(updates, 'notes') ? updates.notes : null,
+    Object.prototype.hasOwnProperty.call(updates, 'features') ? JSON.stringify(updates.features ?? []) : null,
     updates.place_id ?? null,
     updates.imageUrl ?? null,
     typeof updates.paid_by !== 'undefined' ? JSON.stringify(updates.paid_by ?? []) : null,
@@ -4471,11 +4582,13 @@ export const updateLodging = async (
           total_cost = COALESCE($9, total_cost),
           cost_per_night = COALESCE($10, cost_per_night),
           address = COALESCE($11, address),
-          place_id = COALESCE($12, place_id),
-          image_url = COALESCE($13, image_url),
-          paid_by = COALESCE($14::jsonb, paid_by),
-          traveler_ids = COALESCE($15::jsonb, traveler_ids),
-          trip_id = COALESCE($16, trip_id)
+          notes = COALESCE($12, notes),
+          features = COALESCE($13::jsonb, features),
+          place_id = COALESCE($14, place_id),
+          image_url = COALESCE($15, image_url),
+          paid_by = COALESCE($16::jsonb, paid_by),
+          traveler_ids = COALESCE($17::jsonb, traveler_ids),
+          trip_id = COALESCE($18, trip_id)
         WHERE id = $1
         RETURNING
           id,
@@ -4490,6 +4603,8 @@ export const updateLodging = async (
           total_cost as "totalCost",
           cost_per_night as "costPerNight",
           address,
+          notes,
+          COALESCE(features, '[]'::jsonb) as features,
           place_id as "placeId",
           COALESCE(paid_by, '[]'::jsonb) as "paid_by",
           COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -4508,14 +4623,16 @@ export const updateLodging = async (
           total_cost = COALESCE($9, l.total_cost),
           cost_per_night = COALESCE($10, l.cost_per_night),
           address = COALESCE($11, l.address),
-          place_id = COALESCE($12, l.place_id),
-          image_url = COALESCE($13, l.image_url),
-          paid_by = COALESCE($14::jsonb, l.paid_by),
-          traveler_ids = COALESCE($15::jsonb, l.traveler_ids),
-          trip_id = COALESCE($16, l.trip_id)
+          notes = COALESCE($12, l.notes),
+          features = COALESCE($13::jsonb, l.features),
+          place_id = COALESCE($14, l.place_id),
+          image_url = COALESCE($15, l.image_url),
+          paid_by = COALESCE($16::jsonb, l.paid_by),
+          traveler_ids = COALESCE($17::jsonb, l.traveler_ids),
+          trip_id = COALESCE($18, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($16, l.trip_id)
+          AND t.id = COALESCE($18, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
@@ -4531,6 +4648,8 @@ export const updateLodging = async (
           l.total_cost as "totalCost",
           l.cost_per_night as "costPerNight",
           l.address,
+          l.notes,
+          COALESCE(l.features, '[]'::jsonb) as features,
           l.place_id as "placeId",
           COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
           COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
@@ -10867,15 +10986,26 @@ export const reserveCapacity = async (params: {
   try {
     await client.query('BEGIN');
 
+    const existing = await client.query<{ committed: boolean; expires_at: Date }>(
+      'SELECT committed, expires_at FROM capacity_reservations WHERE id = $1',
+      [params.id]
+    );
+
     // 1. Sum up current committed capacity + active (non-expired) reservations
     const { rows } = await client.query<{ current: string }>(
       `SELECT (
          COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = TRUE), 0) +
-         COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = FALSE AND expires_at > NOW()), 0)
+         COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = FALSE AND expires_at > NOW()::timestamp), 0)
        ) AS "current"`,
       [params.provider]
     );
     const current = parseInt(rows[0].current, 10);
+
+    if (existing.rows[0] && (existing.rows[0].committed || new Date(existing.rows[0].expires_at).getTime() > Date.now())) {
+      await client.query('COMMIT');
+      return { allowed: true, current };
+    }
+    if (existing.rows[0]) await client.query('DELETE FROM capacity_reservations WHERE id = $1', [params.id]);
 
     if (current + params.units > params.limit) {
       await client.query('ROLLBACK');
@@ -10883,14 +11013,16 @@ export const reserveCapacity = async (params: {
     }
 
     // 2. Insert new reservation
-    await client.query(
+    const inserted = await client.query(
       `INSERT INTO capacity_reservations (id, provider, caller, units, expires_at, committed)
-       VALUES ($1, $2, $3, $4, $5, FALSE)`,
+       VALUES ($1, $2, $3, $4, $5, FALSE)
+       ON CONFLICT (id) DO NOTHING
+       RETURNING id`,
       [params.id, params.provider, params.caller, params.units, params.expiresAt]
     );
 
     await client.query('COMMIT');
-    return { allowed: true, current: current + params.units };
+    return { allowed: true, current: current + (inserted.rowCount ? params.units : 0) };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
