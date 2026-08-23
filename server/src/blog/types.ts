@@ -140,6 +140,7 @@ export interface BlogTextInput {
   // suggestion, so its acceptance rate is measurable (architecture §8's stage-2 rollout gate
   // depends on this existing). Unset for every other authoring path.
   sourceType?: string | null;
+  idempotencyKey?: string | null;
 }
 
 export interface BlogTextPatch {

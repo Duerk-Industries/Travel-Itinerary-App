@@ -7393,16 +7393,22 @@ export const reserveCapacity = async (params: {
     // use a distributed counter or a summary document.
     const committedSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', true));
     const activeSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', false).where('expiresAt', '>', new Date().toISOString()));
+    const ref = reservationsColl.doc(params.id);
+    const existing = await tx.get(ref);
 
     let current = 0;
     committedSnap.docs.forEach(doc => { current += doc.data().units; });
     activeSnap.docs.forEach(doc => { current += doc.data().units; });
 
+    if (existing.exists) {
+      const data = existing.data() as any;
+      if (data.committed === true || Date.parse(String(data.expiresAt ?? '')) > Date.now()) return { allowed: true, current };
+    }
+
     if (current + params.units > params.limit) {
       return { allowed: false, current };
     }
 
-    const ref = reservationsColl.doc(params.id);
     tx.set(ref, {
       provider: params.provider,
       caller: params.caller,

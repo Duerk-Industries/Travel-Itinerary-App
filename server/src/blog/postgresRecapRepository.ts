@@ -114,7 +114,7 @@ export const pruneRecapSnapshots = async (tripId: string, retain: number): Promi
 
 export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAudienceClass): Promise<BlogRecapSource> => {
   const visible = audiencesSql(audienceClass);
-  const [days, media, contributors, travelers, followers, places, flightLegs, commentedDays] = await Promise.all([
+  const [days, media, contributors, photoContributors, travelers, followers, places, flightLegs, commentedDays] = await Promise.all([
     queryBlog<any>('SELECT COUNT(*)::int AS count FROM blog_days WHERE trip_id = $1', [tripId]),
     queryBlog<any>(
       `SELECT a.id AS asset_id, a.media_kind_key, a.caption, a.alt_text,
@@ -139,6 +139,22 @@ export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAud
         WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND i.audience IN (${visible})
         GROUP BY i.author_user_id, u.first_name, u.last_name, u.email, wu.first_name, wu.last_name, wu.email
         ORDER BY contribution_count DESC, display_name ASC`,
+      [tripId]
+    ),
+    queryBlog<any>(
+      `SELECT a.uploader_user_id AS user_id,
+              COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name, wu.first_name, ''), ' ', COALESCE(u.last_name, wu.last_name, ''))), ''),
+                       u.email, wu.email, 'A traveler') AS display_name,
+              COUNT(*)::int AS photo_count
+         FROM blog_media_assets a
+         JOIN blog_item_assets ia ON ia.asset_id = a.id
+         JOIN blog_items i ON i.id = ia.item_id
+         LEFT JOIN users u ON u.id = a.uploader_user_id
+         LEFT JOIN web_users wu ON wu.id = a.uploader_user_id
+        WHERE a.trip_id = $1 AND a.state = 'ready' AND a.media_kind_key = 'photo'
+          AND i.deleted_at IS NULL AND i.audience IN (${visible})
+        GROUP BY a.uploader_user_id, u.first_name, u.last_name, u.email, wu.first_name, wu.last_name, wu.email
+        ORDER BY photo_count DESC, display_name ASC LIMIT 1`,
       [tripId]
     ),
     queryBlog<any>(
@@ -200,6 +216,7 @@ export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAud
     followerParticipantCount: Number(followers.rows[0]?.count ?? 0),
     media: media.rows.map((row) => ({ assetId: String(row.asset_id), caption: row.caption ?? null, altText: row.alt_text ?? null, reactionTotal: Number(row.reaction_total ?? 0) })),
     contributors: audienceClass === 'travelers' ? contributors.rows.map((row) => ({ userId: String(row.user_id), displayName: String(row.display_name), contributionCount: Number(row.contribution_count) })) : [],
+    topPhotoContributor: audienceClass === 'travelers' && photoContributors.rows[0] ? { userId: String(photoContributors.rows[0].user_id), displayName: String(photoContributors.rows[0].display_name), photoCount: Number(photoContributors.rows[0].photo_count) } : null,
     mostCommentedDay: commented && Number(commented.comment_count) > 0 ? { dayDate: new Date(commented.local_date).toISOString().slice(0, 10), commentCount: Number(commented.comment_count) } : null,
   };
 };

@@ -463,18 +463,30 @@ internal trips with follower notifications observed to respect opt-in and revoca
 
 ## Phase 7 — Follow-on (A9, A10, A11, B9, B10, C6, C8, C9)
 
-Voice notes, quick capture, offline queue, blog presence, Trip Awards, places index, search UI,
-keepsake export. Each is independently valuable and independently deferrable. Prioritize from GA
-data rather than from this document — by then there will be real numbers, and the ordering here is
-guesswork by comparison.
+Phase 7 was implemented on 2026-08-22 as independently gated slices. “Implemented” below means the
+slice has code, an enforceable flag/limit boundary and focused tests; every flag still defaults off.
 
-Two notes worth carrying forward:
+| Item | Status | Delivered contract |
+|---|---|---|
+| A9 voice notes | **Partial, safe to canary** | Audio files upload through the existing signed-object and per-uploader storage-ledger path, with a 25 MiB hard byte cap and web/native playback. Provider transcription remains dark: there is no provider implementation yet, so `trip_blog_audio_transcription` fails closed and no fake transcript job is returned. Direct microphone recording and duration probing are also still open; the canary accepts an existing device recording through the document picker. |
+| A10 quick capture | **Implemented** | The existing OS share target now performs a server-authorized, DB-atomically capped handoff before upload. A first-class in-blog Quick capture entry point opens the current-day composer. iOS and Android have independent default-off flags. |
+| A11 offline queue | **Partial, safe for text** | Text entries are encrypted only to the extent the OS/browser storage provides, scoped by account + trip, capped at 25, expired at seven days, and flushed oldest-first. Flush uses deterministic server idempotency, named API/storage reservations and retained-capacity accounting. Persistent photo/blob queuing is still open because browser Blob URLs do not survive restart and native URI retention needs a managed-file lifecycle. |
+| B9 blog presence | **Blocked by scaling P0** | Deliberately not connected to `presenceManager`. Register rows 1–4 still require Redis fanout/TTL presence plus a two-instance isolation test. `trip_blog_realtime` remains off. |
+| B10 Trip Awards | **Implemented** | The durable recap now includes most photos contributed; the recap UI presents crowd favorite, Shutterbug and conversation-starter awards behind `trip_blog_trip_awards`. No extra request or aggregation is added on render. |
+| C6 places index | **Implemented** | Traveler-only, bounded to 100 configured rows, derived from flights/lodgings/activities/car rentals and deep-linked through `mapLinks.ts`. It makes no reverse-geocoding/provider call. |
+| C8 search UI | **Implemented** | Audience-filtered text search, 2–100 character validation, 20-row stable cursor pages, plain-text 240-character snippets and a lazy UI. Firestore uses the bounded trip-size fallback until a measured need justifies a paid search service. |
+| C9 keepsake export | **Implemented local v1; durable artifact deferred** | A 100-day-bounded authorized blog read produces an escaped, photo-inclusive print-ready browser document or native share text. It creates no stored artifact and costs no provider/storage units beyond the already-capped document read. `core.export` remains reserved for a future paid durable PDF job; it must use a leased adapter-native job before `trip_blog_exports` can turn on. |
 
-- **A9 (voice notes)** unlocks `media.audio`, a registered item kind that has been sitting unused.
-  It is likely the single fastest capture path while actually travelling, and may deserve promotion
-  above its P2 priority if Phase 5 shows authoring is still the bottleneck.
-- **C9 (keepsake export)** unlocks `core.export`, also registered and unused. It is the most likely
-  candidate for a paid one-off, which makes it worth revisiting alongside the storage add-on numbers.
+Phase 7 also closes a pre-existing gap on the text-authoring path: create now reserves
+`BLOG_AUTHORING_WRITE`, database units and `TEXT_RETAINED_KIB`; retries use a deterministic item id;
+deletion releases the retained reservation. The capacity reservation primitive itself is now
+idempotent in both Postgres/memory and Firebase.
+
+**Exit criteria:** enable only the individual slices being canaried. Audio transcription, durable
+photo offline queue, blog presence and durable `core.export` PDF remain explicitly outside the exit
+gate; their parent flags stay off. Search/places/quick-capture must remain below their aggregate caps,
+and the low/base/high estimator must continue pricing voice bytes while representing local keepsake
+renders as zero-provider-cost operations.
 
 ---
 

@@ -1,6 +1,7 @@
 /// <reference types="jest" />
 
 import { resolveMediaAspectRatio, isVideoMimeType, guessMimeTypeFromName, SUPPORTED_MIME_TYPES } from '../tabs/tripBlog';
+import { isAudioMimeType, SUPPORTED_AUDIO_MIME_TYPES } from '../utils/blogUpload';
 
 describe('trip blog media sizing', () => {
   it('preserves valid intrinsic width-to-height ratios', () => {
@@ -38,5 +39,12 @@ describe('trip blog mixed photo/video upload classification', () => {
     expect(guessMimeTypeFromName('screen.webm')).toBe('video/webm');
     expect(guessMimeTypeFromName('sunset.jpg')).toBe('image/jpeg');
     expect(guessMimeTypeFromName('unknown.heic')).toBeNull();
+  });
+
+  it('keeps voice-note formats in their separately flagged picker path', () => {
+    expect(isAudioMimeType('audio/m4a')).toBe(true);
+    expect(SUPPORTED_AUDIO_MIME_TYPES).toEqual(expect.arrayContaining(['audio/mpeg', 'audio/m4a', 'audio/wav']));
+    expect(SUPPORTED_MIME_TYPES).not.toContain('audio/m4a');
+    expect(guessMimeTypeFromName('memo.m4a')).toBe('audio/m4a');
   });
 });

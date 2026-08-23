@@ -87,9 +87,13 @@ export const getStorageSummary = async (userId: string): Promise<BlogStorageSumm
 
 export const initUpload = async (userId: string, input: BlogUploadInitInput): Promise<BlogUploadInitResult> => {
   if (!(await ensureUserInTrip(input.tripId, userId))) throw new Error('Not authorized to edit this trip');
-  const allowed = input.mediaKind === 'photo' ? ['image/jpeg', 'image/png'] : ['video/mp4', 'video/quicktime', 'video/webm'];
+  const allowed = input.mediaKind === 'photo'
+    ? ['image/jpeg', 'image/png']
+    : input.mediaKind === 'audio'
+      ? ['audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/webm']
+      : ['video/mp4', 'video/quicktime', 'video/webm'];
   if (!allowed.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
-  const max = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : 1024 * 1024 * 1024;
+  const max = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : input.mediaKind === 'audio' ? Number(getApiCacheSetting('tripBlog', 'audioMaxBytes') ?? 25 * 1024 * 1024) : 1024 * 1024 * 1024;
   if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > max) throw new Error('Media exceeds the configured size limit');
   const db = getDb();
 
@@ -125,7 +129,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   const blogItemId = input.galleryItemId ?? randomUUID();
   const dayDate = galleryDayDate ?? input.dayDate;
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
-  const parentKindKey = input.galleryItemId ? 'core.gallery' : (input.mediaKind === 'photo' ? 'media.photo' : 'media.video');
+  const parentKindKey = input.galleryItemId ? 'core.gallery' : `media.${input.mediaKind}`;
   const position = input.galleryItemId ? galleryAssetCount : 0;
   const blogDoc = await db.collection('trip_blogs').doc(input.tripId).get();
   const locationEnabled = blogDoc.exists && (blogDoc.data() as any)?.photoLocationEnabled === true;

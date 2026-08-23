@@ -132,9 +132,13 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     const retryUploadUrl = stillUploading ? await createBlogUploadUrl(existingObjectKey, String(existing.rows[0].source_mime_type ?? '')) : null;
     return { asset: mapAsset(existing.rows[0]), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
   }
-  const allowedMime = input.mediaKind === 'photo' ? ['image/jpeg', 'image/png'] : ['video/mp4', 'video/quicktime', 'video/webm'];
+  const allowedMime = input.mediaKind === 'photo'
+    ? ['image/jpeg', 'image/png']
+    : input.mediaKind === 'audio'
+      ? ['audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/webm']
+      : ['video/mp4', 'video/quicktime', 'video/webm'];
   if (!allowedMime.includes(input.mimeType.toLowerCase())) throw new Error('Unsupported media type');
-  const maxBytes = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : 1024 * 1024 * 1024;
+  const maxBytes = input.mediaKind === 'photo' ? 20 * 1024 * 1024 : input.mediaKind === 'audio' ? Number(getApiCacheSetting('tripBlog', 'audioMaxBytes') ?? 25 * 1024 * 1024) : 1024 * 1024 * 1024;
   if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > maxBytes) throw new Error('Media exceeds the configured size limit');
 
   // When joining an existing gallery, the gallery item's own day is authoritative — a stale or
@@ -191,7 +195,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     await queryBlog(
       `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id)
        VALUES ($1, $2, $3, $4, 1, 'public', $5, $6, $6)`,
-      [blogItemId, input.tripId, day!.id, input.mediaKind === 'photo' ? 'media.photo' : 'media.video', `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
+      [blogItemId, input.tripId, day!.id, `media.${input.mediaKind}`, `${Date.now().toString().padStart(16, '0')}-${blogItemId}`, userId]
     );
   }
   await queryBlog(

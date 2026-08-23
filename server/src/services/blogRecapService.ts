@@ -33,6 +33,7 @@ const buildPayload = async (revision: BlogRecapRevision, audienceClass: BlogReca
     followerParticipantCount: source.followerParticipantCount,
     topPhoto,
     topContributors: source.contributors.slice(0, 3),
+    topPhotoContributor: source.topPhotoContributor,
     mostCommentedDay: source.mostCommentedDay,
     generatedAt: new Date().toISOString(),
     audienceClass,

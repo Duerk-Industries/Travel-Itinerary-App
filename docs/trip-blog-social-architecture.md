@@ -744,6 +744,12 @@ where this design consumes them:
 | `trip_blog_group_prompts` | A12 rotating journaling prompts (§16.5) |
 | existing `trip_blog_audio` | A9 capture modality only |
 | `trip_blog_audio_transcription` | A9 provider transcription; Premium/Pro |
+| existing `trip_blog_mobile_share_ios` / `trip_blog_mobile_share_android` | A10 OS share handoff and native quick capture; independently releasable by platform |
+| `trip_blog_offline_queue` | A11 bounded local text queue; does not enable persistent media queuing |
+| `trip_blog_trip_awards` | B10 presentation over the C7 durable recap; no additional aggregation |
+| existing `trip_blog_search` | C8 bounded, audience-aware private search |
+| `trip_blog_places` | C6 traveler-only derived places index |
+| `trip_blog_keepsake_export` | C9 local print/share renderer; does not enable stored `core.export` jobs |
 | `trip_blog_nudges` | B6 |
 | `trip_blog_day_review` | C10/C11 correction/provenance UI |
 | `trip_blog_public_engagement` | The unauthenticated public counts/comments endpoint (§14.7). Separate from `trip_blog_comments` on purpose: it must be switchable off without un-publishing a blog or disabling authenticated commenting. |
@@ -1794,3 +1800,51 @@ quietly defeats FR-B6.1's 72-hour cap.
 
 All default off. B13 additionally requires `notifications_push` and the per-category preference, so
 turning it on cannot bypass a user's notification choices.
+
+---
+
+## 17. Phase 7 delivery constraints
+
+### 17.1 Voice bytes are media; transcription is a separate product
+
+`media.audio` now uses the same `upload-init → signed PUT → complete` flow, uploader ledger, object
+operations and deletion lifecycle as photos/video. Accepted formats and bytes are bounded in
+`caching.tripBlog`; the client never posts audio through Express. The source object is the playable
+rendition, so audio skips image/video transcoding. Upload does **not** imply transcription:
+`trip_blog_audio_transcription` is a separate fail-closed flag and remains unavailable until an
+actual provider caller can reserve minutes before dispatch and finalize real usage. This prevents
+the old modality route's unsafe “write first, reserve later” behavior from masquerading as a job.
+
+### 17.2 Offline replay is local-first and server-idempotent
+
+The v1 queue persists text only. Rows are keyed to account + trip, capped at 25, expire after seven
+days, contain no signed URLs and never enter telemetry. Reconnect flushes oldest-first and stops at
+the first failed request. `Idempotency-Key` maps to a deterministic item UUID on both adapters; a
+lost 201 response followed by replay returns the original item. Retained text reserves 128 KiB before
+write, finalizes actual UTF-8 KiB and releases on deletion. Persistent photo queuing is not claimed:
+native managed-file copying and browser durable Blob storage need their own quota/deletion design.
+
+### 17.3 Discovery avoids new vendors
+
+Places uses already-authorized trip records and never reverse-geocodes. Search uses Postgres text
+matching and a Firestore scan capped at 500 items; both return plain-text snippets only and reserve
+named read/database units before work (the Firebase places projection reserves a conservative 2,000
+read-unit envelope). If Firestore trip size or latency crosses the rollout gate, a managed search
+service requires a new provider cap and price before adoption—Phase 7 does not pre-pay that fixed
+cost.
+
+### 17.4 Keepsakes are local until durable jobs exist
+
+The first keepsake is a deterministic, HTML-escaped print/share projection built from one bounded
+authenticated blog read. It stores nothing, has no background worker and therefore has no
+cross-instance coordination or retained-artifact bill. `core.export` remains registered but dark.
+A durable PDF must use adapter-native claim/lease state, retained-byte reservations, expiry/deletion
+and a separately priced conversion caller; returning a synthetic `202 queued` is explicitly not an
+implementation.
+
+### 17.5 Presence does not ship on known-broken coordination
+
+B9 remains blocked. Reusing the process-local `presenceManager` would knowingly give contradictory
+“is writing” state across Cloud Run instances. Redis TTL presence/fanout, WebSocket transport or
+stickiness, membership-revocation invalidation and the two-instance follower/chat isolation suite in
+the scaling register are prerequisites to enabling it.

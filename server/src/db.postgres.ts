@@ -10986,6 +10986,11 @@ export const reserveCapacity = async (params: {
   try {
     await client.query('BEGIN');
 
+    const existing = await client.query<{ committed: boolean; expires_at: Date }>(
+      'SELECT committed, expires_at FROM capacity_reservations WHERE id = $1',
+      [params.id]
+    );
+
     // 1. Sum up current committed capacity + active (non-expired) reservations
     const { rows } = await client.query<{ current: string }>(
       `SELECT (
@@ -10996,20 +11001,28 @@ export const reserveCapacity = async (params: {
     );
     const current = parseInt(rows[0].current, 10);
 
+    if (existing.rows[0] && (existing.rows[0].committed || new Date(existing.rows[0].expires_at).getTime() > Date.now())) {
+      await client.query('COMMIT');
+      return { allowed: true, current };
+    }
+    if (existing.rows[0]) await client.query('DELETE FROM capacity_reservations WHERE id = $1', [params.id]);
+
     if (current + params.units > params.limit) {
       await client.query('ROLLBACK');
       return { allowed: false, current };
     }
 
     // 2. Insert new reservation
-    await client.query(
+    const inserted = await client.query(
       `INSERT INTO capacity_reservations (id, provider, caller, units, expires_at, committed)
-       VALUES ($1, $2, $3, $4, $5, FALSE)`,
+       VALUES ($1, $2, $3, $4, $5, FALSE)
+       ON CONFLICT (id) DO NOTHING
+       RETURNING id`,
       [params.id, params.provider, params.caller, params.units, params.expiresAt]
     );
 
     await client.query('COMMIT');
-    return { allowed: true, current: current + params.units };
+    return { allowed: true, current: current + (inserted.rowCount ? params.units : 0) };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

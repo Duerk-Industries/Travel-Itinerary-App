@@ -433,6 +433,7 @@ providers:
     windowHours: 24
     overall: 100000
     callers:
+      BLOG_DOCUMENT_READ: 30000
       BLOG_REACTION_WRITE: 15000
       BLOG_COMMENT_WRITE: 5000
       # Phase 5 — day facts (C1/C3/C5) and Day Starter/media-grouping writes (A1/A2).
@@ -444,6 +445,12 @@ providers:
       BLOG_COVER_PROPOSAL_READ: 10000
       BLOG_CAPTION_REQUEST: 5000
       BLOG_PUBLICATION_READINESS_READ: 5000
+      # Phase 7 — every new request path is independently visible and capped. Offline flushes use
+      # BLOG_AUTHORING_WRITE when they reach the existing item endpoint; local queue operations do
+      # not consume server capacity.
+      BLOG_SEARCH_READ: 10000
+      BLOG_PLACES_READ: 5000
+      BLOG_QUICK_CAPTURE_HANDOFF: 5000
 
   # Every new database operation has a finite, DB-atomic unit cap. These are operation units,
   # not retained bytes; retained recap payloads use the capacity gauge below.
@@ -457,9 +464,10 @@ providers:
       DATABASE_DELETE_UNIT: 10000
 
   TRIP_BLOG_SOCIAL_CAPACITY:
-    overall: 2097152
+    overall: 4194304
     callers:
       RECAP_RETAINED_KIB: 2097152
+      TEXT_RETAINED_KIB: 2097152
 
 budgeting:
   OPENAI:
@@ -691,3 +699,11 @@ caching:
     captionSuggestionsPerMonthPremium: 100
     nudgeDedupeHours: 72
     nudgeSuppressDaysAfterTrip: 30
+    searchQueryMaxLength: 100
+    searchPageSize: 20
+    searchScanMaxItems: 500
+    placesPageSize: 100
+    placesReadUnitsFirebase: 2000
+    offlineQueueMaxEntries: 25
+    offlineQueueRetentionDays: 7
+    audioMaxBytes: 26214400

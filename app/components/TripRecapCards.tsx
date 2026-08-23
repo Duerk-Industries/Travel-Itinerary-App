@@ -10,9 +10,10 @@ type Props = {
   mutedColor?: string;
   borderColor?: string;
   backgroundColor?: string;
+  showAwards?: boolean;
 };
 
-const TripRecapCards: React.FC<Props> = ({ recap, topPhotoUrl, spendTotal = null, currency = 'USD', textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff' }) => {
+const TripRecapCards: React.FC<Props> = ({ recap, topPhotoUrl, spendTotal = null, currency = 'USD', textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', showAwards = false }) => {
   const stats = [
     `${recap?.dayCount ?? 0} days`, `${recap?.placeCount ?? 0} places`, recap?.distanceKm > 0 ? `${recap.distanceKm.toLocaleString()} km` : null,
     `${recap?.photoCount ?? 0} photos`, `${recap?.videoCount ?? 0} videos`,
@@ -39,6 +40,14 @@ const TripRecapCards: React.FC<Props> = ({ recap, topPhotoUrl, spendTotal = null
         <Text style={{ color: textColor, marginTop: 8 }}>Traveler spotlight: {(recap.topContributors || []).map((c: any) => c.displayName).join(', ')}</Text>
       ) : null}
       {recap?.mostCommentedDay ? <Text style={{ color: textColor, marginTop: 6 }}>Most-commented day: {recap.mostCommentedDay.dayDate} · {recap.mostCommentedDay.commentCount} comments</Text> : null}
+      {showAwards ? (
+        <View testID="trip-awards" style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 10 }}>
+          <Text style={{ color: textColor, fontWeight: '800', marginBottom: 5 }}>Trip Awards</Text>
+          {recap?.topPhoto ? <Text style={{ color: textColor }}>🏆 Crowd favorite · {recap.topPhoto.reactionTotal} reactions</Text> : null}
+          {recap?.topPhotoContributor ? <Text style={{ color: textColor, marginTop: 4 }}>📸 Shutterbug · {recap.topPhotoContributor.displayName} · {recap.topPhotoContributor.photoCount} photos</Text> : null}
+          {recap?.mostCommentedDay ? <Text style={{ color: textColor, marginTop: 4 }}>💬 Conversation starter · {recap.mostCommentedDay.dayDate}</Text> : null}
+        </View>
+      ) : null}
       {spendTotal != null ? <Text testID="trip-recap-spend" style={{ color: textColor, marginTop: 8, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(spendTotal)}</Text> : null}
       <Text style={{ color: mutedColor, fontSize: 11, marginTop: 8 }}>Generated {new Date(recap?.generatedAt || Date.now()).toLocaleString()}</Text>
     </View>

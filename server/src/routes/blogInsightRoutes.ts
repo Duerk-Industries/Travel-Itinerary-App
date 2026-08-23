@@ -6,10 +6,12 @@ import { getDayFacts } from '../services/blogDayFactsService';
 import { BlogEngagementUnauthorizedError } from '../services/blogEngagementService';
 import { BlogTargetNotFoundError } from '../services/blogEngagementErrors';
 import { getOrQueueBlogRecap } from '../services/blogRecapService';
-import { ensureUserInTrip } from '../db';
+import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { blogEngagementRepository } from '../blog/engagementRepository';
 import { blogMediaRepository } from '../blog/repository';
 import { logError } from '../logger';
+import { getApiCacheSetting } from '../config/apiLimits';
+import { listBlogPlaces } from '../services/blogPlacesService';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §5.2.
 // A request entirely separate from GET /:tripId/blog: facts draw on five more table reads
@@ -78,6 +80,27 @@ router.get('/:tripId/blog/recap', async (req, res) => {
     }
     const message = String((err as any)?.message ?? 'Unable to load trip recap');
     res.status(/not authorized/i.test(message) ? 403 : /not found/i.test(message) ? 404 : 500).json({ error: message });
+  }
+});
+
+router.get('/:tripId/blog/places', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_places'))) {
+      res.status(404).json({ error: 'Trip places are not enabled' });
+      return;
+    }
+    const limit = Math.min(200, Math.max(1, Number(getApiCacheSetting('tripBlog', 'placesPageSize') ?? 100)));
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_PLACES_READ', requireConfiguredLimit: true });
+    const firebaseReadUnits = Math.min(5000, Math.max(100, Number(getApiCacheSetting('tripBlog', 'placesReadUnitsFirebase') ?? 2000)));
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', units: getCurrentDbProvider() === 'firebase' ? firebaseReadUnits : 5, requireConfiguredLimit: true });
+    const places = await listBlogPlaces(req.params.tripId, userIdOf(req), limit);
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    res.json({ places, truncated: places.length >= limit });
+  } catch (err) {
+    const message = String((err as Error).message || 'Unable to load trip places');
+    const status = err instanceof ApiLimitExceededError ? 429 : /not authorized/i.test(message) ? 403 : 500;
+    if (status === 500) logError('[blog-places] request failed', err);
+    res.status(status).json({ error: message });
   }
 });
 

@@ -77,6 +77,9 @@ Severity: **P0** = breaks correctness or user-visible behaviour across instances
 | 19a | Blog recap snapshots | **None — verified safe.** Claim/lease state is durable and adapter-native; payloads are revision/audience keyed and retained-capacity reservations use the shared DB limiter. | — | Closed. Conformance coverage proves one lease owner, stable ready reuse and expired-lease takeover. |
 | 19b | Notification outbox (planned) | **None by design, not implemented.** The architecture requires adapter-native claim/lease state and unique dedupe keys. | — | Open until the Phase 4.5 inbox/outbox exists and passes two-worker/takeover tests. Phase 6 nudges remain off. |
 | 20 | Blog engagement counter contention | High-frequency reactions can create lock contention on the single `blog_engagement_counters` row. | P1 | For extreme viral scenarios, use Redis-backed write-behind counters. v1 uses DB-atomic increment and is safe for normal trip volume. |
+| 21 | Phase 7 offline text replay | **None — safe by construction.** Queue state is device-local; server writes use deterministic item IDs plus DB-atomic API/capacity reservations. | — | Closed for text. Persistent media queue remains unimplemented rather than relying on process memory. |
+| 22 | Phase 7 search and places | **None for correctness.** Each request is an authorized bounded DB projection with no process-local state or external provider. | P2 | Duplicate requests across instances consume capped DB reads only. Add shared/managed search only after measured need and a cost review. |
+| 23 | Phase 7 local keepsake | **None.** Rendering occurs on the requesting device from one bounded authenticated document read. | — | Closed for local print/share. A future durable `core.export` job reopens row 19b's claim/lease class and may not ship as an in-process queue. |
 
 Rows 10, 12, 13 and 19a are designed or verified safe — API limits already enforce
 through the atomic DB path rather than process memory. They are listed rather than omitted because
@@ -198,5 +201,6 @@ is not sufficient if the shared-infrastructure floor costs more than the traffic
 | Date | Change |
 |---|---|
 | 2026-08-22 | Split row 11 into 11/11a: an in-process cache in front of a *paid* API is a cost multiplier, not an inefficiency. Added planned-job rows 15a/15b/15d/15e and the safe-by-construction 15c. |
+| 2026-08-22 | Phase 7 update: kept blog presence blocked on rows 1–4; recorded device-local/idempotent offline text, stateless discovery and local keepsake rendering as scale-safe; durable media queue and `core.export` jobs remain open rather than inheriting process-local workers. |
 | 2026-08-22 | Created. Seeded from the single-instance dependencies found while designing the trip blog social layer (`trip-blog-social-architecture.md` §12.2), plus an audit of existing in-process state. Rows 4, 5 and 10 are planned-but-unbuilt; the rest are live today. |
 | 2026-08-22 | Review update: added native auth exchange, connection-budget, metrics and duplicate-work gaps; required new blog jobs/outbox/recap to be lease-safe from launch; added follower/chat isolation and a cost gate. |

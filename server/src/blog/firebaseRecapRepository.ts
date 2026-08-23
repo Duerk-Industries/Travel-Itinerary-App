@@ -102,6 +102,19 @@ export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAud
     const displayName = `${data.firstName ?? data.first_name ?? ''} ${data.lastName ?? data.last_name ?? ''}`.trim() || String(data.email ?? 'A traveler');
     return { userId, displayName, contributionCount };
   })) : [];
+  const photosByUser = new Map<string, number>();
+  for (const asset of media) {
+    const data = asset.data() as any;
+    const userId = String(data.uploaderUserId ?? '');
+    if (userId && data.mediaKind === 'photo') photosByUser.set(userId, (photosByUser.get(userId) ?? 0) + 1);
+  }
+  const topPhotoUser = [...photosByUser.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? null;
+  let topPhotoContributor: BlogRecapSource['topPhotoContributor'] = null;
+  if (audienceClass === 'travelers' && topPhotoUser) {
+    const user = await db.collection('users').doc(topPhotoUser[0]).get();
+    const data = user.exists ? user.data() as any : {};
+    topPhotoContributor = { userId: topPhotoUser[0], displayName: `${data.firstName ?? data.first_name ?? ''} ${data.lastName ?? data.last_name ?? ''}`.trim() || String(data.email ?? 'A traveler'), photoCount: topPhotoUser[1] };
+  }
   const groupId = String((tripSnap.data() as any)?.groupId ?? '');
   const memberSnap = groupId ? await db.collection('group_members').where('groupId', '==', groupId).limit(5000).get() : null;
   const followerIds = new Set(followerSnap.docs.map((doc) => String((doc.data() as any).followerUserId ?? '')).filter(Boolean));
@@ -156,6 +169,7 @@ export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAud
     followerParticipantCount: participatingFollowerIds.size,
     media: media.map((doc) => ({ assetId: doc.id, caption: (doc.data() as any).caption ?? null, altText: (doc.data() as any).altText ?? null, reactionTotal: reactionByAsset.get(doc.id) ?? 0 })),
     contributors: contributors.sort((a, b) => b.contributionCount - a.contributionCount || a.displayName.localeCompare(b.displayName)),
+    topPhotoContributor,
     mostCommentedDay: commented && commented[1] > 0 ? { dayDate: commented[0], commentCount: commented[1] } : null,
   };
 };

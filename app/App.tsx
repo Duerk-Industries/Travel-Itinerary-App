@@ -48,6 +48,7 @@ import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayer
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import ShareTripModal from './components/ShareTripModal';
 import IncomingShareModal from './components/IncomingShareModal';
+import { clearOfflineBlogAccount } from './utils/blogOfflineQueue';
 import AccountTab, { fetchAccountProfile, type AccountPage } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
@@ -1291,6 +1292,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const logout = useCallback(() => {
+    if (userId) void clearOfflineBlogAccount(userId);
     clearSessionState();
     clearTripsData();
     setActiveTripId(null);
@@ -1319,7 +1321,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // PresenceProvider and ChatProvider reset their state automatically when
     // userToken or activeTripId becomes null after clearSession().
     void clearSessionAsync();
-  }, [clearSessionState, clearTripsData]);
+  }, [clearSessionState, clearTripsData, userId]);
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.

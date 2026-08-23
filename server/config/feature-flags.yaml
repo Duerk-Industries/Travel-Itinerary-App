@@ -122,11 +122,11 @@ flags:
     enabled: true
     description: "Apple Photos import"
   trip_blog_mobile_share_ios:
-    enabled: true
-    description: "iOS share extension upload"
+    enabled: false
+    description: "A10 — iOS share extension and first-class quick-capture entry point"
   trip_blog_mobile_share_android:
-    enabled: true
-    description: "Android share intent upload"
+    enabled: false
+    description: "A10 — Android share intent and first-class quick-capture entry point"
   trip_blog_public_sharing:
     enabled: true
     description: "Phase 4 public sharing, consent flow, and vanity URLs"
@@ -137,8 +137,11 @@ flags:
     enabled: true
     description: "Phase 2 private photo upload, normalization, and per-uploader quota"
   trip_blog_audio:
-    enabled: true
-    description: "Phase 8 audio and narration modality"
+    enabled: false
+    description: "A9 — bounded voice-note upload and playback"
+  trip_blog_audio_transcription:
+    enabled: false
+    description: "A9 — Premium/Pro provider transcription of an uploaded voice note"
   trip_blog_translation:
     enabled: false
     description: "Phase 8 on-demand translation modality"
@@ -165,7 +168,19 @@ flags:
     description: "Phase 6 public sitemap and search indexing"
   trip_blog_search:
     enabled: false
-    description: "Visibility-aware private blog search"
+    description: "C8 — visibility-aware, bounded private blog search UI and API"
+  trip_blog_places:
+    enabled: false
+    description: "C6 — traveler-only places index derived from existing trip records without reverse geocoding"
+  trip_blog_offline_queue:
+    enabled: false
+    description: "A11 — account/trip-scoped seven-day offline authoring queue"
+  trip_blog_trip_awards:
+    enabled: false
+    description: "B10 — Trip Awards presentation derived from the durable recap snapshot"
+  trip_blog_keepsake_export:
+    enabled: false
+    description: "C9 — local print/share keepsake renderer; no server-side export job"
   trip_blog_structured_data:
     enabled: true
     description: "Schema.org public blog metadata"

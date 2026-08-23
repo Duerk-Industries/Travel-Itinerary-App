@@ -2,11 +2,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
 import { useBlogEngagement } from '../utils/useBlogEngagement';
 import { useBlogComments } from '../utils/useBlogComments';
+import { useConnectionState } from '../hooks/useConnectionState';
+import { enqueueOfflineBlogEntry, flushOfflineBlogEntries, listOfflineBlogEntries } from '../utils/blogOfflineQueue';
 import { BlogMediaPreview, resolveMediaAspectRatio } from '../components/BlogMediaPreview';
 import BlogConflictBanner, { type BlogConflictLatest } from '../components/BlogConflictBanner';
 import BlogReactionBar from '../components/BlogReactionBar';
@@ -16,10 +19,13 @@ import BlogRichTextEditor from '../components/BlogRichTextEditor';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
 import TripRecapCards from '../components/TripRecapCards';
+import BlogDiscoveryPanel from '../components/BlogDiscoveryPanel';
+import BlogKeepsakeButton from '../components/BlogKeepsakeButton';
 import {
   SUPPORTED_MIME_TYPES,
   SUPPORTED_PHOTO_MIME_TYPES,
   SUPPORTED_VIDEO_MIME_TYPES,
+  SUPPORTED_AUDIO_MIME_TYPES,
   isVideoMimeType,
   guessMimeTypeFromName,
   uploadBlogFiles,
@@ -73,6 +79,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [metadataBusyAssetId, setMetadataBusyAssetId] = useState(null);
   const [coverProposals, setCoverProposals] = useState({});
   const [reorderBusy, setReorderBusy] = useState(false);
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const draggedItemId = useRef(null);
   // Phase 1 authoring (A3/A4/A5): headline/summary editing, blog masthead editing, and the
   // autosave + conflict-banner replacement for the old Save-button/Alert flow. `drafts` above
@@ -100,6 +107,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // rendered (see the effect below), separate from the blog document's own GET/engagement fetch
   // (architecture §5.1: "one request per day, not one per target").
   const comments = useBlogComments(backendUrl, headers, activeTripId);
+  const connection = useConnectionState();
   const handleCommentError = (message) => Alert.alert('Trip blog', message || 'Something went wrong');
   const loadedCommentDays = useRef(new Set());
 
@@ -200,7 +208,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     if (!activeTripId) return;
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/capabilities`, { headers });
-      if (response.ok) setCapabilities((await response.json()).features || {});
+      if (response.ok) {
+        const data = await response.json();
+        setCapabilities({ ...(data.features || {}), limits: data.limits || {} });
+      }
     } catch {
       setCapabilities({});
     }
@@ -472,6 +483,34 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
   };
 
+  const handleVoiceNote = async (dayDate) => {
+    if (!canEdit || uploading) return;
+    const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+    const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
+    if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) {
+      Alert.alert('Voice note', 'Choose an MP3, M4A, WAV, or WebM audio file.');
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadBlogFiles(
+        { backendUrl, headers, tripId: activeTripId },
+        dayDate,
+        [{ blob, mimeType, size: asset.size ?? blob.size, name: asset.name }]
+      );
+      if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
+      await load();
+    } catch (error) {
+      Alert.alert('Voice note', error.message || 'Unable to add the voice note.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const purchaseStorage = async (planKey) => {
     // Checkout may hand off to an external browser/app. Dismiss the quota sheet
     // before starting that asynchronous work so it never appears stuck.
@@ -676,6 +715,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     if (isRichTextEmpty(body)) return;
     setCreating(true);
     try {
+      if (connection.status === 'offline' && capabilities.trip_blog_offline_queue && currentUserId) {
+        const queued = await enqueueOfflineBlogEntry(
+          { accountId: currentUserId, tripId: activeTripId, dayDate, body },
+          Number(capabilities?.limits?.offlineQueueMaxEntries ?? 25),
+          Number(capabilities?.limits?.offlineQueueRetentionDays ?? 7)
+        );
+        setOfflineQueueCount(queued.length);
+        setNewBody('');
+        setAddingDay(null);
+        return;
+      }
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ kindKey: 'core.text', dayDate, body }),
@@ -687,6 +737,27 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to add blog item'); }
     finally { setCreating(false); }
   };
+
+  useEffect(() => {
+    if (!capabilities.trip_blog_offline_queue || !currentUserId || !activeTripId) {
+      setOfflineQueueCount(0);
+      return;
+    }
+    const retentionDays = Number(capabilities?.limits?.offlineQueueRetentionDays ?? 7);
+    void listOfflineBlogEntries(currentUserId, activeTripId, retentionDays).then((rows) => setOfflineQueueCount(rows.length));
+    if (connection.status !== 'online') return;
+    void flushOfflineBlogEntries(currentUserId, activeTripId, async (entry) => {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': entry.id },
+        body: JSON.stringify({ kindKey: 'core.text', dayDate: entry.dayDate, body: entry.body }),
+      });
+      if (!response.ok) throw new Error('Offline entry flush failed');
+    }, retentionDays).then(({ remaining, sent }) => {
+      setOfflineQueueCount(remaining.length);
+      if (sent > 0) void load();
+    });
+  }, [activeTripId, currentUserId, connection.status, capabilities.trip_blog_offline_queue]);
 
   const deleteItem = async (item) => {
     if (!canEdit) return;
@@ -795,6 +866,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>View public page ↗</Text>
             </TouchableOpacity>
           ) : null}
+          {canEdit && ((Platform.OS === 'ios' && capabilities.trip_blog_mobile_share_ios) || (Platform.OS === 'android' && capabilities.trip_blog_mobile_share_android)) ? (
+            <TouchableOpacity testID="blog-quick-capture" accessibilityRole="button" onPress={() => { const today = new Date().toISOString().slice(0, 10); const day = visibleDays.find((candidate) => candidate.localDate === today)?.localDate ?? visibleDays[0]?.localDate; if (day) { setAddingDay(day); setNewBody(''); } }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+              <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
+            </TouchableOpacity>
+          ) : null}
+          {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
         </View>
         <Text style={{ color: mutedColor, marginBottom: 12 }}>
           {editMode
@@ -803,6 +880,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               ? 'Public preview — only content intended for public sharing is shown.'
               : 'Traveler/follower view — all shared trip blog content is shown.'}
         </Text>
+        {capabilities.trip_blog_offline_queue && offlineQueueCount > 0 ? (
+          <View testID="blog-offline-queue-status" style={{ padding: 10, borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, marginBottom: 12, backgroundColor: '#fffbeb' }}>
+            <Text style={{ color: '#92400e', fontWeight: '700' }}>{offlineQueueCount} {offlineQueueCount === 1 ? 'entry is' : 'entries are'} saved on this device</Text>
+            <Text style={{ color: '#92400e', fontSize: 12 }}>{connection.status === 'online' ? 'Syncing now…' : 'They will publish when this device reconnects.'}</Text>
+          </View>
+        ) : null}
         {canEdit ? (
           <TextInput
             testID="blog-masthead-introduction-input"
@@ -850,6 +933,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
           </View>
         ) : null}
+        <BlogDiscoveryPanel
+          backendUrl={backendUrl}
+          headers={headers}
+          tripId={activeTripId}
+          searchEnabled={Boolean(capabilities.trip_blog_search)}
+          placesEnabled={Boolean(capabilities.trip_blog_places && !readOnly)}
+          textColor={textColor}
+          mutedColor={mutedColor}
+          borderColor={borderColor}
+          backgroundColor={inputColor}
+        />
         {capabilities.trip_blog_recap ? (
           recap ? (
             <TripRecapCards
@@ -861,6 +955,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               mutedColor={mutedColor}
               borderColor={borderColor}
               backgroundColor={inputColor}
+              showAwards={Boolean(capabilities.trip_blog_trip_awards)}
             />
           ) : (
             <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', marginBottom: 14, backgroundColor: '#7c3aed' }]}>
@@ -933,6 +1028,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Add note</Text>
                   </TouchableOpacity>
                 )}
+                {canEdit && capabilities.trip_blog_audio ? (
+                  <TouchableOpacity
+                    testID={`blog-add-voice-${day.localDate}`}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add a voice note"
+                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#7c3aed' }]}
+                    onPress={() => handleVoiceNote(day.localDate)}
+                    disabled={uploading}
+                  >
+                    <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Voice note</Text>
+                  </TouchableOpacity>
+                ) : null}
                 {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
@@ -1145,7 +1252,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                   ) : null}
                   {processingMedia.map((item) => (
                     <View key={item.id} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
-                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
+                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : item.kindKey === 'media.audio' ? '🎙 Voice note' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
                       {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
                       {canEdit ? (
                         <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>

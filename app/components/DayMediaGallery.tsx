@@ -97,7 +97,7 @@ const DayMediaGallery = ({
 
   return (
     <View style={{ marginTop: 8 }}>
-      <TouchableOpacity testID="day-media-open-lightbox" accessibilityRole="button" accessibilityLabel="Open all photos and videos for this day" activeOpacity={0.85} onPress={onOpenLightbox}>
+      <TouchableOpacity testID="day-media-open-lightbox" accessibilityRole="button" accessibilityLabel="Open all trip media for this day" activeOpacity={0.85} onPress={onOpenLightbox}>
         <BlogMediaPreview item={activeItem} backgroundColor={backgroundColor} />
       </TouchableOpacity>
       {activeItem.caption ? <Text testID="day-media-caption" style={{ color: mutedColor, marginTop: 4 }}>{activeItem.caption}</Text> : null}
@@ -134,7 +134,7 @@ const DayMediaGallery = ({
           ) : null}
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {canSetCover && !isCurrentCover ? (
+          {canSetCover && activeItem.mediaKind !== 'audio' && activeItem.kindKey !== 'media.audio' && !isCurrentCover ? (
             <TouchableOpacity testID="day-media-set-cover" accessibilityRole="button" disabled={settingCover} onPress={() => onSetCover(activeItem)} style={[styles?.button, { paddingVertical: 4, paddingHorizontal: 8 }]}>
               <Text style={[styles?.buttonText, { fontSize: 12 }]}>{settingCover ? 'Setting…' : 'Set as day default'}</Text>
             </TouchableOpacity>
@@ -146,7 +146,7 @@ const DayMediaGallery = ({
           ) : null}
         </View>
       </View>
-      {canEditMetadata && onSaveMetadata ? (
+      {canEditMetadata && activeItem.mediaKind !== 'audio' && activeItem.kindKey !== 'media.audio' && onSaveMetadata ? (
         <BlogMediaMetadataEditor
           item={activeItem}
           canSuggest={canSuggestMetadata}

@@ -147,11 +147,13 @@ const DayMediaLightbox = ({
                 key={item.id}
                 testID={`day-media-tile-${item.id}`}
                 accessibilityRole="button"
-                accessibilityLabel={item.kindKey === 'media.video' ? 'Play video' : 'View photo'}
+                accessibilityLabel={item.kindKey === 'media.video' ? 'Play video' : item.kindKey === 'media.audio' ? 'Play voice note' : 'View photo'}
                 onPress={() => setExpandedIndex(index)}
                 style={{ width: '31%', aspectRatio: 1, borderRadius: 6, overflow: 'hidden', backgroundColor, borderWidth: 1, borderColor }}
               >
-                <Image source={{ uri: item.thumbnailUrl || item.primaryUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                {item.kindKey === 'media.audio' ? (
+                  <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 28 }}>🎙</Text><Text style={{ color: textColor, fontSize: 11 }}>Voice note</Text></View>
+                ) : <Image source={{ uri: item.thumbnailUrl || item.primaryUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />}
                 {item.kindKey === 'media.video' ? (
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 24 }}>▶️</Text>

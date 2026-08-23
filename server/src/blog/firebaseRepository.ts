@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, ensureUserCanReadTrip, ensureUserInTrip } from '../db.firebase';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
@@ -10,6 +10,11 @@ import { markSynced, shouldSkipSync } from './syncCoordination';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
+const idForMutation = (userId: string, key?: string | null): string => {
+  if (!key) return randomUUID();
+  const hex = createHash('sha256').update(`blog-text:${userId}:${key}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 
 const ensureBlog = async (tripId: string): Promise<any> => {
   const db = getDb();
@@ -274,7 +279,15 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   if (!access) throw new Error('Not authorized to edit this trip');
   if (String(input.body ?? '').length > 100_000) throw new Error('Text block is too large');
   const day = await getDay(tripId, input.dayDate);
-  const id = randomUUID();
+  const id = idForMutation(userId, input.idempotencyKey);
+  if (input.idempotencyKey) {
+    const replay = await getDb().collection('blog_items').doc(id).get();
+    if (replay.exists) {
+      const data = replay.data() as any;
+      if (String(data.tripId) !== tripId || String(data.authorUserId) !== userId) throw new Error('Idempotency key conflict');
+      return mapItem(replay);
+    }
+  }
   const data = { id, tripId, blogDayId: day.id, localDate: day.localDate, kindKey: 'core.text', schemaVersion: 1, audience: input.audience ?? 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${id}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body: String(input.body ?? ''), languageTag: input.languageTag ?? null, sourceType: input.sourceType ?? null, createdAt: nowIso(), updatedAt: nowIso(), deletedAt: null };
   await getDb().collection('blog_items').doc(id).set(data);
   await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
@@ -592,16 +605,27 @@ export const createModalityItem = async (
   return { itemId, payload: cleanPayload };
 };
 
-export const searchBlog = async (tripId: string, query: string): Promise<any[]> => {
+export const searchBlog = async (
+  tripId: string,
+  query: string,
+  audiences: string[],
+  options: { cursor?: string | null; limit?: number; scanLimit?: number } = {}
+): Promise<any[]> => {
   const q = query.toLowerCase();
-  const snapshots = await getDb().collection('blog_items').where('tripId', '==', tripId).get();
-  // Simple in-memory search for parity with ILIKE
+  const limit = Math.min(50, Math.max(1, Number(options.limit ?? 20)));
+  const cursor = String(options.cursor ?? '');
+  const scanLimit = Math.min(2000, Math.max(limit + 1, Number(options.scanLimit ?? 500)));
+  const snapshots = await getDb().collection('blog_items').where('tripId', '==', tripId).limit(scanLimit).get();
+  // Firestore has no contains/full-text operator. This bounded fallback preserves adapter parity
+  // for today's trip-size ceiling; a managed search index can replace it when that ceiling grows.
   return snapshots.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
     .filter((item) => {
-      if (item.deletedAt != null || item.kindKey !== 'core.text') return false;
+      if (item.deletedAt != null || item.kindKey !== 'core.text' || !audiences.includes(String(item.audience))) return false;
       return String(item.body ?? '').toLowerCase().includes(q);
     })
-    .map((item) => ({ id: item.id, local_date: item.localDate, body: item.body }))
-    .slice(0, 50);
+    .sort((a, b) => `${a.localDate}|${a.id}`.localeCompare(`${b.localDate}|${b.id}`))
+    .filter((item) => !cursor || `${item.localDate}|${item.id}` > cursor)
+    .map((item) => ({ id: item.id, localDate: item.localDate, snippet: String(item.body ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240) }))
+    .slice(0, limit + 1);
 };

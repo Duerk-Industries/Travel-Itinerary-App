@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { ensureUserCanReadTrip, ensureUserInTrip } from '../db';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
@@ -22,6 +22,11 @@ type BlogRow = {
 };
 
 const formatDate = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
+const idForMutation = (userId: string, key?: string | null): string => {
+  if (!key) return randomUUID();
+  const hex = createHash('sha256').update(`blog-text:${userId}:${key}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 
 const ensureBlog = async (tripId: string): Promise<BlogRow> => {
   const existing = await queryBlog<BlogRow>('SELECT * FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
@@ -333,7 +338,16 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   const body = String(input.body ?? '');
   if (body.length > 100_000) throw new Error('Text block is too large');
   const dayId = await getDayId(tripId, input.dayDate);
-  const id = randomUUID();
+  const id = idForMutation(userId, input.idempotencyKey);
+  if (input.idempotencyKey) {
+    const replay = await queryBlog<any>(
+      `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
+       JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id
+       WHERE i.id = $1 AND i.trip_id = $2 AND i.author_user_id = $3`,
+      [id, tripId, userId]
+    );
+    if (replay.rows[0]) return mapItem(replay.rows[0]);
+  }
   const sortKey = `${Date.now().toString().padStart(16, '0')}-${id}`;
   await queryBlog(
     `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, source_type)
@@ -760,16 +774,28 @@ export const createModalityItem = async (
   return { itemId, payload: cleanPayload };
 };
 
-export const searchBlog = async (tripId: string, query: string): Promise<any[]> => {
+export const searchBlog = async (
+  tripId: string,
+  query: string,
+  audiences: string[],
+  options: { cursor?: string | null; limit?: number; scanLimit?: number } = {}
+): Promise<any[]> => {
   const q = `%${query.slice(0, 100)}%`;
+  const limit = Math.min(50, Math.max(1, Number(options.limit ?? 20)));
+  const [cursorDate, cursorId] = String(options.cursor ?? '').split('|', 2);
+  const hasCursor = /^\d{4}-\d{2}-\d{2}$/.test(cursorDate ?? '') && /^[0-9a-f-]{36}$/i.test(cursorId ?? '');
+  const cursorFilter = hasCursor ? 'AND (d.local_date, i.id) > ($4::date, $5::uuid)' : '';
+  const params = hasCursor ? [tripId, q, audiences, cursorDate, cursorId, limit + 1] : [tripId, q, audiences, limit + 1];
   const result = await queryBlog<any>(
-    `SELECT i.id, d.local_date, t.body
+    `SELECT i.id, to_char(d.local_date, 'YYYY-MM-DD') AS local_date, t.body
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      JOIN blog_text_contents t ON t.item_id = i.id
      WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND t.body ILIKE $2
-     ORDER BY d.local_date LIMIT 50`,
-    [tripId, q]
+       AND i.audience = ANY($3::text[])
+       ${cursorFilter}
+     ORDER BY d.local_date, i.id LIMIT $${hasCursor ? 6 : 4}`,
+    params
   );
-  return result.rows;
+  return result.rows.map((row) => ({ id: String(row.id), localDate: String(row.local_date), snippet: String(row.body ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240) }));
 };

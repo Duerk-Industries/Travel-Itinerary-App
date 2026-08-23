@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createHash, randomUUID } from 'crypto';
 import { authenticate } from '../auth';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { getApiLimitsConfig } from '../config/apiLimits';
@@ -8,7 +9,7 @@ import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogAudience } from '../blog/types';
 import { ensureUserInTrip, ensureUserCanReadTrip, getCurrentDbProvider } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
-import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { ApiLimitExceededError, commitCapacityReservation, releaseCapacityReservation, reserveApiUsageOrThrow, reserveCapacityOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
 import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
@@ -29,11 +30,19 @@ const tripBlogLimits = (): Record<string, any> => {
 };
 
 const userIdOf = (req: any): string => String(req.user?.userId ?? '');
+const textMutationId = (userId: string, key: string): string => {
+  const hex = createHash('sha256').update(`blog-text:${userId}:${key}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 const validAudience = (value: unknown): value is BlogAudience => value === 'travelers' || value === 'followers' || value === 'public';
 // Signed read URLs are short-lived and specific to a rendition object, so they're computed at
 // response time rather than stored — only ready assets have anything to render.
 const attachMediaUrls = async (assets: any[]): Promise<any[]> => Promise.all(assets.map(async (asset) => {
   if (asset.state !== 'ready') return asset;
+  if (asset.mediaKind === 'audio') {
+    const primaryUrl = await createBlogReadUrl(`trip-blog/${asset.uploaderUserId}/${asset.assetId ?? asset.id}/source`);
+    return { ...asset, primaryUrl };
+  }
   if (asset.mediaKind === 'video') {
     const primaryUrl = await createBlogReadUrl(blogRenditionKey(asset.uploaderUserId, asset.assetId ?? asset.id, 'primary.mp4'));
     return { ...asset, primaryUrl };
@@ -55,15 +64,17 @@ const errorResponse = (res: any, err: any): void => {
 
 router.get('/:tripId/blog/capabilities', async (req, res) => {
   try {
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_DOCUMENT_READ', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', units: 2, requireConfiguredLimit: true });
     const master = await isFeatureEnabled('trip_blog');
     const descriptors = listBlogItemDescriptors();
     const kinds = await Promise.all(descriptors.map(async (descriptor) => ({ ...descriptor, enabled: master && await isFeatureEnabled(descriptor.featureFlag) })));
     const limits = tripBlogLimits();
     const writable = Boolean(await ensureUserInTrip(req.params.tripId, userIdOf(req)));
-    const featureKeys = ['trip_blog_authoring_assist', 'trip_blog_reactions', 'trip_blog_spend_summary', 'trip_blog_recap', 'trip_blog_alt_text', 'trip_blog_caption_ai'] as const;
+    const featureKeys = ['trip_blog_authoring_assist', 'trip_blog_reactions', 'trip_blog_spend_summary', 'trip_blog_recap', 'trip_blog_alt_text', 'trip_blog_caption_ai', 'trip_blog_audio', 'trip_blog_audio_transcription', 'trip_blog_search', 'trip_blog_places', 'trip_blog_offline_queue', 'trip_blog_trip_awards', 'trip_blog_keepsake_export', 'trip_blog_mobile_share_ios', 'trip_blog_mobile_share_android'] as const;
     const featureValues = await Promise.all(featureKeys.map((key) => isFeatureEnabled(key)));
     const features = Object.fromEntries(featureKeys.map((key, index) => [key, master && featureValues[index]]));
-    res.json({ enabled: master, writable, kinds, features, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300), maxAssetsPerGallery: Number(limits.maxAssetsPerGallery ?? 30) } });
+    res.json({ enabled: master, writable, kinds, features, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300), maxAssetsPerGallery: Number(limits.maxAssetsPerGallery ?? 30), offlineQueueMaxEntries: Number(limits.offlineQueueMaxEntries ?? 25), offlineQueueRetentionDays: Number(limits.offlineQueueRetentionDays ?? 7), audioMaxBytes: Number(limits.audioMaxBytes ?? 26214400) } });
   } catch (err) {
     errorResponse(res, err);
   }
@@ -75,6 +86,8 @@ router.get('/:tripId/blog', async (req, res) => {
       res.status(404).json({ error: 'Trip blog is not enabled' });
       return;
     }
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_DOCUMENT_READ', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', units: 8, requireConfiguredLimit: true });
     const options = {
       date: typeof req.query.date === 'string' ? req.query.date : undefined,
       cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
@@ -241,7 +254,21 @@ router.post('/:tripId/blog/items', async (req, res) => {
       return;
     }
     const audience = validAudience(req.body?.audience) ? req.body.audience : 'public';
-    const item = await blogRepository().createBlogTextItem(userIdOf(req), req.params.tripId, { dayDate, body, languageTag: req.body?.languageTag ?? null, audience });
+    const idempotencyKey = String(req.header('Idempotency-Key') ?? '').trim();
+    if (idempotencyKey.length > 200) return res.status(400).json({ error: 'Idempotency-Key is too long' });
+    const effectiveIdempotencyKey = idempotencyKey || randomUUID();
+    const retainedReservationId = textMutationId(userIdOf(req), effectiveIdempotencyKey);
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_AUTHORING_WRITE', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_WRITE_UNIT', units: 3, requireConfiguredLimit: true });
+    await reserveCapacityOrThrow({ provider: 'TRIP_BLOG_SOCIAL_CAPACITY', caller: 'TEXT_RETAINED_KIB', units: 128, idempotencyKey: retainedReservationId });
+    let item;
+    try {
+      item = await blogRepository().createBlogTextItem(userIdOf(req), req.params.tripId, { dayDate, body, languageTag: req.body?.languageTag ?? null, audience, idempotencyKey: effectiveIdempotencyKey });
+      await commitCapacityReservation(retainedReservationId, Math.max(1, Math.ceil(Buffer.byteLength(String(item.body ?? ''), 'utf8') / 1024) + 4));
+    } catch (err) {
+      await releaseCapacityReservation(retainedReservationId).catch(() => undefined);
+      throw err;
+    }
     res.status(201).json(item);
   } catch (err) {
     errorResponse(res, err);
@@ -303,6 +330,7 @@ router.delete('/:tripId/blog/items/:itemId', async (req, res) => {
       res.status(409).json({ error: 'The blog item changed or was already deleted' });
       return;
     }
+    await releaseCapacityReservation(req.params.itemId).catch(() => undefined);
     res.status(204).end();
   } catch (err) {
     errorResponse(res, err);
@@ -345,11 +373,12 @@ router.post('/:tripId/blog/items/reorder', async (req, res) => {
 
 router.post('/:tripId/blog/media/upload-init', async (req, res) => {
   try {
-    if (!(await isFeatureEnabled('trip_blog_photo_uploads'))) {
+    const requestedKind = String(req.body?.mediaKind ?? 'photo');
+    const mediaKind = requestedKind === 'video' ? 'video' : requestedKind === 'audio' ? 'audio' : 'photo';
+    if (mediaKind === 'photo' && !(await isFeatureEnabled('trip_blog_photo_uploads'))) {
       res.status(404).json({ error: 'Photo uploads are not enabled' });
       return;
     }
-    const mediaKind = req.body?.mediaKind === 'video' ? 'video' : 'photo';
     if (mediaKind === 'video') {
       const tier = await getUserTierKey(userIdOf(req));
       if (!['premium', 'pro'].includes(tier)) {
@@ -360,6 +389,10 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
         res.status(404).json({ error: 'Video uploads are not enabled' });
         return;
       }
+    }
+    if (mediaKind === 'audio' && !(await isFeatureEnabled('trip_blog_audio'))) {
+      res.status(404).json({ error: 'Voice notes are not enabled' });
+      return;
     }
     await assertCanUseFeature(userIdOf(req), 'trip_blog', (req as any).user.role);
     await reserveApiUsageOrThrow({ provider: 'GCS', caller: 'BLOG_UPLOAD_INIT' });
@@ -404,7 +437,7 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
     // the actual normalization/thumbnail pipeline and trust the real processed byte count instead
     // of whatever the client claims. Otherwise (no GCS configured, so upload-init fell back to the
     // simulated path) keep the old client-trusted behavior — there's no real file to process.
-    const asset = reallyUploaded
+    const asset = reallyUploaded && pending?.mediaKind !== 'audio'
       ? await processMediaUpload(userId, req.params.assetId)
       : await blogMediaRepository().completeUpload(userId, req.params.assetId, Number(req.body?.physicalBytes), req.body?.checksum);
     if (asset.mediaKind === 'photo') {
