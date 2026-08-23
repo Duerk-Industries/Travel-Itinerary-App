@@ -9,7 +9,16 @@ CREATE TABLE IF NOT EXISTS scheduled_job_leases (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed Memory Lane and Group Prompts jobs.
+CREATE TABLE IF NOT EXISTS blog_day_map_artifacts (
+  trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  day_date DATE NOT NULL,
+  points_hash TEXT NOT NULL,
+  gcs_path TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (trip_id, day_date, points_hash)
+);
+
+-- Seed Memory Lane, Group Prompts and Day Map Render jobs.
 INSERT INTO scheduled_job_leases (job_key)
-VALUES ('blog:memory_lane'), ('blog:group_prompts')
+VALUES ('blog:memory_lane'), ('blog:group_prompts'), ('blog:day_map_render')
 ON CONFLICT DO NOTHING;

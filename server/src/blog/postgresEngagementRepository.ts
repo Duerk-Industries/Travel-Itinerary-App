@@ -203,9 +203,39 @@ export const clearReaction = async (
 ): Promise<void> =>
   withBlogTransaction(async (client) => {
     const column = targetColumn(targetKind);
-    await client.query(`DELETE FROM blog_reactions WHERE ${column} = $1 AND user_id = $2`, [targetId, userId]);
-    await recomputeCounterRow(client, tripId, targetKind, targetId, audience);
+    const result = await client.query(`DELETE FROM blog_reactions WHERE ${column} = $1 AND user_id = $2`, [targetId, userId]);
+    if (result.rowCount) {
+      await recomputeCounterRow(client, tripId, targetKind, targetId, audience);
+    }
   });
+
+export const upsertStar = async (
+  tripId: string,
+  userId: string,
+  targetKind: 'item' | 'asset',
+  targetId: string
+): Promise<void> => {
+  const column = targetColumn(targetKind);
+  await queryBlog(
+    `INSERT INTO blog_curation_stars (id, trip_id, target_kind, ${column}, user_id)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (${column}, user_id) WHERE ${column} IS NOT NULL DO NOTHING`,
+    [randomUUID(), tripId, targetKind, targetId, userId]
+  );
+};
+
+export const clearStar = async (
+  tripId: string,
+  userId: string,
+  targetKind: 'item' | 'asset',
+  targetId: string
+): Promise<void> => {
+  const column = targetColumn(targetKind);
+  await queryBlog(
+    `DELETE FROM blog_curation_stars WHERE trip_id = $1 AND user_id = $2 AND target_kind = $3 AND ${column} = $4`,
+    [tripId, userId, targetKind, targetId]
+  );
+};
 
 // Batched per-page reads (architecture §14.6/NFR-1): one query for counts across every target on
 // the page, one for the caller's own reactions — never per-target queries. `visibleAudiences` is

@@ -1,7 +1,11 @@
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { notify } from './notificationService';
 import { logError, logInfo } from '../logger';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
+import axios from 'axios';
+import { getStorage } from 'firebase-admin/storage';
+import { resolveLocationBucketName } from '../utils/gcsBucket';
+import { getEnvValue } from '../env';
 
 const LEASE_SECONDS = 300;
 const WORKER_ID = `blog-worker-${randomUUID()}`;
@@ -9,6 +13,7 @@ const WORKER_ID = `blog-worker-${randomUUID()}`;
 export const runBlogBackgroundJobs = async () => {
   await runMemoryLaneJob();
   await runGroupPromptsJob();
+  await runDayMapRenderJob();
 };
 
 const claimLease = async (jobKey: string): Promise<boolean> => {
@@ -72,14 +77,16 @@ const runMemoryLaneJob = async () => {
         [trip.id]
       );
 
-      for (const traveler of travelers.rows) {
+      const userIds = travelers.rows.map(t => t.user_id);
+      if (userIds.length > 0) {
         await notify({
-          userId: traveler.user_id,
-          category: 'engagement',
+          userIds,
+          category: 'blog_memory_lane',
+          tripId: trip.id,
           title: `Memory Lane: ${trip.name}`,
           body: `It's been ${years} year${years === 1 ? '' : 's'} since your trip ended! Revisit your blog to see the memories.`,
-          link: `/trips/${trip.id}/blog`,
-          dedupeKey: `memory_lane:${trip.id}:${years}:${traveler.user_id}`
+          deepLink: `/trips/${trip.id}/blog`,
+          dedupeKey: `memory_lane:${trip.id}:${years}`
         });
       }
     }
@@ -121,14 +128,16 @@ const runGroupPromptsJob = async () => {
         [trip.id, cutoff]
       );
 
-      for (const slacker of slackers.rows) {
+      const userIds = slackers.rows.map(s => s.user_id);
+      if (userIds.length > 0) {
         await notify({
-          userId: slacker.user_id,
-          category: 'engagement',
+          userIds,
+          category: 'blog_nudge',
+          tripId: trip.id,
           title: `Your group is waiting!`,
           body: `Everyone else is sharing memories from ${trip.name}. Add a photo or note to the blog today!`,
-          link: `/trips/${trip.id}/blog`,
-          dedupeKey: `group_prompt:${trip.id}:${today.toISOString().slice(0, 10)}:${slacker.user_id}`
+          deepLink: `/trips/${trip.id}/blog`,
+          dedupeKey: `group_prompt:${trip.id}:${today.toISOString().slice(0, 10)}`
         });
       }
     }
@@ -137,6 +146,80 @@ const runGroupPromptsJob = async () => {
     logInfo(`[blog-worker] Group Prompts job finished, processed ${activeTrips.rows.length} trips`);
   } catch (err) {
     logError(`[blog-worker] Group Prompts job failed`, err);
+  } finally {
+    await releaseLease(jobKey, success);
+  }
+};
+
+const runDayMapRenderJob = async () => {
+  const jobKey = 'blog:day_map_render';
+  if (!await claimLease(jobKey)) return;
+
+  let success = false;
+  try {
+    // Find (trip, day) pairs that have geotagged media but no current artifact.
+    const daysWithMedia = await queryBlog<{ trip_id: string; local_date: string; blog_day_id: string }>(
+      `SELECT DISTINCT i.trip_id, d.local_date, i.blog_day_id
+       FROM blog_items i
+       JOIN blog_days d ON d.id = i.blog_day_id
+       JOIN blog_item_assets ia ON ia.item_id = i.id
+       JOIN blog_media_assets a ON a.id = ia.asset_id
+       WHERE a.captured_lat IS NOT NULL AND a.captured_lng IS NOT NULL
+         AND i.deleted_at IS NULL AND a.state = 'ready'
+       LIMIT 10`
+    );
+
+    for (const day of daysWithMedia.rows) {
+      const points = await queryBlog<{ lat: number; lng: number }>(
+        `SELECT DISTINCT a.captured_lat as lat, a.captured_lng as lng
+         FROM blog_media_assets a
+         JOIN blog_item_assets ia ON ia.asset_id = a.id
+         JOIN blog_items i ON i.id = ia.item_id
+         WHERE i.blog_day_id = $1 AND a.captured_lat IS NOT NULL AND a.state = 'ready'`,
+        [day.blog_day_id]
+      );
+
+      if (points.rows.length === 0) continue;
+
+      const pointsData = points.rows.map(p => `${p.lat},${p.lng}`).sort().join('|');
+      const pointsHash = createHash('md5').update(pointsData).digest('hex');
+
+      const existing = await queryBlog(
+        `SELECT 1 FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3`,
+        [day.trip_id, day.local_date, pointsHash]
+      );
+      if (existing.rowCount > 0) continue;
+
+      const apiKey = getEnvValue('GOOGLE_STATIC_MAPS_API_KEY') || getEnvValue('GOOGLE_MAPS_API_KEY');
+      if (!apiKey) {
+        logError('[blog-worker] Missing Google Maps API key, skipping day map render');
+        break;
+      }
+
+      const markers = points.rows.map(p => `markers=color:red|${p.lat},${p.lng}`).join('&');
+      const url = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&scale=2&${markers}&key=${apiKey}`;
+
+      const response = await axios.get(url, { responseType: 'arraybuffer' });
+      const bucketName = resolveLocationBucketName();
+      if (!bucketName) throw new Error('No GCS bucket configured');
+
+      const gcsPath = `blog-maps/${day.trip_id}/${day.local_date}/${pointsHash}.png`;
+      const file = getStorage().bucket(bucketName).file(gcsPath);
+      await file.save(Buffer.from(response.data), { contentType: 'image/png' });
+
+      await queryBlog(
+        `INSERT INTO blog_day_map_artifacts (trip_id, day_date, points_hash, gcs_path)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (trip_id, day_date, points_hash) DO UPDATE SET gcs_path = EXCLUDED.gcs_path`,
+        [day.trip_id, day.local_date, pointsHash, gcsPath]
+      );
+
+      logInfo(`[blog-worker] Rendered day map for trip ${day.trip_id} day ${day.local_date}`);
+    }
+
+    success = true;
+  } catch (err) {
+    logError(`[blog-worker] Day Map Render job failed`, err);
   } finally {
     await releaseLease(jobKey, success);
   }

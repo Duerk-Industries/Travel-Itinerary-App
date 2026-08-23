@@ -4,6 +4,7 @@ import { createTtlCache } from '../utils/ttlCache';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { resolveActorMembership, visibleAudiencesForMembership } from './blogEngagementService';
 import { BlogTargetNotFoundError } from './blogEngagementErrors';
+import { createHash } from 'crypto';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §7.1.
 // One service, two projections over the same source set: `facts` (aggregates for the strip) and
@@ -151,6 +152,24 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
       for (let i = 1; i < points.length; i += 1) totalKm += haversineKm(points[i - 1], points[i]);
       if (totalKm > 0) {
         facts.push({ key: 'distance', label: 'Distance covered', value: `approx. ${totalKm < 1 ? '<1' : Math.round(totalKm)} km`, sourceTypes: ['blog_media_assets'], confidence: 'approx', asOf });
+      }
+
+      // Day Map Artifact (Phase 5)
+      const pointsData = points.map(p => `${p.lat},${p.lng}`).sort().join('|');
+      const pointsHash = createHash('md5').update(pointsData).digest('hex');
+      const artifact = await queryBlog<{ gcs_path: string }>(
+        'SELECT gcs_path FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3',
+        [tripId, dayDate, pointsHash]
+      );
+      if (artifact.rows[0]) {
+        facts.push({
+          key: 'places',
+          label: 'Day Map',
+          value: artifact.rows[0].gcs_path,
+          sourceTypes: ['blog_day_map_artifacts'],
+          confidence: 'high',
+          asOf,
+        });
       }
     }
     for (const row of mediaRows.rows) {

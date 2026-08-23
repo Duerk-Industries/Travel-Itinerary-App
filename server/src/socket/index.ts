@@ -8,6 +8,7 @@ import { getBackendUrl, isLocalEnv } from '../env';
 import { logInfo } from '../logger';
 import { socketAuthMiddleware } from './authMiddleware';
 import { registerChatHandlers } from './chatHandler';
+import { registerBlogHandlers } from './blogHandler';
 
 let io: Server | null = null;
 
@@ -40,6 +41,7 @@ export const createSocketServer = (httpServer: HttpServer): Server => {
   io.on('connection', (socket) => {
     logInfo(`[socket] connected: ${socket.id} user=${socket.data.user?.id}`);
     registerChatHandlers(io!, socket);
+    registerBlogHandlers(io!, socket);
   });
 
   logInfo('[socket] Socket.IO server initialized');

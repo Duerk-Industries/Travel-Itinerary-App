@@ -1,6 +1,6 @@
 import { getCurrentDbProvider } from '../db';
 import * as postgres from './notificationRepository.postgres';
-// Firebase implementation will be added if needed, following the pattern.
+import * as firebase from './notificationRepository.firebase';
 
 export interface NotificationRepository {
   createNotification(notification: any): Promise<string>;

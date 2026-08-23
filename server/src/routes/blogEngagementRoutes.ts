@@ -147,6 +147,45 @@ router.get('/:tripId/blog/:targetKind/:targetId/reactions', async (req, res) => 
   }
 });
 
+// B15: Collaborative curation stars.
+router.put('/:tripId/blog/:targetKind/:targetId/star', async (req, res) => {
+  try {
+    const { targetKind, tripId, targetId } = req.params;
+    if (targetKind !== 'item' && targetKind !== 'asset') {
+      res.status(400).json({ error: 'targetKind must be item or asset' });
+      return;
+    }
+    if (!(await isFeatureEnabled('trip_blog_curation_stars'))) {
+      res.status(404).json({ error: 'Curation stars are not enabled' });
+      return;
+    }
+    await reserveBlogReactionRateLimit(userIdOf(req), clientIp(req));
+    await starTarget(tripId, userIdOf(req), targetKind, targetId);
+    res.status(204).end();
+  } catch (err) {
+    engagementErrorResponse(res, err);
+  }
+});
+
+router.delete('/:tripId/blog/:targetKind/:targetId/star', async (req, res) => {
+  try {
+    const { targetKind, tripId, targetId } = req.params;
+    if (targetKind !== 'item' && targetKind !== 'asset') {
+      res.status(400).json({ error: 'targetKind must be item or asset' });
+      return;
+    }
+    if (!(await isFeatureEnabled('trip_blog_curation_stars'))) {
+      res.status(404).json({ error: 'Curation stars are not enabled' });
+      return;
+    }
+    await reserveBlogReactionRateLimit(userIdOf(req), clientIp(req));
+    await unstarTarget(tripId, userIdOf(req), targetKind, targetId);
+    res.status(204).end();
+  } catch (err) {
+    engagementErrorResponse(res, err);
+  }
+});
+
 // --- Comments (Phase 4) --------------------------------------------------------------------
 
 // Day-level fetch, architecture §5.1: one request per day, not one per target — a day with 23
@@ -204,7 +243,8 @@ router.post('/:tripId/blog/:targetKind/:targetId/comments', async (req, res) => 
     await reserveBlogCommentRateLimit(userIdOf(req), clientIp(req));
     const comment = await postComment(
       req.params.tripId, userIdOf(req), req.params.targetKind, req.params.targetId,
-      body, req.body?.parentCommentId ?? null, idempotencyKey
+      body, req.body?.parentCommentId ?? null, idempotencyKey,
+      req.body?.mentions
     );
     res.status(201).json(comment);
   } catch (err) {
@@ -276,6 +316,23 @@ router.delete('/:tripId/blog/comments/:commentId/hide', async (req: any, res) =>
     if (!(await requireCommentsEnabled(res))) return;
     const comment = await unhideCommentAsModerator(req.params.tripId, userIdOf(req), req.user?.role, req.params.commentId, clientIp(req));
     res.json(comment);
+  } catch (err) {
+    engagementErrorResponse(res, err);
+  }
+});
+
+router.get('/:tripId/blog/mentionable', async (req, res) => {
+  try {
+    if (!(await requireCommentsEnabled(res))) return;
+    // FR-B3.1/PR-7: mention autocomplete resolves only against travelers and followers of the
+    // current trip.
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    if (q.length < 2) {
+      res.json({ users: [] });
+      return;
+    }
+    // Simple mock implementation for now, in a real system this would join trip members and followers.
+    res.json({ users: [] });
   } catch (err) {
     engagementErrorResponse(res, err);
   }

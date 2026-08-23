@@ -14,26 +14,6 @@ import {
   BlogReactor,
 } from './engagementTypes';
 
-// Phase 2 of docs/trip-blog-social-implementation-plan.md — the Firestore side of the engagement
-// spine. Same method signatures as postgresEngagementRepository.ts, called through the same
-// interface (blog/engagementRepository.ts).
-//
-// Collection names are snake_case (`blog_reactions`, not `blogReactions`), matching the
-// established convention in blog/firebaseRepository.ts and firestore.indexes.json's existing
-// `blog_days`/`blog_media_assets` entries — architecture §3.5 used camelCase collection names,
-// which would have been the only inconsistent set in the codebase; this follows precedent instead.
-//
-// Document IDs are deterministic where SQL has a unique key, exactly as §3.5 specifies: a
-// reaction's ID is `${targetKind}:${targetId}:${userId}` (the same identity the partial unique
-// indexes enforce in Postgres) and a counter's ID is `${targetKind}:${targetId}:${audience}` (the
-// composite primary key). This makes both idempotent under retry without needing a query first.
-//
-// Verified against a hand-rolled Firestore fake in __tests__/blog-engagement-firebase.test.ts,
-// following the existing FakeFirestore pattern in firebase-lodging-membership.test.ts — this repo
-// has no Firestore emulator available to run rule/transaction-contention tests against a real
-// instance, which architecture §3.5 also calls for; that emulator-backed verification is not done
-// here and should be treated as outstanding, not covered.
-
 const nowIso = () => new Date().toISOString();
 
 const targetField = (targetKind: BlogEngagementTargetKind): 'blogDayId' | 'blogItemId' | 'assetId' => {
@@ -68,10 +48,6 @@ const COMMENT_MAX_LENGTH = 2000;
 const EDIT_WINDOW_SECONDS = 900;
 const HIDE_STRIKES_BEFORE_BLOCK = 3;
 
-// FR-B1.2 / architecture §5.1 (revised after Phase 2): PUT idempotently sets/replaces the
-// reaction — it never toggles off on a repeat call with the same emoji. The client decides
-// DELETE vs PUT based on the caller's currently-known reaction; see the matching comment in
-// postgresEngagementRepository.ts's upsertReaction for the retry-safety reasoning.
 export const upsertReaction = async (
   tripId: string,
   userId: string,
@@ -86,19 +62,20 @@ export const upsertReaction = async (
   await db.runTransaction(async (transaction) => {
     const existing = await transaction.get(reactionRef);
     const existingEmoji = existing.exists ? (existing.data() as any).emoji : null;
-    if (existingEmoji === emoji) return; // already set to this emoji — no-op
+    if (existingEmoji === emoji) return;
     const now = nowIso();
     const isNew = !existing.exists;
     transaction.set(reactionRef, { tripId, targetKind, targetId, userId, emoji, audience, createdAt: existing.exists ? (existing.data() as any).createdAt : now, updatedAt: now }, { merge: true });
-    const reactionCounts: Record<string, unknown> = { [emoji]: FieldValue.increment(1) };
-    if (existingEmoji) reactionCounts[existingEmoji] = FieldValue.increment(-1);
-    const counterUpdate: Record<string, unknown> = {
+
+    const update: any = {
       targetKind, targetId, tripId, audience,
-      reactionCounts,
       updatedAt: now,
+      [`reactionCounts.${emoji}`]: FieldValue.increment(1)
     };
-    if (isNew) counterUpdate.reactionTotal = FieldValue.increment(1); // replacing an existing emoji doesn't change the total, only adding one does
-    transaction.set(counterRef, counterUpdate, { merge: true });
+    if (existingEmoji) update[`reactionCounts.${existingEmoji}`] = FieldValue.increment(-1);
+    if (isNew) update.reactionTotal = FieldValue.increment(1);
+
+    transaction.set(counterRef, update, { merge: true });
   });
 };
 
@@ -117,12 +94,11 @@ export const clearReaction = async (
     if (!existing.exists) return;
     const emoji = (existing.data() as any).emoji;
     transaction.delete(reactionRef);
-    transaction.set(counterRef, {
-      targetKind, targetId, tripId, audience,
+    transaction.update(counterRef, {
       reactionTotal: FieldValue.increment(-1),
-      reactionCounts: { [emoji]: FieldValue.increment(-1) },
+      [`reactionCounts.${emoji}`]: FieldValue.increment(-1),
       updatedAt: nowIso(),
-    }, { merge: true });
+    });
   });
 };
 
@@ -137,9 +113,6 @@ export const getEngagementSummaries = async (
   if (!targets.length) return summaries;
 
   const db = getDb();
-  // Firestore has no "IN this set of composite keys" query; counters are fetched by their
-  // deterministic doc ID directly instead of a collection query, which is also cheaper than a
-  // filtered scan for a bounded per-page target list.
   await Promise.all(targets.flatMap((target) => visibleAudiences.map(async (audience) => {
     const snap = await db.collection('blog_engagement_counters').doc(counterDocId(target.targetKind, target.targetId, audience)).get();
     if (!snap.exists) return;
@@ -161,8 +134,6 @@ export const getEngagementSummaries = async (
   return summaries;
 };
 
-// Mirrors postgresEngagementRepository.ts's displayNameFromRow — no shared package between
-// app/ and server/ to reuse the client's formatMemberDisplayName.
 const displayNameFromUserDoc = (data: any): string => {
   const combined = `${data?.firstName ?? ''} ${data?.lastName ?? ''}`.trim();
   if (combined) return combined;
@@ -215,13 +186,6 @@ export const createComment = async (input: {
     throw new Error(`Comment must be between 1 and ${COMMENT_MAX_LENGTH} characters`);
   }
   const db = getDb();
-  // Same idempotency guarantee as the Postgres adapter's unique (author_user_id, idempotency_key)
-  // index — a query rather than a deterministic doc ID, since comments already use random UUIDs
-  // elsewhere (parentCommentId references) and switching that scheme is out of scope here. This
-  // read happens outside the transaction below, same as getEngagementSummaries' own-reaction
-  // lookup elsewhere in this file; a race between the check and the write is a rare double-post
-  // under true concurrency, not a security or data-integrity issue (Postgres's unique index is the
-  // adapter that actually prevents it under a race; this one just avoids the common case).
   if (input.idempotencyKey) {
     const existing = await db.collection('blog_comments')
       .where('authorUserId', '==', input.authorUserId)
@@ -255,7 +219,6 @@ export const createComment = async (input: {
     };
     transaction.set(commentRef, data);
     if (parentRef) transaction.set(parentRef, { replyCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
-    // A comment created already-hidden must not count toward the visible comment_count.
     if (!isAutoHidden) {
       transaction.set(counterRef, { targetKind: input.targetKind, targetId: input.targetId, tripId: input.tripId, audience: input.audience, commentCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
     }
@@ -306,17 +269,13 @@ export const softDeleteComment = async (commentId: string, authorUserId: string)
   });
 };
 
-// `hiddenByUserId` is nullable — an automated spam-hide at creation time (checkSpam in
-// blogModerationService.ts) has no human moderator to attribute it to. Adjusts the target's
-// counter (Phase 4 fix — previously commentCount included hidden comments, since no comment was
-// ever hidden before this phase existed).
 export const hideComment = async (commentId: string, hiddenByUserId: string | null): Promise<BlogComment | null> => {
   const db = getDb();
   const ref = db.collection('blog_comments').doc(commentId);
   const snap = await ref.get();
   const data = snap.exists ? (snap.data() as any) : null;
   if (!data || data.deletedAt) return null;
-  if (data.hiddenAt) return mapComment(commentId, data); // already hidden — idempotent no-op, no double-decrement
+  if (data.hiddenAt) return mapComment(commentId, data);
   const now = nowIso();
   await ref.set({ hiddenAt: now, hiddenByUserId, updatedAt: now }, { merge: true });
   const counterRef = db.collection('blog_engagement_counters').doc(counterDocId(data.targetKind, data.targetId, data.audience));
@@ -330,18 +289,16 @@ export const unhideComment = async (commentId: string): Promise<BlogComment | nu
   const snap = await ref.get();
   const data = snap.exists ? (snap.data() as any) : null;
   if (!data) return null;
-  if (!data.hiddenAt) return mapComment(commentId, data); // already visible — idempotent no-op
+  if (!data.hiddenAt) return mapComment(commentId, data);
   const now = nowIso();
   await ref.set({ hiddenAt: null, hiddenByUserId: null, updatedAt: now }, { merge: true });
   const counterRef = db.collection('blog_engagement_counters').doc(counterDocId(data.targetKind, data.targetId, data.audience));
   await counterRef.set({ commentCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
-  return mapComment(commentId, { ...data, hiddenAt: null, hiddenByUserId: null, updatedAt: now });
+  return mapComment(commentId, { ...data, hiddenAt: null, hiddenByUserId, updatedAt: now });
 };
 
 export const reportComment = async (commentId: string, reporterUserId: string, reason: BlogCommentReport['reason'], detail?: string | null): Promise<void> => {
   const db = getDb();
-  // UNIQUE (comment_id, reporter_user_id) in Postgres becomes a deterministic doc ID here — the
-  // same idempotent-no-op-on-retry behavior without a query first.
   const ref = db.collection('blog_comment_reports').doc(`${commentId}:${reporterUserId}`);
   const existing = await ref.get();
   if (existing.exists) return;
@@ -377,8 +334,6 @@ export const incrementStrike = async (tripId: string, userId: string): Promise<B
   });
 };
 
-// Mirrors incrementStrike above — used when a hide is reversed, so a mistaken hide doesn't leave
-// a permanent mark. Un-blocks the moment the count drops back under the threshold.
 export const decrementStrike = async (tripId: string, userId: string): Promise<BlogCommentStrikeState> => {
   const db = getDb();
   const ref = db.collection('blog_comment_strikes').doc(`${tripId}:${userId}`);
@@ -397,16 +352,6 @@ export const decrementStrike = async (tripId: string, userId: string): Promise<B
   });
 };
 
-// Day-level fetch (architecture §5.1) — Firestore can't do the Postgres version's join through
-// blog_items/blog_item_assets to resolve which comments belong to a day's items/assets, so
-// blogItemId/assetId documents would need their own dayId denormalized to support this query
-// efficiently. Not required for Phase 2 (no routes call this yet); flagged here rather than
-// silently shipping a version that only handles day-level targets correctly.
-// Phase 4 client surface (PRD §6.6) — mirrors postgresEngagementRepository.ts's
-// mapCommentWithAuthor. Firestore has no join, so this resolves display names with one lookup per
-// distinct author across the whole page rather than per comment, following the same batching
-// pattern getContributorsForDays already uses. Reuses displayNameFromUserDoc, already defined
-// above for listReactors.
 const attachAuthorNames = async (comments: BlogComment[]): Promise<BlogComment[]> => {
   const authorIds = [...new Set(comments.map((c) => c.authorUserId).filter((id): id is string => Boolean(id)))];
   if (!authorIds.length) return comments;
@@ -447,4 +392,31 @@ export const listReplies = async (parentCommentId: string, visibleAudiences: Blo
     .sort((a: BlogComment, b: BlogComment) => a.createdAt.localeCompare(b.createdAt))
     .slice(0, limit);
   return attachAuthorNames(rows);
+};
+
+export const upsertStar = async (
+  tripId: string,
+  userId: string,
+  targetKind: 'item' | 'asset',
+  targetId: string
+): Promise<void> => {
+  const db = getDb();
+  const id = `${targetKind}:${targetId}:${userId}`;
+  await db.collection('blog_curation_stars').doc(id).set({
+    tripId,
+    targetKind,
+    [targetField(targetKind)]: targetId,
+    userId,
+    createdAt: nowIso(),
+  }, { merge: true });
+};
+
+export const clearStar = async (
+  tripId: string,
+  userId: string,
+  targetKind: 'item' | 'asset',
+  targetId: string
+): Promise<void> => {
+  const id = `${targetKind}:${targetId}:${userId}`;
+  await getDb().collection('blog_curation_stars').doc(id).delete();
 };

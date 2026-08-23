@@ -22,6 +22,8 @@ export interface BlogEngagementRepository {
   decrementStrike: typeof postgres.decrementStrike;
   listTopLevelCommentsForDay: typeof postgres.listTopLevelCommentsForDay;
   listReplies: typeof postgres.listReplies;
+  upsertStar: typeof postgres.upsertStar;
+  clearStar: typeof postgres.clearStar;
 }
 
 export const blogEngagementRepository = (): BlogEngagementRepository =>
