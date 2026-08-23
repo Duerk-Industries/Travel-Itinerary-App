@@ -195,12 +195,12 @@ if (!hasWebApp) {
 app.use(express.static(publicDir));
 
 import passport from 'passport';
-import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
+import { initPassport, createToken, createOAuthState, createOAuthNonce, decodeOAuthState, authenticate } from './auth';
 import { assertSafeAuthSecretConfig } from './authConfig';
 import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, findOrCreateAppleUser, getUserRole } from './db';
 import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { getAuthFlag } from './config/authFlags';
-import { isAppleOAuthConfigured } from './appleAuth';
+import { isAppleOAuthConfigured, exchangeAppleAuthorizationCode, verifyAppleIdToken, parseAppleUserPayload } from './appleAuth';
 import { requireAdmin } from './middleware/requireAdmin';
 import { appendAuthCodeToRedirect, consumeRedirectTokenExchangeCode, createRedirectTokenExchangeCode, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { assertNoPubliclyExposedServerSecrets } from './secrets';
@@ -249,10 +249,167 @@ app.get('/api/auth/google/callback', async (req, res, next) => {
   })(req, res, next);
 });
 
+// Restored after the "more fixes" rewrite silently dropped this entire block (app/auth-audit
+// pass) — Apple Sign-In has no other mount point, so its absence 404'd every request rather than
+// erroring loudly, which is exactly why appleOAuthRoutes.test.ts existed to catch it.
+const redirectToLoginWithError = (req: express.Request, res: express.Response, webUrl: string, code: string) => {
+  const rawState =
+    typeof req.query.state === 'string'
+      ? req.query.state
+      : typeof req.body?.state === 'string'
+        ? req.body.state
+        : undefined;
+  const state = rawState ? decodeOAuthState(rawState) : null;
+  let redirectUri = state?.redirectUri;
+  if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+    redirectUri = undefined;
+  }
+  const fallback = new URL('/login', webUrl);
+  const nextUrl = new URL(redirectUri ?? fallback.toString());
+  nextUrl.searchParams.set('auth_error', code);
+  res.redirect(nextUrl.toString());
+};
+
+const appleOAuthConfigured = () => isAppleOAuthConfigured() && getAuthFlag('appleOAuthEnabled');
+const APPLE_OAUTH_NONCE_COOKIE = 'apple_oauth_nonce';
+
+const getRequestCookie = (req: express.Request, name: string): string | undefined => {
+  const header = req.headers.cookie;
+  if (!header) return undefined;
+  const prefix = `${name}=`;
+  const value = header.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix));
+  if (!value) return undefined;
+  try {
+    return decodeURIComponent(value.slice(prefix.length));
+  } catch {
+    return undefined;
+  }
+};
+
+const setAppleOAuthNonceCookie = (res: express.Response, nonce: string): void => {
+  res.cookie(APPLE_OAUTH_NONCE_COOKIE, nonce, {
+    httpOnly: true,
+    sameSite: isLocalEnv() ? 'lax' : 'none',
+    secure: !isLocalEnv(),
+    maxAge: 10 * 60 * 1000,
+    path: '/',
+  });
+};
+
+const clearAppleOAuthNonceCookie = (res: express.Response): void => {
+  res.clearCookie(APPLE_OAUTH_NONCE_COOKIE, { path: '/' });
+};
+
+app.get('/api/auth/apple', (req, res) => {
+  if (!appleOAuthConfigured()) {
+    res.status(503).json({ error: 'Apple OAuth is not configured on the server.' });
+    return;
+  }
+  const rawRedirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
+  const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
+  if (error) {
+    res.status(400).json({ error });
+    return;
+  }
+  const nonce = createOAuthNonce();
+  const state = createOAuthState({ redirectUri, nonce });
+  setAppleOAuthNonceCookie(res, nonce);
+  const authorizeUrl = new URL('https://appleid.apple.com/auth/authorize');
+  authorizeUrl.searchParams.set('response_type', 'code');
+  authorizeUrl.searchParams.set('response_mode', 'form_post');
+  authorizeUrl.searchParams.set('client_id', getEnvValue('APPLE_CLIENT_ID') || '');
+  authorizeUrl.searchParams.set('redirect_uri', getEnvValue('APPLE_CALLBACK_URL') || '');
+  authorizeUrl.searchParams.set('scope', 'name email');
+  authorizeUrl.searchParams.set('nonce', nonce);
+  authorizeUrl.searchParams.set('state', state);
+  res.redirect(authorizeUrl.toString());
+});
+
+// Apple uses response_mode=form_post, so the callback arrives as a POST with a
+// form-encoded body (code, state, and — first authorization only — user).
+app.post('/api/auth/apple/callback', async (req, res) => {
+  if (!appleOAuthConfigured()) {
+    res.status(503).json({ error: 'Apple OAuth is not configured on the server.' });
+    return;
+  }
+  const code = typeof req.body?.code === 'string' ? req.body.code : undefined;
+  const stateRaw = typeof req.body?.state === 'string' ? req.body.state : undefined;
+  const state = stateRaw ? decodeOAuthState(stateRaw) : null;
+  const cookieNonce = getRequestCookie(req, APPLE_OAUTH_NONCE_COOKIE);
+  if (!stateRaw || !state || !cookieNonce || cookieNonce !== state.nonce) {
+    logError('[auth] Apple OAuth callback missing or invalid state');
+    clearAppleOAuthNonceCookie(res);
+    redirectToLoginWithError(req, res, webUrl, 'apple_callback_failed');
+    return;
+  }
+  let redirectUri = state?.redirectUri;
+  if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+    redirectUri = undefined;
+  }
+
+  if (req.body?.error) {
+    logError('[auth] Apple OAuth callback returned an error', { error: req.body.error });
+    clearAppleOAuthNonceCookie(res);
+    redirectToLoginWithError(req, res, webUrl, 'apple_callback_failed');
+    return;
+  }
+  if (!code) {
+    logError('[auth] Apple OAuth callback missing code');
+    clearAppleOAuthNonceCookie(res);
+    redirectToLoginWithError(req, res, webUrl, 'apple_callback_failed');
+    return;
+  }
+
+  try {
+    const { idToken } = await exchangeAppleAuthorizationCode(code);
+    const claims = await verifyAppleIdToken(idToken, state.nonce);
+    const emailVerified = claims.email_verified === true || claims.email_verified === 'true';
+    const { firstName, lastName } = parseAppleUserPayload(
+      typeof req.body?.user === 'string' ? req.body.user : undefined
+    );
+    const user = await findOrCreateAppleUser({
+      appleId: claims.sub,
+      email: claims.email,
+      emailVerified,
+      firstName,
+      lastName,
+    });
+
+    await ensureDefaultGroupForUser(user.id, user.email);
+    await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
+    const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
+      user.id,
+      user.email,
+      user.firstName,
+      user.lastName
+    );
+    await ensureAdminBootstrap(user.id, user.email);
+    const role = await getUserRole(user.id);
+    const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
+    const authCode = createRedirectTokenExchangeCode({ token, requirePasswordSetup: requiresPasswordSetup });
+    clearAppleOAuthNonceCookie(res);
+    if (redirectUri) {
+      const next = new URL(appendAuthCodeToRedirect(redirectUri, authCode));
+      res.redirect(next.toString());
+      return;
+    }
+    res.redirect(`/login?auth_code=${encodeURIComponent(authCode)}`);
+  } catch (callbackErr: any) {
+    clearAppleOAuthNonceCookie(res);
+    logError('[auth] Apple OAuth post-login setup failed', {
+      name: callbackErr?.name,
+      message: callbackErr?.message,
+    });
+    redirectToLoginWithError(req, res, webUrl, 'apple_post_login_failed');
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', webAuthRoutes);
 app.use('/api/web-auth', webAuthRoutes);
 app.use('/api/transfers', transferRoutes);
+// Backward-compatible alias for older clients/tests still calling flights endpoints — do not remove.
+app.use('/api/flights', transferRoutes);
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/trips', blogRoutes);
@@ -266,6 +423,7 @@ app.use('/api/trips', blogModalityRoutes);
 app.use('/api/trips', blogInsightRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/public/blog', publicBlogRoutes);
+app.use('/', blogSitemapRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
@@ -281,7 +439,15 @@ app.use('/api/plaid', plaidIntegrationRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);
+app.use('/api/internal/billing', internalBillingRoutes);
+app.use('/api/internal/deploy', internalDeployRoutes);
+app.use('/api/internal/blog', internalBlogWorkerRoutes);
+app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
+app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
+app.use('/api/admin/billing', authenticate, requireAdmin, adminBillingRoutes);
+app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
 app.use('/metrics', prometheusRoutes);
 
 if (hasWebApp) {

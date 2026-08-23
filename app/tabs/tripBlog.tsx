@@ -943,6 +943,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
           mutedColor={mutedColor}
           borderColor={borderColor}
           backgroundColor={inputColor}
+          theme={theme}
         />
         {capabilities.trip_blog_recap ? (
           recap ? (
@@ -956,9 +957,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               borderColor={borderColor}
               backgroundColor={inputColor}
               showAwards={Boolean(capabilities.trip_blog_trip_awards)}
+              theme={theme}
             />
           ) : (
-            <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', marginBottom: 14, backgroundColor: '#7c3aed' }]}>
+            <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', marginBottom: 14, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
               <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Build trip recap'}</Text>
             </TouchableOpacity>
           )
@@ -1033,7 +1035,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     testID={`blog-add-voice-${day.localDate}`}
                     accessibilityRole="button"
                     accessibilityLabel="Add a voice note"
-                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#7c3aed' }]}
+                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}
                     onPress={() => handleVoiceNote(day.localDate)}
                     disabled={uploading}
                   >
@@ -1217,7 +1219,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     <>
                       {canEdit && capabilities.trip_blog_reactions ? (
                         <TouchableOpacity testID={`blog-cover-proposal-${day.localDate}`} onPress={() => loadCoverProposal(day.localDate)} style={{ alignSelf: 'flex-start', paddingVertical: 5, marginTop: 5 }}>
-                          <Text style={{ color: '#7c3aed', fontWeight: '700' }}>{coverProposals[day.localDate] ? '♥ Most-loved photo selected below' : 'Find the most-loved photo'}</Text>
+                          <Text style={{ color: theme?.colors?.link ?? '#7c3aed', fontWeight: '700' }}>{coverProposals[day.localDate] ? '♥ Most-loved photo selected below' : 'Find the most-loved photo'}</Text>
                         </TouchableOpacity>
                       ) : null}
                       <DayMediaGallery

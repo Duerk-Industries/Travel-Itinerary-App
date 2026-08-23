@@ -36,9 +36,14 @@ export const notify = async (options: NotifyOptions): Promise<void> => {
       if (threadKey && await notificationRepository().isThreadMuted(userId, threadKey)) continue;
 
       const userPref = prefMap.get(userId) || DEFAULT_PREFERENCES[category] || { inApp: true, push: false, email: false };
+      // A stored preference row (getPreferences) is a raw DB row (snake_case, in_app); the
+      // in-code DEFAULT_PREFERENCES fallback is camelCase (inApp) — normalized here rather than
+      // reading userPref.in_app directly, which would silently ignore the default object's own
+      // field and always fall through to "enabled" regardless of what the default actually says.
+      const inAppEnabled = userPref.in_app ?? userPref.inApp ?? true;
 
       let notificationId: string | null = null;
-      if (userPref.in_app !== false) {
+      if (inAppEnabled !== false) {
         notificationId = await notificationRepository().createNotification({
           userId,
           category,

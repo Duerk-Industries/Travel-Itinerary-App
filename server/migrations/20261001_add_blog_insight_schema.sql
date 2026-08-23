@@ -5,7 +5,16 @@
 -- accepted starter must be distinguishable from any other core.text item after the fact. Nullable
 -- and unconstrained (not an enum) since other authoring surfaces may want to stamp their own
 -- provenance here later without another migration.
-ALTER TABLE blog_items ADD COLUMN IF NOT EXISTS source_type TEXT;
+--
+-- Named `origin_source_type`, not `source_type` — discovered during the Phases 0-7 audit that
+-- `source_type` collides with the unrelated, pre-existing `blog_item_source_links.source_type`
+-- (the itinerary-detail link concept), which GET /:tripId/blog's items query joins in under that
+-- same output name (`sl.source_type AS source_type` alongside `i.*`). Two same-named columns in
+-- one SELECT force a precedence choice one of the two adapters gets wrong — pg-mem (this repo's
+-- test double) resolved it to the wrong one, silently zeroing out every itinerary_detail-linked
+-- item's sourceType and breaking blog-sync-parallel-correctness.test.ts. A distinct column name
+-- removes the ambiguity outright rather than depending on either engine's column-precedence rule.
+ALTER TABLE blog_items ADD COLUMN IF NOT EXISTS origin_source_type TEXT;
 
 -- C2/§14.1: tracks the currently-stored day-map artifact per (day, audience variant) so a
 -- re-render can find and delete the object it supersedes, and so trip deletion can find every

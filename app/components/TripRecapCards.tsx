@@ -11,9 +11,11 @@ type Props = {
   borderColor?: string;
   backgroundColor?: string;
   showAwards?: boolean;
+  theme?: any;
 };
 
-const TripRecapCards: React.FC<Props> = ({ recap, topPhotoUrl, spendTotal = null, currency = 'USD', textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', showAwards = false }) => {
+const TripRecapCards: React.FC<Props> = ({ recap, topPhotoUrl, spendTotal = null, currency = 'USD', textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', showAwards = false, theme }) => {
+  const accentColor = theme?.colors?.link ?? '#2563eb';
   const stats = [
     `${recap?.dayCount ?? 0} days`, `${recap?.placeCount ?? 0} places`, recap?.distanceKm > 0 ? `${recap.distanceKm.toLocaleString()} km` : null,
     `${recap?.photoCount ?? 0} photos`, `${recap?.videoCount ?? 0} videos`,
@@ -27,7 +29,7 @@ const TripRecapCards: React.FC<Props> = ({ recap, topPhotoUrl, spendTotal = null
           <Text style={{ color: mutedColor, marginTop: 3 }}>{stats.join(' · ')}</Text>
         </View>
         <TouchableOpacity accessibilityRole="button" testID="trip-recap-share" onPress={share} style={{ padding: 8 }}>
-          <Text style={{ color: '#2563eb', fontWeight: '700' }}>Share</Text>
+          <Text style={{ color: accentColor, fontWeight: '700' }}>Share</Text>
         </TouchableOpacity>
       </View>
       {topPhotoUrl ? (

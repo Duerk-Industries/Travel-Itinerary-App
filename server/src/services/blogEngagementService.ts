@@ -308,7 +308,7 @@ export const deleteComment = async (tripId: string, actorUserId: string, comment
   }
 };
 
-export const reportComment = async (tripId: string, actorUserId: string, commentId: string, reason: string, detail?: string): Promise<void> => {
+export const reportComment = async (tripId: string, actorUserId: string, commentId: string, reason: string, detail?: string | null): Promise<void> => {
   const membership = await resolveActorMembership(tripId, actorUserId);
   const resolved = await resolveComment(tripId, actorUserId, membership, commentId);
   if (!resolved) throw new BlogTargetNotFoundError('Comment not found');

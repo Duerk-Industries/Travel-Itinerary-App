@@ -6,6 +6,9 @@ import axios from 'axios';
 import { getStorage } from 'firebase-admin/storage';
 import { resolveLocationBucketName } from '../utils/gcsBucket';
 import { getEnvValue } from '../env';
+import { isFeatureEnabled } from './entitlementService';
+import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimiter';
+import { recordProviderRequestCost } from '../apis/providerBudgeting';
 
 const LEASE_SECONDS = 300;
 const WORKER_ID = `blog-worker-${randomUUID()}`;
@@ -21,7 +24,7 @@ const claimLease = async (jobKey: string): Promise<boolean> => {
   const expiresAt = new Date(now.getTime() + LEASE_SECONDS * 1000);
 
   const result = await queryBlog(
-    `UPDATE scheduled_job_leases
+    `UPDATE blog_worker_leases
      SET lease_owner = $2,
          lease_expires_at = $3,
          last_run_at = $1,
@@ -37,7 +40,7 @@ const claimLease = async (jobKey: string): Promise<boolean> => {
 const releaseLease = async (jobKey: string, success: boolean) => {
   const now = new Date();
   await queryBlog(
-    `UPDATE scheduled_job_leases
+    `UPDATE blog_worker_leases
      SET lease_owner = NULL,
          lease_expires_at = NULL,
          last_success_at = CASE WHEN $2 THEN $1 ELSE last_success_at END,
@@ -152,6 +155,11 @@ const runGroupPromptsJob = async () => {
 };
 
 const runDayMapRenderJob = async () => {
+  // architecture §14.1/§9.1: trip_blog_day_map_render is fail-closed for exactly this reason —
+  // this job is the *only* path in the whole feature set allowed to call Google Static Maps at
+  // all, and it must not spend anything while the flag is off, regardless of what's backlogged.
+  if (!(await isFeatureEnabled('trip_blog_day_map_render'))) return;
+
   const jobKey = 'blog:day_map_render';
   if (!await claimLease(jobKey)) return;
 
@@ -199,7 +207,23 @@ const runDayMapRenderJob = async () => {
       const markers = points.rows.map(p => `markers=color:red|${p.lat},${p.lng}`).join('&');
       const url = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&scale=2&${markers}&key=${apiKey}`;
 
+      // architecture §14.1: "No request path may reach Google Static Maps" without going through
+      // the same admission/budget system every other provider call does — BLOG_DAY_MAP_RENDER's
+      // 200/day cap (api-limits.yaml) exists specifically to bound this job, not as a decorative
+      // config entry. A caught ApiLimitExceededError stops *this tick's* remaining renders rather
+      // than crashing the whole job — the backlog just picks up again next hour, degrading
+      // gracefully rather than erroring (Phase 5's own requirement for this exact case).
+      try {
+        await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: 'BLOG_DAY_MAP_RENDER', requireConfiguredLimit: true });
+      } catch (limitErr) {
+        if (limitErr instanceof ApiLimitExceededError) {
+          logInfo('[blog-worker] Day Map Render job hit its budget cap for this window, stopping early');
+          break;
+        }
+        throw limitErr;
+      }
       const response = await axios.get(url, { responseType: 'arraybuffer' });
+      await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
       const bucketName = resolveLocationBucketName();
       if (!bucketName) throw new Error('No GCS bucket configured');
 

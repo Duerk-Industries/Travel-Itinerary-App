@@ -14,12 +14,14 @@ type Props = {
   borderColor?: string;
   backgroundColor?: string;
   styles?: any;
+  theme?: any;
 };
 
 const BlogMediaMetadataEditor: React.FC<Props> = ({
   item, canSuggest = false, busy = false, onSave, onSuggest, textColor = '#111827',
-  mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', styles,
+  mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', styles, theme,
 }) => {
+  const accentColor = theme?.colors?.link ?? '#7c3aed';
   const [caption, setCaption] = useState('');
   const [altText, setAltText] = useState('');
   const [isDecorative, setIsDecorative] = useState(false);
@@ -84,7 +86,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
           <Text style={styles?.buttonText}>{busy ? 'Saving…' : 'Save details'}</Text>
         </TouchableOpacity>
         {canSuggest ? (
-          <TouchableOpacity testID="blog-media-suggest-metadata" disabled={busy} onPress={suggest} style={[styles?.button, { backgroundColor: '#7c3aed' }]}>
+          <TouchableOpacity testID="blog-media-suggest-metadata" disabled={busy} onPress={suggest} style={[styles?.button, { backgroundColor: accentColor }]}>
             <Text style={styles?.buttonText}>{busy ? 'Working…' : 'Suggest with AI'}</Text>
           </TouchableOpacity>
         ) : null}

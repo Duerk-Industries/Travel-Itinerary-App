@@ -12,9 +12,11 @@ type Props = {
   mutedColor?: string;
   borderColor?: string;
   backgroundColor?: string;
+  theme?: any;
 };
 
-const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, searchEnabled, placesEnabled, textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff' }) => {
+const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, searchEnabled, placesEnabled, textColor = '#111827', mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', theme }) => {
+  const accentColor = theme?.colors?.link ?? '#2563eb';
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [places, setPlaces] = useState<any[]>([]);
@@ -58,17 +60,17 @@ const BlogDiscoveryPanel: React.FC<Props> = ({ backendUrl, headers, tripId, sear
         <View style={{ marginTop: 10 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput testID="blog-search-input" accessibilityLabel="Search trip blog" value={query} onChangeText={(value) => { setQuery(value); setNextCursor(null); }} onSubmitEditing={() => search()} maxLength={100} placeholder="Search notes…" placeholderTextColor={mutedColor} style={{ flex: 1, minHeight: 44, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 10, color: textColor }} />
-            <TouchableOpacity testID="blog-search-submit" accessibilityRole="button" disabled={query.trim().length < 2 || Boolean(busy)} onPress={() => search()} style={{ minHeight: 44, minWidth: 70, borderRadius: 8, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
+            <TouchableOpacity testID="blog-search-submit" accessibilityRole="button" disabled={query.trim().length < 2 || Boolean(busy)} onPress={() => search()} style={{ minHeight: 44, minWidth: 70, borderRadius: 8, backgroundColor: accentColor, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
               {busy === 'search' ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>Search</Text>}
             </TouchableOpacity>
           </View>
           {results.map((result) => <View key={result.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: borderColor }}><Text style={{ color: textColor, fontWeight: '700' }}>{result.localDate}</Text><Text style={{ color: mutedColor }}>{result.snippet}</Text></View>)}
-          {nextCursor ? <TouchableOpacity testID="blog-search-more" accessibilityRole="button" disabled={Boolean(busy)} onPress={() => search(nextCursor)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: '#2563eb', fontWeight: '700' }}>Load more matches</Text></TouchableOpacity> : null}
+          {nextCursor ? <TouchableOpacity testID="blog-search-more" accessibilityRole="button" disabled={Boolean(busy)} onPress={() => search(nextCursor)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: accentColor, fontWeight: '700' }}>Load more matches</Text></TouchableOpacity> : null}
         </View>
       ) : null}
       {placesEnabled ? (
         <View style={{ marginTop: 12 }}>
-          <TouchableOpacity testID="blog-load-places" accessibilityRole="button" disabled={Boolean(busy)} onPress={loadPlaces} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: '#2563eb', fontWeight: '700' }}>{busy === 'places' ? 'Loading places…' : places.length ? 'Refresh places' : 'Show every place visited'}</Text></TouchableOpacity>
+          <TouchableOpacity testID="blog-load-places" accessibilityRole="button" disabled={Boolean(busy)} onPress={loadPlaces} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: accentColor, fontWeight: '700' }}>{busy === 'places' ? 'Loading places…' : places.length ? 'Refresh places' : 'Show every place visited'}</Text></TouchableOpacity>
           {places.map((place) => {
             const url = buildMapUrl(place.name, loadStoredMapPreference());
             return <TouchableOpacity key={`${place.name}:${place.firstDate}`} accessibilityRole="link" onPress={() => url && Linking.openURL(url)} style={{ minHeight: 44, justifyContent: 'center', borderTopWidth: 1, borderTopColor: borderColor }}><Text style={{ color: textColor, fontWeight: '700' }}>{place.name}</Text><Text style={{ color: mutedColor, fontSize: 12 }}>{[place.firstDate, `${place.occurrences} visit${place.occurrences === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</Text></TouchableOpacity>;

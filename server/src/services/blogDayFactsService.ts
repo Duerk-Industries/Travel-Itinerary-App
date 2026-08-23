@@ -5,6 +5,7 @@ import { getApiCacheSetting } from '../config/apiLimits';
 import { resolveActorMembership, visibleAudiencesForMembership } from './blogEngagementService';
 import { BlogTargetNotFoundError } from './blogEngagementErrors';
 import { createHash } from 'crypto';
+import { createBlogReadUrl } from './blogStorageClient';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §7.1.
 // One service, two projections over the same source set: `facts` (aggregates for the strip) and
@@ -19,7 +20,7 @@ import { createHash } from 'crypto';
 export type FactConfidence = 'high' | 'approx';
 
 export interface BlogDayFact {
-  key: 'weather' | 'distance' | 'places' | 'media' | 'plannedVsActual';
+  key: 'weather' | 'distance' | 'places' | 'media' | 'plannedVsActual' | 'dayMap';
   label: string;
   value: string;
   sourceTypes: string[];
@@ -162,14 +163,24 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
         [tripId, dayDate, pointsHash]
       );
       if (artifact.rows[0]) {
-        facts.push({
-          key: 'places',
-          label: 'Day Map',
-          value: artifact.rows[0].gcs_path,
-          sourceTypes: ['blog_day_map_artifacts'],
-          confidence: 'high',
-          asOf,
-        });
+        // The stored artifact is a bare object path (blog_day_map_artifacts.gcs_path), not a
+        // fetchable URL — signed the same way every blog photo already is (architecture §14.1:
+        // "served through the existing signed-URL/CDN path"). A signing failure (object missing,
+        // credentials misconfigured) degrades this one fact away rather than failing the whole
+        // request — the day card must still render without its map, per the "assert budget
+        // exhaustion degrades the card rather than erroring the page" contract this same section
+        // sets for the render job's own failure mode.
+        const mapUrl = await createBlogReadUrl(artifact.rows[0].gcs_path).catch(() => null);
+        if (mapUrl) {
+          facts.push({
+            key: 'dayMap',
+            label: 'Day Map',
+            value: mapUrl,
+            sourceTypes: ['blog_day_map_artifacts'],
+            confidence: 'high',
+            asOf,
+          });
+        }
       }
     }
     for (const row of mediaRows.rows) {

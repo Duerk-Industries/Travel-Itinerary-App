@@ -158,6 +158,7 @@ const DayMediaGallery = ({
           borderColor={borderColor}
           backgroundColor={backgroundColor}
           styles={styles}
+          theme={theme}
         />
       ) : null}
     </View>

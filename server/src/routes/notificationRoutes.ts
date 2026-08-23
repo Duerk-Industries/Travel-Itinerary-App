@@ -1,11 +1,22 @@
 import { Router } from 'express';
 import { authenticate } from '../auth';
 import { notificationRepository } from '../services/notificationRepository';
+import { isFeatureEnabled } from '../services/entitlementService';
 
 const router = Router();
 router.use(authenticate);
 
 const userIdOf = (req: any): string => String(req.user?.userId ?? '');
+
+// architecture §9.1 — fail-closed (entitlementService.ts's FAIL_CLOSED_FLAGS): the in-app inbox
+// itself, not just delivery, is gated so the whole surface can be switched off cleanly.
+router.use(async (req, res, next) => {
+  if (!(await isFeatureEnabled('notifications_in_app'))) {
+    res.status(404).json({ error: 'Notifications are not enabled' });
+    return;
+  }
+  next();
+});
 
 router.get('/', async (req, res) => {
   const options = {

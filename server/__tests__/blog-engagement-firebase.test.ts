@@ -41,10 +41,34 @@ const applyValue = (current: any, incoming: any): any => {
   return incoming;
 };
 
+// Real Firestore treats a dot-containing field path in a set(..., {merge:true}) call as a path
+// into a nested map, not a literal top-level key — e.g. {'reactionCounts.heart': increment(1)}
+// merges into base.reactionCounts.heart, the same as {reactionCounts: {heart: increment(1)}}.
+// firebaseEngagementRepository.ts uses the dot-path form (upsertReaction/clearReaction), so the
+// fake needs to actually resolve dotted paths rather than store them as literal keys — a fake
+// that silently disagreed with real Firestore's own merge semantics here would be worse than no
+// fake at all.
+const setAtPath = (base: Record<string, any>, path: string[], value: any): void => {
+  if (path.length === 1) {
+    base[path[0]] = applyValue(base[path[0]], value);
+    return;
+  }
+  const [head, ...rest] = path;
+  // Shallow-clone the nested object before recursing into it — base itself may be a shallow copy
+  // of a stored document, so its nested objects can still be the same references the store holds;
+  // mutating them in place would corrupt the "current" value before the merged result is written
+  // back via FakeCollection.set.
+  base[head] = isPlainObject(base[head]) ? { ...base[head] } : {};
+  setAtPath(base[head], rest, value);
+};
+
 const mergeData = (current: any, incoming: any): any => {
   if (!isPlainObject(incoming)) return incoming;
   const base = isPlainObject(current) ? { ...current } : {};
-  for (const [key, value] of Object.entries(incoming)) base[key] = applyValue(base[key], value);
+  for (const [key, value] of Object.entries(incoming)) {
+    if (key.includes('.')) setAtPath(base, key.split('.'), value);
+    else base[key] = applyValue(base[key], value);
+  }
   return base;
 };
 
@@ -74,6 +98,11 @@ class FakeDocRef {
   constructor(private collection: FakeCollection, public id: string) {}
   async get() { return new FakeDocSnapshot(this.id, this.collection.getById(this.id)); }
   async set(value: any, options?: { merge?: boolean }) { this.collection.set(this.id, value, options); }
+  // Real Firestore's update() is a targeted partial write like set(..., {merge:true}) — including
+  // dot-path field support — except it errors if the document doesn't exist yet. The fake doesn't
+  // enforce that precondition (nothing in this repository relies on update() failing on a missing
+  // doc), so it's just set(..., {merge:true}) under another name.
+  async update(value: any) { this.collection.set(this.id, value, { merge: true }); }
   async delete() { this.collection.delete(this.id); }
 }
 class FakeCollection {
@@ -95,10 +124,11 @@ class FakeFirestore {
   }
   // No real isolation/atomicity — a plain forward onto the same store, sufficient for a
   // sequential unit test double, not a concurrency test.
-  async runTransaction<T>(callback: (tx: { get: (ref: FakeDocRef) => Promise<FakeDocSnapshot>; set: (ref: FakeDocRef, value: any, options?: { merge?: boolean }) => void; delete: (ref: FakeDocRef) => void }) => Promise<T>): Promise<T> {
+  async runTransaction<T>(callback: (tx: { get: (ref: FakeDocRef) => Promise<FakeDocSnapshot>; set: (ref: FakeDocRef, value: any, options?: { merge?: boolean }) => void; update: (ref: FakeDocRef, value: any) => void; delete: (ref: FakeDocRef) => void }) => Promise<T>): Promise<T> {
     const tx = {
       get: async (ref: FakeDocRef) => ref.get(),
       set: (ref: FakeDocRef, value: any, options?: { merge?: boolean }) => { void ref.set(value, options); },
+      update: (ref: FakeDocRef, value: any) => { void ref.update(value); },
       delete: (ref: FakeDocRef) => { void ref.delete(); },
     };
     return callback(tx);

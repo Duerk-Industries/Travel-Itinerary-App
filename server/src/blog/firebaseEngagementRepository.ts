@@ -294,7 +294,7 @@ export const unhideComment = async (commentId: string): Promise<BlogComment | nu
   await ref.set({ hiddenAt: null, hiddenByUserId: null, updatedAt: now }, { merge: true });
   const counterRef = db.collection('blog_engagement_counters').doc(counterDocId(data.targetKind, data.targetId, data.audience));
   await counterRef.set({ commentCount: FieldValue.increment(1), updatedAt: now }, { merge: true });
-  return mapComment(commentId, { ...data, hiddenAt: null, hiddenByUserId, updatedAt: now });
+  return mapComment(commentId, { ...data, hiddenAt: null, hiddenByUserId: null, updatedAt: now });
 };
 
 export const reportComment = async (commentId: string, reporterUserId: string, reason: BlogCommentReport['reason'], detail?: string | null): Promise<void> => {

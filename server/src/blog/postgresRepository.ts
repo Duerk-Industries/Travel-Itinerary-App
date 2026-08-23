@@ -232,7 +232,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
   const placeholders = dayIds.map((_, i) => `$${i + 2}`).join(',');
   const itemsResult = dayIds.length ? await queryBlog<any>(
     `SELECT i.*, t.body, t.language_tag, d.local_date,
-            COALESCE(sl.source_type, i.source_type) AS source_type, sl.source_id, sl.detached AS source_detached
+            sl.source_type, sl.source_id, sl.detached AS source_detached
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      LEFT JOIN blog_text_contents t ON t.item_id = i.id
@@ -350,7 +350,7 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   }
   const sortKey = `${Date.now().toString().padStart(16, '0')}-${id}`;
   await queryBlog(
-    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, source_type)
+    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, origin_source_type)
      VALUES ($1, $2, $3, 'core.text', 1, $4, $5, $6, $6, $7)`,
     [id, tripId, dayId, input.audience ?? 'public', sortKey, userId, input.sourceType ?? null]
   );
@@ -365,7 +365,7 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   );
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
   const item = await queryBlog<any>(
-    `SELECT i.*, t.body, t.language_tag, d.local_date FROM blog_items i
+    `SELECT i.*, i.origin_source_type AS source_type, t.body, t.language_tag, d.local_date FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id JOIN blog_text_contents t ON t.item_id = i.id WHERE i.id = $1`,
     [id]
   );

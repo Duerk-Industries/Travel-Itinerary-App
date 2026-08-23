@@ -15,6 +15,8 @@ import {
   postComment,
   reactToTarget,
   reportCommentByActor,
+  starTarget,
+  unstarTarget,
 } from '../services/blogEngagementService';
 import { hideCommentAsModerator, unhideCommentAsModerator } from '../services/blogModerationService';
 import { BLOG_REACTION_EMOJIS, BlogEngagementTargetKind, BlogReactionEmoji } from '../blog/engagementTypes';

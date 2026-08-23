@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb } from '../src/db';
+import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
 import { notify } from '../src/services/notificationService';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
@@ -12,6 +12,9 @@ describe('notification service', () => {
 
   beforeAll(async () => {
     await initDb();
+    // Phases 0-7 audit: notifications_in_app is fail-closed (architecture §9.1) and was
+    // discovered with no seeded flag row at all — this route group 404s without it.
+    await setFeatureFlag('notifications_in_app', true, null);
     await registerWebUser(user);
     await confirmWebUser(user.email);
     const login = await loginWebUser(user);

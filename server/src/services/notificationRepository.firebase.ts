@@ -72,9 +72,9 @@ export const listNotifications = async (userId: string, options: any): Promise<a
 
   const snap = await query.get();
   return snap.docs
-    .map(doc => ({ ...doc.data(), id: doc.id }))
-    .filter(n => !options.cursor || n.createdAt < options.cursor)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((doc): any => ({ ...(doc.data() as any), id: doc.id }))
+    .filter((n: any) => !options.cursor || n.createdAt < options.cursor)
+    .sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
 };
 

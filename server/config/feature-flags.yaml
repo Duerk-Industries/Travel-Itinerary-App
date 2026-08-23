@@ -241,6 +241,24 @@ flags:
   trip_blog_nudges:
     enabled: false
     description: "B6 — bounded contribution nudges; requires durable notification inbox/outbox"
+  # Phase 4.5 — architecture §9.1's notification flag table. All four are fail-closed
+  # (entitlementService.ts's FAIL_CLOSED_FLAGS) since each either contacts a person outside the
+  # app or is the kill switch for the delivery worker that would. Discovered missing entirely
+  # during the Phases 0-7 audit — notificationRoutes.ts/notificationOutboxWorker.ts referenced
+  # these by name, but with no row in this file (and no FAIL_CLOSED_FLAGS entry) they were
+  # silently fail-open, i.e. always enabled, regardless of intent.
+  notifications_in_app:
+    enabled: false
+    description: "In-app notification inbox — GET/PATCH /api/notifications/*"
+  notifications_outbox_enabled:
+    enabled: false
+    description: "Master kill switch for the durable push/email delivery worker (§13.3)"
+  notifications_push:
+    enabled: false
+    description: "Push notification delivery via Expo"
+  notifications_web_push:
+    enabled: false
+    description: "Web push notification delivery"
   expense_import_plaid:
     enabled: false
     description: "Master switch for Plaid bank-link and transaction import"
