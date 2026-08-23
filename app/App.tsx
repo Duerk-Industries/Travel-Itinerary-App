@@ -2911,7 +2911,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
           {activePage === 'blog'
             ? renderSharedPageScroll(
-                <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={activeTripId} styles={styles} theme={theme} readOnly={isFollowingMode} currentUserId={(userId ?? null) as any} isTripOwnerOrAdmin={userRole === 'admin'} />
+                <TripBlogTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  activeTripId={activeTripId}
+                  styles={styles}
+                  theme={theme}
+                  readOnly={isFollowingMode}
+                  currentUserId={(userId ?? null) as any}
+                  isTripOwnerOrAdmin={userRole === 'admin'}
+                  allExpenses={allExpenses}
+                  tripCurrency={activeTrip?.currency ?? 'USD'}
+                />
               )
             : null}
 

@@ -386,18 +386,18 @@ on 80% of days with itinerary data.
 
 ## Phase 6 — Recap, spend, polish (C4, C7, A6, A7, A8, B6, B7)
 
-| Task | Size | Files |
-|---|---|---|
-| `services/blogRecapService.ts` + `GET /blog/recap` | L | Durable, leased snapshot keyed on `(tripId, contentRevision, engagementRevision, audienceClass)`; `202` while pending; retain three revisions/trip |
-| `TripRecapCards.tsx` | L | Screenshot-first layout per UI §6.8 |
-| Spend summary | M | Reuse `utils/costs.ts` + `exchangeRates.ts`; `travelers` audience default (FR-C4.1) |
-| Writing prompts | S | Static rotating set; seeds the editor with a heading |
-| Drag-to-reorder UI | M | Wire the existing `POST /blog/items/reorder` |
-| AI caption / alt text | L | Premium/Pro, on demand only; reserve tier quota plus active-provider `BLOG_CAPTION_SUGGEST`; manual alt text remains available to all; every suggestion labelled |
-| Alt-text publication readiness | M | Manual editor for all tiers; new publication validates text or explicit decorative mark; legacy public blogs get non-blocking remediation |
-| Photo of the day proposal | S | Proposes from reaction counts; a traveler confirms (FR-B7.1) |
-| **Traveler Spotlight Badge** | S | UI implementation of B17 in the Contributor Strip |
-| Contribution nudges | M | DB-leased scheduled job → `notify()`; 72h dedupe, 30-day-post-trip suppression, opt-out; suppress before mentions/replies under backlog |
+| Task | Size | Status | Files / outcome |
+|---|---|---|---|
+| `services/blogRecapService.ts` + `GET /blog/recap` | L | **Implemented, flag off** | Durable adapter-native lease keyed on `(tripId, contentRevision, engagementRevision, audienceClass)`; `202` while pending; three retained revisions; per-trip/global build caps; distance, places, media, contributors, most-commented day and top photo |
+| `TripRecapCards.tsx` | L | **Implemented, flag off** | Screenshot-first accessible card with most-loved image, share action and private spend slot |
+| Spend summary | M | **Implemented, flag off** | Reuses the normalized `allExpenses` result already produced by `utils/costs.ts`; computed client-side in trip currency and never persisted or sent to follower/public recap payloads |
+| Writing prompts | S | **Implemented, flag off** | Static deterministic rotation; seeds the rich-text editor with a heading |
+| Drag-to-reorder UI | M | **Implemented, flag off** | Web drag/drop plus accessible move up/down controls wired to the capped existing `POST /blog/items/reorder` |
+| AI caption / alt text | L | **Implemented, flag off** | Premium/Pro, explicit on-demand action; daily/monthly user quotas plus active-provider `BLOG_CAPTION_SUGGEST`; suggestions remain editable drafts until saved |
+| Alt-text publication readiness | M | **Implemented, flag off** | Manual editor for all tiers; new publication validates text/decorative state; already-public blogs receive a non-blocking remediation count |
+| Photo of the day proposal | S | **Implemented, flag off** | Bounded reaction-count read proposes and navigates to a candidate; a traveler must confirm |
+| **Traveler Spotlight Badge** | S | **Implemented, flag off** | Contributor Strip badge based on the day's most-reacted contributor media |
+| Contribution nudges | M | **Blocked — not implemented** | The required Phase 4.5 durable notification inbox/outbox and `notify()` contract are absent. `trip_blog_nudges` remains fail-closed and off; an email/in-process substitute was deliberately not introduced. |
 
 AI captioning/rewrite/transcription is resolved as Premium/Pro. Both customer monthly quota and
 aggregate provider/cost-budget reservations are required. A provider/model switch must carry the same
@@ -406,7 +406,16 @@ caller names and limits, and a missing price keeps the flag off.
 Nudges use the Phase 4.5 notification service and its durable outbox. The scheduled scan itself claims
 a unique DB window so multiple instances cannot enqueue duplicates.
 
-**Exit criteria:** GA. All PRD §2 measures reporting.
+**Phase 6 cost model (2026-08-22 assumptions):** all new request, database-operation, retained-
+snapshot, static-map and AI-token usage is represented in `config/api-limits.yaml` and
+`config/cost-model.yaml`. The modeled incremental amount is approximately **$0.0011 per Basic user-
+month** and **$0.0065 per Premium user-month** (about **$10.60–$64.52/month at 10,000 users**, before
+mixing tiers). Existing user media storage/egress remains in the established blog-media model. These
+are planning estimates, not a provider invoice; flags stay off if provider price attribution is
+missing.
+
+**Exit criteria:** **not yet met.** Components are dark-launched behind flags, the nudge prerequisite
+is blocked, and GA product metrics have not been observed.
 
 ---
 

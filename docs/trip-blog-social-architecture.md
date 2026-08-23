@@ -733,6 +733,7 @@ where this design consumes them:
 | `trip_blog_day_facts` | C1, C3, C5; C2 additionally requires existing fail-closed `trip_day_map` |
 | `trip_blog_spend_summary` | C4 |
 | `trip_blog_recap` | C7, B10 |
+| `trip_blog_alt_text` | A8 manual metadata editor and publication readiness |
 | existing `trip_blog_ai_highlights` | Explicit Day Starter rewrite only |
 | `trip_blog_caption_ai` | A8 caption/alt suggestions; Premium/Pro |
 | `notifications_outbox_enabled` | Master kill-switch for the notification delivery worker (§13.3) |
@@ -787,7 +788,11 @@ providers:
       BLOG_COMMENT_WRITE: 5000
       BLOG_AUTHORING_WRITE: 5000
       BLOG_DAY_FACTS_READ: 10000
+      BLOG_RECAP_READ: 10000
       BLOG_RECAP_BUILD: 500
+      BLOG_COVER_PROPOSAL_READ: 10000
+      BLOG_CAPTION_REQUEST: 5000
+      BLOG_PUBLICATION_READINESS_READ: 5000
       BLOG_MODERATION_WRITE: 500
       NOTIFICATION_INBOX_READ: 3000
       NOTIFICATION_PREFERENCE_WRITE: 500
@@ -844,8 +849,10 @@ caching:
     publicEngagementStaleWhileRevalidateSeconds: 45
     factsCacheTtlMs: 60000
     # recapCacheTtlMs removed — the recap is a persisted `blog_recap_snapshots` row (§7.2),
-    # not an in-process TTL cache. Retention is governed by tripBlogRecap.persistedTtlHours (§14.2).
+    # not an in-process TTL cache. Retention is governed by the count below.
+    recapLeaseSeconds: 60
     recapSnapshotsPerTrip: 3
+    recapGenerationsPerDayPerTrip: 5
     captionSuggestionsPerDayPerUser: 10
     captionSuggestionsPerMonthPremium: 100
     starterRewritesPerDayPerUser: 3
@@ -1423,7 +1430,7 @@ providers:
 
   OPENAI:
     callers:
-      BLOG_CAPTION_SUGGEST: 300       # A8, on demand only, never on upload
+      BLOG_CAPTION_SUGGEST: 200       # A8, on demand only, never on upload; repeat under every active AI provider
       BLOG_STARTER_REWRITE: 100       # A1 "Rewrite", explicit user action
       BLOG_AUDIO_TRANSCRIBE: 50       # A9, Phase 7
 
@@ -1447,17 +1454,13 @@ providers:
   mentionAutocompletePerMinutePerUser: 20
   reportsPerDayPerUser: 20
   dayMapRerenderMinIntervalHours: 24
+  recapLeaseSeconds: 60
+  recapSnapshotsPerTrip: 3
   recapGenerationsPerDayPerTrip: 5
 ```
 
-```yaml
-# api-limits.yaml — caching additions
-  tripBlogEngagement:
-    publicCountsCacheTtlSeconds: 120
-    counterBatchSize: 200
-  tripBlogRecap:
-    persistedTtlHours: 24
-```
+Recap snapshots are revision-keyed and count-retained; there is deliberately no process-local or
+TTL recap cache to multiply work across instances.
 
 ```yaml
 # cost-model.yaml — requestPricing

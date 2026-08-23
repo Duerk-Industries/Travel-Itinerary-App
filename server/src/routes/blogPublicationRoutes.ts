@@ -5,6 +5,8 @@ import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { queryBlog } from '../db.postgres';
 import { randomUUID } from 'crypto';
 import { consentPublicationFirebase, getPublicationStatusFirebase, requestPublicationFirebase, revokePublicationFirebase } from '../blog/firebasePublicationRepository';
+import { blogMediaRepository } from '../blog/repository';
+import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 
 const router = Router();
 const slug = (v: string) => v.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'trip';
@@ -105,6 +107,12 @@ router.post('/:tripId/blog/publication/request', authenticate, async (req: any, 
   try {
     if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return res.status(404).json({ error: 'Public sharing is not enabled' });
     const userId = String(req.user.userId); if (!(await ensureUserInTrip(req.params.tripId, userId))) return res.status(403).json({ error: 'Not authorized' });
+    if (await isFeatureEnabled('trip_blog_alt_text')) {
+      await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_PUBLICATION_READINESS_READ', requireConfiguredLimit: true });
+      await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', requireConfiguredLimit: true });
+      const issues = await blogMediaRepository().listPublicationAccessibilityIssues(userId, req.params.tripId);
+      if (issues.length) return res.status(422).json({ error: 'Add alt text or mark each public photo decorative before publishing', code: 'ALT_TEXT_REQUIRED', issues: issues.slice(0, 50), remaining: Math.max(0, issues.length - 50) });
+    }
     if (getCurrentDbProvider() === 'firebase') return res.status(201).json(await requestPublicationFirebase(req.params.tripId, userId));
     const eligibility = await eligibleAdults(req.params.tripId);
     if (eligibility.missingBirthDate > 0) return res.status(409).json({ error: 'Every account traveler must complete the date-of-birth profile before public consent can be requested', code: 'PROFILE_COMPLETION_REQUIRED' });
@@ -125,7 +133,7 @@ router.post('/:tripId/blog/publication/request', authenticate, async (req: any, 
     res.status(201).json({ epoch, state: adults.length ? 'pending_consent' : 'public', pendingCount: adults.length });
   } catch (err) {
     const error = err as any;
-    res.status(error?.code === 'PROFILE_COMPLETION_REQUIRED' ? 409 : 400).json({ error: error?.message ?? 'Unable to request publication', ...(error?.code ? { code: error.code } : {}) });
+    res.status(error instanceof ApiLimitExceededError ? 429 : error?.code === 'PROFILE_COMPLETION_REQUIRED' ? 409 : 400).json({ error: error?.message ?? 'Unable to request publication', ...(error?.code ? { code: error.code } : {}) });
   }
 });
 

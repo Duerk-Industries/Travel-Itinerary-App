@@ -16,6 +16,7 @@ export type BlogContributor = {
 type Props = {
   contributors: BlogContributor[];
   reactionTotal?: number;
+  spotlightUserId?: string | null;
   mutedColor?: string;
   testID?: string;
 };
@@ -24,7 +25,7 @@ const AVATAR_SIZE = 22;
 const OVERLAP = 6;
 const MAX_VISIBLE = 4;
 
-const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0, mutedColor = '#6b7280', testID }) => {
+const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0, spotlightUserId = null, mutedColor = '#6b7280', testID }) => {
   if (!contributors.length) return null;
 
   const visible = contributors.slice(0, MAX_VISIBLE);
@@ -61,7 +62,14 @@ const BlogContributorStrip: React.FC<Props> = ({ contributors, reactionTotal = 0
           </View>
         ) : null}
       </View>
-      <Text style={{ color: mutedColor, fontSize: 12 }}>{summaryParts.join(' · ')}</Text>
+      <View style={{ flexShrink: 1 }}>
+        <Text style={{ color: mutedColor, fontSize: 12 }}>{summaryParts.join(' · ')}</Text>
+        {spotlightUserId ? (
+          <Text testID={testID ? `${testID}-spotlight` : undefined} style={{ color: '#7c3aed', fontSize: 11, fontWeight: '700' }}>
+            ✨ Traveler spotlight: {contributors.find((c) => c.userId === spotlightUserId)?.displayName || 'top contributor'}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 };

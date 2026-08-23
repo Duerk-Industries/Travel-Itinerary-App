@@ -34,6 +34,7 @@ export interface BlogMediaAsset {
   capturedLng?: number | null;
   caption: string | null;
   altText: string | null;
+  isDecorative?: boolean;
   createdAt?: string;
   primaryUrl?: string | null;
   thumbnailUrl?: string | null;
@@ -64,6 +65,22 @@ export interface BlogUploadInitInput {
   // standalone blog item. The gallery's own day is authoritative; dayDate above is ignored in that case.
   galleryItemId?: string | null;
 }
+
+export type BlogMediaAuthoringContext = {
+  id: string;
+  tripId: string;
+  dayDate: string;
+  dayHeadline: string | null;
+  caption: string | null;
+  altText: string | null;
+  isDecorative: boolean;
+};
+
+export type BlogMediaMetadataPatch = {
+  caption?: string | null;
+  altText?: string | null;
+  isDecorative?: boolean;
+};
 
 export interface BlogUploadInitResult {
   asset: BlogMediaAsset;

@@ -6,6 +6,7 @@ import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimi
 import { getDayStarter, acceptDayStarter, dismissDayStarter } from '../services/blogDayStarterService';
 import { groupMediaByDay } from '../services/blogMediaGroupingService';
 import { BlogTargetNotFoundError } from '../services/blogEngagementErrors';
+import { logError } from '../logger';
 
 // Phase 1 of docs/trip-blog-social-implementation-plan.md (A3/A4): editing UI for
 // blog_days.headline/summary and trip_blogs.title/subtitle/introduction, both of which have
@@ -21,10 +22,9 @@ const userIdOf = (req: any): string => String(req.user?.userId ?? '');
 
 const errorResponse = (res: any, err: any): void => {
   const message = String(err?.message ?? 'Unable to process blog request');
-  if (process.env.NODE_ENV !== 'production') console.error('[blog-authoring] request failed', message);
   if (/not authorized/i.test(message)) res.status(403).json({ error: message });
-  else if (/outside|too large|must be|required|characters or fewer/i.test(message)) res.status(400).json({ error: message });
-  else res.status(500).json({ error: message });
+  else if (/outside|too large|too many|at most|must be|required|characters or fewer/i.test(message)) res.status(400).json({ error: message });
+  else { logError('[blog-authoring] request failed', err); res.status(500).json({ error: message }); }
 };
 
 router.patch('/:tripId/blog/days/:dayDate', async (req, res) => {

@@ -1,17 +1,59 @@
 import { randomUUID } from 'crypto';
+import { FieldValue } from 'firebase-admin/firestore';
 import fs from 'fs';
 import path from 'path';
 import { ensureUserInTrip, ensureUserCanReadTrip } from '../db.firebase';
 import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
+import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { getDb } from '../db.firebase';
 
 const config = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; } })();
 const included = (tier: string) => Number(config.tiers?.[tier]?.includedBytes ?? config.tiers?.free?.includedBytes ?? 0);
 const nowIso = () => new Date().toISOString();
-const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, capturedLat: data.capturedLat == null ? null : Number(data.capturedLat), capturedLng: data.capturedLng == null ? null : Number(data.capturedLng), caption: data.caption ?? null, altText: data.altText ?? null, createdAt: data.createdAt ?? undefined, isHighlight: Boolean(data.isHighlight), parentKindKey: data.parentKindKey ?? undefined, position: data.position != null ? Number(data.position) : undefined });
+const map = (data: any, id: string): BlogMediaAsset => ({ id, tripId: String(data.tripId), blogItemId: String(data.blogItemId), dayDate: String(data.dayDate), uploaderUserId: String(data.uploaderUserId), mediaKind: data.mediaKind, state: String(data.state), sourceMimeType: String(data.sourceMimeType ?? ''), physicalBytes: Number(data.physicalBytes ?? 0), billableBytes: Number(data.billableBytes ?? 0), capturedAt: data.capturedAt ?? null, capturedLat: data.capturedLat == null ? null : Number(data.capturedLat), capturedLng: data.capturedLng == null ? null : Number(data.capturedLng), caption: data.caption ?? null, altText: data.altText ?? null, isDecorative: Boolean(data.isDecorative), createdAt: data.createdAt ?? undefined, isHighlight: Boolean(data.isHighlight), parentKindKey: data.parentKindKey ?? undefined, position: data.position != null ? Number(data.position) : undefined });
+
+export const getMediaAuthoringContext = async (userId: string, tripId: string, assetId: string): Promise<BlogMediaAuthoringContext | null> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const snap = await getDb().collection('blog_media_assets').doc(assetId).get();
+  if (!snap.exists) return null;
+  const data = snap.data() as any;
+  if (String(data.tripId) !== tripId || data.state === 'deleted') return null;
+  const daySnap = await getDb().collection('blog_days').where('tripId', '==', tripId).where('localDate', '==', String(data.dayDate)).limit(1).get();
+  const day = daySnap.empty ? null : daySnap.docs[0].data() as any;
+  return { id: assetId, tripId, dayDate: String(data.dayDate), dayHeadline: day?.headline ?? null, caption: data.caption ?? null, altText: data.altText ?? null, isDecorative: Boolean(data.isDecorative) };
+};
+
+export const updateMediaMetadata = async (userId: string, tripId: string, assetId: string, patch: BlogMediaMetadataPatch): Promise<BlogMediaAuthoringContext | null> => {
+  const current = await getMediaAuthoringContext(userId, tripId, assetId);
+  if (!current) return null;
+  const nextAltText = patch.altText !== undefined ? patch.altText : current.altText;
+  const nextDecorative = patch.isDecorative !== undefined ? patch.isDecorative : current.isDecorative;
+  if (nextDecorative && String(nextAltText ?? '').trim()) throw new Error('Decorative photos cannot also have alt text');
+  const update: Record<string, unknown> = { updatedAt: nowIso() };
+  if (patch.caption !== undefined) update.caption = patch.caption ?? null;
+  if (patch.altText !== undefined) update.altText = patch.altText ?? null;
+  if (patch.isDecorative !== undefined) update.isDecorative = Boolean(patch.isDecorative);
+  await Promise.all([
+    getDb().collection('blog_media_assets').doc(assetId).set(update, { merge: true }),
+    getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: FieldValue.increment(1), updatedAt: nowIso() }, { merge: true }),
+  ]);
+  return { ...current, caption: patch.caption !== undefined ? patch.caption ?? null : current.caption, altText: patch.altText !== undefined ? patch.altText ?? null : current.altText, isDecorative: patch.isDecorative !== undefined ? Boolean(patch.isDecorative) : current.isDecorative };
+};
+
+export const listPublicationAccessibilityIssues = async (userId: string, tripId: string): Promise<Array<{ assetId: string; dayDate: string }>> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const [mediaSnap, itemSnap] = await Promise.all([
+    getDb().collection('blog_media_assets').where('tripId', '==', tripId).get(),
+    getDb().collection('blog_items').where('tripId', '==', tripId).get(),
+  ]);
+  const publicItems = new Set(itemSnap.docs.filter((doc) => { const data = doc.data() as any; return data.deletedAt == null && (data.audience ?? 'public') === 'public'; }).map((doc) => doc.id));
+  return mediaSnap.docs.filter((doc) => {
+    const data = doc.data() as any;
+    return data.state === 'ready' && data.mediaKind === 'photo' && publicItems.has(String(data.blogItemId)) && !data.isDecorative && !String(data.altText ?? '').trim();
+  }).map((doc) => ({ assetId: doc.id, dayDate: String((doc.data() as any).dayDate) })).sort((a, b) => a.dayDate.localeCompare(b.dayDate) || a.assetId.localeCompare(b.assetId));
+};
 
 // Phase 5 — mirrors postgresMediaRepository.ts's isFiniteLat/isFiniteLng.
 const isFiniteLat = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90;

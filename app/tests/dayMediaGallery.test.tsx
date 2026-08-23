@@ -80,6 +80,19 @@ describe('DayMediaGallery', () => {
     expect(onSetCover).toHaveBeenCalledWith(items[2]);
   });
 
+  it('navigates to the proposed most-loved photo while leaving confirmation to the traveler', () => {
+    const items = makeItems();
+    const onSetCover = jest.fn();
+    const { getByTestId } = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" proposedCoverAssetId="asset-3" canSetCover onSetCover={onSetCover} onOpenLightbox={() => {}} styles={styles} />
+    );
+    expect(getByTestId('day-media-cover-proposal')).toBeTruthy();
+    expect(getByTestId('day-media-caption').props.children).toBe('Third caption');
+    expect(onSetCover).not.toHaveBeenCalled();
+    fireEvent.press(getByTestId('day-media-set-cover'));
+    expect(onSetCover).toHaveBeenCalledWith(items[2]);
+  });
+
   it('opens the lightbox when the default view is tapped', () => {
     const items = makeItems();
     const onOpenLightbox = jest.fn();

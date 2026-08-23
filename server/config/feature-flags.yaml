@@ -209,6 +209,23 @@ flags:
   trip_blog_day_map_render:
     enabled: false
     description: "Background day-map render job (§14.1) — writes a stored PNG via Google Static Maps once per (trip-day, points-hash); no request path ever calls out"
+  # Phase 6 — every independently releasable surface defaults off. Caption AI and nudges are
+  # fail-closed in entitlementService because they call a paid provider or contact a person.
+  trip_blog_spend_summary:
+    enabled: false
+    description: "C4 — traveler-only client-side spend summary; never included in public recap payloads"
+  trip_blog_recap:
+    enabled: false
+    description: "C7 — durable audience-scoped trip recap snapshots"
+  trip_blog_alt_text:
+    enabled: false
+    description: "A8 — manual caption/alt-text editing and new-publication accessibility readiness"
+  trip_blog_caption_ai:
+    enabled: false
+    description: "A8 — on-demand Premium/Pro caption and alt-text suggestions"
+  trip_blog_nudges:
+    enabled: false
+    description: "B6 — bounded contribution nudges; requires durable notification inbox/outbox"
   expense_import_plaid:
     enabled: false
     description: "Master switch for Plaid bank-link and transaction import"

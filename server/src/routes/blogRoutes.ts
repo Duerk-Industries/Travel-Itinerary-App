@@ -8,13 +8,14 @@ import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogAudience } from '../blog/types';
 import { ensureUserInTrip, ensureUserCanReadTrip, getCurrentDbProvider } from '../db';
 import { assertCanUseFeature, getUserTierKey } from '../services/entitlementService';
-import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { validateVideoEnvelope } from '../services/blogVideoProcessingService';
 import { processMediaUpload } from '../services/blogMediaProcessingService';
 import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
 import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 import { logError } from '../logger';
+import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
 
 const router = Router();
 router.use(authenticate);
@@ -46,10 +47,10 @@ const attachMediaUrls = async (assets: any[]): Promise<any[]> => Promise.all(ass
 
 const errorResponse = (res: any, err: any): void => {
   const message = String(err?.message ?? 'Unable to process blog request');
-  if (process.env.NODE_ENV !== 'production') console.error('[blog] request failed', message);
+  if (err instanceof ApiLimitExceededError) { res.status(429).json({ error: 'Trip blog is at capacity right now — please try again shortly' }); return; }
   if (/not authorized/i.test(message)) res.status(403).json({ error: message });
-  else if (/outside|too large|must be|required|unsupported|exceeds|bytes do not match/i.test(message)) res.status(400).json({ error: message });
-  else res.status(500).json({ error: message });
+  else if (/outside|too large|must be|required|unsupported|exceeds|decorative|alt text|bytes do not match/i.test(message)) res.status(400).json({ error: message });
+  else { logError('[blog] request failed', err); res.status(500).json({ error: message }); }
 };
 
 router.get('/:tripId/blog/capabilities', async (req, res) => {
@@ -59,7 +60,10 @@ router.get('/:tripId/blog/capabilities', async (req, res) => {
     const kinds = await Promise.all(descriptors.map(async (descriptor) => ({ ...descriptor, enabled: master && await isFeatureEnabled(descriptor.featureFlag) })));
     const limits = tripBlogLimits();
     const writable = Boolean(await ensureUserInTrip(req.params.tripId, userIdOf(req)));
-    res.json({ enabled: master, writable, kinds, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300), maxAssetsPerGallery: Number(limits.maxAssetsPerGallery ?? 30) } });
+    const featureKeys = ['trip_blog_authoring_assist', 'trip_blog_reactions', 'trip_blog_spend_summary', 'trip_blog_recap', 'trip_blog_alt_text', 'trip_blog_caption_ai'] as const;
+    const featureValues = await Promise.all(featureKeys.map((key) => isFeatureEnabled(key)));
+    const features = Object.fromEntries(featureKeys.map((key, index) => [key, master && featureValues[index]]));
+    res.json({ enabled: master, writable, kinds, features, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300), maxAssetsPerGallery: Number(limits.maxAssetsPerGallery ?? 30) } });
   } catch (err) {
     errorResponse(res, err);
   }
@@ -330,6 +334,8 @@ router.post('/:tripId/blog/items/reorder', async (req, res) => {
       res.status(400).json({ error: 'Too many items to reorder in one request' });
       return;
     }
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_AUTHORING_WRITE', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_WRITE_UNIT', units: Math.max(1, ids.length), requireConfiguredLimit: true });
     await blogRepository().reorderBlogItems(userIdOf(req), req.params.tripId, ids);
     res.status(204).end();
   } catch (err) {
@@ -413,6 +419,45 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
   } catch (err) {
     const message = String((err as any)?.message ?? 'Unable to finalize upload');
     if (message === 'QUOTA_EXCEEDED') { res.status(413).json({ error: message, code: message }); return; }
+    errorResponse(res, err);
+  }
+});
+
+router.patch('/:tripId/blog/media/:assetId/metadata', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_alt_text'))) {
+      res.status(404).json({ error: 'Media descriptions are not enabled' });
+      return;
+    }
+    const caption = req.body?.caption === undefined ? undefined : req.body.caption === null ? null : String(req.body.caption).trim();
+    const altText = req.body?.altText === undefined ? undefined : req.body.altText === null ? null : String(req.body.altText).trim();
+    const isDecorative = req.body?.isDecorative === undefined ? undefined : req.body.isDecorative;
+    if (caption !== undefined && caption !== null && caption.length > 500) return res.status(400).json({ error: 'Caption must be 500 characters or fewer' });
+    if (altText !== undefined && altText !== null && altText.length > 1000) return res.status(400).json({ error: 'Alt text must be 1000 characters or fewer' });
+    if (isDecorative !== undefined && typeof isDecorative !== 'boolean') return res.status(400).json({ error: 'isDecorative must be a boolean' });
+    if (isDecorative === true && altText) return res.status(400).json({ error: 'Decorative photos cannot also have alt text' });
+    if (caption === undefined && altText === undefined && isDecorative === undefined) return res.status(400).json({ error: 'At least one media field is required' });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_AUTHORING_WRITE', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_WRITE_UNIT', requireConfiguredLimit: true });
+    const updated = await blogMediaRepository().updateMediaMetadata(userIdOf(req), req.params.tripId, req.params.assetId, { caption, altText: isDecorative === true ? null : altText, isDecorative });
+    if (!updated) return res.status(404).json({ error: 'Photo not found' });
+    res.json(updated);
+  } catch (err) {
+    errorResponse(res, err);
+  }
+});
+
+router.post('/:tripId/blog/media/:assetId/suggest-caption', async (req, res) => {
+  try {
+    await assertCanUseFeature(userIdOf(req), 'trip_blog_caption_ai', (req as any).user.role);
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_CAPTION_REQUEST', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', requireConfiguredLimit: true });
+    const suggestion = await suggestBlogMediaCaption({ userId: userIdOf(req), role: (req as any).user.role, tripId: req.params.tripId, assetId: req.params.assetId });
+    res.json(suggestion);
+  } catch (err) {
+    const message = String((err as any)?.message ?? 'Unable to suggest a caption');
+    if (/premium|daily|monthly|limit reached/i.test(message)) return res.status(402).json({ error: message, code: 'CAPTION_QUOTA_OR_TIER' });
+    if (/not found/i.test(message)) return res.status(404).json({ error: message });
     errorResponse(res, err);
   }
 });

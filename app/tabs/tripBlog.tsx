@@ -15,6 +15,7 @@ import BlogCommentThread from '../components/BlogCommentThread';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
+import TripRecapCards from '../components/TripRecapCards';
 import {
   SUPPORTED_MIME_TYPES,
   SUPPORTED_PHOTO_MIME_TYPES,
@@ -37,7 +38,16 @@ export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTy
 // check what's left.
 const isRichTextEmpty = (html) => !String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false }) => {
+const WRITING_PROMPTS = [
+  'What surprised you today?', 'Best thing you ate', 'A moment worth remembering',
+  'What made everyone laugh?', 'One thing you learned', 'The view you did not expect',
+];
+const promptsForDay = (dayDate) => {
+  const start = [...String(dayDate)].reduce((sum, char) => sum + char.charCodeAt(0), 0) % WRITING_PROMPTS.length;
+  return [0, 1, 2].map((offset) => WRITING_PROMPTS[(start + offset) % WRITING_PROMPTS.length]);
+};
+
+const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD' }) => {
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -57,6 +67,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [editMode, setEditMode] = useState(false);
   const [settingCoverForDay, setSettingCoverForDay] = useState(null);
   const [lightboxDay, setLightboxDay] = useState(null);
+  const [capabilities, setCapabilities] = useState({});
+  const [recap, setRecap] = useState(null);
+  const [recapBusy, setRecapBusy] = useState(false);
+  const [metadataBusyAssetId, setMetadataBusyAssetId] = useState(null);
+  const [coverProposals, setCoverProposals] = useState({});
+  const [reorderBusy, setReorderBusy] = useState(false);
+  const draggedItemId = useRef(null);
   // Phase 1 authoring (A3/A4/A5): headline/summary editing, blog masthead editing, and the
   // autosave + conflict-banner replacement for the old Save-button/Alert flow. `drafts` above
   // (item body HTML) stays as-is; these are the parallel per-field draft stores it didn't need
@@ -122,6 +139,23 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       activities: [],
     };
   }), [blog?.days, publicPreview]);
+  const mediaForDay = (day) => (day.items || []).flatMap((item) => {
+    if (item.kindKey === 'core.gallery') return (item.assets || []).map((asset) => ({ ...asset, audience: asset.audience ?? item.audience, isGalleryMember: true }));
+    return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
+  });
+
+  const spendTotal = useMemo(() => allExpenses.reduce((sum, expense) => sum + (Number.isFinite(Number(expense?.amount)) ? Number(expense.amount) : 0), 0), [allExpenses]);
+  const missingAccessibilityCount = useMemo(() => visibleDays.flatMap((day) => mediaForDay(day)).filter((item) =>
+    item.mediaKind === 'photo' && item.audience === 'public' && !String(item.altText || '').trim() && !item.isDecorative
+  ).length, [visibleDays]);
+
+  const spotlightForDay = (day) => {
+    const ranked = mediaForDay(day).map((item) => ({
+      userId: item.uploaderUserId || item.authorUserId,
+      total: engagement.getSummary('asset', item.assetId)?.total ?? item.engagement?.reactionTotal ?? 0,
+    })).filter((entry) => entry.userId && entry.total > 0).sort((a, b) => b.total - a.total);
+    return ranked[0]?.userId ?? null;
+  };
 
   // Fetches each visible day's comment thread once, the first time that day is rendered — never
   // in the public in-app preview, which mirrors the BlogContributorStrip/day-engagement gating
@@ -160,6 +194,103 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCapabilities = async () => {
+    if (!activeTripId) return;
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/capabilities`, { headers });
+      if (response.ok) setCapabilities((await response.json()).features || {});
+    } catch {
+      setCapabilities({});
+    }
+  };
+
+  const loadRecap = async (attempt = 0) => {
+    if (recapBusy && attempt === 0) return;
+    setRecapBusy(true);
+    let retryScheduled = false;
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/recap`, { headers });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 202 && attempt < 3) {
+        retryScheduled = true;
+        setTimeout(() => { void loadRecap(attempt + 1); }, Math.min(2000, Math.max(250, Number(data.retryAfterSeconds || 1) * 1000)));
+        return;
+      }
+      if (!response.ok) throw new Error(data.error || 'Unable to build the trip recap');
+      setRecap(data.recap || null);
+    } catch (error) {
+      if (attempt === 0) Alert.alert('Trip recap', error.message || 'Unable to build the trip recap');
+    } finally {
+      if (!retryScheduled) setRecapBusy(false);
+    }
+  };
+
+  const saveMediaMetadata = async (item, patch) => {
+    setMetadataBusyAssetId(item.assetId);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${item.assetId}/metadata`, {
+        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to save photo details');
+      await load();
+    } finally { setMetadataBusyAssetId(null); }
+  };
+
+  const suggestMediaMetadata = async (item) => {
+    setMetadataBusyAssetId(item.assetId);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${item.assetId}/suggest-caption`, { method: 'POST', headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to suggest a caption');
+      return data;
+    } finally { setMetadataBusyAssetId(null); }
+  };
+
+  const loadCoverProposal = async (dayDate) => {
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${dayDate}/cover-proposal`, { headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to choose the most-loved photo');
+      setCoverProposals((current) => ({ ...current, [dayDate]: data.proposal || null }));
+    } catch (error) { Alert.alert('Photo of the day', error.message || 'Unable to choose a photo'); }
+  };
+
+  const persistItemOrder = async (ids) => {
+    setReorderBusy(true);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/reorder`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ itemIds: ids }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to reorder entries');
+      await load();
+    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to reorder entries'); }
+    finally { setReorderBusy(false); }
+  };
+
+  const moveItem = async (day, item, offset) => {
+    if (reorderBusy) return;
+    const ids = (day.items || []).map((entry) => entry.id);
+    const from = ids.indexOf(item.id);
+    const to = from + offset;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+    [ids[from], ids[to]] = [ids[to], ids[from]];
+    await persistItemOrder(ids);
+  };
+
+  const dropItem = async (day, targetItem) => {
+    const sourceId = draggedItemId.current;
+    draggedItemId.current = null;
+    if (!sourceId || sourceId === targetItem.id || reorderBusy) return;
+    const ids = (day.items || []).map((entry) => entry.id);
+    const sourceIndex = ids.indexOf(sourceId);
+    const targetIndex = ids.indexOf(targetItem.id);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    const [moved] = ids.splice(sourceIndex, 1);
+    ids.splice(targetIndex, 0, moved);
+    await persistItemOrder(ids);
   };
 
   const loadPublicationStatus = async () => {
@@ -372,7 +503,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     setEditMode(false);
     setAddingDay(null);
     setPublicationNotice('');
+    setCapabilities({});
+    setRecap(null);
+    setCoverProposals({});
     void refreshBlogAndPublication();
+    void loadCapabilities();
   }, [activeTripId]);
 
   const loadMore = () => {
@@ -707,7 +842,36 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               )}
             </View>
             {publicationNotice ? <Text style={{ color: mutedColor, marginTop: 8 }}>{publicationNotice}</Text> : null}
+            {publicationState === 'public' && capabilities.trip_blog_alt_text && missingAccessibilityCount > 0 ? (
+              <Text testID="blog-accessibility-remediation" style={{ color: '#b45309', marginTop: 8, fontSize: 12 }}>
+                Accessibility reminder: {missingAccessibilityCount} public {missingAccessibilityCount === 1 ? 'photo needs' : 'photos need'} alt text or a decorative mark. Your existing public blog remains available while you fix this.
+              </Text>
+            ) : null}
             {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
+          </View>
+        ) : null}
+        {capabilities.trip_blog_recap ? (
+          recap ? (
+            <TripRecapCards
+              recap={recap}
+              topPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.assetId === recap?.topPhoto?.assetId)?.primaryUrl}
+              spendTotal={capabilities.trip_blog_spend_summary && !readOnly ? spendTotal : null}
+              currency={tripCurrency}
+              textColor={textColor}
+              mutedColor={mutedColor}
+              borderColor={borderColor}
+              backgroundColor={inputColor}
+            />
+          ) : (
+            <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', marginBottom: 14, backgroundColor: '#7c3aed' }]}>
+              <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Build trip recap'}</Text>
+            </TouchableOpacity>
+          )
+        ) : null}
+        {capabilities.trip_blog_spend_summary && !readOnly && !recap ? (
+          <View testID="trip-blog-spend-summary" style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, marginBottom: 14, backgroundColor: inputColor }}>
+            <Text style={{ color: textColor, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
+            <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip expense ledger.</Text>
           </View>
         ) : null}
         {visibleDays.map((day) => {
@@ -793,6 +957,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 testID={`blog-day-contributors-${day.localDate}`}
                 contributors={day.contributors}
                 reactionTotal={day.engagement?.reactionTotal}
+                spotlightUserId={spotlightForDay(day)}
                 mutedColor={mutedColor}
               />
             ) : null}
@@ -840,8 +1005,21 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 />
               </View>
             ) : null}
-            {(day.items || []).filter((item) => !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
-              <View key={item.id} style={{ marginTop: 8 }}>
+            {(day.items || []).filter((item) => item.kindKey !== 'core.gallery' && !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
+              <View
+                key={item.id}
+                style={{ marginTop: 8 }}
+                {...(Platform.OS === 'web' && canEdit && capabilities.trip_blog_authoring_assist ? {
+                  draggable: true,
+                  onDragStart: (event) => {
+                    draggedItemId.current = item.id;
+                    event?.dataTransfer?.setData?.('text/plain', item.id);
+                  },
+                  onDragOver: (event) => event?.preventDefault?.(),
+                  onDrop: (event) => { event?.preventDefault?.(); void dropItem(day, item); },
+                } : {})}
+              >
+                {canEdit && capabilities.trip_blog_authoring_assist ? <Text style={{ color: mutedColor, fontSize: 11, marginBottom: 3 }}>⠿ Drag to reorder</Text> : null}
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
                 {canEdit ? (
                   <BlogRichTextEditor
@@ -886,6 +1064,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                       {saveStateLabel(`item-${item.id}`) ? (
                         <Text style={{ color: mutedColor, fontSize: 12 }}>{saveStateLabel(`item-${item.id}`)}</Text>
                       ) : null}
+                      {capabilities.trip_blog_authoring_assist ? (
+                        <>
+                          <TouchableOpacity accessibilityLabel="Move entry up" disabled={reorderBusy || (day.items || [])[0]?.id === item.id} onPress={() => moveItem(day, item, -1)} style={{ padding: 6 }}><Text style={{ color: textColor }}>↑</Text></TouchableOpacity>
+                          <TouchableOpacity accessibilityLabel="Move entry down" disabled={reorderBusy || (day.items || [])[(day.items || []).length - 1]?.id === item.id} onPress={() => moveItem(day, item, 1)} style={{ padding: 6 }}><Text style={{ color: textColor }}>↓</Text></TouchableOpacity>
+                        </>
+                      ) : null}
                       <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => deleteItem(item)}><Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text></TouchableOpacity>
                     </View>
                     {itemConflicts[item.id] ? (
@@ -914,7 +1098,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               // standalone items use (deleteItem) — see removeMediaItem above.
               const allMedia = (day.items || []).flatMap((item) => {
                 if (item.kindKey === 'core.gallery') {
-                  return (item.assets || []).map((asset) => ({ ...asset, isGalleryMember: true }));
+                  return (item.assets || []).map((asset) => ({ ...asset, audience: asset.audience ?? item.audience, isGalleryMember: true }));
                 }
                 return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
               });
@@ -923,28 +1107,41 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               return (
                 <>
                   {readyMedia.length ? (
-                    <DayMediaGallery
-                      items={readyMedia}
-                      dayDate={day.localDate}
-                      coverItemId={day.coverItemId}
-                      canSetCover={!readOnly}
-                      settingCover={settingCoverForDay === day.localDate}
-                      onSetCover={(item) => setDayCover(day.localDate, item)}
-                      onOpenLightbox={() => setLightboxDay(day.localDate)}
-                      canRemove={canEdit}
-                      removing={deleting}
-                      onRemove={(item) => removeMediaItem(item)}
-                      textColor={textColor}
-                      mutedColor={mutedColor}
-                      borderColor={borderColor}
-                      backgroundColor={inputColor}
-                      styles={styles}
-                      canEngage={canEngage}
-                      getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
-                      onToggleReaction={engagement.toggle}
-                      onReactionError={handleEngagementError}
-                      theme={theme}
-                    />
+                    <>
+                      {canEdit && capabilities.trip_blog_reactions ? (
+                        <TouchableOpacity testID={`blog-cover-proposal-${day.localDate}`} onPress={() => loadCoverProposal(day.localDate)} style={{ alignSelf: 'flex-start', paddingVertical: 5, marginTop: 5 }}>
+                          <Text style={{ color: '#7c3aed', fontWeight: '700' }}>{coverProposals[day.localDate] ? '♥ Most-loved photo selected below' : 'Find the most-loved photo'}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      <DayMediaGallery
+                        items={readyMedia}
+                        dayDate={day.localDate}
+                        coverItemId={day.coverItemId}
+                        canSetCover={!readOnly}
+                        settingCover={settingCoverForDay === day.localDate}
+                        onSetCover={(item) => setDayCover(day.localDate, item)}
+                        onOpenLightbox={() => setLightboxDay(day.localDate)}
+                        canRemove={canEdit}
+                        removing={deleting}
+                        onRemove={(item) => removeMediaItem(item)}
+                        textColor={textColor}
+                        mutedColor={mutedColor}
+                        borderColor={borderColor}
+                        backgroundColor={inputColor}
+                        styles={styles}
+                        canEngage={canEngage}
+                        getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
+                        onToggleReaction={engagement.toggle}
+                        onReactionError={handleEngagementError}
+                        theme={theme}
+                        canEditMetadata={canEdit && capabilities.trip_blog_alt_text}
+                        canSuggestMetadata={canEdit && capabilities.trip_blog_caption_ai}
+                        metadataBusy={Boolean(metadataBusyAssetId)}
+                        onSaveMetadata={saveMediaMetadata}
+                        onSuggestMetadata={suggestMediaMetadata}
+                        proposedCoverAssetId={coverProposals[day.localDate]?.assetId}
+                      />
+                    </>
                   ) : null}
                   {processingMedia.map((item) => (
                     <View key={item.id} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
@@ -1001,6 +1198,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             ) : null}
             {canEdit && addingDay === day.localDate ? (
               <View style={{ marginTop: 10 }}>
+                {capabilities.trip_blog_authoring_assist ? (
+                  <View testID={`blog-writing-prompts-${day.localDate}`} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {promptsForDay(day.localDate).map((prompt) => (
+                      <TouchableOpacity key={prompt} accessibilityRole="button" onPress={() => setNewBody(`<p><strong>${prompt}</strong></p><p></p>`)} style={{ borderWidth: 1, borderColor, borderRadius: 16, paddingVertical: 5, paddingHorizontal: 9, backgroundColor: inputColor }}>
+                        <Text style={{ color: textColor, fontSize: 12 }}>{prompt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
                 <BlogRichTextEditor
                   key={`new-${day.localDate}`}
                   testID={`blog-new-note-editor-${day.localDate}`}
@@ -1016,7 +1222,20 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 </View>
               </View>
             ) : null}
-            {canEdit && (day.items || []).length === 0 && addingDay !== day.localDate ? <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text> : null}
+            {canEdit && (day.items || []).length === 0 && addingDay !== day.localDate ? (
+              <View>
+                <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text>
+                {capabilities.trip_blog_authoring_assist ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                    {promptsForDay(day.localDate).map((prompt) => (
+                      <TouchableOpacity key={prompt} onPress={() => { setAddingDay(day.localDate); setNewBody(`<p><strong>${prompt}</strong></p><p></p>`); }} style={{ borderWidth: 1, borderColor, borderRadius: 16, paddingVertical: 5, paddingHorizontal: 9 }}>
+                        <Text style={{ color: textColor, fontSize: 12 }}>{prompt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
           );
         })}

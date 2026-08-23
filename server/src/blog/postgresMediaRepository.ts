@@ -6,7 +6,7 @@ import { queryBlog, withBlogTransaction } from '../db.postgres';
 import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { BlogMediaAsset, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
+import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 
 const tierConfig = (() => {
   try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; }
@@ -52,7 +52,58 @@ export const setIncludedStorage = async (userId: string, includedBytes: number):
   );
 };
 
-const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, capturedLat: row.captured_lat == null ? null : Number(row.captured_lat), capturedLng: row.captured_lng == null ? null : Number(row.captured_lng), caption: row.caption ?? null, altText: row.alt_text ?? null, createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
+const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, capturedLat: row.captured_lat == null ? null : Number(row.captured_lat), capturedLng: row.captured_lng == null ? null : Number(row.captured_lng), caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative), createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
+
+export const getMediaAuthoringContext = async (userId: string, tripId: string, assetId: string): Promise<BlogMediaAuthoringContext | null> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const result = await queryBlog<any>(
+    `SELECT a.id, a.trip_id, d.local_date, d.headline, a.caption, a.alt_text, a.is_decorative
+       FROM blog_media_assets a
+       JOIN blog_item_assets ia ON ia.asset_id = a.id
+       JOIN blog_items i ON i.id = ia.item_id
+       JOIN blog_days d ON d.id = i.blog_day_id
+      WHERE a.id = $1 AND a.trip_id = $2 AND a.state <> 'deleted' AND i.deleted_at IS NULL LIMIT 1`,
+    [assetId, tripId]
+  );
+  const row = result.rows[0];
+  return row ? { id: String(row.id), tripId, dayDate: dateString(row.local_date), dayHeadline: row.headline ?? null, caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
+};
+
+export const updateMediaMetadata = async (userId: string, tripId: string, assetId: string, patch: BlogMediaMetadataPatch): Promise<BlogMediaAuthoringContext | null> => {
+  const current = await getMediaAuthoringContext(userId, tripId, assetId);
+  if (!current) return null;
+  const nextAltText = patch.altText !== undefined ? patch.altText : current.altText;
+  const nextDecorative = patch.isDecorative !== undefined ? patch.isDecorative : current.isDecorative;
+  if (nextDecorative && String(nextAltText ?? '').trim()) throw new Error('Decorative photos cannot also have alt text');
+  const result = await queryBlog<any>(
+    `UPDATE blog_media_assets SET
+       caption = CASE WHEN $3 THEN $4 ELSE caption END,
+       alt_text = CASE WHEN $5 THEN $6 ELSE alt_text END,
+       is_decorative = CASE WHEN $7 THEN $8 ELSE is_decorative END,
+       updated_at = NOW()
+     WHERE id = $1 AND trip_id = $2 RETURNING *`,
+    [assetId, tripId, patch.caption !== undefined, patch.caption ?? null, patch.altText !== undefined, patch.altText ?? null, patch.isDecorative !== undefined, patch.isDecorative ?? false]
+  );
+  await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
+  const row = result.rows[0];
+  return row ? { ...current, caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
+};
+
+export const listPublicationAccessibilityIssues = async (userId: string, tripId: string): Promise<Array<{ assetId: string; dayDate: string }>> => {
+  if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
+  const result = await queryBlog<any>(
+    `SELECT a.id, d.local_date FROM blog_media_assets a
+       JOIN blog_item_assets ia ON ia.asset_id = a.id
+       JOIN blog_items i ON i.id = ia.item_id
+       JOIN blog_days d ON d.id = i.blog_day_id
+      WHERE a.trip_id = $1 AND a.state = 'ready' AND a.media_kind_key = 'photo'
+        AND i.deleted_at IS NULL AND i.audience = 'public'
+        AND COALESCE(a.is_decorative, FALSE) = FALSE AND NULLIF(TRIM(COALESCE(a.alt_text, '')), '') IS NULL
+      ORDER BY d.local_date, a.id`,
+    [tripId]
+  );
+  return result.rows.map((row) => ({ assetId: String(row.id), dayDate: dateString(row.local_date) }));
+};
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md — PR-3: a geotag is only ever persisted
 // when the trip's photo_location_enabled toggle is on *at upload time*; turning it on later does

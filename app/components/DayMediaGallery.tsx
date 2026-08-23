@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BlogMediaPreview } from './BlogMediaPreview';
 import BlogReactionBar from './BlogReactionBar';
+import BlogMediaMetadataEditor, { type BlogMediaMetadataPatch } from './BlogMediaMetadataEditor';
 
 type DayMediaGalleryProps = {
   items: any[];
@@ -31,6 +32,12 @@ type DayMediaGalleryProps = {
   onToggleReaction?: (targetKind: 'asset', targetId: string, emoji: string) => Promise<void>;
   onReactionError?: (message: string) => void;
   theme?: any;
+  canEditMetadata?: boolean;
+  canSuggestMetadata?: boolean;
+  metadataBusy?: boolean;
+  onSaveMetadata?: (item: any, patch: BlogMediaMetadataPatch) => Promise<void>;
+  onSuggestMetadata?: (item: any) => Promise<{ caption?: string; altText?: string }>;
+  proposedCoverAssetId?: string | null;
 };
 
 const DayMediaGallery = ({
@@ -54,6 +61,12 @@ const DayMediaGallery = ({
   onToggleReaction,
   onReactionError,
   theme,
+  canEditMetadata = false,
+  canSuggestMetadata = false,
+  metadataBusy = false,
+  onSaveMetadata,
+  onSuggestMetadata,
+  proposedCoverAssetId = null,
 }: DayMediaGalleryProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -65,6 +78,12 @@ const DayMediaGallery = ({
     setActiveIndex(index >= 0 ? index : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayDate, coverItemId]);
+
+  useEffect(() => {
+    if (!proposedCoverAssetId) return;
+    const index = items.findIndex((item) => item.assetId === proposedCoverAssetId);
+    if (index >= 0) setActiveIndex(index);
+  }, [proposedCoverAssetId]);
 
   const clampedIndex = items.length ? Math.min(activeIndex, items.length - 1) : 0;
   const activeItem = items[clampedIndex] ?? null;
@@ -82,6 +101,7 @@ const DayMediaGallery = ({
         <BlogMediaPreview item={activeItem} backgroundColor={backgroundColor} />
       </TouchableOpacity>
       {activeItem.caption ? <Text testID="day-media-caption" style={{ color: mutedColor, marginTop: 4 }}>{activeItem.caption}</Text> : null}
+      {activeItem.assetId === proposedCoverAssetId && !isCurrentCover ? <Text testID="day-media-cover-proposal" style={{ color: '#7c3aed', fontWeight: '700', marginTop: 4 }}>♥ Most-loved photo of the day</Text> : null}
       {getEngagementSummary && onToggleReaction ? (
         <View style={{ marginTop: 4 }}>
           <BlogReactionBar
@@ -126,6 +146,20 @@ const DayMediaGallery = ({
           ) : null}
         </View>
       </View>
+      {canEditMetadata && onSaveMetadata ? (
+        <BlogMediaMetadataEditor
+          item={activeItem}
+          canSuggest={canSuggestMetadata}
+          busy={metadataBusy}
+          onSave={(patch) => onSaveMetadata(activeItem, patch)}
+          onSuggest={onSuggestMetadata ? () => onSuggestMetadata(activeItem) : undefined}
+          textColor={textColor}
+          mutedColor={mutedColor}
+          borderColor={borderColor}
+          backgroundColor={backgroundColor}
+          styles={styles}
+        />
+      ) : null}
     </View>
   );
 };

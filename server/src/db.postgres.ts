@@ -10990,7 +10990,7 @@ export const reserveCapacity = async (params: {
     const { rows } = await client.query<{ current: string }>(
       `SELECT (
          COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = TRUE), 0) +
-         COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = FALSE AND expires_at > NOW()), 0)
+         COALESCE((SELECT SUM(units) FROM capacity_reservations WHERE provider = $1 AND committed = FALSE AND expires_at > NOW()::timestamp), 0)
        ) AS "current"`,
       [params.provider]
     );
