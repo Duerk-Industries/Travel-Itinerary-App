@@ -2912,7 +2912,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             : null}
 
           {activePage === 'blog'
-            ? renderSharedPageScroll(
+            ? renderBoundedPage(
                 <TripBlogTab
                   backendUrl={backendUrl}
                   headers={headers}

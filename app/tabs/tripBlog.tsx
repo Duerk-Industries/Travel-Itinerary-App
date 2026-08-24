@@ -81,6 +81,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [coverProposals, setCoverProposals] = useState({});
   const [reorderBusy, setReorderBusy] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+  // Phase 0 reorder — search/places/privacy/export/storage move out from in front of the story
+  // into a collapsed "Blog tools" section below the days (redesign notes §1/§4), so they no longer
+  // compete with the narrative for the first thing a reader sees.
+  const [showBlogTools, setShowBlogTools] = useState(false);
   const draggedItemId = useRef(null);
   // Phase 1 authoring (A3/A4/A5): headline/summary editing, blog masthead editing, and the
   // autosave + conflict-banner replacement for the old Save-button/Alert flow. `drafts` above
@@ -178,6 +182,27 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       comments.loadDay(day.localDate).catch(() => { loadedCommentDays.current.delete(day.localDate); });
     }
   }, [visibleDays, publicPreview]);
+
+  // Phase 0 of the visual redesign (docs/trip-blog-social-prd.md §6.2) — the elastic fact strip.
+  // Weather/distance/places/media-span were already computed server-side (blogDayFactsService.ts)
+  // and simply never reached the UI. Lazy per-day fetch, same shape as the comment-loading effect
+  // just above: once per day, skipped entirely for the public in-app preview (no identity to
+  // resolve membership against there), and a failure (flag off, rate-limited, etc.) just leaves
+  // that day's strip empty rather than surfacing an error — facts are enrichment, never blocking.
+  const [dayFacts, setDayFacts] = useState({});
+  const loadedFactDays = useRef(new Set());
+  useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); }, [activeTripId]);
+  useEffect(() => {
+    if (publicPreview) return;
+    for (const day of visibleDays) {
+      if (loadedFactDays.current.has(day.localDate)) continue;
+      loadedFactDays.current.add(day.localDate);
+      fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${day.localDate}/facts`, { headers })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => { if (data?.facts) setDayFacts((current) => ({ ...current, [day.localDate]: data.facts })); })
+        .catch(() => { loadedFactDays.current.delete(day.localDate); });
+    }
+  }, [visibleDays, publicPreview, backendUrl, activeTripId, headers]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -805,8 +830,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   };
   const removeMediaItem = (item) => (item.isGalleryMember ? removeGalleryAsset(item.assetId) : deleteItem(item));
 
-  if (!activeTripId) return <View style={styles.card}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
-  if (loading) return <View style={styles.card}><ActivityIndicator /></View>;
+  if (!activeTripId) return <View style={{ padding: 18 }}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
+  if (loading) return <View style={{ padding: 18, alignItems: 'center' }}><ActivityIndicator /></View>;
   const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
   const hasPendingConsent = publicationState === 'pending_consent' && publication?.userDecision === 'pending';
   // FR-A5.2: a visible Saving…/Saved/Not saved state for any autosaved field, shared by the
@@ -819,9 +844,23 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     if (state.status === 'saved') return `Saved ${new Date(state.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     return 'Not saved — retrying';
   };
+  // Phase 0 of the visual redesign — the trip blog gets its own page shell (renderBoundedPage in
+  // App.tsx) instead of the shared renderSharedPageScroll wrapper every other tab uses, so this is
+  // the only ScrollView in the tree (the old nesting put a second ScrollView here inside that
+  // shared one). It also stops wrapping the entire page in the generic `styles.card` used by every
+  // other tab — the masthead below gets its own quiet surface, and each day becomes its own
+  // "chapter" further down, rather than one long bordered form.
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
-      <View style={styles.card}>
+    <View style={{ flex: 1, minHeight: 0 }}>
+      <ScrollView
+        style={{ flex: 1, minHeight: 0 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        showsVerticalScrollIndicator
+      >
+        <View style={{ width: '100%', maxWidth: 1200, alignSelf: 'center', gap: 20 }}>
+      <View style={{ backgroundColor: surfaceColor, borderRadius: 16, padding: 18 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           {canEdit ? (
             <View style={{ flex: 1 }}>
@@ -897,88 +936,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             multiline
             style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, marginBottom: 4, minHeight: 44, backgroundColor: inputColor }}
           />
-        ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 12 }}>{blog.introduction}</Text> : null)}
-        {canEdit ? (
-          <View style={{ marginBottom: 16, padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <Text style={{ color: textColor, fontWeight: '700' }}>
-                Visibility: {publicationState === 'public' ? 'Public' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Private'}
-              </Text>
-              {publicationState === 'public' ? (
-                <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={revokePublication}>
-                  <Text style={{ color: textColor }}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
-                </TouchableOpacity>
-              ) : hasPendingConsent ? (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={() => respondToPublication('approved')}>
-                    <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Approve'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={() => respondToPublication('declined')}>
-                    <Text style={{ color: textColor }}>Decline</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : publicationState === 'pending_consent' ? (
-                <Text style={{ color: mutedColor }}>Waiting for other adult travelers</Text>
-              ) : (
-                <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={requestPublication}>
-                  <Text style={styles.buttonText}>{publicationBusy ? 'Requesting…' : 'Make public'}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {publicationNotice ? <Text style={{ color: mutedColor, marginTop: 8 }}>{publicationNotice}</Text> : null}
-            {publicationState === 'public' && capabilities.trip_blog_alt_text && missingAccessibilityCount > 0 ? (
-              <Text testID="blog-accessibility-remediation" style={{ color: '#b45309', marginTop: 8, fontSize: 12 }}>
-                Accessibility reminder: {missingAccessibilityCount} public {missingAccessibilityCount === 1 ? 'photo needs' : 'photos need'} alt text or a decorative mark. Your existing public blog remains available while you fix this.
-              </Text>
-            ) : null}
-            {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
-          </View>
-        ) : null}
-        <BlogDiscoveryPanel
-          backendUrl={backendUrl}
-          headers={headers}
-          tripId={activeTripId}
-          searchEnabled={Boolean(capabilities.trip_blog_search)}
-          placesEnabled={Boolean(capabilities.trip_blog_places && !readOnly)}
-          textColor={textColor}
-          mutedColor={mutedColor}
-          borderColor={borderColor}
-          backgroundColor={inputColor}
-          theme={theme}
-        />
-        {capabilities.trip_blog_recap ? (
-          recap ? (
-            <TripRecapCards
-              recap={recap}
-              topPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.assetId === recap?.topPhoto?.assetId)?.primaryUrl}
-              spendTotal={capabilities.trip_blog_spend_summary && !readOnly ? spendTotal : null}
-              currency={tripCurrency}
-              textColor={textColor}
-              mutedColor={mutedColor}
-              borderColor={borderColor}
-              backgroundColor={inputColor}
-              showAwards={Boolean(capabilities.trip_blog_trip_awards)}
-              theme={theme}
-            />
-          ) : (
-            <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', marginBottom: 14, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
-              <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Build trip recap'}</Text>
-            </TouchableOpacity>
-          )
-        ) : null}
-        {capabilities.trip_blog_spend_summary && !readOnly && !recap ? (
-          <View testID="trip-blog-spend-summary" style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, marginBottom: 14, backgroundColor: inputColor }}>
-            <Text style={{ color: textColor, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
-            <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip expense ledger.</Text>
-          </View>
-        ) : null}
+        ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 4 }}>{blog.introduction}</Text> : null)}
+      </View>
         {visibleDays.map((day) => {
           const dayMetaDraft = dayMetaDrafts[day.localDate];
           const dayMetaConflict = dayMetaConflicts[day.localDate];
           const dayHeadline = dayMetaDraft?.headline ?? (day.headline ?? '');
           const daySummary = dayMetaDraft?.summary ?? (day.summary ?? '');
           return (
-          <View key={day.id} style={{ marginBottom: 24, borderBottomWidth: 1, borderBottomColor: borderColor, paddingBottom: 16 }}>
+          <View key={day.id} style={{ marginBottom: 20, backgroundColor: surfaceColor, borderRadius: 16, padding: 18 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: canEdit ? 'flex-start' : 'center', marginBottom: 8 }}>
               {canEdit ? (
                 <View style={{ flex: 1, marginRight: 8 }}>
@@ -1052,67 +1018,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo/Video'}</Text>
                   </TouchableOpacity>
                 )}
-                {day.weather ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme?.colors?.surfaceMuted ?? '#f0f9ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                    <Text style={{ fontSize: 16, marginRight: 4 }}>{day.weather.icon}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: theme?.colors?.link ?? '#0369a1' }}>
-                      {day.weather.temperatureHighC != null ? `${day.weather.temperatureHighC}°C` : ''}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
             </View>
-            {!publicPreview && (day.contributors || []).length > 0 ? (
-              <BlogContributorStrip
-                testID={`blog-day-contributors-${day.localDate}`}
-                contributors={day.contributors}
-                reactionTotal={day.engagement?.reactionTotal}
-                spotlightUserId={spotlightForDay(day)}
-                mutedColor={mutedColor}
-              />
-            ) : null}
-            {day.engagement ? (
-              <BlogReactionBar
-                testID={`blog-day-reactions-${day.localDate}`}
-                targetKind="day"
-                targetId={day.id}
-                summary={engagement.getSummary('day', day.id)}
-                canEngage={canEngage}
-                onToggle={engagement.toggle}
-                onError={handleEngagementError}
-                textColor={textColor}
-                mutedColor={mutedColor}
-                theme={theme}
-                size="compact"
-              />
-            ) : null}
-            {!publicPreview && day.engagement ? (
-              <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
-                <BlogCommentThread
-                  testID={`blog-day-comments-${day.localDate}`}
-                  comments={comments.getDayState(day.localDate).comments.filter((c) => c.targetKind === 'day' && c.targetId === day.id)}
-                  targetKind="day"
-                  targetId={day.id}
-                  audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
-                  currentUserId={currentUserId}
-                  canModerate={isTripOwnerOrAdmin}
-                  canEngage={canEngage}
-                  onPostTopLevel={(body) => comments.postComment(day.localDate, 'day', day.id, body)}
-                  onReply={(parentCommentId, body) => comments.postComment(day.localDate, 'day', day.id, body, parentCommentId)}
-                  onEdit={(commentId, body) => comments.editComment(day.localDate, commentId, body)}
-                  onDelete={(commentId) => comments.deleteComment(day.localDate, commentId)}
-                  onReport={(commentId, reason) => comments.reportComment(commentId, reason)}
-                  onHide={(commentId) => comments.hideComment(day.localDate, commentId)}
-                  onUnhide={(commentId) => comments.unhideComment(day.localDate, commentId)}
-                  onShowEarlierReplies={(commentId) => comments.loadMoreReplies(day.localDate, commentId)}
-                  onError={handleCommentError}
-                  textColor={textColor}
-                  mutedColor={mutedColor}
-                  borderColor={borderColor}
-                  backgroundColor={inputColor}
-                  styles={styles}
-                  theme={theme}
-                />
+            {/* Phase 0 elastic fact strip (docs/trip-blog-social-prd.md §6.2, FR-C1.1) — chips with
+                no data are absent, not greyed out, so a photos-only day still reads as intentional.
+                Weather moved here from the old header pill; distance/places/media are newly
+                surfaced from an endpoint the client never called before this redesign. */}
+            {dayFacts[day.localDate]?.length ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4, marginBottom: 4 }}>
+                {dayFacts[day.localDate].map((fact) => (
+                  <View
+                    key={fact.key}
+                    testID={`blog-day-fact-${day.localDate}-${fact.key}`}
+                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme?.colors?.surfaceMuted ?? '#f0f9ff', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 }}
+                  >
+                    <Text style={{ fontSize: 12.5, fontWeight: '600', color: theme?.colors?.link ?? '#0369a1' }}>
+                      {fact.key === 'weather' ? fact.value : `${fact.label}: ${fact.value}`}
+                    </Text>
+                  </View>
+                ))}
               </View>
             ) : null}
             {(day.items || []).filter((item) => item.kindKey !== 'core.gallery' && !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
@@ -1295,6 +1219,64 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 </>
               );
             })()}
+            {/* Phase 0 reorder (docs/trip-blog-social-prd.md §6.2 / redesign notes §2) — contributor
+                attribution, the day's own reaction bar, and the comment thread now come after the
+                story and its media, not before it, so a reader meets the day before its metadata. */}
+            {!publicPreview && (day.contributors || []).length > 0 ? (
+              <BlogContributorStrip
+                testID={`blog-day-contributors-${day.localDate}`}
+                contributors={day.contributors}
+                reactionTotal={day.engagement?.reactionTotal}
+                spotlightUserId={spotlightForDay(day)}
+                mutedColor={mutedColor}
+              />
+            ) : null}
+            {day.engagement ? (
+              <View style={{ marginTop: (!publicPreview && (day.contributors || []).length > 0) ? 6 : 12 }}>
+                <BlogReactionBar
+                  testID={`blog-day-reactions-${day.localDate}`}
+                  targetKind="day"
+                  targetId={day.id}
+                  summary={engagement.getSummary('day', day.id)}
+                  canEngage={canEngage}
+                  onToggle={engagement.toggle}
+                  onError={handleEngagementError}
+                  textColor={textColor}
+                  mutedColor={mutedColor}
+                  theme={theme}
+                  size="compact"
+                />
+              </View>
+            ) : null}
+            {!publicPreview && day.engagement ? (
+              <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
+                <BlogCommentThread
+                  testID={`blog-day-comments-${day.localDate}`}
+                  comments={comments.getDayState(day.localDate).comments.filter((c) => c.targetKind === 'day' && c.targetId === day.id)}
+                  targetKind="day"
+                  targetId={day.id}
+                  audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
+                  currentUserId={currentUserId}
+                  canModerate={isTripOwnerOrAdmin}
+                  canEngage={canEngage}
+                  onPostTopLevel={(body) => comments.postComment(day.localDate, 'day', day.id, body)}
+                  onReply={(parentCommentId, body) => comments.postComment(day.localDate, 'day', day.id, body, parentCommentId)}
+                  onEdit={(commentId, body) => comments.editComment(day.localDate, commentId, body)}
+                  onDelete={(commentId) => comments.deleteComment(day.localDate, commentId)}
+                  onReport={(commentId, reason) => comments.reportComment(commentId, reason)}
+                  onHide={(commentId) => comments.hideComment(day.localDate, commentId)}
+                  onUnhide={(commentId) => comments.unhideComment(day.localDate, commentId)}
+                  onShowEarlierReplies={(commentId) => comments.loadMoreReplies(day.localDate, commentId)}
+                  onError={handleCommentError}
+                  textColor={textColor}
+                  mutedColor={mutedColor}
+                  borderColor={borderColor}
+                  backgroundColor={inputColor}
+                  styles={styles}
+                  theme={theme}
+                />
+              </View>
+            ) : null}
             {!publicPreview && (day.activities || []).length > 0 ? (
               <View style={{ marginTop: 14 }}>
                 <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>
@@ -1360,8 +1342,103 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </Text>
           </TouchableOpacity>
         ) : null}
-      </View>
-
+        {/* Phase 0 reorder — the recap is the "Relive this trip" moment (redesign notes §1), kept
+            prominent after the last day rather than buried above the story. */}
+        {capabilities.trip_blog_recap ? (
+          <View style={{ marginTop: 8 }}>
+            {recap ? (
+              <TripRecapCards
+                recap={recap}
+                topPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.assetId === recap?.topPhoto?.assetId)?.primaryUrl}
+                spendTotal={capabilities.trip_blog_spend_summary && !readOnly ? spendTotal : null}
+                currency={tripCurrency}
+                textColor={textColor}
+                mutedColor={mutedColor}
+                borderColor={borderColor}
+                backgroundColor={inputColor}
+                showAwards={Boolean(capabilities.trip_blog_trip_awards)}
+                theme={theme}
+              />
+            ) : (
+              <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
+                <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Relive this trip'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null}
+        {/* Phase 0 reorder — search, places, privacy/publication, and the spend figure are utility
+            controls, not story — collapsed here instead of crowding the masthead (redesign notes
+            §1/§4's "Blog tools" drawer). */}
+        <View style={{ marginTop: 12 }}>
+          <TouchableOpacity
+            testID="blog-tools-toggle"
+            accessibilityRole="button"
+            onPress={() => setShowBlogTools((current) => !current)}
+            style={{ alignSelf: 'flex-start', paddingVertical: 6 }}
+          >
+            <Text style={{ color: mutedColor, fontWeight: '700', fontSize: 13 }}>{showBlogTools ? '▾' : '▸'} Blog tools</Text>
+          </TouchableOpacity>
+          {showBlogTools ? (
+            <View testID="blog-tools-panel" style={{ backgroundColor: surfaceColor, borderRadius: 16, padding: 18, marginTop: 6, gap: 14 }}>
+              {canEdit ? (
+                <View style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <Text style={{ color: textColor, fontWeight: '700' }}>
+                      Visibility: {publicationState === 'public' ? 'Public' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Private'}
+                    </Text>
+                    {publicationState === 'public' ? (
+                      <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={revokePublication}>
+                        <Text style={{ color: textColor }}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
+                      </TouchableOpacity>
+                    ) : hasPendingConsent ? (
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={() => respondToPublication('approved')}>
+                          <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Approve'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={() => respondToPublication('declined')}>
+                          <Text style={{ color: textColor }}>Decline</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : publicationState === 'pending_consent' ? (
+                      <Text style={{ color: mutedColor }}>Waiting for other adult travelers</Text>
+                    ) : (
+                      <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={requestPublication}>
+                        <Text style={styles.buttonText}>{publicationBusy ? 'Requesting…' : 'Make public'}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {publicationNotice ? <Text style={{ color: mutedColor, marginTop: 8 }}>{publicationNotice}</Text> : null}
+                  {publicationState === 'public' && capabilities.trip_blog_alt_text && missingAccessibilityCount > 0 ? (
+                    <Text testID="blog-accessibility-remediation" style={{ color: '#b45309', marginTop: 8, fontSize: 12 }}>
+                      Accessibility reminder: {missingAccessibilityCount} public {missingAccessibilityCount === 1 ? 'photo needs' : 'photos need'} alt text or a decorative mark. Your existing public blog remains available while you fix this.
+                    </Text>
+                  ) : null}
+                  {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
+                </View>
+              ) : null}
+              <BlogDiscoveryPanel
+                backendUrl={backendUrl}
+                headers={headers}
+                tripId={activeTripId}
+                searchEnabled={Boolean(capabilities.trip_blog_search)}
+                placesEnabled={Boolean(capabilities.trip_blog_places && !readOnly)}
+                textColor={textColor}
+                mutedColor={mutedColor}
+                borderColor={borderColor}
+                backgroundColor={inputColor}
+                theme={theme}
+              />
+              {capabilities.trip_blog_spend_summary && !readOnly ? (
+                <View testID="trip-blog-spend-summary" style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
+                  <Text style={{ color: textColor, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
+                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip expense ledger.</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+        </View>
+      </ScrollView>
       <Modal visible={showQuotaModal} transparent animationType="slide" onRequestClose={() => setShowQuotaModal(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
@@ -1385,7 +1462,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 };
 

@@ -1,8 +1,16 @@
 // @ts-nocheck
-// Combined per-day photo/video gallery: shows one item at a time (aggregating every traveler's
-// uploads for that day, not just the current user's), with prev/next "angle" buttons, the active
-// item's caption only, a "Set as day default" action, and a tap-to-open tiled lightbox.
-import React, { useEffect, useMemo, useState } from 'react';
+// Photo mosaic for a day's combined media (every traveler's uploads, not just the current user's).
+// Phase 0 of the trip-blog visual redesign (docs/trip-blog-social-prd.md §6.2's gallery + reaction
+// badges): replaces the old one-item-at-a-time carousel with a predictable editorial mosaic — 1
+// photo full-width, 2 split evenly, 3 one large + two stacked, 4+ one hero + three tiles with a
+// "+N" overflow badge on the last one. Every tile opens the same existing tiled DayMediaLightbox
+// (which already shows every asset, not just the visible mosaic tiles), so nothing is ever hidden
+// behind this preview — it is strictly a richer teaser of what the lightbox already contains.
+//
+// Cover selection, remove, and metadata editing move from a single "active item" toolbar (the old
+// model) to a small per-tile overlay that only appears in edit mode — "edit-mode overlays, not
+// permanent controls below the image" per the redesign notes.
+import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BlogMediaPreview } from './BlogMediaPreview';
 import BlogReactionBar from './BlogReactionBar';
@@ -24,9 +32,6 @@ type DayMediaGalleryProps = {
   borderColor?: string;
   backgroundColor?: string;
   styles?: any;
-  // Phase 3 (B1): reaction bar for the active tile. `getEngagementSummary` reads from the parent's
-  // normalized engagement store (useBlogEngagement) keyed by the item's `assetId` — every entry
-  // here (gallery member or standalone) carries one, per the flattening in tripBlog.tsx.
   canEngage?: boolean;
   getEngagementSummary?: (assetId: string) => any;
   onToggleReaction?: (targetKind: 'asset', targetId: string, emoji: string) => Promise<void>;
@@ -39,6 +44,12 @@ type DayMediaGalleryProps = {
   onSuggestMetadata?: (item: any) => Promise<{ caption?: string; altText?: string }>;
   proposedCoverAssetId?: string | null;
 };
+
+const MOSAIC_HEIGHT = 220;
+const GAP = 4;
+const MAX_TILES = 4;
+
+const isAudioItem = (item: any) => item.mediaKind === 'audio' || item.kindKey === 'media.audio';
 
 const DayMediaGallery = ({
   items,
@@ -68,91 +79,142 @@ const DayMediaGallery = ({
   onSuggestMetadata,
   proposedCoverAssetId = null,
 }: DayMediaGalleryProps) => {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [expandedMetadataItemId, setExpandedMetadataItemId] = useState(null);
 
-  // Jump to the day's current cover whenever the day changes or a new cover is picked — but not
-  // on every refetch, so browsing with prev/next isn't reset out from under the traveler by a
-  // routine background reload that happens to return a new array reference for the same content.
-  useEffect(() => {
-    const index = items.findIndex((item) => item.id === coverItemId);
-    setActiveIndex(index >= 0 ? index : 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayDate, coverItemId]);
+  if (!items.length) return null;
 
-  useEffect(() => {
-    if (!proposedCoverAssetId) return;
-    const index = items.findIndex((item) => item.assetId === proposedCoverAssetId);
-    if (index >= 0) setActiveIndex(index);
-  }, [proposedCoverAssetId]);
+  const visible = items.slice(0, MAX_TILES);
+  const overflowCount = items.length - visible.length;
+  const expandedItem = expandedMetadataItemId ? items.find((item) => item.id === expandedMetadataItemId) : null;
 
-  const clampedIndex = items.length ? Math.min(activeIndex, items.length - 1) : 0;
-  const activeItem = items[clampedIndex] ?? null;
+  const editRow = (item: any) => {
+    const isCover = item.id === coverItemId;
+    const showSetCover = canSetCover && !isAudioItem(item) && !isCover;
+    const showMetadata = canEditMetadata && !isAudioItem(item) && onSaveMetadata;
+    if (!showSetCover && !canRemove && !showMetadata) return null;
+    return (
+      <View style={{ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4 }} pointerEvents="box-none">
+        {showSetCover ? (
+          <TouchableOpacity
+            testID={`day-media-set-cover-${item.id}`}
+            accessibilityRole="button"
+            accessibilityLabel="Set as day default"
+            disabled={settingCover}
+            onPress={() => onSetCover(item)}
+            style={{ backgroundColor: 'rgba(17,24,39,0.65)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
+          >
+            <Text style={{ color: '#fff', fontSize: 13 }}>{settingCover ? '…' : '⭐'}</Text>
+          </TouchableOpacity>
+        ) : null}
+        {showMetadata ? (
+          <TouchableOpacity
+            testID={`day-media-edit-details-${item.id}`}
+            accessibilityRole="button"
+            accessibilityLabel="Edit photo details"
+            onPress={() => setExpandedMetadataItemId((current) => (current === item.id ? null : item.id))}
+            style={{ backgroundColor: 'rgba(17,24,39,0.65)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
+          >
+            <Text style={{ color: '#fff', fontSize: 13 }}>✎</Text>
+          </TouchableOpacity>
+        ) : null}
+        {canRemove ? (
+          <TouchableOpacity
+            testID={`day-media-remove-${item.id}`}
+            accessibilityRole="button"
+            accessibilityLabel="Remove"
+            disabled={removing}
+            onPress={() => onRemove(item)}
+            style={{ backgroundColor: 'rgba(185,28,28,0.85)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
+          >
+            <Text style={{ color: '#fff', fontSize: 13 }}>{removing ? '…' : '✕'}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  };
 
-  const goPrev = () => setActiveIndex((current) => (items.length ? (current - 1 + items.length) % items.length : 0));
-  const goNext = () => setActiveIndex((current) => (items.length ? (current + 1) % items.length : 0));
+  const tile = (item: any, tileHeight: number, isLast: boolean, extraStyle: any = {}) => (
+    <View key={item.id} style={[{ position: 'relative', overflow: 'hidden', borderRadius: 8 }, extraStyle]}>
+      <TouchableOpacity
+        testID={`day-media-grid-tile-${item.id}`}
+        accessibilityRole="button"
+        accessibilityLabel="Open all trip media for this day"
+        activeOpacity={0.85}
+        onPress={onOpenLightbox}
+      >
+        <BlogMediaPreview item={item} backgroundColor={backgroundColor} tileHeight={tileHeight} />
+        {isLast && overflowCount > 0 ? (
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(17,24,39,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+            <Text testID="day-media-overflow-count" style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>+{overflowCount}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+      {editRow(item)}
+      {item.assetId === proposedCoverAssetId && item.id !== coverItemId ? (
+        <View testID={`day-media-cover-proposal-${item.id}`} style={{ position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(124,58,237,0.85)', borderRadius: 12, paddingVertical: 2, paddingHorizontal: 8 }}>
+          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>♥ Most-loved</Text>
+        </View>
+      ) : null}
+    </View>
+  );
 
-  const isCurrentCover = useMemo(() => Boolean(activeItem) && activeItem.id === coverItemId, [activeItem, coverItemId]);
-
-  if (!items.length || !activeItem) return null;
+  // Editorial mosaic (redesign notes §3): 1 = full width, 2 = even split, 3 = one large + two
+  // stacked, 4+ = one hero + three tiles with a "+N" overlay on the last.
+  const mosaic = visible.length === 1 ? (
+    <View>{tile(visible[0], MOSAIC_HEIGHT, true)}</View>
+  ) : visible.length === 2 ? (
+    <View style={{ flexDirection: 'row', gap: GAP }}>
+      {tile(visible[0], MOSAIC_HEIGHT, false, { flex: 1 })}
+      {tile(visible[1], MOSAIC_HEIGHT, true, { flex: 1 })}
+    </View>
+  ) : (
+    <View style={{ flexDirection: 'row', gap: GAP, height: MOSAIC_HEIGHT }}>
+      {tile(visible[0], MOSAIC_HEIGHT, false, { flex: 1.6 })}
+      <View style={{ flex: 1, gap: GAP }}>
+        {visible.slice(1).map((item, i) =>
+          tile(item, (MOSAIC_HEIGHT - GAP * (visible.length - 2)) / (visible.length - 1), i === visible.length - 2, { flex: 1 })
+        )}
+      </View>
+    </View>
+  );
 
   return (
     <View style={{ marginTop: 8 }}>
-      <TouchableOpacity testID="day-media-open-lightbox" accessibilityRole="button" accessibilityLabel="Open all trip media for this day" activeOpacity={0.85} onPress={onOpenLightbox}>
-        <BlogMediaPreview item={activeItem} backgroundColor={backgroundColor} />
-      </TouchableOpacity>
-      {activeItem.caption ? <Text testID="day-media-caption" style={{ color: mutedColor, marginTop: 4 }}>{activeItem.caption}</Text> : null}
-      {activeItem.assetId === proposedCoverAssetId && !isCurrentCover ? <Text testID="day-media-cover-proposal" style={{ color: '#7c3aed', fontWeight: '700', marginTop: 4 }}>♥ Most-loved photo of the day</Text> : null}
-      {getEngagementSummary && onToggleReaction ? (
-        <View style={{ marginTop: 4 }}>
-          <BlogReactionBar
-            testID={`day-media-reactions-${activeItem.assetId}`}
-            targetKind="asset"
-            targetId={activeItem.assetId}
-            summary={getEngagementSummary(activeItem.assetId)}
-            canEngage={canEngage}
-            onToggle={onToggleReaction}
-            onError={onReactionError}
-            textColor={textColor}
-            mutedColor={mutedColor}
-            theme={theme}
-            size="compact"
-          />
+      {mosaic}
+      {canEngage && getEngagementSummary && onToggleReaction ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+          {visible.map((item) => (
+            <BlogReactionBar
+              key={item.assetId}
+              testID={`day-media-reactions-${item.assetId}`}
+              targetKind="asset"
+              targetId={item.assetId}
+              summary={getEngagementSummary(item.assetId)}
+              canEngage={canEngage}
+              onToggle={onToggleReaction}
+              onError={onReactionError}
+              textColor={textColor}
+              mutedColor={mutedColor}
+              theme={theme}
+              size="compact"
+            />
+          ))}
         </View>
       ) : null}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {items.length > 1 ? (
-            <>
-              <TouchableOpacity testID="day-media-prev" accessibilityRole="button" accessibilityLabel="Previous photo or video" onPress={goPrev} style={{ paddingVertical: 4, paddingHorizontal: 8, borderWidth: 1, borderColor, borderRadius: 6 }}>
-                <Text style={{ color: textColor, fontWeight: '700' }}>‹</Text>
-              </TouchableOpacity>
-              <Text style={{ color: mutedColor, fontSize: 12 }}>{clampedIndex + 1} / {items.length}</Text>
-              <TouchableOpacity testID="day-media-next" accessibilityRole="button" accessibilityLabel="Next photo or video" onPress={goNext} style={{ paddingVertical: 4, paddingHorizontal: 8, borderWidth: 1, borderColor, borderRadius: 6 }}>
-                <Text style={{ color: textColor, fontWeight: '700' }}>›</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
+      {visible.some((item) => item.caption) ? (
+        <View style={{ marginTop: 4, gap: 2 }}>
+          {visible.filter((item) => item.caption).map((item) => (
+            <Text key={item.id} testID={`day-media-caption-${item.id}`} style={{ color: mutedColor, fontSize: 12 }}>{item.caption}</Text>
+          ))}
         </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {canSetCover && activeItem.mediaKind !== 'audio' && activeItem.kindKey !== 'media.audio' && !isCurrentCover ? (
-            <TouchableOpacity testID="day-media-set-cover" accessibilityRole="button" disabled={settingCover} onPress={() => onSetCover(activeItem)} style={[styles?.button, { paddingVertical: 4, paddingHorizontal: 8 }]}>
-              <Text style={[styles?.buttonText, { fontSize: 12 }]}>{settingCover ? 'Setting…' : 'Set as day default'}</Text>
-            </TouchableOpacity>
-          ) : null}
-          {canRemove ? (
-            <TouchableOpacity testID="day-media-remove" accessibilityRole="button" disabled={removing} onPress={() => onRemove(activeItem)} style={[styles?.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#b91c1c' }]}>
-              <Text style={[styles?.buttonText, { fontSize: 12 }]}>{removing ? 'Removing…' : 'Remove'}</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
-      {canEditMetadata && activeItem.mediaKind !== 'audio' && activeItem.kindKey !== 'media.audio' && onSaveMetadata ? (
+      ) : null}
+      {expandedItem ? (
         <BlogMediaMetadataEditor
-          item={activeItem}
+          item={expandedItem}
           canSuggest={canSuggestMetadata}
           busy={metadataBusy}
-          onSave={(patch) => onSaveMetadata(activeItem, patch)}
-          onSuggest={onSuggestMetadata ? () => onSuggestMetadata(activeItem) : undefined}
+          onSave={(patch) => onSaveMetadata(expandedItem, patch)}
+          onSuggest={onSuggestMetadata ? () => onSuggestMetadata(expandedItem) : undefined}
           textColor={textColor}
           mutedColor={mutedColor}
           borderColor={borderColor}

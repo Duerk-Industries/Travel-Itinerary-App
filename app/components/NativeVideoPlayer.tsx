@@ -6,18 +6,23 @@
 import React from 'react';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
-const NativeVideoPlayer = ({ uri, backgroundColor }) => {
+// `height`/`muted`/`showControls` let a compact caller (the DayMediaGallery mosaic) request a
+// fixed-size, silent, control-free tile — tapping the tile opens the full lightbox for real
+// playback, so this rendering never needs its own controls in that context. Omitting them keeps
+// every existing full-size caller unchanged.
+const NativeVideoPlayer = ({ uri, backgroundColor, height = 220, muted = false, showControls = true }) => {
   const player = useVideoPlayer(uri, (instance) => {
     instance.loop = false;
+    instance.muted = muted;
   });
 
   return (
     <VideoView
       testID="blog-media-video-native"
       player={player}
-      style={{ width: '100%', height: 220, borderRadius: 8, backgroundColor }}
-      nativeControls
-      contentFit="contain"
+      style={{ width: '100%', height, borderRadius: 8, backgroundColor }}
+      nativeControls={showControls}
+      contentFit={showControls ? 'contain' : 'cover'}
     />
   );
 };
