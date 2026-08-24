@@ -1,4 +1,5 @@
 import { queryBlog } from '../db.postgres';
+import { getCurrentDbProvider, listFlights, listLodgings, listActivities, listCarRentals } from '../db';
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { createTtlCache } from '../utils/ttlCache';
 import { getApiCacheSetting } from '../config/apiLimits';
@@ -7,6 +8,7 @@ import { BlogTargetNotFoundError } from './blogEngagementErrors';
 import { createHash } from 'crypto';
 import { createBlogReadUrl } from './blogStorageClient';
 import { findBundledAirport } from './airportCatalog';
+import { getBlogDayByDate, getTripName, getVisibleMediaForDay, getDayMapArtifact } from '../blog/firebaseBlogDayData';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §7.1.
 // One service, two projections over the same source set: `facts` (aggregates for the strip) and
@@ -86,14 +88,22 @@ const isSameDate = (value: unknown, dayDate: string): boolean => new Date(String
 export const getDayFacts = async (tripId: string, actorUserId: string, dayDate: string): Promise<BlogDayFactsResult> => {
   const membership = await resolveActorMembership(tripId, actorUserId);
   const cacheKey = `${tripId}:${dayDate}:${membership}`;
-  return factsCache.getOrFetch(cacheKey, () => computeDayFacts(tripId, dayDate, membership), getFactsCacheTtlMs());
+  return factsCache.getOrFetch(cacheKey, () => computeDayFacts(tripId, actorUserId, dayDate, membership), getFactsCacheTtlMs());
 };
 
-const computeDayFacts = async (tripId: string, dayDate: string, membership: 'traveler' | 'follower'): Promise<BlogDayFactsResult> => {
-  const dayRow = await queryBlog<{ id: string; headline: string | null; summary: string | null; local_date: string }>(
-    'SELECT id, headline, summary, local_date FROM blog_days WHERE trip_id = $1 AND local_date = $2::date',
-    [tripId, dayDate]
-  );
+const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: string, membership: 'traveler' | 'follower'): Promise<BlogDayFactsResult> => {
+  const isFirebase = getCurrentDbProvider() === 'firebase';
+
+  let dayRow: { rows: Array<{ id: string; headline: string | null; summary: string | null; local_date: string }> };
+  if (isFirebase) {
+    const day = await getBlogDayByDate(tripId, dayDate);
+    dayRow = { rows: day ? [{ id: day.id, headline: day.headline, summary: day.summary, local_date: day.localDate }] : [] };
+  } else {
+    dayRow = await queryBlog<{ id: string; headline: string | null; summary: string | null; local_date: string }>(
+      'SELECT id, headline, summary, local_date FROM blog_days WHERE trip_id = $1 AND local_date = $2::date',
+      [tripId, dayDate]
+    );
+  }
   if (!dayRow.rows[0]) throw new BlogTargetNotFoundError('That day was not found on this trip');
   const dayId = String(dayRow.rows[0].id);
   const asOf = new Date().toISOString();
@@ -101,7 +111,13 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
   const timeline: BlogDayTimelineEntry[] = [];
 
   // Weather — unchanged existing enrichment (architecture §7.1's own table).
-  const tripRow = await queryBlog<{ name: string }>('SELECT name FROM trips WHERE id = $1', [tripId]);
+  let tripRow: { rows: Array<{ name: string }> };
+  if (isFirebase) {
+    const name = await getTripName(tripId);
+    tripRow = { rows: name ? [{ name }] : [] };
+  } else {
+    tripRow = await queryBlog<{ name: string }>('SELECT name FROM trips WHERE id = $1', [tripId]);
+  }
   const location = dayRow.rows[0].headline || dayRow.rows[0].summary || tripRow.rows[0]?.name || 'Destination';
   const { weather } = await fetchOverviewWeather([{ date: dayDate, location }]).catch(() => ({ weather: [] as any[] }));
   const dayWeather = weather.find((w: any) => w.date === dayDate);
@@ -136,27 +152,56 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
   // which uses their text as-is instead of pretending to a precision they don't have.
   const flightPoints: Array<{ lat: number; lng: number; time: number }> = [];
   if (membership === 'traveler') {
-    [flights, lodgings, activities, carRentals] = await Promise.all([
-      queryBlog<FlightRow>(
-        `SELECT id, departure_date, departure_time, arrival_time, departure_location, arrival_location, departure_airport_code, arrival_airport_code, status
-         FROM flights WHERE trip_id = $1 AND departure_date = $2::date`,
-        [tripId, dayDate]
-      ),
-      queryBlog<LodgingRow>(
-        `SELECT id, name, check_in_date, check_out_date, address, status
-         FROM lodgings WHERE trip_id = $1 AND (check_in_date = $2::date OR check_out_date = $2::date)`,
-        [tripId, dayDate]
-      ),
-      queryBlog<ActivityRow>(
-        `SELECT id, name, start_time, start_location, status FROM tours WHERE trip_id = $1 AND date = $2::date`,
-        [tripId, dayDate]
-      ),
-      queryBlog<CarRentalRow>(
-        `SELECT id, vendor, pickup_date, dropoff_date, pickup_location, dropoff_location, status
-         FROM car_rentals WHERE trip_id = $1 AND (pickup_date = $2::date OR dropoff_date = $2::date)`,
-        [tripId, dayDate]
-      ),
-    ]);
+    if (isFirebase) {
+      const [firebaseFlights, firebaseLodgings, firebaseActivities, firebaseCarRentals] = await Promise.all([
+        listFlights(actorUserId, tripId),
+        listLodgings(actorUserId, tripId),
+        listActivities(actorUserId, tripId),
+        listCarRentals(actorUserId, tripId),
+      ]);
+      flights = {
+        rows: firebaseFlights
+          .filter((f) => f.departureDate === dayDate)
+          .map((f) => ({ id: f.id, departure_date: f.departureDate, departure_time: f.departureTime ?? null, arrival_time: f.arrivalTime ?? null, departure_location: f.departureLocation ?? null, arrival_location: f.arrivalLocation ?? null, departure_airport_code: f.departureAirportCode ?? null, arrival_airport_code: f.arrivalAirportCode ?? null, status: f.status ?? null })),
+      };
+      lodgings = {
+        rows: firebaseLodgings
+          .filter((l) => isSameDate(l.check_in_date, dayDate) || isSameDate(l.check_out_date, dayDate))
+          .map((l) => ({ id: l.id, name: l.name, check_in_date: l.check_in_date, check_out_date: l.check_out_date, address: l.address ?? null, status: l.status ?? null })),
+      };
+      activities = {
+        rows: firebaseActivities
+          .filter((a) => a.date === dayDate)
+          .map((a) => ({ id: a.id, name: a.name, start_time: a.startTime ?? null, start_location: a.startLocation ?? null, status: a.status ?? null })),
+      };
+      carRentals = {
+        rows: firebaseCarRentals
+          .filter((c) => isSameDate(c.pickupDate, dayDate) || isSameDate(c.dropoffDate, dayDate))
+          .map((c) => ({ id: c.id, vendor: c.vendor ?? null, pickup_date: c.pickupDate, dropoff_date: c.dropoffDate, pickup_location: c.pickupLocation ?? null, dropoff_location: c.dropoffLocation ?? null, status: c.status ?? null })),
+      };
+    } else {
+      [flights, lodgings, activities, carRentals] = await Promise.all([
+        queryBlog<FlightRow>(
+          `SELECT id, departure_date, departure_time, arrival_time, departure_location, arrival_location, departure_airport_code, arrival_airport_code, status
+           FROM flights WHERE trip_id = $1 AND departure_date = $2::date`,
+          [tripId, dayDate]
+        ),
+        queryBlog<LodgingRow>(
+          `SELECT id, name, check_in_date, check_out_date, address, status
+           FROM lodgings WHERE trip_id = $1 AND (check_in_date = $2::date OR check_out_date = $2::date)`,
+          [tripId, dayDate]
+        ),
+        queryBlog<ActivityRow>(
+          `SELECT id, name, start_time, start_location, status FROM tours WHERE trip_id = $1 AND date = $2::date`,
+          [tripId, dayDate]
+        ),
+        queryBlog<CarRentalRow>(
+          `SELECT id, vendor, pickup_date, dropoff_date, pickup_location, dropoff_location, status
+           FROM car_rentals WHERE trip_id = $1 AND (pickup_date = $2::date OR dropoff_date = $2::date)`,
+          [tripId, dayDate]
+        ),
+      ]);
+    }
 
     for (const row of flights.rows) {
       const departure = findBundledAirport(row.departure_airport_code);
@@ -179,15 +224,20 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
   // the audiences that membership level can see (architecture §3.2's own visibility rule, reused
   // rather than re-derived).
   const visibleAudiences = visibleAudiencesForMembership(membership);
-  const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 2}`).join(',');
-  const mediaRows = await queryBlog<MediaRow>(
-    `SELECT a.id, a.captured_at, a.captured_lat, a.captured_lng, a.media_kind_key
-     FROM blog_media_assets a
-     JOIN blog_item_assets ia ON ia.asset_id = a.id
-     JOIN blog_items i ON i.id = ia.item_id
-     WHERE i.blog_day_id = $1 AND i.deleted_at IS NULL AND i.audience IN (${audiencePlaceholders}) AND a.state = 'ready'`,
-    [dayId, ...visibleAudiences]
-  );
+  let mediaRows: { rows: MediaRow[] };
+  if (isFirebase) {
+    mediaRows = { rows: (await getVisibleMediaForDay(dayId, visibleAudiences)) as unknown as MediaRow[] };
+  } else {
+    const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 2}`).join(',');
+    mediaRows = await queryBlog<MediaRow>(
+      `SELECT a.id, a.captured_at, a.captured_lat, a.captured_lng, a.media_kind_key
+       FROM blog_media_assets a
+       JOIN blog_item_assets ia ON ia.asset_id = a.id
+       JOIN blog_items i ON i.id = ia.item_id
+       WHERE i.blog_day_id = $1 AND i.deleted_at IS NULL AND i.audience IN (${audiencePlaceholders}) AND a.state = 'ready'`,
+      [dayId, ...visibleAudiences]
+    );
+  }
   const mediaPoints = mediaRows.rows
     .filter((r) => r.captured_lat != null && r.captured_lng != null && r.captured_at != null)
     .map((r) => ({ lat: Number(r.captured_lat), lng: Number(r.captured_lng), time: new Date(r.captured_at!).getTime() }));
@@ -239,10 +289,16 @@ const computeDayFacts = async (tripId: string, dayDate: string, membership: 'tra
   if (mediaPoints.length >= 2) {
     const pointsData = mediaPoints.map((p) => `${p.lat},${p.lng}`).sort().join('|');
     const pointsHash = createHash('md5').update(pointsData).digest('hex');
-    const artifact = await queryBlog<{ gcs_path: string }>(
-      'SELECT gcs_path FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3',
-      [tripId, dayDate, pointsHash]
-    );
+    let artifact: { rows: Array<{ gcs_path: string }> };
+    if (isFirebase) {
+      const row = await getDayMapArtifact(tripId, dayDate, pointsHash);
+      artifact = { rows: row ? [row] : [] };
+    } else {
+      artifact = await queryBlog<{ gcs_path: string }>(
+        'SELECT gcs_path FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3',
+        [tripId, dayDate, pointsHash]
+      );
+    }
     if (artifact.rows[0]) {
       // The stored artifact is a bare object path (blog_day_map_artifacts.gcs_path), not a
       // fetchable URL — signed the same way every blog photo already is (architecture §14.1:

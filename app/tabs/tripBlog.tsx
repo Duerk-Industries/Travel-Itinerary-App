@@ -1,8 +1,9 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { alertMessage } from '../utils/crossPlatformAlert';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
@@ -102,13 +103,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [itemConflicts, setItemConflicts] = useState({});
   const canEdit = !readOnly && editMode;
   const engagement = useBlogEngagement(backendUrl, headers, activeTripId);
-  const handleEngagementError = (message) => Alert.alert('Trip blog', message || 'Unable to save your reaction');
+  const handleEngagementError = (message) => alertMessage('Trip blog', message || 'Unable to save your reaction');
   // Phase 4 (B2/B11) — day-level comment threads, loaded lazily per day the first time it's
   // rendered (see the effect below), separate from the blog document's own GET/engagement fetch
   // (architecture §5.1: "one request per day, not one per target").
   const comments = useBlogComments(backendUrl, headers, activeTripId);
   const connection = useConnectionState();
-  const handleCommentError = (message) => Alert.alert('Trip blog', message || 'Something went wrong');
+  const handleCommentError = (message) => alertMessage('Trip blog', message || 'Something went wrong');
   const loadedCommentDays = useRef(new Set());
 
   const textColor = theme?.colors?.text ?? styles.sectionTitle?.color ?? '#111827';
@@ -198,7 +199,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       const lastDay = days[days.length - 1];
       setCursor(days.length >= limit && lastDay ? lastDay.localDate : null);
     } catch (error) {
-      Alert.alert('Trip blog', error.message || 'Unable to load the trip blog');
+      alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
     } finally {
       setLoading(false);
     }
@@ -232,7 +233,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       if (!response.ok) throw new Error(data.error || 'Unable to build the trip recap');
       setRecap(data.recap || null);
     } catch (error) {
-      if (attempt === 0) Alert.alert('Trip recap', error.message || 'Unable to build the trip recap');
+      if (attempt === 0) alertMessage('Trip recap', error.message || 'Unable to build the trip recap');
     } finally {
       if (!retryScheduled) setRecapBusy(false);
     }
@@ -266,7 +267,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Unable to choose the most-loved photo');
       setCoverProposals((current) => ({ ...current, [dayDate]: data.proposal || null }));
-    } catch (error) { Alert.alert('Photo of the day', error.message || 'Unable to choose a photo'); }
+    } catch (error) { alertMessage('Photo of the day', error.message || 'Unable to choose a photo'); }
   };
 
   const persistItemOrder = async (ids) => {
@@ -277,7 +278,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to reorder entries');
       await load();
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to reorder entries'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to reorder entries'); }
     finally { setReorderBusy(false); }
   };
 
@@ -425,7 +426,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo library access needed', 'Allow photo library access in Settings to add photos or videos to this trip blog.');
+      alertMessage('Photo library access needed', 'Allow photo library access in Settings to add photos or videos to this trip blog.');
       return [];
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -451,7 +452,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     const supported = picked.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType));
     const unsupportedCount = picked.length - supported.length;
     if (!supported.length) {
-      Alert.alert('Upload', 'Only JPEG/PNG photos or MP4/MOV/WebM videos are supported.');
+      alertMessage('Upload', 'Only JPEG/PNG photos or MP4/MOV/WebM videos are supported.');
       return;
     }
 
@@ -475,7 +476,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         if (result.failed > 0) parts.push(`${result.failed} failed`);
         if (result.entitlementSkipped > 0) parts.push(`${result.entitlementSkipped} skipped (video requires Premium)`);
         if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
-        Alert.alert('Upload', parts.join(', '));
+        alertMessage('Upload', parts.join(', '));
       }
     } finally {
       setUploading(false);
@@ -492,7 +493,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     const blob = await response.blob();
     const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
     if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) {
-      Alert.alert('Voice note', 'Choose an MP3, M4A, WAV, or WebM audio file.');
+      alertMessage('Voice note', 'Choose an MP3, M4A, WAV, or WebM audio file.');
       return;
     }
     setUploading(true);
@@ -505,7 +506,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
       await load();
     } catch (error) {
-      Alert.alert('Voice note', error.message || 'Unable to add the voice note.');
+      alertMessage('Voice note', error.message || 'Unable to add the voice note.');
     } finally {
       setUploading(false);
     }
@@ -524,7 +525,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         throw new Error('Unable to start checkout');
       }
     } catch (error) {
-      Alert.alert('Purchase', error.message || 'Failed to start purchase');
+      alertMessage('Purchase', error.message || 'Failed to start purchase');
     }
   };
 
@@ -597,7 +598,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     if (!latest) return;
     try {
       await saveItemBody(item, drafts[item.id] ?? '', latest.version);
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to save'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to save'); }
   };
 
   const useTheirsItem = (item) => {
@@ -626,7 +627,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save your draft as a new note');
       await load();
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to save your draft as a new note'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to save your draft as a new note'); }
   };
 
   // A3/FR-A3.3: day headline/summary autosave, same explicit-parameter shape as the item-body
@@ -672,7 +673,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     if (!latest || !draft) return;
     try {
       await saveDayMeta(day, draft.headline, draft.summary, latest.updateVersion);
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to save'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to save'); }
   };
 
   const useTheirsDayMeta = (day) => {
@@ -734,7 +735,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       setNewBody('');
       setAddingDay(null);
       await load();
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to add blog item'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to add blog item'); }
     finally { setCreating(false); }
   };
 
@@ -768,7 +769,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to remove blog item');
       await load();
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to remove blog item'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to remove blog item'); }
     finally { setDeleting(false); }
   };
 
@@ -785,7 +786,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to set the day cover');
       await load();
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to set the day cover'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to set the day cover'); }
     finally { setSettingCoverForDay(null); }
   };
 
@@ -799,7 +800,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${assetId}`, { method: 'DELETE', headers });
       if (!response.ok && response.status !== 404) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to remove photo');
       await load();
-    } catch (error) { Alert.alert('Trip blog', error.message || 'Unable to remove photo'); }
+    } catch (error) { alertMessage('Trip blog', error.message || 'Unable to remove photo'); }
     finally { setDeleting(false); }
   };
   const removeMediaItem = (item) => (item.isGalleryMember ? removeGalleryAsset(item.assetId) : deleteItem(item));
