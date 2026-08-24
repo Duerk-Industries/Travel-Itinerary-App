@@ -20,4 +20,4 @@ export interface NotificationRepository {
 }
 
 export const notificationRepository = (): NotificationRepository =>
-  getCurrentDbProvider() === 'firebase' ? (postgres as unknown as NotificationRepository) : (postgres as unknown as NotificationRepository);
+  getCurrentDbProvider() === 'firebase' ? (firebase as unknown as NotificationRepository) : (postgres as unknown as NotificationRepository);
