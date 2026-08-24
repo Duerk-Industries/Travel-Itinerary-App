@@ -15,9 +15,14 @@ export const resolveMediaAspectRatio = (width, height) => {
   return numericWidth / numericHeight;
 };
 
-export const BlogMediaPreview = ({ item, backgroundColor }) => {
+// `tileHeight`, when passed, opts into a fixed-height "cover" crop instead of the default
+// intrinsic-aspect-ratio/letterboxed rendering — used by the DayMediaGallery mosaic, where every
+// tile in a row must line up regardless of each photo's own aspect ratio. Omitting it keeps every
+// existing caller (the lightbox, standalone item media) rendering exactly as before.
+export const BlogMediaPreview = ({ item, backgroundColor, tileHeight = null }) => {
   const [aspectRatio, setAspectRatio] = useState(null);
   const mediaUrl = item.primaryUrl || item.thumbnailUrl;
+  const isTile = tileHeight != null;
 
   useEffect(() => {
     setAspectRatio(null);
@@ -28,23 +33,25 @@ export const BlogMediaPreview = ({ item, backgroundColor }) => {
       return React.createElement('video', {
         testID: 'blog-media-video-web',
         src: mediaUrl,
-        controls: true,
+        controls: !isTile,
+        muted: isTile,
         playsInline: true,
         preload: 'metadata',
         style: {
           display: 'block',
           width: '100%',
-          height: 'auto',
+          height: isTile ? tileHeight : 'auto',
           maxWidth: '100%',
           borderRadius: 8,
           backgroundColor,
+          objectFit: isTile ? 'cover' : undefined,
         },
       });
     }
     // Native (iOS/Android): previously fell through to <Image> below, which tried to decode a
     // video URL as an image and silently showed nothing — expo-video plays it properly instead.
     if (!mediaUrl) return null;
-    return <NativeVideoPlayer uri={mediaUrl} backgroundColor={backgroundColor} />;
+    return <NativeVideoPlayer uri={mediaUrl} backgroundColor={backgroundColor} height={tileHeight ?? undefined} muted={isTile} showControls={!isTile} />;
   }
 
   if (item.kindKey === 'media.audio') {
@@ -70,13 +77,18 @@ export const BlogMediaPreview = ({ item, backgroundColor }) => {
     <Image
       testID="blog-media-photo"
       source={{ uri: mediaUrl }}
-      style={{
+      style={isTile ? {
+        width: '100%',
+        height: tileHeight,
+        borderRadius: 8,
+        backgroundColor,
+      } : {
         width: '100%',
         ...(aspectRatio ? { aspectRatio } : { height: 200 }),
         borderRadius: 8,
         backgroundColor,
       }}
-      resizeMode="contain"
+      resizeMode={isTile ? 'cover' : 'contain'}
       onLoad={(event) => {
         const source = event?.nativeEvent?.source;
         const nextAspectRatio = resolveMediaAspectRatio(source?.width, source?.height);

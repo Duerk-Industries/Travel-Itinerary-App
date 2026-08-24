@@ -17,90 +17,84 @@ const makeItems = () => [
   { id: 'item-3', assetId: 'asset-3', kindKey: 'media.video', primaryUrl: 'https://example.com/3.mp4', thumbnailUrl: null, caption: 'Third caption' },
 ];
 
-describe('DayMediaGallery', () => {
-  it('shows only the active item\'s caption, never another item\'s', () => {
-    const items = makeItems();
-    const { getByTestId, queryByTestId } = render(
-      <DayMediaGallery
-        items={items}
-        dayDate="2026-09-10"
-        coverItemId="item-1"
-        canSetCover={false}
-        onSetCover={() => {}}
-        onOpenLightbox={() => {}}
-        styles={styles}
-      />
-    );
-    expect(getByTestId('day-media-caption').props.children).toBe('First caption');
-    fireEvent.press(getByTestId('day-media-next'));
-    // item-2 has no caption — nothing should render.
-    expect(queryByTestId('day-media-caption')).toBeNull();
-    fireEvent.press(getByTestId('day-media-next'));
-    expect(getByTestId('day-media-caption').props.children).toBe('Third caption');
-  });
-
-  it('cycles prev/next with wraparound', () => {
-    const items = makeItems();
-    const { getByTestId } = render(
-      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover={false} onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
-    );
-    // Wrap backward from the first item to the last.
-    fireEvent.press(getByTestId('day-media-prev'));
-    expect(getByTestId('day-media-caption').props.children).toBe('Third caption');
-    // Wrap forward from the last item back to the first.
-    fireEvent.press(getByTestId('day-media-next'));
-    expect(getByTestId('day-media-caption').props.children).toBe('First caption');
-  });
-
-  it('only offers "Set as day default" when canSetCover is true, and hides it for the current cover', () => {
-    const items = makeItems();
-    const readOnlyRender = render(
-      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover={false} onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
-    );
-    expect(readOnlyRender.queryByTestId('day-media-set-cover')).toBeNull();
-
-    const travelerRender = render(
-      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-2" canSetCover onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
-    );
-    // The view opens on the cover (item-2), where the button is correctly hidden...
-    expect(travelerRender.queryByTestId('day-media-set-cover')).toBeNull();
-    // ...but navigating to a different (non-cover) item reveals it.
-    fireEvent.press(travelerRender.getByTestId('day-media-next'));
-    expect(travelerRender.getByTestId('day-media-set-cover')).toBeTruthy();
-  });
-
-  it('calls onSetCover with the active item when pressed', () => {
-    const items = makeItems();
-    const onSetCover = jest.fn();
-    const { getByTestId } = render(
-      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-2" canSetCover onSetCover={onSetCover} onOpenLightbox={() => {}} styles={styles} />
-    );
-    fireEvent.press(getByTestId('day-media-next')); // move off the cover (item-2) onto item-3
-    fireEvent.press(getByTestId('day-media-set-cover'));
-    expect(onSetCover).toHaveBeenCalledWith(items[2]);
-  });
-
-  it('navigates to the proposed most-loved photo while leaving confirmation to the traveler', () => {
-    const items = makeItems();
-    const onSetCover = jest.fn();
-    const { getByTestId } = render(
-      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" proposedCoverAssetId="asset-3" canSetCover onSetCover={onSetCover} onOpenLightbox={() => {}} styles={styles} />
-    );
-    expect(getByTestId('day-media-cover-proposal')).toBeTruthy();
-    expect(getByTestId('day-media-caption').props.children).toBe('Third caption');
-    expect(onSetCover).not.toHaveBeenCalled();
-    fireEvent.press(getByTestId('day-media-set-cover'));
-    expect(onSetCover).toHaveBeenCalledWith(items[2]);
-  });
-
-  it('opens the lightbox when the default view is tapped', () => {
+describe('DayMediaGallery — photo mosaic', () => {
+  it('renders every item (up to 4) as its own tile, each opening the lightbox', () => {
     const items = makeItems();
     const onOpenLightbox = jest.fn();
     const { getByTestId } = render(
       <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover={false} onSetCover={() => {}} onOpenLightbox={onOpenLightbox} styles={styles} />
     );
-    fireEvent.press(getByTestId('day-media-open-lightbox'));
+    items.forEach((item) => expect(getByTestId(`day-media-grid-tile-${item.id}`)).toBeTruthy());
+    fireEvent.press(getByTestId('day-media-grid-tile-item-2'));
     expect(onOpenLightbox).toHaveBeenCalled();
+  });
+
+  it('shows only captions that exist, each attributed to its own tile', () => {
+    const items = makeItems();
+    const { getByTestId, queryByTestId } = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover={false} onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
+    );
+    expect(getByTestId('day-media-caption-item-1').props.children).toBe('First caption');
+    expect(queryByTestId('day-media-caption-item-2')).toBeNull();
+    expect(getByTestId('day-media-caption-item-3').props.children).toBe('Third caption');
+  });
+
+  it('shows a "+N" overflow badge on the fourth tile once there are more than four items', () => {
+    const items = [...makeItems(), { id: 'item-4', assetId: 'asset-4', kindKey: 'media.photo', primaryUrl: 'https://example.com/4.jpg' }, { id: 'item-5', assetId: 'asset-5', kindKey: 'media.photo', primaryUrl: 'https://example.com/5.jpg' }];
+    const { getByTestId, queryByTestId } = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover={false} onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
+    );
+    // Only the first four render as tiles — the rest are reachable through the lightbox, not a fifth tile.
+    expect(queryByTestId('day-media-grid-tile-item-5')).toBeNull();
+    expect(getByTestId('day-media-overflow-count').props.children.join('')).toBe('+1');
+  });
+
+  it('only offers "Set as day default" in edit mode, and hides it on the tile that is already the cover', () => {
+    const items = makeItems();
+    const readOnlyRender = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover={false} onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
+    );
+    expect(readOnlyRender.queryByTestId('day-media-set-cover-item-2')).toBeNull();
+
+    const editRender = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
+    );
+    // item-1 is the cover — its own set-cover control is hidden; item-2's is not.
+    expect(editRender.queryByTestId('day-media-set-cover-item-1')).toBeNull();
+    expect(editRender.getByTestId('day-media-set-cover-item-2')).toBeTruthy();
+  });
+
+  it('calls onSetCover with the pressed tile\'s own item', () => {
+    const items = makeItems();
+    const onSetCover = jest.fn();
+    const { getByTestId } = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover onSetCover={onSetCover} onOpenLightbox={() => {}} styles={styles} />
+    );
+    fireEvent.press(getByTestId('day-media-set-cover-item-3'));
+    expect(onSetCover).toHaveBeenCalledWith(items[2]);
+  });
+
+  it('marks the proposed most-loved photo on its own tile, leaving confirmation to the traveler', () => {
+    const items = makeItems();
+    const onSetCover = jest.fn();
+    const { getByTestId, queryByTestId } = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" proposedCoverAssetId="asset-3" canSetCover onSetCover={onSetCover} onOpenLightbox={() => {}} styles={styles} />
+    );
+    expect(getByTestId('day-media-cover-proposal-item-3')).toBeTruthy();
+    expect(queryByTestId('day-media-cover-proposal-item-1')).toBeNull();
+    expect(onSetCover).not.toHaveBeenCalled();
+    fireEvent.press(getByTestId('day-media-set-cover-item-3'));
+    expect(onSetCover).toHaveBeenCalledWith(items[2]);
+  });
+
+  it('removes a specific tile\'s item without disturbing the others', () => {
+    const items = makeItems();
+    const onRemove = jest.fn();
+    const { getByTestId } = render(
+      <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canRemove onRemove={onRemove} onOpenLightbox={() => {}} styles={styles} />
+    );
+    fireEvent.press(getByTestId('day-media-remove-item-2'));
+    expect(onRemove).toHaveBeenCalledWith(items[1]);
   });
 });
 
