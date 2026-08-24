@@ -161,7 +161,14 @@ describe('Postgres schema drift guard', () => {
     for (const file of files) {
       const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
       const isPackingV2LegacyConstraintUpgrade = file === '20260715_packing_lists_v2.sql' && /DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+trip_packing_list_items_trip_id_category_label_key/i.test(sql);
-      if (/\bDROP\s+(TABLE|INDEX|COLUMN|CONSTRAINT)\b/i.test(sql) && !isPackingV2LegacyConstraintUpgrade) {
+      // Same pattern as the packing-lists exception above: drops an FK constraint only to
+      // immediately redefine it with ON DELETE SET NULL (see the file's own comment) — the two
+      // DROP CONSTRAINT IF EXISTS lines target real Postgres's and pg-mem's differently-named
+      // auto-generated constraint, neither of which drops data.
+      const isBlogPublicationRequestedByFkUpgrade = file === '20260901_add_blog_publication_requested_by_nullable.sql'
+        && /DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+blog_publication_epochs_requested_by_fkey/i.test(sql)
+        && /DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+blog_publication_epochs_requested_by_fk\b/i.test(sql);
+      if (/\bDROP\s+(TABLE|INDEX|COLUMN|CONSTRAINT)\b/i.test(sql) && !isPackingV2LegacyConstraintUpgrade && !isBlogPublicationRequestedByFkUpgrade) {
         offenders.push(file);
       }
     }
