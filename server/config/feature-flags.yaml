@@ -211,7 +211,7 @@ flags:
     description: "Parent flag for Day Starter (A1) and the photo-first composer (A2)"
   trip_blog_day_starter:
     enabled: true
-    true: "A1/A6 — deterministic day-starter template (Use/Rewrite/Not now), never an LLM call itself"
+    description: "A1/A6 — deterministic day-starter template (Use/Rewrite/Not now), never an LLM call itself"
   trip_blog_photo_composer:
     enabled: true
     description: "A2 — photo-first composer with day buckets, an Unassigned bucket and pre-commit storage headroom"

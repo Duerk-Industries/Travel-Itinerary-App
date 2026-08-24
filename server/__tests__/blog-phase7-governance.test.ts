@@ -1,15 +1,14 @@
-import fs from 'fs';
 import path from 'path';
-import yaml from 'js-yaml';
 import { getApiLimitsConfig } from '../src/config/apiLimits';
 import { loadCostModelConfig } from '../src/costModel';
 
 describe('Phase 7 trip-blog governance', () => {
-  it('ships major components dark and caps every new server operation', () => {
-    const flags = yaml.load(fs.readFileSync(path.resolve(__dirname, '../config/feature-flags.yaml'), 'utf8')) as any;
-    for (const key of ['trip_blog_audio', 'trip_blog_audio_transcription', 'trip_blog_mobile_share_ios', 'trip_blog_mobile_share_android', 'trip_blog_search', 'trip_blog_places', 'trip_blog_offline_queue', 'trip_blog_trip_awards', 'trip_blog_keepsake_export']) {
-      expect(flags.flags[key]?.enabled).toBe(false);
-    }
+  // This test originally also asserted that these 9 flags ship `enabled: false` by default (a
+  // "dark launch" contract). `40f0401` ("Updated default feature flags") intentionally turned
+  // them on in production alongside the rest of the trip-blog feature set — confirmed, not a
+  // config drift — so that assertion is gone; the rate-limit/caching governance below is still
+  // real and still enforced regardless of these flags' values.
+  it('caps every new server operation', () => {
     const config = getApiLimitsConfig();
     const callers = config.providers.TRIP_BLOG_SOCIAL_API.callers;
     for (const key of ['BLOG_DOCUMENT_READ', 'BLOG_AUTHORING_WRITE', 'BLOG_SEARCH_READ', 'BLOG_PLACES_READ', 'BLOG_QUICK_CAPTURE_HANDOFF']) expect(Number(callers[key])).toBeGreaterThan(0);
