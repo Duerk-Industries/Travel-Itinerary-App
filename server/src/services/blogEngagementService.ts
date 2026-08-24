@@ -1,6 +1,14 @@
-import { ensureUserInTrip, ensureUserFollowsTrip } from '../db';
+import { ensureUserInTrip, ensureUserFollowsTrip, getCurrentDbProvider, getUserById } from '../db';
 import { queryBlog } from '../db.postgres';
 import { blogRepository } from '../blog/repository';
+import {
+  getBlogDayById,
+  getBlogDayByDate,
+  getBlogItemTarget,
+  getBlogAssetTarget,
+  getFollowerCommentsEnabled,
+  getGroupMemberUserIdsForTrip,
+} from '../blog/firebaseBlogDayData';
 import { blogEngagementRepository } from '../blog/engagementRepository';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { checkSpam } from './blogModerationService';
@@ -33,6 +41,11 @@ export const resolveActorMembership = async (tripId: string, userId: string): Pr
 type TargetRow = { dayId: string; tripId: string; audience: BlogAudience | null; ready: boolean };
 
 const resolveDayTarget = async (tripId: string, dayId: string): Promise<TargetRow | null> => {
+  if (getCurrentDbProvider() === 'firebase') {
+    const row = await getBlogDayById(dayId);
+    if (!row || row.tripId !== tripId) return null;
+    return { dayId: row.id, tripId, audience: null, ready: true };
+  }
   const result = await queryBlog<{ id: string; trip_id: string }>('SELECT id, trip_id FROM blog_days WHERE id = $1', [dayId]);
   const row = result.rows[0];
   if (!row || String(row.trip_id) !== tripId) return null;
@@ -40,6 +53,11 @@ const resolveDayTarget = async (tripId: string, dayId: string): Promise<TargetRo
 };
 
 const resolveItemTarget = async (tripId: string, itemId: string): Promise<TargetRow | null> => {
+  if (getCurrentDbProvider() === 'firebase') {
+    const row = await getBlogItemTarget(itemId);
+    if (!row || row.tripId !== tripId) return null;
+    return { dayId: row.blogDayId, tripId, audience: row.audience, ready: true };
+  }
   const result = await queryBlog<{ id: string; trip_id: string; blog_day_id: string; audience: BlogAudience }>(
     'SELECT id, trip_id, blog_day_id, audience FROM blog_items WHERE id = $1 AND deleted_at IS NULL',
     [itemId]
@@ -50,6 +68,11 @@ const resolveItemTarget = async (tripId: string, itemId: string): Promise<Target
 };
 
 const resolveAssetTarget = async (tripId: string, assetId: string): Promise<TargetRow | null> => {
+  if (getCurrentDbProvider() === 'firebase') {
+    const row = await getBlogAssetTarget(assetId);
+    if (!row || row.tripId !== tripId) return null;
+    return { dayId: row.blogDayId, tripId, audience: row.audience, ready: true };
+  }
   const result = await queryBlog<{ id: string; trip_id: string; blog_day_id: string; audience: BlogAudience }>(
     `SELECT a.id, a.trip_id, i.blog_day_id, i.audience
      FROM blog_media_assets a
@@ -103,6 +126,7 @@ export const resolveComment = async (
 };
 
 const isFollowerCommentingEnabled = async (tripId: string): Promise<boolean> => {
+  if (getCurrentDbProvider() === 'firebase') return getFollowerCommentsEnabled(tripId);
   const result = await queryBlog<{ follower_comments_enabled: boolean }>(
     'SELECT follower_comments_enabled FROM trip_blogs WHERE trip_id = $1',
     [tripId]
@@ -134,13 +158,14 @@ const checkEngagementMilestones = async (tripId: string, targetKind: string, tar
     const threshold = MILESTONE_THRESHOLDS.find(t => total >= t && total < t + 5);
     if (!threshold) return;
 
-    const membersResult = await queryBlog<{ user_id: string }>(
-      `SELECT user_id FROM group_members gm
-       JOIN trips t ON t.group_id = gm.group_id
-       WHERE t.id = $1 AND gm.removed_at IS NULL`,
-      [tripId]
-    );
-    const userIds = membersResult.rows.map(r => r.user_id);
+    const userIds = getCurrentDbProvider() === 'firebase'
+      ? await getGroupMemberUserIdsForTrip(tripId)
+      : (await queryBlog<{ user_id: string }>(
+          `SELECT user_id FROM group_members gm
+           JOIN trips t ON t.group_id = gm.group_id
+           WHERE t.id = $1 AND gm.removed_at IS NULL`,
+          [tripId]
+        )).rows.map(r => r.user_id);
 
     if (userIds.length > 0) {
       await notify({
@@ -249,8 +274,14 @@ export const postComment = async (
 
 const dispatchCommentNotifications = async (comment: BlogComment, mentions: string[]): Promise<void> => {
   try {
-    const actorRow = await queryBlog<{ first_name: string | null; last_name: string | null }>('SELECT first_name, last_name FROM users WHERE id = $1', [comment.authorUserId]);
-    const actorName = actorRow.rows[0] ? `${actorRow.rows[0].first_name ?? ''} ${actorRow.rows[0].last_name ?? ''}`.trim() || 'A traveler' : 'A traveler';
+    let actorName: string;
+    if (getCurrentDbProvider() === 'firebase') {
+      const user = comment.authorUserId ? await getUserById(comment.authorUserId) : null;
+      actorName = user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'A traveler' : 'A traveler';
+    } else {
+      const actorRow = await queryBlog<{ first_name: string | null; last_name: string | null }>('SELECT first_name, last_name FROM users WHERE id = $1', [comment.authorUserId]);
+      actorName = actorRow.rows[0] ? `${actorRow.rows[0].first_name ?? ''} ${actorRow.rows[0].last_name ?? ''}`.trim() || 'A traveler' : 'A traveler';
+    }
 
     if (mentions.length > 0) {
       await notify({
@@ -336,9 +367,16 @@ export const unstarTarget = async (tripId: string, actorUserId: string, targetKi
 
 export const listCommentsForDay = async (tripId: string, actorUserId: string, dayDate: string, options: { cursor?: string; limit?: number } = {}) => {
   const membership = await resolveActorMembership(tripId, actorUserId);
-  const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, dayDate]);
-  if (!dayRow.rows[0]) throw new BlogTargetNotFoundError();
-  const dayId = dayRow.rows[0].id;
+  let dayId: string;
+  if (getCurrentDbProvider() === 'firebase') {
+    const day = await getBlogDayByDate(tripId, dayDate);
+    if (!day) throw new BlogTargetNotFoundError();
+    dayId = day.id;
+  } else {
+    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, dayDate]);
+    if (!dayRow.rows[0]) throw new BlogTargetNotFoundError();
+    dayId = dayRow.rows[0].id;
+  }
   const visibleAudiences = visibleAudiencesForMembership(membership);
   const comments = await blogEngagementRepository().listTopLevelCommentsForDay(tripId, dayId, visibleAudiences, options);
   return Promise.all(comments.map(async (c) => ({

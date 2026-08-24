@@ -1,6 +1,7 @@
 import { queryBlog } from '../db.postgres';
-import { ensureUserInTrip } from '../db';
+import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { BlogEngagementUnauthorizedError, BlogTargetNotFoundError } from './blogEngagementErrors';
+import { listBlogDayDates } from '../blog/firebaseBlogDayData';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (A2) — architecture §5.3: "stateless on
 // purpose: the client sends the timestamps it read locally from the picker, the server answers
@@ -41,9 +42,11 @@ export const groupMediaByDay = async (tripId: string, actorUserId: string, candi
   if (!Array.isArray(candidates) || candidates.length === 0) return { buckets: [], unassigned: [], outOfRange: [] };
   if (candidates.length > MAX_CANDIDATES) throw new Error(`At most ${MAX_CANDIDATES} candidates are allowed per request`);
 
-  const days = await queryBlog<{ local_date: string }>('SELECT local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [tripId]);
-  if (!days.rows.length) throw new BlogTargetNotFoundError('This trip has no days to group photos into yet');
-  const validDates = new Set(days.rows.map((row) => new Date(row.local_date).toISOString().slice(0, 10)));
+  const dayDates = getCurrentDbProvider() === 'firebase'
+    ? await listBlogDayDates(tripId)
+    : (await queryBlog<{ local_date: string }>('SELECT local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [tripId])).rows.map((row) => row.local_date);
+  if (!dayDates.length) throw new BlogTargetNotFoundError('This trip has no days to group photos into yet');
+  const validDates = new Set(dayDates.map((date) => new Date(date).toISOString().slice(0, 10)));
 
   const byDay = new Map<string, string[]>();
   const unassigned: string[] = [];
