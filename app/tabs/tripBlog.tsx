@@ -1,9 +1,12 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { alertMessage } from '../utils/crossPlatformAlert';
+import { formatDateLong } from '../utils/formatDateLong';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
@@ -55,6 +58,13 @@ const promptsForDay = (dayDate) => {
 };
 
 const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD' }) => {
+  // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
+  // headlines, everything else stays on the system font. Loaded here rather than at the app
+  // root so this stays scoped to the trip blog; while it loads, headings just render in the
+  // system font (no flash of unstyled layout, only of the display face).
+  const [fraunceLoaded] = useFonts({ Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic });
+  const displayFont = fraunceLoaded ? 'Fraunces_600SemiBold' : undefined;
+  const displayFontItalic = fraunceLoaded ? 'Fraunces_600SemiBold_Italic' : undefined;
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -203,6 +213,34 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         .catch(() => { loadedFactDays.current.delete(day.localDate); });
     }
   }, [visibleDays, publicPreview, backendUrl, activeTripId, headers]);
+
+  // Phase 1 masthead stat row (redesign proposal — "a real masthead... a small stat row").
+  // Day/photo/contributor counts come straight from what's already loaded; distance is
+  // best-effort, summed from whichever days' fact strips have resolved so far (parsed back out
+  // of the formatted "approx. N km" string rather than adding a second endpoint for one number)
+  // — so it fills in progressively and is simply absent, not zero, until at least one day's
+  // facts have loaded.
+  const tripStats = useMemo(() => {
+    const media = visibleDays.flatMap(mediaForDay);
+    const photoCount = media.filter((item) => item.mediaKind === 'photo' || item.kindKey === 'media.photo').length;
+    const videoCount = media.filter((item) => item.mediaKind === 'video' || item.kindKey === 'media.video').length;
+    const contributorIds = new Set();
+    visibleDays.forEach((day) => (day.contributors || []).forEach((c) => c.userId && contributorIds.add(c.userId)));
+    let distanceKm = 0;
+    let hasDistance = false;
+    Object.values(dayFacts).forEach((facts: any) => {
+      const distanceFact = (facts || []).find((f) => f.key === 'distance');
+      const match = distanceFact ? String(distanceFact.value).match(/([\d.]+)\s*km/) : null;
+      if (match) { distanceKm += parseFloat(match[1]); hasDistance = true; }
+    });
+    return {
+      dayCount: visibleDays.length,
+      photoCount,
+      videoCount,
+      contributorCount: contributorIds.size,
+      distanceKm: hasDistance ? Math.round(distanceKm) : null,
+    };
+  }, [visibleDays, dayFacts]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -870,7 +908,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 onChangeText={(text) => scheduleMastheadSave({ title: text.slice(0, 200) })}
                 placeholder="Trip Blog"
                 placeholderTextColor={mutedColor}
-                style={[styles.sectionTitle, { color: textColor, padding: 0 }]}
+                style={[styles.sectionTitle, { color: textColor, padding: 0, fontFamily: displayFont, fontSize: 26 }]}
               />
               <TextInput
                 testID="blog-masthead-subtitle-input"
@@ -884,8 +922,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </View>
           ) : (
             <View style={{ flex: 1 }}>
-              <Text style={styles.sectionTitle}>{blog?.title || 'Trip Blog'}</Text>
-              {blog?.subtitle ? <Text style={{ color: mutedColor, fontSize: 14, marginTop: 2 }}>{blog.subtitle}</Text> : null}
+              <Text style={[styles.sectionTitle, { fontFamily: displayFont, fontSize: 26 }]}>{blog?.title || 'Trip Blog'}</Text>
+              {blog?.subtitle ? <Text style={{ color: mutedColor, fontSize: 14, marginTop: 2, fontFamily: displayFontItalic }}>{blog.subtitle}</Text> : null}
             </View>
           )}
           {!readOnly ? (
@@ -912,6 +950,32 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </TouchableOpacity>
           ) : null}
           {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+        </View>
+        {/* Phase 1 masthead stat row (redesign proposal §1) — the "trip at a glance" strip. */}
+        <View testID="blog-trip-stats" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 6, marginBottom: 10 }}>
+          <Text style={{ color: mutedColor, fontSize: 13 }}>
+            <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.dayCount}</Text> {tripStats.dayCount === 1 ? 'day' : 'days'}
+          </Text>
+          {tripStats.photoCount > 0 ? (
+            <Text style={{ color: mutedColor, fontSize: 13 }}>
+              <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.photoCount}</Text> {tripStats.photoCount === 1 ? 'photo' : 'photos'}
+            </Text>
+          ) : null}
+          {tripStats.videoCount > 0 ? (
+            <Text style={{ color: mutedColor, fontSize: 13 }}>
+              <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.videoCount}</Text> {tripStats.videoCount === 1 ? 'video' : 'videos'}
+            </Text>
+          ) : null}
+          {tripStats.contributorCount > 0 ? (
+            <Text style={{ color: mutedColor, fontSize: 13 }}>
+              <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.contributorCount}</Text> {tripStats.contributorCount === 1 ? 'traveler' : 'travelers'}
+            </Text>
+          ) : null}
+          {tripStats.distanceKm != null ? (
+            <Text style={{ color: mutedColor, fontSize: 13 }}>
+              approx. <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.distanceKm}</Text> km
+            </Text>
+          ) : null}
         </View>
         <Text style={{ color: mutedColor, marginBottom: 12 }}>
           {editMode
@@ -943,9 +1007,49 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
           const dayMetaConflict = dayMetaConflicts[day.localDate];
           const dayHeadline = dayMetaDraft?.headline ?? (day.headline ?? '');
           const daySummary = dayMetaDraft?.summary ?? (day.summary ?? '');
+          // Phase 1 hero-photo day card (redesign proposal §2) — only in reading mode: editing
+          // stays the plain workspace layout below (overlaying text inputs on a photo is bad for
+          // both legibility and hit-testing), so a traveler writing today's entry always sees
+          // clear fields, and everyone else sees the day as a photo with a caption.
+          const dayCoverItem = day.coverItemId ? mediaForDay(day).find((item) => item.id === day.coverItemId) : null;
+          const dayCoverUrl = dayCoverItem?.primaryUrl || dayCoverItem?.thumbnailUrl || null;
+          const dayWeatherFact = (dayFacts[day.localDate] || []).find((f) => f.key === 'weather');
+          const showHeroHeader = !canEdit && dayCoverUrl;
           return (
-          <View key={day.id} style={{ marginBottom: 20, backgroundColor: surfaceColor, borderRadius: 16, padding: 18 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: canEdit ? 'flex-start' : 'center', marginBottom: 8 }}>
+          <View
+            key={day.id}
+            style={{
+              marginBottom: 20,
+              backgroundColor: canEdit ? (theme?.colors?.surfaceMuted ?? '#f3f4f6') : surfaceColor,
+              borderRadius: 16,
+              padding: 18,
+              ...(canEdit ? { borderWidth: 1, borderColor: theme?.colors?.link ?? borderColor, borderStyle: 'dashed' as const } : {}),
+            }}
+          >
+            {showHeroHeader ? (
+              <ImageBackground
+                testID={`blog-day-hero-${day.localDate}`}
+                source={{ uri: dayCoverUrl }}
+                style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 10, minHeight: 160 }}
+                imageStyle={{ borderRadius: 12 }}
+              >
+                <LinearGradient
+                  colors={['rgba(11,23,38,0)', 'rgba(11,23,38,0.05)', 'rgba(11,23,38,0.78)']}
+                  style={{ minHeight: 160, justifyContent: 'flex-end', padding: 16, borderRadius: 12 }}
+                >
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600', letterSpacing: 0.3 }}>
+                    {formatDateLong(day.localDate)}{dayWeatherFact ? `  ·  ${dayWeatherFact.value}` : ''}
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 24, fontFamily: displayFont, marginTop: 2 }}>
+                    {day.headline || formatDateLong(day.localDate)}
+                  </Text>
+                  {day.summary ? (
+                    <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14, marginTop: 4, fontFamily: displayFontItalic }}>{day.summary}</Text>
+                  ) : null}
+                </LinearGradient>
+              </ImageBackground>
+            ) : null}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: canEdit ? 'flex-start' : 'center', marginBottom: 8, display: showHeroHeader && !canEdit ? 'none' as const : 'flex' as const }}>
               {canEdit ? (
                 <View style={{ flex: 1, marginRight: 8 }}>
                   <TextInput

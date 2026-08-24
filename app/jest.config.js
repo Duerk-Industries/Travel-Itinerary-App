@@ -32,6 +32,8 @@ module.exports = {
     '^expo-video$': '<rootDir>/tests/__mocks__/expo-video.ts',
     '^expo-share-intent$': '<rootDir>/tests/__mocks__/expo-share-intent.ts',
     '^@10play/tentap-editor$': '<rootDir>/tests/__mocks__/@10play/tentap-editor.ts',
+    '^expo-linear-gradient$': '<rootDir>/tests/__mocks__/expo-linear-gradient.ts',
+    '^@expo-google-fonts/fraunces$': '<rootDir>/tests/__mocks__/@expo-google-fonts/fraunces.ts',
   },
 
   // A setup file that runs before each test.
