@@ -124,6 +124,7 @@ import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
 import TripBlogTab from './tabs/tripBlog';
+import PublicTripBlogPage from './components/PublicTripBlogPage';
 const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
@@ -235,6 +236,21 @@ const resolveRefreshIntervalMs = (): number => {
 const backendUrl = resolveBackendUrl();
 const refreshIntervalMs = resolveRefreshIntervalMs();
 const idleRefreshMultiplier = 5;
+
+// Public trip blog reader (docs/trip-blog-social-prd.md, publicBlogRoutes.ts) — the vanity URL
+// blogRepository.getPublicPath produces is always exactly `/{usernameSlug}/{tripSlug}` at the
+// app's own root, so a bare two-segment path is enough to recognize it. This app has no
+// pathname-based routing anywhere else (everything else is state-driven, always at `/`), so
+// there's nothing else a two-segment path could collide with. Web only — a public link is a
+// browser-shareable artifact, not something native deep-linking needs to solve today.
+const PUBLIC_BLOG_SLUG = /^[a-z0-9][a-z0-9-]*$/i;
+const parsePublicBlogPath = (pathname: string): { username: string; tripSlug: string } | null => {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length !== 2) return null;
+  const [username, tripSlug] = parts;
+  if (!PUBLIC_BLOG_SLUG.test(username) || !PUBLIC_BLOG_SLUG.test(tripSlug)) return null;
+  return { username, tripSlug };
+};
 const idleThresholdMs = 2 * 60 * 1000;
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
@@ -3887,6 +3903,21 @@ const App: React.FC = () => {
       navigationRef.navigate(screen);
     }
   }, []);
+
+  // Checked before anything session/auth-related mounts — a public blog reader needs none of it,
+  // and must render the same way whether or not the visitor happens to have a session.
+  const publicBlogParams = useMemo(
+    () => (Platform.OS === 'web' && typeof window !== 'undefined' ? parsePublicBlogPath(window.location.pathname) : null),
+    []
+  );
+
+  if (publicBlogParams) {
+    return (
+      <RootErrorBoundary>
+        <PublicTripBlogPage username={publicBlogParams.username} tripSlug={publicBlogParams.tripSlug} />
+      </RootErrorBoundary>
+    );
+  }
 
   return (
     <RootErrorBoundary>

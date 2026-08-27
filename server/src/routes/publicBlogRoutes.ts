@@ -7,8 +7,35 @@ import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow } from '../serv
 import { getApiCacheSetting } from '../config/apiLimits';
 import { blogEngagementRepository } from '../blog/engagementRepository';
 import { BlogComment } from '../blog/engagementTypes';
+import { createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
 
 const router = Router();
+
+// Public-reader page media — mirrors attachMediaUrls in blogRoutes.ts exactly (same rendition
+// naming, same signing), but only ever called on items whose audience is already 'public' (both
+// query branches below filter to that before this runs), and strips uploaderUserId from the
+// output afterward — the public page has no business exposing who a photo's uploader is, only
+// where to fetch it from.
+const attachPublicMediaUrls = async (days: Array<{ items: any[] }>): Promise<void> => {
+  await Promise.all(days.flatMap((day) => day.items.map(async (item: any) => {
+    if (!item.mediaKind || !item.uploaderUserId) return;
+    const assetId = item.assetId;
+    if (item.mediaKind === 'audio') {
+      item.primaryUrl = await createBlogReadUrl(`trip-blog/${item.uploaderUserId}/${assetId}/source`);
+    } else if (item.mediaKind === 'video') {
+      item.primaryUrl = await createBlogReadUrl(blogRenditionKey(item.uploaderUserId, assetId, 'primary.mp4'));
+    } else {
+      const [primaryUrl, thumbnailUrl] = await Promise.all([
+        createBlogReadUrl(blogRenditionKey(item.uploaderUserId, assetId, 'primary.jpg')),
+        createBlogReadUrl(blogRenditionKey(item.uploaderUserId, assetId, 'thumb.jpg')),
+      ]);
+      item.primaryUrl = primaryUrl;
+      item.thumbnailUrl = thumbnailUrl;
+    }
+    delete item.uploaderUserId;
+    delete item.objectKey;
+  })));
+};
 
 // Phase 4 of docs/trip-blog-social-implementation-plan.md, architecture §5.1/§14.7 — a route
 // entirely separate from GET /:username/:tripSlug above, on its own cache key, flag and rate
@@ -111,9 +138,27 @@ const resolvePublicTripIdPostgres = async (
 };
 
 router.get('/:username/:tripSlug', async (req, res) => {
+  // The public-reader page (unlike everything else in this router) is a full document fetch, not
+  // a lightweight counts poll — same rate-limit pattern as the engagement route above, own budget.
+  try {
+    await reserveHttpRateLimitOrThrow({
+      name: 'blog_public_document',
+      identity: `ip:${clientIp(req)}`,
+      limit: Number(getApiCacheSetting('tripBlog', 'publicDocumentReadsPerMinutePerIp') ?? 30),
+      windowMs: 60_000,
+    });
+  } catch (err) {
+    if (err instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds));
+      return res.status(429).json({ error: err.message });
+    }
+    throw err;
+  }
+
   if (getCurrentDbProvider() === 'firebase') {
     const blog = await getPublicBlogFirebase(String(req.params.username), String(req.params.tripSlug));
     if (!blog) return res.status(404).json({ error: 'Public blog not found' });
+    await attachPublicMediaUrls(blog.days);
     res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.setHeader('X-Robots-Tag', blog.indexingEnabled ? 'index,follow' : 'noindex');
     return res.json(blog);
@@ -123,7 +168,7 @@ router.get('/:username/:tripSlug', async (req, res) => {
   const days = await queryBlog<any>('SELECT id, local_date, headline, summary FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [alias.rows[0].trip_id]);
   const items = await queryBlog<any>(
     `SELECT i.id, i.blog_day_id, i.kind_key, i.schema_version, i.audience, i.sort_key, t.body, t.language_tag,
-            a.id AS asset_id, a.media_kind_key, a.caption, a.alt_text, a.object_key
+            a.id AS asset_id, a.media_kind_key, a.caption, a.alt_text, a.object_key, a.uploader_user_id
      FROM blog_items i
      LEFT JOIN blog_text_contents t ON t.item_id = i.id
      LEFT JOIN blog_item_assets ia ON ia.item_id = i.id
@@ -139,11 +184,13 @@ router.get('/:username/:tripSlug', async (req, res) => {
     if (item.kind_key === 'core.text') {
       list.push({ ...base, body: item.body ?? '', languageTag: item.language_tag ?? null });
     } else if (item.kind_key.startsWith('media.')) {
-      list.push({ ...base, assetId: item.asset_id, mediaKind: item.media_kind_key, caption: item.caption, altText: item.alt_text, objectKey: item.object_key });
+      list.push({ ...base, assetId: item.asset_id, mediaKind: item.media_kind_key, caption: item.caption, altText: item.alt_text, objectKey: item.object_key, uploaderUserId: item.uploader_user_id });
     }
     byDay.set(String(item.blog_day_id), list);
   }
+  const responseDays = days.rows.map((d) => ({ localDate: new Date(d.local_date).toISOString().slice(0, 10), headline: d.headline, summary: d.summary, items: byDay.get(String(d.id)) ?? [] }));
+  await attachPublicMediaUrls(responseDays);
   res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300'); res.setHeader('X-Robots-Tag', alias.rows[0].indexing_enabled ? 'index,follow' : 'noindex');
-  res.json({ title: alias.rows[0].title, subtitle: alias.rows[0].subtitle, introduction: alias.rows[0].introduction, contentRevision: Number(alias.rows[0].content_revision ?? 0), visibilityEpoch: Number(alias.rows[0].visibility_epoch ?? 0), days: days.rows.map((d) => ({ localDate: new Date(d.local_date).toISOString().slice(0, 10), headline: d.headline, summary: d.summary, items: byDay.get(String(d.id)) ?? [] })) });
+  res.json({ title: alias.rows[0].title, subtitle: alias.rows[0].subtitle, introduction: alias.rows[0].introduction, contentRevision: Number(alias.rows[0].content_revision ?? 0), visibilityEpoch: Number(alias.rows[0].visibility_epoch ?? 0), days: responseDays });
 });
 export default router;
