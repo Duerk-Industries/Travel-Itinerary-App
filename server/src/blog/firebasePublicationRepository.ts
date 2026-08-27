@@ -192,14 +192,19 @@ export const getPublicBlogFirebase = async (usernameSlug: string, tripSlug: stri
     if (item.deletedAt != null || item.audience !== 'public') return;
     const base = { id: doc.id, kindKey: item.kindKey, schemaVersion: Number(item.schemaVersion ?? 1), audience: item.audience, sortKey: item.sortKey };
     const media = String(item.kindKey ?? '').startsWith('media.') ? mediaByItem.get(doc.id) : null;
-    const output = media ? { ...base, assetId: media.assetId, mediaKind: media.mediaKind, caption: media.caption ?? null, altText: media.altText ?? null, objectKey: media.objectKey ?? null } : { ...base, body: String(item.body ?? ''), languageTag: item.languageTag ?? null };
-    // Text items use the blog day document id; Firebase media items use the day date.
+    const output = media ? { ...base, assetId: media.assetId, mediaKind: media.mediaKind, caption: media.caption ?? null, altText: media.altText ?? null, objectKey: media.objectKey ?? null, uploaderUserId: media.uploaderUserId ?? null } : { ...base, body: String(item.body ?? ''), languageTag: item.languageTag ?? null };
+    // Text items use the blog day document id; Firebase media items use the day date. These are
+    // two different keys into the same map — a day with both kinds of item needs entries under
+    // both to be found below, not an either/or fallback (that silently dropped every media item
+    // on any day that also had a text item, since the id-keyed lookup always won first).
     const key = media ? String(media.dayDate ?? item.blogDayId) : String(item.blogDayId);
     itemsByDay.set(key, [...(itemsByDay.get(key) ?? []), output]);
   });
   const days = daysSnap.docs.map((doc) => {
     const day = doc.data() as any;
-    return { localDate: String(day.localDate), headline: day.headline ?? null, summary: day.summary ?? null, items: itemsByDay.get(doc.id) ?? itemsByDay.get(String(day.localDate)) ?? [] };
+    const items = [...(itemsByDay.get(doc.id) ?? []), ...(itemsByDay.get(String(day.localDate)) ?? [])]
+      .sort((a, b) => String(a.sortKey ?? '').localeCompare(String(b.sortKey ?? '')));
+    return { localDate: String(day.localDate), headline: day.headline ?? null, summary: day.summary ?? null, items };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
   return { title: blogData.title ?? '', subtitle: blogData.subtitle ?? null, introduction: blogData.introduction ?? null, contentRevision: Number(blogData.contentRevision ?? 0), visibilityEpoch: Number(blogData.visibilityEpoch ?? 0), indexingEnabled: blogData.indexingEnabled !== false, days };
 };
