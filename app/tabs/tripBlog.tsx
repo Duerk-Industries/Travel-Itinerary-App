@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
@@ -1127,10 +1127,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             {/* Phase 0 elastic fact strip (docs/trip-blog-social-prd.md §6.2, FR-C1.1) — chips with
                 no data are absent, not greyed out, so a photos-only day still reads as intentional.
                 Weather moved here from the old header pill; distance/places/media are newly
-                surfaced from an endpoint the client never called before this redesign. */}
+                surfaced from an endpoint the client never called before this redesign.
+                Phase 2: `dayMap`'s value is a signed image URL (the background render job's
+                static map artifact), not display text — it gets its own thumbnail rather than
+                being stringified into a text chip like every other fact. */}
             {dayFacts[day.localDate]?.length ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4, marginBottom: 4 }}>
-                {dayFacts[day.localDate].map((fact) => (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4, marginBottom: 4 }}>
+                {dayFacts[day.localDate].filter((fact) => fact.key !== 'dayMap').map((fact) => (
                   <View
                     key={fact.key}
                     testID={`blog-day-fact-${day.localDate}-${fact.key}`}
@@ -1141,6 +1144,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     </Text>
                   </View>
                 ))}
+                {(() => {
+                  const mapFact = dayFacts[day.localDate].find((fact) => fact.key === 'dayMap');
+                  if (!mapFact) return null;
+                  return (
+                    <Image
+                      testID={`blog-day-fact-${day.localDate}-dayMap`}
+                      source={{ uri: mapFact.value }}
+                      accessibilityLabel="Map of this day's route"
+                      style={{ width: 100, height: 52, borderRadius: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#f0f9ff' }}
+                      resizeMode="cover"
+                    />
+                  );
+                })()}
               </View>
             ) : null}
             {(day.items || []).filter((item) => item.kindKey !== 'core.gallery' && !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (
@@ -1459,9 +1475,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 textColor={textColor}
                 mutedColor={mutedColor}
                 borderColor={borderColor}
-                backgroundColor={inputColor}
+                backgroundColor={surfaceColor}
                 showAwards={Boolean(capabilities.trip_blog_trip_awards)}
                 theme={theme}
+                displayFont={displayFont}
+                displayFontItalic={displayFontItalic}
               />
             ) : (
               <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
