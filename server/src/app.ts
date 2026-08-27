@@ -377,7 +377,15 @@ app.post('/api/auth/apple/callback', async (req, res) => {
 
     await ensureDefaultGroupForUser(user.id, user.email);
     await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
-    const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
+    // ensureWebPasswordAccountForOAuth still backs this account with a (randomly-seeded,
+    // never-shown) web_users row for a possible future email/password fallback login — that part
+    // is unchanged. What must never happen for Apple is *forcing* the "Set Your Password" prompt
+    // on the client: Sign in with Apple already completes authentication via the Authentication
+    // Services framework, and Apple's HIG explicitly forbids requiring any additional
+    // account-creation step (password included) afterward — App Store Guideline 4 rejected this
+    // exact flow. Unlike the Google callback below, this always reports false regardless of what
+    // ensureWebPasswordAccountForOAuth returns.
+    await ensureWebPasswordAccountForOAuth(
       user.id,
       user.email,
       user.firstName,
@@ -386,7 +394,7 @@ app.post('/api/auth/apple/callback', async (req, res) => {
     await ensureAdminBootstrap(user.id, user.email);
     const role = await getUserRole(user.id);
     const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
-    const authCode = createRedirectTokenExchangeCode({ token, requirePasswordSetup: requiresPasswordSetup });
+    const authCode = createRedirectTokenExchangeCode({ token, requirePasswordSetup: false });
     clearAppleOAuthNonceCookie(res);
     if (redirectUri) {
       const next = new URL(appendAuthCodeToRedirect(redirectUri, authCode));
