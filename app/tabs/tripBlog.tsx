@@ -7,6 +7,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { formatDateLong } from '../utils/formatDateLong';
+import TripDayMap from '../components/TripDayMap';
+import { type TripMapPoint } from '../utils/googleMaps';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
@@ -57,7 +59,7 @@ const promptsForDay = (dayDate) => {
   return [0, 1, 2].map((offset) => WRITING_PROMPTS[(start + offset) % WRITING_PROMPTS.length]);
 };
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD' }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[] }) => {
   // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
   // headlines, everything else stays on the system font. Loaded here rather than at the app
   // root so this stays scoped to the trip blog; while it loads, headings just render in the
@@ -241,6 +243,32 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       distanceKm: hasDistance ? Math.round(distanceKm) : null,
     };
   }, [visibleDays, dayFacts]);
+
+  // Phase 2 route map (redesign proposal §4 "day map... prominent, not utility-panel placement";
+  // notes §"Give the trip route... prominent placement") — the whole-trip counterpart to the
+  // per-day map already shipped in overview.tsx's day-detail view. Same TripDayMap component,
+  // same GET /api/maps/trip-day endpoint, same point-building pattern, just built from every
+  // flight/lodging/activity/car-rental in the trip instead of one day's — no new backend work.
+  const tripMapPoints = useMemo(() => {
+    const points: TripMapPoint[] = [];
+    (flights || []).forEach((f: any) => {
+      if (f.departure_location) points.push({ kind: 'flight', address: f.departure_location });
+      if (f.arrival_location) points.push({ kind: 'flight', address: f.arrival_location });
+    });
+    (lodgings || []).forEach((l: any) => {
+      if (l.address) points.push({ kind: 'lodging', address: l.address });
+    });
+    (tours || []).forEach((t: any) => {
+      if (t.startLocation) points.push({ kind: 'activity', address: t.startLocation });
+    });
+    (carRentals || []).forEach((r: any) => {
+      if (r.pickupLocation) points.push({ kind: 'car_rental', address: r.pickupLocation });
+      if (r.dropoffLocation && r.dropoffLocation !== r.pickupLocation) {
+        points.push({ kind: 'car_rental', address: r.dropoffLocation });
+      }
+    });
+    return points;
+  }, [flights, lodgings, tours, carRentals]);
 
   const load = async (nextCursor = null) => {
     setLoading(true);
@@ -977,6 +1005,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </Text>
           ) : null}
         </View>
+        {tripMapPoints.length ? (
+          <TripDayMap points={tripMapPoints} backendUrl={backendUrl} requestHeaders={headers} testID="trip-blog-route-map" />
+        ) : null}
         <Text style={{ color: mutedColor, marginBottom: 12 }}>
           {editMode
             ? 'Editing mode — changes are saved to the trip blog.'

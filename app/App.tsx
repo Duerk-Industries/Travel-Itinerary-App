@@ -2042,6 +2042,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'tours':
           await fetchTours(authToken);
           break;
+        case 'blog':
+          // Trip blog's Phase 2 route map (TripDayMap, reused from overview.tsx's day-detail
+          // view) needs every flight/lodging/activity/car-rental in the trip, not just one day's
+          // — without its own case here it fell to `default` below, which never fetches any of
+          // these, so the map silently had nothing to plot unless Overview happened to run first
+          // in the same session and left the shared state populated.
+          await Promise.all([
+            fetchFlights(authToken),
+            fetchLodgings(authToken),
+            fetchTours(authToken),
+            fetchCarRentals(authToken),
+          ]);
+          break;
         case 'expenses':
         case 'ledger':
         case 'cost':
@@ -2924,6 +2937,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   isTripOwnerOrAdmin={userRole === 'admin'}
                   allExpenses={allExpenses}
                   tripCurrency={activeTrip?.currency ?? 'USD'}
+                  flights={flights}
+                  lodgings={lodgings}
+                  tours={tours}
+                  carRentals={carRentals}
                 />
               )
             : null}
