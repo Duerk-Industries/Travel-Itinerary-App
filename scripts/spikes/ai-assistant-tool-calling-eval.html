@@ -88,12 +88,18 @@
     <label for="modelSelect" class="metric">Model:</label>
     <select id="modelSelect">
       <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5-1.5B-Instruct (plan default)</option>
-      <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5-3B-Instruct (plan opt-in)</option>
-      <option value="Hermes-2-Pro-Mistral-7B-q4f16_1-MLC">Hermes-2-Pro-Mistral-7B (MLC-vetted function-calling reference)</option>
+      <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC" selected>Qwen2.5-3B-Instruct (recommended retest -- better instruction-following than 1.5B)</option>
+      <option value="Hermes-2-Pro-Mistral-7B-q4f16_1-MLC">Hermes-2-Pro-Mistral-7B (MLC-vetted, but native tool-calling is currently broken -- see plan doc)</option>
     </select>
     <button id="loadBtn" class="primary">Load model</button>
     <button id="runBtn" disabled>Run eval (10 prompts)</button>
     <button id="clearCacheBtn">Clear this model's cache</button>
+  </div>
+  <div class="row">
+    <label style="display:flex; align-items:center; gap:6px;">
+      <input type="checkbox" id="narrowToolSetCheckbox" checked />
+      Narrow tool set (Phase 3's actual planned first allow-list: addActivity + updateItineraryStatus only)
+    </label>
   </div>
   <div id="progressBar"><div id="progressFill"></div></div>
   <div id="status">Not loaded yet.</div>
@@ -126,7 +132,16 @@
 </div>
 
 <script type="module">
-  import * as webllm from "https://esm.run/@mlc-ai/web-llm@0.2.84";
+  // Pinned to 0.2.82, NOT the app's 0.2.84 -- confirmed via
+  // https://github.com/mlc-ai/web-llm/issues/844 that 0.2.83+ has a real,
+  // still-open upstream regression (shapeCache LRU eviction disposes
+  // in-use ShapeTuples -> "Object has already been disposed" -> GPU
+  // device hang), root-caused to apache/tvm's web runtime. This is what
+  // broke both the Hermes GrammarMatcher run and the plain Qwen2.5-3B
+  // manual-strategy run (no tools/response_format involved at all in the
+  // latter, which is why a bug this deep in the shared runtime was the
+  // right thing to suspect once the "no tools" call started failing too).
+  import * as webllm from "https://esm.run/@mlc-ai/web-llm@0.2.82";
 
   // ---------------------------------------------------------------------
   // Tool schemas -- deliberately small subsets of the real Flight/Lodging/
@@ -136,7 +151,7 @@
   // invents record IDs; the real client-side dispatch layer (assistantTools.ts,
   // per the plan) would resolve "the Eiffel Tower tour" to a real item itself.
   // ---------------------------------------------------------------------
-  const TOOLS = [
+  const TOOLS_FULL = [
     {
       type: "function",
       function: {
@@ -211,6 +226,20 @@
     },
   ];
 
+  // Phase 3's actual planned first allow-list (§12 of the implementation
+  // plan): lowest-risk actions only, no deletions/payment-adjacent tools.
+  // Testing against this instead of all 4 hypothetical tools answers the
+  // question that actually matters for shipping -- can the model handle
+  // the real v1 scope -- rather than a broader hypothetical one.
+  const TOOLS_NARROW = TOOLS_FULL.filter(
+    (t) => t.function.name === "addActivity" || t.function.name === "updateItineraryStatus"
+  );
+
+  // Active tool set for the current run -- reassigned (not const) so the
+  // "narrow tool set" checkbox can swap it before a run without duplicating
+  // every function that references it.
+  let TOOLS = TOOLS_FULL;
+
   // ---------------------------------------------------------------------
   // Strategy selection. WebLLM's `tools`/`tool_choice` API *hard-rejects*
   // (throws, never calls the model) any model not on its own vetted
@@ -238,13 +267,86 @@
       const required = t.function.parameters.required?.join(", ") || "none";
       return `- ${t.function.name}(${props}) -- ${t.function.description} Required: ${required}.`;
     }).join("\n");
+    // Few-shot examples added after the first real run showed the model's
+    // worst failure mode wasn't format (JSON came out fine) but judgment --
+    // it invented plausible-sounding flight/hotel details instead of asking
+    // when the user gave no dates or airports, and defaulted to a
+    // training-data-plausible year (2023) instead of the year actually
+    // stated above when the user's date had no year. The first two examples
+    // use only `addActivity`, which exists in every tool-set variant this
+    // harness can run with, so they stay valid whether TOOLS is the full or
+    // narrowed set.
+    const statusExample =
+      '- User: "Mark the harbor cruise as booked." (asking to change an existing item\'s status)\n' +
+      '  Correct response (JSON only): {"tool": "updateItineraryStatus", "args": {"itemName": "harbor cruise", "status": "Booked"}}\n' +
+      '  (Note "status" is exactly one of the enum values listed above, capitalized -- map the ' +
+      "user's own wording to the closest matching value, don't leave it in the user's casing or " +
+      "pick an unrelated one.)";
+    // Only relevant when the current TOOLS set actually lacks addLodging --
+    // added conditionally (rather than hardcoded) so this stays correct if
+    // the harness is later run with the full tool set, where addLodging
+    // *is* a valid action and this guidance would be wrong. This example is
+    // deliberately UNDER-specified (no dates) -- a prior retest showed the
+    // model would correctly decline a vague out-of-scope request like this
+    // one, but still coerced a *fully-specified* one into a bogus
+    // addActivity call, so the lesson apparently learned was "decline when
+    // you don't have enough to fill in a call" rather than "decline because
+    // the action doesn't exist." The addFlight example directly below is
+    // the fully-specified counterpart that targets that gap.
+    const outOfScopeExample = TOOLS.some((t) => t.function.name === "addLodging")
+      ? ""
+      : '\n- User: "Book me a hotel in Rome." (a lodging request, and addLodging is not in the actions list above)\n' +
+        '  Correct response (plain text, NOT JSON): "I can\'t book lodging yet -- that\'s not supported ' +
+        'in this assistant right now."\n' +
+        "  (Do not call addActivity, or any other action, as a stand-in for a request none of your " +
+        "actions actually cover.)";
+    // Fully-specified counterpart to the example above -- every field an
+    // addFlight call would need is present in the user's message, on
+    // purpose. The point is that completeness is irrelevant: the decline
+    // happens because the action isn't in your list, not because details
+    // are missing.
+    const outOfScopeCompleteExample = TOOLS.some((t) => t.function.name === "addFlight")
+      ? ""
+      : '\n- User: "Add my flight -- Delta 88, from ATL to ORD, landing at 2:15pm on July 9th." ' +
+        "(every detail a flight needs is given, but addFlight is not in the actions list above)\n" +
+        '  Correct response (plain text, NOT JSON): "I can\'t add flights yet -- that\'s not supported ' +
+        'in this assistant right now."\n' +
+        "  (Having every field filled in does NOT make it okay to file this under addActivity or any " +
+        "other action instead -- completeness is irrelevant when the action itself doesn't exist. " +
+        "Always decline in plain text, never invent a plausible-looking substitute tool call.)";
+    // Symmetric fully-specified counterpart for addLodging -- added after a
+    // retest showed the addFlight complete-detail example above fixed
+    // exactly the tool it named (fully-specified flights started getting
+    // declined correctly) but did NOT generalize to addLodging, which still
+    // only had the vague/under-specified example (outOfScopeExample above)
+    // and kept coercing a fully-specified hotel stay into addActivity. The
+    // lesson evidently doesn't transfer between sibling tools on its own --
+    // each out-of-scope tool that gets tested needs its own complete-detail
+    // example.
+    const outOfScopeCompleteLodgingExample = TOOLS.some((t) => t.function.name === "addLodging")
+      ? ""
+      : '\n- User: "Book us into the Park Hyatt Kyoto, June 1st to June 5th, 2 rooms." ' +
+        "(every detail a lodging call needs is given, but addLodging is not in the actions list above)\n" +
+        '  Correct response (plain text, NOT JSON): "I can\'t book lodging yet -- that\'s not supported ' +
+        'in this assistant right now."\n' +
+        "  (Same rule as the flight example above: complete details don't make it okay to file this " +
+        "under addActivity instead. Decline in plain text regardless of how much information you " +
+        "were given.)";
+    const fewShotExamples =
+      "Examples of correct behavior:\n" +
+      '- User: "Add a tour of the Louvre." (no date given, and date is required)\n' +
+      "  Correct response (plain text, NOT JSON): \"Sure -- what date would you like to do that?\"\n" +
+      '- User: "Add a walking tour of the Colosseum on December 4th at 9am." (no year given; today\'s date is stated above)\n' +
+      '  Correct response (JSON only): {"tool": "addActivity", "args": {"name": "Walking tour of the Colosseum", "date": "2026-12-04", "startTime": "09:00", "duration": ""}}\n' +
+      "  (Note the year comes from today's date above, not a guess, and \"duration\" is left empty rather than invented since the user never gave one.)\n" +
+      statusExample + outOfScopeExample + outOfScopeCompleteExample + outOfScopeCompleteLodgingExample;
     return (
       "You also have access to these actions. To perform one, respond with ONLY a single JSON " +
       'object (no other text, no markdown code fences) in exactly this form: {"tool": "<action ' +
       'name>", "args": { ... }}\n\n' +
       "If none of these actions apply, or the user hasn't given enough information to fill in an " +
       "action's required fields, respond with plain text instead -- do not guess at missing fields, " +
-      "and do not wrap plain text in JSON.\n\nActions:\n" + lines
+      "and do not wrap plain text in JSON.\n\nActions:\n" + lines + "\n\n" + fewShotExamples
     );
   };
 
@@ -324,13 +426,39 @@
       .filter(Boolean);
   };
 
-  const SYSTEM_PROMPT =
-    "You are a trip-planning assistant embedded in a travel itinerary app. " +
-    "You can call tools to add flights, lodging, and activities, or update an item's status. " +
-    "Only call a tool when the user is clearly asking you to add or change something. " +
-    "If the user is just asking a question, or hasn't given you enough information to fill in " +
-    "the tool's required fields, do NOT call a tool and do NOT invent missing details -- respond " +
-    "with a short clarifying question or a plain answer instead. Today's date is 2026-08-21.";
+  // Built dynamically from whichever TOOLS set is actually active, instead
+  // of a hardcoded capability list -- a static "you can add flights,
+  // lodging, and activities" string was still true even when the narrow
+  // tool set (addActivity + updateItineraryStatus only) was selected, which
+  // told the model it had capabilities it didn't, and is the likely real
+  // cause of it coercing unsupported flight/lodging requests into a bogus
+  // addActivity call instead of declining. Recomputed per call (cheap, and
+  // keeps this correct if TOOLS is ever swapped between calls).
+  const CAPABILITY_DESCRIPTIONS = {
+    addFlight: "add flights",
+    addLodging: "add lodging/hotel stays",
+    addActivity: "add activities/tours/events",
+    updateItineraryStatus: "update an existing item's status",
+  };
+  const buildSystemPrompt = () => {
+    const toolNames = TOOLS.map((t) => t.function.name);
+    const capabilityList = toolNames.map((n) => CAPABILITY_DESCRIPTIONS[n] ?? n).join(", ");
+    return (
+      "You are a trip-planning assistant embedded in a travel itinerary app. " +
+      `In this configuration you can ONLY ${capabilityList} -- you have no other tools. ` +
+      "Only call a tool when the user is clearly asking you to add or change something, and only " +
+      "for one of the actions you actually have. If the user asks for something none of your " +
+      "actions cover (for example, a flight or a hotel/lodging when that tool isn't in your list), " +
+      "do NOT call a different tool as a workaround or substitute -- respond in plain text " +
+      "explaining that action isn't supported yet, instead of calling any tool. This applies " +
+      "EVEN IF the user gave you every detail that action would need -- having complete " +
+      "information does not make it okay to file the request under a different tool; decline in " +
+      "plain text either way. If the user is just asking a question, or hasn't given you enough " +
+      "information to fill in the tool's required fields, do NOT call a tool and do NOT invent " +
+      "missing details -- respond with a short clarifying question or a plain answer instead. " +
+      "Today's date is 2026-08-21."
+    );
+  };
 
   // ---------------------------------------------------------------------
   // Fixed eval set. `expectedTool: null` means the correct behavior is NOT
@@ -339,7 +467,7 @@
   // cases need a human judgment call (multi-tool, ambiguous) -- the harness
   // still shows what the model did, you just grade it yourself.
   // ---------------------------------------------------------------------
-  const CASES = [
+  const CASES_FULL = [
     {
       id: "flight-clear",
       prompt: "Add a flight for me, Alex Chen, on United flight 245 from JFK to LAX on March 3rd, departing 8:00am and arriving 11:15am.",
@@ -411,6 +539,86 @@
     },
   ];
 
+  // Same 10 prompts, re-graded against Phase 3's actual planned first
+  // allow-list (TOOLS_NARROW: addActivity + updateItineraryStatus only).
+  // Cases that used to expect addFlight/addLodging now expect no tool call
+  // at all -- those tools don't exist in this scope, so the correct
+  // behavior is declining/redirecting, not calling something that isn't
+  // there.
+  const CASES_NARROW = [
+    {
+      id: "flight-clear",
+      prompt: "Add a flight for me, Alex Chen, on United flight 245 from JFK to LAX on March 3rd, departing 8:00am and arriving 11:15am.",
+      expectedTool: null,
+      note: "addFlight isn't in this tool set -- correct behavior is explaining flights aren't supported yet (or a plain decline), not inventing a call.",
+      graded: "auto",
+    },
+    {
+      id: "lodging-clear",
+      prompt: "Book us a stay at the Park Hyatt Kyoto from June 1 to June 5.",
+      expectedTool: null,
+      note: "addLodging isn't in this tool set -- same as above.",
+      graded: "auto",
+    },
+    {
+      id: "activity-clear",
+      prompt: "Add a walking food tour in Rome on April 12th starting at 10am.",
+      expectedTool: "addActivity",
+      expectedArgsContains: { date: "2026-04-12" },
+      graded: "auto",
+    },
+    {
+      id: "status-update",
+      prompt: "Mark the Eiffel Tower tour as booked.",
+      expectedTool: "updateItineraryStatus",
+      expectedArgsContains: { status: "booked" },
+      graded: "auto",
+    },
+    {
+      id: "no-tool-question",
+      prompt: "What's the best time of year to visit Kyoto?",
+      expectedTool: null,
+      graded: "auto",
+    },
+    {
+      id: "missing-info-flight",
+      prompt: "Add a flight to Tokyo.",
+      expectedTool: null,
+      note: "addFlight isn't in this tool set either way -- correct behavior is still no tool call.",
+      graded: "auto",
+    },
+    {
+      id: "missing-info-lodging",
+      prompt: "Book me a hotel in Paris.",
+      expectedTool: null,
+      note: "addLodging isn't in this tool set either way -- correct behavior is still no tool call.",
+      graded: "auto",
+    },
+    {
+      id: "multi-intent",
+      prompt: "Add a hotel in Paris from June 1 to June 5, and also add a Seine river cruise activity on June 2 at 7pm.",
+      expectedTool: "addActivity",
+      note: "addLodging isn't in this tool set -- correct behavior is calling addActivity for the cruise and declining/redirecting on the hotel half. Genuinely two-part; grade by hand.",
+      graded: "manual",
+    },
+    {
+      id: "irrelevant-request",
+      prompt: "Can you recommend a good vegetarian restaurant near the Colosseum?",
+      expectedTool: null,
+      note: "Not an action this assistant's tools cover -- correct behavior is a plain text answer/decline, not a wrong tool call.",
+      graded: "auto",
+    },
+    {
+      id: "ambiguous-reference",
+      prompt: "Actually, cancel that activity we just talked about.",
+      expectedTool: "updateItineraryStatus",
+      note: "No prior turn in this harness, so 'that activity' is genuinely ambiguous -- correct behavior is asking which one, not guessing. Grade by hand.",
+      graded: "manual",
+    },
+  ];
+
+  let CASES = CASES_FULL;
+
   // ---------------------------------------------------------------------
   // UI wiring
   // ---------------------------------------------------------------------
@@ -419,6 +627,7 @@
   const loadBtn = $("loadBtn");
   const runBtn = $("runBtn");
   const clearCacheBtn = $("clearCacheBtn");
+  const narrowToolSetCheckbox = $("narrowToolSetCheckbox");
   const statusEl = $("status");
   const progressBar = $("progressBar");
   const progressFill = $("progressFill");
@@ -543,6 +752,62 @@
     });
   };
 
+  // ---------------------------------------------------------------------
+  // Client-side guard -- a structural safety net, not another prompt
+  // trick. Three rounds of few-shot/system-prompt tweaks aimed at exactly
+  // "decline a fully-specified flight/lodging request instead of coercing
+  // it into addActivity" didn't close the gap, and a low-temperature
+  // rerun (see ACTION_TEMPERATURE above) showed the coercion is this
+  // model's actual preferred completion for that prompt shape, not
+  // sampling noise -- i.e. not something further prompt engineering is
+  // likely to fix. Rather than keep chasing it in the prompt, this
+  // inspects a proposed addActivity call's own arguments for
+  // flight/lodging-shaped content and intercepts it before it would ever
+  // reach a confirmation dialog in the real app. Same principle §8 of the
+  // implementation plan already commits to ("tool allow-list only,
+  // nothing new to trust") applied one level deeper: don't just trust the
+  // model to stay in its lane, verify the shape of what it hands back.
+  // Deliberately simple substring/regex matching, not another model call
+  // -- a real `assistantTools.ts` dispatch layer would need something at
+  // least this defensive before executing any addActivity call, so this
+  // doubles as a rough prototype of that guard, not just an eval-harness
+  // trick.
+  // ---------------------------------------------------------------------
+  const FLIGHT_SIGNAL_PATTERN = /\bflight(s)?\b|\b[A-Z]{3}\s*(?:to|-|→)\s*[A-Z]{3}\b/i;
+  const LODGING_SIGNAL_PATTERN = /\b(hotel|lodging|resort|hostel|motel|inn|airbnb|check-?in|check-?out|\d+\s*nights?|\bstay(ing)?\b)\b/i;
+
+  const detectOutOfScopeCoercion = (call) => {
+    if (call.name !== "addActivity") return null;
+    const haystack = [call.args?.name, call.args?.startLocation].filter(Boolean).join(" ");
+    const durationText = String(call.args?.duration ?? "");
+    if (!TOOLS.some((t) => t.function.name === "addFlight") && FLIGHT_SIGNAL_PATTERN.test(haystack)) {
+      return "flight";
+    }
+    if (
+      !TOOLS.some((t) => t.function.name === "addLodging") &&
+      (LODGING_SIGNAL_PATTERN.test(haystack) || LODGING_SIGNAL_PATTERN.test(durationText))
+    ) {
+      return "lodging";
+    }
+    return null;
+  };
+
+  // Splits raw model tool calls into ones that pass the guard (`kept`) and
+  // ones it intercepted (`blocked`, tagged with why) -- `kept` is what
+  // actually gets graded and would actually reach the user, `blocked` is
+  // kept around purely for transparency in the results table so a
+  // reviewer can still see what the model itself proposed.
+  const applyClientSideGuard = (toolCalls) => {
+    const kept = [];
+    const blocked = [];
+    for (const call of toolCalls) {
+      const kind = detectOutOfScopeCoercion(call);
+      if (kind) blocked.push({ call, kind });
+      else kept.push(call);
+    }
+    return { kept, blocked };
+  };
+
   const runOneCase = async (c) => {
     const row = rows.get(c.id);
     const started = performance.now();
@@ -555,31 +820,63 @@
     // native path, our own guidance (don't invent missing fields, ask a
     // clarifying question instead, etc.) has to travel inside the user
     // turn instead of a system message.
+    const systemPrompt = buildSystemPrompt();
+    // Pinned low, not left at WebLLM's model-config default (~1.0 for
+    // Qwen2.5) -- an earlier retest showed materially different pass/fail
+    // results across back-to-back runs of the exact same prompts against
+    // the exact same harness code, which made it impossible to tell a real
+    // prompt-engineering improvement from sampling noise. Matches the
+    // precedent already set in the real app (`ASSISTANT_TEMPERATURE = 0.2`
+    // in `assistantLocalModel.ts`, adopted for the same "confident-but-
+    // wrong drift" reason per this plan's Phase 1 findings) -- this is a
+    // structured-output/grounded-answer task, not creative writing.
+    const ACTION_TEMPERATURE = 0.2;
     const completion = useNative
       ? await engine.chat.completions.create({
           messages: [
-            { role: "user", content: `${SYSTEM_PROMPT}\n\n---\n\n${c.prompt}` },
+            { role: "user", content: `${systemPrompt}\n\n---\n\n${c.prompt}` },
           ],
           tools: TOOLS,
           tool_choice: "auto",
+          temperature: ACTION_TEMPERATURE,
         })
       : await engine.chat.completions.create({
           messages: [
-            { role: "system", content: SYSTEM_PROMPT + "\n\n" + buildManualToolsPrompt() },
+            { role: "system", content: systemPrompt + "\n\n" + buildManualToolsPrompt() },
             { role: "user", content: c.prompt },
           ],
+          temperature: ACTION_TEMPERATURE,
         });
     const elapsedMs = performance.now() - started;
     const message = completion.choices[0].message;
-    const toolCalls = useNative ? toolCallsFromMessage(message) : parseManualToolCall(message.content);
+    const rawToolCalls = useNative ? toolCallsFromMessage(message) : parseManualToolCall(message.content);
+    const { kept: toolCalls, blocked } = applyClientSideGuard(rawToolCalls);
     const autoGradeResult = autoGrade(c, toolCalls);
 
-    row.result = { toolCalls, message, autoGrade: autoGradeResult, elapsedMs, usage: completion.usage, strategy: useNative ? "native" : "manual" };
+    row.result = {
+      toolCalls,
+      rawToolCalls,
+      blocked,
+      message,
+      autoGrade: autoGradeResult,
+      elapsedMs,
+      usage: completion.usage,
+      strategy: useNative ? "native" : "manual",
+    };
 
     const actualCell = row.tr.querySelector(".actual");
-    actualCell.innerHTML = toolCalls.length
+    const keptHtml = toolCalls.length
       ? toolCalls.map((tc) => `<pre>${escapeHtml(tc.name)}(${escapeHtml(JSON.stringify(tc.args))})</pre>`).join("")
       : `<pre>(no tool call)${message.content ? "\n\n" + escapeHtml(message.content) : ""}</pre>`;
+    const blockedHtml = blocked.length
+      ? blocked
+          .map(
+            (b) =>
+              `<div class="metric" style="margin-top:4px; color: var(--unknown);">⚠ client-side guard blocked ${escapeHtml(b.kind)}-shaped call: <code>${escapeHtml(b.call.name)}(${escapeHtml(JSON.stringify(b.call.args))})</code></div>`
+          )
+          .join("")
+      : "";
+    actualCell.innerHTML = keptHtml + blockedHtml;
 
     const autoCell = row.tr.querySelector(".auto");
     autoCell.innerHTML = autoGradeResult === "pass"
@@ -615,13 +912,20 @@
     modelSelect.disabled = true;
     runBtn.disabled = true;
     clearCacheBtn.disabled = true;
+    narrowToolSetCheckbox.disabled = true;
   };
 
   loadBtn.addEventListener("click", async () => {
     const modelId = modelSelect.value;
+    // Lock in the tool-set choice for this run at load time, same moment
+    // the model choice is locked in -- both determine what "correct
+    // behavior" means for every case, so they shouldn't change mid-run.
+    TOOLS = narrowToolSetCheckbox.checked ? TOOLS_NARROW : TOOLS_FULL;
+    CASES = narrowToolSetCheckbox.checked ? CASES_NARROW : CASES_FULL;
     loadBtn.disabled = true;
     modelSelect.disabled = true;
     runBtn.disabled = true;
+    narrowToolSetCheckbox.disabled = true;
     progressBar.style.display = "block";
     loadStartMs = performance.now();
     try {
@@ -636,10 +940,14 @@
       const strategyNote = isNativeFunctionCallingModel(modelId)
         ? "native tools API"
         : "manual JSON-in-prompt fallback (not on WebLLM's vetted tool-calling list)";
-      setStatus(`Loaded ${modelId} in ${loadSeconds.toFixed(1)}s. Strategy: ${strategyNote}. Ready to run eval.`);
+      const toolSetNote = narrowToolSetCheckbox.checked
+        ? "narrowed (addActivity + updateItineraryStatus)"
+        : "full (all 4 candidate tools)";
+      setStatus(`Loaded ${modelId} in ${loadSeconds.toFixed(1)}s. Strategy: ${strategyNote}. Tool set: ${toolSetNote}. Ready to run eval.`);
       runBtn.disabled = false;
       loadBtn.disabled = false;
       modelSelect.disabled = false;
+      narrowToolSetCheckbox.disabled = false;
       progressBar.style.display = "none";
       renderCaseRows();
       updateSummary();
@@ -660,6 +968,7 @@
       }
       loadBtn.disabled = false;
       modelSelect.disabled = false;
+      narrowToolSetCheckbox.disabled = false;
       setStatus(`Failed to load: ${msg}\n\nIf this mentions WebGPU, your browser/device likely doesn't support it -- this is exactly the "not available" case the plan (§13) already accounts for.`);
     }
   });
@@ -709,8 +1018,9 @@
     const strategyNote = loadedModelId && isNativeFunctionCallingModel(loadedModelId)
       ? "native tools API"
       : "manual JSON-in-prompt fallback";
+    const toolSetNote = TOOLS === TOOLS_NARROW ? "narrowed" : "full";
     const lines = [
-      `Model: ${loadedModelId} — load time ${loadSeconds?.toFixed(1)}s — strategy: ${strategyNote}`,
+      `Model: ${loadedModelId} — load time ${loadSeconds?.toFixed(1)}s — strategy: ${strategyNote} — tool set: ${toolSetNote}`,
       "",
       "| Case | Expected | Actual | Grade | tok/s |",
       "|---|---|---|---|---|",
@@ -719,7 +1029,11 @@
       const row = rows.get(c.id);
       const r = row.result;
       const expected = c.expectedTool === null ? "(none)" : Array.isArray(c.expectedTool) ? c.expectedTool.join("+") : c.expectedTool;
-      const actual = r?.toolCalls?.length ? r.toolCalls.map((tc) => `${tc.name}(${JSON.stringify(tc.args)})`).join("; ") : "(none)";
+      const keptPart = r?.toolCalls?.length ? r.toolCalls.map((tc) => `${tc.name}(${JSON.stringify(tc.args)})`).join("; ") : "(none)";
+      const blockedPart = r?.blocked?.length
+        ? r.blocked.map((b) => `[guard blocked ${b.kind}-shaped ${b.call.name}(${JSON.stringify(b.call.args)})]`).join("; ")
+        : "";
+      const actual = [keptPart, blockedPart].filter(Boolean).join(" ");
       const grade = row.manualGrade ?? r?.autoGrade ?? "?";
       const tps = r?.usage?.extra?.decode_tokens_per_s?.toFixed(1) ?? "-";
       lines.push(`| ${c.id} | ${expected} | ${actual.replace(/\|/g, "\\|")} | ${grade} | ${tps} |`);
@@ -730,6 +1044,11 @@
     setStatus("Results copied as Markdown (also left in the textarea above).");
   });
 
+  // Match the initial pre-load table to the checkbox's default state
+  // (checked -- narrowed tool set) so it doesn't show the full-set cases
+  // before the user has loaded anything.
+  TOOLS = narrowToolSetCheckbox.checked ? TOOLS_NARROW : TOOLS_FULL;
+  CASES = narrowToolSetCheckbox.checked ? CASES_NARROW : CASES_FULL;
   renderCaseRows();
 </script>
 </body>

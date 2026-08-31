@@ -207,6 +207,36 @@ export const createActivityForTrip = async (params: {
   return { ok: true };
 };
 
+// Status changes otherwise only ever ride inside a full-record save
+// (saveTour) or the grid editor's bulk-PATCH (saveGridEdit) -- this is a
+// small, standalone status-only helper following createActivityForTrip's
+// exact convention above, added for the AI assistant's updateItineraryStatus
+// tool (see app/utils/assistantTools.ts), which only ever has an id + a new
+// status, not a full draft to save.
+export const updateActivityStatus = async (params: {
+  backendUrl: string;
+  jsonHeaders: Record<string, string>;
+  activeTripId: string | null;
+  activityId: string;
+  status: ItineraryStatus;
+}): Promise<{ ok: boolean; error?: string }> => {
+  const { backendUrl, jsonHeaders, activeTripId, activityId, status } = params;
+  if (!activeTripId) return { ok: false, error: 'Select an active trip before updating status.' };
+  const res = await fetch(`${backendUrl}/api/activities/bulk`, {
+    method: 'PATCH',
+    headers: jsonHeaders,
+    body: JSON.stringify({ tripId: activeTripId, updates: [{ id: activityId, fields: { status } }], deletes: [] }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: data.error || 'Unable to update status' };
+  // The bulk endpoint can 200 with a per-row failure -- check the specific
+  // row's own `ok`, not just `res.ok` (same handling saveGridEdit already
+  // does for its own bulk-PATCH calls above).
+  const result = (data.updates ?? []).find((u: any) => String(u.id) === activityId);
+  if (result && !result.ok) return { ok: false, error: result.error || 'Unable to update status' };
+  return { ok: true };
+};
+
 export const removeActivityApi = async (
   backendUrl: string,
   jsonHeaders: Record<string, string>,

@@ -29,6 +29,9 @@ import {
 import type { AppTheme } from '../theme/theme';
 import { useAssistantChat, type AssistantChatUIMessage } from '../hooks/useAssistantChat';
 import { DEFAULT_MODEL_ID } from '../utils/assistantLocalModel';
+import type { ActionDispatchContext } from '../utils/assistantTools';
+import type { Tour } from '../tabs/activities';
+import AssistantActionConfirmDialog from './AssistantActionConfirmDialog';
 import {
   clampPanelPosition,
   computeInitialPanelPosition,
@@ -49,6 +52,17 @@ interface Props {
   // don't see each other's history. Persistence is skipped entirely when
   // this is null/undefined.
   userId?: string | null;
+  // Action mode (ai_assistant_actions), independently flagged from guide
+  // mode -- see useAssistantChat.ts. False/omitted behaves exactly like
+  // before this existed.
+  actionsAllowed?: boolean;
+  // Only meaningful when actionsAllowed is true -- what a confirmed
+  // proposal actually dispatches through. See assistantTools.ts.
+  dispatchContext?: ActionDispatchContext | null;
+  // The trip's current activities, for the updateItineraryStatus picker.
+  // Sourced from App.tsx's existing `tours` state, not a fresh fetch --
+  // see the implementation plan's Milestone 5.
+  activities?: Tour[];
 }
 
 const PANEL_WIDTH = 360;
@@ -68,10 +82,29 @@ const CAPABILITY_REASON_TEXT: Record<string, string> = {
   unknown: "This assistant isn't available on this browser or device right now.",
 };
 
-const AssistantChatPanel: React.FC<Props> = ({ onClose, theme, visible = true, userId }) => {
+const AssistantChatPanel: React.FC<Props> = ({
+  onClose,
+  theme,
+  visible = true,
+  userId,
+  actionsAllowed = false,
+  dispatchContext = null,
+  activities = [],
+}) => {
   const themedStyles = React.useMemo(() => buildStyles(theme), [theme]);
-  const { engineState, loadProgress, errorMessage, messages, capability, loadModel, sendMessage, clearConversation } =
-    useAssistantChat(userId);
+  const {
+    engineState,
+    loadProgress,
+    errorMessage,
+    messages,
+    capability,
+    pendingAction,
+    loadModel,
+    sendMessage,
+    clearConversation,
+    confirmPendingAction,
+    cancelPendingAction,
+  } = useAssistantChat({ userId, actionsAllowed, dispatchContext });
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<any>(null);
   const isWeb = Platform.OS === 'web';
@@ -231,6 +264,14 @@ const AssistantChatPanel: React.FC<Props> = ({ onClose, theme, visible = true, u
           renderItem={renderMessage}
           contentContainerStyle={themedStyles.messageList}
           testID="assistant-message-list"
+        />
+        <AssistantActionConfirmDialog
+          visible={!!pendingAction}
+          pendingAction={pendingAction}
+          activities={activities}
+          onConfirm={(resolvedActivityId) => void confirmPendingAction(resolvedActivityId)}
+          onCancel={cancelPendingAction}
+          theme={theme}
         />
         {errorMessage ? (
           <Text style={[themedStyles.stateBody, themedStyles.errorText, themedStyles.inlineError]}>

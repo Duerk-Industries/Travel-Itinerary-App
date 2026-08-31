@@ -35,9 +35,12 @@ const baseHookReturn = {
   errorMessage: null,
   messages: [] as any[],
   capability: { supported: true },
+  pendingAction: null as any,
   loadModel: jest.fn(),
   sendMessage: jest.fn(),
   clearConversation: jest.fn(),
+  confirmPendingAction: jest.fn(),
+  cancelPendingAction: jest.fn(),
 };
 
 describe('AssistantChatPanel', () => {
@@ -285,5 +288,75 @@ describe('AssistantChatPanel', () => {
     const { getByTestId } = render(<AssistantChatPanel onClose={jest.fn()} />);
     fireEvent.press(getByTestId('assistant-clear'));
     expect(clearConversation).toHaveBeenCalledTimes(1);
+  });
+
+  describe('action mode confirmation dialog', () => {
+    // The dialog's own behavior (picker ranking, confirm/cancel wiring) is
+    // covered by AssistantActionConfirmDialog.test.tsx -- this only asserts
+    // the panel renders it exactly when the hook reports a pendingAction.
+    // actionsAllowed's actual effect on whether a pendingAction ever gets
+    // set at all is covered by useAssistantChat.test.tsx, since this file
+    // mocks the hook entirely.
+    it('does not render the dialog when there is no pending action', () => {
+      mockUseAssistantChat.mockReturnValue({ ...baseHookReturn, engineState: 'ready' });
+      const { queryByTestId } = render(<AssistantChatPanel onClose={jest.fn()} />);
+      expect(queryByTestId('assistant-action-confirm-dialog')).toBeNull();
+    });
+
+    it('renders the dialog when the hook reports a pending action', () => {
+      mockUseAssistantChat.mockReturnValue({
+        ...baseHookReturn,
+        engineState: 'ready',
+        pendingAction: { kind: 'addActivity', args: { name: 'Louvre tour', date: '2026-04-12' } },
+      });
+      const { getByTestId } = render(<AssistantChatPanel onClose={jest.fn()} />);
+      expect(getByTestId('assistant-action-confirm-dialog')).toBeTruthy();
+    });
+
+    it('passes the activities prop through to the dialog for the status-update picker', () => {
+      const activities = [
+        {
+          id: 'a',
+          status: 'Needed' as const,
+          activityType: 'Tour' as const,
+          date: '2026-04-12',
+          name: 'Eiffel Tower tour',
+          startLocation: '',
+          startTime: '',
+          duration: '',
+          cost: '0',
+          freeCancelBy: '',
+          bookedOn: '',
+          reference: '',
+          notes: '',
+          paidBy: [],
+          travelerIds: [],
+        },
+      ];
+      mockUseAssistantChat.mockReturnValue({
+        ...baseHookReturn,
+        engineState: 'ready',
+        pendingAction: { kind: 'updateItineraryStatus', args: { itemName: 'Eiffel Tower tour', status: 'Booked' } },
+      });
+      const { getByTestId } = render(<AssistantChatPanel onClose={jest.fn()} activities={activities} />);
+      expect(getByTestId('assistant-action-picker-row-a')).toBeTruthy();
+    });
+
+    it('calls confirmPendingAction / cancelPendingAction from the dialog', () => {
+      const confirmPendingAction = jest.fn();
+      const cancelPendingAction = jest.fn();
+      mockUseAssistantChat.mockReturnValue({
+        ...baseHookReturn,
+        engineState: 'ready',
+        pendingAction: { kind: 'addActivity', args: { name: 'Louvre tour', date: '2026-04-12' } },
+        confirmPendingAction,
+        cancelPendingAction,
+      });
+      const { getByTestId } = render(<AssistantChatPanel onClose={jest.fn()} />);
+      fireEvent.press(getByTestId('assistant-action-confirm'));
+      expect(confirmPendingAction).toHaveBeenCalledWith(undefined);
+      fireEvent.press(getByTestId('assistant-action-cancel'));
+      expect(cancelPendingAction).toHaveBeenCalledTimes(1);
+    });
   });
 });

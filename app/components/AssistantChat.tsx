@@ -20,6 +20,8 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import type { AppTheme } from '../theme/theme';
+import type { ActionDispatchContext } from '../utils/assistantTools';
+import type { Tour } from '../tabs/activities';
 import AssistantChatButton from './AssistantChatButton';
 
 const AssistantChatPanel = lazy(() => import('./AssistantChatPanel'));
@@ -27,6 +29,13 @@ const AssistantChatPanel = lazy(() => import('./AssistantChatPanel'));
 type Props = {
   theme?: AppTheme;
   userId?: string | null;
+  // Action mode -- see AssistantChatPanel.tsx and useAssistantChat.ts.
+  // Threading these through a static import here (rather than only inside
+  // the lazy-loaded panel) is safe: they're plain data (a boolean, a
+  // context object, an array), never anything that imports WebLLM.
+  actionsAllowed?: boolean;
+  dispatchContext?: ActionDispatchContext | null;
+  activities?: Tour[];
 };
 
 const PanelLoadingFallback: React.FC = () => (
@@ -35,7 +44,7 @@ const PanelLoadingFallback: React.FC = () => (
   </View>
 );
 
-const AssistantChat: React.FC<Props> = ({ theme, userId }) => {
+const AssistantChat: React.FC<Props> = ({ theme, userId, actionsAllowed, dispatchContext, activities }) => {
   // Two flags, not one: `hasOpenedOnce` is sticky (never goes back to
   // false) so the panel -- and the useAssistantChat() state living inside
   // it, i.e. the loaded model + the conversation so far -- stays mounted
@@ -57,7 +66,15 @@ const AssistantChat: React.FC<Props> = ({ theme, userId }) => {
       {!visible && <AssistantChatButton onPress={handleOpen} />}
       {hasOpenedOnce && (
         <Suspense fallback={<PanelLoadingFallback />}>
-          <AssistantChatPanel onClose={handleClose} theme={theme} visible={visible} userId={userId} />
+          <AssistantChatPanel
+            onClose={handleClose}
+            theme={theme}
+            visible={visible}
+            userId={userId}
+            actionsAllowed={actionsAllowed}
+            dispatchContext={dispatchContext}
+            activities={activities}
+          />
         </Suspense>
       )}
     </>

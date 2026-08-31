@@ -24,6 +24,24 @@ const mockedLoadAssistantEngine = loadAssistantEngine as jest.Mock;
 const mockedStreamAssistantReply = streamAssistantReply as jest.Mock;
 const mockedDetectCapability = detectAssistantModelCapability as jest.Mock;
 
+// Only the dispatch map is mocked here -- parseActionToolCall/applyActionGuard
+// stay real so these tests exercise the hook's actual parse-then-branch
+// logic against a mocked model reply, not a stubbed-out version of it.
+jest.mock('../utils/assistantTools', () => ({
+  ...jest.requireActual('../utils/assistantTools'),
+  ACTION_DISPATCH: { addActivity: jest.fn(), updateItineraryStatus: jest.fn() },
+}));
+import { ACTION_DISPATCH } from '../utils/assistantTools';
+const mockedAddActivityDispatch = ACTION_DISPATCH.addActivity as jest.Mock;
+const mockedUpdateStatusDispatch = ACTION_DISPATCH.updateItineraryStatus as jest.Mock;
+
+const DISPATCH_CONTEXT = {
+  backendUrl: 'https://wanderbunnies.test',
+  jsonHeaders: {},
+  activeTripId: 'trip-1',
+  defaultPayerId: null,
+};
+
 describe('useAssistantChat', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -169,7 +187,7 @@ describe('useAssistantChat', () => {
         'stp.assistantChatHistory.user-1',
         JSON.stringify([{ id: 'u-1', role: 'user', content: 'How do I add a flight?' }])
       );
-      const { result } = renderHook(() => useAssistantChat('user-1'));
+      const { result } = renderHook(() => useAssistantChat({ userId: 'user-1' }));
       expect(result.current.messages).toEqual([
         { id: 'u-1', role: 'user', content: 'How do I add a flight?' },
       ]);
@@ -180,7 +198,7 @@ describe('useAssistantChat', () => {
         'stp.assistantChatHistory.user-1',
         JSON.stringify([{ id: 'u-1', role: 'user', content: 'private question' }])
       );
-      const { result } = renderHook(() => useAssistantChat('user-2'));
+      const { result } = renderHook(() => useAssistantChat({ userId: 'user-2' }));
       expect(result.current.messages).toEqual([]);
     });
 
@@ -189,7 +207,7 @@ describe('useAssistantChat', () => {
         onDelta('answer');
         return { text: 'answer', usage: null };
       });
-      const { result } = renderHook(() => useAssistantChat('user-1'));
+      const { result } = renderHook(() => useAssistantChat({ userId: 'user-1' }));
       await act(async () => {
         await result.current.loadModel();
       });
@@ -211,7 +229,7 @@ describe('useAssistantChat', () => {
             resolveStream = () => resolve({ text: 'partial answer', usage: null });
           })
       );
-      const { result } = renderHook(() => useAssistantChat('user-1'));
+      const { result } = renderHook(() => useAssistantChat({ userId: 'user-1' }));
       await act(async () => {
         await result.current.loadModel();
       });
@@ -236,7 +254,7 @@ describe('useAssistantChat', () => {
 
     it('clearConversation empties both the in-memory messages and stored history', async () => {
       mockedStreamAssistantReply.mockResolvedValue({ text: 'answer', usage: null });
-      const { result } = renderHook(() => useAssistantChat('user-1'));
+      const { result } = renderHook(() => useAssistantChat({ userId: 'user-1' }));
       await act(async () => {
         await result.current.loadModel();
       });
@@ -283,7 +301,7 @@ describe('useAssistantChat', () => {
         JSON.stringify([{ id: 'u-1', role: 'user', content: 'earlier question' }])
       );
 
-      const { result, rerender } = renderHook(({ userId }) => useAssistantChat(userId), {
+      const { result, rerender } = renderHook(({ userId }) => useAssistantChat({ userId }), {
         initialProps: { userId: null as string | null },
       });
       expect(result.current.messages).toEqual([]);
@@ -299,6 +317,170 @@ describe('useAssistantChat', () => {
       expect(JSON.parse(window.localStorage.getItem('stp.assistantChatHistory.user-1')!)).toEqual([
         { id: 'u-1', role: 'user', content: 'earlier question' },
       ]);
+    });
+  });
+
+  describe('action mode (Phase 3)', () => {
+    // Content is built entirely from onDelta calls (see the persistence
+    // tests above) -- the resolved return value alone never touches
+    // `messages`. This mirrors a real stream: the raw text appears in the
+    // bubble first, then the hook's post-processing may replace it.
+    const mockReply = (text: string) => {
+      mockedStreamAssistantReply.mockImplementation(
+        async (_engine: unknown, _messages: unknown, onDelta?: (d: string) => void) => {
+          onDelta?.(text);
+          return { text, usage: null };
+        }
+      );
+    };
+
+    beforeEach(() => {
+      mockedAddActivityDispatch.mockReset();
+      mockedUpdateStatusDispatch.mockReset();
+    });
+
+    it('leaves tool-call-shaped text as plain content when actionsAllowed is false -- byte-for-byte guide-mode behavior', async () => {
+      mockReply('{"tool": "addActivity", "args": {"name": "Louvre tour", "date": "2026-04-12"}}');
+      const { result } = renderHook(() => useAssistantChat({ actionsAllowed: false }));
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('Add a tour of the Louvre on April 12th.');
+      });
+
+      expect(result.current.pendingAction).toBeNull();
+      const assistantMessage = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistantMessage?.content).toContain('"tool": "addActivity"');
+    });
+
+    it('sets pendingAction from a valid proposed tool call when actionsAllowed is true, without dispatching', async () => {
+      mockReply('{"tool": "addActivity", "args": {"name": "Louvre tour", "date": "2026-04-12"}}');
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('Add a tour of the Louvre on April 12th.');
+      });
+
+      expect(result.current.pendingAction).toEqual({
+        kind: 'addActivity',
+        args: { name: 'Louvre tour', date: '2026-04-12' },
+      });
+      expect(mockedAddActivityDispatch).not.toHaveBeenCalled();
+      // The raw JSON must never be left as the visible/persisted message
+      // content -- it's replaced with a plain-language placeholder.
+      const assistantMessage = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistantMessage?.content).not.toContain('"tool"');
+    });
+
+    it('does not set pendingAction, and shows a decline, for a guard-blocked out-of-scope call', async () => {
+      mockReply('{"tool": "addActivity", "args": {"name": "United flight 245 from JFK to LAX", "date": "2026-03-03"}}');
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('Add a flight for me on United 245.');
+      });
+
+      expect(result.current.pendingAction).toBeNull();
+      const assistantMessage = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistantMessage?.content).toMatch(/flight request/i);
+    });
+
+    it('leaves a plain-text (non-tool-call) reply untouched when actionsAllowed is true', async () => {
+      mockReply('The best time to visit Kyoto is spring.');
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('What is the best time to visit Kyoto?');
+      });
+
+      expect(result.current.pendingAction).toBeNull();
+      const assistantMessage = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistantMessage?.content).toBe('The best time to visit Kyoto is spring.');
+    });
+
+    it('confirmPendingAction dispatches through ACTION_DISPATCH, appends a result message, and clears pendingAction', async () => {
+      mockReply('{"tool": "addActivity", "args": {"name": "Louvre tour", "date": "2026-04-12"}}');
+      mockedAddActivityDispatch.mockResolvedValue({ ok: true });
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('Add a tour of the Louvre on April 12th.');
+      });
+      expect(result.current.pendingAction).not.toBeNull();
+
+      await act(async () => {
+        await result.current.confirmPendingAction();
+      });
+
+      expect(mockedAddActivityDispatch).toHaveBeenCalledWith(
+        { name: 'Louvre tour', date: '2026-04-12', resolvedActivityId: undefined },
+        DISPATCH_CONTEXT
+      );
+      expect(result.current.pendingAction).toBeNull();
+      const lastMessage = result.current.messages[result.current.messages.length - 1];
+      expect(lastMessage.content).toContain('Louvre tour');
+    });
+
+    it('confirmPendingAction for updateItineraryStatus passes the resolved activity id through to dispatch', async () => {
+      mockReply('{"tool": "updateItineraryStatus", "args": {"itemName": "the Eiffel Tower tour", "status": "Booked"}}');
+      mockedUpdateStatusDispatch.mockResolvedValue({ ok: true });
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('Mark the Eiffel Tower tour as booked.');
+      });
+
+      await act(async () => {
+        await result.current.confirmPendingAction('activity-42');
+      });
+
+      expect(mockedUpdateStatusDispatch).toHaveBeenCalledWith(
+        { itemName: 'the Eiffel Tower tour', status: 'Booked', resolvedActivityId: 'activity-42' },
+        DISPATCH_CONTEXT
+      );
+    });
+
+    it('cancelPendingAction clears the proposal without dispatching', async () => {
+      mockReply('{"tool": "addActivity", "args": {"name": "Louvre tour", "date": "2026-04-12"}}');
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('Add a tour of the Louvre on April 12th.');
+      });
+      expect(result.current.pendingAction).not.toBeNull();
+
+      act(() => {
+        result.current.cancelPendingAction();
+      });
+
+      expect(result.current.pendingAction).toBeNull();
+      expect(mockedAddActivityDispatch).not.toHaveBeenCalled();
+      expect(mockedUpdateStatusDispatch).not.toHaveBeenCalled();
     });
   });
 });

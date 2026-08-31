@@ -683,6 +683,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
   const aiItineraryGenerationAllowed = accountProfile.entitlements?.aiItineraryGeneration === true;
   const aiAssistantGuideAllowed = accountProfile.entitlements?.aiAssistantGuide === true;
+  const aiAssistantActionsAllowed = accountProfile.entitlements?.aiAssistantActions === true;
   const logoutRef = useRef<() => void>(() => undefined);
   const handleUnauthorized = useCallback(() => logoutRef.current(), []);
 
@@ -3707,7 +3708,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           web-only until that's solved (Phase 4), rather than showing a FAB
           whose panel can only ever say "not available here" on native. */}
       {userToken && aiAssistantGuideAllowed && Platform.OS === 'web' ? (
-        <AssistantChat theme={theme} userId={userId ?? null} />
+        <AssistantChat
+          theme={theme}
+          userId={userId ?? null}
+          actionsAllowed={aiAssistantActionsAllowed}
+          activities={tours}
+          dispatchContext={{ backendUrl, jsonHeaders, activeTripId, defaultPayerId }}
+        />
       ) : null}
     </SafeAreaView>
       </ChatProvider>

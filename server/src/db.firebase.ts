@@ -4791,6 +4791,13 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
     createdAt: nowIso(),
   };
   await db.collection('tours').doc(id).set(payload);
+  // TOUR_ADDED was a defined-but-dead TripActivityType before this -- mirrors
+  // the same retrofit in db.postgres.ts's insertActivity, kept inside the
+  // adapter function rather than the route, matching every other
+  // writeActivity call site in this file (see followTripByCode/addItineraryDetail above).
+  await writeActivity(payload.tripId, payload.userId, 'TOUR_ADDED', 'Activity added', payload.name, {
+    activityId: payload.id,
+  });
   return payload;
 };
 

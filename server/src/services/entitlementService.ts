@@ -182,6 +182,11 @@ const FAIL_CLOSED_FLAGS = new Set([
   // to off, not on, or a deployment whose seeding pass hasn't caught up yet silently
   // exposes the map before anyone's decided to turn it on.
   'trip_day_map',
+  // Unlike ai_assistant_guide (read-only Q&A, fail-open), this flag gates the
+  // on-device assistant proposing real mutations (addActivity/updateItineraryStatus).
+  // An unseeded DB row must not silently enable AI-driven writes on a fresh or
+  // misconfigured deployment.
+  'ai_assistant_actions',
 ]);
 
 /**

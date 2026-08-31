@@ -24,6 +24,7 @@ export type AccountProfile = {
     costTracking?: boolean;
     aiItineraryGeneration?: boolean;
     aiAssistantGuide?: boolean;
+    aiAssistantActions?: boolean;
   };
   tierKey?: string;
 };

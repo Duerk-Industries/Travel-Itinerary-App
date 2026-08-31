@@ -101,4 +101,33 @@ describe('Trip activity feed', () => {
     expect(page2.body.events.length).toBeGreaterThanOrEqual(1);
     expect(page2.body.events[0].id).not.toBe(page1.body.events[0].id);
   });
+
+  it('POST /api/activities writes a TOUR_ADDED feed entry (retrofit for the AI assistant\'s addActivity tool -- see the implementation plan\'s Phase 3 milestone 2; TOUR_ADDED was previously a defined-but-dead activity type)', async () => {
+    const created = await request(app)
+      .post('/api/activities')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        tripId,
+        date: '2026-09-10',
+        name: 'Feed Retrofit Tour',
+        startLocation: 'Old Town',
+        startTime: '10:00',
+        duration: '2h',
+        cost: 0,
+      })
+      .expect(201);
+
+    const res = await request(app)
+      .get(`/api/trips/${tripId}/activity`)
+      .query({ group: 'false' })
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const tourAdded = res.body.events.find(
+      (event: any) => event.type === 'TOUR_ADDED' && event.metadata?.activityId === created.body.id
+    );
+    expect(tourAdded).toBeTruthy();
+    expect(tourAdded.summary).toBe('Feed Retrofit Tour');
+    expect(tourAdded.actorUserId).toBe(ownerUserId);
+  });
 });

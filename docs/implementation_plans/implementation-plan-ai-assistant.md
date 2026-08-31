@@ -6,12 +6,173 @@ Phase 1 (guide/FAQ chat) built, tested, and manually verified working
 end-to-end behind the `ai_assistant_guide` flag (default off). Phase 2
 (conversation persistence) is also built and tested — see "Phase 2
 status" below for a real deviation from this plan's original design
-(client-side only, not the server DB table originally specified). Phase 0's
-findings below still stand as background; Phase 1's own findings are
-below that. Phase 3 (actions) has not been started. This plan reflects
-scoping decisions the product owner made up front (see "Scoping decisions"
-below), most recently revised to make the **entire** feature — guide *and*
-actions — run on-device with $0 marginal cost.
+(client-side only, not the server DB table originally specified). **Phase 3
+(actions) is now built and tested too** — see "Phase 3 status" below for
+the narrow tool set that shipped, how it differs from the original 4-tool
+design, and what's still open before the `ai_assistant_actions` flag can
+actually be flipped on for real users. Phase 0's findings below still
+stand as background; Phase 1's own findings are below that. This plan
+reflects scoping decisions the product owner made up front (see "Scoping
+decisions" below), most recently revised to make the **entire** feature —
+guide *and* actions — run on-device with $0 marginal cost.
+
+**Phase 3 (actions) is paused, not started — product decision, not a
+default.** The eval harness (§13) was run against both realistic
+candidate models and found no currently-viable path: Qwen2.5-1.5B's
+manual-JSON-in-prompt accuracy was weak (3/8, failing exactly the
+safety-critical "ask instead of inventing details" cases), and
+Hermes-2-Pro-Mistral-7B's native `tools` path is blocked by an upstream
+WebLLM/XGrammar bug (crashes on the first call, every time — see the
+"GrammarMatcher disposal bug" finding below) on top of GPU-load fragility
+observed on the test machine. Given both realistic strategies are
+currently broken or unreliable, the product owner chose to **keep the
+assistant guide-only for now** rather than keep chasing either path.
+Revisit if WebLLM's tool-calling matures upstream (watch
+[mlc-ai/web-llm#807](https://github.com/mlc-ai/web-llm/issues/807)) or if
+a narrower tool set is later judged worth re-testing against Qwen2.5.
+**Update: that narrower retest happened — see "Narrow-tool-set retest
+result" below.** The accuracy gate this pause was based on is closed for
+the narrow tool set + manual strategy. **Product owner decision (2026-08-24):
+un-pause Phase 3 and begin scoping the actual implementation**, on the
+condition that the WebLLM `0.2.84` version risk (same entry below) is
+resolved or explicitly accepted first, and on the narrow tool set only —
+the full 4-tool set was never re-tested and should not be assumed safe.
+
+**Retest in progress (product owner requested it):** since the manual
+JSON-in-prompt strategy doesn't depend on the broken upstream Hermes path,
+it's worth one more real attempt before treating the pause as final. The
+harness now supports, without depending on any WebLLM fix: (1) Qwen2.5-3B
+instead of 1.5B (better instruction-following, now the dropdown's default
+selection), (2) two few-shot examples in the manual-strategy system prompt
+targeting the exact observed failure modes ("ask instead of inventing
+missing fields," "use the stated current year, don't guess"), and (3) a
+"narrow tool set" checkbox (checked by default) that re-grades the same 10
+prompts against Phase 3's actual planned first allow-list (`addActivity` +
+`updateItineraryStatus` only) instead of all 4 hypothetical tools — the
+scope that would actually ship, not a broader hypothetical one. Results
+pending a real run.
+
+🛑 **Retest hit a third blocker, also traced to a confirmed upstream bug —
+and this one is a live risk for the already-shipped Phase 1 feature, not
+just this eval.** Running Qwen2.5-3B via the manual strategy (no `tools`,
+no `response_format` at all) failed identically to the Hermes crash —
+"Object has already been disposed" on every call, starting with the
+first, in a genuinely fresh browser session (confirmed with the product
+owner: full browser restart beforehand, Qwen2.5-3B was the first model
+tried, no prior Hermes attempt in that session — ruling out leftover
+tab-state corruption as the cause). Found the real cause via GitHub
+search: [mlc-ai/web-llm#844](https://github.com/mlc-ai/web-llm/issues/844),
+opened days before this was hit, root-caused to `apache/tvm`'s web
+runtime — a shared `shapeCache` LRU evicts and disposes tensor-shape
+objects that are still in use elsewhere, and a fix requires an upstream
+`apache/tvm` PR to land, a new `web-runtime` release, and then a WebLLM
+dependency bump, **none of which has happened yet.** This is a different
+bug from the Hermes GrammarMatcher one, but the same *class*: both are
+"regression introduced in 0.2.83" per the issue title, and both this
+harness and (more importantly) `app/package.json` are pinned to
+`@mlc-ai/web-llm@^0.2.84` — **after** the regression, and with a caret
+range that floats forward into any future 0.2.x. Apparently only larger
+models (3B, 7B) churn the shape cache enough to trigger it reliably;
+Qwen2.5-1.5B (the shipped guide-mode default) didn't trip it in this
+session's earlier runs or in Phase 1's manual testing, but that's
+circumstantial, not a guarantee — longer conversations or heavier prompts
+could still hit it. **Fix applied in the harness only:** pinned the CDN
+import to `@mlc-ai/web-llm@0.2.82` (before the regression) instead of
+`0.2.84`, to unblock testing. **Not yet applied to `app/package.json` —
+that's a real production question for the product owner**, since the
+same regression, if it fires, would break the shipped guide chat, not
+just this spike.
+
+🎯 **Narrow-tool-set retest result — positive, and it closes the specific
+accuracy gate Phase 3 was paused on.** With the 0.2.82 pin unblocking real
+runs, the narrowed 10-prompt set (Qwen2.5-3B, manual JSON-in-prompt
+strategy, `addActivity` + `updateItineraryStatus` only — Phase 3's actual
+planned first allow-list, not the full 4-tool hypothetical set) went
+through several rounds of real, verified fixes:
+
+1. **Harness bug fixed — the system prompt didn't match the tool set.**
+   `SYSTEM_PROMPT` was a static string claiming the model could add
+   flights, lodging, *and* activities, regardless of which tool set was
+   actually loaded — so under the narrow set the model was being told it
+   had capabilities it didn't. Replaced with `buildSystemPrompt()`,
+   generated from whatever's actually in `TOOLS`, which also explicitly
+   forbids substituting a different tool for a request none of the active
+   tools cover.
+2. **Few-shot examples added** for (a) mapping the user's own phrasing
+   onto the exact status enum value (fixed a wrong-value bug where "mark
+   as booked" produced `status: "Needed"`), and (b) declining out-of-scope
+   requests — covering both an under-specified case and, after a
+   follow-up retest showed the lesson hadn't generalized, fully-specified
+   flight and lodging requests too (each tool needed its own
+   complete-detail example; the lesson didn't transfer between siblings on
+   its own).
+3. **Sampling temperature pinned to `0.2`** (`ACTION_TEMPERATURE` in the
+   harness). Previously left at WebLLM's model-config default (~1.0 for
+   Qwen2.5), which made back-to-back reruns of the *identical* prompts
+   against *identical* harness code produce materially different
+   pass/fail results — impossible to tell a real prompt improvement from
+   sampling noise. Matches the precedent already set by
+   `ASSISTANT_TEMPERATURE = 0.2` in the shipped guide mode
+   (`assistantLocalModel.ts`), adopted for the same "confident-but-wrong
+   drift" reason.
+4. **A client-side heuristic guard added**, after the temperature fix
+   revealed that coercing a *fully-specified* flight/lodging request into
+   a bogus `addActivity` call is this model's actual preferred completion
+   for that prompt shape — not sampling noise, and not something three
+   rounds of prompt engineering could close. `detectOutOfScopeCoercion` /
+   `applyClientSideGuard` (in the harness) inspect a proposed
+   `addActivity` call's own arguments for flight/lodging-shaped content
+   (the word "flight," an airport-code pattern, "hotel"/"resort"/
+   "check-in"/"N nights," etc.) and intercept it before it would reach a
+   confirmation dialog, rather than relying on the model to self-restrain.
+   Blocked calls are still shown (flagged) in the harness's results, not
+   hidden, so the model's real behavior stays visible alongside the
+   guard's intervention.
+
+**Final result: 8/8 auto-graded pass, 9/10 overall** — multi-intent (the
+one `graded: "manual"` case that isn't a known harness limitation) also
+passed, correctly adding only the in-scope cruise half and dropping the
+hotel half. The sole remaining failure, ambiguous-reference ("cancel that
+activity we just talked about"), isn't fixable by anything tested here —
+this harness has no real conversation history to resolve "that activity"
+against, so correct behavior (asking which one) can't be distinguished
+from a lucky guess in this test shape; a real Phase 3 implementation would
+have actual conversation context available and needs re-testing in that
+context, not this harness.
+
+**Caveat, stated plainly:** most of this gain is the guard, not the model
+becoming more reliable — its underlying instinct to coerce an unsupported
+request into `addActivity` did not change, which is exactly why the guard
+exists. The guard itself is simple regex/keyword matching, which means
+real false positives are possible in production (a legitimate activity
+literally named "Dinner at the Hotel Ritz" or "wine tasting flight" would
+be wrongly blocked) — a real `assistantTools.ts` implementation needs a
+more careful version of this check, not a direct port of the harness's
+regex.
+
+**What this does and doesn't settle:** this closes the accuracy gate for
+the *narrow* tool set specifically — the original full 4-tool set was
+never re-tested under any of these fixes and should be assumed to still
+fail the same way it originally did (no guard exists for `addFlight`/
+`addLodging` calls when those tools are actually active and legitimate).
+Un-pausing Phase 3 is still the product owner's call, not just an
+engineering one — and two things independent of this accuracy result
+still need resolving first: (a) the WebLLM `@mlc-ai/web-llm@^0.2.84`
+shapeCache regression above is still unresolved in `app/package.json`
+(only pinned to 0.2.82 in this harness, not the real app) — a live risk
+to the already-shipped guide mode, unrelated to tool-calling accuracy; (b)
+no `assistantTools.ts` dispatch layer, confirmation UI, or
+`ai_assistant_actions` flag wiring exists yet — this retest validates the
+accuracy checkpoint the plan's rollout gate (§12) names as the go/no-go
+signal, it is not itself an implementation.
+
+✅ **Update: that implementation now exists.** All three things this
+paragraph named as missing — the `assistantTools.ts` dispatch layer, the
+confirmation UI, and the `ai_assistant_actions` flag wiring — are built and
+tested. See "Phase 3 status" below for what shipped and how it differs
+from this section's assumptions (most notably: the flag ships fail-
+**closed**, not fail-open like `ai_assistant_guide`, since it gates real
+mutations).
 
 ## Phase 0 findings so far
 
@@ -173,11 +334,13 @@ it through this repo's actual tooling (not simulated):
   mode if Qwen2.5's accuracy is too low") — if the reference model for
   measuring Qwen2.5 against can't reliably load on real hardware, it's not
   a realistic fallback for end users either, and the comparison run itself
-  is still blocked. Needs a retry after a full page refresh (not yet done)
-  to know if this was one bad load or a consistent hardware ceiling; if
-  consistent, the "bigger opt-in model for actions" option may not be
-  viable at all on constrained hardware, which would leave "narrow the
-  tool set and re-test Qwen2.5" as the only real path.
+  is still blocked. **Update: retried after a full browser restart** —
+  the model itself now loaded successfully (so the first `DEVICE_REMOVED`
+  really was a one-off GPU crash, not a hard hardware ceiling — though the
+  browser did briefly refuse to find *any* GPU adapter in between,
+  consistent with Chrome/Edge's post-crash GPU-process blocklist, and
+  needed the full restart, not just a tab refresh, to clear). But the
+  comparison run is still blocked — see the new finding immediately below.
   - **Harness bug found and fixed alongside this:** a lost/removed GPU
     device is fatal for the rest of the page — no in-page retry can
     recover it — but the harness kept letting "Load model" be re-clicked
@@ -195,6 +358,37 @@ it through this repo's actual tooling (not simulated):
     works, since Qwen2.5 already proved that), instead naming the actual
     likely cause (VRAM/driver timeout on a larger model) and the actual
     fix (refresh the page).
+- 🛑 **Blocker (not a harness bug): Hermes's native `tools` path crashes on
+  every single call with a confirmed upstream WebLLM bug — the eval
+  harness cannot get real accuracy data for the native strategy at all.**
+  Once the model actually loaded (see above), every one of the 10 prompts
+  failed identically with an Emscripten/embind use-after-dispose error:
+  `Cannot pass deleted object as a pointer of type GrammarMatcher` on the
+  first call, then `The current Object has already been disposed` on
+  every call after. Root cause traced (not guessed): WebLLM hardcodes
+  `response_format: { type: "json_object", schema: ... }` internally for
+  Hermes-2-Pro/Hermes-3 function calling (§4, item 1's correction already
+  covers why), which forces its internal XGrammar-based `GrammarMatcher`
+  to initialize on every call — and that initialization is disposing a
+  native object it still needs. This matches the *shape* of a previously
+  fixed bug ([mlc-ai/web-llm#486](https://github.com/mlc-ai/web-llm/issues/486),
+  "Module has already been disposed" when reusing one engine across
+  `response_format` calls, fixed in npm `0.2.66`) but not its exact
+  trigger — we're on `0.2.84` and it fails on the *first* call, before any
+  schema-switching could occur. It matches more closely an **actively
+  open, unresolved** issue filed by another user against the same version
+  range, [mlc-ai/web-llm#807](https://github.com/mlc-ai/web-llm/issues/807):
+  the WebLLM maintainer's own read is that this is likely a bug in the
+  newer XGrammar-based grammar-matcher bindings, not something fixable
+  from application code. **Conclusion: Hermes's native tool-calling path
+  is not currently usable in the browser with this WebLLM version,
+  independent of anything in our harness or app code.** Combined with the
+  weak Qwen2.5 manual-strategy accuracy (3/8) and Hermes's GPU-load
+  fragility on the test machine, **the product owner decided to pause
+  Phase 3 entirely and keep the assistant guide-only for now** (see
+  "Status" at the top) rather than keep investing in either path. Revisit
+  by watching web-llm#807 for an upstream fix, or by re-testing Qwen2.5
+  against a narrower tool set if action mode is revisited later.
 - **Incidental, unrelated finding — flagged, not fixed here:**
   `app/tests/metroConfigParity.test.ts`'s "keeps image-size-safe as a
   workspace instead of a broken file override" assertion is already
@@ -365,6 +559,133 @@ so it can never fire with pre-hydration data. Locked in by a regression
 test that seeds storage, mounts with `userId: null`, then rerenders with
 a real `userId` and asserts the seeded data survives untouched.
 
+## Phase 3 status: action-taking — built, on the narrow tool set only
+
+Phase 3 is built and tested, dispatched entirely from the codepaths the
+narrow-tool-set retest (see "Status" above) validated — **not** the
+original 4-tool (`addFlight`/`addLodging`/`addActivity`/
+`updateItineraryStatus`) design §5.2 first described. Scope is exactly
+`addActivity` + `updateItineraryStatus` (activities only, for the status
+tool); `addFlight`/`addLodging` were never re-tested after the retest's
+guard was added and are explicitly out of scope for this build, not a
+placeholder for "coming soon."
+
+**Strategy: manual JSON-in-prompt, not WebLLM's native `tools` API.**
+`app/utils/assistantTools.ts` implements the same approach the retest
+validated, ported rather than redesigned: tool schemas are described as
+plain text in the system prompt (`buildActionSystemPrompt` +
+`buildActionToolsPrompt`), the model is asked to reply with a single raw
+JSON object, and the response is parsed defensively
+(`parseActionToolCall`) — markdown fences are stripped, and a
+string-aware brace-matching scan (`extractTopLevelJsonObjects`) recovers
+multiple back-to-back JSON objects a small model sometimes emits without
+a separator. An unparseable or unrecognized-tool response is treated as
+"no tool call," never an error surfaced to the user. WebLLM's native
+`tools`/`tool_choice` path is still not used anywhere in this feature —
+Qwen2.5 remains outside its `functionCallingModelIds` allowlist (§4), and
+that hasn't changed.
+
+**The client-side out-of-scope guard shipped as designed, with its known
+false-positive trade-off accepted, not silently dropped.**
+`detectOutOfScopeCoercion` / `applyActionGuard` inspect a proposed
+`addActivity` call's own `name`/`startLocation`/`duration` text for
+flight- or lodging-shaped signals (airport-code patterns, "hotel,"
+"check-in," "N nights," etc.) and intercept it before it would ever reach
+the confirmation dialog. This is the same simple keyword matching the
+retest used, not a smarter semantic version — a real activity named
+"Dinner at the Hotel Ritz" would still be wrongly blocked. That was an
+accepted v1 trade-off in the retest write-up and remains one here; it
+wasn't revisited or hardened during implementation.
+
+**Item resolution for `updateItineraryStatus` is a ranking hint, never an
+authoritative match.** The model's `itemName` free-text guess only drives
+`rankActivitiesByNameSimilarity`'s ordering in the confirmation UI
+(`AssistantActionConfirmDialog.tsx`) — the user must explicitly pick the
+real activity, which becomes `resolvedActivityId`. `ACTION_DISPATCH`'s
+`updateItineraryStatus` handler refuses to dispatch without a
+user-confirmed `resolvedActivityId`; the model's guess alone can never
+update a record. This is stricter than §5.2's original description
+implied (no fuzzy auto-resolution anywhere), a deliberate correctness
+call made during implementation, not a plan deviation flagged elsewhere.
+
+**Dispatch reuses existing fetch helpers, per §5.2's original design —
+one new helper needed, not a new endpoint.** `addActivity` dispatches
+through the same `createActivityForTrip` the Activities tab's own "Add"
+button already calls. `updateItineraryStatus` needed one small new
+helper, `updateActivityStatus` (`app/tabs/activities.tsx`), because no
+existing fetch helper did a status-only PATCH (the only prior paths were
+a full-record save or the grid editor's bulk-PATCH) — it follows
+`createActivityForTrip`'s exact existing convention and calls the same
+`/api/activities/bulk` endpoint the grid editor already uses, checking
+the per-row `ok` the same way `saveGridEdit` already does.
+
+**Traceability gap closed as a side effect, not the main goal.**
+Implementing this surfaced that `TOUR_ADDED` was a defined-but-dead
+`TripActivityType` — no caller, ever, wrote one, so *no* activity add
+(manual or assistant-driven) produced a trip-activity-feed entry despite
+the type existing. Fixed in both `db.postgres.ts` and `db.firebase.ts`'s
+`insertActivity`, inside the adapter function itself (matching how every
+other `writeActivity` call in those files already lives inside the
+adapter, not the route) — so this is a pre-existing gap that got fixed
+for all activity adds, not something scoped narrowly to assistant-driven
+ones.
+
+**Feature flag ships fail-closed, deliberately inconsistent with
+`ai_assistant_guide`.** `ai_assistant_actions` (`server/config/feature-flags.yaml`,
+default off) was added to `entitlementService.ts`'s `FAIL_CLOSED_FLAGS`
+set — an unseeded DB row denies the feature, not grants it, unlike the
+guide flag's fail-open default. This matches the `trip_day_map` precedent
+already in that set: an unseeded/misconfigured deployment must not
+silently enable AI-driven writes. Entitlement is threaded through
+`GET /api/account` (`accountRoutes.ts`) as `aiAssistantActions`, and into
+`App.tsx` as `aiAssistantActionsAllowed`, passed to `<AssistantChat>`
+alongside `activities` (for the confirmation dialog's ranking) and a new
+`dispatchContext` (`backendUrl`, `jsonHeaders`, `activeTripId`,
+`defaultPayerId`) threaded as plain data through the component's static
+props — safe per §6/§9's lazy-load rule because none of it imports
+WebLLM, only `AssistantChatPanel`'s lazy-loaded subtree does that.
+
+**The WebLLM version risk §13 flagged as blocking un-pause is also
+resolved, separately from the accuracy work above.** `app/package.json`
+now pins `@mlc-ai/web-llm` to `0.2.82` (was `^0.2.84`, a floating range
+that included the confirmed `shapeCache` disposal regression from
+[mlc-ai/web-llm#844](https://github.com/mlc-ai/web-llm/issues/844)) — the
+same fix the retest had only applied to the harness, now carried into the
+real app. This removes the second of the two blockers the "Narrow-tool-set
+retest result" entry above named as independent of the accuracy result.
+
+**Test coverage:** `assistantTools.test.ts` (schema/prompt/parsing/guard
+logic), `assistantToolsDispatch.test.ts` (each tool calls the correct
+existing fetch helper with correctly-mapped arguments — the test §10
+called "the most important test in the whole feature"),
+`AssistantActionConfirmDialog.test.tsx`, and the action-mode additions to
+`useAssistantChat.test.tsx` / `AssistantChatPanel.test.tsx` — 72 tests
+total across those five files, all passing. Server side:
+`aiAssistantActionsEntitlement.test.ts` (fail-closed behavior) and new
+cases in `trip-activity.test.ts` covering the `TOUR_ADDED` retrofit — 5
+tests, passing.
+
+**What this build does *not* settle — still open before rollout:**
+
+- **The flag is still off by default and has not been flipped, anywhere,
+  including internal/admin accounts.** Built and tested is not the same as
+  rolled out — §12's staged rollout (internal-first, then general
+  availability, same pattern as Phase 1) hasn't started.
+- **No real on-device accuracy run against this exact shipped code has
+  happened.** The 9/10 result the flag's design is based on was measured
+  by the eval harness (`scripts/spikes/ai-assistant-tool-calling-eval.html`),
+  which this implementation ported logic from — it is not itself a
+  substitute for running the real `assistantTools.ts` path, in the real
+  app, against a real loaded model, before general availability.
+- **The full 4-tool set remains untested and unimplemented**, not merely
+  deferred — `addFlight`/`addLodging` tools, and any guard logic for them,
+  do not exist in `assistantTools.ts`. Extending scope later needs its own
+  accuracy pass, per §13's original caveat, not an assumption that the
+  narrow-set result generalizes.
+- **The out-of-scope guard's known false-positive trade-off is unchanged
+  and unmonitored** — no telemetry exists yet to tell whether real users
+  hit it on legitimately-named activities.
+
 ## 1. Summary
 
 A chat-based assistant embedded in the app that helps users understand and
@@ -394,7 +715,7 @@ reasons.
 | Question | Decision |
 |---|---|
 | What does "local" mean? | **All on-device**, both guide and actions — no server LLM calls at all (revised; originally actions were server-mediated) |
-| Can it take real actions? | Phased — guide/Q&A ships first; actions come later behind their own flag, once tool-calling reliability is validated |
+| Can it take real actions? | **Built, flag off pending rollout.** Phase 3 shipped on the narrow tool set (`addActivity` + `updateItineraryStatus` only) once the accuracy checkpoint closed for that scope (§13) — see "Phase 3 status." The original full 4-tool set is still out of scope. |
 | Platform priority | Web first; native is a later, separate investigation (now blocks *both* modes — see §11) |
 | Who gets access? | **All tiers, both modes.** Tier-gating for actions is dropped: it was motivated by cost containment, which no longer applies (revised — see §5.6) |
 
@@ -803,12 +1124,20 @@ ingestion, etc.).
 3. **Phase 2 — conversation persistence — done.** Built once real usage
    asked for it (a page reload losing the conversation). Client-side only,
    no flag — see "Phase 2 status."
-4. **Phase 3 — action-taking**, on-device, all tiers, gated only by
-   `ai_assistant_actions` and the Phase 0 accuracy checkpoint. Starts with
-   the smallest, lowest-risk tool allow-list (e.g. "add an activity,"
-   "check an itinerary item's status") — no deletions, nothing
-   payment-adjacent — before ever expanding the allow-list, and follows
-   the same internal-first staged rollout as Phase 1.
+4. **Phase 3 — action-taking — built, rollout not started.** Paused
+   initially (§13's accuracy checkpoint came back negative for both
+   realistic strategies against the original 4-tool set — see "Phase 0
+   findings"), then un-paused by product decision (2026-08-24) once a
+   narrower retest closed the accuracy gate for the smallest, lowest-risk
+   allow-list only: `addActivity` + `updateItineraryStatus`, no deletions,
+   nothing payment-adjacent. See "Phase 3 status" above for what actually
+   shipped (`assistantTools.ts`, the confirmation UI, the fail-closed
+   `ai_assistant_actions` flag) and what's still open. **Rollout itself
+   hasn't started** — the flag is off by default and the internal-first
+   staged rollout this item originally called for (same pattern as Phase
+   1) hasn't begun. `addFlight`/`addLodging` remain out of scope entirely;
+   extending to them would need their own accuracy pass, not an assumption
+   the narrow-set result generalizes.
 5. **Phase 4 (exploratory, not committed) — native on-device**, only
    pursued if Phase 1/3 clearly prove the UX is worth the native R&D cost.
    Unlocks both modes on native simultaneously, since neither has a
@@ -877,14 +1206,28 @@ ingestion, etc.).
   — it's either narrowing the tool allow-list further, or using the larger
   Hermes model specifically for action mode (bigger opt-in-only download,
   still $0, still on-device) while keeping Qwen2.5-1.5B for guide mode.
-  **Update: the Qwen2.5-1.5B / manual-strategy run is done** — see "First
+  **Update: both runs are now resolved, and the answer is negative for
+  both.** The Qwen2.5-1.5B / manual-strategy run completed — see "First
   real accuracy run" in the Phase 0 findings above (3/8 auto-graded pass,
   with the failures concentrated in "invents details instead of asking").
-  **Still pending: the Hermes-2-Pro-Mistral-7B / native-strategy
-  comparison run**, to know whether the native `tools` API's constrained
-  decoding actually buys back the accuracy Qwen2.5 is losing, or whether
-  tool-call *selection* and *judgment* errors persist regardless of
-  strategy.
+  The Hermes-2-Pro-Mistral-7B / native-strategy comparison run never
+  produced usable data at all — every prompt crashed identically on a
+  confirmed upstream WebLLM/XGrammar bug (see "Blocker" in the Phase 0
+  findings above), so there's no answer to whether native constrained
+  decoding would have bought back the accuracy Qwen2.5 is losing. With
+  neither path clearing the bar, **Phase 3 is paused** (see "Status" and
+  §12) rather than picking a strategy to ship with. **Update: a narrower
+  retest (see "Narrow-tool-set retest result" in Status) closed this gate
+  for the manual-strategy + narrow-tool-set combination specifically —
+  9/10 after a harness prompt-bug fix, targeted few-shot examples, a
+  pinned sampling temperature, and a client-side guard. The full 4-tool
+  set was not re-tested and should still be assumed to fail the same way.
+  **Both remaining blockers are now resolved: the product owner un-paused
+  Phase 3 (2026-08-24), and the WebLLM version risk is fixed in
+  `app/package.json` itself (pinned to `0.2.82`), not just the harness.
+  Phase 3 is built on the narrow set — see "Phase 3 status" above — with
+  rollout (flipping `ai_assistant_actions` on, even for internal accounts)
+  the one remaining step, not an accuracy or version blocker.**
 - ~~Lazy-load bundle-splitting~~ — **resolved.** Confirmed working via
   `React.lazy()`, matching this codebase's existing `AdminTab`/
   `IngestionTab` pattern (see "Phase 0 findings" and the revised §6). The
