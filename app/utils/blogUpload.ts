@@ -35,6 +35,12 @@ export type PickedMediaFile = {
   mimeType: string | null;
   size: number;
   name?: string;
+  // Slice 1 of the photo-first composer (A2): capture time/location read from the file locally
+  // (EXIF on web, expo-image-picker's exif output on native). Optional — an older client, a
+  // screenshot, or a stripped image simply omits them and the asset's captured_at stays null.
+  capturedAt?: string | null;
+  capturedLat?: number | null;
+  capturedLng?: number | null;
 };
 
 export type UploadOutcome = 'ok' | 'quota_exceeded' | 'entitlement_required' | 'error';
@@ -66,7 +72,12 @@ export const uploadOneBlogFile = async (
   const initRes = await fetch(`${backendUrl}/api/trips/${tripId}/blog/media/upload-init`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({ dayDate, mediaKind, mimeType: pickedFile.mimeType, byteSize: pickedFile.size, caption: caption ?? null }),
+    body: JSON.stringify({
+      dayDate, mediaKind, mimeType: pickedFile.mimeType, byteSize: pickedFile.size, caption: caption ?? null,
+      capturedAt: pickedFile.capturedAt ?? null,
+      capturedLat: typeof pickedFile.capturedLat === 'number' ? pickedFile.capturedLat : null,
+      capturedLng: typeof pickedFile.capturedLng === 'number' ? pickedFile.capturedLng : null,
+    }),
   });
 
   if (initRes.status === 413) return { outcome: 'quota_exceeded' };
