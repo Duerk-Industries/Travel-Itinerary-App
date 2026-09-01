@@ -80,6 +80,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [storagePlans, setStoragePlans] = useState<PlanInfo[]>([]);
   const [addingDay, setAddingDay] = useState(null);
   const [composerFiles, setComposerFiles] = useState(null); // photo-first composer (A2): picked files awaiting day assignment
+  const [composerDefaultDay, setComposerDefaultDay] = useState(null); // set when opened from a specific day's button
   const [newBody, setNewBody] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -520,7 +521,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         // Read EXIF capture time/location locally so the photo-first composer can bucket by day
         // (A2) and the day-facts time span has data. JPEG-only, best-effort — {} on anything else.
         const capture = await readImageCaptureMetadata(file);
-        return { blob: file, mimeType, size: file.size, name: file.name, ...capture };
+        const previewUri = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(file) : null;
+        return { blob: file, mimeType, size: file.size, name: file.name, previewUri, ...capture };
       }));
     }
 
@@ -542,13 +544,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       const response = await fetch(asset.uri);
       const blob = await response.blob();
       const capture = readNativeExifCapture(asset.exif);
-      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), ...capture };
+      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), previewUri: asset.uri ?? null, ...capture };
     }));
   };
 
   // Photo-first composer (A2): pick once, sort by day, commit as a batch. The per-day
   // "+ Photo/Video" button (handleUpload) stays for adding to one specific day.
-  const openPhotoComposer = async () => {
+  const openPhotoComposer = async (defaultDayDate = null) => {
     if (!canEdit) return;
     const picked = await pickMediaFiles();
     if (!picked.length) return;
@@ -557,11 +559,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       alertMessage('Add photos', 'Only JPEG/PNG photos or MP4/MOV/WebM videos are supported.');
       return;
     }
+    setComposerDefaultDay(defaultDayDate);
     setComposerFiles(supported);
   };
+  const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); };
 
   const handleComposerCommitted = async ({ succeeded, failed, quotaBlocked }) => {
-    setComposerFiles(null);
+    closePhotoComposer();
     if (quotaBlocked) {
       const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
       setStoragePlans(plans.filter((p) => p.planKey.startsWith('storage_')));
@@ -1199,7 +1203,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
-                    onPress={() => handleUpload(day.localDate)}
+                    onPress={() => (capabilities.trip_blog_photo_composer ? openPhotoComposer(day.localDate) : handleUpload(day.localDate))}
                     disabled={uploading}
                   >
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo/Video'}</Text>
@@ -1648,8 +1652,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         visible={!!composerFiles}
         files={composerFiles || []}
         dayDates={visibleDays.map((day) => day.localDate)}
+        defaultDayDate={composerDefaultDay}
         context={{ backendUrl, headers, tripId: activeTripId }}
-        onClose={() => setComposerFiles(null)}
+        onClose={closePhotoComposer}
         onCommitted={handleComposerCommitted}
         styles={styles}
         theme={theme}

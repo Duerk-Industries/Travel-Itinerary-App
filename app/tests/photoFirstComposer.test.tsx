@@ -16,7 +16,7 @@ const styles = { button: {}, buttonText: {} } as any;
 const DAYS = ['2026-09-01', '2026-09-02'];
 const context = { backendUrl: 'https://api.test', headers: {}, tripId: 'trip-1' };
 
-const file = (name: string, capturedAt?: string) => ({ blob: new Blob(['x']), mimeType: 'image/jpeg', size: 2 * 1024 * 1024, name, capturedAt });
+const file = (name: string, capturedAt?: string, previewUri?: string) => ({ blob: new Blob(['x']), mimeType: 'image/jpeg', size: 2 * 1024 * 1024, name, capturedAt, previewUri });
 
 const mockFetch = (group: any, storage: any = { availableBytes: 999 * 1024 * 1024, entitlementActive: true }) => {
   (global as any).fetch = jest.fn((url: string) => {
@@ -82,5 +82,21 @@ describe('PhotoFirstComposer', () => {
     expect(screen.getByTestId('pc-commit').props.disabled).toBe(true);
     await act(async () => { fireEvent.press(screen.getByTestId('pc-file-f0-day-2026-09-01')); });
     await waitFor(() => expect(screen.getByTestId('pc-commit').props.disabled).toBe(false));
+  });
+
+  it('renders a thumbnail from previewUri', async () => {
+    mockFetch({ buckets: [{ dayDate: '2026-09-01', clientIds: ['f0'] }], unassigned: [], outOfRange: [] });
+    const screen = render(<PhotoFirstComposer {...baseProps} files={[file('a.jpg', '2026-09-01T10:00:00', 'blob:preview-1')]} />);
+    await waitFor(() => expect(screen.getByTestId('pc-file-f0')).toBeTruthy());
+    const images = screen.UNSAFE_getAllByType(require('react-native').Image);
+    expect(images.some((img: any) => img.props.source?.uri === 'blob:preview-1')).toBe(true);
+  });
+
+  it('with defaultDayDate, an undated photo is pre-placed there and does not block commit', async () => {
+    mockFetch({ buckets: [], unassigned: ['f0'], outOfRange: [] });
+    const screen = render(<PhotoFirstComposer {...baseProps} defaultDayDate="2026-09-02" files={[file('b.jpg')]} />);
+    await waitFor(() => expect(screen.getByTestId('pc-day-2026-09-02-count')).toBeTruthy());
+    expect(screen.queryByTestId('pc-unplaced-count')).toBeNull();
+    expect(screen.getByTestId('pc-commit').props.disabled).toBe(false);
   });
 });

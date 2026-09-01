@@ -10,7 +10,7 @@
 //
 // On commit it drives the existing uploadBlogFiles() batch once per day bucket.
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { uploadBlogFiles, type PickedMediaFile } from '../utils/blogUpload';
 import { formatDateLong } from '../utils/formatDateLong';
 
@@ -21,6 +21,9 @@ type Props = {
   files: PickedMediaFile[];
   dayDates: string[];
   context: Ctx;
+  // When the composer is opened from a specific day's "+ Photo/Video" button, photos the server
+  // can't place by capture date default to that day instead of blocking commit.
+  defaultDayDate?: string;
   onClose: () => void;
   onCommitted: (summary: { succeeded: number; failed: number; quotaBlocked: boolean }) => void;
   styles: any;
@@ -36,7 +39,7 @@ const MB = 1024 * 1024;
 const mb = (bytes: number): string => `${(bytes / MB).toFixed(1)} MB`;
 
 const PhotoFirstComposer: React.FC<Props> = ({
-  visible, files, dayDates, context, onClose, onCommitted,
+  visible, files, dayDates, context, defaultDayDate, onClose, onCommitted,
   styles, theme, textColor = '#111827', mutedColor = '#6b7280', borderColor = '#ccd4df',
   backgroundColor = '#ffffff', testID = 'photo-composer',
 }) => {
@@ -82,9 +85,9 @@ const PhotoFirstComposer: React.FC<Props> = ({
         for (const bucket of grouped.buckets ?? []) {
           for (const clientId of bucket.clientIds) next[clientId] = bucket.dayDate;
         }
-        for (const clientId of grouped.unassigned ?? []) next[clientId] = null;
+        for (const clientId of grouped.unassigned ?? []) next[clientId] = defaultDayDate ?? null;
         const oor: Record<string, string> = {};
-        for (const item of grouped.outOfRange ?? []) { next[item.clientId] = null; oor[item.clientId] = item.capturedAt; }
+        for (const item of grouped.outOfRange ?? []) { next[item.clientId] = defaultDayDate ?? null; oor[item.clientId] = item.capturedAt; }
         setAssignment(next);
         setOutOfRange(oor);
 
@@ -98,7 +101,17 @@ const PhotoFirstComposer: React.FC<Props> = ({
       }
     })();
     return () => { cancelled = true; };
-  }, [visible, context.backendUrl, context.tripId, clientFiles]);
+  }, [visible, context.backendUrl, context.tripId, clientFiles, defaultDayDate]);
+
+  // Free the web blob: URLs created for thumbnails once this batch is done with.
+  useEffect(() => {
+    if (visible) return;
+    for (const file of clientFiles) {
+      if (typeof file.previewUri === 'string' && file.previewUri.startsWith('blob:') && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+        URL.revokeObjectURL(file.previewUri);
+      }
+    }
+  }, [visible, clientFiles]);
 
   const included = clientFiles.filter((f) => !removed.has(f.clientId));
   const neededBytes = included.reduce((sum, f) => sum + (Number(f.size) || 0), 0);
@@ -161,8 +174,15 @@ const PhotoFirstComposer: React.FC<Props> = ({
 
   const fileRow = (file: any) => {
     const oor = outOfRange[file.clientId];
+    const isVideo = /^video\//i.test(String(file.mimeType || ''));
     return (
-      <View key={file.clientId} testID={`${testID}-file-${file.clientId}`} style={{ borderTopWidth: 1, borderTopColor: borderColor, paddingVertical: 8 }}>
+      <View key={file.clientId} testID={`${testID}-file-${file.clientId}`} style={{ borderTopWidth: 1, borderTopColor: borderColor, paddingVertical: 8, flexDirection: 'row' }}>
+        <View style={{ width: 48, height: 48, borderRadius: 6, marginRight: 10, backgroundColor: '#00000010', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+          {file.previewUri && !isVideo
+            ? <Image source={{ uri: file.previewUri }} style={{ width: 48, height: 48 }} resizeMode="cover" />
+            : <Text style={{ fontSize: 18 }}>{isVideo ? '🎞️' : '🖼️'}</Text>}
+        </View>
+        <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={{ color: textColor, fontSize: 13, flex: 1 }} numberOfLines={1}>{file.name || 'photo'}</Text>
           <TouchableOpacity testID={`${testID}-file-${file.clientId}-remove`} accessibilityRole="button" accessibilityLabel="Remove this photo" onPress={() => removeFile(file.clientId)} style={{ paddingHorizontal: 8, minHeight: 28, justifyContent: 'center' }}>
@@ -179,6 +199,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
           <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>No capture date — choose a day.</Text>
         )}
         {dayChips(file.clientId)}
+        </View>
       </View>
     );
   };
