@@ -101,6 +101,11 @@ describe('POST /:tripId/blog/media/group', () => {
     await cleanupTestUsersByEmail([stranger.email]);
   });
 
+  it('the blog capabilities endpoint reports trip_blog_photo_composer so the client shows the composer entry', async () => {
+    const res = await request(app).get(`/api/trips/${tripId}/blog/capabilities`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+    expect(res.body.features.trip_blog_photo_composer).toBe(true);
+  });
+
   it('404s when the flag is off', async () => {
     await setFeatureFlag('trip_blog_photo_composer', false, null);
     clearFeatureFlagCacheForTesting();
