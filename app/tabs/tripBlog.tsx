@@ -22,6 +22,7 @@ import BlogReactionBar from '../components/BlogReactionBar';
 import BlogContributorStrip from '../components/BlogContributorStrip';
 import BlogCommentThread from '../components/BlogCommentThread';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
+import BlogDayStarterCard from '../components/BlogDayStarterCard';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
 import TripRecapCards from '../components/TripRecapCards';
@@ -219,6 +220,59 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         .catch(() => { loadedFactDays.current.delete(day.localDate); });
     }
   }, [visibleDays, publicPreview, backendUrl, activeTripId, headers]);
+
+  // Phase 5 (A1) — Day Starter. For any day the editing traveler has left empty, ask the server
+  // for its one deterministic draft suggestion. Same lazy per-day shape as the facts effect above:
+  // 204 (dismissed, or the day already has text) is stored as `null` so we don't ask again, and
+  // any failure just leaves the day without a card. Keyed by localDate:
+  //   undefined = not asked yet · null = nothing to offer · { draft, sources } = a suggestion.
+  const [dayStarters, setDayStarters] = useState({});
+  const [dayStarterBusy, setDayStarterBusy] = useState(null);
+  const loadedStarterDays = useRef(new Set());
+  useEffect(() => { loadedStarterDays.current.clear(); setDayStarters({}); }, [activeTripId]);
+  useEffect(() => {
+    if (publicPreview || readOnly || !editMode || !capabilities.trip_blog_day_starter) return;
+    for (const day of visibleDays) {
+      if ((day.items || []).length > 0) continue;
+      if (loadedStarterDays.current.has(day.localDate)) continue;
+      loadedStarterDays.current.add(day.localDate);
+      fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${day.localDate}/starter`, { headers })
+        .then((response) => {
+          if (response.status === 204) { setDayStarters((current) => ({ ...current, [day.localDate]: null })); return null; }
+          return response.ok ? response.json() : null;
+        })
+        .then((data) => { if (data?.draft) setDayStarters((current) => ({ ...current, [day.localDate]: { draft: data.draft, sources: data.sources || [] } })); })
+        .catch(() => { loadedStarterDays.current.delete(day.localDate); });
+    }
+  }, [visibleDays, publicPreview, readOnly, editMode, capabilities.trip_blog_day_starter, backendUrl, activeTripId, headers]);
+
+  const acceptDayStarter = async (dayDate) => {
+    setDayStarterBusy(dayDate);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${dayDate}/starter/accept`, { method: 'POST', headers });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        alertMessage('Trip blog', data.error || 'Could not use that draft. Please try again.');
+        return;
+      }
+      setDayStarters((current) => ({ ...current, [dayDate]: null }));
+      await load();
+    } catch {
+      alertMessage('Trip blog', 'Could not use that draft. Please try again.');
+    } finally {
+      setDayStarterBusy(null);
+    }
+  };
+
+  const dismissDayStarter = async (dayDate) => {
+    // Hide immediately; the POST just makes the suppression permanent (FR-A1.3).
+    setDayStarters((current) => ({ ...current, [dayDate]: null }));
+    try {
+      await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${dayDate}/starter/dismiss`, { method: 'POST', headers });
+    } catch {
+      // A failed dismiss is not worth surfacing — the card is already gone for this session.
+    }
+  };
 
   // Phase 1 masthead stat row (redesign proposal — "a real masthead... a small stat row").
   // Day/photo/contributor counts come straight from what's already loaded; distance is
@@ -1523,7 +1577,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             ) : null}
             {canEdit && (day.items || []).length === 0 && addingDay !== day.localDate ? (
               <View>
-                <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text>
+                {dayStarters[day.localDate]?.draft ? (
+                  <BlogDayStarterCard
+                    testID={`blog-day-starter-${day.localDate}`}
+                    draft={dayStarters[day.localDate].draft}
+                    busy={dayStarterBusy === day.localDate}
+                    onUse={() => acceptDayStarter(day.localDate)}
+                    onDismiss={() => dismissDayStarter(day.localDate)}
+                    displayFont={displayFont}
+                    textColor={textColor}
+                    mutedColor={mutedColor}
+                    borderColor={borderColor}
+                    backgroundColor={inputColor}
+                    accentColor={theme?.colors?.link ?? '#2E96A6'}
+                    styles={styles}
+                  />
+                ) : null}
+                <Text style={{ color: mutedColor }}>
+                  {dayStarters[day.localDate]?.draft ? 'Or start from scratch — click “+ Add note”.' : 'No notes yet. Click “+ Add note” to start this day.'}
+                </Text>
                 {capabilities.trip_blog_authoring_assist ? (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                     {promptsForDay(day.localDate).map((prompt) => (

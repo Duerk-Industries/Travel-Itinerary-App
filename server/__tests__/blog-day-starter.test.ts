@@ -98,6 +98,11 @@ describe('Day Starter (get/accept/dismiss)', () => {
     expect(weekday).toBe('Saturday');
   });
 
+  it('the blog capabilities endpoint reports trip_blog_day_starter so the client can show the card', async () => {
+    const res = await request(app).get(`/api/trips/${tripId}/blog/capabilities`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+    expect(res.body.features.trip_blog_day_starter).toBe(true);
+  });
+
   it('a stranger with no relationship to the trip gets 403', async () => {
     const stranger = { firstName: 'Starter', lastName: 'Stranger', email: 'blog-day-starter-stranger@example.com', password: 'Password123!' };
     await registerWebUser(stranger);
