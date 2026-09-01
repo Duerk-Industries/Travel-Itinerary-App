@@ -41,6 +41,9 @@ export type PickedMediaFile = {
   capturedAt?: string | null;
   capturedLat?: number | null;
   capturedLng?: number | null;
+  // A local, displayable URI for a pre-upload thumbnail (blob: URL on web, file URI on native).
+  // Never sent to the server; the composer revokes web blob URLs when it closes.
+  previewUri?: string | null;
 };
 
 export type UploadOutcome = 'ok' | 'quota_exceeded' | 'entitlement_required' | 'error';

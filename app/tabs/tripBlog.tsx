@@ -37,6 +37,7 @@ import {
   uploadBlogFiles,
 } from '../utils/blogUpload';
 import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCapture';
+import PhotoFirstComposer from '../components/PhotoFirstComposer';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -78,6 +79,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [showQuotaModal, setShowQuotaModal] = useState(false);
   const [storagePlans, setStoragePlans] = useState<PlanInfo[]>([]);
   const [addingDay, setAddingDay] = useState(null);
+  const [composerFiles, setComposerFiles] = useState(null); // photo-first composer (A2): picked files awaiting day assignment
+  const [composerDefaultDay, setComposerDefaultDay] = useState(null); // set when opened from a specific day's button
   const [newBody, setNewBody] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -518,7 +521,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         // Read EXIF capture time/location locally so the photo-first composer can bucket by day
         // (A2) and the day-facts time span has data. JPEG-only, best-effort — {} on anything else.
         const capture = await readImageCaptureMetadata(file);
-        return { blob: file, mimeType, size: file.size, name: file.name, ...capture };
+        const previewUri = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(file) : null;
+        return { blob: file, mimeType, size: file.size, name: file.name, previewUri, ...capture };
       }));
     }
 
@@ -540,8 +544,40 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       const response = await fetch(asset.uri);
       const blob = await response.blob();
       const capture = readNativeExifCapture(asset.exif);
-      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), ...capture };
+      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), previewUri: asset.uri ?? null, ...capture };
     }));
+  };
+
+  // Photo-first composer (A2): pick once, sort by day, commit as a batch. The per-day
+  // "+ Photo/Video" button (handleUpload) stays for adding to one specific day.
+  const openPhotoComposer = async (defaultDayDate = null) => {
+    if (!canEdit) return;
+    const picked = await pickMediaFiles();
+    if (!picked.length) return;
+    const supported = picked.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType));
+    if (!supported.length) {
+      alertMessage('Add photos', 'Only JPEG/PNG photos or MP4/MOV/WebM videos are supported.');
+      return;
+    }
+    setComposerDefaultDay(defaultDayDate);
+    setComposerFiles(supported);
+  };
+  const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); };
+
+  const handleComposerCommitted = async ({ succeeded, failed, quotaBlocked }) => {
+    closePhotoComposer();
+    if (quotaBlocked) {
+      const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
+      setStoragePlans(plans.filter((p) => p.planKey.startsWith('storage_')));
+      setShowQuotaModal(true);
+    }
+    await load();
+    if (!quotaBlocked && (succeeded || failed)) {
+      const parts = [];
+      if (succeeded) parts.push(`${succeeded} added`);
+      if (failed) parts.push(`${failed} failed`);
+      alertMessage('Add photos', parts.join(', '));
+    }
   };
 
   const handleUpload = async (dayDate) => {
@@ -1042,6 +1078,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
           />
         ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 4 }}>{blog.introduction}</Text> : null)}
       </View>
+        {canEdit && capabilities.trip_blog_photo_composer && visibleDays.length > 0 ? (
+          <TouchableOpacity
+            testID="blog-add-photos"
+            accessibilityRole="button"
+            style={[styles.button, { backgroundColor: '#0ea5e9', alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 6, paddingHorizontal: 12 }]}
+            onPress={openPhotoComposer}
+            disabled={uploading}
+          >
+            <Text style={styles.buttonText}>＋ Add photos to this trip</Text>
+          </TouchableOpacity>
+        ) : null}
         {visibleDays.map((day) => {
           const dayMetaDraft = dayMetaDrafts[day.localDate];
           const dayMetaConflict = dayMetaConflicts[day.localDate];
@@ -1156,7 +1203,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
-                    onPress={() => handleUpload(day.localDate)}
+                    onPress={() => (capabilities.trip_blog_photo_composer ? openPhotoComposer(day.localDate) : handleUpload(day.localDate))}
                     disabled={uploading}
                   >
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo/Video'}</Text>
@@ -1601,6 +1648,21 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         </View>
         </View>
       </ScrollView>
+      <PhotoFirstComposer
+        visible={!!composerFiles}
+        files={composerFiles || []}
+        dayDates={visibleDays.map((day) => day.localDate)}
+        defaultDayDate={composerDefaultDay}
+        context={{ backendUrl, headers, tripId: activeTripId }}
+        onClose={closePhotoComposer}
+        onCommitted={handleComposerCommitted}
+        styles={styles}
+        theme={theme}
+        textColor={textColor}
+        mutedColor={mutedColor}
+        borderColor={borderColor}
+        backgroundColor={surfaceColor}
+      />
       <Modal visible={showQuotaModal} transparent animationType="slide" onRequestClose={() => setShowQuotaModal(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
