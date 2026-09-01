@@ -36,6 +36,7 @@ import {
   guessMimeTypeFromName,
   uploadBlogFiles,
 } from '../utils/blogUpload';
+import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCapture';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -512,7 +513,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         input.onchange = () => resolve(input.files ? Array.from(input.files) : []);
         input.click();
       });
-      return files.map((file) => ({ blob: file, mimeType: file.type || guessMimeTypeFromName(file.name), size: file.size, name: file.name }));
+      return Promise.all(files.map(async (file) => {
+        const mimeType = file.type || guessMimeTypeFromName(file.name);
+        // Read EXIF capture time/location locally so the photo-first composer can bucket by day
+        // (A2) and the day-facts time span has data. JPEG-only, best-effort — {} on anything else.
+        const capture = await readImageCaptureMetadata(file);
+        return { blob: file, mimeType, size: file.size, name: file.name, ...capture };
+      }));
     }
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -525,13 +532,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       mediaTypes: ['images', 'videos'],
       allowsMultipleSelection: true,
       quality: 1,
+      exif: true, // capture time/location for the photo-first composer (A2)
     });
     if (result.canceled || !result.assets?.length) return [];
     return Promise.all(result.assets.map(async (asset) => {
       const mimeType = asset.mimeType || guessMimeTypeFromName(asset.fileName);
       const response = await fetch(asset.uri);
       const blob = await response.blob();
-      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo') };
+      const capture = readNativeExifCapture(asset.exif);
+      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), ...capture };
     }));
   };
 

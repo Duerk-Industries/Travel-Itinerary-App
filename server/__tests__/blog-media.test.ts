@@ -33,6 +33,20 @@ describe('trip blog media quota lifecycle', () => {
     expect(media.body.media).toHaveLength(1);
   });
 
+  it('persists a client-supplied capturedAt and nulls an unparseable one', async () => {
+    const good = await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'photo-capturedat').send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 512, capturedAt: '2026-09-01T14:30:00' }).expect(201);
+    await request(app).post(`/api/trips/${tripId}/blog/media/${good.body.asset.id}/complete`).set('Authorization', `Bearer ${token}`).send({ physicalBytes: 512 }).expect(200);
+
+    const bad = await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'photo-capturedat-bad').send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 512, capturedAt: 'not-a-date' }).expect(201);
+    await request(app).post(`/api/trips/${tripId}/blog/media/${bad.body.asset.id}/complete`).set('Authorization', `Bearer ${token}`).send({ physicalBytes: 512 }).expect(200);
+
+    const media = await request(app).get(`/api/trips/${tripId}/blog/media`).set('Authorization', `Bearer ${token}`).expect(200);
+    const goodAsset = media.body.media.find((m: any) => m.id === good.body.asset.id);
+    const badAsset = media.body.media.find((m: any) => m.id === bad.body.asset.id);
+    expect(goodAsset.capturedAt).toContain('2026-09-01');
+    expect(badAsset.capturedAt).toBeNull();
+  });
+
   it('rejects unsupported image formats before reserving bytes', async () => {
     await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'photo-heic').send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/heic', byteSize: 2048 }).expect(400);
   });

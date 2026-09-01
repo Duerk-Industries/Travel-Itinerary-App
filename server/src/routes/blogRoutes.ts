@@ -407,7 +407,9 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
       mediaKind,
       mimeType: String(req.body?.mimeType ?? ''),
       byteSize: Number(req.body?.byteSize),
-      capturedAt: req.body?.capturedAt ?? null,
+      // Client-read EXIF (web) or expo-image-picker exif (native), naive local wall-clock. Accept
+      // only a parseable timestamp — a garbage value must not reach the timestamp column.
+      capturedAt: (typeof req.body?.capturedAt === 'string' && !Number.isNaN(Date.parse(req.body.capturedAt))) ? req.body.capturedAt : null,
       // Phase 5 (C2, PR-3) — client-supplied EXIF geotag; the repository decides whether to
       // actually persist it (only when the trip's photo_location_enabled toggle is on). Server
       // never parses EXIF itself.
