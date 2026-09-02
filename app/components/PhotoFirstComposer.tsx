@@ -85,9 +85,10 @@ const PhotoFirstComposer: React.FC<Props> = ({
         for (const bucket of grouped.buckets ?? []) {
           for (const clientId of bucket.clientIds) next[clientId] = bucket.dayDate;
         }
-        for (const clientId of grouped.unassigned ?? []) next[clientId] = defaultDayDate ?? null;
+        const fallbackDay = typeof defaultDayDate === 'string' ? defaultDayDate : null;
+        for (const clientId of grouped.unassigned ?? []) next[clientId] = fallbackDay;
         const oor: Record<string, string> = {};
-        for (const item of grouped.outOfRange ?? []) { next[item.clientId] = defaultDayDate ?? null; oor[item.clientId] = item.capturedAt; }
+        for (const item of grouped.outOfRange ?? []) { next[item.clientId] = fallbackDay; oor[item.clientId] = item.capturedAt; }
         setAssignment(next);
         setOutOfRange(oor);
 

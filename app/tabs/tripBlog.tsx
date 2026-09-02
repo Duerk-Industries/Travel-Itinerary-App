@@ -605,6 +605,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // Photo-first composer (A2): pick once, sort by day, commit as a batch. The per-day
   // "+ Photo/Video" button (handleUpload) stays for adding to one specific day.
   const openPhotoComposer = async (defaultDayDate = null) => {
+    // Guard: a bare onPress={openPhotoComposer} would hand us the press event here.
+    const forDay = typeof defaultDayDate === 'string' ? defaultDayDate : null;
     if (!canEdit) return;
     const picked = await pickMediaFiles();
     if (!picked.length) return;
@@ -613,7 +615,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       alertMessage('Add photos', 'Only JPEG/PNG photos or MP4/MOV/WebM videos are supported.');
       return;
     }
-    setComposerDefaultDay(defaultDayDate);
+    setComposerDefaultDay(forDay);
     setComposerFiles(supported);
   };
   const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); };
@@ -1149,7 +1151,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             testID="blog-add-photos"
             accessibilityRole="button"
             style={[styles.button, { backgroundColor: '#0ea5e9', alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 6, paddingHorizontal: 12 }]}
-            onPress={openPhotoComposer}
+            onPress={() => openPhotoComposer()}
             disabled={uploading}
           >
             <Text style={styles.buttonText}>＋ Add photos to this trip</Text>
