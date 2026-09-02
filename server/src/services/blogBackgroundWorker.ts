@@ -440,7 +440,7 @@ const runDayMapRenderJobFirebase = async () => {
       const day = await getBlogDayByDate(tripId, dayDate);
       if (!day) continue;
 
-      const media = await getVisibleMediaForDay(day.id, ['travelers', 'followers', 'public']);
+      const media = await getVisibleMediaForDay(dayDate, ['travelers', 'followers', 'public']);
       const points = media
         .filter((m) => m.captured_lat != null && m.captured_lng != null)
         .map((m) => ({ lat: m.captured_lat as number, lng: m.captured_lng as number }));
