@@ -666,7 +666,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         if (result.failed > 0) parts.push(`${result.failed} failed`);
         if (result.entitlementSkipped > 0) parts.push(`${result.entitlementSkipped} skipped (video requires Premium)`);
         if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
-        alertMessage('Upload', parts.join(', '));
+        const detail = result.errors?.[0] ? `\n\n${result.errors[0]}` : '';
+        alertMessage('Upload', parts.join(', ') + detail);
       }
     } finally {
       setUploading(false);

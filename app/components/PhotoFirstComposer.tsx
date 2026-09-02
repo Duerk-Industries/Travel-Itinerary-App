@@ -126,6 +126,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
 
   const commit = async () => {
     setPhase('committing');
+    setMessage(null);
     const byDay = new Map<string, PickedMediaFile[]>();
     for (const file of included) {
       const day = assignment[file.clientId];
@@ -136,16 +137,26 @@ const PhotoFirstComposer: React.FC<Props> = ({
     let failed = 0;
     let quotaBlocked = false;
     let done = 0;
+    const errors: string[] = [];
     for (const [dayDate, group] of byDay) {
       const result = await uploadBlogFiles(context, dayDate, group, {
         onProgress: (current) => setProgress({ current: done + current, total: included.length }),
       });
       succeeded += result.succeeded;
       failed += result.failed;
+      errors.push(...result.errors);
       done += group.length;
       if (result.quotaBlocked) { quotaBlocked = true; break; }
     }
     setProgress(null);
+    // Keep the composer open on a partial/total failure so the user can see why and retry the
+    // same selection instead of re-picking everything.
+    if (failed > 0 && !quotaBlocked) {
+      setMessage(errors[0] || `${failed} photo${failed === 1 ? '' : 's'} failed to upload.`);
+      setPhase('ready');
+      if (succeeded > 0) onCommitted({ succeeded, failed: 0, quotaBlocked: false });
+      return;
+    }
     onCommitted({ succeeded, failed, quotaBlocked });
   };
 
@@ -257,6 +268,10 @@ const PhotoFirstComposer: React.FC<Props> = ({
                   </View>
                 ))}
               </ScrollView>
+
+              {message ? (
+                <Text testID={`${testID}-error`} style={{ color: '#b91c1c', fontSize: 12, marginTop: 10 }}>{message}</Text>
+              ) : null}
 
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
                 <TouchableOpacity

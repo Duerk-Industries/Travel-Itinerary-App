@@ -32,7 +32,7 @@ const baseProps = {
 };
 
 describe('PhotoFirstComposer', () => {
-  beforeEach(() => { uploadBlogFiles.mockReset(); uploadBlogFiles.mockResolvedValue({ succeeded: 1, failed: 0, entitlementSkipped: 0, quotaBlocked: false, assets: [] }); });
+  beforeEach(() => { uploadBlogFiles.mockReset(); uploadBlogFiles.mockResolvedValue({ succeeded: 1, failed: 0, entitlementSkipped: 0, quotaBlocked: false, assets: [], errors: [] }); });
 
   it('shows server day buckets and flags photos with no capture date', async () => {
     mockFetch({ buckets: [{ dayDate: '2026-09-01', clientIds: ['f0'] }], unassigned: ['f1'], outOfRange: [] });
@@ -90,6 +90,24 @@ describe('PhotoFirstComposer', () => {
     await waitFor(() => expect(screen.getByTestId('pc-file-f0')).toBeTruthy());
     const images = screen.UNSAFE_getAllByType(require('react-native').Image);
     expect(images.some((img: any) => img.props.source?.uri === 'blob:preview-1')).toBe(true);
+  });
+
+  it('on an upload failure, stays open and shows the underlying error instead of just closing', async () => {
+    mockFetch({ buckets: [{ dayDate: '2026-09-01', clientIds: ['f0'] }], unassigned: [], outOfRange: [] });
+    uploadBlogFiles.mockResolvedValue({
+      succeeded: 0, failed: 1, entitlementSkipped: 0, quotaBlocked: false, assets: [],
+      errors: ['Storage rejected the photo (HTTP 403). The upload bucket may not allow this site — check its CORS config.'],
+    });
+    const onCommitted = jest.fn();
+    const screen = render(<PhotoFirstComposer {...baseProps} onCommitted={onCommitted} files={[file('a.jpg', '2026-09-01T10:00:00')]} />);
+
+    await waitFor(() => expect(screen.getByTestId('pc-commit').props.disabled).toBe(false));
+    await act(async () => { fireEvent.press(screen.getByTestId('pc-commit')); });
+
+    await waitFor(() => expect(screen.getByTestId('pc-error')).toBeTruthy());
+    expect(screen.getByText(/CORS config/)).toBeTruthy();
+    expect(onCommitted).not.toHaveBeenCalled(); // nothing succeeded -> no parent reload
+    expect(screen.getByTestId('pc-commit').props.disabled).toBe(false); // can retry
   });
 
   it('with defaultDayDate, an undated photo is pre-placed there and does not block commit', async () => {
