@@ -56,6 +56,10 @@ const PhotoFirstComposer: React.FC<Props> = ({
   const [headroom, setHeadroom] = useState<{ availableBytes: number; entitlementActive: boolean } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+  // The full trip day list from the grouping response — so a photo can be placed on ANY trip
+  // day, not just the ones the blog tab has paged in (the `dayDates` prop). Falls back to the prop.
+  const [allDayDates, setAllDayDates] = useState<string[]>([]);
+  const pickableDays = allDayDates.length ? allDayDates : dayDates;
 
   useEffect(() => {
     if (!visible) return;
@@ -81,6 +85,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
           return;
         }
         const grouped = await groupRes.json();
+        if (Array.isArray(grouped.dayDates) && grouped.dayDates.length) setAllDayDates(grouped.dayDates);
         const next: Record<string, string | null> = {};
         for (const bucket of grouped.buckets ?? []) {
           for (const clientId of bucket.clientIds) next[clientId] = bucket.dayDate;
@@ -163,7 +168,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
 
   const dayChips = (clientId: string) => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-      {dayDates.map((dayDate) => {
+      {pickableDays.map((dayDate) => {
         const active = assignment[clientId] === dayDate;
         return (
           <TouchableOpacity
@@ -216,7 +221,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
     );
   };
 
-  const placedByDay = dayDates
+  const placedByDay = pickableDays
     .map((dayDate) => ({ dayDate, items: included.filter((f) => assignment[f.clientId] === dayDate) }))
     .filter((group) => group.items.length > 0);
 

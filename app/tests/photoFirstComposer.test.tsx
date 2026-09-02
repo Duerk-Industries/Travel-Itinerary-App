@@ -110,6 +110,25 @@ describe('PhotoFirstComposer', () => {
     expect(screen.getByTestId('pc-commit').props.disabled).toBe(false); // can retry
   });
 
+  it('offers every trip day from the grouping response, not just the dayDates prop', async () => {
+    // The blog tab has only paged in 2026-09-01/02, but the trip also has 2026-09-05.
+    mockFetch({
+      buckets: [], unassigned: ['f0'], outOfRange: [],
+      dayDates: ['2026-09-01', '2026-09-02', '2026-09-05'],
+    });
+    const onCommitted = jest.fn();
+    const screen = render(<PhotoFirstComposer {...baseProps} onCommitted={onCommitted} files={[file('a.jpg')]} />);
+
+    await waitFor(() => expect(screen.getByTestId('pc-file-f0')).toBeTruthy());
+    // A chip for the un-paged day exists.
+    await act(async () => { fireEvent.press(screen.getByTestId('pc-file-f0-day-2026-09-05')); });
+    await waitFor(() => expect(screen.getByTestId('pc-commit').props.disabled).toBe(false));
+
+    await act(async () => { fireEvent.press(screen.getByTestId('pc-commit')); });
+    await waitFor(() => expect(onCommitted).toHaveBeenCalled());
+    expect(uploadBlogFiles.mock.calls[0][1]).toBe('2026-09-05');
+  });
+
   it('with defaultDayDate, an undated photo is pre-placed there and does not block commit', async () => {
     mockFetch({ buckets: [], unassigned: ['f0'], outOfRange: [] });
     const screen = render(<PhotoFirstComposer {...baseProps} defaultDayDate="2026-09-02" files={[file('b.jpg')]} />);

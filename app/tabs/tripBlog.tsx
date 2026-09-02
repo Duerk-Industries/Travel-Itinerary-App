@@ -331,7 +331,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const load = async (nextCursor = null) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: String(limit) });
+      // On a refresh (no cursor — e.g. after any mutation), re-request every day the user has
+      // already paged in, so a small edit doesn't collapse the list back to the first page and
+      // lose their scroll context. Cursor-paged "Load more" keeps using the page size.
+      const loadedCount = blog?.days?.length ?? 0;
+      const effectiveLimit = nextCursor ? limit : Math.max(limit, loadedCount);
+      const params = new URLSearchParams({ limit: String(effectiveLimit) });
       if (nextCursor) params.set('cursor', nextCursor);
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog?${params.toString()}`, { headers });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to load the trip blog');
@@ -346,7 +351,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       // off, since the field is simply absent from `data` in that case.
       engagement.seedFromBlog(data);
       const lastDay = days[days.length - 1];
-      setCursor(days.length >= limit && lastDay ? lastDay.localDate : null);
+      setCursor(days.length >= effectiveLimit && lastDay ? lastDay.localDate : null);
     } catch (error) {
       alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
     } finally {
@@ -1473,6 +1478,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     mutedColor={mutedColor}
                     borderColor={borderColor}
                     backgroundColor={inputColor}
+                    canRemove={canEdit}
+                    removing={deleting}
+                    onRemove={(item) => removeMediaItem(item)}
                     canEngage={canEngage}
                     getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
                     onToggleReaction={engagement.toggle}
