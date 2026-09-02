@@ -55,9 +55,13 @@ const chunk = <T>(items: T[], size = 10): T[][] => {
 // Firestore assets carry `blogItemId` directly (no junction collection — see
 // firebaseMediaRepository.ts), so this resolves the day's visible, non-deleted items first, then
 // reads only the assets that belong to them.
-export const getVisibleMediaForDay = async (dayId: string, visibleAudiences: BlogAudience[]): Promise<FirebaseMediaRow[]> => {
+//
+// Keyed on `localDate`, not the blog_days doc id: firebaseMediaRepository.initUpload writes media
+// blog_items with `blogDayId = <date string>` while text items use `blogDayId = <doc id>` — the
+// one field every blog_items doc sets consistently is `localDate`.
+export const getVisibleMediaForDay = async (dayDate: string, visibleAudiences: BlogAudience[]): Promise<FirebaseMediaRow[]> => {
   const db = getDb();
-  const itemSnap = await db.collection('blog_items').where('blogDayId', '==', dayId).get();
+  const itemSnap = await db.collection('blog_items').where('localDate', '==', dayDate).get();
   const itemIds = itemSnap.docs
     .filter((doc) => {
       const data = doc.data() as any;
@@ -67,9 +71,12 @@ export const getVisibleMediaForDay = async (dayId: string, visibleAudiences: Blo
   if (!itemIds.length) return [];
   const rows: FirebaseMediaRow[] = [];
   for (const ids of chunk(itemIds)) {
-    const assetSnap = await db.collection('blog_media_assets').where('blogItemId', 'in', ids).where('state', '==', 'ready').get();
+    // `state` is filtered in memory rather than as a second `where` — an `in` + `==` pair would
+    // otherwise want a composite index this collection doesn't have.
+    const assetSnap = await db.collection('blog_media_assets').where('blogItemId', 'in', ids).get();
     assetSnap.docs.forEach((doc) => {
       const data = doc.data() as any;
+      if (String(data.state) !== 'ready') return;
       rows.push({
         id: doc.id,
         captured_at: data.capturedAt ? new Date(data.capturedAt) : null,
@@ -86,10 +93,10 @@ const ALL_AUDIENCES: BlogAudience[] = ['travelers', 'followers', 'public'];
 
 // Postgres's day-starter media count has no audience filter (`blogDayStarterService.ts`'s
 // mediaCount query) — passing every audience reproduces that.
-export const countAllReadyMediaForDay = async (dayId: string): Promise<number> => (await getVisibleMediaForDay(dayId, ALL_AUDIENCES)).length;
+export const countAllReadyMediaForDay = async (dayDate: string): Promise<number> => (await getVisibleMediaForDay(dayDate, ALL_AUDIENCES)).length;
 
-export const hasTextItemForDay = async (dayId: string): Promise<boolean> => {
-  const snap = await getDb().collection('blog_items').where('blogDayId', '==', dayId).where('kindKey', '==', 'core.text').get();
+export const hasTextItemForDay = async (dayDate: string): Promise<boolean> => {
+  const snap = await getDb().collection('blog_items').where('localDate', '==', dayDate).where('kindKey', '==', 'core.text').get();
   return snap.docs.some((doc) => (doc.data() as any).deletedAt == null);
 };
 
