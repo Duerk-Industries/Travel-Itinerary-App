@@ -736,6 +736,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     setCapabilities({});
     setRecap(null);
     setCoverProposals({});
+    setBlog(null); // switching trips: show the spinner, not the previous trip's blog, until the new one loads
     void refreshBlogAndPublication();
     void loadCapabilities();
   }, [activeTripId]);
@@ -996,7 +997,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const removeMediaItem = (item) => (item.isGalleryMember ? removeGalleryAsset(item.assetId) : deleteItem(item));
 
   if (!activeTripId) return <View style={{ padding: 18 }}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
-  if (loading) return <View style={{ padding: 18, alignItems: 'center' }}><ActivityIndicator /></View>;
+  // Only take over the whole tab with a spinner on the very first load (no data yet). Every
+  // later refetch — accepting a Day Starter draft, "Load more days", saving a field, any
+  // mutation that calls load() — keeps the existing content mounted so the ScrollView doesn't
+  // unmount and snap back to the top. A slim "Updating…" bar (below) signals the refresh.
+  if (loading && !blog) return <View style={{ padding: 18, alignItems: 'center' }}><ActivityIndicator /></View>;
   const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
   const hasPendingConsent = publicationState === 'pending_consent' && publication?.userDecision === 'pending';
   // FR-A5.2: a visible Saving…/Saved/Not saved state for any autosaved field, shared by the
@@ -1017,6 +1022,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // "chapter" further down, rather than one long bordered form.
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
+      {loading && blog ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 6, backgroundColor: theme?.colors?.surfaceMuted ?? '#eef2f4' }}>
+          <ActivityIndicator size="small" />
+          <Text style={{ color: mutedColor, fontSize: 12 }}>Updating…</Text>
+        </View>
+      ) : null}
       <ScrollView
         style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
