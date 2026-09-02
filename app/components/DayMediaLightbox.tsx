@@ -158,17 +158,22 @@ const DayMediaLightbox = ({
         </View>
       ) : (
         <ScrollView style={{ maxHeight: 480 }}>
+          {canRemove ? (
+            <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 8 }}>Tap ✕ on a photo to remove it from this day.</Text>
+          ) : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {items.map((item, index) => {
               const summary = getEngagementSummary?.(item.assetId);
               return (
+              // Wrapper View so the Remove control is a *sibling* of the tap target, not nested
+              // inside it — nested Touchables don't reliably deliver the inner press on web.
+              <View key={item.id} style={{ width: '31%', aspectRatio: 1, position: 'relative' }}>
               <TouchableOpacity
-                key={item.id}
                 testID={`day-media-tile-${item.id}`}
                 accessibilityRole="button"
                 accessibilityLabel={item.kindKey === 'media.video' ? 'Play video' : item.kindKey === 'media.audio' ? 'Play voice note' : 'View photo'}
                 onPress={() => setExpandedIndex(index)}
-                style={{ width: '31%', aspectRatio: 1, borderRadius: 6, overflow: 'hidden', backgroundColor, borderWidth: 1, borderColor }}
+                style={{ width: '100%', height: '100%', borderRadius: 6, overflow: 'hidden', backgroundColor, borderWidth: 1, borderColor }}
               >
                 {item.kindKey === 'media.audio' ? (
                   <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 28 }}>🎙</Text><Text style={{ color: textColor, fontSize: 11 }}>Voice note</Text></View>
@@ -187,19 +192,20 @@ const DayMediaLightbox = ({
                     <Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>{summary.reactionTotal}</Text>
                   </View>
                 ) : null}
-                {canRemove ? (
-                  <TouchableOpacity
-                    testID={`day-media-lightbox-remove-${item.id}`}
-                    accessibilityRole="button"
-                    accessibilityLabel="Remove this photo"
-                    disabled={removing}
-                    onPress={() => onRemove(item)}
-                    style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(185,28,28,0.9)', borderRadius: 14, paddingVertical: 3, paddingHorizontal: 7 }}
-                  >
-                    <Text style={{ color: '#fff', fontSize: 12 }}>{removing ? '…' : '✕'}</Text>
-                  </TouchableOpacity>
-                ) : null}
               </TouchableOpacity>
+              {canRemove ? (
+                <TouchableOpacity
+                  testID={`day-media-lightbox-remove-${item.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove this photo"
+                  disabled={removing}
+                  onPress={() => onRemove(item)}
+                  style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(185,28,28,0.92)', borderRadius: 14, minWidth: 26, minHeight: 26, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{removing ? '…' : '✕'}</Text>
+                </TouchableOpacity>
+              ) : null}
+              </View>
               );
             })}
           </View>
