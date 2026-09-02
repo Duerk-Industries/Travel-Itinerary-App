@@ -72,16 +72,24 @@ export const uploadOneBlogFile = async (
 ): Promise<UploadOneFileResult> => {
   const mediaKind = isAudioMimeType(pickedFile.mimeType) ? 'audio' : isVideoMimeType(pickedFile.mimeType) ? 'video' : 'photo';
   const idempotencyKey = createIdempotencyKey('up');
-  const initRes = await fetch(`${backendUrl}/api/trips/${tripId}/blog/media/upload-init`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-    body: JSON.stringify({
-      dayDate, mediaKind, mimeType: pickedFile.mimeType, byteSize: pickedFile.size, caption: caption ?? null,
-      capturedAt: pickedFile.capturedAt ?? null,
-      capturedLat: typeof pickedFile.capturedLat === 'number' ? pickedFile.capturedLat : null,
-      capturedLng: typeof pickedFile.capturedLng === 'number' ? pickedFile.capturedLng : null,
-    }),
-  });
+  // Guard against a NaN slipping through from EXIF parsing — JSON.stringify turns it into null
+  // anyway, but be explicit.
+  const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  let initRes: Response;
+  try {
+    initRes = await fetch(`${backendUrl}/api/trips/${tripId}/blog/media/upload-init`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({
+        dayDate, mediaKind, mimeType: pickedFile.mimeType, byteSize: pickedFile.size, caption: caption ?? null,
+        capturedAt: typeof pickedFile.capturedAt === 'string' ? pickedFile.capturedAt : null,
+        capturedLat: num(pickedFile.capturedLat),
+        capturedLng: num(pickedFile.capturedLng),
+      }),
+    });
+  } catch (err) {
+    return { outcome: 'error', error: `Could not start the upload (${(err as Error)?.name || 'error'}: ${(err as Error)?.message || 'request failed'}). Backend: ${backendUrl}` };
+  }
 
   if (initRes.status === 413) return { outcome: 'quota_exceeded' };
   if (initRes.status === 402) return { outcome: 'entitlement_required' };
@@ -93,8 +101,16 @@ export const uploadOneBlogFile = async (
 
   if (uploadUrl) {
     // Real signed URL: upload the actual selected file's bytes directly to storage.
-    const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': String(pickedFile.mimeType) }, body: pickedFile.blob as any });
-    if (!putRes.ok) return { outcome: 'error', error: `Failed to upload the ${mediaKind} to storage` };
+    try {
+      const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': String(pickedFile.mimeType) }, body: pickedFile.blob as any });
+      if (!putRes.ok) {
+        return { outcome: 'error', error: `Storage rejected the ${mediaKind} (HTTP ${putRes.status}). The upload bucket may not allow this site — check its CORS config.` };
+      }
+    } catch (err) {
+      // A thrown fetch here is almost always the browser blocking the cross-origin PUT (bucket
+      // CORS) or a network failure — neither surfaces a status code.
+      return { outcome: 'error', error: `Could not reach storage to upload the ${mediaKind} (${(err as Error)?.message || 'network/CORS error'}).` };
+    }
   }
 
   const completeRes = await fetch(`${backendUrl}/api/trips/${tripId}/blog/media/${asset.id}/complete`, {
@@ -116,6 +132,7 @@ export type UploadBatchResult = {
   entitlementSkipped: number;
   quotaBlocked: boolean;
   assets: any[];
+  errors: string[];
 };
 
 // Uploads a batch of files sequentially (matches the existing in-tab upload behavior), stopping
@@ -132,6 +149,7 @@ export const uploadBlogFiles = async (
   let entitlementSkipped = 0;
   let quotaBlocked = false;
   const assets: any[] = [];
+  const errors: string[] = [];
 
   for (let index = 0; index < files.length; index += 1) {
     if (quotaBlocked) break;
@@ -142,15 +160,16 @@ export const uploadBlogFiles = async (
       const result = await uploadOneBlogFile(context, dayDate, files[index], files.length === 1 ? options.caption ?? null : null);
       if (result.outcome === 'quota_exceeded') { quotaBlocked = true; break; }
       if (result.outcome === 'entitlement_required') { entitlementSkipped += 1; continue; }
-      if (result.outcome === 'error') { failed += 1; continue; }
+      if (result.outcome === 'error') { failed += 1; if (result.error) errors.push(result.error); continue; }
       succeeded += 1;
       if (result.asset) assets.push(result.asset);
-    } catch {
+    } catch (err) {
       failed += 1;
+      errors.push((err as Error)?.message || String(err));
     }
   }
 
-  return { succeeded, failed, entitlementSkipped, quotaBlocked, assets };
+  return { succeeded, failed, entitlementSkipped, quotaBlocked, assets, errors };
 };
 
 // The existing "+ Add note" mechanism (POST core.text) reused as-is for a share's "general message
