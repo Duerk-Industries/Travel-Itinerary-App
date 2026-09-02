@@ -80,8 +80,14 @@ export const uploadOneBlogFile = async (
     initRes = await fetch(`${backendUrl}/api/trips/${tripId}/blog/media/upload-init`, {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+      // Every field is coerced to a primitive here — the request body must never be able to
+      // carry a non-serializable value (a stray press event, a Blob, etc.) into JSON.stringify.
       body: JSON.stringify({
-        dayDate, mediaKind, mimeType: pickedFile.mimeType, byteSize: pickedFile.size, caption: caption ?? null,
+        dayDate: typeof dayDate === 'string' ? dayDate : String(dayDate ?? ''),
+        mediaKind,
+        mimeType: pickedFile.mimeType == null ? null : String(pickedFile.mimeType),
+        byteSize: Number.isFinite(Number(pickedFile.size)) ? Number(pickedFile.size) : 0,
+        caption: caption == null ? null : String(caption),
         capturedAt: typeof pickedFile.capturedAt === 'string' ? pickedFile.capturedAt : null,
         capturedLat: num(pickedFile.capturedLat),
         capturedLng: num(pickedFile.capturedLng),

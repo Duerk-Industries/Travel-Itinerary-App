@@ -58,4 +58,25 @@ describe('blog media upload finalization', () => {
     expect(initBody2.capturedAt).toBeNull();
     expect(initBody2.capturedLat).toBeNull();
   });
+
+  it('does not throw a cyclic-JSON error when handed a non-string dayDate', async () => {
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce(jsonResponse({ asset: { id: 'a1' }, uploadUrl: null }, 201))
+      .mockResolvedValueOnce(jsonResponse({ id: 'a1' }, 200));
+    global.fetch = fetchMock as jest.Mock;
+
+    // A DOM-event-like object with a self-reference — exactly what a bare onPress handler leaks.
+    const cyclic: any = { type: 'press' };
+    cyclic.self = cyclic;
+
+    const result = await uploadOneBlogFile(
+      { backendUrl: 'https://example.test', headers: {}, tripId: 'trip-1' },
+      cyclic,
+      { blob: new Blob(['x']), mimeType: 'image/jpeg', size: 10 }
+    );
+
+    expect(result.outcome).toBe('ok');
+    const initBody = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(typeof initBody.dayDate).toBe('string'); // coerced, not cyclic
+  });
 });
