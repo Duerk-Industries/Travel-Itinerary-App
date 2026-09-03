@@ -25,6 +25,8 @@ const buildPayload = async (revision: BlogRecapRevision, audienceClass: BlogReca
     tripId: revision.tripId,
     title: revision.title,
     dayCount: source.dayCount,
+    startDate: source.startDate,
+    endDate: source.endDate,
     placeCount: source.placeCount,
     distanceKm: source.distanceKm,
     photoCount: source.photoCount,
