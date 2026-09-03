@@ -1674,6 +1674,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
               <TripRecapCards
                 recap={recap}
                 topPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.assetId === recap?.topPhoto?.assetId)?.primaryUrl}
+                fallbackPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.mediaKind === 'photo' && (item.primaryUrl || item.thumbnailUrl))?.primaryUrl}
+                shareUrl={publicPageUrl}
                 spendTotal={capabilities.trip_blog_spend_summary && !readOnly ? spendTotal : null}
                 currency={tripCurrency}
                 textColor={textColor}

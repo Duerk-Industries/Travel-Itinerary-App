@@ -4,6 +4,8 @@ export type BlogRecapPayload = {
   tripId: string;
   title: string;
   dayCount: number;
+  startDate: string | null;
+  endDate: string | null;
   placeCount: number;
   distanceKm: number;
   photoCount: number;
@@ -36,6 +38,8 @@ export type BlogRecapSnapshot = BlogRecapRevision & {
 
 export type BlogRecapSource = {
   dayCount: number;
+  startDate: string | null;
+  endDate: string | null;
   placeCount: number;
   distanceKm: number;
   photoCount: number;
