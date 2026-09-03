@@ -161,6 +161,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // render at all — hidden in the public preview, which has no authenticated session's own
   // reaction to show and no server-side identity to attach one to.
   const canEngage = !publicPreview;
+  // The "Blog tools" drawer is entirely traveler-facing (publish/unpublish, the private spend
+  // figure, the traveler-only places index, search). A follower has nothing in it — don't show an
+  // empty collapsible.
+  const blogToolsHasContent =
+    canEdit ||
+    Boolean(capabilities.trip_blog_search) ||
+    Boolean(capabilities.trip_blog_places && !readOnly) ||
+    Boolean(capabilities.trip_blog_spend_summary && !readOnly);
   const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
     if (!publicPreview) return day;
     return {
@@ -1671,7 +1679,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         ) : null}
         {/* Phase 0 reorder — search, places, privacy/publication, and the spend figure are utility
             controls, not story — collapsed here instead of crowding the masthead (redesign notes
-            §1/§4's "Blog tools" drawer). */}
+            §1/§4's "Blog tools" drawer). Hidden entirely when the current viewer (e.g. a follower)
+            has nothing in it. */}
+        {blogToolsHasContent ? (
         <View style={{ marginTop: 12 }}>
           <TouchableOpacity
             testID="blog-tools-toggle"
@@ -1740,6 +1750,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </View>
           ) : null}
         </View>
+        ) : null}
         </View>
       </ScrollView>
       <PhotoFirstComposer
