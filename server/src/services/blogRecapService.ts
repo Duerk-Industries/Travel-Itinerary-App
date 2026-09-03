@@ -43,6 +43,15 @@ const buildPayload = async (revision: BlogRecapRevision, audienceClass: BlogReca
 const generateClaimedSnapshot = async (revision: BlogRecapRevision, audienceClass: BlogRecapAudienceClass, leaseOwner: string): Promise<void> => {
   const reservationId = capacityId(revision, audienceClass);
   try {
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_RECAP_BUILD', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', units: 20, requireConfiguredLimit: true });
+    await reserveCapacityOrThrow({ provider: 'TRIP_BLOG_SOCIAL_CAPACITY', caller: 'RECAP_RETAINED_KIB', units: 64, idempotencyKey: reservationId });
+    const payload = await buildPayload(revision, audienceClass);
+    const actualKiB = Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(payload), 'utf8') / 1024));
+    // Charge the per-trip daily generation quota only once the build has actually succeeded. A
+    // build that fails earlier (a missing Firestore index, a transient error) must not burn the
+    // day's budget and lock the trip out of retrying — the lease claim already serializes builds,
+    // so this doesn't need to be a pre-flight guard.
     const tripQuota = await atomicIncrementApiUsageIfUnderLimit({
       provider: 'TRIP_BLOG_RECAP_TRIP',
       caller: createHash('sha256').update(revision.tripId).digest('hex').slice(0, 24),
@@ -51,11 +60,6 @@ const generateClaimedSnapshot = async (revision: BlogRecapRevision, audienceClas
       limit: recapBuildsPerTripPerDay(),
     });
     if (!tripQuota.allowed) throw new Error('Daily trip recap generation limit reached');
-    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_RECAP_BUILD', requireConfiguredLimit: true });
-    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', units: 20, requireConfiguredLimit: true });
-    await reserveCapacityOrThrow({ provider: 'TRIP_BLOG_SOCIAL_CAPACITY', caller: 'RECAP_RETAINED_KIB', units: 64, idempotencyKey: reservationId });
-    const payload = await buildPayload(revision, audienceClass);
-    const actualKiB = Math.max(1, Math.ceil(Buffer.byteLength(JSON.stringify(payload), 'utf8') / 1024));
     await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_WRITE_UNIT', requireConfiguredLimit: true });
     await blogRecapRepository().completeRecapSnapshot(revision, audienceClass, leaseOwner, payload);
     await commitCapacityReservation(reservationId, actualKiB);

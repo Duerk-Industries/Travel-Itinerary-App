@@ -94,6 +94,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [capabilities, setCapabilities] = useState({});
   const [recap, setRecap] = useState(null);
   const [recapBusy, setRecapBusy] = useState(false);
+  const [recapNotice, setRecapNotice] = useState(null);
+  const scrollRef = useRef(null);
+  const recapY = useRef(0);
   const [metadataBusyAssetId, setMetadataBusyAssetId] = useState(null);
   const [coverProposals, setCoverProposals] = useState({});
   const [reorderBusy, setReorderBusy] = useState(false);
@@ -380,22 +383,32 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
   };
 
+  const RECAP_MAX_POLLS = 20;
   const loadRecap = async (attempt = 0) => {
     if (recapBusy && attempt === 0) return;
     setRecapBusy(true);
+    if (attempt === 0) setRecapNotice('Building your recap — this can take up to a minute…');
     let retryScheduled = false;
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/recap`, { headers });
       const data = await response.json().catch(() => ({}));
-      if (response.status === 202 && attempt < 3) {
-        retryScheduled = true;
-        setTimeout(() => { void loadRecap(attempt + 1); }, Math.min(2000, Math.max(250, Number(data.retryAfterSeconds || 1) * 1000)));
+      if (response.status === 202) {
+        if (attempt < RECAP_MAX_POLLS) {
+          retryScheduled = true;
+          setTimeout(() => { void loadRecap(attempt + 1); }, Math.min(3000, Math.max(1000, Number(data.retryAfterSeconds || 1) * 1000)));
+        } else {
+          setRecapNotice('Still building — give it a moment and tap “Relive this trip” again.');
+        }
         return;
       }
-      if (!response.ok) throw new Error(data.error || 'Unable to build the trip recap');
-      setRecap(data.recap || null);
+      if (!response.ok || !data.recap) throw new Error(data.error || 'Unable to build the trip recap');
+      setRecap(data.recap);
+      setRecapNotice(null);
+      // Bring the freshly-built card into view — otherwise it just appears somewhere off-screen.
+      setTimeout(() => { try { scrollRef.current?.scrollTo({ y: Math.max(0, recapY.current - 24), animated: true }); } catch {} }, 120);
     } catch (error) {
-      if (attempt === 0) alertMessage('Trip recap', error.message || 'Unable to build the trip recap');
+      setRecapNotice(null);
+      alertMessage('Trip recap', error.message || 'Unable to build the trip recap');
     } finally {
       if (!retryScheduled) setRecapBusy(false);
     }
@@ -751,6 +764,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     setPublicationNotice('');
     setCapabilities({});
     setRecap(null);
+    setRecapNotice(null);
     setCoverProposals({});
     setBlog(null); // switching trips: show the spinner, not the previous trip's blog, until the new one loads
     void refreshBlogAndPublication();
@@ -1045,6 +1059,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         </View>
       ) : null}
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
@@ -1654,7 +1669,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         {/* Phase 0 reorder — the recap is the "Relive this trip" moment (redesign notes §1), kept
             prominent after the last day rather than buried above the story. */}
         {capabilities.trip_blog_recap ? (
-          <View style={{ marginTop: 8 }}>
+          <View style={{ marginTop: 8 }} onLayout={(e) => { recapY.current = e.nativeEvent.layout.y; }}>
             {recap ? (
               <TripRecapCards
                 recap={recap}
@@ -1671,9 +1686,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 displayFontItalic={displayFontItalic}
               />
             ) : (
-              <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
-                <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Relive this trip'}</Text>
-              </TouchableOpacity>
+              <View>
+                <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
+                  <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Relive this trip'}</Text>
+                </TouchableOpacity>
+                {recapNotice ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>{recapNotice}</Text> : null}
+              </View>
             )}
           </View>
         ) : null}

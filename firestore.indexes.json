@@ -245,6 +245,24 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "capacity_reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "committed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "provider",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "expiresAt",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
