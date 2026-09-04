@@ -58,6 +58,7 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
+import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
@@ -4001,70 +4002,87 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {renderContent()}
       {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
       {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
-      {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={timePickerValue}
-          mode="time"
-          display="spinner"
-          onChange={(event, date) => {
-            if (event?.type === 'dismissed') {
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!timePickerTarget}
+          onRequestClose={() => setTimePickerTarget(null)}
+          testID="overview-time-picker"
+        >
+          <NativeDateTimePicker
+            value={timePickerValue}
+            mode="time"
+            onChange={(event, date) => {
+              if (event?.type === 'dismissed') {
+                setTimePickerTarget(null);
+                return;
+              }
+              if (!date) return;
+              const hh = String(date.getHours()).padStart(2, '0');
+              const mm = String(date.getMinutes()).padStart(2, '0');
+              const value = `${hh}:${mm}`;
+              if (timePickerTarget === 'edit-dep') {
+                setEditingFlightDraft((prev) => (prev ? { ...prev, departureTime: value } : prev));
+              } else if (timePickerTarget === 'edit-arr') {
+                setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
+              }
               setTimePickerTarget(null);
-              return;
-            }
-            if (!date) return;
-            const hh = String(date.getHours()).padStart(2, '0');
-            const mm = String(date.getMinutes()).padStart(2, '0');
-            const value = `${hh}:${mm}`;
-            if (timePickerTarget === 'edit-dep') {
-              setEditingFlightDraft((prev) => (prev ? { ...prev, departureTime: value } : prev));
-            } else if (timePickerTarget === 'edit-arr') {
-              setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
-            }
-            setTimePickerTarget(null);
-          }}
-        />
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={dateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!dateField}
+          onRequestClose={() => setDateField(null)}
+          testID="overview-date-picker"
+        >
+          <NativeDateTimePicker
+            value={dateValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setDateField(null);
+                return;
+              }
+              const iso = date.toISOString().slice(0, 10);
+              if (dateField === 'start') {
+                setDateDraft((prev) => ({ ...prev, startDate: iso }));
+              } else {
+                setDateDraft((prev) => ({ ...prev, endDate: iso }));
+              }
               setDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (dateField === 'start') {
-              setDateDraft((prev) => ({ ...prev, startDate: iso }));
-            } else {
-              setDateDraft((prev) => ({ ...prev, endDate: iso }));
-            }
-            setDateField(null);
-          }}
-        />
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && modalDateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={modalDateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!modalDateField}
+          onRequestClose={() => setModalDateField(null)}
+          testID="overview-modal-date-picker"
+        >
+          <NativeDateTimePicker
+            value={modalDateValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setModalDateField(null);
+                return;
+              }
+              const iso = date.toISOString().slice(0, 10);
+              if (modalDateField === 'flightDeparture') {
+                setEditingFlightDraft((prev) => (prev ? { ...prev, departureDate: iso } : prev));
+              } else if (modalDateField === 'lodgingCheckIn') {
+                setLodgingDraft((prev) => ({ ...prev, checkInDate: iso }));
+              } else if (modalDateField === 'lodgingCheckOut') {
+                setLodgingDraft((prev) => ({ ...prev, checkOutDate: iso }));
+              } else if (modalDateField === 'lodgingRefundBy') {
+                setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
+              }
               setModalDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (modalDateField === 'flightDeparture') {
-              setEditingFlightDraft((prev) => (prev ? { ...prev, departureDate: iso } : prev));
-            } else if (modalDateField === 'lodgingCheckIn') {
-              setLodgingDraft((prev) => ({ ...prev, checkInDate: iso }));
-            } else if (modalDateField === 'lodgingCheckOut') {
-              setLodgingDraft((prev) => ({ ...prev, checkOutDate: iso }));
-            } else if (modalDateField === 'lodgingRefundBy') {
-              setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
-            }
-            setModalDateField(null);
-          }}
-        />
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
 
       {showAddTour ? (

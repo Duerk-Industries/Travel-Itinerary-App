@@ -65,6 +65,7 @@ import { MustSeeAttractionSelector, type AttractionOption } from '../components/
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
+import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
   
 type Suggestion = {
@@ -2783,60 +2784,82 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={dateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!dateField}
+          onRequestClose={() => setDateField(null)}
+          theme={theme}
+          testID="wizard-date-picker"
+        >
+          <NativeDateTimePicker
+            value={dateValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setDateField(null);
+                return;
+              }
+              const iso = date.toISOString().slice(0, 10);
+              if (dateField === 'start') {
+                setStartDateWithRangeGuard(iso);
+              } else if (dateField === 'end') {
+                setDates((prev) => ({ ...prev, endDate: iso }));
+              } else {
+                setItineraryDraft((prev) => ({ ...prev, date: iso }));
+              }
               setDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (dateField === 'start') {
-              setStartDateWithRangeGuard(iso);
-            } else if (dateField === 'end') {
-              setDates((prev) => ({ ...prev, endDate: iso }));
-            } else {
-              setItineraryDraft((prev) => ({ ...prev, date: iso }));
-            }
-            setDateField(null);
-          }}
-        />
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && wizardLodgingDateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={wizardLodgingDateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!wizardLodgingDateField}
+          onRequestClose={() => setWizardLodgingDateField(null)}
+          theme={theme}
+          testID="wizard-lodging-date-picker"
+        >
+          <NativeDateTimePicker
+            value={wizardLodgingDateValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setWizardLodgingDateField(null);
+                return;
+              }
+              const iso = date.toISOString().slice(0, 10);
+              if (wizardLodgingDateField !== 'checkIn' && wizardLodgingDateField !== 'checkOut') {
+                setWizardLodgingDateField(null);
+                return;
+              }
+              applyWizardLodgingDate(wizardLodgingDateField, iso);
               setWizardLodgingDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (wizardLodgingDateField !== 'checkIn' && wizardLodgingDateField !== 'checkOut') {
-              setWizardLodgingDateField(null);
-              return;
-            }
-            applyWizardLodgingDate(wizardLodgingDateField, iso);
-            setWizardLodgingDateField(null);
-          }}
-        />
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && wizardCarDateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={wizardCarDateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!wizardCarDateField}
+          onRequestClose={() => setWizardCarDateField(null)}
+          theme={theme}
+          testID="wizard-car-date-picker"
+        >
+          <NativeDateTimePicker
+            value={wizardCarDateValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setWizardCarDateField(null);
+                return;
+              }
+              if (!wizardCarDateField) return;
+              const iso = date.toISOString().slice(0, 10);
+              applyWizardCarDate(wizardCarDateField, iso);
               setWizardCarDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            applyWizardCarDate(wizardCarDateField, iso);
-            setWizardCarDateField(null);
-          }}
-        />
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
       {editingWizardLodging && editingWizardLodgingId ? (
         <View style={styles.passengerOverlay}>
