@@ -52,6 +52,8 @@ const styles = {
   detailModalScroll: {},
   tableActionButton: {},
   tableActionButtonDanger: {},
+  dangerButton: {},
+  dangerButtonText: {},
 };
 
 describe('DailyExpensesTab', () => {
@@ -111,6 +113,39 @@ describe('DailyExpensesTab', () => {
     expect(getByTestId('expense-detail-modal')).toBeTruthy();
     expect(getByText('Cafe Nero')).toBeTruthy();
     expect(getByText('Coffee and pastries')).toBeTruthy();
+  });
+
+  it('surfaces and deletes expenses the daily grid cannot reach (wrong category or date)', async () => {
+    const setExpenses = jest.fn();
+    const fetchMock = jest.fn(async () => ({ ok: true, status: 204, json: async () => ({}) }) as any);
+    (global as any).fetch = fetchMock;
+
+    const list = [
+      ...expenses,
+      { id: 'act-1', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2025-02-01', category: 'Activities', amount: 63.71, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '', sourceType: 'activity', sourceId: 'a1' },
+      { id: 'act-0', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2025-02-02', category: 'Activities', amount: 0, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '', sourceType: 'activity', sourceId: 'a2' },
+      { id: 'old-1', tripId: 't1', groupId: 'g1', userId: 'u1', expenseDate: '2024-12-25', category: 'Lunch', amount: 9, currency: 'EUR', payerIds: ['m1'], forIds: ['m1'], createdAt: '' },
+    ];
+
+    const screen = render(
+      <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+        groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+    );
+
+    // The grid can't show any of these three; the "Other expenses" table does.
+    expect(screen.getByText('Other expenses (3)')).toBeTruthy();
+    expect(screen.getByTestId('other-expense-row-act-1')).toBeTruthy();
+    expect(screen.getByTestId('other-expense-row-old-1')).toBeTruthy();
+    // e1 (Breakfast, in range) stays in the grid, not here.
+    expect(screen.queryByTestId('other-expense-row-e1')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('expense-delete-act-1'));
+    fireEvent.press(screen.getByLabelText('Delete')); // ConfirmDialog confirm
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('http://example.test/api/expenses/act-1', expect.objectContaining({ method: 'DELETE' })));
+    expect(setExpenses).toHaveBeenCalled();
+
+    // The bulk "remove zero-amount" shortcut only shows with 2+ zero entries; here there is 1.
+    expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();
   });
 
   it('sends vendor and notes when creating a daily expense', async () => {

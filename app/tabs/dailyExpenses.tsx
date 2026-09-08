@@ -47,6 +47,8 @@ type Expense = {
   payerIds: string[];
   forIds: string[];
   createdAt: string;
+  sourceType?: string | null;
+  sourceId?: string | null;
 };
 
 type ParsedReceiptExpenseDraft = {
@@ -241,6 +243,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     );
   }, [detailTarget, expenseItems]);
 
+  // Every expense the day × category grid can't reach — a non-grid category (Flights / Lodging /
+  // Activities / Car Rentals, usually mirrored from an itinerary item) or a date outside the
+  // trip's range. Without this they'd be invisible in this tab and impossible to delete here.
+  const tripDateSet = useMemo(() => new Set(tripDates), [tripDates]);
+  const otherExpenses = useMemo(
+    () => expenses
+      .filter((e) => !categoryOptions.includes(e.category as CategoryOption) || !tripDateSet.has(e.expenseDate))
+      .sort((a, b) => (a.expenseDate < b.expenseDate ? -1 : a.expenseDate > b.expenseDate ? 1 : 0)),
+    [expenses, tripDateSet]
+  );
+
   const toggleSelection = (ids: string[], id: string): string[] =>
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
 
@@ -419,6 +432,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       setPendingDeleteExpense(null);
     } catch (err) {
       Alert.alert((err as Error).message || 'Unable to delete expense');
+    }
+  };
+
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const deleteExpensesByIds = async (ids: string[]) => {
+    if (!costTrackingAllowed || !ids.length) return;
+    setBulkDeleting(true);
+    const deleted: string[] = [];
+    try {
+      for (const id of ids) {
+        const res = await fetch(`${backendUrl}/api/expenses/${id}`, { method: 'DELETE', headers });
+        if (res.ok) deleted.push(id);
+      }
+      if (deleted.length) setExpenses((prev) => prev.filter((e) => !deleted.includes(e.id)));
+      if (deleted.length < ids.length) Alert.alert(`Deleted ${deleted.length} of ${ids.length}. Some could not be removed.`);
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -764,6 +794,67 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           </View>
         </HorizontalTableScroll>
       )}
+
+      {otherExpenses.length ? (
+        <View style={{ marginTop: 18 }}>
+          <Text style={styles.sectionTitle}>Other expenses ({otherExpenses.length})</Text>
+          <Text style={styles.helperText}>
+            Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Delete any that shouldn’t be here. Editing the linked itinerary item will re-create its expense.
+          </Text>
+          {otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length >= 2 ? (
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { alignSelf: 'flex-start', marginTop: 6, marginBottom: 4 }]}
+              disabled={bulkDeleting}
+              onPress={() => deleteExpensesByIds(otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).map((e) => e.id))}
+              testID="other-expenses-clear-zero"
+            >
+              <Text style={styles.buttonText}>
+                {bulkDeleting ? 'Removing…' : `Remove ${otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length} zero-amount entries`}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <View style={styles.table} testID="other-expenses-table">
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                {['Date', 'Category', 'Description', 'For', 'Amount', 'Action'].map((header, index) => (
+                  <View key={header} style={[styles.cell, { minWidth: index === 4 ? 90 : 130, flex: 1 }, index === 5 && styles.lastCell]}>
+                    <Text style={styles.headerText}>{header}</Text>
+                  </View>
+                ))}
+              </View>
+              {otherExpenses.map((expense, index) => (
+                <View key={expense.id} style={[styles.tableRow, index === otherExpenses.length - 1 && styles.lastRow]} testID={`other-expense-row-${expense.id}`}>
+                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                    <Text style={styles.cellText}>{formatDateLabel(expense.expenseDate)}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                    <Text style={styles.cellText}>{expense.category}</Text>
+                    {expense.sourceType ? <Text style={styles.helperText}>from itinerary</Text> : null}
+                  </View>
+                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                    <Text style={styles.cellText}>{expense.vendor || expense.notes || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                    <Text style={styles.cellText}>{expense.forIds.length ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 90, flex: 1 }]}>
+                    <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lastCell, { minWidth: 130, flex: 1 }]}>
+                    <TouchableOpacity
+                      style={[styles.tableActionButton, styles.tableActionButtonDanger]}
+                      onPress={() => setPendingDeleteExpense(expense)}
+                      testID={`expense-delete-${expense.id}`}
+                    >
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </HorizontalTableScroll>
+        </View>
+      ) : null}
 
       {Platform.OS !== 'web' && datePickerVisible && NativeDateTimePicker ? (
         <NativeDateTimePicker
