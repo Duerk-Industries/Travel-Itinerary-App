@@ -901,60 +901,55 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </View>
                 </View>
               ) : null}
-              <ScrollView style={styles.detailModalScroll}>
-                <View style={[styles.table, { marginTop: 8 }]}>
+              <HorizontalTableScroll style={{ marginTop: 8 }} contentContainerStyle={styles.tableScrollContent}>
+                <View style={[styles.table, { minWidth: 620 }]}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
-                    {['Vendor', 'Notes', 'For', 'Payers', 'Amount', 'Action'].map((header, index) => (
-                      <View key={header} style={[styles.cell, { minWidth: index === 4 ? 90 : 140, flex: 1 }, index === 5 && styles.lastCell]}>
+                    {['Description', 'For', 'Payers', 'Amount', 'Action'].map((header, index) => (
+                      <View key={header} style={[styles.cell, { minWidth: index === 3 ? 90 : 150, flex: 1 }, index === 4 && styles.lastCell]}>
                         <Text style={styles.headerText}>{header}</Text>
                       </View>
                     ))}
                   </View>
-                  {detailItems.map((expense, index) => (
-                    <View key={expense.id} style={[styles.tableRow, index === detailItems.length - 1 && styles.lastRow]}>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>{expense.vendor || '-'}</Text>
+                  <ScrollView style={{ maxHeight: viewportHeight ? Math.min(360, viewportHeight * 0.4) : 360 }} nestedScrollEnabled>
+                    {detailItems.map((expense, index) => (
+                      <View key={expense.id} style={[styles.tableRow, index === detailItems.length - 1 && styles.lastRow]}>
+                        <View style={[styles.cell, { minWidth: 150, flex: 1 }]}>
+                          <Text style={styles.cellText}>{expense.vendor || expense.notes || '-'}</Text>
+                        </View>
+                        <View style={[styles.cell, { minWidth: 150, flex: 1 }]}>
+                          <Text style={styles.cellText}>
+                            {expense.forIds.length ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}
+                          </Text>
+                        </View>
+                        <View style={[styles.cell, { minWidth: 150, flex: 1 }]}>
+                          <Text style={styles.cellText}>
+                            {expense.payerIds.length ? expense.payerIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}
+                          </Text>
+                        </View>
+                        <View style={[styles.cell, { minWidth: 90, flex: 1 }]}>
+                          <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
+                        </View>
+                        <View style={[styles.cell, styles.lastCell, { minWidth: 150, flex: 1 }]}>
+                          <TouchableOpacity
+                            style={[styles.tableActionButton, styles.tableActionButtonDanger]}
+                            onPress={() => setPendingDeleteExpense(expense)}
+                            testID={`expense-delete-${expense.id}`}
+                          >
+                            <Text style={styles.buttonText}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>{expense.notes || '-'}</Text>
+                    ))}
+                    {!detailItems.length ? (
+                      <View style={[styles.tableRow, styles.lastRow]}>
+                        <View style={[styles.cell, styles.lastCell, { minWidth: 150, flex: 1 }]}>
+                          <Text style={styles.helperText}>No expenses recorded.</Text>
+                        </View>
                       </View>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>
-                          {expense.forIds.length
-                            ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ')
-                            : '-'}
-                        </Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>
-                          {expense.payerIds.length
-                            ? expense.payerIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ')
-                            : '-'}
-                        </Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 90, flex: 1 }]}>
-                        <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
-                        <TouchableOpacity
-                          style={[styles.tableActionButton, styles.tableActionButtonDanger]}
-                          onPress={() => setPendingDeleteExpense(expense)}
-                          testID={`expense-delete-${expense.id}`}
-                        >
-                          <Text style={styles.buttonText}>Delete</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                  {!detailItems.length ? (
-                    <View style={[styles.tableRow, styles.lastRow]}>
-                      <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.helperText}>No expenses recorded.</Text>
-                      </View>
-                    </View>
-                  ) : null}
+                    ) : null}
+                  </ScrollView>
                 </View>
-              </ScrollView>
+              </HorizontalTableScroll>
         </DialogShell>
       ) : null}
 

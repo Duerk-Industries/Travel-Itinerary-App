@@ -111,8 +111,8 @@ describe('DailyExpensesTab', () => {
     expect(queryByTestId('expense-detail-modal')).toBeNull();
     fireEvent.press(getAllByText('$12.00')[0]);
     expect(getByTestId('expense-detail-modal')).toBeTruthy();
+    // Description column shows the vendor (falling back to notes).
     expect(getByText('Cafe Nero')).toBeTruthy();
-    expect(getByText('Coffee and pastries')).toBeTruthy();
   });
 
   it('deletes a daily (in-grid) expense from the category detail dialog', async () => {
