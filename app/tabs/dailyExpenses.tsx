@@ -951,6 +951,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           onConfirm={() => deleteExpense(pendingDeleteExpense)}
           onCancel={() => setPendingDeleteExpense(null)}
           styles={styles}
+          // The category detail dialog is itself a native Modal; without this the confirm renders
+          // behind it and the Delete button in that dialog appears to do nothing.
+          useNativeModal
         />
       ) : null}
     </View>
