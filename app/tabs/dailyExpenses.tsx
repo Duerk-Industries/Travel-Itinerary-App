@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -11,6 +11,7 @@ import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { toWebStyle } from '../utils/webStyle';
+import { alertMessage } from '../utils/crossPlatformAlert';
 
 type Trip = {
   id: string;
@@ -268,7 +269,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       receiptFileInputRef.current?.click?.();
       return;
     }
-    Alert.alert('Receipt scanning is available in a mobile web browser.');
+    alertMessage('Receipt scanning is available in a mobile web browser.');
   };
 
   const applyParsedReceiptDraft = (parsed: ParsedReceiptExpenseDraft) => {
@@ -298,7 +299,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const handleReceiptFile = async (file: File | null | undefined) => {
     if (!costTrackingAllowed) {
-      Alert.alert('Expense tracking is a premium feature');
+      alertMessage('Expense tracking is a premium feature');
       return;
     }
     if (!trip?.id || !file) return;
@@ -320,14 +321,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       if (!res.ok) {
         const message = data.error || 'Unable to scan receipt';
         setReceiptError(message);
-        Alert.alert(message);
+        alertMessage(message);
         return;
       }
       applyParsedReceiptDraft(data as ParsedReceiptExpenseDraft);
     } catch (err) {
       const message = (err as Error).message || 'Unable to scan receipt';
       setReceiptError(message);
-      Alert.alert(message);
+      alertMessage(message);
     } finally {
       setReceiptParsing(false);
       if (receiptFileInputRef.current) receiptFileInputRef.current.value = '';
@@ -336,23 +337,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const saveExpense = async () => {
     if (!costTrackingAllowed) {
-      Alert.alert('Expense tracking is a premium feature');
+      alertMessage('Expense tracking is a premium feature');
       return;
     }
     if (!trip?.id) {
-      Alert.alert('Select an active trip before adding expenses.');
+      alertMessage('Select an active trip before adding expenses.');
       return;
     }
     if (!draftForIds.length) {
-      Alert.alert('Select at least one traveler.');
+      alertMessage('Select at least one traveler.');
       return;
     }
     if (!draftPayerIds.length) {
-      Alert.alert('Select at least one payer.');
+      alertMessage('Select at least one payer.');
       return;
     }
     if (!draftDate) {
-      Alert.alert('Select a date.');
+      alertMessage('Select a date.');
       return;
     }
     const tripCurrency = (trip.currency ?? 'USD').toUpperCase();
@@ -400,7 +401,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        Alert.alert(data.error || 'Unable to save expense');
+        alertMessage(data.error || 'Unable to save expense');
         return;
       }
       setExpenses((prev) => [data as Expense, ...prev.filter((e) => e.id !== data.id)]);
@@ -409,13 +410,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       setDraftNotes('');
       closeAddExpenseModal();
     } catch (err) {
-      Alert.alert((err as Error).message || 'Unable to save expense');
+      alertMessage((err as Error).message || 'Unable to save expense');
     }
   };
 
   const deleteExpense = async (expense: Expense) => {
     if (!costTrackingAllowed) {
-      Alert.alert('Expense tracking is a premium feature');
+      alertMessage('Expense tracking is a premium feature');
       return;
     }
     try {
@@ -425,13 +426,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        Alert.alert(data.error || 'Unable to delete expense');
+        alertMessage(data.error || 'Unable to delete expense');
         return;
       }
       setExpenses((prev) => prev.filter((e) => e.id !== expense.id));
       setPendingDeleteExpense(null);
     } catch (err) {
-      Alert.alert((err as Error).message || 'Unable to delete expense');
+      alertMessage((err as Error).message || 'Unable to delete expense');
     }
   };
 
@@ -446,7 +447,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         if (res.ok) deleted.push(id);
       }
       if (deleted.length) setExpenses((prev) => prev.filter((e) => !deleted.includes(e.id)));
-      if (deleted.length < ids.length) Alert.alert(`Deleted ${deleted.length} of ${ids.length}. Some could not be removed.`);
+      if (deleted.length < ids.length) alertMessage(`Deleted ${deleted.length} of ${ids.length}. Some could not be removed.`);
     } finally {
       setBulkDeleting(false);
     }
@@ -886,6 +887,20 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
               </View>
+              {pendingDeleteExpense && detailItems.some((e) => e.id === pendingDeleteExpense.id) ? (
+                // Inline confirm — a second stacked Modal can render behind this one on web.
+                <View testID="expense-detail-delete-confirm" style={{ borderWidth: 1, borderColor: theme?.colors?.alert ?? '#b91c1c', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                  <Text style={styles.cellText}>Delete this ${(Number(pendingDeleteExpense.amount) || 0).toFixed(2)} expense? This cannot be undone.</Text>
+                  <View style={[styles.row, { marginTop: 8, gap: 8 }]}>
+                    <TouchableOpacity testID="expense-detail-delete-confirm-yes" accessibilityRole="button" accessibilityLabel="Confirm delete" style={[styles.button, styles.smallButton, styles.tableActionButtonDanger]} onPress={() => deleteExpense(pendingDeleteExpense)}>
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity accessibilityRole="button" style={[styles.button, styles.smallButton]} onPress={() => setPendingDeleteExpense(null)}>
+                      <Text style={styles.buttonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
               <ScrollView style={styles.detailModalScroll}>
                 <View style={[styles.table, { marginTop: 8 }]}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
@@ -943,17 +958,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         </DialogShell>
       ) : null}
 
-      {pendingDeleteExpense ? (
+      {pendingDeleteExpense && !detailItems.some((e) => e.id === pendingDeleteExpense.id) ? (
+        // Deletes from the "Other expenses" table (no other modal open) use the standard confirm.
+        // The category-detail-dialog case is handled by the inline confirm inside that dialog.
         <ConfirmDialog
-          visible={Boolean(pendingDeleteExpense)}
+          visible
           title="Delete Expense"
           message="Are you sure you want to delete this expense? This cannot be undone."
           onConfirm={() => deleteExpense(pendingDeleteExpense)}
           onCancel={() => setPendingDeleteExpense(null)}
           styles={styles}
-          // The category detail dialog is itself a native Modal; without this the confirm renders
-          // behind it and the Delete button in that dialog appears to do nothing.
-          useNativeModal
         />
       ) : null}
     </View>
