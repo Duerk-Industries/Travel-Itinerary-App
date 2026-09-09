@@ -5202,8 +5202,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     overflow: 'visible',
   },
   detailModal: {
-    maxHeight: 520,
-    maxWidth: 520,
+    maxHeight: 640,
+    maxWidth: 720,
     width: '100%',
   },
   expenseFieldRow: {
