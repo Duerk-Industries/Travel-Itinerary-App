@@ -127,7 +127,9 @@ describe('DailyExpensesTab', () => {
 
     fireEvent.press(screen.getAllByText('$12.00')[0]); // open the Breakfast · Feb 1 detail dialog
     fireEvent.press(screen.getByTestId('expense-delete-e1'));
-    fireEvent.press(screen.getByLabelText('Delete')); // ConfirmDialog confirm — must not be stuck behind the detail modal
+    // The confirm is inline inside the detail dialog (a second stacked Modal can hide behind it on web).
+    expect(screen.getByTestId('expense-detail-delete-confirm')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('expense-detail-delete-confirm-yes'));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('http://example.test/api/expenses/e1', expect.objectContaining({ method: 'DELETE' })));
     expect(setExpenses).toHaveBeenCalled();
