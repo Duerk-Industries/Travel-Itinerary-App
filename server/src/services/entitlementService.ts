@@ -197,6 +197,7 @@ const FAIL_CLOSED_FLAGS = new Set([
   'notifications_outbox_enabled',
   'notifications_push',
   'notifications_web_push',
+  'notifications_email',
   'trip_blog_caption_ai',
   'trip_blog_audio',
   'trip_blog_audio_transcription',

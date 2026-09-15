@@ -164,6 +164,14 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
           photosPermission: 'WanderBunnies needs access to your photos so you can add them to a trip blog.',
         },
       ],
+      // Real push delivery (server/src/apis/expoPushApi.ts, notificationOutboxWorker.ts) needs a
+      // registered device token, which only exists once this plugin has wired up the native
+      // notification entitlements — see app/utils/pushNotifications.ts for the client side. No
+      // custom `icon`/`color` configured here — there's no dedicated monochrome Android
+      // notification icon asset yet (Android requires white-on-transparent, distinct from the app
+      // icon at app/assets/wanderbunnies-app-icon.png), so this falls back to the platform
+      // default until that asset is designed.
+      'expo-notifications',
       [
         sentryExpoPlugin,
         {

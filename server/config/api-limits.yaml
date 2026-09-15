@@ -139,6 +139,14 @@ providers:
       VERIFICATION_EMAIL: 100
       TRIP_INVITE_EMAIL: 100
       BILLING_TRIAL_REMINDER: 100
+      NOTIFICATION_EMAIL: 500
+
+  EXPO_PUSH:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      NOTIFICATION_PUSH: 2000
 
   AIRPORT_DATASET:
     window: hour
@@ -543,6 +551,7 @@ requestPricing:
   DOCLING: 0
   UNSPLASH: 0
   SMTP: 0
+  EXPO_PUSH: 0
   COUNTRY_NOW: 0
   GEONAMES: 0
   AIRPORT_DATASET: 0

@@ -83,6 +83,24 @@ export const deleteDevice = async (userId: string, deviceId: string): Promise<vo
   await queryBlog('UPDATE notification_devices SET disabled_at = NOW() WHERE user_id = $1 AND id = $2', [userId, deviceId]);
 };
 
+export const getNotificationById = async (id: string): Promise<any | null> => {
+  const result = await queryBlog('SELECT * FROM notifications WHERE id = $1', [id]);
+  return result.rows[0] ?? null;
+};
+
+export const listActivePushDevicesForUser = async (userId: string): Promise<any[]> => {
+  const result = await queryBlog(
+    `SELECT id, platform, push_token_ciphertext FROM notification_devices
+     WHERE user_id = $1 AND disabled_at IS NULL AND platform IN ('ios', 'android')`,
+    [userId]
+  );
+  return result.rows;
+};
+
+export const incrementDeviceFailure = async (deviceId: string): Promise<void> => {
+  await queryBlog('UPDATE notification_devices SET failure_count = failure_count + 1 WHERE id = $1', [deviceId]);
+};
+
 export const updatePreferences = async (userId: string, prefs: any[]): Promise<void> => {
   for (const p of prefs) {
     await queryBlog(

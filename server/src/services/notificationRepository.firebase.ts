@@ -117,6 +117,26 @@ export const deleteDevice = async (userId: string, deviceId: string): Promise<vo
   await getDb().collection('notification_devices').doc(deviceId).update({ disabledAt: nowIso() });
 };
 
+export const getNotificationById = async (id: string): Promise<any | null> => {
+  const doc = await getDb().collection('notifications').doc(id).get();
+  if (!doc.exists) return null;
+  return { ...(doc.data() as any), id: doc.id };
+};
+
+export const listActivePushDevicesForUser = async (userId: string): Promise<any[]> => {
+  const snap = await getDb().collection('notification_devices')
+    .where('userId', '==', userId)
+    .where('disabledAt', '==', null)
+    .get();
+  return snap.docs
+    .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
+    .filter((d: any) => d.platform === 'ios' || d.platform === 'android');
+};
+
+export const incrementDeviceFailure = async (deviceId: string): Promise<void> => {
+  await getDb().collection('notification_devices').doc(deviceId).update({ failureCount: FieldValue.increment(1) });
+};
+
 export const updatePreferences = async (userId: string, prefs: any[]): Promise<void> => {
   const db = getDb();
   const batch = db.batch();

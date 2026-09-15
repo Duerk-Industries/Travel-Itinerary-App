@@ -6,6 +6,7 @@ import {
   sendBillingTrialReminderEmailViaSmtpApi,
   sendTripInviteEmailViaSmtpApi,
   sendVerificationEmailViaSmtpApi,
+  sendNotificationEmailViaSmtpApi,
 } from './apis/smtpCallers';
 import { isCanaryRecipientEmail } from './middleware/canarySafeMode';
 
@@ -246,4 +247,33 @@ export const sendBillingTrialEndingEmailBestEffort = async (
   trialEnd: Date,
 ): Promise<{ sent: boolean; attempts: number }> => {
   return sendWithRetry(() => sendBillingTrialEndingEmail(to, trialEnd), to);
+};
+
+// Generic notification email — reused for every notification category's `email` channel, both
+// when a category's preference explicitly requests email and as the delivery worker's fallback
+// for a user with no registered push device (notificationOutboxWorker.ts's deliverPush). Throws
+// on failure rather than swallowing it, unlike the *BestEffort helpers above: the outbox worker's
+// own retry-with-backoff loop (five attempts, exponential) is what should decide whether to give
+// up, not this function silently reporting "not sent" as if that were a normal outcome.
+export const sendNotificationEmail = async (
+  to: string,
+  title: string,
+  body: string,
+  deepLink?: string | null
+): Promise<void> => {
+  if (await isCanaryRecipientEmail(to, 'sendNotificationEmail')) return;
+  const { transporter, from } = buildTransporter();
+  if (!transporter) {
+    throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
+  }
+  const rawWebUrl = String(getBackendUrl('https://wander-bunnies.com') ?? 'https://wander-bunnies.com').trim();
+  const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
+  const link = deepLink ? `${webUrl}${deepLink.startsWith('/') ? deepLink : `/${deepLink}`}` : webUrl;
+  const text = [body, '', link].join('\n');
+  await sendNotificationEmailViaSmtpApi(transporter, {
+    from,
+    to,
+    subject: title,
+    text,
+  });
 };
