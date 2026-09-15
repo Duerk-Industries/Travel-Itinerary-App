@@ -22,9 +22,12 @@ const DEFAULT_PREFERENCES: Record<string, { inApp: boolean; push: boolean; email
   blog_reaction_digest: { inApp: true, push: false, email: false },
   blog_memory_lane: { inApp: true, push: false, email: false },
   blog_milestone: { inApp: true, push: false, email: false },
-  // End-of-day nudge — timely by design (it's meant to catch someone before the day slips away),
-  // so push defaults on unlike the other bounded nudges above.
-  blog_day_photo_reminder: { inApp: true, push: true, email: false },
+  // End-of-day nudge — unlike every other category above, this one defaults fully off on every
+  // channel. It's opt-in by design, on top of the separate trip-level
+  // trip_blogs.day_photo_reminders_enabled gate (blogBackgroundWorker.ts's
+  // runDayPhotoReminderJob): a traveler must explicitly set a preference (PATCH
+  // /api/notifications/preferences) before this category ever reaches them at all.
+  blog_day_photo_reminder: { inApp: false, push: false, email: false },
 };
 
 export const notify = async (options: NotifyOptions): Promise<void> => {

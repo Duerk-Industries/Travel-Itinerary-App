@@ -230,9 +230,16 @@ const runDayPhotoReminderJob = async () => {
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
 
+    // Trip-level opt-in, on top of each traveler's own notification preference (see
+    // notificationService.ts's DEFAULT_PREFERENCES) — a JOIN rather than a WHERE EXISTS
+    // subquery (the same pg-mem NOT EXISTS caution as the media/travelers queries below applies
+    // here too), which also naturally excludes any trip whose trip_blogs row doesn't exist yet
+    // (a trip nobody has touched the blog for at all), matching the "off by default" intent.
     const activeTrips = await queryBlog<{ id: string; name: string }>(
-      `SELECT id, name FROM trips
-       WHERE start_date <= $1::date AND end_date >= $1::date`,
+      `SELECT t.id, t.name FROM trips t
+       JOIN trip_blogs tb ON tb.trip_id = t.id
+       WHERE t.start_date <= $1::date AND t.end_date >= $1::date
+         AND tb.day_photo_reminders_enabled = true`,
       [todayStr]
     );
 
@@ -517,6 +524,12 @@ const runDayPhotoReminderJobFirebase = async () => {
       .filter((t) => t.endDate && t.endDate >= todayStr);
 
     for (const trip of activeTrips) {
+      // Trip-level opt-in, on top of each traveler's own notification preference (see
+      // notificationService.ts's DEFAULT_PREFERENCES) — mirrors the Postgres job's JOIN against
+      // trip_blogs.day_photo_reminders_enabled, including "no trip_blogs doc yet" reading as off.
+      const blogDoc = await db.collection('trip_blogs').doc(trip.id).get();
+      if (!blogDoc.exists || (blogDoc.data() as any)?.dayPhotoRemindersEnabled !== true) continue;
+
       const userIds = await getGroupMemberUserIdsForTrip(trip.id);
       if (!userIds.length) continue;
 
