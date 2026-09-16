@@ -40,11 +40,15 @@ describe('Phase 11 production authorization', () => {
     },
   );
 
-  it.each(['Bryan', 'bryan', 'Tristan', 'tristan'])('allows authorized actor %s', (actor) => {
+  // github.actor is the real GitHub login (what workflow_dispatch actually sets), not a bare
+  // first name — 'Bryan'/'bryan'/'Tristan'/'tristan' never matched it, so the allowlist rejected
+  // every CI-driven production deploy regardless of who triggered it. Matched case-insensitively
+  // against the real usernames now (discovered running PR #103's deploy).
+  it.each(['bryanduerk', 'BryanDuerk', 'tristanduerk', 'TristanDuerk'])('allows authorized actor %s', (actor) => {
     expect(runGuard(actor).code).toBe(0);
   });
 
-  it.each(['duerk-industries', 'bduerk', 'random-contributor', 'Bryan2'])(
+  it.each(['duerk-industries', 'bduerk', 'random-contributor', 'bryanduerk2', 'Bryan', 'Tristan'])(
     'rejects unauthorized actor %s (regression test for an over-wide allowlist)',
     (actor) => {
       const result = runGuard(actor);
