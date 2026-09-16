@@ -21,11 +21,24 @@ export const runBlogBackgroundJobs = async () => {
     await runMemoryLaneJobFirebase();
     await runGroupPromptsJobFirebase();
     await runDayMapRenderJobFirebase();
+    await runDayPhotoReminderJobFirebase();
     return;
   }
   await runMemoryLaneJob();
   await runGroupPromptsJob();
   await runDayMapRenderJob();
+  await runDayPhotoReminderJob();
+};
+
+// End-of-day reminder gate: this worker has no per-trip timezone to compute a real local
+// end-of-day against (trips carry no timezone column — see blogDayFactsService.ts's own
+// "straight-line only" caveat for the same kind of honest approximation), so "end of day" is
+// approximated as a fixed UTC evening window rather than pretending to a precision the data
+// doesn't support. Runs hourly like the rest of this file; the window keeps it from firing at
+// 2pm UTC for someone on the other side of the world.
+const isEndOfDayWindow = (): boolean => {
+  const hour = new Date().getUTCHours();
+  return hour >= 20 || hour < 2;
 };
 
 // --- Firebase lease primitive -----------------------------------------------------------------
@@ -197,6 +210,90 @@ const runGroupPromptsJob = async () => {
     logInfo(`[blog-worker] Group Prompts job finished, processed ${activeTrips.rows.length} trips`);
   } catch (err) {
     logError(`[blog-worker] Group Prompts job failed`, err);
+  } finally {
+    await releaseLease(jobKey, success);
+  }
+};
+
+const runDayPhotoReminderJob = async () => {
+  // Reuses trip_blog_nudges — B6's "bounded contribution nudges" flag — rather than adding a new
+  // one; a personal "you haven't added a photo today" reminder is exactly that category. Listed in
+  // entitlementService.ts's FAIL_CLOSED_FLAGS, so a missing/unseeded row defaults this off.
+  if (!(await isFeatureEnabled('trip_blog_nudges'))) return;
+  if (!isEndOfDayWindow()) return;
+
+  const jobKey = 'blog:day_photo_reminder';
+  if (!await claimLease(jobKey)) return;
+
+  let success = false;
+  try {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    // Trip-level opt-in, on top of each traveler's own notification preference (see
+    // notificationService.ts's DEFAULT_PREFERENCES) — a JOIN rather than a WHERE EXISTS
+    // subquery (the same pg-mem NOT EXISTS caution as the media/travelers queries below applies
+    // here too), which also naturally excludes any trip whose trip_blogs row doesn't exist yet
+    // (a trip nobody has touched the blog for at all), matching the "off by default" intent.
+    const activeTrips = await queryBlog<{ id: string; name: string }>(
+      `SELECT t.id, t.name FROM trips t
+       JOIN trip_blogs tb ON tb.trip_id = t.id
+       WHERE t.start_date <= $1::date AND t.end_date >= $1::date
+         AND tb.day_photo_reminders_enabled = true`,
+      [todayStr]
+    );
+
+    let notifiedCount = 0;
+    for (const trip of activeTrips.rows) {
+      // Everyone in the trip's group minus whoever has already added a ready photo today —
+      // deliberately photo-only (not "any contribution", unlike runGroupPromptsJob's 2-day
+      // slacker check above) since the ask is specifically about pictures. Split into two plain
+      // queries and diffed in JS rather than one NOT EXISTS / derived-table join — pg-mem (the
+      // in-memory adapter the test suite runs against) throws on NOT EXISTS subqueries, and
+      // silently returns zero rows for a join filtered by `gm.user_id IS NOT NULL` on the joined
+      // side (a pg-mem query-planning bug, not anything about the data — real Postgres handles
+      // both fine). `user_id IS NOT NULL` is filtered client-side below for the same reason.
+      const travelers = await queryBlog<{ user_id: string | null }>(
+        `SELECT gm.user_id FROM group_members gm
+         JOIN trips t ON t.group_id = gm.group_id
+         WHERE t.id = $1 AND gm.removed_at IS NULL`,
+        [trip.id]
+      );
+      const travelerIds = travelers.rows.map((r) => r.user_id).filter((id): id is string => id != null);
+      if (!travelerIds.length) continue;
+
+      const photographedToday = await queryBlog<{ author_user_id: string }>(
+        `SELECT DISTINCT i.author_user_id
+         FROM blog_items i
+         JOIN blog_days d ON d.id = i.blog_day_id
+         JOIN blog_item_assets ia ON ia.item_id = i.id
+         JOIN blog_media_assets a ON a.id = ia.asset_id
+         WHERE i.trip_id = $1 AND i.deleted_at IS NULL
+           AND d.local_date = $2::date
+           AND a.media_kind_key = 'photo' AND a.state = 'ready'`,
+        [trip.id, todayStr]
+      );
+      const alreadyPhotographed = new Set(photographedToday.rows.map((r) => r.author_user_id));
+      const noPhotoYet = travelerIds.filter((id) => !alreadyPhotographed.has(id));
+
+      for (const userId of noPhotoYet) {
+        await notify({
+          userIds: [userId],
+          category: 'blog_day_photo_reminder',
+          tripId: trip.id,
+          title: `Add a photo from today?`,
+          body: `The day's almost over — add a picture to ${trip.name}'s blog before it slips away.`,
+          deepLink: `/trips/${trip.id}/blog?date=${todayStr}`,
+          dedupeKey: `day_photo_reminder:${trip.id}:${userId}:${todayStr}`
+        });
+        notifiedCount += 1;
+      }
+    }
+
+    success = true;
+    logInfo(`[blog-worker] Day Photo Reminder job finished, notified ${notifiedCount} travelers across ${activeTrips.rows.length} trips`);
+  } catch (err) {
+    logError(`[blog-worker] Day Photo Reminder job failed`, err);
   } finally {
     await releaseLease(jobKey, success);
   }
@@ -402,6 +499,73 @@ const runGroupPromptsJobFirebase = async () => {
     logInfo(`[blog-worker] Group Prompts job finished (firebase), processed ${processedCount} trips`);
   } catch (err) {
     logError(`[blog-worker] Group Prompts job failed (firebase)`, err);
+  } finally {
+    await releaseLeaseFirebase(jobKey, success);
+  }
+};
+
+const runDayPhotoReminderJobFirebase = async () => {
+  if (!(await isFeatureEnabled('trip_blog_nudges'))) return;
+  if (!isEndOfDayWindow()) return;
+
+  const jobKey = 'blog:day_photo_reminder';
+  if (!await claimLeaseFirebase(jobKey)) return;
+
+  let success = false;
+  let notifiedCount = 0;
+  try {
+    const db = getDb();
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    const snap = await db.collection('trips').where('startDate', '<=', todayStr).get();
+    const activeTrips = snap.docs
+      .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
+      .filter((t) => t.endDate && t.endDate >= todayStr);
+
+    for (const trip of activeTrips) {
+      // Trip-level opt-in, on top of each traveler's own notification preference (see
+      // notificationService.ts's DEFAULT_PREFERENCES) — mirrors the Postgres job's JOIN against
+      // trip_blogs.day_photo_reminders_enabled, including "no trip_blogs doc yet" reading as off.
+      const blogDoc = await db.collection('trip_blogs').doc(trip.id).get();
+      if (!blogDoc.exists || (blogDoc.data() as any)?.dayPhotoRemindersEnabled !== true) continue;
+
+      const userIds = await getGroupMemberUserIdsForTrip(trip.id);
+      if (!userIds.length) continue;
+
+      // blog_media_assets carries dayDate/mediaKind/uploaderUserId directly (see
+      // firebaseBlogDayData.ts's own note on this collection's shape), so no item/day join is
+      // needed the way the Postgres query above needs one.
+      const assetSnap = await db.collection('blog_media_assets')
+        .where('tripId', '==', trip.id)
+        .where('dayDate', '==', todayStr)
+        .get();
+      const photographedBy = new Set(
+        assetSnap.docs
+          .map((doc) => doc.data() as any)
+          .filter((data) => data.state === 'ready' && (data.mediaKind ?? 'photo') === 'photo')
+          .map((data) => String(data.uploaderUserId))
+      );
+      const noPhotoYet = userIds.filter((id) => !photographedBy.has(id));
+
+      for (const userId of noPhotoYet) {
+        await notify({
+          userIds: [userId],
+          category: 'blog_day_photo_reminder',
+          tripId: trip.id,
+          title: `Add a photo from today?`,
+          body: `The day's almost over — add a picture to ${trip.name}'s blog before it slips away.`,
+          deepLink: `/trips/${trip.id}/blog?date=${todayStr}`,
+          dedupeKey: `day_photo_reminder:${trip.id}:${userId}:${todayStr}`
+        });
+        notifiedCount += 1;
+      }
+    }
+
+    success = true;
+    logInfo(`[blog-worker] Day Photo Reminder job finished (firebase), notified ${notifiedCount} travelers across ${activeTrips.length} trips`);
+  } catch (err) {
+    logError(`[blog-worker] Day Photo Reminder job failed (firebase)`, err);
   } finally {
     await releaseLeaseFirebase(jobKey, success);
   }

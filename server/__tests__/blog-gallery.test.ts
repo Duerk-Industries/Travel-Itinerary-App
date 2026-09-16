@@ -5,13 +5,13 @@ import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 
 describe('trip blog photo galleries', () => {
   const owner = { firstName: 'Gallery', lastName: 'Poster', email: 'blog-gallery@example.com', password: 'Password123!' };
   let token = '';
   let tripId = '';
-  const day = '2026-09-01';
+  const day = futureDateString();
 
   const uploadPhoto = async (idempotencyKey: string, galleryItemId?: string) => {
     const init = await request(app)

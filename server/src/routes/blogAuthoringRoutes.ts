@@ -78,7 +78,10 @@ router.patch('/:tripId/blog', async (req, res) => {
     // Phase 5 (C2, PR-3): the trip-level photo-geotag toggle. Not retroactive — see
     // BlogMastheadPatch.photoLocationEnabled.
     const photoLocationEnabled = req.body?.photoLocationEnabled === undefined ? undefined : Boolean(req.body.photoLocationEnabled);
-    const blog = await blogRepository().updateBlogMeta(userIdOf(req), req.params.tripId, { title, subtitle, introduction, photoLocationEnabled });
+    // Trip-level opt-in for the end-of-day photo reminder (blogBackgroundWorker.ts's
+    // runDayPhotoReminderJob) — off by default; see BlogMastheadPatch.dayPhotoRemindersEnabled.
+    const dayPhotoRemindersEnabled = req.body?.dayPhotoRemindersEnabled === undefined ? undefined : Boolean(req.body.dayPhotoRemindersEnabled);
+    const blog = await blogRepository().updateBlogMeta(userIdOf(req), req.params.tripId, { title, subtitle, introduction, photoLocationEnabled, dayPhotoRemindersEnabled });
     res.json(blog);
   } catch (err) {
     errorResponse(res, err);

@@ -1,7 +1,10 @@
 import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, futureDateStringPlusDays, loginWebUser, registerWebUser } from './helpers';
+
+const DAY1 = futureDateString();
+const DAY2 = futureDateStringPlusDays(1);
 
 describe('trip blog day cover selection', () => {
   const owner = { firstName: 'Cover', lastName: 'Owner', email: 'blog-day-cover-owner@example.com', password: 'Password123!' };
@@ -20,7 +23,7 @@ describe('trip blog day cover selection', () => {
     await registerWebUser(outsider);
     await confirmWebUser(outsider.email);
     outsiderToken = (await loginWebUser(outsider)).body.token;
-    const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`).send({ name: 'Cover Trip', startDate: '2026-09-10', endDate: '2026-09-11', participants: [] }).expect(201);
+    const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`).send({ name: 'Cover Trip', startDate: DAY1, endDate: DAY2, participants: [] }).expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
   });
   afterAll(async () => { await cleanupTestUsersByEmail([owner.email, outsider.email]); });
@@ -41,33 +44,33 @@ describe('trip blog day cover selection', () => {
   };
 
   it('automatically sets the first uploaded photo as the cover without replacing it on later uploads', async () => {
-    const first = await uploadReadyPhoto('2026-09-10', 'cover-fallback-1');
-    const second = await uploadReadyPhoto('2026-09-10', 'cover-fallback-2');
+    const first = await uploadReadyPhoto(DAY1, 'cover-fallback-1');
+    const second = await uploadReadyPhoto(DAY1, 'cover-fallback-2');
     const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
-    const day = blog.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
+    const day = blog.body.days.find((candidate: any) => candidate.localDate === DAY1);
     expect(day.coverIsExplicit).toBe(true);
     expect(day.coverItemId).toBe(first.itemId);
     expect(first.itemId).not.toBe(second.itemId);
   });
 
   it('lets a traveler set an explicit day cover, reflected on the next GET /blog', async () => {
-    await uploadReadyPhoto('2026-09-10', 'cover-explicit-1');
-    const second = await uploadReadyPhoto('2026-09-10', 'cover-explicit-2');
+    await uploadReadyPhoto(DAY1, 'cover-explicit-1');
+    const second = await uploadReadyPhoto(DAY1, 'cover-explicit-2');
     await request(app)
-      .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
+      .post(`/api/trips/${tripId}/blog/days/${DAY1}/cover`)
       .set('Authorization', `Bearer ${token}`)
       .send({ assetId: second.assetId })
       .expect(204);
     const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
-    const day = blog.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
+    const day = blog.body.days.find((candidate: any) => candidate.localDate === DAY1);
     expect(day.coverIsExplicit).toBe(true);
     expect(day.coverItemId).toBe(second.itemId);
   });
 
   it('rejects setting a cover to an asset that belongs to a different day', async () => {
-    const otherDay = await uploadReadyPhoto('2026-09-11', 'cover-wrong-day');
+    const otherDay = await uploadReadyPhoto(DAY2, 'cover-wrong-day');
     await request(app)
-      .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
+      .post(`/api/trips/${tripId}/blog/days/${DAY1}/cover`)
       .set('Authorization', `Bearer ${token}`)
       .send({ assetId: otherDay.assetId })
       .expect(400);
@@ -78,30 +81,30 @@ describe('trip blog day cover selection', () => {
       .post(`/api/trips/${tripId}/blog/media/upload-init`)
       .set('Authorization', `Bearer ${token}`)
       .set('Idempotency-Key', 'cover-not-ready')
-      .send({ dayDate: '2026-09-10', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024 })
+      .send({ dayDate: DAY1, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024 })
       .expect(201);
     await request(app)
-      .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
+      .post(`/api/trips/${tripId}/blog/days/${DAY1}/cover`)
       .set('Authorization', `Bearer ${token}`)
       .send({ assetId: init.body.asset.id })
       .expect(400);
   });
 
   it('rejects a non-trip-member from setting a day cover', async () => {
-    const asset = await uploadReadyPhoto('2026-09-10', 'cover-outsider');
+    const asset = await uploadReadyPhoto(DAY1, 'cover-outsider');
     await request(app)
-      .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
+      .post(`/api/trips/${tripId}/blog/days/${DAY1}/cover`)
       .set('Authorization', `Bearer ${outsiderToken}`)
       .send({ assetId: asset.assetId })
       .expect(403);
   });
 
   it('bumps the blog ETag after a cover-set call', async () => {
-    const asset = await uploadReadyPhoto('2026-09-10', 'cover-etag');
+    const asset = await uploadReadyPhoto(DAY1, 'cover-etag');
     const before = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
     const etagBefore = before.headers.etag;
     await request(app)
-      .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
+      .post(`/api/trips/${tripId}/blog/days/${DAY1}/cover`)
       .set('Authorization', `Bearer ${token}`)
       .send({ assetId: asset.assetId })
       .expect(204);
@@ -110,26 +113,26 @@ describe('trip blog day cover selection', () => {
   });
 
   it('clears an explicit cover back to the fallback when assetId is null', async () => {
-    const asset = await uploadReadyPhoto('2026-09-10', 'cover-clear');
+    const asset = await uploadReadyPhoto(DAY1, 'cover-clear');
     await request(app)
-      .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
+      .post(`/api/trips/${tripId}/blog/days/${DAY1}/cover`)
       .set('Authorization', `Bearer ${token}`)
       .send({ assetId: asset.assetId })
       .expect(204);
     await request(app)
-      .post(`/api/trips/${tripId}/blog/days/2026-09-10/cover`)
+      .post(`/api/trips/${tripId}/blog/days/${DAY1}/cover`)
       .set('Authorization', `Bearer ${token}`)
       .send({ assetId: null })
       .expect(204);
     const blog = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
-    const day = blog.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
+    const day = blog.body.days.find((candidate: any) => candidate.localDate === DAY1);
     expect(day.coverIsExplicit).toBe(false);
 
     // Clearing is an intentional user choice; a later upload must not silently assign a new
     // automatic cover. Only a day that has never had its cover set gets the first-photo default.
-    await uploadReadyPhoto('2026-09-10', 'cover-after-clear');
+    await uploadReadyPhoto(DAY1, 'cover-after-clear');
     const afterUpload = await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
-    const dayAfterUpload = afterUpload.body.days.find((candidate: any) => candidate.localDate === '2026-09-10');
+    const dayAfterUpload = afterUpload.body.days.find((candidate: any) => candidate.localDate === DAY1);
     expect(dayAfterUpload.coverIsExplicit).toBe(false);
   });
 });

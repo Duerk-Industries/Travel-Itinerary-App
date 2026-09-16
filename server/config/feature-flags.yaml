@@ -259,6 +259,15 @@ flags:
   notifications_web_push:
     enabled: true
     description: "Web push notification delivery"
+  # Added alongside real push delivery (2026-09-14) — beyond the original four-flag table above.
+  # notifications_web_push was reserved for literal browser push (service worker + VAPID), which
+  # doesn't exist yet; the product decision for now is that web/no-device users get a real email
+  # instead of a browser push, so that path (and any category with an explicit `email` preference)
+  # gets its own kill switch rather than overloading notifications_web_push's name for something
+  # it doesn't yet mean.
+  notifications_email:
+    enabled: true
+    description: "Notification delivery via email — used both for explicit email-channel preferences and as the fallback when a user has no registered push device"
   expense_import_plaid:
     enabled: false
     description: "Master switch for Plaid bank-link and transaction import"

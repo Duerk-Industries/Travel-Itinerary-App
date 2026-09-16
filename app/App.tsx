@@ -132,6 +132,7 @@ import ChatOverlay from './components/ChatOverlay';
 import HorizontalTableScroll from './components/HorizontalTableScroll';
 import CostReportTable from './components/CostReportTable';
 import { connectSocket, disconnectSocket } from './utils/socket';
+import { registerForPushNotificationsAsync } from './utils/pushNotifications';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
@@ -2260,6 +2261,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       fetchPendingTripShareInvites();
     }
   }, [userToken, requirePasswordSetup, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
+
+  useEffect(() => {
+    // Best-effort, native-only (see pushNotifications.ts) — never awaited/blocking, and safe to
+    // re-run on every token change since /api/notifications/devices upserts on the token hash.
+    if (userToken && !requirePasswordSetup) {
+      void registerForPushNotificationsAsync(userToken);
+    }
+  }, [userToken, requirePasswordSetup]);
 
   useEffect(() => {
     if (userToken) return;

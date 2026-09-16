@@ -13,6 +13,13 @@ export interface NotificationRepository {
   upsertDevice(userId: string, device: any): Promise<void>;
   listDevices(userId: string): Promise<any[]>;
   deleteDevice(userId: string, deviceId: string): Promise<void>;
+  getNotificationById(id: string): Promise<any | null>;
+  // Unlike listDevices (the public GET /devices response, deliberately scrubbed of the raw
+  // token), this carries push_token_ciphertext — for internal delivery use only
+  // (notificationOutboxWorker.ts's deliverPush). Mobile-only (ios/android): web never has an
+  // Expo push token to deliver to.
+  listActivePushDevicesForUser(userId: string): Promise<any[]>;
+  incrementDeviceFailure(deviceId: string): Promise<void>;
   updatePreferences(userId: string, preferences: any[]): Promise<void>;
   claimOutboxBatch(leaseOwner: string, batchSize: number, leaseSeconds: number): Promise<any[]>;
   updateOutboxState(id: string, state: string, options?: { attemptCount?: number; nextAttemptAt?: Date; lastErrorCode?: string | null }): Promise<void>;
