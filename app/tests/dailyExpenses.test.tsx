@@ -1,5 +1,5 @@
 /**
- * @jest-environment node
+ * @jest-environment jsdom
  */
 /// <reference types="jest" />
 /// <reference types="node" />
@@ -89,6 +89,10 @@ describe('DailyExpensesTab', () => {
     },
   ];
 
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it('shows trip currency and opens detail modal on non-zero cell', () => {
     const { getByText, queryByTestId, getByTestId, getAllByText } = render(
       <DailyExpensesTab
@@ -133,6 +137,39 @@ describe('DailyExpensesTab', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('http://example.test/api/expenses/e1', expect.objectContaining({ method: 'DELETE' })));
     expect(setExpenses).toHaveBeenCalled();
+  });
+
+  it('does not allow expense mutations while cached trip data is read-only', async () => {
+    const fetchMock = jest.fn();
+    const originalFetch = global.fetch;
+    global.fetch = fetchMock as any;
+
+    try {
+      const screen = render(
+        <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed readOnly />
+      );
+
+      expect(screen.getByTestId('expense-add-button').props.disabled).toBe(true);
+      expect(screen.getByTestId('expense-scan-receipt-button').props.disabled).toBe(true);
+      expect(screen.getByTestId('expense-import-button').props.disabled).toBe(true);
+      // Testing Library can invoke an onPress even when a native Touchable is
+      // disabled. Exercise that stale/programmatic path too: Save still must
+      // not post an expense while the cached trip is read-only.
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      expect(screen.getByTestId('expense-add-modal')).toBeTruthy();
+      fireEvent.press(screen.getByText('Save Expense'));
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      // The delete handler has the same protection for an already-open stale
+      // control.
+      fireEvent.press(screen.getAllByText('$12.00')[0]);
+      fireEvent.press(screen.getByTestId('expense-delete-e1'));
+      fireEvent.press(screen.getByTestId('expense-detail-delete-confirm-yes'));
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   it('surfaces and deletes expenses the daily grid cannot reach (wrong category or date)', async () => {
@@ -221,6 +258,87 @@ describe('DailyExpensesTab', () => {
         notes: 'Receipt reviewed',
         amount: 18.75,
       }));
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('restores an unsaved open expense dialog after a refresh and only Cancel discards it', () => {
+    const fetchMock = jest.fn();
+    const originalFetch = global.fetch;
+    global.fetch = fetchMock as any;
+
+    try {
+      const firstLoad = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      fireEvent.press(firstLoad.getByTestId('expense-add-button'));
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Amount'), '18.75');
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Vendor'), 'Flour Bakery');
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Notes'), 'Receipt reviewed');
+      // The dialog overlay has no dismissal action, so a backdrop click leaves
+      // the draft and dialog alone.
+      fireEvent.press(firstLoad.getByTestId('expense-add-modal'));
+      expect(firstLoad.getByPlaceholderText('Amount').props.value).toBe('18.75');
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      firstLoad.unmount();
+
+      const refreshed = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      expect(refreshed.getByTestId('expense-add-modal')).toBeTruthy();
+      expect(refreshed.getByPlaceholderText('Amount').props.value).toBe('18.75');
+      expect(refreshed.getByPlaceholderText('Vendor').props.value).toBe('Flour Bakery');
+      expect(refreshed.getByPlaceholderText('Notes').props.value).toBe('Receipt reviewed');
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      fireEvent.press(refreshed.getByTestId('expense-cancel'));
+      expect(refreshed.queryByTestId('expense-add-modal')).toBeNull();
+
+      refreshed.unmount();
+      const afterCancelRefresh = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+      expect(afterCancelRefresh.queryByTestId('expense-add-modal')).toBeNull();
     } finally {
       global.fetch = originalFetch;
     }

@@ -38,10 +38,24 @@ delete process.env.API_BASE_URL;
 delete process.env.REACT_APP_BACKEND_URL;
 delete process.env.REACT_NATIVE_APP_BACKEND_URL;
 
+// App.tsx installs the permission-denied fetch interceptor when it loads.
+// Give that interceptor a harmless fetch implementation before importing App
+// so startup tests never attempt a live network request.
+const interceptedFetchFallback = jest.fn(async () => ({
+  ok: true,
+  status: 200,
+  json: async () => ({}),
+}));
+(global as any).fetch = interceptedFetchFallback;
+
 const App = require('../App').default;
 const ExpoLinking = require('expo-linking');
 const WebBrowser = require('expo-web-browser');
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+const Network = require('expo-network');
+const LocalAuthentication = require('expo-local-authentication');
+const { saveSessionAsync } = require('../utils/session');
+const { saveOfflineTripSnapshot, startOfflineAccessPeriod } = require('../utils/offlineTripCache');
 
 const makeJwt = (payload: Record<string, unknown>) => {
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -52,13 +66,18 @@ describe('App startup', () => {
   const originalPremiumTrialsFlag = process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED;
   let fetchSpy: jest.SpyInstance | null = null;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.NODE_ENV = 'test';
     process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = 'true';
     fetchSpy?.mockRestore();
     fetchSpy = null;
+    interceptedFetchFallback.mockClear();
+    await AsyncStorage.clear();
     WebBrowser.openAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
     AsyncStorage.setItem.mockClear();
+    Network.getNetworkStateAsync.mockResolvedValue({ isConnected: true, isInternetReachable: true });
+    LocalAuthentication.hasHardwareAsync.mockResolvedValue(true);
+    LocalAuthentication.authenticateAsync.mockResolvedValue({ success: true });
   });
 
   afterEach(() => {
@@ -78,6 +97,58 @@ describe('App startup', () => {
   it('renders the signed-out native shell without crashing', () => {
     const { getAllByText } = render(<App />);
     expect(getAllByText('WanderBunnies').length).toBeGreaterThan(0);
+  });
+
+  it('requires device authentication before restoring cached trips offline', async () => {
+    const token = makeJwt({ email: 'offline@example.com', firstName: 'Off', lastName: 'Line', role: 'user', userId: 'offline-user' });
+    await AsyncStorage.clear();
+    await saveSessionAsync(token, 'Off Line', 'overview', 'offline@example.com', 'offline-trip');
+    await startOfflineAccessPeriod('offline@example.com');
+    await saveOfflineTripSnapshot(
+      'offline@example.com',
+      {
+        tripId: 'offline-trip',
+        savedAt: Date.now(),
+        trip: { id: 'offline-trip', groupId: 'offline-group', name: 'Offline Trip', startDate: '2026-09-20', endDate: '2026-09-22' },
+        groupMembers: [], flights: [], lodgings: [], tours: [], carRentals: [], expenses: [], payments: [], coveredBy: {}, itinerary: null,
+      },
+      { trips: [{ id: 'offline-trip', groupId: 'offline-group', name: 'Offline Trip' }], groups: [] },
+    );
+    Network.getNetworkStateAsync.mockResolvedValue({ isConnected: false, isInternetReachable: false });
+
+    const { findByTestId, getByTestId, queryByTestId, findByText } = render(<App />);
+    await findByTestId('offline-unlock-screen');
+    fireEvent.press(getByTestId('offline-unlock-button'));
+    await waitFor(() => expect(LocalAuthentication.authenticateAsync).toHaveBeenCalled());
+    await waitFor(() => expect(queryByTestId('offline-unlock-screen')).toBeNull());
+    await findByText('Offline Trip');
+  });
+
+  it('keeps cached trips locked when device authentication is cancelled', async () => {
+    const token = makeJwt({ email: 'locked@example.com', firstName: 'Locked', lastName: 'Traveler', role: 'user', userId: 'locked-user' });
+    await saveSessionAsync(token, 'Locked Traveler', 'overview', 'locked@example.com', 'locked-trip');
+    await startOfflineAccessPeriod('locked@example.com');
+    await saveOfflineTripSnapshot(
+      'locked@example.com',
+      {
+        tripId: 'locked-trip',
+        savedAt: Date.now(),
+        trip: { id: 'locked-trip', groupId: 'locked-group', name: 'Locked Offline Trip', startDate: '2026-09-20', endDate: '2026-09-22' },
+        groupMembers: [], flights: [], lodgings: [], tours: [], carRentals: [], expenses: [], payments: [], coveredBy: {}, itinerary: null,
+      },
+      { trips: [{ id: 'locked-trip', groupId: 'locked-group', name: 'Locked Offline Trip' }], groups: [] },
+    );
+    Network.getNetworkStateAsync.mockResolvedValue({ isConnected: false, isInternetReachable: false });
+    LocalAuthentication.authenticateAsync.mockResolvedValue({ success: false, error: 'user_cancel' });
+
+    const { findByTestId, getByTestId, getByText, queryByText } = render(<App />);
+    await findByTestId('offline-unlock-screen');
+    fireEvent.press(getByTestId('offline-unlock-button'));
+
+    await waitFor(() => expect(LocalAuthentication.authenticateAsync).toHaveBeenCalled());
+    expect(getByTestId('offline-unlock-screen')).toBeTruthy();
+    expect(getByText('Offline trips remain locked.')).toBeTruthy();
+    expect(queryByText('Locked Offline Trip')).toBeNull();
   });
 
   it('uses Expo Linking to build the native Google OAuth redirect URL', async () => {

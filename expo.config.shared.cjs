@@ -136,6 +136,12 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       'expo-video',
       'expo-dev-client',
       [
+        'expo-local-authentication',
+        {
+          faceIDPermission: 'WanderBunnies uses Face ID to unlock cached trip information while you are offline.',
+        },
+      ],
+      [
         // Lets a traveler "send to" WanderBunnies from the phone's native Photos/share sheet,
         // same as sharing to a messaging app — see app/utils/incomingShare.ts for the receiving
         // side. Photos and videos only (matches SUPPORTED_MIME_TYPES in app/tabs/tripBlog.tsx);
@@ -204,7 +210,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
               ? 'http://localhost:4000'
               : 'https://wander-bunnies.com'),
       refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
-      sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,
+      sessionCacheTimeoutMinutes: 43200,
       premiumTrialsEnabled: String(process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED ?? 'true').toLowerCase() !== 'false',
       eas: {
         projectId: '06966c0b-d878-4346-850c-090c762f1916',

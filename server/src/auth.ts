@@ -46,7 +46,7 @@ export interface TokenPayload {
 
 export const createToken = (payload: TokenPayload): string => {
   return jwt.sign(payload, getAuthSecret(), {
-    expiresIn: '7d',
+    expiresIn: '30d',
     issuer: getAuthIssuer(),
     audience: getAuthAudience(),
   });
@@ -61,7 +61,7 @@ export const verifyToken = (token: string): TokenPayload => {
 
 export const createWebUserToken = (payload: { userId: string; username: string }): string => {
   return jwt.sign(payload, getAuthSecret(), {
-    expiresIn: '7d',
+    expiresIn: '30d',
     issuer: getAuthIssuer(),
     audience: getAuthAudience(),
   });

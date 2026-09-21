@@ -2784,59 +2784,86 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         </View>
       ) : null}
       {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={dateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
-              setDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (dateField === 'start') {
-              setStartDateWithRangeGuard(iso);
-            } else if (dateField === 'end') {
-              setDates((prev) => ({ ...prev, endDate: iso }));
-            } else {
-              setItineraryDraft((prev) => ({ ...prev, date: iso }));
-            }
-            setDateField(null);
-          }}
-        />
+        <View style={styles.passengerOverlay}>
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setDateField(null)} />
+          <View style={styles.modalCard}>
+            <NativeDateTimePicker
+              value={dateValue}
+              mode="date"
+              display="spinner"
+              onChange={(_, date) => {
+                if (!date) {
+                  setDateField(null);
+                  return;
+                }
+                const iso = date.toISOString().slice(0, 10);
+                if (dateField === 'start') {
+                  setStartDateWithRangeGuard(iso);
+                } else if (dateField === 'end') {
+                  setDates((prev) => ({ ...prev, endDate: iso }));
+                } else {
+                  setItineraryDraft((prev) => ({ ...prev, date: iso }));
+                }
+                if (Platform.OS === 'android') setDateField(null);
+              }}
+            />
+            <TouchableOpacity style={styles.button} onPress={() => setDateField(null)}>
+              <Text style={styles.buttonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       ) : null}
       {Platform.OS !== 'web' && wizardLodgingDateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={wizardLodgingDateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
-              setWizardLodgingDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (wizardLodgingDateField !== 'checkIn' && wizardLodgingDateField !== 'checkOut') {
-              setWizardLodgingDateField(null);
-              return;
-            }
-            applyWizardLodgingDate(wizardLodgingDateField, iso);
-            setWizardLodgingDateField(null);
-          }}
-        />
+        <View style={styles.passengerOverlay}>
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setWizardLodgingDateField(null)} />
+          <View style={styles.modalCard}>
+            <NativeDateTimePicker
+              value={wizardLodgingDateValue}
+              mode="date"
+              display="spinner"
+              onChange={(_, date) => {
+                if (!date) {
+                  setWizardLodgingDateField(null);
+                  return;
+                }
+                const iso = date.toISOString().slice(0, 10);
+                if (wizardLodgingDateField !== 'checkIn' && wizardLodgingDateField !== 'checkOut') {
+                  setWizardLodgingDateField(null);
+                  return;
+                }
+                applyWizardLodgingDate(wizardLodgingDateField, iso);
+                if (Platform.OS === 'android') setWizardLodgingDateField(null);
+              }}
+            />
+            <TouchableOpacity style={styles.button} onPress={() => setWizardLodgingDateField(null)}>
+              <Text style={styles.buttonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       ) : null}
       {Platform.OS !== 'web' && wizardCarDateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={wizardCarDateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
-              setWizardCarDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            applyWizardCarDate(wizardCarDateField, iso);
-            setWizardCarDateField(null);
-          }}
-        />
+        <View style={styles.passengerOverlay}>
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setWizardCarDateField(null)} />
+          <View style={styles.modalCard}>
+            <NativeDateTimePicker
+              value={wizardCarDateValue}
+              mode="date"
+              display="spinner"
+              onChange={(_, date) => {
+                if (!date) {
+                  setWizardCarDateField(null);
+                  return;
+                }
+                const iso = date.toISOString().slice(0, 10);
+                applyWizardCarDate(wizardCarDateField, iso);
+                if (Platform.OS === 'android') setWizardCarDateField(null);
+              }}
+            />
+            <TouchableOpacity style={styles.button} onPress={() => setWizardCarDateField(null)}>
+              <Text style={styles.buttonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       ) : null}
       {editingWizardLodging && editingWizardLodgingId ? (
         <View style={styles.passengerOverlay}>

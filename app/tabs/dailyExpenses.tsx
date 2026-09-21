@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -12,6 +12,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { toWebStyle } from '../utils/webStyle';
 import { alertMessage } from '../utils/crossPlatformAlert';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 type Trip = {
   id: string;
@@ -73,6 +74,7 @@ type DailyExpensesTabProps = {
   defaultPayerId: string | null;
   styles: Record<string, any>;
   costTrackingAllowed?: boolean;
+  readOnly?: boolean;
 };
 
 const categoryOptions = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'] as const;
@@ -82,6 +84,18 @@ const currencySelectOptions: SelectFieldOption[] = ['USD', 'EUR', 'GBP', 'JPY', 
   value: currency,
 }));
 type CategoryOption = typeof categoryOptions[number];
+
+type DailyExpenseDraft = {
+  isOpen: boolean;
+  date: string;
+  category: CategoryOption;
+  currency: string;
+  amount: string;
+  vendor: string;
+  notes: string;
+  forIds: string[];
+  payerIds: string[];
+};
 
 const dayCardStyles = {
   card: {
@@ -160,6 +174,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   defaultPayerId,
   styles,
   costTrackingAllowed,
+  readOnly = false,
 }) => {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isNarrowLayout = viewportWidth < 700;
@@ -175,16 +190,65 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     return map;
   }, [activeMembers]);
 
-  const [draftDate, setDraftDate] = useState<string>('');
-  const [draftCategory, setDraftCategory] = useState<CategoryOption>('Breakfast');
-  const [draftCurrency, setDraftCurrency] = useState<string>('USD');
-  const [draftAmount, setDraftAmount] = useState<string>('');
-  const [draftVendor, setDraftVendor] = useState<string>('');
-  const [draftNotes, setDraftNotes] = useState<string>('');
-  const [draftForIds, setDraftForIds] = useState<string[]>([]);
-  const [draftPayerIds, setDraftPayerIds] = useState<string[]>([]);
+  const tripDates = useMemo(() => buildDateRange(trip), [trip]);
+  const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;
+  const defaultExpenseDraft = useMemo<DailyExpenseDraft>(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    return {
+      isOpen: false,
+      date: tripDates.includes(todayIso) ? todayIso : tripDates[0] ?? todayIso,
+      category: 'Breakfast',
+      currency: trip?.currency ?? 'USD',
+      amount: '',
+      vendor: '',
+      notes: '',
+      forIds: activeMembers.map((member) => member.id),
+      payerIds: defaultPayerId ? [defaultPayerId] : [],
+    };
+  }, [activeMembers, defaultPayerId, trip?.currency, tripDates]);
+  const [storedExpenseDraft, setExpenseDraft] = usePersistedState<DailyExpenseDraft | null>(
+    expenseDraftStorageKey,
+    null,
+  );
+  const expenseDraft = storedExpenseDraft ?? defaultExpenseDraft;
+  const {
+    date: draftDate,
+    category: draftCategory,
+    currency: draftCurrency,
+    amount: draftAmount,
+    vendor: draftVendor,
+    notes: draftNotes,
+    forIds: draftForIds,
+    payerIds: draftPayerIds,
+  } = expenseDraft;
+  const updateExpenseDraft = (update: Partial<DailyExpenseDraft>) => {
+    setExpenseDraft((current) => ({ ...(current ?? defaultExpenseDraft), ...update }));
+  };
+  const setDraftDate = (date: string) => updateExpenseDraft({ date });
+  const setDraftCategory = (category: CategoryOption) => updateExpenseDraft({ category });
+  const setDraftCurrency = (currency: string) => updateExpenseDraft({ currency });
+  const setDraftAmount = (amount: string) => updateExpenseDraft({ amount });
+  const setDraftVendor = (vendor: string) => updateExpenseDraft({ vendor });
+  const setDraftNotes = (notes: string) => updateExpenseDraft({ notes });
+  const setDraftForIds = (next: React.SetStateAction<string[]>) => {
+    setExpenseDraft((current) => {
+      const draft = current ?? defaultExpenseDraft;
+      return {
+        ...draft,
+        forIds: typeof next === 'function' ? next(draft.forIds) : next,
+      };
+    });
+  };
+  const setDraftPayerIds = (next: React.SetStateAction<string[]>) => {
+    setExpenseDraft((current) => {
+      const draft = current ?? defaultExpenseDraft;
+      return {
+        ...draft,
+        payerIds: typeof next === 'function' ? next(draft.payerIds) : next,
+      };
+    });
+  };
   const [datePickerVisible, setDatePickerVisible] = useState(false);
-  const [addExpenseVisible, setAddExpenseVisible] = useState(false);
   const [importExpensesVisible, setImportExpensesVisible] = useState(false);
   const [receiptParsing, setReceiptParsing] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
@@ -192,26 +256,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
   const receiptFileInputRef = useRef<any>(null);
 
-  const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseItems = useMemo(
     () => expenses.filter((expense) => categoryOptions.includes(expense.category as CategoryOption)),
     [expenses]
   );
-
-  useEffect(() => {
-    if (!trip) return;
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const initialDate = tripDates.includes(todayIso) ? todayIso : tripDates[0] ?? todayIso;
-    setDraftDate(initialDate);
-    setDraftCategory('Breakfast');
-    setDraftCurrency(trip.currency ?? 'USD');
-    setDraftAmount('');
-    setDraftVendor('');
-    setDraftNotes('');
-    setReceiptError(null);
-    setDraftForIds(activeMembers.map((m) => m.id));
-    setDraftPayerIds(defaultPayerId ? [defaultPayerId] : []);
-  }, [trip?.id, tripDates, activeMembers, defaultPayerId, trip?.currency]);
 
   const dailyTotals = useMemo(() => {
     const totals: Record<string, Record<string, number>> = {};
@@ -258,9 +306,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const toggleSelection = (ids: string[], id: string): string[] =>
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
 
-  const closeAddExpenseModal = () => {
-    setAddExpenseVisible(false);
+  const openAddExpenseModal = () => {
+    updateExpenseDraft({ isOpen: true });
+  };
+
+  const cancelAddExpenseModal = () => {
+    setExpenseDraft(null);
     setDatePickerVisible(false);
+    setReceiptError(null);
   };
 
   const handleReceiptPickerPress = () => {
@@ -294,7 +347,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           : '',
       ].filter(Boolean).join(' ')
     );
-    setAddExpenseVisible(true);
+    openAddExpenseModal();
   };
 
   const handleReceiptFile = async (file: File | null | undefined) => {
@@ -336,6 +389,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const saveExpense = async () => {
+    if (readOnly) {
+      alertMessage('Offline trip information is read-only. Reconnect to add an expense.');
+      return;
+    }
     if (!costTrackingAllowed) {
       alertMessage('Expense tracking is a premium feature');
       return;
@@ -405,16 +462,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         return;
       }
       setExpenses((prev) => [data as Expense, ...prev.filter((e) => e.id !== data.id)]);
-      setDraftAmount('');
-      setDraftVendor('');
-      setDraftNotes('');
-      closeAddExpenseModal();
+      cancelAddExpenseModal();
     } catch (err) {
       alertMessage((err as Error).message || 'Unable to save expense');
     }
   };
 
   const deleteExpense = async (expense: Expense) => {
+    if (readOnly) {
+      alertMessage('Offline trip information is read-only. Reconnect to delete an expense.');
+      return;
+    }
     if (!costTrackingAllowed) {
       alertMessage('Expense tracking is a premium feature');
       return;
@@ -438,6 +496,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const deleteExpensesByIds = async (ids: string[]) => {
+    if (readOnly) {
+      alertMessage('Offline trip information is read-only. Reconnect to delete expenses.');
+      return;
+    }
     if (!costTrackingAllowed || !ids.length) return;
     setBulkDeleting(true);
     const deleted: string[] = [];
@@ -498,7 +560,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
         <TouchableOpacity
           style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-          onPress={() => setAddExpenseVisible(true)}
+          onPress={openAddExpenseModal}
+          disabled={readOnly}
           testID="expense-add-button"
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
@@ -506,7 +569,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
           onPress={handleReceiptPickerPress}
-          disabled={receiptParsing}
+          disabled={receiptParsing || readOnly}
           testID="expense-scan-receipt-button"
         >
           <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
@@ -514,6 +577,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.smallButton]}
           onPress={() => setImportExpensesVisible(true)}
+          disabled={readOnly}
           testID="expense-import-button"
         >
           <Text style={styles.buttonText}>Import</Text>
@@ -544,12 +608,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           onImported={(expense) => setExpenses(prev => [expense, ...prev])}
         />
       )}
-      {addExpenseVisible ? (
+      {expenseDraft.isOpen ? (
         <DialogShell
           visible
           title="Add Expense"
           styles={styles}
-          onClose={closeAddExpenseModal}
+          // Backdrop, Escape, and the native back action must not discard a
+          // partially entered expense. Cancel is the explicit discard action.
+          onClose={() => undefined}
           testID="expense-add-modal"
           useNativeModal
           cardStyle={[styles.modalCard, styles.expenseModalCard]}
@@ -557,9 +623,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               <View style={styles.row}>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-                  onPress={closeAddExpenseModal}
+                  onPress={cancelAddExpenseModal}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel expense"
+                  testID="expense-cancel"
                 >
-                  <Text style={styles.buttonText}>Close</Text>
+                  <Text style={styles.buttonText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8, overflow: 'visible', paddingBottom: 8 }}>
