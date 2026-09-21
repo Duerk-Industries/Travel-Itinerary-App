@@ -242,15 +242,20 @@ describe('packing lists v2', () => {
     await p.query('DROP INDEX IF EXISTS idx_trip_packing_v2_normalized_label');
     const keepId = randomUUID();
     const dropId = randomUUID();
+    // Use a normalized_label unique to this test run (not the shared literal
+    // "sunscreen") so the GROUP BY (trip_id, normalized_label) below can't
+    // pick up unrelated single-row "sunscreen" items other tests in this
+    // file seed for their own trips.
+    const dedupLabel = `sunscreen-dedup-${keepId}`;
     await p.query(
       `INSERT INTO trip_packing_list_items (id, trip_id, category, label, normalized_label, position)
-       VALUES ($1, $2, 'General', 'Sunscreen', 'sunscreen', 0)`,
-      [keepId, tripId]
+       VALUES ($1, $2, 'General', 'Sunscreen', $3, 0)`,
+      [keepId, tripId, dedupLabel]
     );
     await p.query(
       `INSERT INTO trip_packing_list_items (id, trip_id, category, label, normalized_label, position)
-       VALUES ($1, $2, 'Beach', 'sunscreen ', 'sunscreen', 1)`,
-      [dropId, tripId]
+       VALUES ($1, $2, 'Beach', 'sunscreen ', $3, 1)`,
+      [dropId, tripId, dedupLabel]
     );
 
     // Attach a contribution/source and a packed-check to the row that is
@@ -318,8 +323,8 @@ describe('packing lists v2', () => {
     // lowest id, which is arbitrary from the test's point of view, so assert
     // on whichever one actually remains rather than assuming keepId "wins".
     const remaining: any = await p.query(
-      `SELECT id FROM trip_packing_list_items WHERE trip_id = $1 AND normalized_label = 'sunscreen'`,
-      [tripId]
+      `SELECT id FROM trip_packing_list_items WHERE trip_id = $1 AND normalized_label = $2`,
+      [tripId, dedupLabel]
     );
     expect(remaining.rows).toHaveLength(1);
     expect([keepId, dropId]).toContain(remaining.rows[0].id);
