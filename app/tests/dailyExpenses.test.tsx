@@ -1,5 +1,5 @@
 /**
- * @jest-environment node
+ * @jest-environment jsdom
  */
 /// <reference types="jest" />
 /// <reference types="node" />
@@ -88,6 +88,10 @@ describe('DailyExpensesTab', () => {
       createdAt: '2025-02-01T10:00:00Z',
     },
   ];
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
 
   it('shows trip currency and opens detail modal on non-zero cell', () => {
     const { getByText, queryByTestId, getByTestId, getAllByText } = render(
@@ -221,6 +225,87 @@ describe('DailyExpensesTab', () => {
         notes: 'Receipt reviewed',
         amount: 18.75,
       }));
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('restores an unsaved open expense dialog after a refresh and only Cancel discards it', () => {
+    const fetchMock = jest.fn();
+    const originalFetch = global.fetch;
+    global.fetch = fetchMock as any;
+
+    try {
+      const firstLoad = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      fireEvent.press(firstLoad.getByTestId('expense-add-button'));
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Amount'), '18.75');
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Vendor'), 'Flour Bakery');
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Notes'), 'Receipt reviewed');
+      // The dialog overlay has no dismissal action, so a backdrop click leaves
+      // the draft and dialog alone.
+      fireEvent.press(firstLoad.getByTestId('expense-add-modal'));
+      expect(firstLoad.getByPlaceholderText('Amount').props.value).toBe('18.75');
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      firstLoad.unmount();
+
+      const refreshed = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      expect(refreshed.getByTestId('expense-add-modal')).toBeTruthy();
+      expect(refreshed.getByPlaceholderText('Amount').props.value).toBe('18.75');
+      expect(refreshed.getByPlaceholderText('Vendor').props.value).toBe('Flour Bakery');
+      expect(refreshed.getByPlaceholderText('Notes').props.value).toBe('Receipt reviewed');
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      fireEvent.press(refreshed.getByTestId('expense-cancel'));
+      expect(refreshed.queryByTestId('expense-add-modal')).toBeNull();
+
+      refreshed.unmount();
+      const afterCancelRefresh = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+      expect(afterCancelRefresh.queryByTestId('expense-add-modal')).toBeNull();
     } finally {
       global.fetch = originalFetch;
     }
