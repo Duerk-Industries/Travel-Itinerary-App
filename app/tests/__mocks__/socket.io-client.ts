@@ -33,6 +33,10 @@ class FakeSocket {
     return this;
   }
 
+  once(event: string, listener: Listener): this {
+    return this.on(event, listener);
+  }
+
   off(event: string, listener?: Listener): this {
     if (!listener) {
       this.listeners.delete(event);

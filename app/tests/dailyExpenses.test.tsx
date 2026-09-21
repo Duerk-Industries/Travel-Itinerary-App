@@ -139,6 +139,39 @@ describe('DailyExpensesTab', () => {
     expect(setExpenses).toHaveBeenCalled();
   });
 
+  it('does not allow expense mutations while cached trip data is read-only', async () => {
+    const fetchMock = jest.fn();
+    const originalFetch = global.fetch;
+    global.fetch = fetchMock as any;
+
+    try {
+      const screen = render(
+        <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed readOnly />
+      );
+
+      expect(screen.getByTestId('expense-add-button').props.disabled).toBe(true);
+      expect(screen.getByTestId('expense-scan-receipt-button').props.disabled).toBe(true);
+      expect(screen.getByTestId('expense-import-button').props.disabled).toBe(true);
+      // Testing Library can invoke an onPress even when a native Touchable is
+      // disabled. Exercise that stale/programmatic path too: Save still must
+      // not post an expense while the cached trip is read-only.
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      expect(screen.getByTestId('expense-add-modal')).toBeTruthy();
+      fireEvent.press(screen.getByText('Save Expense'));
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      // The delete handler has the same protection for an already-open stale
+      // control.
+      fireEvent.press(screen.getAllByText('$12.00')[0]);
+      fireEvent.press(screen.getByTestId('expense-delete-e1'));
+      fireEvent.press(screen.getByTestId('expense-detail-delete-confirm-yes'));
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
   it('surfaces and deletes expenses the daily grid cannot reach (wrong category or date)', async () => {
     const setExpenses = jest.fn();
     const fetchMock = jest.fn(async () => ({ ok: true, status: 204, json: async () => ({}) }) as any);

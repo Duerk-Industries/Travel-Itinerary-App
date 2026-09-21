@@ -6,6 +6,8 @@ type OfflineBannerProps = {
   /** Optional style overrides. Banner is hidden when connection is healthy. */
   containerStyle?: Record<string, unknown>;
   textStyle?: Record<string, unknown>;
+  /** Cached trip data is visible, but editing must remain unavailable offline. */
+  offlineReadOnly?: boolean;
 };
 
 const defaultContainer: Record<string, unknown> = {
@@ -27,10 +29,10 @@ const messageFor = (status: string): string => {
   return '';
 };
 
-const OfflineBanner: React.FC<OfflineBannerProps> = ({ containerStyle, textStyle }) => {
+const OfflineBanner: React.FC<OfflineBannerProps> = ({ containerStyle, textStyle, offlineReadOnly = false }) => {
   const { status, isDegraded } = useConnectionState();
-  if (!isDegraded) return null;
-  const message = messageFor(status);
+  if (!isDegraded && !offlineReadOnly) return null;
+  const message = offlineReadOnly ? 'Offline — cached trip data is read-only.' : messageFor(status);
   return (
     <View
       style={[defaultContainer, containerStyle] as any}

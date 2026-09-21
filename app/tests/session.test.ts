@@ -82,8 +82,8 @@ describe('session persistence', () => {
 
   test('loadSession returns null when the entry has expired', () => {
     const nowSpy = jest.spyOn(Date, 'now');
-    const twelveHoursMs = 12 * 60 * 60 * 1000;
-    nowSpy.mockReturnValueOnce(0).mockReturnValue(twelveHoursMs + 1);
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    nowSpy.mockReturnValueOnce(0).mockReturnValue(thirtyDaysMs + 1);
     saveSession('token-3', 'Traveler', 'overview', 'traveler@example.com', 'trip-3');
     expect(loadSession()).toBeNull();
   });
@@ -161,8 +161,8 @@ describe('session persistence', () => {
 
     test('loadSessionAsync removes expired native sessions', async () => {
       const nowSpy = jest.spyOn(Date, 'now');
-      const twelveHoursMs = 12 * 60 * 60 * 1000;
-      nowSpy.mockReturnValueOnce(0).mockReturnValue(twelveHoursMs + 1);
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      nowSpy.mockReturnValueOnce(0).mockReturnValue(thirtyDaysMs + 1);
       await saveSessionAsync('native-token-3', 'Native Traveler', 'overview', 'native@example.com', 'native-trip-3');
 
       expect(await loadSessionAsync()).toBeNull();

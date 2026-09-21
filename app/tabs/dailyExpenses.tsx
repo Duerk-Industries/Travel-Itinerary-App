@@ -74,6 +74,7 @@ type DailyExpensesTabProps = {
   defaultPayerId: string | null;
   styles: Record<string, any>;
   costTrackingAllowed?: boolean;
+  readOnly?: boolean;
 };
 
 const categoryOptions = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'] as const;
@@ -173,6 +174,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   defaultPayerId,
   styles,
   costTrackingAllowed,
+  readOnly = false,
 }) => {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isNarrowLayout = viewportWidth < 700;
@@ -387,6 +389,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const saveExpense = async () => {
+    if (readOnly) {
+      alertMessage('Offline trip information is read-only. Reconnect to add an expense.');
+      return;
+    }
     if (!costTrackingAllowed) {
       alertMessage('Expense tracking is a premium feature');
       return;
@@ -463,6 +469,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const deleteExpense = async (expense: Expense) => {
+    if (readOnly) {
+      alertMessage('Offline trip information is read-only. Reconnect to delete an expense.');
+      return;
+    }
     if (!costTrackingAllowed) {
       alertMessage('Expense tracking is a premium feature');
       return;
@@ -486,6 +496,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const deleteExpensesByIds = async (ids: string[]) => {
+    if (readOnly) {
+      alertMessage('Offline trip information is read-only. Reconnect to delete expenses.');
+      return;
+    }
     if (!costTrackingAllowed || !ids.length) return;
     setBulkDeleting(true);
     const deleted: string[] = [];
@@ -547,6 +561,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
           onPress={openAddExpenseModal}
+          disabled={readOnly}
           testID="expense-add-button"
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
@@ -554,7 +569,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
           onPress={handleReceiptPickerPress}
-          disabled={receiptParsing}
+          disabled={receiptParsing || readOnly}
           testID="expense-scan-receipt-button"
         >
           <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
@@ -562,6 +577,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.smallButton]}
           onPress={() => setImportExpensesVisible(true)}
+          disabled={readOnly}
           testID="expense-import-button"
         >
           <Text style={styles.buttonText}>Import</Text>
