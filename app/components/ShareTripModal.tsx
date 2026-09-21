@@ -51,7 +51,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
 
   const shareLink = useMemo(() => {
     if (!followCode) return '';
-    const webOrigin = typeof window !== 'undefined' ? window.location.origin || '' : '';
+    const webOrigin = Platform.OS === 'web' && typeof window !== 'undefined' && window.location ? window.location.origin || '' : '';
     return buildFollowShareLink(followCode, {
       platformOs: Platform.OS,
       webOrigin,

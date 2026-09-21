@@ -81,7 +81,7 @@ export const useBillingStatus = ({
   }, [backendUrl, token]);
 
   useEffect(() => {
-    if (!token || typeof window === 'undefined') return;
+    if (!token || typeof window === 'undefined' || !window.location) return;
     const url = new URL(window.location.href);
     if (url.searchParams.get('billing') !== 'success') return;
     triggerPostCheckoutRefresh().finally(() => {

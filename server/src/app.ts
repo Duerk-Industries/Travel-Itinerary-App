@@ -237,7 +237,7 @@ app.get('/api/auth/google/callback', async (req, res, next) => {
     try {
       await ensureDefaultGroupForUser(user.id, user.email);
       await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
-      const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(user.id, user.email, user.firstName, user.lastName);
+      const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(user.id, user.email, user.firstName, user.lastName, user.provider);
       await ensureAdminBootstrap(user.id, user.email);
       const role = await getUserRole(user.id);
       const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
@@ -381,7 +381,8 @@ app.post('/api/auth/apple/callback', async (req, res) => {
       user.id,
       user.email,
       user.firstName,
-      user.lastName
+      user.lastName,
+      user.provider
     );
     await ensureAdminBootstrap(user.id, user.email);
     const role = await getUserRole(user.id);
