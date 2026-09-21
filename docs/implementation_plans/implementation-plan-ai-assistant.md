@@ -659,11 +659,98 @@ logic), `assistantToolsDispatch.test.ts` (each tool calls the correct
 existing fetch helper with correctly-mapped arguments — the test §10
 called "the most important test in the whole feature"),
 `AssistantActionConfirmDialog.test.tsx`, and the action-mode additions to
-`useAssistantChat.test.tsx` / `AssistantChatPanel.test.tsx` — 72 tests
-total across those five files, all passing. Server side:
+`useAssistantChat.test.tsx` / `AssistantChatPanel.test.tsx`, plus
+regression tests in `assistantPrompt.test.ts` / `assistantGuideCorpus.test.ts`
+for each bug in "First real on-device testing pass" below — 122 tests
+across all assistant-related frontend files, all passing. Server side:
 `aiAssistantActionsEntitlement.test.ts` (fail-closed behavior) and new
 cases in `trip-activity.test.ts` covering the `TOUR_ADDED` retrofit — 5
 tests, passing.
+
+### First real on-device testing pass — bugs found and fixed
+
+The gap named below ("no real on-device accuracy run against this exact
+shipped code has happened") got its first real pass: manual testing against
+the actual shipped `assistantTools.ts`/`useAssistantChat.ts` path, in the
+real app, with a real loaded model — not the eval harness. It surfaced six
+real, distinct bugs, all fixed and covered by regression tests, not just
+noted:
+
+1. **System-prompt leakage.** The action-tools prompt's own few-shot
+   example (a fictional "Delta 88, ATL to ORD" flight) got recited
+   verbatim by the model as the answer to an unrelated guide question
+   ("how do I add a flight?"), because the combined system prompt always
+   includes the action few-shots whenever `actionsAllowed` is true,
+   regardless of what the current message actually is. Fixed by explicitly
+   framing the examples as fictional formatting illustrations, never real
+   answers, in both `buildActionSystemPrompt` and `buildActionToolsPrompt`.
+2. **"How do I" questions treated as action requests.** A harder version
+   of the same leakage: "How do I add a flight?" got answered with the
+   `addActivity` few-shot's own clarifying-question text ("Sure -- what
+   date would you like to do that?"), because the word "add" pattern-
+   matched the few-shot shape. Two rounds of stronger prompt wording
+   (an explicit rule, then a contrasting worked example) did not reliably
+   fix it — confirmed via repeated real retests, not assumed. What
+   actually worked was a structural fix, not another prompt tweak:
+   `isInformationalQuestion()` detects "how do I" / "how can I" / "how to"
+   phrasing client-side and skips sending the action-tools prompt for that
+   turn entirely, so there is no action few-shot in context to latch onto.
+3. **A second guide-corpus faithfulness gap**, same class as the
+   already-documented "Flights tab" one: the model invented an "Add
+   Flight" button that doesn't exist (the real control is an unlabeled
+   round "+" icon, separate from a "Paste Info" button). Fixed the same
+   way the first one was — naming and ruling out the wrong guess by name
+   in the corpus entry, not just stating the truth.
+4. **A directive-phrased corpus fact backfired.** The first fix for #3 was
+   worded as an instruction to the model ("do not call it an 'Add Flight'
+   button") rather than a fact — and the model echoed that instruction
+   back to the user verbatim instead of absorbing it, producing a garbled,
+   vague answer. Rewriting it as a plain statement ("there is no 'Add
+   Flight' button") — matching the phrasing pattern that already worked
+   for "Flights tab" — fixed it.
+5. **Correct button, missing tab name.** Once #3/#4 were fixed, answers
+   correctly named the "+" button but sometimes dropped which tab it was
+   in, even though the tab name was already present in the retrieved
+   reference material — an instruction-following gap, not a faithfulness
+   one. An abstract "always name the tab" instruction alone wasn't enough
+   (same lesson as #2); a concrete worked example on top of it was.
+6. **A real, model-independent functional bug: duplicate dispatch.**
+   `confirmPendingAction` had no guard against being called again while
+   its dispatch was still in flight, and the confirm dialog gave no
+   visual feedback while awaiting — so repeated taps on Confirm (a
+   reasonable reaction to an apparently-unresponsive button) fired one
+   `createActivityForTrip` call per tap. Reproduced live: six duplicate
+   activities from one proposal. Fixed with a ref-based re-entrancy guard
+   in the hook (`isDispatchingRef` — a ref, not just state, since state
+   updates batch and can't synchronously block a fast second tap) plus a
+   `confirming` state that disables both Confirm and Cancel and shows
+   "Confirming…" while a dispatch is outstanding.
+
+Also fixed during this pass, unrelated to model behavior: the draggable
+panel (Phase 1) was missing `userSelect: 'none'` on the drag handle, so
+dragging over the header text triggered the browser's native
+text-selection drag, which fought the custom responder-based drag and
+made it randomly stop tracking mid-gesture.
+
+**One model-selection correction that came out of this testing, not a
+bug fix:** action mode now loads **Qwen2.5-3B**, not the shared 1.5B
+default. 1.5B was never the model the 9/10 accuracy result (see
+"Narrow-tool-set retest result" above) was measured against — it only
+ever scored 3/8 on the same prompts — and real testing against it
+reproduced exactly that unreliability (e.g. asking for a date already
+given in the same message). Guide-only sessions (no `ai_assistant_actions`
+entitlement) still load 1.5B, since they don't need the larger model's
+tool-calling reliability and would just pay a bigger download for nothing.
+
+**What this still doesn't settle:** this was real but informal
+manual testing (a handful of prompts, not the harness's structured
+10-prompt set run against the real app), and only against Qwen2.5-3B for
+action mode — it's a genuine data point, not a formal accuracy re-run.
+The GPU driver crash (`DXGI_ERROR_DEVICE_REMOVED`, then a temporary
+"no GPU adapter found" state) predicted by Phase 0's findings was also
+hit again during this session, confirming that finding still holds on
+current hardware/drivers — it needed the same fix (a full browser
+restart, not just a refresh), not a new one.
 
 **What this build does *not* settle — still open before rollout:**
 
@@ -671,12 +758,11 @@ tests, passing.
   including internal/admin accounts.** Built and tested is not the same as
   rolled out — §12's staged rollout (internal-first, then general
   availability, same pattern as Phase 1) hasn't started.
-- **No real on-device accuracy run against this exact shipped code has
-  happened.** The 9/10 result the flag's design is based on was measured
-  by the eval harness (`scripts/spikes/ai-assistant-tool-calling-eval.html`),
-  which this implementation ported logic from — it is not itself a
-  substitute for running the real `assistantTools.ts` path, in the real
-  app, against a real loaded model, before general availability.
+- **No formal, structured accuracy re-run (matching the harness's 10-prompt
+  set) against the real shipped code has happened** — see "First real
+  on-device testing pass" above for what real, informal testing did surface
+  and fix. That testing was against Qwen2.5-3B only, one prompt shape at a
+  time, not a repeatable scored benchmark.
 - **The full 4-tool set remains untested and unimplemented**, not merely
   deferred — `addFlight`/`addLodging` tools, and any guard logic for them,
   do not exist in `assistantTools.ts`. Extending scope later needs its own

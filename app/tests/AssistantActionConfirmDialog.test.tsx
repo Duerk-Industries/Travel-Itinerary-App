@@ -85,6 +85,35 @@ describe('AssistantActionConfirmDialog', () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it('disables both Confirm and Cancel, and shows a busy label, while confirming is true', () => {
+    // Regression test: manual testing found repeated taps on Confirm (no
+    // visual feedback while the dispatch's fetch was in flight) creating
+    // several duplicate activities -- one dispatch per tap. The hook-level
+    // ref guard (useAssistantChat.test.tsx) is what actually prevents the
+    // duplicate call; this covers the other half of the fix, that the UI
+    // itself stops accepting taps and tells the user something is happening.
+    const onConfirm = jest.fn();
+    const onCancel = jest.fn();
+    const { getByTestId, getByText } = render(
+      <AssistantActionConfirmDialog
+        visible
+        pendingAction={ADD_ACTIVITY}
+        activities={[]}
+        confirming
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    );
+    expect(getByTestId('assistant-action-confirm').props.disabled).toBe(true);
+    expect(getByTestId('assistant-action-cancel').props.disabled).toBe(true);
+    expect(getByText(/Confirming/)).toBeTruthy();
+
+    fireEvent.press(getByTestId('assistant-action-confirm'));
+    fireEvent.press(getByTestId('assistant-action-cancel'));
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
   it('updateItineraryStatus mode: Confirm starts disabled until a picker row is selected', () => {
     const onConfirm = jest.fn();
     const activities = [makeTour({ id: 'a', name: 'Eiffel Tower tour' }), makeTour({ id: 'b', name: 'Harbor cruise' })];

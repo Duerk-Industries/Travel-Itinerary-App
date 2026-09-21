@@ -36,8 +36,10 @@ export const GUIDE_CORPUS: GuideCorpusEntry[] = [
     content:
       'The tab is called "Transfers" -- there is no separate "Flights" tab. It tracks flights, trains, ' +
       'buses, ferries, and private transfers all together. Each entry has a status (Needed, Proposed, ' +
-      'Booked, Completed, or Cancelled). Add one manually, or paste a confirmation email/text and the ' +
-      'flight parser will fill in the details for you.',
+      'Booked, Completed, or Cancelled). Add one manually by tapping the round "+" button -- it has no ' +
+      'text label; there is no "Add Flight" button. To add one automatically instead, tap the separate ' +
+      '"Paste Info" button and paste a confirmation email/text; the flight parser will fill in the ' +
+      'details for you.',
   },
   {
     id: 'lodging',

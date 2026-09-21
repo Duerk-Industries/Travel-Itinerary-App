@@ -51,4 +51,17 @@ describe('assistantGuideCorpus', () => {
     expect(transfers?.content).toContain('Transfers');
     expect(transfers?.content.toLowerCase()).toContain('no separate "flights" tab');
   });
+
+  // Regression guard for a second real hallucination observed in manual
+  // testing, after the "Flights tab" one above was fixed: the model
+  // answered with an "Add Flight" button, a plausible-sounding but
+  // nonexistent label -- the real control is an unlabeled "+" icon,
+  // separate from the "Paste Info" button. Same fix pattern: name the
+  // wrong guess and rule it out explicitly, don't just state the truth.
+  it('explicitly rules out "Add Flight" as a button name and names the real "+" / "Paste Info" controls', () => {
+    const transfers = GUIDE_CORPUS.find((entry) => entry.id === 'transfers');
+    expect(transfers?.content.toLowerCase()).toContain('add flight');
+    expect(transfers?.content).toContain('"+"');
+    expect(transfers?.content).toContain('Paste Info');
+  });
 });

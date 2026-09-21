@@ -28,7 +28,7 @@ import {
 } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 import { useAssistantChat, type AssistantChatUIMessage } from '../hooks/useAssistantChat';
-import { DEFAULT_MODEL_ID } from '../utils/assistantLocalModel';
+import { DEFAULT_MODEL_ID, HIGH_QUALITY_MODEL_ID } from '../utils/assistantLocalModel';
 import type { ActionDispatchContext } from '../utils/assistantTools';
 import type { Tour } from '../tabs/activities';
 import AssistantActionConfirmDialog from './AssistantActionConfirmDialog';
@@ -99,6 +99,7 @@ const AssistantChatPanel: React.FC<Props> = ({
     messages,
     capability,
     pendingAction,
+    isConfirmingAction,
     loadModel,
     sendMessage,
     clearConversation,
@@ -117,6 +118,14 @@ const AssistantChatPanel: React.FC<Props> = ({
   // state (and the position the user drags it to) lives in this component,
   // so it survives close/reopen the same way the conversation does -- see
   // the `visible` prop doc above.
+  // Action mode loads the larger, opt-in model (Qwen2.5-3B), not the shared
+  // default (1.5B) -- the accuracy checkpoint that actually unblocked Phase
+  // 3 (implementation plan, "Narrow-tool-set retest result": 9/10) was
+  // measured against 3B specifically. 1.5B only ever scored 3/8 on the same
+  // prompts and was never the validated choice for actions; it stayed the
+  // shared default for guide mode's smaller/faster download, which doesn't
+  // carry the same accuracy bar. Guide-only sessions are unaffected.
+  const modelToLoad = actionsAllowed ? HIGH_QUALITY_MODEL_ID : DEFAULT_MODEL_ID;
   const panelSize = React.useMemo(() => ({ width: getResponsivePanelWidth(), height: PANEL_HEIGHT }), []);
   const [position, setPosition] = useState<PanelPosition>(() =>
     computeInitialPanelPosition(getViewportSize(), panelSize)
@@ -229,7 +238,7 @@ const AssistantChatPanel: React.FC<Props> = ({
           ) : null}
           <TouchableOpacity
             style={themedStyles.primaryButton}
-            onPress={() => void loadModel(DEFAULT_MODEL_ID)}
+            onPress={() => void loadModel(modelToLoad)}
             testID="assistant-load-button"
             accessibilityRole="button"
           >
@@ -269,6 +278,7 @@ const AssistantChatPanel: React.FC<Props> = ({
           visible={!!pendingAction}
           pendingAction={pendingAction}
           activities={activities}
+          confirming={isConfirmingAction}
           onConfirm={(resolvedActivityId) => void confirmPendingAction(resolvedActivityId)}
           onCancel={cancelPendingAction}
           theme={theme}
@@ -402,6 +412,12 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   headerTitleDragHandle: {
     flex: 1,
     cursor: 'grab' as any,
+    // Without this, dragging the mouse over the "App Guide" text triggers
+    // the browser's native text-selection drag, which fights the
+    // responder-based drag below and makes it randomly stop tracking
+    // mid-gesture -- userSelect: 'none' is inherited by the Text child, so
+    // it only needs to be set here, not on headerTitle too.
+    userSelect: 'none' as any,
   },
   headerTitleDragging: {
     cursor: 'grabbing' as any,

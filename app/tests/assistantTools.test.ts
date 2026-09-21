@@ -4,6 +4,7 @@ import {
   buildActionSystemPrompt,
   buildActionToolsPrompt,
   detectOutOfScopeCoercion,
+  isInformationalQuestion,
   parseActionToolCall,
   rankActivitiesByNameSimilarity,
   type ParsedToolCall,
@@ -44,6 +45,31 @@ describe('buildActionSystemPrompt / buildActionToolsPrompt', () => {
     const prompt = buildActionToolsPrompt();
     expect(prompt).toMatch(/every detail a flight needs is given/i);
     expect(prompt).toMatch(/lodging request, and there is no addLodging/i);
+  });
+
+  it('distinguishes a "how do I" informational question from a real action request', () => {
+    // Regression test: manual testing found "How do I add a flight?" (purely
+    // informational) getting answered with "Sure -- what date would you like
+    // to do that?" -- the model pattern-matched on the word "add" and copied
+    // the addActivity few-shot's clarifying-question response verbatim,
+    // instead of recognizing "how do I" as a request for instructions. Fixed
+    // with an explicit contrasting example, not just a stronger abstract rule
+    // (an abstract-only version of this instruction was tried first and
+    // wasn't enough on its own).
+    expect(buildActionSystemPrompt()).toMatch(/how can I/i);
+    expect(buildActionToolsPrompt()).toMatch(/how do i add a flight/i);
+    expect(buildActionToolsPrompt()).toMatch(/never a\s*\n?\s*trigger for a tool call/i);
+  });
+
+  it('tells the model the few-shot examples are fictional and must not answer unrelated questions', () => {
+    // Regression test: manual testing found the model regurgitating the
+    // "Delta 88, ATL to ORD" few-shot example's invented details into an
+    // unrelated "how do I add a flight" guide answer, because both prompts
+    // are concatenated into one system message whenever actions are on
+    // (useAssistantChat.ts). Both halves need their own explicit guard,
+    // since either one alone wasn't enough to stop the leak in practice.
+    expect(buildActionSystemPrompt()).toMatch(/fictional/i);
+    expect(buildActionToolsPrompt()).toMatch(/fictional/i);
   });
 });
 
@@ -124,6 +150,19 @@ describe('detectOutOfScopeCoercion / applyActionGuard', () => {
     expect(kept[0].args.name).toBe('Walking tour of the Colosseum');
     expect(blocked).toHaveLength(1);
     expect(blocked[0].kind).toBe('lodging');
+  });
+});
+
+describe('isInformationalQuestion', () => {
+  it('matches "how do I" / "how can I" / "how to" phrasing, including with an action verb', () => {
+    expect(isInformationalQuestion('How do I add a flight?')).toBe(true);
+    expect(isInformationalQuestion('how can i book a hotel')).toBe(true);
+    expect(isInformationalQuestion('How to add an activity')).toBe(true);
+  });
+
+  it('does not match a real action request', () => {
+    expect(isInformationalQuestion('Add a flight for me on July 9th')).toBe(false);
+    expect(isInformationalQuestion('Mark the harbor cruise as booked')).toBe(false);
   });
 });
 

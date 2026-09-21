@@ -24,6 +24,7 @@ import {
   applyActionGuard,
   buildActionSystemPrompt,
   buildActionToolsPrompt,
+  isInformationalQuestion,
   parseActionToolCall,
   type ActionDispatchArgs,
   type ActionDispatchContext,
@@ -86,6 +87,21 @@ export const useAssistantChat = ({ userId, actionsAllowed = false, dispatchConte
   // proposal sits awaiting confirmation, since generation has finished --
   // only the UI's next step is gated. See AssistantActionConfirmDialog.tsx.
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  // Surfaced to the confirm dialog so it can disable both buttons while a
+  // dispatch is in flight -- see confirmPendingAction's isDispatchingRef doc
+  // comment for why a ref (not just this state) is what actually prevents a
+  // double-dispatch; this boolean exists only to drive the UI.
+  const [isConfirmingAction, setIsConfirmingAction] = useState(false);
+  // A real bug, found via manual testing: dispatch is an awaited network
+  // call with no immediate visual feedback, so a user who taps Confirm more
+  // than once before it resolves (because nothing appears to happen, or the
+  // page is lagging) fired one createActivityForTrip call per tap -- six
+  // duplicate activities in the reported case. isConfirmingAction alone
+  // isn't a sufficient guard: React batches state updates, so a second tap
+  // arriving before the re-render that disables the button can still slip
+  // through. A ref is checked-and-set synchronously inside the callback
+  // itself, so it can't race the same way.
+  const isDispatchingRef = useRef(false);
 
   // Tracks which userId `messages` currently reflects a successful load
   // for. Seeded from whatever `userId` was at mount, matching the lazy
@@ -165,7 +181,12 @@ export const useAssistantChat = ({ userId, actionsAllowed = false, dispatchConte
         // but the existing token budget below still leaves comfortable room
         // for conversation history in practice (checked against the
         // combined prompt size during implementation, not just assumed).
-        if (actionsAllowed) {
+        // Skipped for a "how do I" / "how can I" / "how to" question --
+        // see isInformationalQuestion's doc comment: prompt wording alone
+        // wasn't reliable enough at stopping the model from copying an
+        // action few-shot's clarifying-question response for this exact
+        // phrasing, confirmed via real on-device testing.
+        if (actionsAllowed && !isInformationalQuestion(text)) {
           systemPrompt = `${systemPrompt}\n\n${buildActionSystemPrompt()}\n\n${buildActionToolsPrompt()}`;
         }
         const budget = MODEL_CONTEXT_WINDOW_TOKENS - MAX_REPLY_TOKENS;
@@ -222,25 +243,33 @@ export const useAssistantChat = ({ userId, actionsAllowed = false, dispatchConte
 
   const confirmPendingAction = useCallback(
     async (resolvedActivityId?: string) => {
-      if (!pendingAction) return;
+      if (!pendingAction || isDispatchingRef.current) return;
       if (!dispatchContext) {
         setPendingAction(null);
         return;
       }
-      const dispatchArgs: ActionDispatchArgs = { ...pendingAction.args, resolvedActivityId };
-      const result = await ACTION_DISPATCH[pendingAction.kind](dispatchArgs, dispatchContext);
-      const resultText = result.ok
-        ? pendingAction.kind === 'addActivity'
-          ? `Added "${String(pendingAction.args.name ?? 'the activity')}" to your itinerary.`
-          : `Updated the status to ${String(pendingAction.args.status ?? '')}.`
-        : `I couldn't do that: ${result.error ?? 'something went wrong'}.`;
-      setMessages((prev) => [...prev, { id: nextId('a'), role: 'assistant', content: resultText }]);
-      setPendingAction(null);
+      isDispatchingRef.current = true;
+      setIsConfirmingAction(true);
+      try {
+        const dispatchArgs: ActionDispatchArgs = { ...pendingAction.args, resolvedActivityId };
+        const result = await ACTION_DISPATCH[pendingAction.kind](dispatchArgs, dispatchContext);
+        const resultText = result.ok
+          ? pendingAction.kind === 'addActivity'
+            ? `Added "${String(pendingAction.args.name ?? 'the activity')}" to your itinerary.`
+            : `Updated the status to ${String(pendingAction.args.status ?? '')}.`
+          : `I couldn't do that: ${result.error ?? 'something went wrong'}.`;
+        setMessages((prev) => [...prev, { id: nextId('a'), role: 'assistant', content: resultText }]);
+        setPendingAction(null);
+      } finally {
+        isDispatchingRef.current = false;
+        setIsConfirmingAction(false);
+      }
     },
     [pendingAction, dispatchContext]
   );
 
   const cancelPendingAction = useCallback(() => {
+    if (isDispatchingRef.current) return;
     setMessages((prev) => [...prev, { id: nextId('a'), role: 'assistant', content: "Okay, I won't do that." }]);
     setPendingAction(null);
   }, []);
@@ -252,6 +281,7 @@ export const useAssistantChat = ({ userId, actionsAllowed = false, dispatchConte
     messages,
     capability,
     pendingAction,
+    isConfirmingAction,
     loadModel,
     sendMessage,
     clearConversation,

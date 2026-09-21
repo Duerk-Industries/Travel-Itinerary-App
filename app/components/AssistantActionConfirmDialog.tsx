@@ -26,6 +26,15 @@ type Props = {
   visible: boolean;
   pendingAction: PendingAction | null;
   activities: Tour[];
+  // True while confirmPendingAction's dispatch is in flight. Both buttons
+  // disable during this window -- a real bug found via manual testing was
+  // the dialog giving no feedback on tap, so a user (reasonably) tapped
+  // Confirm repeatedly, firing one dispatch per tap and creating several
+  // duplicate activities. The hook's own ref-based guard (see
+  // useAssistantChat.ts's isDispatchingRef) is what actually prevents the
+  // duplicate dispatch; this prop is what gives the user visible feedback
+  // so they stop tapping in the first place.
+  confirming?: boolean;
   onConfirm: (resolvedActivityId?: string) => void;
   onCancel: () => void;
   theme?: AppTheme;
@@ -43,6 +52,7 @@ const AssistantActionConfirmDialog: React.FC<Props> = ({
   visible,
   pendingAction,
   activities,
+  confirming = false,
   onConfirm,
   onCancel,
   theme,
@@ -62,11 +72,16 @@ const AssistantActionConfirmDialog: React.FC<Props> = ({
   const rankedActivities = isStatusUpdate
     ? rankActivitiesByNameSimilarity(String(pendingAction.args.itemName ?? ''), activities)
     : [];
-  const canConfirm = isStatusUpdate ? Boolean(selectedActivityId) : true;
+  const canConfirm = (isStatusUpdate ? Boolean(selectedActivityId) : true) && !confirming;
 
   const handleConfirm = () => {
     if (!canConfirm) return;
     onConfirm(isStatusUpdate ? selectedActivityId ?? undefined : undefined);
+  };
+
+  const handleCancel = () => {
+    if (confirming) return;
+    onCancel();
   };
 
   return (
@@ -74,7 +89,7 @@ const AssistantActionConfirmDialog: React.FC<Props> = ({
       visible={visible}
       title={isStatusUpdate ? 'Update item status?' : 'Add activity?'}
       styles={themedStyles}
-      onClose={onCancel}
+      onClose={handleCancel}
       testID="assistant-action-confirm-dialog"
       accessibilityRole="alert"
       useNativeModal
@@ -123,11 +138,12 @@ const AssistantActionConfirmDialog: React.FC<Props> = ({
           accessibilityLabel="Confirm"
           testID="assistant-action-confirm"
         >
-          <Text style={themedStyles.confirmButtonText}>Confirm</Text>
+          <Text style={themedStyles.confirmButtonText}>{confirming ? 'Confirming…' : 'Confirm'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={themedStyles.button}
-          onPress={onCancel}
+          style={[themedStyles.button, confirming && themedStyles.buttonDisabled]}
+          onPress={handleCancel}
+          disabled={confirming}
           accessibilityRole="button"
           accessibilityLabel="Cancel"
           testID="assistant-action-cancel"

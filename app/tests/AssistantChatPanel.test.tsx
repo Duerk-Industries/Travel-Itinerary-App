@@ -36,6 +36,7 @@ const baseHookReturn = {
   messages: [] as any[],
   capability: { supported: true },
   pendingAction: null as any,
+  isConfirmingAction: false,
   loadModel: jest.fn(),
   sendMessage: jest.fn(),
   clearConversation: jest.fn(),
@@ -68,6 +69,18 @@ describe('AssistantChatPanel', () => {
     fireEvent.press(getByTestId('assistant-load-button'));
     expect(loadModel).toHaveBeenCalledTimes(1);
     expect(loadModel).toHaveBeenCalledWith('Qwen2.5-1.5B-Instruct-q4f16_1-MLC');
+  });
+
+  it('loads the larger 3B model instead of the default when actionsAllowed is true', () => {
+    // The accuracy checkpoint that unblocked Phase 3 (implementation plan,
+    // "Narrow-tool-set retest result") was measured against Qwen2.5-3B --
+    // the shared 1.5B default only ever scored 3/8 on the same prompts and
+    // was never validated for action mode.
+    const loadModel = jest.fn();
+    mockUseAssistantChat.mockReturnValue({ ...baseHookReturn, loadModel });
+    const { getByTestId } = render(<AssistantChatPanel onClose={jest.fn()} actionsAllowed />);
+    fireEvent.press(getByTestId('assistant-load-button'));
+    expect(loadModel).toHaveBeenCalledWith('Qwen2.5-3B-Instruct-q4f16_1-MLC');
   });
 
   it('shows load progress while loading', () => {

@@ -394,6 +394,32 @@ describe('useAssistantChat', () => {
       expect(assistantMessage?.content).toMatch(/flight request/i);
     });
 
+    it('omits the action-tools prompt for a "how do I" question, even when actionsAllowed is true', async () => {
+      // Regression test: manual on-device testing found "How do I add a
+      // flight?" getting answered with the addActivity few-shot's own
+      // "Sure -- what date would you like to do that?" response, because the
+      // action-tools prompt (with that exact example) was always included
+      // whenever actionsAllowed was true. Two rounds of prompt wording
+      // aimed at this didn't fix it reliably, so isInformationalQuestion now
+      // excludes the action-tools prompt for this message shape entirely --
+      // this asserts that exclusion actually happens at the hook level.
+      mockReply('Head to the Transfers tab to add a flight.');
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('How do I add a flight?');
+      });
+
+      const [, engineMessages] = mockedStreamAssistantReply.mock.calls[0];
+      expect(engineMessages[0].role).toBe('system');
+      expect(engineMessages[0].content).not.toMatch(/what date would you like to do that/i);
+      expect(engineMessages[0].content).not.toContain('addActivity(');
+    });
+
     it('leaves a plain-text (non-tool-call) reply untouched when actionsAllowed is true', async () => {
       mockReply('The best time to visit Kyoto is spring.');
       const { result } = renderHook(() =>
@@ -436,6 +462,51 @@ describe('useAssistantChat', () => {
       expect(result.current.pendingAction).toBeNull();
       const lastMessage = result.current.messages[result.current.messages.length - 1];
       expect(lastMessage.content).toContain('Louvre tour');
+    });
+
+    it('a second confirmPendingAction call while the first is still in flight does not dispatch twice', async () => {
+      // Regression test: manual testing found repeated taps on Confirm
+      // (before the dispatch's fetch resolves, with no visual feedback in
+      // between) creating several duplicate activities -- one dispatch per
+      // tap. A resolved-immediately mock (like the other tests above) can't
+      // reproduce this, since there's no window for a second call to land
+      // inside -- this uses a manually-controlled promise to hold the first
+      // dispatch open while the second call is attempted.
+      mockReply('{"tool": "addActivity", "args": {"name": "Louvre tour", "date": "2026-04-12"}}');
+      let resolveDispatch: (value: { ok: boolean }) => void = () => undefined;
+      mockedAddActivityDispatch.mockReturnValue(
+        new Promise((resolve) => {
+          resolveDispatch = resolve;
+        })
+      );
+      const { result } = renderHook(() =>
+        useAssistantChat({ actionsAllowed: true, dispatchContext: DISPATCH_CONTEXT })
+      );
+      await act(async () => {
+        await result.current.loadModel();
+      });
+      await act(async () => {
+        await result.current.sendMessage('Add a tour of the Louvre on April 12th.');
+      });
+
+      let firstCallDone: Promise<void> = Promise.resolve();
+      act(() => {
+        firstCallDone = result.current.confirmPendingAction();
+      });
+      expect(result.current.isConfirmingAction).toBe(true);
+
+      await act(async () => {
+        await result.current.confirmPendingAction();
+      });
+      expect(mockedAddActivityDispatch).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveDispatch({ ok: true });
+        await firstCallDone;
+      });
+      expect(mockedAddActivityDispatch).toHaveBeenCalledTimes(1);
+      expect(result.current.isConfirmingAction).toBe(false);
+      expect(result.current.pendingAction).toBeNull();
     });
 
     it('confirmPendingAction for updateItineraryStatus passes the resolved activity id through to dispatch', async () => {
