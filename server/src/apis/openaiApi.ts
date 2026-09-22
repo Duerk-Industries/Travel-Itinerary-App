@@ -67,6 +67,35 @@ const normalizeAxiosError = (error: unknown): Error => {
   return enriched;
 };
 
+// Whisper transcription (audio in, plain text out) — a different request shape than the
+// chat-completion endpoint above (multipart form data, not JSON), so it isn't routed through the
+// resolveProvider/AiChatProvider abstraction used elsewhere; this is OpenAI-specific by design,
+// same as the direct getEnvValue('OPENAI_API_KEY') usage in ai/providers/openaiProvider.ts.
+export const postOpenAiAudioTranscription = async (params: {
+  caller: string;
+  apiKey: string;
+  audio: Buffer;
+  mimeType: string;
+  filename: string;
+  model?: string;
+}): Promise<{ text: string }> => {
+  await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
+  const form = new FormData();
+  form.append('file', new Blob([new Uint8Array(params.audio)], { type: params.mimeType }), params.filename);
+  form.append('model', params.model ?? 'whisper-1');
+  let response;
+  try {
+    response = await axios.post<{ text: string }>(
+      'https://api.openai.com/v1/audio/transcriptions',
+      form,
+      { headers: { Authorization: `Bearer ${params.apiKey}` } }
+    );
+  } catch (error) {
+    throw normalizeAxiosError(error);
+  }
+  return response.data;
+};
+
 export const postOpenAiChatCompletion = async (params: {
   caller: string;
   apiKey: string;

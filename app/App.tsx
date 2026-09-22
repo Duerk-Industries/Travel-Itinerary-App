@@ -149,6 +149,7 @@ import HorizontalTableScroll from './components/HorizontalTableScroll';
 import CostReportTable from './components/CostReportTable';
 import { connectSocket, disconnectSocket } from './utils/socket';
 import { registerForPushNotificationsAsync } from './utils/pushNotifications';
+import { configureEveningTripReminderHandler, ensureEveningTripReminder } from './utils/tripReminderNotifications';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
@@ -607,6 +608,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [showTripGroupDropdown, setShowTripGroupDropdown] = useState(false);
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  // Set when the traveler taps the evening trip reminder notification — tells TripBlogTab to open
+  // the add-photos flow once it's mounted and ready. See tripReminderNotifications.ts.
+  const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineItineraries, setOfflineItineraries] = useState<Record<string, OfflineItinerarySnapshot | null>>({});
   const [pendingOfflineUnlock, setPendingOfflineUnlock] = useState<PendingOfflineUnlock | null>(null);
@@ -2463,6 +2467,45 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     };
   }, []);
 
+  // Evening trip reminder (tripReminderNotifications.ts): register the foreground-display handler
+  // and the tap listener once, native-only. A separate effect below is what actually (re)schedules
+  // the notification — kept apart from the idle-timer AppState effect above so this stays
+  // independently readable/testable.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let subscription: { remove: () => void } | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        await configureEveningTripReminderHandler();
+        const Notifications = await import('expo-notifications');
+        if (cancelled) return;
+        subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+          const data = response.notification.request.content.data as { type?: string; tripId?: string } | undefined;
+          if (data?.type !== 'evening_trip_reminder' || !data.tripId) return;
+          setActiveTripId(data.tripId);
+          setActivePage('blog');
+          setAutoOpenAddPhotos(true);
+        });
+      } catch {
+        // Best effort — see pushNotifications.ts's file-level note for the same rationale.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !userToken) return;
+    void ensureEveningTripReminder(trips, activeTripId);
+    const subscription = AppState.addEventListener('change', (nextState: string) => {
+      if (nextState === 'active') void ensureEveningTripReminder(trips, activeTripId);
+    });
+    return () => subscription.remove();
+  }, [trips, activeTripId, userToken]);
+
   // Socket.IO presence + chat UI state live in PresenceProvider / ChatProvider
   // (wrapped around the AppShell render tree), so AppShell itself does not
   // re-render on every presence heartbeat.
@@ -3240,6 +3283,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   backendUrl={backendUrl}
                   headers={headers}
                   activeTripId={activeTripId}
+                  trips={trips}
                   styles={styles}
                   theme={theme}
                   readOnly={isFollowingMode || offlineReadOnly}
@@ -3251,6 +3295,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   lodgings={lodgings}
                   tours={tours}
                   carRentals={carRentals}
+                  autoOpenAddPhotos={autoOpenAddPhotos}
+                  onAutoOpenHandled={() => setAutoOpenAddPhotos(false)}
                 />
               )
             : null}

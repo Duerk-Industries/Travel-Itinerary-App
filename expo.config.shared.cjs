@@ -170,6 +170,15 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
           photosPermission: 'WanderBunnies needs access to your photos so you can add them to a trip blog.',
         },
       ],
+      [
+        // Lets a traveler dictate a trip-blog photo caption instead of typing it — see
+        // app/components/BlogMediaMetadataEditor.tsx's Record button. Recording is short and
+        // ephemeral (never persisted as a blog media asset), so no background-recording mode.
+        'expo-audio',
+        {
+          microphonePermission: 'WanderBunnies needs access to your microphone to record a spoken caption.',
+        },
+      ],
       // Real push delivery (server/src/apis/expoPushApi.ts, notificationOutboxWorker.ts) needs a
       // registered device token, which only exists once this plugin has wired up the native
       // notification entitlements — see app/utils/pushNotifications.ts for the client side. No

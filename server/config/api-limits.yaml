@@ -452,6 +452,7 @@ providers:
       BLOG_RECAP_BUILD: 500
       BLOG_COVER_PROPOSAL_READ: 10000
       BLOG_CAPTION_REQUEST: 5000
+      BLOG_VOICE_CAPTION_REQUEST: 5000
       BLOG_PUBLICATION_READINESS_READ: 5000
       # Phase 7 — every new request path is independently visible and capped. Offline flushes use
       # BLOG_AUTHORING_WRITE when they reach the existing item endpoint; local queue operations do
@@ -706,6 +707,8 @@ caching:
     recapGenerationsPerDayPerTrip: 5
     captionSuggestionsPerDayPerUser: 10
     captionSuggestionsPerMonthPremium: 100
+    voiceCaptionsPerDayPerUser: 10
+    voiceCaptionsPerMonthPremium: 100
     nudgeDedupeHours: 72
     nudgeSuppressDaysAfterTrip: 30
     searchQueryMaxLength: 100

@@ -77,11 +77,11 @@ test.describe('Trip Management', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Ledger', { exact: true }).first()).toBeVisible({ timeout: 5000 });
 
-    // Return home before checking 'overview', which navigates to its own page.
+    // Return home before checking 'overview' (now labeled "Itinerary"), which navigates to its own page.
     await page.getByText('⌂', { exact: true }).click();
     await page.getByTestId('home-nav-overview').click();
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Overview').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Itinerary').first()).toBeVisible({ timeout: 5000 });
 
     expect(jsErrors, `JS errors: ${jsErrors.join(', ')}`).toHaveLength(0);
   });

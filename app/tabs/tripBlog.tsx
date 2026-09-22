@@ -39,6 +39,8 @@ import {
 } from '../utils/blogUpload';
 import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCapture';
 import PhotoFirstComposer from '../components/PhotoFirstComposer';
+import DropdownOptionButton from '../components/DropdownOptionButton';
+import { isTripActiveToday, localDateString } from '../utils/offlineTripCache';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -62,7 +64,7 @@ const promptsForDay = (dayDate) => {
   return [0, 1, 2].map((offset) => WRITING_PROMPTS[(start + offset) % WRITING_PROMPTS.length]);
 };
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[] }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {} }) => {
   // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
   // headlines, everything else stays on the system font. Loaded here rather than at the app
   // root so this stays scoped to the trip blog; while it loads, headings just render in the
@@ -82,6 +84,22 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [addingDay, setAddingDay] = useState(null);
   const [composerFiles, setComposerFiles] = useState(null); // photo-first composer (A2): picked files awaiting day assignment
   const [composerDefaultDay, setComposerDefaultDay] = useState(null); // set when opened from a specific day's button
+  // Destination trip for the "+ Add photos to this trip" flow — defaults to whichever trip is
+  // active today, falling back to the app's currently-selected trip, but never overrides an
+  // explicit choice the traveler already made from the dropdown this session.
+  const [uploadTripId, setUploadTripId] = useState(activeTripId);
+  const [showUploadTripDropdown, setShowUploadTripDropdown] = useState(false);
+  const uploadTripManuallyPicked = useRef(false);
+  useEffect(() => {
+    if (uploadTripManuallyPicked.current) return;
+    const todaysTrip = trips.find((trip) => isTripActiveToday(trip));
+    setUploadTripId(todaysTrip?.id ?? activeTripId);
+  }, [trips, activeTripId]);
+  const uploadTripsSorted = useMemo(
+    () => [...trips].sort((a, b) => String(a.startDate ?? '').localeCompare(String(b.startDate ?? ''))),
+    [trips]
+  );
+  const uploadTrip = uploadTripsSorted.find((trip) => trip.id === uploadTripId) ?? trips.find((trip) => trip.id === uploadTripId);
   const [newBody, setNewBody] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -436,6 +454,29 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     } finally { setMetadataBusyAssetId(null); }
   };
 
+  // Dictated caption (A9 voice-caption feature): the recorded clip is sent straight through for
+  // transcription + AI cleanup and is never persisted as its own blog media asset — it only ever
+  // populates this photo's caption draft, same as suggestMediaMetadata above.
+  const transcribeMediaCaption = async (item, recording) => {
+    setMetadataBusyAssetId(item.assetId);
+    try {
+      const formData = new FormData();
+      formData.append('audio', {
+        uri: recording.uri,
+        name: recording.name || 'caption-recording.m4a',
+        type: recording.mimeType || 'audio/m4a',
+      } as any);
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${item.assetId}/transcribe-caption`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to transcribe the recording');
+      return data;
+    } finally { setMetadataBusyAssetId(null); }
+  };
+
   const loadCoverProposal = async (dayDate) => {
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${dayDate}/cover-proposal`, { headers });
@@ -645,6 +686,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     setComposerFiles(supported);
   };
   const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); };
+
+  // Deep-link target for the evening trip reminder notification (see tripReminderNotifications.ts
+  // / App.tsx's notification response listener) — opens the same picker the "+ Add photos" button
+  // does, defaulted to today, once this tab has finished loading enough to edit.
+  useEffect(() => {
+    if (!autoOpenAddPhotos) return;
+    if (!canEdit || !capabilities.trip_blog_photo_composer || visibleDays.length === 0 || composerFiles) return;
+    onAutoOpenHandled();
+    openPhotoComposer(localDateString());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenAddPhotos, canEdit, capabilities.trip_blog_photo_composer, visibleDays.length, composerFiles]);
 
   const handleComposerCommitted = async ({ succeeded, failed, quotaBlocked }) => {
     closePhotoComposer();
@@ -1175,15 +1227,42 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 4 }}>{blog.introduction}</Text> : null)}
       </View>
         {canEdit && capabilities.trip_blog_photo_composer && visibleDays.length > 0 ? (
-          <TouchableOpacity
-            testID="blog-add-photos"
-            accessibilityRole="button"
-            style={[styles.button, { backgroundColor: '#0ea5e9', alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 6, paddingHorizontal: 12 }]}
-            onPress={() => openPhotoComposer()}
-            disabled={uploading}
-          >
-            <Text style={styles.buttonText}>＋ Add photos to this trip</Text>
-          </TouchableOpacity>
+          <View style={[styles.row, { alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }]}>
+            {trips.length > 1 ? (
+              <View style={[styles.input, styles.dropdown, { paddingVertical: 6, paddingHorizontal: 10, minWidth: 160 }]}>
+                <TouchableOpacity testID="blog-upload-trip-select" onPress={() => setShowUploadTripDropdown((open) => !open)}>
+                  <Text style={styles.cellText}>{uploadTrip?.name || uploadTrip?.destination || 'Select trip'}</Text>
+                </TouchableOpacity>
+                {showUploadTripDropdown ? (
+                  <View style={styles.dropdownList}>
+                    {uploadTripsSorted.map((trip) => (
+                      <DropdownOptionButton
+                        key={trip.id}
+                        styles={styles}
+                        testID={`blog-upload-trip-option-${trip.id}`}
+                        onPress={() => {
+                          uploadTripManuallyPicked.current = true;
+                          setUploadTripId(trip.id);
+                          setShowUploadTripDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.cellText}>{trip.name || trip.destination}</Text>
+                      </DropdownOptionButton>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+            <TouchableOpacity
+              testID="blog-add-photos"
+              accessibilityRole="button"
+              style={[styles.button, { backgroundColor: '#0ea5e9', alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12 }]}
+              onPress={() => openPhotoComposer(localDateString())}
+              disabled={uploading}
+            >
+              <Text style={styles.buttonText}>＋ Add photos to this trip</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
         {visibleDays.map((day) => {
           const dayMetaDraft = dayMetaDrafts[day.localDate];
@@ -1473,9 +1552,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                         theme={theme}
                         canEditMetadata={canEdit && capabilities.trip_blog_alt_text}
                         canSuggestMetadata={canEdit && capabilities.trip_blog_caption_ai}
+                        canRecordCaption={canEdit && capabilities.trip_blog_audio_transcription}
                         metadataBusy={Boolean(metadataBusyAssetId)}
                         onSaveMetadata={saveMediaMetadata}
                         onSuggestMetadata={suggestMediaMetadata}
+                        onTranscribeMetadata={transcribeMediaCaption}
                         proposedCoverAssetId={coverProposals[day.localDate]?.assetId}
                       />
                     </>
@@ -1778,7 +1859,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         files={composerFiles || []}
         dayDates={visibleDays.map((day) => day.localDate)}
         defaultDayDate={composerDefaultDay}
-        context={{ backendUrl, headers, tripId: activeTripId }}
+        context={{ backendUrl, headers, tripId: uploadTripId || activeTripId }}
         onClose={closePhotoComposer}
         onCommitted={handleComposerCommitted}
         styles={styles}
