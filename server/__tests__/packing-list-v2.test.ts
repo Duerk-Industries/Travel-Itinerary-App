@@ -235,6 +235,14 @@ describe('packing lists v2', () => {
     const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'Dedup trip', members: [] });
     const tripId = created.trip.id;
 
+    // createTripWithGroupAndMembers seeds the trip's default packing list (see
+    // config/defaultPackingList.ts), which already includes a "sunscreen" item. Left in place,
+    // that gives normalized_label='sunscreen' THREE candidate rows instead of the two this test
+    // means to create below, so the migration's MIN(id::text) canonical pick can land on that
+    // pre-existing row instead of either keepId/dropId — the assertion below only accounts for
+    // two. Remove it so this test's own two dirty rows are the only "sunscreen" duplicates.
+    await p.query(`DELETE FROM trip_packing_list_items WHERE trip_id = $1 AND normalized_label = 'sunscreen'`, [tripId]);
+
     // Simulate the pre-migration (v1) state, where two rows for the same
     // trip could share a normalized label but differ in exact casing/
     // whitespace — something the (trip_id, normalized_label) unique index

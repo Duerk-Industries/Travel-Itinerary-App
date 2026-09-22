@@ -11,6 +11,7 @@ import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/me
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
+import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
 import type { AppTheme } from '../theme/theme';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -2132,13 +2133,19 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           rendered here (a sibling outside that Modal) would be mounted but visually hidden behind
           the Transfer Details modal, exactly matching the "can't see the date picker" report. Only
           'new-dep'/'new-arr' (the inline add-transfer grid, not inside any modal) belong here. */}
-      {Platform.OS !== 'web' && (timePickerTarget === 'new-dep' || timePickerTarget === 'new-arr') && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={timePickerValue}
-          mode="time"
-          display="spinner"
-          onChange={(event, date) => handleTimePickerChange(event, date, timePickerTarget)}
-        />
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={timePickerTarget === 'new-dep' || timePickerTarget === 'new-arr'}
+          onRequestClose={() => handleTimePickerChange({ type: 'dismissed' }, undefined, timePickerTarget)}
+          theme={theme}
+          testID="transfers-time-picker"
+        >
+          <NativeDateTimePicker
+            value={timePickerValue}
+            mode="time"
+            onChange={(event, date) => handleTimePickerChange(event, date, timePickerTarget)}
+          />
+        </NativeDatePickerSheet>
       ) : null}
       {!readOnly && showPasteModal ? (
         <Modal transparent visible={showPasteModal} animationType="fade" onRequestClose={() => setShowPasteModal(false)}>

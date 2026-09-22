@@ -7,6 +7,7 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { ACTIVITY_TYPES, type ActivityType, type TourDraft } from '../tabs/activities';
+import NativeDatePickerSheet from './NativeDatePickerSheet';
 
 // Single source of truth for the "add/edit activity" form so the Activities tab and the
 // Overview day-detail "quick edit" share one implementation instead of two hand-copied
@@ -321,28 +322,35 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={pickerValue}
-          mode={dateField === 'startTime' ? 'time' : 'date'}
-          onChange={(_, date) => {
-            if (!date) {
-              setDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            onChange((prev) => {
-              if (dateField === 'startTime') {
-                const hours = String(date.getHours()).padStart(2, '0');
-                const mins = String(date.getMinutes()).padStart(2, '0');
-                return { ...prev, startTime: `${hours}:${mins}` };
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!dateField}
+          onRequestClose={() => setDateField(null)}
+          theme={theme}
+          testID="activity-date-picker"
+        >
+          <NativeDateTimePicker
+            value={pickerValue}
+            mode={dateField === 'startTime' ? 'time' : 'date'}
+            onChange={(_, date) => {
+              if (!date) {
+                setDateField(null);
+                return;
               }
-              if (dateField === 'date') return { ...prev, date: iso };
-              return { ...prev, freeCancelBy: iso };
-            });
-            setDateField(null);
-          }}
-        />
+              const iso = date.toISOString().slice(0, 10);
+              onChange((prev) => {
+                if (dateField === 'startTime') {
+                  const hours = String(date.getHours()).padStart(2, '0');
+                  const mins = String(date.getMinutes()).padStart(2, '0');
+                  return { ...prev, startTime: `${hours}:${mins}` };
+                }
+                if (dateField === 'date') return { ...prev, date: iso };
+                return { ...prev, freeCancelBy: iso };
+              });
+              setDateField(null);
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
     </Modal>
   );

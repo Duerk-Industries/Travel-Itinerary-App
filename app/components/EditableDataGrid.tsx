@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { parseClipboardMatrix, serializeClipboardMatrix } from '../utils/clipboardGrid';
+import NativeDatePickerSheet from './NativeDatePickerSheet';
 
 export type GridEditorKind = 'text' | 'date' | 'time' | 'decimal' | 'select' | 'multiSelect' | 'textarea' | 'readonly' | 'action';
 
@@ -504,9 +505,17 @@ export function EditableDataGrid<Row extends { id: string }>({
           </View>
         </Modal>
       ) : null}
-      {(openPicker?.kind === 'date' || openPicker?.kind === 'time') && nativeDateTimePicker
-        ? React.createElement(nativeDateTimePicker, { value: pickerDraftDate, mode: openPicker.kind, onChange: commitDateTimePicker })
-        : null}
+      {nativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={openPicker?.kind === 'date' || openPicker?.kind === 'time'}
+          onRequestClose={closePicker}
+          testID="grid-date-picker"
+        >
+          {openPicker && (openPicker.kind === 'date' || openPicker.kind === 'time')
+            ? React.createElement(nativeDateTimePicker, { value: pickerDraftDate, mode: openPicker.kind, onChange: commitDateTimePicker })
+            : <View />}
+        </NativeDatePickerSheet>
+      ) : null}
     </View>
   );
 }

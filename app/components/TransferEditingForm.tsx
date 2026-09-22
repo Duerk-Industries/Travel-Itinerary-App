@@ -6,6 +6,7 @@ import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/t
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { AppTheme } from '../theme/theme';
+import NativeDatePickerSheet from './NativeDatePickerSheet';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
 const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
@@ -539,13 +540,19 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && timePickerTarget && timePickerValue && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={timePickerValue}
-          mode="time"
-          display="spinner"
-          onChange={(event: { type?: string } | undefined, date: Date | undefined) => onTimePickerChange?.(event, date, timePickerTarget)}
-        />
+      {Platform.OS !== 'web' && timePickerValue && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!timePickerTarget}
+          onRequestClose={() => onTimePickerChange?.({ type: 'dismissed' }, undefined, timePickerTarget ?? null)}
+          theme={theme}
+          testID="flight-edit-time-picker"
+        >
+          <NativeDateTimePicker
+            value={timePickerValue}
+            mode="time"
+            onChange={(event: { type?: string } | undefined, date: Date | undefined) => onTimePickerChange?.(event, date, timePickerTarget ?? null)}
+          />
+        </NativeDatePickerSheet>
       ) : null}
     </Modal>
   );
