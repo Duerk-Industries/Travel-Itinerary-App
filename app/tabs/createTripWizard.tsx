@@ -66,6 +66,8 @@ import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
   
 type Suggestion = {
   id: string;
@@ -200,18 +202,6 @@ const descriptorForValue = (
   if (value >= 75) return descriptors.highDescriptor;
   return descriptors.mediumDescriptor;
 };
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   backendUrl,
@@ -791,7 +781,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (field === 'start' || field === 'end') {
       primeRangeDates();
     }
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const rangeDefaults = field === 'start' || field === 'end'
         ? getDefaultTripRangeDates({ startDate: dates.startDate, endDate: dates.endDate })
         : null;
@@ -801,7 +791,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           : field === 'end'
             ? rangeDefaults?.endDate
             : itineraryDraft.date;
-      const date = base ? new Date(base) : new Date();
+      const date = parseLocalDateOnly(base);
       setDateValue(date);
       setDateField(field);
       return;
@@ -924,13 +914,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       ref?.focus();
       return;
     }
-    if (current) {
-      const parsed = new Date(current);
-      if (!Number.isNaN(parsed.valueOf())) {
-        setWizardLodgingDateValue(parsed);
-      }
-    }
-    setWizardLodgingDateField(field as 'checkIn' | 'checkOut' | null);
+    const fieldValue = current ?? (
+      field === 'checkIn'
+        ? editingWizardLodging?.checkInDate
+        : field === 'checkOut'
+          ? editingWizardLodging?.checkOutDate
+          : editingWizardLodging?.refundBy
+    );
+    setWizardLodgingDateValue(parseLocalDateOnly(fieldValue));
+    setWizardLodgingDateField(field === 'refundBy' ? 'refund' : field);
   };
 
   const openWizardLodgingEditor = (lodging: Lodging | null) => {
@@ -959,9 +951,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
 
   const openWizardCarDatePicker = (field: 'pickup' | 'dropoff') => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const base = (field === 'pickup' ? wizardCarDraft.pickupDate : wizardCarDraft.dropoffDate) || '';
-      const date = base ? new Date(base) : new Date();
+      const date = parseLocalDateOnly(base);
       setWizardCarDateValue(date);
       setWizardCarDateField(field);
       return;
@@ -2783,7 +2775,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' && dateField ? (
         <View style={styles.passengerOverlay}>
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setDateField(null)} />
           <View style={styles.modalCard}>
@@ -2796,7 +2788,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   setDateField(null);
                   return;
                 }
-                const iso = date.toISOString().slice(0, 10);
+                const iso = formatLocalDateOnly(date);
                 if (dateField === 'start') {
                   setStartDateWithRangeGuard(iso);
                 } else if (dateField === 'end') {
@@ -2813,7 +2805,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && wizardLodgingDateField && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' && wizardLodgingDateField ? (
         <View style={styles.passengerOverlay}>
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setWizardLodgingDateField(null)} />
           <View style={styles.modalCard}>
@@ -2826,12 +2818,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   setWizardLodgingDateField(null);
                   return;
                 }
-                const iso = date.toISOString().slice(0, 10);
-                if (wizardLodgingDateField !== 'checkIn' && wizardLodgingDateField !== 'checkOut') {
-                  setWizardLodgingDateField(null);
-                  return;
+                const iso = formatLocalDateOnly(date);
+                if (wizardLodgingDateField === 'refund') {
+                  setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: iso } : prev));
+                } else {
+                  applyWizardLodgingDate(wizardLodgingDateField, iso);
                 }
-                applyWizardLodgingDate(wizardLodgingDateField, iso);
                 if (Platform.OS === 'android') setWizardLodgingDateField(null);
               }}
             />
@@ -2841,7 +2833,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && wizardCarDateField && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' && wizardCarDateField ? (
         <View style={styles.passengerOverlay}>
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setWizardCarDateField(null)} />
           <View style={styles.modalCard}>
@@ -2854,7 +2846,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   setWizardCarDateField(null);
                   return;
                 }
-                const iso = date.toISOString().slice(0, 10);
+                const iso = formatLocalDateOnly(date);
                 applyWizardCarDate(wizardCarDateField, iso);
                 if (Platform.OS === 'android') setWizardCarDateField(null);
               }}

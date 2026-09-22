@@ -93,6 +93,7 @@ import {
   type OfflineItinerarySnapshot,
 } from './utils/offlineTripCache';
 import { requestOfflineUnlock } from './utils/offlineAccess';
+import NativeDateTimePicker from './components/NativeDateTimePicker';
 
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -161,18 +162,6 @@ WebBrowser.maybeCompleteAuthSession();
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 type SafeAreaViewCompatProps = React.ComponentProps<typeof View>;
 const SafeAreaView = NativeSafeAreaView as unknown as React.ComponentType<SafeAreaViewCompatProps>;
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 // GroupInvite + PendingTripShareInvite now live in app/types/invites.ts so
 // the useGroupInvites hook can consume them without a circular import.
@@ -3248,7 +3237,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         ) : null}
       </View>
-      <OfflineBanner offlineReadOnly={offlineReadOnly} />
+      <OfflineBanner status={connection.status} offlineReadOnly={offlineReadOnly} />
       {userToken ? (
         <View style={styles.contentViewport}>
           {activePage === 'home'
@@ -3928,7 +3917,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Set Your Password</Text>
               <Text style={styles.helperText}>
-                This is your first Google sign-in for this account. Set a password now to finish account setup.
+                This account doesn't have a password yet. Set one now to finish account setup.
               </Text>
               <PasswordField
                 label="New password"

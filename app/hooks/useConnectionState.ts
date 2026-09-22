@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import * as Network from 'expo-network';
 import { getSocket } from '../utils/socket';
 
@@ -6,12 +7,13 @@ export type ConnectionStatus = 'online' | 'offline' | 'reconnecting';
 
 export type ConnectionState = {
   status: ConnectionStatus;
-  /** True when either the browser reports offline or the socket is down. */
+  /** True when the device is offline or Socket.IO is actively retrying. */
   isDegraded: boolean;
 };
 
-const isBrowser = (): boolean =>
-  typeof window !== 'undefined' && typeof window.addEventListener === 'function';
+// React Native exposes a number of browser-like globals. Platform is the
+// reliable distinction; otherwise iOS can accidentally skip expo-network.
+const isBrowser = (): boolean => Platform.OS === 'web';
 
 const readBrowserOnline = (): boolean => {
   if (!isBrowser()) return true;
@@ -22,34 +24,20 @@ const readBrowserOnline = (): boolean => {
 /**
  * Tracks connectivity by combining two signals:
  *   - The browser's `navigator.onLine` plus `online`/`offline` events
- *   - The Socket.IO client's `connect`/`disconnect`/`reconnect_attempt` events
+ *   - Socket.IO manager reconnection events
  *
  * Resolves to:
  *   - `'offline'`  — browser says we have no network
- *   - `'reconnecting'` — browser is online but socket is actively reconnecting
- *   - `'online'`   — browser is online and socket is connected (or idle, which
- *                    is treated as online to avoid false banners pre-login)
+ *   - `'reconnecting'` — the device is online and Socket.IO is actively retrying
+ *   - `'online'`   — the device is online; an idle or stopped real-time socket
+ *                    does not make normal API-backed screens unavailable
  *
  * This is a stateless UI hook — it does not attempt reconnects itself; the
  * underlying Socket.IO client handles reconnect logic.
  */
 export const useConnectionState = (): ConnectionState => {
   const [browserOnline, setBrowserOnline] = useState<boolean>(() => readBrowserOnline());
-  const [socketConnected, setSocketConnected] = useState<boolean>(() => {
-    try {
-      return getSocket().connected;
-    } catch {
-      return false;
-    }
-  });
   const [socketReconnecting, setSocketReconnecting] = useState<boolean>(false);
-  const [socketInitiated, setSocketInitiated] = useState<boolean>(() => {
-    try {
-      return getSocket().connected;
-    } catch {
-      return false;
-    }
-  });
 
   useEffect(() => {
     if (isBrowser()) {
@@ -87,38 +75,38 @@ export const useConnectionState = (): ConnectionState => {
       return;
     }
 
-    const handleConnect = () => {
-      setSocketConnected(true);
-      setSocketReconnecting(false);
-      setSocketInitiated(true);
-    };
-    const handleDisconnect = () => {
-      setSocketConnected(false);
-    };
+    const handleConnect = () => setSocketReconnecting(false);
     const handleReconnectAttempt = () => {
       setSocketReconnecting(true);
+    };
+    const handleReconnectComplete = () => {
+      setSocketReconnecting(false);
     };
     const handleReconnectFailed = () => {
       setSocketReconnecting(false);
     };
 
+    const manager = socket.io;
     socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.on('reconnect_attempt', handleReconnectAttempt);
-    socket.on('reconnect_failed', handleReconnectFailed);
+    // Since Socket.IO v3, reconnection lifecycle events are emitted by the
+    // Manager (`socket.io`), not the namespace socket. Listening on the
+    // socket meant this state could never accurately reflect retries.
+    manager?.on('reconnect_attempt', handleReconnectAttempt);
+    manager?.on('reconnect', handleReconnectComplete);
+    manager?.on('reconnect_failed', handleReconnectFailed);
 
     return () => {
       socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('reconnect_attempt', handleReconnectAttempt);
-      socket.off('reconnect_failed', handleReconnectFailed);
+      manager?.off('reconnect_attempt', handleReconnectAttempt);
+      manager?.off('reconnect', handleReconnectComplete);
+      manager?.off('reconnect_failed', handleReconnectFailed);
     };
   }, []);
 
   let status: ConnectionStatus;
   if (!browserOnline) {
     status = 'offline';
-  } else if (socketInitiated && (!socketConnected || socketReconnecting)) {
+  } else if (socketReconnecting) {
     status = 'reconnecting';
   } else {
     status = 'online';

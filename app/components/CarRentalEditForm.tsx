@@ -6,24 +6,14 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { CarRentalDraft } from '../tabs/carRentals';
+import NativeDateTimePicker from './NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 
 // Single source of truth for the "add/edit car rental" form, styled to match
 // FlightEditingForm/LodgingForm/ActivityEditForm (same modalCard shell, per-field
 // labels, plain text inputs, toggle-chip pickers) instead of the panel's previous
 // bespoke unlabeled grid layout. Shared by CarRentalsPanel (the Car Rentals tab)
 // and the Overview day-detail "quick edit" so both present an identical dialog.
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch {
-    NativeDateTimePicker = null;
-  }
-}
 
 export type CarRentalFormMember = {
   id: string;
@@ -85,7 +75,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
   const openDatePicker = (field: CarRentalDateField) => {
     setDateField(field);
     const current = draft[field];
-    setPickerValue(current ? new Date(current) : new Date());
+    setPickerValue(parseLocalDateOnly(current));
   };
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
@@ -273,7 +263,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' && dateField ? (
         <NativeDateTimePicker
           value={pickerValue}
           mode="date"
@@ -282,7 +272,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
               setDateField(null);
               return;
             }
-            const iso = date.toISOString().slice(0, 10);
+            const iso = formatLocalDateOnly(date);
             onChange((prev) => ({ ...prev, [dateField]: iso }));
             setDateField(null);
           }}

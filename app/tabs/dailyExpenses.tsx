@@ -13,6 +13,8 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { toWebStyle } from '../utils/webStyle';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { usePersistedState } from '../hooks/usePersistedState';
+import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
 
 type Trip = {
   id: string;
@@ -138,29 +140,17 @@ const formatDateLabel = (iso: string): string => {
 
 const buildDateRange = (trip: Trip | null): string[] => {
   if (!trip?.startDate || !trip?.endDate) return [];
-  const start = new Date(trip.startDate);
-  const end = new Date(trip.endDate);
-  if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf())) return [];
+  const start = parseLocalDateOnly(trip.startDate);
+  const end = parseLocalDateOnly(trip.endDate);
+  if (formatLocalDateOnly(start) !== trip.startDate || formatLocalDateOnly(end) !== trip.endDate) return [];
   const dates: string[] = [];
-  let cursor = new Date(start.getTime());
+  const cursor = new Date(start.getTime());
   while (cursor <= end) {
-    dates.push(cursor.toISOString().slice(0, 10));
-    cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000);
+    dates.push(formatLocalDateOnly(cursor));
+    cursor.setDate(cursor.getDate() + 1);
   }
   return dates;
 };
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   theme,
@@ -193,7 +183,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;
   const defaultExpenseDraft = useMemo<DailyExpenseDraft>(() => {
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayIso = localTodayDateOnly();
     return {
       isOpen: false,
       date: tripDates.includes(todayIso) ? todayIso : tripDates[0] ?? todayIso,
@@ -926,16 +916,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         </View>
       ) : null}
 
-      {Platform.OS !== 'web' && datePickerVisible && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' && datePickerVisible ? (
         <NativeDateTimePicker
-          value={draftDate ? new Date(draftDate) : new Date()}
+          value={parseLocalDateOnly(draftDate)}
           mode="date"
           onChange={(_, date) => {
             if (!date) {
               setDatePickerVisible(false);
               return;
             }
-            setDraftDate(date.toISOString().slice(0, 10));
+            setDraftDate(formatLocalDateOnly(date));
             setDatePickerVisible(false);
           }}
         />

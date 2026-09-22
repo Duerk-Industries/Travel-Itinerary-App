@@ -7,22 +7,12 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { ACTIVITY_TYPES, type ActivityType, type TourDraft } from '../tabs/activities';
+import NativeDateTimePicker from './NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 
 // Single source of truth for the "add/edit activity" form so the Activities tab and the
 // Overview day-detail "quick edit" share one implementation instead of two hand-copied
 // forms that can drift out of sync with each other as fields get added over time.
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch {
-    NativeDateTimePicker = null;
-  }
-}
 
 export type ActivityFormMember = {
   id: string;
@@ -91,7 +81,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
       }
       setPickerValue(base);
     } else {
-      setPickerValue(current ? new Date(current) : new Date());
+      setPickerValue(parseLocalDateOnly(current));
     }
   };
 
@@ -321,7 +311,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' && dateField ? (
         <NativeDateTimePicker
           value={pickerValue}
           mode={dateField === 'startTime' ? 'time' : 'date'}
@@ -330,7 +320,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               setDateField(null);
               return;
             }
-            const iso = date.toISOString().slice(0, 10);
+            const iso = formatLocalDateOnly(date);
             onChange((prev) => {
               if (dateField === 'startTime') {
                 const hours = String(date.getHours()).padStart(2, '0');
