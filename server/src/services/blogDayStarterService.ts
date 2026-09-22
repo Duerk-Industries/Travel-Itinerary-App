@@ -139,7 +139,7 @@ export const getDayStarter = async (tripId: string, actorUserId: string, dayDate
   if (isFirebase) {
     [dismissed, hasExistingText] = await Promise.all([
       getDayStarterDismissed(tripId, dayDate, actorUserId),
-      hasTextItemForDay(dayId),
+      hasTextItemForDay(dayDate),
     ]);
   } else {
     const [dismissedResult, existingTextResult] = await Promise.all([
@@ -160,7 +160,7 @@ export const getDayStarter = async (tripId: string, actorUserId: string, dayDate
   // neither itinerary data nor media gets none — there is nothing true to say about it yet.
   let count: number;
   if (isFirebase) {
-    count = await countAllReadyMediaForDay(dayId);
+    count = await countAllReadyMediaForDay(dayDate);
   } else {
     const mediaCount = await queryBlog<MediaCountRow>(
       `SELECT COUNT(*)::text AS count FROM blog_media_assets a

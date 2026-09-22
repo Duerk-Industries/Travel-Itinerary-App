@@ -159,8 +159,11 @@ export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAud
     if (dayDate) commentsByDay.set(dayDate, (commentsByDay.get(dayDate) ?? 0) + Number(data.commentCount ?? 0));
   }
   const commented = [...commentsByDay.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? null;
+  const dayDatesSorted = [...dayDateById.values()].filter(Boolean).sort();
   return {
     dayCount: daySnap.size,
+    startDate: dayDatesSorted[0] ?? null,
+    endDate: dayDatesSorted[dayDatesSorted.length - 1] ?? null,
     placeCount: places.size,
     distanceKm,
     photoCount: media.filter((doc) => (doc.data() as any).mediaKind === 'photo').length,

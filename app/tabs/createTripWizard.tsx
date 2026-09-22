@@ -2807,7 +2807,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               } else {
                 setItineraryDraft((prev) => ({ ...prev, date: iso }));
               }
-              setDateField(null);
+              if (Platform.OS === 'android') setDateField(null);
             }}
           />
         </NativeDatePickerSheet>
@@ -2833,7 +2833,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 return;
               }
               applyWizardLodgingDate(wizardLodgingDateField, iso);
-              setWizardLodgingDateField(null);
+              if (Platform.OS === 'android') setWizardLodgingDateField(null);
             }}
           />
         </NativeDatePickerSheet>
@@ -2856,7 +2856,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               if (!wizardCarDateField) return;
               const iso = date.toISOString().slice(0, 10);
               applyWizardCarDate(wizardCarDateField, iso);
-              setWizardCarDateField(null);
+              if (Platform.OS === 'android') setWizardCarDateField(null);
             }}
           />
         </NativeDatePickerSheet>

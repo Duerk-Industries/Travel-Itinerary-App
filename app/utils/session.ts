@@ -5,17 +5,10 @@ const sessionTokenKey = 'stp.session.token';
 const lastTripByEmailKey = 'stp.session.lastTripByEmail';
 const asyncItineraryByEmailKey = 'stp.session.asyncItinerary';
 
-const resolveSessionDurationMs = (): number => {
-  const raw =
-    process.env.EXPO_PUBLIC_SESSION_CACHE_TIMEOUT_MINUTES ??
-    process.env.SESSION_CACHE_TIMEOUT_MINUTES ??
-    '720';
-  const minutes = typeof raw === 'number' ? raw : Number(raw);
-  if (!Number.isFinite(minutes) || minutes <= 0) return 12 * 60 * 60 * 1000;
-  return Math.floor(minutes) * 60 * 1000;
-};
-
-const sessionDurationMs = resolveSessionDurationMs();
+// A server-issued JWT and its local session are deliberately aligned. After
+// this period the phone must make an online sign-in before cached trip data is
+// eligible for offline unlock again.
+const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
 
 const canAccessWebStorage = (): boolean =>
   typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';

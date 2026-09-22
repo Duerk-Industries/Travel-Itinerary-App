@@ -22,6 +22,7 @@ import BlogReactionBar from '../components/BlogReactionBar';
 import BlogContributorStrip from '../components/BlogContributorStrip';
 import BlogCommentThread from '../components/BlogCommentThread';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
+import BlogDayStarterCard from '../components/BlogDayStarterCard';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
 import TripRecapCards from '../components/TripRecapCards';
@@ -36,6 +37,8 @@ import {
   guessMimeTypeFromName,
   uploadBlogFiles,
 } from '../utils/blogUpload';
+import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCapture';
+import PhotoFirstComposer from '../components/PhotoFirstComposer';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -77,6 +80,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [showQuotaModal, setShowQuotaModal] = useState(false);
   const [storagePlans, setStoragePlans] = useState<PlanInfo[]>([]);
   const [addingDay, setAddingDay] = useState(null);
+  const [composerFiles, setComposerFiles] = useState(null); // photo-first composer (A2): picked files awaiting day assignment
+  const [composerDefaultDay, setComposerDefaultDay] = useState(null); // set when opened from a specific day's button
   const [newBody, setNewBody] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -89,6 +94,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const [capabilities, setCapabilities] = useState({});
   const [recap, setRecap] = useState(null);
   const [recapBusy, setRecapBusy] = useState(false);
+  const [recapNotice, setRecapNotice] = useState(null);
+  const scrollRef = useRef(null);
+  const recapY = useRef(0);
   const [metadataBusyAssetId, setMetadataBusyAssetId] = useState(null);
   const [coverProposals, setCoverProposals] = useState({});
   const [reorderBusy, setReorderBusy] = useState(false);
@@ -156,6 +164,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // render at all — hidden in the public preview, which has no authenticated session's own
   // reaction to show and no server-side identity to attach one to.
   const canEngage = !publicPreview;
+  // The "Blog tools" drawer is entirely traveler-facing (publish/unpublish, the private spend
+  // figure, the traveler-only places index, search). A follower has nothing in it — don't show an
+  // empty collapsible.
+  const blogToolsHasContent =
+    canEdit ||
+    Boolean(capabilities.trip_blog_search) ||
+    Boolean(capabilities.trip_blog_places && !readOnly) ||
+    Boolean(capabilities.trip_blog_spend_summary && !readOnly);
   const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
     if (!publicPreview) return day;
     return {
@@ -216,6 +232,59 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
   }, [visibleDays, publicPreview, backendUrl, activeTripId, headers]);
 
+  // Phase 5 (A1) — Day Starter. For any day the editing traveler has left empty, ask the server
+  // for its one deterministic draft suggestion. Same lazy per-day shape as the facts effect above:
+  // 204 (dismissed, or the day already has text) is stored as `null` so we don't ask again, and
+  // any failure just leaves the day without a card. Keyed by localDate:
+  //   undefined = not asked yet · null = nothing to offer · { draft, sources } = a suggestion.
+  const [dayStarters, setDayStarters] = useState({});
+  const [dayStarterBusy, setDayStarterBusy] = useState(null);
+  const loadedStarterDays = useRef(new Set());
+  useEffect(() => { loadedStarterDays.current.clear(); setDayStarters({}); }, [activeTripId]);
+  useEffect(() => {
+    if (publicPreview || readOnly || !editMode || !capabilities.trip_blog_day_starter) return;
+    for (const day of visibleDays) {
+      if ((day.items || []).length > 0) continue;
+      if (loadedStarterDays.current.has(day.localDate)) continue;
+      loadedStarterDays.current.add(day.localDate);
+      fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${day.localDate}/starter`, { headers })
+        .then((response) => {
+          if (response.status === 204) { setDayStarters((current) => ({ ...current, [day.localDate]: null })); return null; }
+          return response.ok ? response.json() : null;
+        })
+        .then((data) => { if (data?.draft) setDayStarters((current) => ({ ...current, [day.localDate]: { draft: data.draft, sources: data.sources || [] } })); })
+        .catch(() => { loadedStarterDays.current.delete(day.localDate); });
+    }
+  }, [visibleDays, publicPreview, readOnly, editMode, capabilities.trip_blog_day_starter, backendUrl, activeTripId, headers]);
+
+  const acceptDayStarter = async (dayDate) => {
+    setDayStarterBusy(dayDate);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${dayDate}/starter/accept`, { method: 'POST', headers });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        alertMessage('Trip blog', data.error || 'Could not use that draft. Please try again.');
+        return;
+      }
+      setDayStarters((current) => ({ ...current, [dayDate]: null }));
+      await load();
+    } catch {
+      alertMessage('Trip blog', 'Could not use that draft. Please try again.');
+    } finally {
+      setDayStarterBusy(null);
+    }
+  };
+
+  const dismissDayStarter = async (dayDate) => {
+    // Hide immediately; the POST just makes the suppression permanent (FR-A1.3).
+    setDayStarters((current) => ({ ...current, [dayDate]: null }));
+    try {
+      await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${dayDate}/starter/dismiss`, { method: 'POST', headers });
+    } catch {
+      // A failed dismiss is not worth surfacing — the card is already gone for this session.
+    }
+  };
+
   // Phase 1 masthead stat row (redesign proposal — "a real masthead... a small stat row").
   // Day/photo/contributor counts come straight from what's already loaded; distance is
   // best-effort, summed from whichever days' fact strips have resolved so far (parsed back out
@@ -273,7 +342,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const load = async (nextCursor = null) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: String(limit) });
+      // On a refresh (no cursor — e.g. after any mutation), re-request every day the user has
+      // already paged in, so a small edit doesn't collapse the list back to the first page and
+      // lose their scroll context. Cursor-paged "Load more" keeps using the page size.
+      const loadedCount = blog?.days?.length ?? 0;
+      const effectiveLimit = nextCursor ? limit : Math.max(limit, loadedCount);
+      const params = new URLSearchParams({ limit: String(effectiveLimit) });
       if (nextCursor) params.set('cursor', nextCursor);
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog?${params.toString()}`, { headers });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to load the trip blog');
@@ -288,7 +362,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       // off, since the field is simply absent from `data` in that case.
       engagement.seedFromBlog(data);
       const lastDay = days[days.length - 1];
-      setCursor(days.length >= limit && lastDay ? lastDay.localDate : null);
+      setCursor(days.length >= effectiveLimit && lastDay ? lastDay.localDate : null);
     } catch (error) {
       alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
     } finally {
@@ -309,22 +383,32 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     }
   };
 
+  const RECAP_MAX_POLLS = 20;
   const loadRecap = async (attempt = 0) => {
     if (recapBusy && attempt === 0) return;
     setRecapBusy(true);
+    if (attempt === 0) setRecapNotice('Building your recap — this can take up to a minute…');
     let retryScheduled = false;
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/recap`, { headers });
       const data = await response.json().catch(() => ({}));
-      if (response.status === 202 && attempt < 3) {
-        retryScheduled = true;
-        setTimeout(() => { void loadRecap(attempt + 1); }, Math.min(2000, Math.max(250, Number(data.retryAfterSeconds || 1) * 1000)));
+      if (response.status === 202) {
+        if (attempt < RECAP_MAX_POLLS) {
+          retryScheduled = true;
+          setTimeout(() => { void loadRecap(attempt + 1); }, Math.min(3000, Math.max(1000, Number(data.retryAfterSeconds || 1) * 1000)));
+        } else {
+          setRecapNotice('Still building — give it a moment and tap “Relive this trip” again.');
+        }
         return;
       }
-      if (!response.ok) throw new Error(data.error || 'Unable to build the trip recap');
-      setRecap(data.recap || null);
+      if (!response.ok || !data.recap) throw new Error(data.error || 'Unable to build the trip recap');
+      setRecap(data.recap);
+      setRecapNotice(null);
+      // Bring the freshly-built card into view — otherwise it just appears somewhere off-screen.
+      setTimeout(() => { try { scrollRef.current?.scrollTo({ y: Math.max(0, recapY.current - 24), animated: true }); } catch {} }, 120);
     } catch (error) {
-      if (attempt === 0) alertMessage('Trip recap', error.message || 'Unable to build the trip recap');
+      setRecapNotice(null);
+      alertMessage('Trip recap', error.message || 'Unable to build the trip recap');
     } finally {
       if (!retryScheduled) setRecapBusy(false);
     }
@@ -512,7 +596,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         input.onchange = () => resolve(input.files ? Array.from(input.files) : []);
         input.click();
       });
-      return files.map((file) => ({ blob: file, mimeType: file.type || guessMimeTypeFromName(file.name), size: file.size, name: file.name }));
+      return Promise.all(files.map(async (file) => {
+        const mimeType = file.type || guessMimeTypeFromName(file.name);
+        // Read EXIF capture time/location locally so the photo-first composer can bucket by day
+        // (A2) and the day-facts time span has data. JPEG-only, best-effort — {} on anything else.
+        const capture = await readImageCaptureMetadata(file);
+        const previewUri = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(file) : null;
+        return { blob: file, mimeType, size: file.size, name: file.name, previewUri, ...capture };
+      }));
     }
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -525,14 +616,50 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
       mediaTypes: ['images', 'videos'],
       allowsMultipleSelection: true,
       quality: 1,
+      exif: true, // capture time/location for the photo-first composer (A2)
     });
     if (result.canceled || !result.assets?.length) return [];
     return Promise.all(result.assets.map(async (asset) => {
       const mimeType = asset.mimeType || guessMimeTypeFromName(asset.fileName);
       const response = await fetch(asset.uri);
       const blob = await response.blob();
-      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo') };
+      const capture = readNativeExifCapture(asset.exif);
+      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), previewUri: asset.uri ?? null, ...capture };
     }));
+  };
+
+  // Photo-first composer (A2): pick once, sort by day, commit as a batch. The per-day
+  // "+ Photo/Video" button (handleUpload) stays for adding to one specific day.
+  const openPhotoComposer = async (defaultDayDate = null) => {
+    // Guard: a bare onPress={openPhotoComposer} would hand us the press event here.
+    const forDay = typeof defaultDayDate === 'string' ? defaultDayDate : null;
+    if (!canEdit) return;
+    const picked = await pickMediaFiles();
+    if (!picked.length) return;
+    const supported = picked.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType));
+    if (!supported.length) {
+      alertMessage('Add photos', 'Only JPEG/PNG photos or MP4/MOV/WebM videos are supported.');
+      return;
+    }
+    setComposerDefaultDay(forDay);
+    setComposerFiles(supported);
+  };
+  const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); };
+
+  const handleComposerCommitted = async ({ succeeded, failed, quotaBlocked }) => {
+    closePhotoComposer();
+    if (quotaBlocked) {
+      const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
+      setStoragePlans(plans.filter((p) => p.planKey.startsWith('storage_')));
+      setShowQuotaModal(true);
+    }
+    await load();
+    if (!quotaBlocked && (succeeded || failed)) {
+      const parts = [];
+      if (succeeded) parts.push(`${succeeded} added`);
+      if (failed) parts.push(`${failed} failed`);
+      alertMessage('Add photos', parts.join(', '));
+    }
   };
 
   const handleUpload = async (dayDate) => {
@@ -567,7 +694,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         if (result.failed > 0) parts.push(`${result.failed} failed`);
         if (result.entitlementSkipped > 0) parts.push(`${result.entitlementSkipped} skipped (video requires Premium)`);
         if (unsupportedCount > 0) parts.push(`${unsupportedCount} skipped (unsupported format)`);
-        alertMessage('Upload', parts.join(', '));
+        const detail = result.errors?.[0] ? `\n\n${result.errors[0]}` : '';
+        alertMessage('Upload', parts.join(', ') + detail);
       }
     } finally {
       setUploading(false);
@@ -636,7 +764,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
     setPublicationNotice('');
     setCapabilities({});
     setRecap(null);
+    setRecapNotice(null);
     setCoverProposals({});
+    setBlog(null); // switching trips: show the spinner, not the previous trip's blog, until the new one loads
     void refreshBlogAndPublication();
     void loadCapabilities();
   }, [activeTripId]);
@@ -897,7 +1027,11 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   const removeMediaItem = (item) => (item.isGalleryMember ? removeGalleryAsset(item.assetId) : deleteItem(item));
 
   if (!activeTripId) return <View style={{ padding: 18 }}><Text style={styles.sectionTitle}>Select a trip to write its blog.</Text></View>;
-  if (loading) return <View style={{ padding: 18, alignItems: 'center' }}><ActivityIndicator /></View>;
+  // Only take over the whole tab with a spinner on the very first load (no data yet). Every
+  // later refetch — accepting a Day Starter draft, "Load more days", saving a field, any
+  // mutation that calls load() — keeps the existing content mounted so the ScrollView doesn't
+  // unmount and snap back to the top. A slim "Updating…" bar (below) signals the refresh.
+  if (loading && !blog) return <View style={{ padding: 18, alignItems: 'center' }}><ActivityIndicator /></View>;
   const publicationState = publication?.state ?? blog?.visibilityState ?? 'private';
   const hasPendingConsent = publicationState === 'pending_consent' && publication?.userDecision === 'pending';
   // FR-A5.2: a visible Saving…/Saved/Not saved state for any autosaved field, shared by the
@@ -918,7 +1052,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
   // "chapter" further down, rather than one long bordered form.
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
+      {loading && blog ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 6, backgroundColor: theme?.colors?.surfaceMuted ?? '#eef2f4' }}>
+          <ActivityIndicator size="small" />
+          <Text style={{ color: mutedColor, fontSize: 12 }}>Updating…</Text>
+        </View>
+      ) : null}
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1, minHeight: 0 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
@@ -1033,6 +1174,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
           />
         ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 4 }}>{blog.introduction}</Text> : null)}
       </View>
+        {canEdit && capabilities.trip_blog_photo_composer && visibleDays.length > 0 ? (
+          <TouchableOpacity
+            testID="blog-add-photos"
+            accessibilityRole="button"
+            style={[styles.button, { backgroundColor: '#0ea5e9', alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 6, paddingHorizontal: 12 }]}
+            onPress={() => openPhotoComposer()}
+            disabled={uploading}
+          >
+            <Text style={styles.buttonText}>＋ Add photos to this trip</Text>
+          </TouchableOpacity>
+        ) : null}
         {visibleDays.map((day) => {
           const dayMetaDraft = dayMetaDrafts[day.localDate];
           const dayMetaConflict = dayMetaConflicts[day.localDate];
@@ -1147,7 +1299,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
-                    onPress={() => handleUpload(day.localDate)}
+                    onPress={() => (capabilities.trip_blog_photo_composer ? openPhotoComposer(day.localDate) : handleUpload(day.localDate))}
                     disabled={uploading}
                   >
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>{uploading ? (uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}…` : '…') : '+ Photo/Video'}</Text>
@@ -1349,6 +1501,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                     mutedColor={mutedColor}
                     borderColor={borderColor}
                     backgroundColor={inputColor}
+                    canRemove={canEdit}
+                    removing={deleting}
+                    onRemove={(item) => removeMediaItem(item)}
                     canEngage={canEngage}
                     getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
                     onToggleReaction={engagement.toggle}
@@ -1467,7 +1622,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             ) : null}
             {canEdit && (day.items || []).length === 0 && addingDay !== day.localDate ? (
               <View>
-                <Text style={{ color: mutedColor }}>No notes yet. Click “+ Add note” to start this day.</Text>
+                {dayStarters[day.localDate]?.draft ? (
+                  <BlogDayStarterCard
+                    testID={`blog-day-starter-${day.localDate}`}
+                    draft={dayStarters[day.localDate].draft}
+                    busy={dayStarterBusy === day.localDate}
+                    onUse={() => acceptDayStarter(day.localDate)}
+                    onDismiss={() => dismissDayStarter(day.localDate)}
+                    displayFont={displayFont}
+                    textColor={textColor}
+                    mutedColor={mutedColor}
+                    borderColor={borderColor}
+                    backgroundColor={inputColor}
+                    accentColor={theme?.colors?.link ?? '#2E96A6'}
+                    styles={styles}
+                  />
+                ) : null}
+                <Text style={{ color: mutedColor }}>
+                  {dayStarters[day.localDate]?.draft ? 'Or start from scratch — click “+ Add note”.' : 'No notes yet. Click “+ Add note” to start this day.'}
+                </Text>
                 {capabilities.trip_blog_authoring_assist ? (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                     {promptsForDay(day.localDate).map((prompt) => (
@@ -1496,11 +1669,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
         {/* Phase 0 reorder — the recap is the "Relive this trip" moment (redesign notes §1), kept
             prominent after the last day rather than buried above the story. */}
         {capabilities.trip_blog_recap ? (
-          <View style={{ marginTop: 8 }}>
+          <View style={{ marginTop: 8 }} onLayout={(e) => { recapY.current = e.nativeEvent.layout.y; }}>
             {recap ? (
               <TripRecapCards
                 recap={recap}
                 topPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.assetId === recap?.topPhoto?.assetId)?.primaryUrl}
+                fallbackPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.mediaKind === 'photo' && (item.primaryUrl || item.thumbnailUrl))?.primaryUrl}
+                shareUrl={publicPageUrl}
                 spendTotal={capabilities.trip_blog_spend_summary && !readOnly ? spendTotal : null}
                 currency={tripCurrency}
                 textColor={textColor}
@@ -1513,15 +1688,20 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
                 displayFontItalic={displayFontItalic}
               />
             ) : (
-              <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
-                <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Relive this trip'}</Text>
-              </TouchableOpacity>
+              <View>
+                <TouchableOpacity testID="trip-blog-build-recap" accessibilityRole="button" disabled={recapBusy} onPress={() => loadRecap()} style={[styles.button, { alignSelf: 'flex-start', backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}>
+                  <Text style={styles.buttonText}>{recapBusy ? 'Building recap…' : 'Relive this trip'}</Text>
+                </TouchableOpacity>
+                {recapNotice ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>{recapNotice}</Text> : null}
+              </View>
             )}
           </View>
         ) : null}
         {/* Phase 0 reorder — search, places, privacy/publication, and the spend figure are utility
             controls, not story — collapsed here instead of crowding the masthead (redesign notes
-            §1/§4's "Blog tools" drawer). */}
+            §1/§4's "Blog tools" drawer). Hidden entirely when the current viewer (e.g. a follower)
+            has nothing in it. */}
+        {blogToolsHasContent ? (
         <View style={{ marginTop: 12 }}>
           <TouchableOpacity
             testID="blog-tools-toggle"
@@ -1590,8 +1770,24 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, styles, theme, readOnl
             </View>
           ) : null}
         </View>
+        ) : null}
         </View>
       </ScrollView>
+      <PhotoFirstComposer
+        visible={!!composerFiles}
+        files={composerFiles || []}
+        dayDates={visibleDays.map((day) => day.localDate)}
+        defaultDayDate={composerDefaultDay}
+        context={{ backendUrl, headers, tripId: activeTripId }}
+        onClose={closePhotoComposer}
+        onCommitted={handleComposerCommitted}
+        styles={styles}
+        theme={theme}
+        textColor={textColor}
+        mutedColor={mutedColor}
+        borderColor={borderColor}
+        backgroundColor={surfaceColor}
+      />
       <Modal visible={showQuotaModal} transparent animationType="slide" onRequestClose={() => setShowQuotaModal(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>

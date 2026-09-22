@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../auth';
 import { notificationRepository } from '../services/notificationRepository';
 import { isFeatureEnabled } from '../services/entitlementService';
+import { encryptPushToken, hashPushToken } from '../utils/pushTokenCrypto';
 
 const router = Router();
 router.use(authenticate);
@@ -41,12 +42,25 @@ router.get('/devices', async (req, res) => {
 });
 
 router.post('/devices', async (req, res) => {
-  const { platform, pushTokenCiphertext, pushTokenHash, deviceLabel } = req.body;
-  if (!platform || !pushTokenCiphertext || !pushTokenHash) {
+  // The client sends the raw Expo push token over HTTPS — the server encrypts it here (never the
+  // client; see pushTokenCrypto.ts) before it's persisted. pushTokenHash is derived server-side
+  // too, not trusted from the request, since it's the UNIQUE(user_id, push_token_hash) upsert key.
+  const { platform, pushToken, deviceLabel } = req.body;
+  if (!platform || typeof pushToken !== 'string' || !pushToken.trim()) {
     res.status(400).json({ error: 'Missing required device fields' });
     return;
   }
-  await notificationRepository().upsertDevice(userIdOf(req), { platform, pushTokenCiphertext, pushTokenHash, deviceLabel });
+  if (!['ios', 'android', 'web'].includes(platform)) {
+    res.status(400).json({ error: 'Unsupported platform' });
+    return;
+  }
+  const trimmedToken = pushToken.trim();
+  await notificationRepository().upsertDevice(userIdOf(req), {
+    platform,
+    pushTokenCiphertext: encryptPushToken(trimmedToken),
+    pushTokenHash: hashPushToken(trimmedToken),
+    deviceLabel,
+  });
   res.status(204).end();
 });
 

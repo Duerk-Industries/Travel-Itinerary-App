@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import Stripe from 'stripe';
 import { TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
 import {
@@ -153,8 +152,7 @@ router.post('/plans/:planKey/price', async (req, res) => {
     return;
   }
 
-  const interval: Stripe.PriceCreateParams.Recurring.Interval =
-    planKey === 'premium_annual' ? 'year' : 'month';
+  const interval: 'month' | 'year' = planKey === 'premium_annual' ? 'year' : 'month';
 
   try {
     const lookupKey =

@@ -22,15 +22,16 @@
   "overrides": {
     "glob": "13.0.5",
     "minimatch": "10.2.5",
-    "brace-expansion": "5.0.8",
+    "brace-expansion": "5.0.12",
     "protobufjs": "7.6.5",
     "image-size": "file:../packages/image-size-safe",
-    "body-parser": "2.3.0",
+    "body-parser": "1.20.8",
     "shell-quote": "1.10.0",
     "tar": "7.5.22",
     "uuid": "11.1.1",
     "postcss": "8.5.23",
-    "js-yaml": "4.3.1"
+    "js-yaml": "4.3.2",
+    "@tiptap/core": "3.31.3"
   },
   "expo": {
     "install": {
@@ -62,6 +63,9 @@
     "expo-image-picker": "~17.0.11",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.12",
+    "expo-local-authentication": "~17.0.9",
+    "expo-network": "~8.0.8",
+    "expo-notifications": "~0.32.17",
     "expo-share-intent": "^5.1.1",
     "expo-sharing": "~14.0.8",
     "expo-video": "~3.0.16",

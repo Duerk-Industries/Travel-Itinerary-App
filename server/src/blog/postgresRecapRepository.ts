@@ -115,7 +115,7 @@ export const pruneRecapSnapshots = async (tripId: string, retain: number): Promi
 export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAudienceClass): Promise<BlogRecapSource> => {
   const visible = audiencesSql(audienceClass);
   const [days, media, contributors, photoContributors, travelers, followers, places, flightLegs, commentedDays] = await Promise.all([
-    queryBlog<any>('SELECT COUNT(*)::int AS count FROM blog_days WHERE trip_id = $1', [tripId]),
+    queryBlog<any>('SELECT COUNT(*)::int AS count, MIN(local_date) AS start_date, MAX(local_date) AS end_date FROM blog_days WHERE trip_id = $1', [tripId]),
     queryBlog<any>(
       `SELECT a.id AS asset_id, a.media_kind_key, a.caption, a.alt_text,
               COALESCE(SUM(c.reaction_total), 0)::int AS reaction_total
@@ -206,8 +206,11 @@ export const getRecapSource = async (tripId: string, audienceClass: BlogRecapAud
     row.arrival_lat == null ? null : { lat: Number(row.arrival_lat), lng: Number(row.arrival_lng) },
   ].filter(Boolean)), 0));
   const commented = commentedDays.rows[0];
+  const toDate = (v: unknown): string | null => (v ? new Date(v as any).toISOString().slice(0, 10) : null);
   return {
     dayCount: Number(days.rows[0]?.count ?? 0),
+    startDate: toDate(days.rows[0]?.start_date),
+    endDate: toDate(days.rows[0]?.end_date),
     placeCount: Number(places.rows[0]?.count ?? 0),
     distanceKm,
     photoCount: media.rows.filter((row) => row.media_kind_key === 'photo').length,

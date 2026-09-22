@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as Network from 'expo-network';
 import { getSocket } from '../utils/socket';
 
 export type ConnectionStatus = 'online' | 'offline' | 'reconnecting';
@@ -51,14 +52,30 @@ export const useConnectionState = (): ConnectionState => {
   });
 
   useEffect(() => {
-    if (!isBrowser()) return;
-    const onOnline = () => setBrowserOnline(true);
-    const onOffline = () => setBrowserOnline(false);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
+    if (isBrowser()) {
+      const onOnline = () => setBrowserOnline(true);
+      const onOffline = () => setBrowserOnline(false);
+      window.addEventListener('online', onOnline);
+      window.addEventListener('offline', onOffline);
+      return () => {
+        window.removeEventListener('online', onOnline);
+        window.removeEventListener('offline', onOffline);
+      };
+    }
+
+    let disposed = false;
+    const updateNetworkState = (state: Network.NetworkState) => {
+      const online = state.isInternetReachable ?? state.isConnected ?? false;
+      if (!disposed) setBrowserOnline(online);
+    };
+    void Network.getNetworkStateAsync().then(updateNetworkState).catch(() => {
+      // If the platform cannot report its state, retain the optimistic default
+      // and let normal request failures handle the next refresh.
+    });
+    const subscription = Network.addNetworkStateListener(updateNetworkState);
     return () => {
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
+      disposed = true;
+      subscription.remove();
     };
   }, []);
 

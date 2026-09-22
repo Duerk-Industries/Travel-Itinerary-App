@@ -16,6 +16,7 @@ type UseTripsDataParams = {
   backendUrl: string;
   groupSort: 'created' | 'name';
   isFollowingMode: boolean;
+  offlineMode?: boolean;
   onUnauthorized?: () => void;
   requirePasswordSetup: boolean;
   selectedFollowedTripDetails: Trip | null;
@@ -60,6 +61,7 @@ export const useTripsData = ({
   backendUrl,
   groupSort,
   isFollowingMode,
+  offlineMode = false,
   onUnauthorized,
   requirePasswordSetup,
   selectedFollowedTripDetails,
@@ -92,6 +94,7 @@ export const useTripsData = ({
 
   const fetchGroups = useCallback(
     async (sort?: 'created' | 'name'): Promise<GroupView[]> => {
+      if (offlineMode) return [];
       if (!userToken) {
         setGroups([]);
         return [];
@@ -110,11 +113,12 @@ export const useTripsData = ({
         return [];
       }
     },
-    [backendUrl, groupSort, handleRequestError, userToken]
+    [backendUrl, groupSort, handleRequestError, offlineMode, userToken]
   );
 
   const fetchTrips = useCallback(
     async (tokenOverride?: string): Promise<Trip[]> => {
+      if (offlineMode) return [];
       const authToken = tokenOverride ?? userToken;
       if (!authToken) {
         setTrips([]);
@@ -141,10 +145,11 @@ export const useTripsData = ({
         return [];
       }
     },
-    [backendUrl, handleRequestError, isFollowingMode, setActiveTripId, userEmail, userToken]
+    [backendUrl, handleRequestError, isFollowingMode, offlineMode, setActiveTripId, userEmail, userToken]
   );
 
   const fetchGroupMembersForActiveTrip = useCallback(async (): Promise<GroupMemberOption[]> => {
+    if (offlineMode) return [];
     if (!userToken || !activeTripId) {
       clearGroupMembers();
       return [];
@@ -192,6 +197,7 @@ export const useTripsData = ({
     backendUrl,
     clearGroupMembers,
     isFollowingMode,
+    offlineMode,
     onUnauthorized,
     requirePasswordSetup,
     selectedFollowedTripDetails,
@@ -204,12 +210,13 @@ export const useTripsData = ({
   }, [activeTripId]);
 
   useEffect(() => {
+    if (offlineMode) return;
     if (userToken && !requirePasswordSetup) {
       void fetchGroupMembersForActiveTrip();
       return;
     }
     setGroupMembers([]);
-  }, [fetchGroupMembersForActiveTrip, requirePasswordSetup, userToken]);
+  }, [fetchGroupMembersForActiveTrip, offlineMode, requirePasswordSetup, userToken]);
 
   const addMemberToGroup = useCallback(
     async (groupId: string, payload: Record<string, unknown>): Promise<MutationResult> => {
@@ -308,6 +315,9 @@ export const useTripsData = ({
     groupMembers,
     groups,
     removeMemberFromGroup,
+    setGroupMembers,
+    setGroups,
+    setTrips,
     trips,
   };
 };

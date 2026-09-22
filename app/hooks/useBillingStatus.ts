@@ -89,7 +89,7 @@ export const useBillingStatus = ({
     // PremiumSubscriptionPanel) — this was reported as "profile page failed to load and
     // displayed an error message" in App Store review on iPad. Every other `window.location`
     // read in this codebase gates on `Platform.OS === 'web'` for exactly this reason.
-    if (!token || Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (!token || Platform.OS !== 'web' || typeof window === 'undefined' || !window.location) return;
     const url = new URL(window.location.href);
     if (url.searchParams.get('billing') !== 'success') return;
     triggerPostCheckoutRefresh().finally(() => {

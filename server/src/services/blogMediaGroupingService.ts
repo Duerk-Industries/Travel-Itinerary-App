@@ -28,6 +28,9 @@ export interface MediaGroupResult {
   // Has a real capturedAt, but outside every day this trip actually has — the composer's
   // "out-of-range confirm" flow, not a silent drop and not a silent clamp to the nearest day.
   outOfRange: Array<{ clientId: string; capturedAt: string }>;
+  // Every day this trip has, normalized and sorted — the composer's day picker uses this so a
+  // photo can be placed on any trip day, not only the ones the blog tab has paged in.
+  dayDates: string[];
 }
 
 const MAX_CANDIDATES = 500;
@@ -39,14 +42,17 @@ const toDateString = (iso: string): string | null => {
 
 export const groupMediaByDay = async (tripId: string, actorUserId: string, candidates: MediaGroupCandidate[]): Promise<MediaGroupResult> => {
   if (!(await ensureUserInTrip(tripId, actorUserId))) throw new BlogEngagementUnauthorizedError('Not authorized on this trip');
-  if (!Array.isArray(candidates) || candidates.length === 0) return { buckets: [], unassigned: [], outOfRange: [] };
-  if (candidates.length > MAX_CANDIDATES) throw new Error(`At most ${MAX_CANDIDATES} candidates are allowed per request`);
+  if (candidates != null && !Array.isArray(candidates)) return { buckets: [], unassigned: [], outOfRange: [], dayDates: [] };
+  if (Array.isArray(candidates) && candidates.length > MAX_CANDIDATES) throw new Error(`At most ${MAX_CANDIDATES} candidates are allowed per request`);
 
-  const dayDates = getCurrentDbProvider() === 'firebase'
+  const rawDayDates = getCurrentDbProvider() === 'firebase'
     ? await listBlogDayDates(tripId)
     : (await queryBlog<{ local_date: string }>('SELECT local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date ASC', [tripId])).rows.map((row) => row.local_date);
-  if (!dayDates.length) throw new BlogTargetNotFoundError('This trip has no days to group photos into yet');
-  const validDates = new Set(dayDates.map((date) => new Date(date).toISOString().slice(0, 10)));
+  if (!rawDayDates.length) throw new BlogTargetNotFoundError('This trip has no days to group photos into yet');
+  const sortedDates = [...new Set(rawDayDates.map((date) => new Date(date).toISOString().slice(0, 10)))].sort();
+  const validDates = new Set(sortedDates);
+
+  if (!Array.isArray(candidates) || candidates.length === 0) return { buckets: [], unassigned: [], outOfRange: [], dayDates: sortedDates };
 
   const byDay = new Map<string, string[]>();
   const unassigned: string[] = [];
@@ -76,5 +82,5 @@ export const groupMediaByDay = async (tripId: string, actorUserId: string, candi
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([dayDate, clientIds]) => ({ dayDate, clientIds }));
 
-  return { buckets, unassigned, outOfRange };
+  return { buckets, unassigned, outOfRange, dayDates: sortedDates };
 };

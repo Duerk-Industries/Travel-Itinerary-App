@@ -60,7 +60,7 @@ describe('GET /:tripId/blog/recap', () => {
       throw new Error(`Recap did not become ready: ${JSON.stringify(snapshots.rows)}`);
     }
     expect(ready.body.state).toBe('ready');
-    expect(ready?.body.recap).toEqual(expect.objectContaining({ title: 'Recap Trip', dayCount: 3, distanceKm: 111, audienceClass: 'travelers', mostCommentedDay: { dayDate: '2027-06-02', commentCount: 4 } }));
+    expect(ready?.body.recap).toEqual(expect.objectContaining({ title: 'Recap Trip', dayCount: 3, startDate: '2027-06-01', endDate: '2027-06-03', distanceKm: 111, audienceClass: 'travelers', mostCommentedDay: { dayDate: '2027-06-02', commentCount: 4 } }));
     expect(ready?.body.recap.topPhoto).toBeNull();
 
     const cached = await request(app).get(`/api/trips/${tripId}/blog/recap`).set('Authorization', `Bearer ${token}`).expect(200);

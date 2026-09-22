@@ -7,7 +7,7 @@
 // Deliberately web-only (App.tsx only checks window.location on Platform.OS === 'web'): a public
 // link is a browser-shareable artifact, not something native deep-linking needs to solve today.
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import { useFonts, Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import { resolveBackendUrl } from '../utils/backendUrl';
@@ -43,7 +43,158 @@ type Props = {
   tripSlug: string;
 };
 
+// Mirrors server/src/blog/engagementTypes.ts BLOG_REACTION_EMOJIS / BlogReactionBar's EMOJI_GLYPH.
+const REACTION_GLYPH: Record<string, string> = {
+  heart: '❤️', laugh: '😂', wow: '😮', fire: '🔥', clap: '👏', thanks: '🙏',
+};
+const REACTION_ORDER = ['heart', 'laugh', 'wow', 'fire', 'clap', 'thanks'];
+
+type DayEngagement = {
+  reactionCounts: Record<string, number>;
+  reactionTotal: number;
+  commentCount: number;
+};
+
+type PublicComment = {
+  id: string;
+  body: string | null;
+  authorRole: string;
+  parentCommentId: string | null;
+  replyCount: number;
+  createdAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
+};
+
 const stripHtml = (html: string): string => String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
+// The sanitized public comment carries authorRole but no identity (server strips id/name/email —
+// architecture §5.1). 'owner'/'traveler' both read as "Traveler" to a stranger; anything else is
+// a follower.
+const ROLE_LABEL = (role: string): string => (role === 'follower' ? 'Follower' : 'Traveler');
+
+const formatCommentWhen = (iso: string): string => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
+const COMMENT_PAGE = 20;
+const engagementQuery = (params: Record<string, string>): string =>
+  Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+
+// A quiet, read-only tally under each day — reaction counts, and a comment count that expands the
+// day's public-audience thread on tap. No compose box and no reaction buttons: a stranger with the
+// link sees how the trip's travelers and followers responded but cannot join in here (architecture
+// PR-1: no anonymous public commenting).
+const DayEngagementFooter: React.FC<{
+  data?: DayEngagement;
+  bodyFont?: string;
+  backendUrl: string;
+  username: string;
+  tripSlug: string;
+  localDate: string;
+}> = ({ data, bodyFont, backendUrl, username, tripSlug, localDate }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [comments, setComments] = useState<PublicComment[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const loadPage = async (cursor?: string) => {
+    setLoading(true);
+    setFailed(false);
+    try {
+      const query = engagementQuery({ dayDate: localDate, limit: String(COMMENT_PAGE), ...(cursor ? { cursor } : {}) });
+      const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/engagement?${query}`);
+      if (!response.ok) { setFailed(true); return; }
+      const payload = await response.json();
+      const page: PublicComment[] = payload.comments ?? [];
+      setComments((prev) => (cursor && prev ? [...prev, ...page] : page));
+      // The endpoint returns no next-cursor; a full page means there may be more.
+      setHasMore(page.length === COMMENT_PAGE);
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const chips = REACTION_ORDER.filter((emoji) => (data?.reactionCounts[emoji] ?? 0) > 0);
+  const commentCount = data?.commentCount ?? 0;
+  if (!data || (!chips.length && !commentCount)) return null;
+
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && comments === null && !loading) loadPage();
+  };
+
+  return (
+    <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#EEF2F4' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+        {chips.map((emoji) => (
+          <View key={emoji} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 14, marginBottom: 4 }}>
+            <Text style={{ fontSize: 14 }}>{REACTION_GLYPH[emoji]}</Text>
+            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280', marginLeft: 4 }}>{data.reactionCounts[emoji]}</Text>
+          </View>
+        ))}
+        {commentCount ? (
+          <Pressable
+            onPress={toggle}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            style={{ marginBottom: 4 }}
+          >
+            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#2E96A6' }}>
+              💬 {commentCount} {commentCount === 1 ? 'comment' : 'comments'} {expanded ? '▲' : '▼'}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {expanded && commentCount ? (
+        <View style={{ marginTop: 14 }}>
+          {loading && !comments ? (
+            <ActivityIndicator size="small" color="#2E96A6" />
+          ) : failed && !comments ? (
+            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280' }}>Couldn't load comments right now.</Text>
+          ) : comments && comments.length ? (
+            <>
+              {comments.map((comment) => (
+                <View key={comment.id} style={{ marginBottom: 14 }}>
+                  <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#94A0AC', marginBottom: 3 }}>
+                    {ROLE_LABEL(comment.authorRole)} · {formatCommentWhen(comment.createdAt)}{comment.editedAt ? ' (edited)' : ''}
+                  </Text>
+                  <Text style={{ fontFamily: bodyFont, fontSize: 15, lineHeight: 22, color: comment.deletedAt || comment.body == null ? '#94A0AC' : '#111827', fontStyle: comment.deletedAt || comment.body == null ? 'italic' : 'normal' }}>
+                    {comment.deletedAt || comment.body == null ? 'This comment was removed.' : comment.body}
+                  </Text>
+                  {comment.replyCount > 0 ? (
+                    <Text style={{ fontFamily: bodyFont, fontSize: 12, color: '#94A0AC', marginTop: 3 }}>
+                      {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+              {hasMore ? (
+                <Pressable onPress={() => loadPage(comments[comments.length - 1]?.id)} accessibilityRole="button" disabled={loading}>
+                  <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#2E96A6', marginTop: 2 }}>
+                    {loading ? 'Loading…' : 'Show more comments'}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {failed ? (
+                <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280', marginTop: 4 }}>Couldn't load more comments.</Text>
+              ) : null}
+            </>
+          ) : (
+            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280' }}>No public comments on this day.</Text>
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+};
 
 const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   const [fontsLoaded] = useFonts({ Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic });
@@ -82,6 +233,36 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
     })();
     return () => { cancelled = true; };
   }, [backendUrl, username, tripSlug]);
+
+  // Read-only public engagement — public-audience reaction counts and comment counts per day, on
+  // its own endpoint/flag/cache (architecture §5.1/§14.7). A separate request from the document
+  // fetch above so an engagement change never busts the CDN-cached prose. Joined to rendered days
+  // by localDate (the document endpoint doesn't expose day ids; this endpoint is keyed by date).
+  // A 404 here means trip_blog_public_engagement is off — render the page exactly as before.
+  const [engagement, setEngagement] = useState<Record<string, DayEngagement>>({});
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/engagement`);
+        if (cancelled || !response.ok) return;
+        const data = await response.json();
+        const map: Record<string, DayEngagement> = {};
+        for (const day of data.days ?? []) {
+          map[day.localDate] = {
+            reactionCounts: day.reactionCounts ?? {},
+            reactionTotal: day.reactionTotal ?? 0,
+            commentCount: day.commentCount ?? 0,
+          };
+        }
+        if (!cancelled) setEngagement(map);
+      } catch {
+        // Non-fatal: the page reads fine without engagement.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [backendUrl, username, tripSlug, state.status]);
 
   // The trip's own most-loved photo isn't in this payload (no engagement data on the public
   // document endpoint) — the first available photo, in day order, is a reasonable stand-in for a
@@ -197,6 +378,14 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
               }
               return null;
             })}
+            <DayEngagementFooter
+              data={engagement[day.localDate]}
+              bodyFont={bodyDisplayFont}
+              backendUrl={backendUrl}
+              username={username}
+              tripSlug={tripSlug}
+              localDate={day.localDate}
+            />
           </View>
         ))}
 

@@ -33,17 +33,24 @@ describe('IncomingShareModal', () => {
   });
 
   it('shows a trip picker defaulting to the active trip when a share is pending', () => {
-    mockedUseShareIntent.mockReturnValue({
-      hasShareIntent: true,
-      shareIntent: { files: [{ path: 'file:///a.jpg', mimeType: 'image/jpeg', fileName: 'a.jpg', size: 100 }], text: null },
-      resetShareIntent: jest.fn(),
-    });
-    const { getByTestId } = render(
-      <IncomingShareModal backendUrl="https://api.example.com" headers={{}} trips={trips} activeTripId="trip-2" styles={styles} />
-    );
-    expect(getByTestId('share-trip-trip-1')).toBeTruthy();
-    expect(getByTestId('share-trip-trip-2')).toBeTruthy();
-    expect(getByTestId('share-day-input').props.value).toBe('2026-09-01'); // clamped into trip-2's range
+    // Pin "now" before trip-2's window so the default-day clamp is deterministic — otherwise this
+    // asserts trip-2's start only while the real clock happens to be earlier than 2026-09-01.
+    jest.useFakeTimers({ now: new Date('2026-07-15T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate'] });
+    try {
+      mockedUseShareIntent.mockReturnValue({
+        hasShareIntent: true,
+        shareIntent: { files: [{ path: 'file:///a.jpg', mimeType: 'image/jpeg', fileName: 'a.jpg', size: 100 }], text: null },
+        resetShareIntent: jest.fn(),
+      });
+      const { getByTestId } = render(
+        <IncomingShareModal backendUrl="https://api.example.com" headers={{}} trips={trips} activeTripId="trip-2" styles={styles} />
+      );
+      expect(getByTestId('share-trip-trip-1')).toBeTruthy();
+      expect(getByTestId('share-trip-trip-2')).toBeTruthy();
+      expect(getByTestId('share-day-input').props.value).toBe('2026-09-01'); // today is before the trip -> clamped to its start
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('prefills the message from the share intent\'s text', () => {

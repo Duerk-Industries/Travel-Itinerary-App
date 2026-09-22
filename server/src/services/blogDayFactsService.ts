@@ -226,7 +226,7 @@ const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: str
   const visibleAudiences = visibleAudiencesForMembership(membership);
   let mediaRows: { rows: MediaRow[] };
   if (isFirebase) {
-    mediaRows = { rows: (await getVisibleMediaForDay(dayId, visibleAudiences)) as unknown as MediaRow[] };
+    mediaRows = { rows: (await getVisibleMediaForDay(dayDate, visibleAudiences)) as unknown as MediaRow[] };
   } else {
     const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 2}`).join(',');
     mediaRows = await queryBlog<MediaRow>(

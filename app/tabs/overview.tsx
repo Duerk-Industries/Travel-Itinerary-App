@@ -265,6 +265,17 @@ type OverviewTabProps = {
   featureItineraryItemKinds?: boolean;
   featureItineraryDocumentImport?: boolean;
   userTier?: string | null;
+  /** Defined in offline mode (including null when this trip has no itinerary). */
+  cachedItinerary?: {
+    id: string | null;
+    planMarkdown: string | null;
+    details: unknown[];
+  } | null;
+  onItineraryCacheChange?: (tripId: string, snapshot: {
+    id: string | null;
+    planMarkdown: string | null;
+    details: unknown[];
+  }) => void;
 };
 
 type DayCard = {
@@ -477,6 +488,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureItineraryItemKinds = true,
   featureItineraryDocumentImport = false,
   userTier,
+  cachedItinerary,
+  onItineraryCacheChange,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -670,6 +683,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     const loadItinerary = async () => {
+      if (cachedItinerary !== undefined) {
+        setItineraryDetails((cachedItinerary?.details ?? []) as ItineraryDetail[]);
+        setItineraryId(cachedItinerary?.id ?? null);
+        setItineraryPlanMarkdown(cachedItinerary?.planMarkdown ?? null);
+        setItineraryLoading(false);
+        return;
+      }
       if (!trip?.id) {
         setItineraryDetails([]);
         setItineraryId(null);
@@ -717,7 +737,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
     };
     loadItinerary();
-  }, [backendUrl, headers, trip?.id]);
+  }, [backendUrl, cachedItinerary, headers, trip?.id]);
+
+  useEffect(() => {
+    if (cachedItinerary !== undefined || !onItineraryCacheChange || !trip?.id) return;
+    onItineraryCacheChange(trip.id, {
+      id: itineraryId,
+      planMarkdown: itineraryPlanMarkdown,
+      details: itineraryDetails,
+    });
+  }, [
+    itineraryDetails,
+    itineraryId,
+    itineraryPlanMarkdown,
+    cachedItinerary,
+    onItineraryCacheChange,
+    trip?.id,
+  ]);
 
   const sortedItineraryDetails = useMemo(
     () =>

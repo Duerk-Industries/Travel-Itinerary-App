@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { createHash } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
@@ -70,6 +71,38 @@ describe('notification service', () => {
 
     const match = res.body.notifications.filter((n: any) => n.dedupe_key === 'dedupe-123');
     expect(match).toHaveLength(1);
+  });
+
+  it('registers a device, encrypting the raw push token before it is ever stored', async () => {
+    await request(app)
+      .post('/api/notifications/devices')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ platform: 'ios', pushToken: 'ExponentPushToken[abc123]', deviceLabel: 'Test iPhone' })
+      .expect(204);
+
+    const stored = await queryBlog('SELECT push_token_ciphertext, push_token_hash FROM notification_devices WHERE user_id = $1', [userId]);
+    expect(stored.rows).toHaveLength(1);
+    expect(stored.rows[0].push_token_ciphertext).not.toContain('ExponentPushToken');
+    expect(stored.rows[0].push_token_hash).toBe(createHash('sha256').update('ExponentPushToken[abc123]').digest('hex'));
+
+    // The public GET /devices response must never leak the ciphertext back out.
+    const listed = await request(app).get('/api/notifications/devices').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(listed.body.devices).toHaveLength(1);
+    expect(listed.body.devices[0]).not.toHaveProperty('push_token_ciphertext');
+    expect(listed.body.devices[0].device_label).toBe('Test iPhone');
+  });
+
+  it('rejects device registration with a missing token or unsupported platform', async () => {
+    await request(app)
+      .post('/api/notifications/devices')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ platform: 'ios' })
+      .expect(400);
+    await request(app)
+      .post('/api/notifications/devices')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ platform: 'smart-fridge', pushToken: 'x' })
+      .expect(400);
   });
 
   it('markAsRead updates read_at', async () => {

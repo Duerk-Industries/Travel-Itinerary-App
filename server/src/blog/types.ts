@@ -116,6 +116,8 @@ export interface BlogDocument {
   visibilityEpoch: number;
   // Phase 5 (C2, PR-3) — off by default; see BlogMastheadPatch.photoLocationEnabled.
   photoLocationEnabled: boolean;
+  // Off by default; see BlogMastheadPatch.dayPhotoRemindersEnabled.
+  dayPhotoRemindersEnabled: boolean;
   days: BlogDay[];
 }
 
@@ -176,4 +178,8 @@ export interface BlogMastheadPatch {
   // postgresMediaRepository.ts/firebaseMediaRepository.ts, which reads the current value at
   // upload time only).
   photoLocationEnabled?: boolean;
+  // The end-of-day "add a photo" reminder (blogBackgroundWorker.ts's runDayPhotoReminderJob) is
+  // opt-in per trip on top of each traveler's own notification preference — both must be on
+  // before anyone gets nudged. Off by default (trip_blogs.day_photo_reminders_enabled).
+  dayPhotoRemindersEnabled?: boolean;
 }

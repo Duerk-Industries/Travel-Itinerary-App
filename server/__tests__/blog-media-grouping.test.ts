@@ -101,6 +101,20 @@ describe('POST /:tripId/blog/media/group', () => {
     await cleanupTestUsersByEmail([stranger.email]);
   });
 
+  it('returns the full sorted trip day list so the composer can place a photo on any day', async () => {
+    const res = await request(app)
+      .post(`/api/trips/${tripId}/blog/media/group`)
+      .set('Authorization', `Bearer ${travelerToken}`)
+      .send({ candidates: [{ clientId: 'c1', capturedAt: '2027-05-02T10:00:00.000Z' }] })
+      .expect(200);
+    expect(res.body.dayDates).toEqual(['2027-05-01', '2027-05-02', '2027-05-03']);
+  });
+
+  it('the blog capabilities endpoint reports trip_blog_photo_composer so the client shows the composer entry', async () => {
+    const res = await request(app).get(`/api/trips/${tripId}/blog/capabilities`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+    expect(res.body.features.trip_blog_photo_composer).toBe(true);
+  });
+
   it('404s when the flag is off', async () => {
     await setFeatureFlag('trip_blog_photo_composer', false, null);
     clearFeatureFlagCacheForTesting();

@@ -169,4 +169,47 @@ describe('TripBlogTab — headline/summary and masthead autosave (Phase 1: A3/A4
     await waitFor(() => expect(patchBody).not.toBeNull(), { timeout: 3000 });
     expect(patchBody.title).toBe('Italy 2026');
   }, 10000);
+
+  // Regression: a post-edit reload (load()) used to flip `loading` true and the tab returned a
+  // bare <ActivityIndicator/>, unmounting the whole ScrollView — so every save/accept/"load more"
+  // snapped the user back to the top and lost their place. The reload must now keep the content
+  // mounted and only show a slim "Updating…" bar.
+  it('keeps the day content mounted during a post-edit refetch instead of collapsing to a spinner', async () => {
+    let currentDay: any = { ...baseDay };
+    let getCount = 0;
+    let releaseReload: () => void = () => {};
+    (global as any).fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (url.includes('/blog/publication/status')) return jsonResponse({}, 404);
+      if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) {
+        getCount += 1;
+        if (getCount === 1) return jsonResponse(blogBody(currentDay));
+        // The post-save reload: hang until the test releases it, so we can observe the
+        // in-flight state.
+        return new Promise<Response>((resolve) => {
+          releaseReload = () => resolve({ ok: true, status: 200, json: async () => blogBody(currentDay) } as Response);
+        });
+      }
+      if (method === 'PATCH' && url.endsWith('/blog/days/2026-09-10')) {
+        currentDay = { ...currentDay, headline: 'Edited headline', updateVersion: currentDay.updateVersion + 1 };
+        return jsonResponse({ ...currentDay });
+      }
+      throw new Error(`Unhandled fetch: ${method} ${url}`);
+    });
+
+    const { findByText, findByTestId, queryByTestId, queryByText } = renderTab();
+    await enterEditMode(findByText);
+    const headlineInput = await findByTestId('blog-day-headline-input-2026-09-10');
+
+    fireEvent.changeText(headlineInput, 'Edited headline');
+    await waitFor(() => expect(getCount).toBe(2), { timeout: 4000 }); // autosave -> PATCH -> reload in flight
+
+    // The tab must NOT have collapsed to the bare spinner — the day's editor is still there.
+    expect(queryByTestId('blog-day-headline-input-2026-09-10')).not.toBeNull();
+    expect(queryByText('Updating…')).not.toBeNull();
+
+    await act(async () => { releaseReload(); });
+    await waitFor(() => expect(queryByText('Updating…')).toBeNull());
+  }, 15000);
 });
