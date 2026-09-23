@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { createHash, randomUUID } from 'crypto';
 import { authenticate } from '../auth';
 import { isFeatureEnabled } from '../services/entitlementService';
@@ -17,9 +18,20 @@ import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 import { logError } from '../logger';
 import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
+import { transcribeAndCleanCaption } from '../services/blogVoiceCaptionService';
 
 const router = Router();
 router.use(authenticate);
+
+// Mirrors SUPPORTED_AUDIO_MIME_TYPES in app/utils/blogUpload.ts and the allowedMime audio list in
+// blog/postgresMediaRepository.ts — a dictated caption recording never becomes a persisted media
+// asset, so it doesn't go through either of those, but it should still only accept the same clip
+// formats the app records/uploads.
+const voiceCaptionUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+});
+const ALLOWED_VOICE_CAPTION_MIME_TYPES = new Set(['audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/webm']);
 
 const tripBlogLimits = (): Record<string, any> => {
   try {
@@ -497,6 +509,39 @@ router.post('/:tripId/blog/media/:assetId/suggest-caption', async (req, res) => 
   }
 });
 
+router.post('/:tripId/blog/media/:assetId/transcribe-caption', voiceCaptionUpload.single('audio'), async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog_audio_transcription'))) {
+      res.status(404).json({ error: 'Voice captions are not enabled' });
+      return;
+    }
+    await assertCanUseFeature(userIdOf(req), 'trip_blog_audio_transcription', (req as any).user.role);
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) { res.status(400).json({ error: 'An audio recording is required' }); return; }
+    if (!ALLOWED_VOICE_CAPTION_MIME_TYPES.has(String(file.mimetype).toLowerCase())) {
+      res.status(400).json({ error: 'Unsupported audio format' });
+      return;
+    }
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_VOICE_CAPTION_REQUEST', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', requireConfiguredLimit: true });
+    const result = await transcribeAndCleanCaption({
+      userId: userIdOf(req),
+      role: (req as any).user.role,
+      tripId: req.params.tripId,
+      assetId: req.params.assetId,
+      audio: file.buffer,
+      mimeType: file.mimetype,
+    });
+    res.json(result);
+  } catch (err) {
+    const message = String((err as any)?.message ?? 'Unable to transcribe the recording');
+    if (/premium|daily|monthly|limit reached/i.test(message)) return res.status(402).json({ error: message, code: 'VOICE_CAPTION_QUOTA_OR_TIER' });
+    if (/not found/i.test(message)) return res.status(404).json({ error: message });
+    errorResponse(res, err);
+  }
+});
+
+
 router.get('/:tripId/blog/media', async (req, res) => {
   try {
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
@@ -527,6 +572,17 @@ router.post('/:tripId/blog/items/:itemId/highlight', async (req, res) => {
     await blogMediaRepository().setHighlight(userIdOf(req), req.params.itemId, req.body?.highlighted !== false);
     res.status(204).end();
   } catch (err) { errorResponse(res, err); }
+});
+
+// Multer's file-size/count errors surface through Express's error-handling middleware, not the
+// route handler's own try/catch (they're thrown by voiceCaptionUpload.single(...) before the
+// handler above even runs) — mirrors the same pattern in expenseRoutes.ts.
+router.use((err: any, _req: any, res: any, next: any) => {
+  if (err instanceof multer.MulterError) {
+    res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Recording is too large' : err.message });
+    return;
+  }
+  next(err);
 });
 
 export default router;

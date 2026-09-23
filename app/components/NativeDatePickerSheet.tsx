@@ -22,6 +22,8 @@ import { Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
 export type NativeDatePickerSheetProps = {
   visible: boolean;
   onRequestClose: () => void;
+  onDone?: () => void;
+  onCancel?: () => void;
   theme?: { mode?: 'light' | 'dark' };
   doneLabel?: string;
   testID?: string;
@@ -29,7 +31,7 @@ export type NativeDatePickerSheetProps = {
 };
 
 const NativeDatePickerSheet: React.FC<NativeDatePickerSheetProps> = ({
-  visible, onRequestClose, theme, doneLabel = 'Done', testID, children,
+  visible, onRequestClose, onDone, onCancel, theme, doneLabel = 'Done', testID, children,
 }) => {
   if (!visible) return null;
   const picker = isValidElement(children) && Platform.OS === 'ios'
@@ -39,11 +41,21 @@ const NativeDatePickerSheet: React.FC<NativeDatePickerSheetProps> = ({
     <Modal visible transparent animationType="slide" onRequestClose={onRequestClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
         <View style={{ backgroundColor: theme?.mode === 'dark' ? '#1C2B3A' : '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 8 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme?.mode === 'dark' ? '#385266' : '#E6ECEF' }}>
+          <View style={{ flexDirection: 'row', justifyContent: onCancel ? 'space-between' : 'flex-end', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme?.mode === 'dark' ? '#385266' : '#E6ECEF' }}>
+            {onCancel ? (
+              <TouchableOpacity
+                testID={testID ? `${testID}-cancel` : undefined}
+                accessibilityRole="button"
+                onPress={onCancel}
+                style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
+              >
+                <Text style={{ color: theme?.mode === 'dark' ? '#B8C2CC' : '#6B7280', fontSize: 16 }}>Cancel</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               testID={testID ? `${testID}-done` : undefined}
               accessibilityRole="button"
-              onPress={onRequestClose}
+              onPress={onDone ?? onRequestClose}
               style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
             >
               <Text style={{ color: theme?.mode === 'dark' ? '#5FD2E0' : '#0369a1', fontSize: 16, fontWeight: '700' }}>{doneLabel}</Text>

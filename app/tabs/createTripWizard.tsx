@@ -66,7 +66,10 @@ import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+import { fixedTableColumn } from '../utils/tableColumns';
   
 type Suggestion = {
   id: string;
@@ -75,6 +78,23 @@ type Suggestion = {
   email?: string | null;
   source?: 'user' | 'fellow';
 };
+
+const WIZARD_CAR_COLUMNS = [
+  { label: 'Pick Up Location', width: 140 },
+  { label: 'Pick Up Date', width: 140 },
+  { label: 'Drop Off Location', width: 140 },
+  { label: 'Drop Off Date', width: 140 },
+  { label: 'Status', width: 130 },
+  { label: 'Reference', width: 140 },
+  { label: 'Vendor', width: 140 },
+  { label: 'Prepaid?', width: 140 },
+  { label: 'Cost', width: 120 },
+  { label: 'Car Model', width: 180 },
+  { label: 'Notes', width: 220 },
+  { label: 'For', width: 180 },
+  { label: 'Paid By', width: 180 },
+  { label: 'Actions', width: 160 },
+] as const;
 
 type CreateTripWizardProps = {
   backendUrl: string;
@@ -201,18 +221,6 @@ const descriptorForValue = (
   if (value >= 75) return descriptors.highDescriptor;
   return descriptors.mediumDescriptor;
 };
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   backendUrl,
@@ -792,7 +800,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (field === 'start' || field === 'end') {
       primeRangeDates();
     }
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const rangeDefaults = field === 'start' || field === 'end'
         ? getDefaultTripRangeDates({ startDate: dates.startDate, endDate: dates.endDate })
         : null;
@@ -802,7 +810,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           : field === 'end'
             ? rangeDefaults?.endDate
             : itineraryDraft.date;
-      const date = base ? new Date(base) : new Date();
+      const date = parseLocalDateOnly(base);
       setDateValue(date);
       setDateField(field);
       return;
@@ -925,13 +933,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       ref?.focus();
       return;
     }
-    if (current) {
-      const parsed = new Date(current);
-      if (!Number.isNaN(parsed.valueOf())) {
-        setWizardLodgingDateValue(parsed);
-      }
-    }
-    setWizardLodgingDateField(field as 'checkIn' | 'checkOut' | null);
+    const fieldValue = current ?? (
+      field === 'checkIn'
+        ? editingWizardLodging?.checkInDate
+        : field === 'checkOut'
+          ? editingWizardLodging?.checkOutDate
+          : editingWizardLodging?.refundBy
+    );
+    setWizardLodgingDateValue(parseLocalDateOnly(fieldValue));
+    setWizardLodgingDateField(field === 'refundBy' ? 'refund' : field);
   };
 
   const openWizardLodgingEditor = (lodging: Lodging | null) => {
@@ -960,9 +970,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
 
   const openWizardCarDatePicker = (field: 'pickup' | 'dropoff') => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const base = (field === 'pickup' ? wizardCarDraft.pickupDate : wizardCarDraft.dropoffDate) || '';
-      const date = base ? new Date(base) : new Date();
+      const date = parseLocalDateOnly(base);
       setWizardCarDateValue(date);
       setWizardCarDateField(field);
       return;
@@ -2261,59 +2271,59 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             >
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {WIZARD_CAR_COLUMNS.map((column, idx, arr) => (
                     <View
-                      key={label}
-                      style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
+                      key={column.label}
+                      style={[styles.cell, fixedTableColumn(column.width), idx === arr.length - 1 && styles.lastCell]}
                     >
-                      <Text style={styles.headerText}>{label}</Text>
+                      <Text style={styles.headerText}>{column.label}</Text>
                     </View>
                   ))}
                 </View>
                 {wizardCarRentals.map((car) => (
                   <View key={car.id} style={styles.tableRow}>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(140)]}>
                       <Text style={[styles.cellText, styles.cellTextWrap]}>{car.pickupLocation || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(140)]}>
                       <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(140)]}>
                       <Text style={[styles.cellText, styles.cellTextWrap]}>{car.dropoffLocation || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(140)]}>
                       <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(130)]}>
                       <Text style={styles.cellText}>{normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(140)]}>
                       <Text style={styles.cellText}>{car.reference || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(140)]}>
                       <Text style={styles.cellText}>{car.vendor || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(140)]}>
                       <Text style={styles.cellText}>{car.prepaid || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(120)]}>
                       <Text style={styles.cellText}>{car.cost ? `$${car.cost}` : '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(180)]}>
                       <Text style={styles.cellText}>{car.model || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(220)]}>
                       <Text style={[styles.cellText, styles.cellTextWrap]}>{car.notes || '-'}</Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(180)]}>
                       <Text style={styles.cellText}>
                         {(car.travelerIds ?? []).length ? (car.travelerIds ?? []).map(wizardPayerName).join(', ') : '-'}
                       </Text>
                     </View>
-                    <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <View style={[styles.cell, fixedTableColumn(180)]}>
                       <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(wizardPayerName).join(', ') : '-'}</Text>
                     </View>
-                    <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
+                    <View style={[styles.cell, styles.actionCell, fixedTableColumn(160), styles.lastCell]}>
                       <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeWizardCarRental(car.id)}>
                         <Text style={styles.dangerButtonText}>Delete</Text>
                       </TouchableOpacity>
@@ -2321,7 +2331,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </View>
                 ))}
                 <View style={[styles.tableRow, styles.inputRow, styles.lastRow, { alignItems: 'stretch' }]}>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Pick up location"
@@ -2330,7 +2340,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, pickupLocation: text }))}
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <View style={wizardCarDateWrapStyle}>
                       {Platform.OS === 'web' ? (
                         <input
@@ -2357,7 +2367,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Drop off location"
@@ -2366,7 +2376,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, dropoffLocation: text }))}
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <View style={wizardCarDateWrapStyle}>
                       {Platform.OS === 'web' ? (
                         <input
@@ -2393,7 +2403,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(130)]}>
                     {Platform.OS === 'web' ? (
                       <select
                         value={normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
@@ -2415,7 +2425,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       <Text style={styles.cellText}>{normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
                     )}
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Reference"
@@ -2424,7 +2434,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, reference: text }))}
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Vendor"
@@ -2433,7 +2443,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, vendor: text }))}
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <SelectField
                       styles={styles}
                       options={prepaidOptions}
@@ -2446,7 +2456,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChange={(value) => setWizardCarDraft((p) => ({ ...p, prepaid: value }))}
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 120, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(120)]}>
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Cost"
@@ -2458,7 +2468,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       }
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 180, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Car model"
@@ -2467,7 +2477,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, model: text }))}
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 220, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(220)]}>
                     <TextInput
                       style={[wizardCarInputStyle, styles.cellTextWrap]}
                       placeholder="Notes"
@@ -2476,7 +2486,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
                     />
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 180, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
                     <View style={styles.payerChips}>
                       {wizardCarDraft.travelerIds.map((id) => (
                         <View key={`wizard-car-traveler-${id}`} style={styles.payerChip}>
@@ -2501,7 +2511,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         ))}
                     </View>
                   </View>
-                  <View style={[wizardCarInputCellStyle, { minWidth: 180, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, fixedTableColumn(180)]}>
                     <View style={styles.payerChips}>
                       {wizardCarDraft.paidBy.map((id) => (
                         <View key={id} style={styles.payerChip}>
@@ -2526,7 +2536,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         ))}
                     </View>
                   </View>
-                  <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
+                  <View style={[styles.cell, styles.actionCell, fixedTableColumn(160), styles.lastCell]}>
                     <TouchableOpacity style={styles.button} onPress={addWizardCarRental}>
                       <Text style={styles.buttonText}>Add</Text>
                     </TouchableOpacity>
@@ -2784,7 +2794,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!dateField}
           onRequestClose={() => setDateField(null)}
@@ -2799,7 +2809,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 setDateField(null);
                 return;
               }
-              const iso = date.toISOString().slice(0, 10);
+              const iso = formatLocalDateOnly(date);
               if (dateField === 'start') {
                 setStartDateWithRangeGuard(iso);
               } else if (dateField === 'end') {
@@ -2812,7 +2822,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!wizardLodgingDateField}
           onRequestClose={() => setWizardLodgingDateField(null)}
@@ -2827,18 +2837,21 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 setWizardLodgingDateField(null);
                 return;
               }
-              const iso = date.toISOString().slice(0, 10);
-              if (wizardLodgingDateField !== 'checkIn' && wizardLodgingDateField !== 'checkOut') {
+              const iso = formatLocalDateOnly(date);
+              if (wizardLodgingDateField === 'refund') {
+                setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: iso } : prev));
+              } else if (wizardLodgingDateField === 'checkIn' || wizardLodgingDateField === 'checkOut') {
+                applyWizardLodgingDate(wizardLodgingDateField, iso);
+              } else {
                 setWizardLodgingDateField(null);
                 return;
               }
-              applyWizardLodgingDate(wizardLodgingDateField, iso);
               if (Platform.OS === 'android') setWizardLodgingDateField(null);
             }}
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!wizardCarDateField}
           onRequestClose={() => setWizardCarDateField(null)}
@@ -2854,7 +2867,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 return;
               }
               if (!wizardCarDateField) return;
-              const iso = date.toISOString().slice(0, 10);
+              const iso = formatLocalDateOnly(date);
               applyWizardCarDate(wizardCarDateField, iso);
               if (Platform.OS === 'android') setWizardCarDateField(null);
             }}

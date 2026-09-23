@@ -12,6 +12,7 @@ import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '
 import CarRentalEditForm from './CarRentalEditForm';
 import EditableDataGrid, { type GridCellError, type GridColumn } from './EditableDataGrid';
 import type { AppTheme } from '../theme/theme';
+import { fixedTableColumn } from '../utils/tableColumns';
 
 export type CarRentalsPanelProps = {
   /** Committed car-rental rows rendered in the table. */
@@ -213,32 +214,32 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
       >
       <View style={styles.table} testID="car-rentals-table">
         <View style={[styles.tableRow, styles.tableHeaderRow]}>
-          <TouchableOpacity style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortCarTable('pickupLocation')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(240), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortCarTable('pickupLocation')}>
             <Text style={styles.headerText}>Route</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 120 }]} onPress={() => sortCarTable('pickupDate')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(120)]} onPress={() => sortCarTable('pickupDate')}>
             <Text style={styles.headerText}>Pick-up</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 120 }]} onPress={() => sortCarTable('dropoffDate')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(120)]} onPress={() => sortCarTable('dropoffDate')}>
             <Text style={styles.headerText}>Drop-off</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 110 }]} onPress={() => sortCarTable('status')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('status')}>
             <Text style={styles.headerText}>Status</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 110 }]} onPress={() => sortCarTable('netVotes')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('netVotes')}>
             <Text style={styles.headerText}>Votes</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tableHeaderCell, { minWidth: 110 }]} onPress={() => sortCarTable('netRating')}>
+          <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortCarTable('netRating')}>
             <Text style={styles.headerText}>Rating</Text>
           </TouchableOpacity>
-          <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
+          <View style={[styles.tableHeaderCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
             <Text style={styles.headerText}>Actions</Text>
           </View>
         </View>
 
         {sortedCarRentals.map((car, idx, arr) => (
           <TouchableOpacity key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]} onPress={() => { if (!isFollowingMode && featureTapToEditTables) openEditDialog(car); }} activeOpacity={0.8}>
-            <View style={[styles.tableCell, { flex: 2, minWidth: 240 }, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+            <View style={[styles.tableCell, fixedTableColumn(240), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
               <Text style={styles.cellText}>
                 {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
               </Text>
@@ -248,28 +249,28 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 </Text>
               ) : null}
             </View>
-            <View style={[styles.tableCell, { minWidth: 120 }]}>
+            <View style={[styles.tableCell, fixedTableColumn(120)]}>
               <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
             </View>
-            <View style={[styles.tableCell, { minWidth: 120 }]}>
+            <View style={[styles.tableCell, fixedTableColumn(120)]}>
               <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
             </View>
-            <View style={[styles.tableCell, { minWidth: 110 }]}>
+            <View style={[styles.tableCell, fixedTableColumn(110)]}>
               <Text style={styles.cellText}>
                 {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}
               </Text>
             </View>
-            <View style={[styles.tableCell, { minWidth: 110 }]}>
+            <View style={[styles.tableCell, fixedTableColumn(110)]}>
               <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
             </View>
-            <View style={[styles.tableCell, { minWidth: 110 }]}>
+            <View style={[styles.tableCell, fixedTableColumn(110)]}>
               {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
                 <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
               ) : (
                 <Text style={styles.cellText}>-</Text>
               )}
             </View>
-            <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+            <View style={[styles.tableCell, fixedTableColumn(180), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
               <View style={styles.actionCell}>
                 {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
                   <>

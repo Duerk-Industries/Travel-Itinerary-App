@@ -39,9 +39,11 @@ type DayMediaGalleryProps = {
   theme?: any;
   canEditMetadata?: boolean;
   canSuggestMetadata?: boolean;
+  canRecordCaption?: boolean;
   metadataBusy?: boolean;
   onSaveMetadata?: (item: any, patch: BlogMediaMetadataPatch) => Promise<void>;
   onSuggestMetadata?: (item: any) => Promise<{ caption?: string; altText?: string }>;
+  onTranscribeMetadata?: (item: any, recording: { uri: string; mimeType?: string; name?: string }) => Promise<{ caption?: string }>;
   proposedCoverAssetId?: string | null;
 };
 
@@ -74,9 +76,11 @@ const DayMediaGallery = ({
   theme,
   canEditMetadata = false,
   canSuggestMetadata = false,
+  canRecordCaption = false,
   metadataBusy = false,
   onSaveMetadata,
   onSuggestMetadata,
+  onTranscribeMetadata,
   proposedCoverAssetId = null,
 }: DayMediaGalleryProps) => {
   const [expandedMetadataItemId, setExpandedMetadataItemId] = useState(null);
@@ -90,7 +94,7 @@ const DayMediaGallery = ({
   const editRow = (item: any) => {
     const isCover = item.id === coverItemId;
     const showSetCover = canSetCover && !isAudioItem(item) && !isCover;
-    const showMetadata = canEditMetadata && !isAudioItem(item) && onSaveMetadata;
+    const showMetadata = (canEditMetadata || canRecordCaption) && !isAudioItem(item) && onSaveMetadata;
     if (!showSetCover && !canRemove && !showMetadata) return null;
     return (
       <View style={{ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4 }} pointerEvents="box-none">
@@ -212,9 +216,11 @@ const DayMediaGallery = ({
         <BlogMediaMetadataEditor
           item={expandedItem}
           canSuggest={canSuggestMetadata}
+          canRecord={canRecordCaption}
           busy={metadataBusy}
           onSave={(patch) => onSaveMetadata(expandedItem, patch)}
           onSuggest={onSuggestMetadata ? () => onSuggestMetadata(expandedItem) : undefined}
+          onTranscribe={onTranscribeMetadata ? (recording) => onTranscribeMetadata(expandedItem, recording) : undefined}
           textColor={textColor}
           mutedColor={mutedColor}
           borderColor={borderColor}

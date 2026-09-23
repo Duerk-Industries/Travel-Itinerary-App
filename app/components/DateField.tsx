@@ -18,18 +18,8 @@ import React, { useMemo, useState } from 'react';
 import { Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { toWebStyle } from '../utils/webStyle';
 import { normalizeDateString } from '../utils/normalizeDateString';
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch {
-    NativeDateTimePicker = null;
-  }
-}
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import NativeDateTimePicker from './NativeDateTimePicker';
 
 export type DateFieldProps = {
   value: string; // 'YYYY-MM-DD', or '' for empty
@@ -45,25 +35,11 @@ export type DateFieldProps = {
   disabled?: boolean;
 };
 
-const parseIsoDate = (iso: string): Date => {
-  if (!iso) return new Date();
-  const [y, m, d] = iso.split('-').map(Number);
-  if (!y || !m || !d) return new Date();
-  return new Date(y, m - 1, d);
-};
-
-const toIsoDate = (date: Date): string => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-
 const DateField: React.FC<DateFieldProps> = ({
   value, onChange, styles, theme, placeholder = 'YYYY-MM-DD', minDate, maxDate, testID, accessibilityLabel, style, disabled = false,
 }) => {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [draftDate, setDraftDate] = useState<Date>(() => parseIsoDate(value));
+  const [draftDate, setDraftDate] = useState<Date>(() => parseLocalDateOnly(value));
 
   const webInputStyle = useMemo(
     () => toWebStyle([styles.input, style], {
@@ -97,7 +73,7 @@ const DateField: React.FC<DateFieldProps> = ({
 
   const openPicker = () => {
     if (disabled) return;
-    setDraftDate(parseIsoDate(value));
+    setDraftDate(parseLocalDateOnly(value));
     setPickerOpen(true);
   };
 
@@ -113,7 +89,7 @@ const DateField: React.FC<DateFieldProps> = ({
       >
         <Text style={styles.cellText}>{value || placeholder}</Text>
       </TouchableOpacity>
-      {NativeDateTimePicker && pickerOpen ? (
+      {pickerOpen ? (
         <Modal visible transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
             <View style={{ backgroundColor: theme?.mode === 'dark' ? '#1C2B3A' : '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 8 }}>
@@ -124,7 +100,7 @@ const DateField: React.FC<DateFieldProps> = ({
                 <TouchableOpacity
                   testID={testID ? `${testID}-done` : undefined}
                   accessibilityRole="button"
-                  onPress={() => { onChange(toIsoDate(draftDate)); setPickerOpen(false); }}
+                  onPress={() => { onChange(formatLocalDateOnly(draftDate)); setPickerOpen(false); }}
                   style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
                 >
                   <Text style={{ color: theme?.mode === 'dark' ? '#5FD2E0' : '#0369a1', fontSize: 16, fontWeight: '700' }}>Done</Text>
@@ -134,15 +110,15 @@ const DateField: React.FC<DateFieldProps> = ({
                 value={draftDate}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={minDate ? parseIsoDate(minDate) : undefined}
-                maximumDate={maxDate ? parseIsoDate(maxDate) : undefined}
+                minimumDate={minDate ? parseLocalDateOnly(minDate) : undefined}
+                maximumDate={maxDate ? parseLocalDateOnly(maxDate) : undefined}
                 onChange={(event, date) => {
                   // Android's "default" display is already its own modal dialog that dismisses
                   // itself on pick/cancel — apply immediately and close, don't wait for a Done
                   // button that isn't shown for that display mode's own native chrome.
                   if (Platform.OS === 'android') {
                     setPickerOpen(false);
-                    if (event?.type === 'set' && date) onChange(toIsoDate(date));
+                    if (event?.type === 'set' && date) onChange(formatLocalDateOnly(date));
                     return;
                   }
                   if (date) setDraftDate(date);

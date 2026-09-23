@@ -145,8 +145,13 @@ export const clearOfflineTripCache = async (email: string | null | undefined): P
   await removeAsync(cacheKeyFor(ownerEmail));
 };
 
+// Local (device) wall-clock date as YYYY-MM-DD — deliberately not `toISOString().slice(0, 10)`,
+// which is UTC and can land on the wrong day near midnight in most timezones.
+export const localDateString = (date: Date = new Date()): string =>
+  [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+
 export const isTripActiveToday = (trip: { startDate?: string | null; endDate?: string | null }, now = new Date()): boolean => {
-  const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+  const today = localDateString(now);
   const start = String(trip.startDate ?? '').slice(0, 10);
   const end = String(trip.endDate ?? '').slice(0, 10);
   return Boolean(start && end && start <= today && today <= end);

@@ -93,6 +93,7 @@ import {
   type OfflineItinerarySnapshot,
 } from './utils/offlineTripCache';
 import { requestOfflineUnlock } from './utils/offlineAccess';
+import NativeDateTimePicker from './components/NativeDateTimePicker';
 
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -149,7 +150,9 @@ import HorizontalTableScroll from './components/HorizontalTableScroll';
 import CostReportTable from './components/CostReportTable';
 import { connectSocket, disconnectSocket } from './utils/socket';
 import { registerForPushNotificationsAsync } from './utils/pushNotifications';
+import { configureEveningTripReminderHandler, ensureEveningTripReminder } from './utils/tripReminderNotifications';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
+import { fixedTableColumn } from './utils/tableColumns';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
@@ -160,18 +163,6 @@ WebBrowser.maybeCompleteAuthSession();
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 type SafeAreaViewCompatProps = React.ComponentProps<typeof View>;
 const SafeAreaView = NativeSafeAreaView as unknown as React.ComponentType<SafeAreaViewCompatProps>;
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 // GroupInvite + PendingTripShareInvite now live in app/types/invites.ts so
 // the useGroupInvites hook can consume them without a circular import.
@@ -607,6 +598,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [showTripGroupDropdown, setShowTripGroupDropdown] = useState(false);
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  // Set when the traveler taps the evening trip reminder notification — tells TripBlogTab to open
+  // the add-photos flow once it's mounted and ready. See tripReminderNotifications.ts.
+  const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineItineraries, setOfflineItineraries] = useState<Record<string, OfflineItinerarySnapshot | null>>({});
   const [pendingOfflineUnlock, setPendingOfflineUnlock] = useState<PendingOfflineUnlock | null>(null);
@@ -2463,6 +2457,45 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     };
   }, []);
 
+  // Evening trip reminder (tripReminderNotifications.ts): register the foreground-display handler
+  // and the tap listener once, native-only. A separate effect below is what actually (re)schedules
+  // the notification — kept apart from the idle-timer AppState effect above so this stays
+  // independently readable/testable.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let subscription: { remove: () => void } | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        await configureEveningTripReminderHandler();
+        const Notifications = await import('expo-notifications');
+        if (cancelled) return;
+        subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+          const data = response.notification.request.content.data as { type?: string; tripId?: string } | undefined;
+          if (data?.type !== 'evening_trip_reminder' || !data.tripId) return;
+          setActiveTripId(data.tripId);
+          setActivePage('blog');
+          setAutoOpenAddPhotos(true);
+        });
+      } catch {
+        // Best effort — see pushNotifications.ts's file-level note for the same rationale.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !userToken) return;
+    void ensureEveningTripReminder(trips, activeTripId);
+    const subscription = AppState.addEventListener('change', (nextState: string) => {
+      if (nextState === 'active') void ensureEveningTripReminder(trips, activeTripId);
+    });
+    return () => subscription.remove();
+  }, [trips, activeTripId, userToken]);
+
   // Socket.IO presence + chat UI state live in PresenceProvider / ChatProvider
   // (wrapped around the AppShell render tree), so AppShell itself does not
   // re-render on every presence heartbeat.
@@ -3205,7 +3238,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         ) : null}
       </View>
-      <OfflineBanner offlineReadOnly={offlineReadOnly} />
+      <OfflineBanner status={connection.status} offlineReadOnly={offlineReadOnly} />
       {userToken ? (
         <View style={styles.contentViewport}>
           {activePage === 'home'
@@ -3240,6 +3273,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   backendUrl={backendUrl}
                   headers={headers}
                   activeTripId={activeTripId}
+                  trips={trips}
                   styles={styles}
                   theme={theme}
                   readOnly={isFollowingMode || offlineReadOnly}
@@ -3251,6 +3285,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   lodgings={lodgings}
                   tours={tours}
                   carRentals={carRentals}
+                  autoOpenAddPhotos={autoOpenAddPhotos}
+                  onAutoOpenHandled={() => setAutoOpenAddPhotos(false)}
                 />
               )
             : null}
@@ -3882,7 +3918,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Set Your Password</Text>
               <Text style={styles.helperText}>
-                This is your first Google sign-in for this account. Set a password now to finish account setup.
+                This account doesn't have a password yet. Set one now to finish account setup.
               </Text>
               <PasswordField
                 label="New password"
@@ -5268,14 +5304,14 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     color: theme.colors.link,
     textDecorationLine: 'underline',
   },
-  lodgingNameCol: { minWidth: 120, maxWidth: 320, flex: 1 },
-  lodgingDateCol: { minWidth: 120, maxWidth: 320, flex: 1 },
-  lodgingRoomsCol: { minWidth: 80, maxWidth: 320, flex: 1 },
-  lodgingRefundCol: { minWidth: 120, maxWidth: 320, flex: 1 },
-  lodgingCostCol: { minWidth: 100, maxWidth: 320, flex: 1 },
-  lodgingPayerCol: { minWidth: 140, maxWidth: 320, flex: 1 },
-  lodgingAddressCol: { minWidth: 140, maxWidth: 320, flex: 1 },
-  lodgingActionCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingNameCol: fixedTableColumn(200),
+  lodgingDateCol: fixedTableColumn(140),
+  lodgingRoomsCol: fixedTableColumn(100),
+  lodgingRefundCol: fixedTableColumn(160),
+  lodgingCostCol: fixedTableColumn(120),
+  lodgingPayerCol: fixedTableColumn(180),
+  lodgingAddressCol: fixedTableColumn(220),
+  lodgingActionCol: fixedTableColumn(180),
   lodgingTabNameCol: { flex: 1, minWidth: 160 },
   lodgingTabDateCol: { flexGrow: 0, flexShrink: 0, minWidth: 110 },
   lodgingTabActionsCol: { flexGrow: 0, flexShrink: 0, minWidth: 168 },

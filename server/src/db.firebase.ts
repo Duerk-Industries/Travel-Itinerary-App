@@ -1423,19 +1423,19 @@ export const ensureWebPasswordAccountForOAuth = async (
   provider?: string
 ): Promise<{ requiresPasswordSetup: boolean }> => {
   const db = getDb();
-  // Sign in with Apple already authenticates via Authentication Services; per Apple's HIG,
-  // these users must never be asked to create a password.
-  const isApple = provider === 'apple';
+  // Sign in with Apple and Sign in with Google both already authenticate the user via the
+  // provider's own identity check, so neither should ever be asked to create a password here.
+  const skipsPasswordSetup = provider === 'apple' || provider === 'google';
   const doc = await db.collection('web_users').doc(userId).get();
   if (doc.exists) {
     const data = doc.data() as any;
-    return { requiresPasswordSetup: isApple ? false : Boolean(data.passwordSetupRequired) };
+    return { requiresPasswordSetup: skipsPasswordSetup ? false : Boolean(data.passwordSetupRequired) };
   }
 
   const salt = randomBytes(16).toString('hex');
   const randomSecret = randomBytes(32).toString('hex');
   const passwordHash = hashPassword(randomSecret, salt);
-  const requiresPasswordSetup = !isApple;
+  const requiresPasswordSetup = !skipsPasswordSetup;
   await db.collection('web_users').doc(userId).set({
     email: normalizeEmail(email),
     firstName: firstName ?? '',

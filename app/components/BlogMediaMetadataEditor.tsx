@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
 
 export type BlogMediaMetadataPatch = { caption: string; altText: string; isDecorative: boolean };
+
+type RecordingState = 'idle' | 'recording' | 'transcribing';
 
 type Props = {
   item: any;
   canSuggest?: boolean;
+  canRecord?: boolean;
   busy?: boolean;
   onSave: (patch: BlogMediaMetadataPatch) => Promise<void>;
   onSuggest?: () => Promise<{ caption?: string; altText?: string }>;
+  onTranscribe?: (recording: { uri: string; mimeType?: string; name?: string }) => Promise<{ caption?: string }>;
   textColor?: string;
   mutedColor?: string;
   borderColor?: string;
@@ -18,7 +23,7 @@ type Props = {
 };
 
 const BlogMediaMetadataEditor: React.FC<Props> = ({
-  item, canSuggest = false, busy = false, onSave, onSuggest, textColor = '#111827',
+  item, canSuggest = false, canRecord = false, busy = false, onSave, onSuggest, onTranscribe, textColor = '#111827',
   mutedColor = '#6b7280', borderColor = '#d1d5db', backgroundColor = '#fff', styles, theme,
 }) => {
   const accentColor = theme?.colors?.link ?? '#7c3aed';
@@ -26,12 +31,15 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
   const [altText, setAltText] = useState('');
   const [isDecorative, setIsDecorative] = useState(false);
   const [notice, setNotice] = useState('');
+  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   useEffect(() => {
     setCaption(String(item?.caption ?? ''));
     setAltText(String(item?.altText ?? ''));
     setIsDecorative(Boolean(item?.isDecorative));
     setNotice('');
+    setRecordingState('idle');
   }, [item?.assetId, item?.caption, item?.altText, item?.isDecorative]);
 
   const suggest = async () => {
@@ -43,6 +51,45 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
       setNotice('AI suggestion added as a draft. Review it before saving.');
     } catch (error: any) {
       setNotice(error?.message || 'Unable to suggest text');
+    }
+  };
+
+  // Dictate a caption: record a short clip, then hand it off for transcription + AI cleanup. Only
+  // ever drafts into the caption field below, same as suggest() above — the traveler still has to
+  // review and press Save.
+  const toggleRecording = async () => {
+    if (!onTranscribe || busy) return;
+    if (recordingState === 'idle') {
+      try {
+        const permission = await requestRecordingPermissionsAsync();
+        if (!permission.granted) {
+          setNotice('Microphone access is needed to record a caption.');
+          return;
+        }
+        await recorder.prepareToRecordAsync();
+        recorder.record();
+        setRecordingState('recording');
+        setNotice('Recording… tap Stop when done.');
+      } catch (error: any) {
+        setNotice(error?.message || 'Unable to start recording');
+      }
+      return;
+    }
+    if (recordingState === 'recording') {
+      setRecordingState('transcribing');
+      setNotice('Transcribing…');
+      try {
+        await recorder.stop();
+        const uri = recorder.uri;
+        if (!uri) throw new Error('No recording was captured');
+        const result = await onTranscribe({ uri, mimeType: 'audio/m4a', name: 'caption-recording.m4a' });
+        if (result.caption) setCaption(result.caption);
+        setNotice('Transcribed — review it before saving.');
+      } catch (error: any) {
+        setNotice(error?.message || 'Unable to transcribe the recording');
+      } finally {
+        setRecordingState('idle');
+      }
     }
   };
 
@@ -88,6 +135,18 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         {canSuggest ? (
           <TouchableOpacity testID="blog-media-suggest-metadata" disabled={busy} onPress={suggest} style={[styles?.button, { backgroundColor: accentColor }]}>
             <Text style={styles?.buttonText}>{busy ? 'Working…' : 'Suggest with AI'}</Text>
+          </TouchableOpacity>
+        ) : null}
+        {canRecord ? (
+          <TouchableOpacity
+            testID="blog-media-record-caption"
+            disabled={busy || recordingState === 'transcribing'}
+            onPress={toggleRecording}
+            style={[styles?.button, { backgroundColor: recordingState === 'recording' ? '#b91c1c' : accentColor }]}
+          >
+            <Text style={styles?.buttonText}>
+              {recordingState === 'recording' ? '● Stop' : recordingState === 'transcribing' ? 'Transcribing…' : '🎙 Record caption'}
+            </Text>
           </TouchableOpacity>
         ) : null}
       </View>

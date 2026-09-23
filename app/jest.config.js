@@ -32,6 +32,7 @@ module.exports = {
     '^expo-network$': '<rootDir>/tests/__mocks__/expo-network.ts',
     '^expo-document-picker$': '<rootDir>/tests/__mocks__/expo-document-picker.ts',
     '^expo-video$': '<rootDir>/tests/__mocks__/expo-video.ts',
+    '^expo-audio$': '<rootDir>/tests/__mocks__/expo-audio.ts',
     '^expo-share-intent$': '<rootDir>/tests/__mocks__/expo-share-intent.ts',
     '^@10play/tentap-editor$': '<rootDir>/tests/__mocks__/@10play/tentap-editor.ts',
     '^expo-linear-gradient$': '<rootDir>/tests/__mocks__/expo-linear-gradient.ts',

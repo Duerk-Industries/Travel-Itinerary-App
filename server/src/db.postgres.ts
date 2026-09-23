@@ -2012,9 +2012,9 @@ export const ensureWebPasswordAccountForOAuth = async (
 ): Promise<{ requiresPasswordSetup: boolean }> => {
   const p = getPool();
   const normalizedEmail = normalizeEmail(email);
-  // Sign in with Apple already authenticates via Authentication Services; per Apple's HIG,
-  // these users must never be asked to create a password.
-  const isApple = provider === 'apple';
+  // Sign in with Apple and Sign in with Google both already authenticate the user via the
+  // provider's own identity check, so neither should ever be asked to create a password here.
+  const skipsPasswordSetup = provider === 'apple' || provider === 'google';
   const existing = await p.query<{ passwordSetupRequired: boolean }>(
     `SELECT password_setup_required as "passwordSetupRequired" FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
@@ -2022,13 +2022,13 @@ export const ensureWebPasswordAccountForOAuth = async (
   if (existing.rows.length) {
     await upsertUserEmail(p, userId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
     await ensurePackingListForUserWithRunner(p, userId);
-    return { requiresPasswordSetup: isApple ? false : Boolean(existing.rows[0].passwordSetupRequired) };
+    return { requiresPasswordSetup: skipsPasswordSetup ? false : Boolean(existing.rows[0].passwordSetupRequired) };
   }
 
   const salt = randomBytes(16).toString('hex');
   const randomSecret = randomBytes(32).toString('hex');
   const passwordHash = hashPassword(randomSecret, salt);
-  const requiresPasswordSetup = !isApple;
+  const requiresPasswordSetup = !skipsPasswordSetup;
   await p.query(
     `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt, password_setup_required)
      VALUES ($1, $2, COALESCE($3, ''), COALESCE($4, ''), $5, $6, $7)`,
