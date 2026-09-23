@@ -68,6 +68,13 @@
     "e2e:maestro": "maestro test .maestro/launch-smoke.yaml",
     "e2e:maestro:all": "maestro test .maestro"
   },
+  "expo": {
+    "install": {
+      "exclude": [
+        "@react-native-community/datetimepicker"
+      ]
+    }
+  },
   "overrides": {
     "glob": "13.0.5",
     "minimatch": "10.2.4",
