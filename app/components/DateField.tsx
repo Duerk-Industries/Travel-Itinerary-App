@@ -15,21 +15,12 @@
 // why this component always uses it on iOS, presented inside an explicit bottom-sheet Modal with
 // real Cancel/Done affordances instead of an ambiguous tap-outside-to-dismiss.
 import React, { useMemo, useState } from 'react';
-import { Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity } from 'react-native';
 import { toWebStyle } from '../utils/webStyle';
 import { normalizeDateString } from '../utils/normalizeDateString';
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch {
-    NativeDateTimePicker = null;
-  }
-}
+import NativeDatePickerSheet from './NativeDatePickerSheet';
+import NativeDateTimePicker from './NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 
 export type DateFieldProps = {
   value: string; // 'YYYY-MM-DD', or '' for empty
@@ -45,25 +36,11 @@ export type DateFieldProps = {
   disabled?: boolean;
 };
 
-const parseIsoDate = (iso: string): Date => {
-  if (!iso) return new Date();
-  const [y, m, d] = iso.split('-').map(Number);
-  if (!y || !m || !d) return new Date();
-  return new Date(y, m - 1, d);
-};
-
-const toIsoDate = (date: Date): string => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-
 const DateField: React.FC<DateFieldProps> = ({
   value, onChange, styles, theme, placeholder = 'YYYY-MM-DD', minDate, maxDate, testID, accessibilityLabel, style, disabled = false,
 }) => {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [draftDate, setDraftDate] = useState<Date>(() => parseIsoDate(value));
+  const [draftDate, setDraftDate] = useState<Date>(() => parseLocalDateOnly(value));
 
   const webInputStyle = useMemo(
     () => toWebStyle([styles.input, style], {
@@ -97,7 +74,7 @@ const DateField: React.FC<DateFieldProps> = ({
 
   const openPicker = () => {
     if (disabled) return;
-    setDraftDate(parseIsoDate(value));
+    setDraftDate(parseLocalDateOnly(value));
     setPickerOpen(true);
   };
 
@@ -113,44 +90,33 @@ const DateField: React.FC<DateFieldProps> = ({
       >
         <Text style={styles.cellText}>{value || placeholder}</Text>
       </TouchableOpacity>
-      {NativeDateTimePicker && pickerOpen ? (
-        <Modal visible transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
-          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-            <View style={{ backgroundColor: theme?.mode === 'dark' ? '#1C2B3A' : '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 8 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme?.mode === 'dark' ? '#385266' : '#E6ECEF' }}>
-                <TouchableOpacity testID={testID ? `${testID}-cancel` : undefined} accessibilityRole="button" onPress={() => setPickerOpen(false)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}>
-                  <Text style={{ color: theme?.mode === 'dark' ? '#B8C2CC' : '#6B7280', fontSize: 16 }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID={testID ? `${testID}-done` : undefined}
-                  accessibilityRole="button"
-                  onPress={() => { onChange(toIsoDate(draftDate)); setPickerOpen(false); }}
-                  style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
-                >
-                  <Text style={{ color: theme?.mode === 'dark' ? '#5FD2E0' : '#0369a1', fontSize: 16, fontWeight: '700' }}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <NativeDateTimePicker
-                value={draftDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={minDate ? parseIsoDate(minDate) : undefined}
-                maximumDate={maxDate ? parseIsoDate(maxDate) : undefined}
-                onChange={(event, date) => {
-                  // Android's "default" display is already its own modal dialog that dismisses
-                  // itself on pick/cancel — apply immediately and close, don't wait for a Done
-                  // button that isn't shown for that display mode's own native chrome.
-                  if (Platform.OS === 'android') {
-                    setPickerOpen(false);
-                    if (event?.type === 'set' && date) onChange(toIsoDate(date));
-                    return;
-                  }
-                  if (date) setDraftDate(date);
-                }}
-              />
-            </View>
-          </View>
-        </Modal>
+      {pickerOpen ? (
+        <NativeDatePickerSheet
+          visible
+          onRequestClose={() => setPickerOpen(false)}
+          onCancel={() => setPickerOpen(false)}
+          onDone={() => {
+            onChange(formatLocalDateOnly(draftDate));
+            setPickerOpen(false);
+          }}
+          theme={theme}
+          testID={testID}
+        >
+          <NativeDateTimePicker
+            value={draftDate}
+            mode="date"
+            minimumDate={minDate ? parseLocalDateOnly(minDate) : undefined}
+            maximumDate={maxDate ? parseLocalDateOnly(maxDate) : undefined}
+            onChange={(event, date) => {
+              if (Platform.OS === 'android') {
+                setPickerOpen(false);
+                if (event.type === 'set' && date) onChange(formatLocalDateOnly(date));
+                return;
+              }
+              if (date) setDraftDate(date);
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
     </>
   );

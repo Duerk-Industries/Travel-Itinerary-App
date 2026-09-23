@@ -93,6 +93,7 @@ import {
   type OfflineItinerarySnapshot,
 } from './utils/offlineTripCache';
 import { requestOfflineUnlock } from './utils/offlineAccess';
+import NativeDateTimePicker from './components/NativeDateTimePicker';
 
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -161,18 +162,6 @@ WebBrowser.maybeCompleteAuthSession();
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 type SafeAreaViewCompatProps = React.ComponentProps<typeof View>;
 const SafeAreaView = NativeSafeAreaView as unknown as React.ComponentType<SafeAreaViewCompatProps>;
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 // GroupInvite + PendingTripShareInvite now live in app/types/invites.ts so
 // the useGroupInvites hook can consume them without a circular import.

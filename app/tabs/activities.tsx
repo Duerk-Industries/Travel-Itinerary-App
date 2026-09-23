@@ -273,7 +273,7 @@ export const fetchActivitiesForTrip = async ({
   }));
 };
 
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
+type NativeDateTimePickerType = typeof import('../components/NativeDateTimePicker').default;
 
 type TourTabProps = {
   backendUrl: string;

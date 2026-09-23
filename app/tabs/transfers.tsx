@@ -12,6 +12,7 @@ import { normalizeTimeInput } from '../utils/normalizeTimeInput';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
 import type { AppTheme } from '../theme/theme';
 import { fixedTableColumn } from '../utils/tableColumns';
 import {
@@ -21,17 +22,6 @@ import {
   normalizeItineraryStatus,
   shouldRelaxRequiredFields,
 } from '../utils/itineraryStatus';
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch {
-    NativeDateTimePicker = null;
-  }
-}
 
 export interface Flight {
   id: string;
@@ -1105,7 +1095,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const openTimePicker = (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const base = new Date();
       const match = current.match(/(\d{1,2}):(\d{2})/);
       if (match) {
@@ -1140,7 +1130,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     } else if (target === 'new-arr') {
       setNewFlight((prev) => ({ ...prev, arrivalTime: value }));
     }
-    setTimePickerTarget(null);
+    if (Platform.OS === 'android') setTimePickerTarget(null);
   };
 
   const openFlightDetails = (flight: Flight) => {
@@ -2134,7 +2124,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           rendered here (a sibling outside that Modal) would be mounted but visually hidden behind
           the Transfer Details modal, exactly matching the "can't see the date picker" report. Only
           'new-dep'/'new-arr' (the inline add-transfer grid, not inside any modal) belong here. */}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={timePickerTarget === 'new-dep' || timePickerTarget === 'new-arr'}
           onRequestClose={() => handleTimePickerChange({ type: 'dismissed' }, undefined, timePickerTarget)}
