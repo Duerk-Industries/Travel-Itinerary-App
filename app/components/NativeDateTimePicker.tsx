@@ -1,0 +1,63 @@
+import React from 'react';
+import { Platform } from 'react-native';
+
+type PickerMode = 'date' | 'time';
+type PickerDisplay = 'default' | 'spinner' | 'compact' | 'inline' | 'calendar' | 'clock';
+
+type UnderlyingPickerProps = {
+  value: Date;
+  mode: PickerMode;
+  display?: PickerDisplay;
+  minimumDate?: Date;
+  maximumDate?: Date;
+  onValueChange: (event: { nativeEvent: unknown }, date: Date) => void;
+  onDismiss: () => void;
+};
+
+export type NativeDateTimePickerProps = {
+  value: Date;
+  mode: PickerMode;
+  display?: PickerDisplay;
+  minimumDate?: Date;
+  maximumDate?: Date;
+  /**
+   * Compatibility callback for existing call sites. Version 9 exposes the
+   * Fabric-safe granular listeners used below instead of relying on the
+   * legacy native `onChange` listener.
+   */
+  onChange?: (event: { type?: 'set' | 'dismissed'; nativeEvent?: unknown }, date?: Date) => void;
+};
+
+type DateTimePickerModule = {
+  default?: React.ComponentType<UnderlyingPickerProps>;
+};
+
+let UnderlyingPicker: React.ComponentType<UnderlyingPickerProps> | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    // Keep the native package out of web bundles.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const module = require('@react-native-community/datetimepicker') as DateTimePickerModule;
+    UnderlyingPicker = module.default ?? (module as unknown as React.ComponentType<UnderlyingPickerProps>);
+  } catch {
+    UnderlyingPicker = null;
+  }
+}
+
+const NativeDateTimePicker: React.FC<NativeDateTimePickerProps> = ({ onChange, ...props }) => {
+  if (!UnderlyingPicker) return null;
+
+  return (
+    <UnderlyingPicker
+      {...props}
+      onValueChange={(event, date) => {
+        onChange?.({ type: 'set', nativeEvent: event.nativeEvent }, date);
+      }}
+      onDismiss={() => {
+        onChange?.({ type: 'dismissed' });
+      }}
+    />
+  );
+};
+
+export default NativeDateTimePicker;

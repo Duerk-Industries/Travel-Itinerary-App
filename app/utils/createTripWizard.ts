@@ -61,7 +61,7 @@ export const getDefaultTripRangeDates = (params: {
   endDate?: string | null;
   today?: Date;
 }): { startDate: string; endDate: string } => {
-  const todayIso = isoDateString(params.today ?? new Date());
+  const todayIso = params.today ? isoDateString(params.today) : localTodayDateOnly();
   const startDate = params.startDate || todayIso;
   const endDate = ensureRangeEndDate(startDate, params.endDate ?? undefined);
   return { startDate, endDate };
@@ -169,3 +169,4 @@ export const buildTripDescription = (details: TripDetails, knownInfo?: KnownInfo
 };
 
 export const canProceedFromItineraryStep = (mode: ItineraryMode): boolean => Boolean(mode);
+import { localTodayDateOnly } from './dateOnly';

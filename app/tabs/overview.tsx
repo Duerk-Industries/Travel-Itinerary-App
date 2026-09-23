@@ -59,6 +59,8 @@ import {
 } from '../tabs/carRentals';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
@@ -99,18 +101,6 @@ import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itin
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 type Trip = {
   id: string;
@@ -1528,9 +1518,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, [backendUrl, headers, blogDayImages, dayCards, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const base = field === 'start' ? dateDraft.startDate : dateDraft.endDate;
-      const date = base ? new Date(base) : new Date();
+      const date = parseLocalDateOnly(base);
       setDateValue(date);
       setDateField(field);
       return;
@@ -1548,15 +1538,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const openModalDatePicker = (field: ModalDateField, current?: string) => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
-      const base = current?.trim() ? new Date(current) : new Date();
+    if (Platform.OS !== 'web') {
+      const fieldValue = current ?? (
+        field === 'flightDeparture'
+          ? editingFlightDraft?.departureDate
+          : field === 'lodgingCheckIn'
+            ? lodgingDraft.checkInDate
+            : field === 'lodgingCheckOut'
+              ? lodgingDraft.checkOutDate
+              : lodgingDraft.refundBy
+      );
+      const base = parseLocalDateOnly(fieldValue);
       setModalDateValue(base);
       setModalDateField(field);
     }
   };
 
   const openTimePicker = (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const base = new Date();
       const match = current?.match(/(\d{1,2}):(\d{2})/);
       if (match) {
@@ -4038,7 +4037,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {renderContent()}
       {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
       {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!timePickerTarget}
           onRequestClose={() => setTimePickerTarget(null)}
@@ -4061,12 +4060,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               } else if (timePickerTarget === 'edit-arr') {
                 setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
               }
-              setTimePickerTarget(null);
+              if (Platform.OS === 'android') setTimePickerTarget(null);
             }}
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!dateField}
           onRequestClose={() => setDateField(null)}
@@ -4080,18 +4079,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 setDateField(null);
                 return;
               }
-              const iso = date.toISOString().slice(0, 10);
+              const iso = formatLocalDateOnly(date);
               if (dateField === 'start') {
                 setDateDraft((prev) => ({ ...prev, startDate: iso }));
               } else {
                 setDateDraft((prev) => ({ ...prev, endDate: iso }));
               }
-              setDateField(null);
+              if (Platform.OS === 'android') setDateField(null);
             }}
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!modalDateField}
           onRequestClose={() => setModalDateField(null)}
@@ -4105,7 +4104,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 setModalDateField(null);
                 return;
               }
-              const iso = date.toISOString().slice(0, 10);
+              const iso = formatLocalDateOnly(date);
               if (modalDateField === 'flightDeparture') {
                 setEditingFlightDraft((prev) => (prev ? { ...prev, departureDate: iso } : prev));
               } else if (modalDateField === 'lodgingCheckIn') {
@@ -4115,7 +4114,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               } else if (modalDateField === 'lodgingRefundBy') {
                 setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
               }
-              setModalDateField(null);
+              if (Platform.OS === 'android') setModalDateField(null);
             }}
           />
         </NativeDatePickerSheet>

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Modal, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { parseClipboardMatrix, serializeClipboardMatrix } from '../utils/clipboardGrid';
 import NativeDatePickerSheet from './NativeDatePickerSheet';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { fixedTableColumn } from '../utils/tableColumns';
 
 export type GridEditorKind = 'text' | 'date' | 'time' | 'decimal' | 'select' | 'multiSelect' | 'textarea' | 'readonly' | 'action';
@@ -83,8 +84,7 @@ const parseDateInputValue = (raw: string, mode: 'date' | 'time'): Date => {
     return base;
   }
   if (raw && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
+    return parseLocalDateOnly(raw, base);
   }
   return base;
 };
@@ -304,9 +304,9 @@ export function EditableDataGrid<Row extends { id: string }>({
     }
     const value = openPicker.kind === 'time'
       ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-      : date.toISOString().slice(0, 10);
+      : formatLocalDateOnly(date);
     onCellChange(openPicker.rowId, openPicker.columnKey, value);
-    closePicker();
+    if (Platform.OS === 'android') closePicker();
   };
 
   const renderEditor = (row: Row, column: GridColumn<Row>, rowIndex: number, columnIndex: number) => {
