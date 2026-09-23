@@ -13,6 +13,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import CsvTransferControls from '../components/CsvTransferControls';
 import ActivityEditForm from '../components/ActivityEditForm';
 import { resolveMemberClipboardValue } from '../utils/clipboardGrid';
+import { fixedTableColumn } from '../utils/tableColumns';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -31,9 +32,8 @@ import {
 // different amount per row -- producing exactly the ragged, row-by-row
 // column drift this was reported for. A literal fixed `width` with growth
 // and shrink both disabled makes every row's columns identical regardless
-// of what's inside any one cell; `overflow: 'hidden'` then clips (rather
-// than pushes) any cell whose content is wider than its column.
-const fixedColumnStyle = (width: number) => ({ width, flexGrow: 0, flexShrink: 0, overflow: 'hidden' as const });
+// of what's inside any one cell.
+const fixedColumnStyle = fixedTableColumn;
 
 export type ActivityType =
   | 'Class'

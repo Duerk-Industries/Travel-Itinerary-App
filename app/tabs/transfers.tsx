@@ -13,6 +13,7 @@ import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import NativeDateTimePicker from '../components/NativeDateTimePicker';
 import type { AppTheme } from '../theme/theme';
+import { fixedTableColumn } from '../utils/tableColumns';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -1567,7 +1568,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 key={col.key}
                 style={[
                   styles.cell,
-                  { minWidth: col.minWidth ?? 120, flex: 1 },
+                  fixedTableColumn(col.minWidth ?? 120),
                   col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   idx === columns.length - 1 && styles.lastCell,
@@ -1589,7 +1590,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.actionCell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                         isLast && styles.lastCell,
                       ]}
@@ -1623,7 +1624,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.actionCell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1660,7 +1661,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`${item.id}-${col.key}`}
                       style={[
                         styles.cell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1719,7 +1720,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     key={`${item.id}-${col.key}`}
                     style={[
                       styles.cell,
-                      { minWidth: col.minWidth ?? 120, flex: 1 },
+                      fixedTableColumn(col.minWidth ?? 120),
                       col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                       isLast && styles.lastCell,
                     ]}
@@ -1741,7 +1742,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.actionCell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1757,7 +1758,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1771,7 +1772,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1827,7 +1828,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1848,7 +1849,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1876,7 +1877,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1910,7 +1911,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.locationField,
-                        { minWidth: col.minWidth ?? 120, flex: 1, position: 'relative' },
+                        { ...fixedTableColumn(col.minWidth ?? 120), position: 'relative' },
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1935,7 +1936,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         key={`input-${col.key}`}
                         style={[
                           styles.cell,
-                          { minWidth: col.minWidth ?? 120, flex: 1 },
+                          fixedTableColumn(col.minWidth ?? 120),
                           isLast && styles.lastCell,
                         ]}
                       >
@@ -1950,10 +1951,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   }
                   return (
                     <View
-                      key={`input-${col.key}`}
-                      style={[
-                        styles.cell,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                  key={`input-${col.key}`}
+                  style={[
+                    styles.cell,
+                    fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1972,7 +1973,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     key={`input-${col.key}`}
                     style={[
                       styles.cell,
-                      { minWidth: col.minWidth ?? 120, flex: 1 },
+                      fixedTableColumn(col.minWidth ?? 120),
                       isLast && styles.lastCell,
                     ]}
                   >

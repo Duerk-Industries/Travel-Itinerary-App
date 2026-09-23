@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Modal, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { parseClipboardMatrix, serializeClipboardMatrix } from '../utils/clipboardGrid';
 import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import { fixedTableColumn } from '../utils/tableColumns';
 
 export type GridEditorKind = 'text' | 'date' | 'time' | 'decimal' | 'select' | 'multiSelect' | 'textarea' | 'readonly' | 'action';
 
@@ -398,7 +399,7 @@ export function EditableDataGrid<Row extends { id: string }>({
         : <TextInput style={inputStyle} value={value} onChangeText={onChange} />;
     }
     return (
-      <View key={`${row.id}-${column.key}`} style={[styles.cell, { minWidth: column.width, width: column.width }, column.sticky === 'left' && stickyIdentityStyle, column.sticky === 'right' && stickyActionsStyle, selected && selectedCellStyle, error && errorCellStyle]}>
+      <View key={`${row.id}-${column.key}`} style={[styles.cell, fixedTableColumn(column.width), column.sticky === 'left' && stickyIdentityStyle, column.sticky === 'right' && stickyActionsStyle, selected && selectedCellStyle, error && errorCellStyle]}>
         {column.editor === 'readonly' ? <Text style={styles.cellText}>{value || '-'}</Text> : editor}
         {error ? <Text style={errorTextStyle}>{error}</Text> : null}
       </View>
@@ -409,11 +410,12 @@ export function EditableDataGrid<Row extends { id: string }>({
       <View key={row.id} style={[styles.tableRow, stagedDeleteIds.has(row.id) && deletedRowStyle]} testID={`activity-row-${row.id}`}>
       {columns.map((column, columnIndex) => {
         if (column.editor === 'action') {
-          return <View key={`${row.id}-${column.key}`} style={[styles.cell, { minWidth: column.width, width: column.width }, styles.lastCell, stickyActionsStyle]}><TouchableOpacity disabled={disabled} style={[styles.button, styles.dangerButton, disabled && disabledButtonStyle]} onPress={() => onDeleteRow(row.id)}><Text style={styles.dangerButtonText}>{stagedDeleteIds.has(row.id) ? 'Restore' : 'Delete'}</Text></TouchableOpacity></View>;
+          return <View key={`${row.id}-${column.key}`} style={[styles.cell, fixedTableColumn(column.width), styles.lastCell, stickyActionsStyle]}><TouchableOpacity disabled={disabled} style={[styles.button, styles.dangerButton, disabled && disabledButtonStyle]} onPress={() => onDeleteRow(row.id)}><Text style={styles.dangerButtonText}>{stagedDeleteIds.has(row.id) ? 'Restore' : 'Delete'}</Text></TouchableOpacity></View>;
         }
         return (
           <View
             key={`${row.id}-wrapper-${column.key}`}
+            style={fixedTableColumn(column.width)}
             onStartShouldSetResponder={() => true}
             onResponderGrant={() => {
               const next = { rowIndex, columnIndex };
@@ -435,7 +437,7 @@ export function EditableDataGrid<Row extends { id: string }>({
     return (
       <TouchableOpacity
         key={column.key}
-        style={[styles.cell, { minWidth: column.width, width: column.width }, column.editor === 'action' && styles.lastCell, column.sticky === 'left' && stickyIdentityStyle, (column.sticky === 'right' || column.editor === 'action') && stickyActionsStyle]}
+        style={[styles.cell, fixedTableColumn(column.width), column.editor === 'action' && styles.lastCell, column.sticky === 'left' && stickyIdentityStyle, (column.sticky === 'right' || column.editor === 'action') && stickyActionsStyle]}
         disabled={!isSortable}
         onPress={() => {
           setAnchor(null);
