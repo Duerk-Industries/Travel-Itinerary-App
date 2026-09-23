@@ -66,9 +66,9 @@ import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
-import { createIdempotencyKey } from '../utils/idempotencyKey';
 import NativeDateTimePicker from '../components/NativeDateTimePicker';
 import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { fixedTableColumn } from '../utils/tableColumns';
   
 type Suggestion = {
@@ -2794,7 +2794,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!dateField}
           onRequestClose={() => setDateField(null)}
@@ -2822,7 +2822,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!wizardLodgingDateField}
           onRequestClose={() => setWizardLodgingDateField(null)}
@@ -2851,7 +2851,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!wizardCarDateField}
           onRequestClose={() => setWizardCarDateField(null)}

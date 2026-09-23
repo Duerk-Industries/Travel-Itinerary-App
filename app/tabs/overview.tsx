@@ -59,6 +59,8 @@ import {
 } from '../tabs/carRentals';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
@@ -99,8 +101,6 @@ import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itin
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
-import NativeDateTimePicker from '../components/NativeDateTimePicker';
-import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 
 type Trip = {
   id: string;
@@ -4037,7 +4037,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {renderContent()}
       {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
       {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!timePickerTarget}
           onRequestClose={() => setTimePickerTarget(null)}
@@ -4060,12 +4060,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               } else if (timePickerTarget === 'edit-arr') {
                 setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
               }
-              setTimePickerTarget(null);
+              if (Platform.OS === 'android') setTimePickerTarget(null);
             }}
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!dateField}
           onRequestClose={() => setDateField(null)}
@@ -4085,12 +4085,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               } else {
                 setDateDraft((prev) => ({ ...prev, endDate: iso }));
               }
-              setDateField(null);
+              if (Platform.OS === 'android') setDateField(null);
             }}
           />
         </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!modalDateField}
           onRequestClose={() => setModalDateField(null)}
@@ -4114,7 +4114,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               } else if (modalDateField === 'lodgingRefundBy') {
                 setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
               }
-              setModalDateField(null);
+              if (Platform.OS === 'android') setModalDateField(null);
             }}
           />
         </NativeDatePickerSheet>

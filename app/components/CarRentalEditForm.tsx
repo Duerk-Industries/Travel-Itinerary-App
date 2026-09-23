@@ -264,7 +264,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!dateField}
           onRequestClose={() => setDateField(null)}
@@ -281,7 +281,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
               }
               const iso = formatLocalDateOnly(date);
               onChange((prev) => ({ ...prev, [dateField as NonNullable<typeof dateField>]: iso }));
-              setDateField(null);
+              if (Platform.OS === 'android') setDateField(null);
             }}
           />
         </NativeDatePickerSheet>

@@ -306,7 +306,7 @@ export function EditableDataGrid<Row extends { id: string }>({
       ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
       : formatLocalDateOnly(date);
     onCellChange(openPicker.rowId, openPicker.columnKey, value);
-    closePicker();
+    if (Platform.OS === 'android') closePicker();
   };
 
   const renderEditor = (row: Row, column: GridColumn<Row>, rowIndex: number, columnIndex: number) => {

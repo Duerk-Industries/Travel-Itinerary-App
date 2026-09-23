@@ -8,14 +8,14 @@ import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { toWebStyle } from '../utils/webStyle';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
-import NativeDateTimePicker from '../components/NativeDateTimePicker';
 import { fixedTableColumn } from '../utils/tableColumns';
 
 type Trip = {
@@ -918,7 +918,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         </View>
       ) : null}
 
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={datePickerVisible}
           onRequestClose={() => setDatePickerVisible(false)}

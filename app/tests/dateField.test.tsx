@@ -5,7 +5,7 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { act, render, fireEvent } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import DateField from '../components/DateField';
 
@@ -58,6 +58,44 @@ describe('DateField', () => {
     fireEvent.press(getByTestId('trip-start-date'));
     fireEvent.press(getByTestId('trip-start-date-cancel'));
     expect(onChange).not.toHaveBeenCalled();
+    expect(queryByTestId('trip-start-date-done')).toBeNull();
+  });
+
+  it('on iOS, uses the spinner sheet and waits for Done before committing the selected local date', () => {
+    Platform.OS = 'ios';
+    const onChange = jest.fn();
+    const { getByTestId } = render(
+      <DateField value="2026-11-10" onChange={onChange} styles={styles} testID="trip-start-date" />
+    );
+    fireEvent.press(getByTestId('trip-start-date'));
+
+    const picker = getByTestId('native-date-time-picker');
+    expect(picker.props.display).toBe('spinner');
+    act(() => {
+      picker.props.onValueChange({ nativeEvent: {} }, new Date(2026, 10, 12));
+    });
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('trip-start-date-done'));
+    expect(onChange).toHaveBeenCalledWith('2026-11-12');
+  });
+
+  it('on Android, commits immediately and dismisses after selection', () => {
+    Platform.OS = 'android';
+    const onChange = jest.fn();
+    const { getByTestId, queryByTestId } = render(
+      <DateField value="2026-11-10" onChange={onChange} styles={styles} testID="trip-start-date" />
+    );
+    fireEvent.press(getByTestId('trip-start-date'));
+
+    act(() => {
+      getByTestId('native-date-time-picker').props.onValueChange(
+        { nativeEvent: {} },
+        new Date(2026, 10, 13),
+      );
+    });
+
+    expect(onChange).toHaveBeenCalledWith('2026-11-13');
     expect(queryByTestId('trip-start-date-done')).toBeNull();
   });
 

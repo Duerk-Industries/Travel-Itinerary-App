@@ -312,7 +312,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+      {Platform.OS !== 'web' ? (
         <NativeDatePickerSheet
           visible={!!dateField}
           onRequestClose={() => setDateField(null)}
@@ -337,7 +337,7 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
                 if (dateField === 'date') return { ...prev, date: iso };
                 return { ...prev, freeCancelBy: iso };
               });
-              setDateField(null);
+              if (Platform.OS === 'android') setDateField(null);
             }}
           />
         </NativeDatePickerSheet>
