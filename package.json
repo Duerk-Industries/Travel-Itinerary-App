@@ -3,6 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "main": "app/AppEntry.js",
+  "expo": {
+    "install": {
+      "exclude": [
+        "@react-native-community/datetimepicker"
+      ]
+    }
+  },
   "workspaces": [
     "server",
     "app",
