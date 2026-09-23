@@ -150,6 +150,7 @@ import CostReportTable from './components/CostReportTable';
 import { connectSocket, disconnectSocket } from './utils/socket';
 import { registerForPushNotificationsAsync } from './utils/pushNotifications';
 import { horizontalTableLayout } from './utils/horizontalTableLayout';
+import { fixedTableColumn } from './utils/tableColumns';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
@@ -5268,14 +5269,14 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     color: theme.colors.link,
     textDecorationLine: 'underline',
   },
-  lodgingNameCol: { minWidth: 120, maxWidth: 320, flex: 1 },
-  lodgingDateCol: { minWidth: 120, maxWidth: 320, flex: 1 },
-  lodgingRoomsCol: { minWidth: 80, maxWidth: 320, flex: 1 },
-  lodgingRefundCol: { minWidth: 120, maxWidth: 320, flex: 1 },
-  lodgingCostCol: { minWidth: 100, maxWidth: 320, flex: 1 },
-  lodgingPayerCol: { minWidth: 140, maxWidth: 320, flex: 1 },
-  lodgingAddressCol: { minWidth: 140, maxWidth: 320, flex: 1 },
-  lodgingActionCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingNameCol: fixedTableColumn(200),
+  lodgingDateCol: fixedTableColumn(140),
+  lodgingRoomsCol: fixedTableColumn(100),
+  lodgingRefundCol: fixedTableColumn(160),
+  lodgingCostCol: fixedTableColumn(120),
+  lodgingPayerCol: fixedTableColumn(180),
+  lodgingAddressCol: fixedTableColumn(220),
+  lodgingActionCol: fixedTableColumn(180),
   lodgingTabNameCol: { flex: 1, minWidth: 160 },
   lodgingTabDateCol: { flexGrow: 0, flexShrink: 0, minWidth: 110 },
   lodgingTabActionsCol: { flexGrow: 0, flexShrink: 0, minWidth: 168 },
