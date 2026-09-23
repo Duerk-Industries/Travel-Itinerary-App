@@ -8,6 +8,7 @@ import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItinerarySta
 import type { CarRentalDraft } from '../tabs/carRentals';
 import NativeDateTimePicker from './NativeDateTimePicker';
 import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import NativeDatePickerSheet from './NativeDatePickerSheet';
 
 // Single source of truth for the "add/edit car rental" form, styled to match
 // FlightEditingForm/LodgingForm/ActivityEditForm (same modalCard shell, per-field
@@ -263,20 +264,27 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' && dateField ? (
-        <NativeDateTimePicker
-          value={pickerValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={!!dateField}
+          onRequestClose={() => setDateField(null)}
+          theme={theme}
+          testID="car-rental-date-picker"
+        >
+          <NativeDateTimePicker
+            value={pickerValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setDateField(null);
+                return;
+              }
+              const iso = formatLocalDateOnly(date);
+              onChange((prev) => ({ ...prev, [dateField as NonNullable<typeof dateField>]: iso }));
               setDateField(null);
-              return;
-            }
-            const iso = formatLocalDateOnly(date);
-            onChange((prev) => ({ ...prev, [dateField]: iso }));
-            setDateField(null);
-          }}
-        />
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
     </Modal>
   );

@@ -172,6 +172,10 @@ describe('Apple OAuth routes', () => {
     const decoded = verifyToken(exchangeRes.body.token);
     expect(decoded.email).toBe('success@example.com');
     expect(decoded.provider).toBe('apple');
+    // App Store Guideline 4 rejection: Sign in with Apple must never require an additional
+    // password-creation step afterward — the client's "Set Your Password" modal is gated on
+    // this flag, so a first-time Apple sign-in must never report it as required, unlike Google.
+    expect(exchangeRes.body.requirePasswordSetup).toBe(false);
   });
 
   it('allows an existing Apple-linked user to return when email_verified is false', async () => {

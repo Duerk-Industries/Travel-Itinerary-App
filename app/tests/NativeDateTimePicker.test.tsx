@@ -26,4 +26,15 @@ describe('NativeDateTimePicker', () => {
     });
     expect(onChange).toHaveBeenLastCalledWith({ type: 'dismissed' });
   });
+
+  it('forwards minimumDate and maximumDate to the native picker', () => {
+    const min = new Date(2026, 8, 1);
+    const max = new Date(2026, 8, 30);
+    const { getByTestId } = render(
+      <NativeDateTimePicker value={new Date(2026, 8, 21)} mode="date" minimumDate={min} maximumDate={max} />,
+    );
+    const picker = getByTestId('native-date-time-picker');
+    expect(picker.props.minimumDate).toBe(min);
+    expect(picker.props.maximumDate).toBe(max);
+  });
 });

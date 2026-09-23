@@ -7,6 +7,7 @@ import DialogShell from '../components/DialogShell';
 import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
+import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
@@ -917,19 +918,26 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         </View>
       ) : null}
 
-      {Platform.OS !== 'web' && datePickerVisible ? (
-        <NativeDateTimePicker
-          value={parseLocalDateOnly(draftDate)}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
-              setDatePickerVisible(false);
-              return;
-            }
-            setDraftDate(formatLocalDateOnly(date));
-            setDatePickerVisible(false);
-          }}
-        />
+      {Platform.OS !== 'web' && NativeDateTimePicker ? (
+        <NativeDatePickerSheet
+          visible={datePickerVisible}
+          onRequestClose={() => setDatePickerVisible(false)}
+          theme={theme}
+          testID="daily-expenses-date-picker"
+        >
+          <NativeDateTimePicker
+            value={parseLocalDateOnly(draftDate)}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setDatePickerVisible(false);
+                return;
+              }
+              setDraftDate(formatLocalDateOnly(date));
+              if (Platform.OS === 'android') setDatePickerVisible(false);
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
 
       {detailTarget ? (

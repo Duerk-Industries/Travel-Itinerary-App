@@ -8,6 +8,8 @@ type UnderlyingPickerProps = {
   value: Date;
   mode: PickerMode;
   display?: PickerDisplay;
+  minimumDate?: Date;
+  maximumDate?: Date;
   onValueChange: (event: { nativeEvent: unknown }, date: Date) => void;
   onDismiss: () => void;
 };
@@ -16,6 +18,10 @@ type NativeDateTimePickerProps = {
   value: Date;
   mode: PickerMode;
   display?: PickerDisplay;
+  /** Earliest selectable date; forwarded to the native picker. */
+  minimumDate?: Date;
+  /** Latest selectable date; forwarded to the native picker. */
+  maximumDate?: Date;
   /**
    * Compatibility callback for the app's existing picker call sites. The
    * underlying package exposes granular listeners, which work on iOS Fabric
