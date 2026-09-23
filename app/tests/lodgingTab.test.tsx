@@ -8,6 +8,7 @@ import React from 'react';
 import { render, fireEvent, within, waitFor } from '@testing-library/react-native';
 import LodgingTab, { formatShortDate } from '../tabs/LodgingTab';
 import type { Lodging } from '../tabs/lodging';
+import { getAppTheme } from '../theme/theme';
 
 const styles = {
     card: {},
@@ -116,6 +117,39 @@ describe('LodgingTab', () => {
         fireEvent.press(getByText('+'));
         const dialog = getByTestId('lodging-editor-dialog');
         expect(within(dialog).getByText('Add Lodging')).toBeTruthy();
+    });
+
+    it('opens native date pickers for check-in and check-out while adding lodging', () => {
+        const theme = getAppTheme('dark', 'light');
+        const { getByTestId } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                theme={theme}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+            />
+        );
+
+        fireEvent.press(getByTestId('lodging-add'));
+        fireEvent.press(getByTestId('lodging-check-in-date'));
+        const checkInPicker = getByTestId('native-date-time-picker');
+        expect(checkInPicker).toBeTruthy();
+        expect(checkInPicker.props.themeVariant).toBe('dark');
+        expect(checkInPicker.props.textColor).toBe(theme.colors.text);
+        fireEvent.press(getByTestId('lodging-check-in-date-cancel'));
+
+        fireEvent.press(getByTestId('lodging-check-out-date'));
+        expect(getByTestId('native-date-time-picker')).toBeTruthy();
+        fireEvent.press(getByTestId('lodging-check-out-date-cancel'));
     });
 
     it('opens the details dialog when a lodging is clicked', () => {
@@ -263,6 +297,30 @@ describe('LodgingTab', () => {
         fireEvent.press(getByTestId('lodging-table-edit'));
         expect(getByTestId('lodging-table-save')).toBeTruthy();
         expect(getByText('Check-In')).toBeTruthy();
+    });
+
+    it('opens a native date picker from the editable lodging grid', () => {
+        const { getByTestId, getByText } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+            />
+        );
+
+        fireEvent.press(getByTestId('lodging-table-edit'));
+        fireEvent.press(getByTestId('grid-checkInDate-l1'));
+        expect(getByTestId('native-date-time-picker')).toBeTruthy();
+        fireEvent.press(getByTestId('grid-checkInDate-l1-done'));
     });
 
     it('updates paid by and saves the lodging', async () => {

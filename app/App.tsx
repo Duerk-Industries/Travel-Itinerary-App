@@ -93,7 +93,6 @@ import {
   type OfflineItinerarySnapshot,
 } from './utils/offlineTripCache';
 import { requestOfflineUnlock } from './utils/offlineAccess';
-import NativeDateTimePicker from './components/NativeDateTimePicker';
 
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -3308,7 +3307,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   toursTotal={toursTotal}
                   styles={styles}
                   theme={theme}
-                  nativeDateTimePicker={NativeDateTimePicker}
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode || offlineReadOnly}
                   defaultActivityDate={activeTrip?.startDate ?? null}
@@ -3401,6 +3399,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     backendUrl={backendUrl}
                     headers={headers}
                     styles={styles}
+                    theme={theme}
                     onNavigate={handleHomeNavigate}
                     onAssignmentApplied={handleIngestionAssignmentApplied}
                     userRole={userRole}

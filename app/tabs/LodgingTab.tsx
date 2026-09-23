@@ -503,6 +503,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           payerName={payerName}
           defaultPayerId={defaultPayerId}
           styles={styles}
+          theme={theme}
           onSave={handleSave}
           onCancel={closeEditor}
         />

@@ -7,8 +7,7 @@ import DialogShell from '../components/DialogShell';
 import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
-import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
-import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import DateField from '../components/DateField';
 import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -240,7 +239,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       };
     });
   };
-  const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [importExpensesVisible, setImportExpensesVisible] = useState(false);
   const [receiptParsing, setReceiptParsing] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
@@ -304,7 +302,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const cancelAddExpenseModal = () => {
     setExpenseDraft(null);
-    setDatePickerVisible(false);
     setReceiptError(null);
   };
 
@@ -525,12 +522,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     );
   }
 
-  const formattedDraftDate = draftDate ? formatDateLabel(draftDate) : '';
   const fullWidthExpenseField = isNarrowLayout ? { flexBasis: '100%', minWidth: '100%', maxWidth: '100%' } : null;
   const narrowSelectField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 150, minWidth: 132, maxWidth: '100%' } : null;
   const narrowAmountField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 120, minWidth: 120, maxWidth: '100%' } : null;
   const categoryFieldStyle = [styles.expenseFieldCategory, narrowSelectField];
   const currencyFieldStyle = [styles.expenseFieldCurrency, narrowSelectField];
+  const dateFieldStyle = isNarrowLayout
+    ? { ...(styles.expenseFieldDate ?? {}), ...(fullWidthExpenseField ?? {}) }
+    : styles.expenseFieldDate;
   const amountFieldStyle = [styles.input, styles.expenseFieldAmount, narrowAmountField];
   const vendorFieldStyle = [styles.input, styles.expenseFieldVendor, fullWidthExpenseField];
   const notesFieldStyle = [styles.input, styles.expenseFieldNotes, fullWidthExpenseField];
@@ -625,35 +624,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               </View>
               <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8, overflow: 'visible', paddingBottom: 8 }}>
                 <View style={styles.expenseFieldRow}>
-                  <View style={[styles.expenseFieldDate, fullWidthExpenseField]}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        type="date"
-                        value={draftDate}
-                        onChange={(event) => setDraftDate(event.target.value)}
-                        style={{
-                          ...toWebStyle(styles.input),
-                          width: '100%',
-                          maxWidth: '100%',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    ) : (
-                      <View style={styles.dateInputWrap}>
-                        <TouchableOpacity
-                          style={[styles.input, styles.dateTouchable]}
-                          onPress={() => setDatePickerVisible(true)}
-                        >
-                          <Text style={draftDate ? styles.cellText : styles.placeholderText}>
-                            {draftDate ? formattedDraftDate : 'Select date'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.dateIcon} onPress={() => setDatePickerVisible(true)}>
-                          <Text style={styles.selectCaret}>📅</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
+                  <DateField
+                    value={draftDate}
+                    onChange={setDraftDate}
+                    styles={styles}
+                    theme={theme}
+                    minDate={trip.startDate ?? undefined}
+                    maxDate={trip.endDate ?? undefined}
+                    testID="daily-expense-date"
+                    accessibilityLabel="Expense date"
+                    style={dateFieldStyle}
+                  />
                   <SelectField
                     styles={styles}
                     value={draftCategory}
@@ -916,28 +897,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
             </View>
           </HorizontalTableScroll>
         </View>
-      ) : null}
-
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={datePickerVisible}
-          onRequestClose={() => setDatePickerVisible(false)}
-          theme={theme}
-          testID="daily-expenses-date-picker"
-        >
-          <NativeDateTimePicker
-            value={parseLocalDateOnly(draftDate)}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setDatePickerVisible(false);
-                return;
-              }
-              setDraftDate(formatLocalDateOnly(date));
-              if (Platform.OS === 'android') setDatePickerVisible(false);
-            }}
-          />
-        </NativeDatePickerSheet>
       ) : null}
 
       {detailTarget ? (

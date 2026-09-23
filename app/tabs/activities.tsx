@@ -273,8 +273,6 @@ export const fetchActivitiesForTrip = async ({
   }));
 };
 
-type NativeDateTimePickerType = typeof import('../components/NativeDateTimePicker').default;
-
 type TourTabProps = {
   backendUrl: string;
   userToken: string | null;
@@ -290,7 +288,6 @@ type TourTabProps = {
   toursTotal: number;
   styles: ReturnType<typeof StyleSheet.create>;
   theme?: AppTheme;
-  nativeDateTimePicker: NativeDateTimePickerType | null;
   fetchTours: (token?: string) => Promise<void>;
   onDataChanged?: () => void;
   mode?: 'live' | 'wizard';
@@ -323,7 +320,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   toursTotal,
   styles,
   theme,
-  nativeDateTimePicker,
   fetchTours,
   onDataChanged,
   mode = 'live',
@@ -358,7 +354,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const [gridSaving, setGridSaving] = useState(false);
   const [activitySort, setActivitySort] = useState<ActivitySort>({ key: null, direction: 'asc' });
   const [tourToDelete, setTourToDelete] = useState<Tour | null>(null);
-  const DateTimePickerComponent = nativeDateTimePicker;
   const activeMembers = useMemo(
     () => groupMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
     [groupMembers]
@@ -920,7 +915,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             onError={setGridMessage}
             styles={styles}
             theme={theme}
-            nativeDateTimePicker={DateTimePickerComponent}
           />
           </HorizontalTableScroll>
         </>

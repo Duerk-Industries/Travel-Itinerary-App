@@ -6,7 +6,7 @@ import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/t
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { AppTheme } from '../theme/theme';
-import NativeDatePickerSheet from './NativeDatePickerSheet';
+import DateField from './DateField';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
 const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
@@ -36,14 +36,6 @@ export type FlightEditingFormProps = {
   getLocationInputValue: (raw: string, activeTarget: AirportTarget, currentTarget: AirportTarget) => string;
   showAirportDropdown: (target: Exclude<AirportTarget, null>, node: any, query: string) => void;
   parseLayoverDuration: (value: string | null | undefined) => { hours: string; minutes: string };
-  openTimePicker: (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => void;
-  // Rendered inside this component's own Modal (see below) rather than by the caller — a native
-  // RN Modal presents in its own window above everything else, so a time picker rendered by the
-  // caller as a sibling outside this Modal would be mounted but invisible, hidden behind it.
-  timePickerTarget?: 'edit-dep' | 'edit-arr' | null;
-  timePickerValue?: Date;
-  onTimePickerChange?: (event: { type?: string } | undefined, date: Date | undefined, target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null) => void;
-  nativeDateTimePicker?: React.ComponentType<any> | null;
   onAirportEnter: (target: Exclude<AirportTarget, null>, value: string) => void;
   setFlight: React.Dispatch<React.SetStateAction<FlightEditDraft | null>>;
   setPassengerIds: (ids: string[]) => void;
@@ -77,11 +69,6 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   getLocationInputValue,
   showAirportDropdown,
   parseLayoverDuration,
-  openTimePicker,
-  timePickerTarget,
-  timePickerValue,
-  onTimePickerChange,
-  nativeDateTimePicker: NativeDateTimePicker,
   onAirportEnter,
   setFlight,
   setPassengerIds,
@@ -234,53 +221,34 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           <View style={rowStyle}>
             <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={flight.departureDate}
-                  onChange={(e) =>
-                    setFlight((prev) => {
-                      if (!prev) return prev;
-                      const dep = e.target.value;
-                      const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate ? dep : prev.arrivalDate;
-                      return { ...prev, departureDate: dep, arrivalDate: nextArrival };
-                    })
-                  }
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={flight.departureDate}
-                  placeholder="Date"
-                  onChangeText={(text: string) =>
-                    setFlight((prev) => {
-                      if (!prev) return prev;
-                      const dep = text;
-                      const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate ? dep : prev.arrivalDate;
-                      return { ...prev, departureDate: dep, arrivalDate: nextArrival };
-                    })
-                  }
-                />
-              )}
+              <DateField
+                value={flight.departureDate}
+                onChange={(dep) =>
+                  setFlight((prev) => {
+                    if (!prev) return prev;
+                    const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate
+                      ? dep
+                      : prev.arrivalDate;
+                    return { ...prev, departureDate: dep, arrivalDate: nextArrival };
+                  })
+                }
+                styles={styles}
+                theme={theme}
+                testID="transfer-departure-date"
+                accessibilityLabel="Departure date"
+              />
             </View>
             <View style={timeFieldStyle}>
               <Text style={styles.modalLabelSmall}>Time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={flight.departureTime}
-                  onChange={(e) => setFlight((prev) => (prev ? { ...prev, departureTime: e.target.value } : prev))}
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                />
-              ) : (
-                <TouchableOpacity
-                  style={[styles.input, { justifyContent: 'center' }]}
-                  onPress={() => openTimePicker('edit-dep', flight.departureTime)}
-                >
-                  <Text style={styles.cellText}>{flight.departureTime || 'HH:MM'}</Text>
-                </TouchableOpacity>
-              )}
+              <DateField
+                mode="time"
+                value={flight.departureTime}
+                onChange={(departureTime) => setFlight((prev) => (prev ? { ...prev, departureTime } : prev))}
+                styles={styles}
+                theme={theme}
+                testID="transfer-departure-time"
+                accessibilityLabel="Departure time"
+              />
             </View>
           </View>
           <View style={rowStyle}>
@@ -312,39 +280,26 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           <View style={rowStyle}>
             <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={flight.arrivalDate}
-                  onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalDate: e.target.value } : prev))}
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={flight.arrivalDate}
-                  onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, arrivalDate: text } : prev))}
-                  placeholder="YYYY-MM-DD"
-                />
-              )}
+              <DateField
+                value={flight.arrivalDate}
+                onChange={(arrivalDate) => setFlight((prev) => (prev ? { ...prev, arrivalDate } : prev))}
+                styles={styles}
+                theme={theme}
+                testID="transfer-arrival-date"
+                accessibilityLabel="Arrival date"
+              />
             </View>
             <View style={timeFieldStyle}>
               <Text style={styles.modalLabelSmall}>Time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={flight.arrivalTime}
-                  onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalTime: e.target.value } : prev))}
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                />
-              ) : (
-                <TouchableOpacity
-                  style={[styles.input, { justifyContent: 'center' }]}
-                  onPress={() => openTimePicker('edit-arr', flight.arrivalTime)}
-                >
-                  <Text style={styles.cellText}>{flight.arrivalTime || 'HH:MM'}</Text>
-                </TouchableOpacity>
-              )}
+              <DateField
+                mode="time"
+                value={flight.arrivalTime}
+                onChange={(arrivalTime) => setFlight((prev) => (prev ? { ...prev, arrivalTime } : prev))}
+                styles={styles}
+                theme={theme}
+                testID="transfer-arrival-time"
+                accessibilityLabel="Arrival time"
+              />
             </View>
           </View>
           <View style={rowStyle}>
@@ -539,20 +494,6 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             ))}
           </View>
         </View>
-      ) : null}
-      {Platform.OS !== 'web' && timePickerValue && NativeDateTimePicker ? (
-        <NativeDatePickerSheet
-          visible={!!timePickerTarget}
-          onRequestClose={() => onTimePickerChange?.({ type: 'dismissed' }, undefined, timePickerTarget ?? null)}
-          theme={theme}
-          testID="flight-edit-time-picker"
-        >
-          <NativeDateTimePicker
-            value={timePickerValue}
-            mode="time"
-            onChange={(event: { type?: string } | undefined, date: Date | undefined) => onTimePickerChange?.(event, date, timePickerTarget ?? null)}
-          />
-        </NativeDatePickerSheet>
       ) : null}
     </Modal>
   );

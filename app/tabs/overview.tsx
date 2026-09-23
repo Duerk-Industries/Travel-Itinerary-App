@@ -58,9 +58,6 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
-import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
-import NativeDateTimePicker from '../components/NativeDateTimePicker';
-import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
@@ -72,6 +69,7 @@ import {
   tourMatchesDay,
 } from '../utils/overviewDayEvents';
 import { FlightEditingForm } from '../components/TransferEditingForm';
+import DateField from '../components/DateField';
 import TripDayMap from '../components/TripDayMap';
 import { type TripMapPoint } from '../utils/googleMaps';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -289,12 +287,6 @@ type DetailModalState = {
   kind?: 'flight' | 'lodging' | 'activity';
   item?: Flight | Lodging | Tour;
 };
-
-type ModalDateField =
-  | 'flightDeparture'
-  | 'lodgingCheckIn'
-  | 'lodgingCheckOut'
-  | 'lodgingRefundBy';
 
 export const dedupeAttendees = (
   attendees: OverviewTabProps['attendees']
@@ -596,20 +588,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
-  const [dateField, setDateField] = useState<'start' | 'end' | null>(null);
-  const [dateValue, setDateValue] = useState<Date>(new Date());
-  const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | null>(null);
-  const [timePickerValue, setTimePickerValue] = useState<Date>(new Date());
   const [scrollY, setScrollY] = useState(0);
   const [flightRowOffsets, setFlightRowOffsets] = useState<Record<string, number>>({});
-  const startDateRef = useRef<any>(null);
-  const endDateRef = useRef<any>(null);
   const editDepLocationRef = useRef<any>(null);
   const editArrLocationRef = useRef<any>(null);
   const editLayoverLocationRef = useRef<any>(null);
   const scrollRef = useRef<any>(null);
-  const [modalDateField, setModalDateField] = useState<ModalDateField | null>(null);
-  const [modalDateValue, setModalDateValue] = useState<Date>(new Date());
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
@@ -1517,59 +1501,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     };
   }, [backendUrl, headers, blogDayImages, dayCards, tripLocationLabel, trip?.destination]);
 
-  const openDatePicker = (field: 'start' | 'end') => {
-    if (Platform.OS !== 'web') {
-      const base = field === 'start' ? dateDraft.startDate : dateDraft.endDate;
-      const date = parseLocalDateOnly(base);
-      setDateValue(date);
-      setDateField(field);
-      return;
-    }
-    const ref = field === 'start' ? startDateRef.current : endDateRef.current;
-    if ((ref as any)?.showPicker) {
-      (ref as any).showPicker();
-      return;
-    }
-    if (typeof ref?.click === 'function') {
-      ref.click();
-      return;
-    }
-    ref?.focus();
-  };
-
-  const openModalDatePicker = (field: ModalDateField, current?: string) => {
-    if (Platform.OS !== 'web') {
-      const fieldValue = current ?? (
-        field === 'flightDeparture'
-          ? editingFlightDraft?.departureDate
-          : field === 'lodgingCheckIn'
-            ? lodgingDraft.checkInDate
-            : field === 'lodgingCheckOut'
-              ? lodgingDraft.checkOutDate
-              : lodgingDraft.refundBy
-      );
-      const base = parseLocalDateOnly(fieldValue);
-      setModalDateValue(base);
-      setModalDateField(field);
-    }
-  };
-
-  const openTimePicker = (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => {
-    if (Platform.OS !== 'web') {
-      const base = new Date();
-      const match = current?.match(/(\d{1,2}):(\d{2})/);
-      if (match) {
-        base.setHours(Number(match[1]), Number(match[2]), 0, 0);
-      } else {
-        base.setHours(0, 0, 0, 0);
-      }
-      setTimePickerValue(base);
-      if (target === 'edit-dep' || target === 'edit-arr') {
-        setTimePickerTarget(target);
-      }
-    }
-  };
-
   const monthOptions = useMemo(
     () =>
       Array.from({ length: 12 }).map((_, idx) => ({
@@ -1584,27 +1515,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return Array.from({ length: 12 }).map((_, idx) => String(current - 1 + idx));
   }, []);
 
-  const dayOptions = useMemo(() => Array.from({ length: 31 }).map((_, idx) => String(idx + 1).padStart(2, '0')), []);
   const durationOptions = useMemo(() => Array.from({ length: 365 }).map((_, idx) => String(idx + 1)), []);
-
-  const parseDateParts = (value: string | null | undefined) => {
-    const safe = (value ?? '').trim();
-    const [year, month, day] = safe.split('-');
-    return { year: year || '', month: month || '', day: day || '' };
-  };
-
-  const setDatePart = (which: 'start' | 'end', part: 'year' | 'month' | 'day', value: string) => {
-    setDateDraft((prev) => {
-      const current = which === 'start' ? prev.startDate : prev.endDate;
-      const parts = parseDateParts(current);
-      const next = { ...parts, [part]: value };
-      const year = (next.year || '').padStart(4, '0');
-      const month = (next.month || '').padStart(2, '0');
-      const day = (next.day || '').padStart(2, '0');
-      const formatted = year && month && day ? `${year}-${month}-${day}` : '';
-      return which === 'start' ? { ...prev, startDate: formatted } : { ...prev, endDate: formatted };
-    });
-  };
 
   const saveOverviewEdits = async () => {
     if (!trip?.id) return;
@@ -1899,7 +1810,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowFlightEditor(false);
     setEditingFlightId(null);
     setEditingFlightDraft(null);
-    setTimePickerTarget(null);
     setFlightEditorAnchor(0);
     if (returnToOverviewViewAfterItemEdit) {
       setReturnToOverviewViewAfterItemEdit(false);
@@ -2507,12 +2417,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       groupMembers={groupMembers}
       userMembers={userMembers}
       styles={styles}
+      theme={theme}
       formatMemberName={formatMemberName}
       payerName={payerName}
       getLocationInputValue={getLocationInputValue}
       showAirportDropdown={showAirportDropdown}
       parseLayoverDuration={parseLayoverDuration}
-      openTimePicker={openTimePicker}
       onAirportEnter={() => undefined}
       setFlight={setEditingFlightDraft}
       setPassengerIds={setEditingFlightPassengers}
@@ -2535,13 +2445,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       formatMemberName={formatMemberName}
       defaultPayerId={defaultPayerId}
       payerName={payerName}
+      theme={theme}
       onSave={saveLodging}
       onCancel={closeLodgingModal}
-      onOpenDatePicker={(field) =>
-        openModalDatePicker(
-          field === 'checkIn' ? 'lodgingCheckIn' : field === 'checkOut' ? 'lodgingCheckOut' : 'lodgingRefundBy'
-        )
-      }
     />
   );
 
@@ -3483,118 +3389,26 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             {dateDraft.mode === 'range' ? (
               <>
                 <View style={[styles.row, { gap: 8 }]}>
-                  {Platform.OS === 'web' ? (
-                    <>
-                      <select
-                        aria-label="Start month"
-                        value={parseDateParts(dateDraft.startDate).month}
-                        onChange={(e) => setDatePart('start', 'month', e.target.value)}
-                        className="dateSelect"
-                      >
-                        <option value="">Month</option>
-                        {monthOptions.map((m) => (
-                          <option key={`start-${m.value}`} value={m.value}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="Start day"
-                        value={parseDateParts(dateDraft.startDate).day}
-                        onChange={(e) => setDatePart('start', 'day', e.target.value)}
-                        className="dateSelect"
-                      >
-                        <option value="">Day</option>
-                        {dayOptions.map((d) => (
-                          <option key={`start-day-${d}`} value={d}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="Start year"
-                        value={parseDateParts(dateDraft.startDate).year}
-                        onChange={(e) => setDatePart('start', 'year', e.target.value)}
-                        className="dateSelect"
-                      >
-                        <option value="">Year</option>
-                        {yearOptions.map((y) => (
-                          <option key={`start-year-${y}`} value={y}>
-                            {y}
-                          </option>
-                        ))}
-                      </select>
-                    </>
-                  ) : (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]}
-                        onPress={() => openDatePicker('start')}
-                      >
-                        <Text style={styles.cellText}>{dateDraft.startDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
-                        <Text style={styles.selectCaret}>v</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
+                  <DateField
+                    value={dateDraft.startDate}
+                    onChange={(startDate) => setDateDraft((prev) => ({ ...prev, startDate }))}
+                    styles={styles}
+                    theme={theme}
+                    style={{ maxWidth: 200 }}
+                    testID="overview-trip-start-date"
+                    accessibilityLabel="Start date"
+                  />
                 </View>
                 <View style={[styles.row, { gap: 8 }]}>
-                  {Platform.OS === 'web' ? (
-                    <>
-                      <select
-                        aria-label="End month"
-                        value={parseDateParts(dateDraft.endDate).month}
-                        onChange={(e) => setDatePart('end', 'month', e.target.value)}
-                        className="dateSelect"
-                      >
-                        <option value="">Month</option>
-                        {monthOptions.map((m) => (
-                          <option key={`end-${m.value}`} value={m.value}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="End day"
-                        value={parseDateParts(dateDraft.endDate).day}
-                        onChange={(e) => setDatePart('end', 'day', e.target.value)}
-                        className="dateSelect"
-                      >
-                        <option value="">Day</option>
-                        {dayOptions.map((d) => (
-                          <option key={`end-day-${d}`} value={d}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="End year"
-                        value={parseDateParts(dateDraft.endDate).year}
-                        onChange={(e) => setDatePart('end', 'year', e.target.value)}
-                        className="dateSelect"
-                      >
-                        <option value="">Year</option>
-                        {yearOptions.map((y) => (
-                          <option key={`end-year-${y}`} value={y}>
-                            {y}
-                          </option>
-                        ))}
-                      </select>
-                    </>
-                  ) : (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]}
-                        onPress={() => openDatePicker('end')}
-                      >
-                        <Text style={styles.cellText}>{dateDraft.endDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
-                        <Text style={styles.selectCaret}>v</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
+                  <DateField
+                    value={dateDraft.endDate}
+                    onChange={(endDate) => setDateDraft((prev) => ({ ...prev, endDate }))}
+                    styles={styles}
+                    theme={theme}
+                    style={{ maxWidth: 200 }}
+                    testID="overview-trip-end-date"
+                    accessibilityLabel="End date"
+                  />
                 </View>
               </>
             ) : (
@@ -3890,13 +3704,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       formatMemberName={formatMemberName}
                       defaultPayerId={defaultPayerId}
                       payerName={payerName}
+                      theme={theme}
                       onSave={saveLodging}
                       onCancel={closeLodgingModal}
-                      onOpenDatePicker={(field) =>
-                        openModalDatePicker(
-                          field === 'checkIn' ? 'lodgingCheckIn' : field === 'checkOut' ? 'lodgingCheckOut' : 'lodgingRefundBy'
-                        )
-                      }
                     />
                   </View>
                 );
@@ -4037,88 +3847,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {renderContent()}
       {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
       {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!timePickerTarget}
-          onRequestClose={() => setTimePickerTarget(null)}
-          testID="overview-time-picker"
-        >
-          <NativeDateTimePicker
-            value={timePickerValue}
-            mode="time"
-            onChange={(event, date) => {
-              if (event?.type === 'dismissed') {
-                setTimePickerTarget(null);
-                return;
-              }
-              if (!date) return;
-              const hh = String(date.getHours()).padStart(2, '0');
-              const mm = String(date.getMinutes()).padStart(2, '0');
-              const value = `${hh}:${mm}`;
-              if (timePickerTarget === 'edit-dep') {
-                setEditingFlightDraft((prev) => (prev ? { ...prev, departureTime: value } : prev));
-              } else if (timePickerTarget === 'edit-arr') {
-                setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
-              }
-              if (Platform.OS === 'android') setTimePickerTarget(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!dateField}
-          onRequestClose={() => setDateField(null)}
-          testID="overview-date-picker"
-        >
-          <NativeDateTimePicker
-            value={dateValue}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setDateField(null);
-                return;
-              }
-              const iso = formatLocalDateOnly(date);
-              if (dateField === 'start') {
-                setDateDraft((prev) => ({ ...prev, startDate: iso }));
-              } else {
-                setDateDraft((prev) => ({ ...prev, endDate: iso }));
-              }
-              if (Platform.OS === 'android') setDateField(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!modalDateField}
-          onRequestClose={() => setModalDateField(null)}
-          testID="overview-modal-date-picker"
-        >
-          <NativeDateTimePicker
-            value={modalDateValue}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setModalDateField(null);
-                return;
-              }
-              const iso = formatLocalDateOnly(date);
-              if (modalDateField === 'flightDeparture') {
-                setEditingFlightDraft((prev) => (prev ? { ...prev, departureDate: iso } : prev));
-              } else if (modalDateField === 'lodgingCheckIn') {
-                setLodgingDraft((prev) => ({ ...prev, checkInDate: iso }));
-              } else if (modalDateField === 'lodgingCheckOut') {
-                setLodgingDraft((prev) => ({ ...prev, checkOutDate: iso }));
-              } else if (modalDateField === 'lodgingRefundBy') {
-                setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
-              }
-              if (Platform.OS === 'android') setModalDateField(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
 
       {showAddTour ? (
         <ActivityEditForm

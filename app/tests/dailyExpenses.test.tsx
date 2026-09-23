@@ -5,7 +5,8 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import DailyExpensesTab from '../tabs/dailyExpenses';
 import { getAppTheme } from '../theme/theme';
 
@@ -260,6 +261,78 @@ describe('DailyExpensesTab', () => {
       }));
     } finally {
       global.fetch = originalFetch;
+    }
+  });
+
+  it('renders a bounded web date input and keeps a selected expense date', () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      const screen = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      const dateInput = screen.getByTestId('daily-expense-date') as any;
+      expect(dateInput.props.type).toBe('date');
+      expect(dateInput.props.min).toBe('2025-02-01');
+      expect(dateInput.props.max).toBe('2025-02-02');
+
+      fireEvent(dateInput, 'change', { target: { value: '2025-02-02' } });
+      expect(screen.getByTestId('daily-expense-date').props.value).toBe('2025-02-02');
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
+  it('opens a native date picker outside the scrolling expense form and commits its selection', () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'ios';
+    try {
+      const screen = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      fireEvent.press(screen.getByTestId('daily-expense-date'));
+
+      const picker = screen.getByTestId('native-date-time-picker');
+      expect(picker.props.display).toBe('spinner');
+      expect(picker.props.minimumDate).toEqual(new Date(2025, 1, 1));
+      expect(picker.props.maximumDate).toEqual(new Date(2025, 1, 2));
+
+      act(() => {
+        picker.props.onValueChange({ nativeEvent: {} }, new Date(2025, 1, 2));
+      });
+      fireEvent.press(screen.getByTestId('daily-expense-date-done'));
+
+      expect(screen.getByText('2025-02-02')).toBeTruthy();
+    } finally {
+      Platform.OS = originalOS;
     }
   });
 

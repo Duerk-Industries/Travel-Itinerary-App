@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
@@ -6,9 +6,7 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { CarRentalDraft } from '../tabs/carRentals';
-import NativeDateTimePicker from './NativeDateTimePicker';
-import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
-import NativeDatePickerSheet from './NativeDatePickerSheet';
+import DateField from './DateField';
 
 // Single source of truth for the "add/edit car rental" form, styled to match
 // FlightEditingForm/LodgingForm/ActivityEditForm (same modalCard shell, per-field
@@ -26,8 +24,6 @@ export type CarRentalFormMember = {
   status?: 'active' | 'pending' | 'removed';
   removedAt?: string | null;
 };
-
-type CarRentalDateField = 'pickupDate' | 'dropoffDate';
 
 export type CarRentalEditFormProps = {
   draft: CarRentalDraft;
@@ -51,8 +47,6 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
   styles,
   theme,
 }) => {
-  const [dateField, setDateField] = useState<CarRentalDateField | null>(null);
-  const [pickerValue, setPickerValue] = useState<Date>(new Date());
   // Keep this list in sync with lodging and activity editors: guests and
   // pending travelers are valid trip participants, while removed members are
   // never offered for new assignments.
@@ -72,12 +66,6 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
   };
   const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
   const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
-
-  const openDatePicker = (field: CarRentalDateField) => {
-    setDateField(field);
-    const current = draft[field];
-    setPickerValue(parseLocalDateOnly(current));
-  };
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
 
@@ -125,19 +113,14 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, pickupLocation: text }))}
             />
             <Text style={styles.modalLabel}>Pick-up date</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                type="date"
-                title="Pick-up date"
-                value={draft.pickupDate}
-                onChange={(e) => onChange((prev) => ({ ...prev, pickupDate: e.target.value }))}
-              />
-            ) : (
-              <TouchableOpacity style={styles.input} onPress={() => openDatePicker('pickupDate')}>
-                <Text style={styles.cellText}>{draft.pickupDate || 'YYYY-MM-DD'}</Text>
-              </TouchableOpacity>
-            )}
+            <DateField
+              value={draft.pickupDate}
+              onChange={(pickupDate) => onChange((prev) => ({ ...prev, pickupDate }))}
+              styles={styles}
+              theme={theme}
+              testID="car-rental-pickup-date"
+              accessibilityLabel="Pick-up date"
+            />
             <Text style={styles.modalLabel}>Drop-off location</Text>
             <TextInput
               style={styles.input}
@@ -146,19 +129,14 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, dropoffLocation: text }))}
             />
             <Text style={styles.modalLabel}>Drop-off date</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                type="date"
-                title="Drop-off date"
-                value={draft.dropoffDate}
-                onChange={(e) => onChange((prev) => ({ ...prev, dropoffDate: e.target.value }))}
-              />
-            ) : (
-              <TouchableOpacity style={styles.input} onPress={() => openDatePicker('dropoffDate')}>
-                <Text style={styles.cellText}>{draft.dropoffDate || 'YYYY-MM-DD'}</Text>
-              </TouchableOpacity>
-            )}
+            <DateField
+              value={draft.dropoffDate}
+              onChange={(dropoffDate) => onChange((prev) => ({ ...prev, dropoffDate }))}
+              styles={styles}
+              theme={theme}
+              testID="car-rental-dropoff-date"
+              accessibilityLabel="Drop-off date"
+            />
             <Text style={styles.modalLabel}>Vendor</Text>
             <TextInput
               style={styles.input}
@@ -264,28 +242,6 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!dateField}
-          onRequestClose={() => setDateField(null)}
-          theme={theme}
-          testID="car-rental-date-picker"
-        >
-          <NativeDateTimePicker
-            value={pickerValue}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setDateField(null);
-                return;
-              }
-              const iso = formatLocalDateOnly(date);
-              onChange((prev) => ({ ...prev, [dateField as NonNullable<typeof dateField>]: iso }));
-              if (Platform.OS === 'android') setDateField(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
     </Modal>
   );
 };
