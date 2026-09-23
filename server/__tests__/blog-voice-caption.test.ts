@@ -10,12 +10,17 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('trip blog voice captions', () => {
   const traveler = { firstName: 'Voice', lastName: 'Traveler', email: 'blog-voice-traveler@example.com', password: 'Password123!' };
+  const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
   let token = '';
   let userId = '';
   let tripId = '';
   let assetId = '';
 
   beforeAll(async () => {
+    // The route validates its OpenAI credential before invoking the mocked HTTP
+    // client. Supply a fixture value so this test does not depend on .env or CI
+    // secrets; axios remains fully mocked below.
+    process.env.OPENAI_API_KEY = 'test-openai-api-key';
     await initDb();
     await seedTiersForTest();
     for (const key of ['trip_blog', 'trip_blog_photo_uploads', 'trip_blog_audio_transcription']) await setFeatureFlag(key, true, null);
@@ -35,7 +40,14 @@ describe('trip blog voice captions', () => {
   });
 
   afterEach(() => { jest.clearAllMocks(); });
-  afterAll(async () => { await cleanupTestUsersByEmail([traveler.email]); });
+  afterAll(async () => {
+    try {
+      await cleanupTestUsersByEmail([traveler.email]);
+    } finally {
+      if (originalOpenAiApiKey === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = originalOpenAiApiKey;
+    }
+  });
 
   it('keeps voice captions behind the Premium/Pro entitlement', async () => {
     const res = await request(app)
