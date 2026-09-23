@@ -1901,12 +1901,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 useNativeModal
                 testID="manual-itinerary-item-dialog"
               >
-                <TextInput
-                  style={styles.input}
-                  placeholder="Time (optional)"
-                  accessibilityLabel="Time"
+                <DateField
+                  mode="time"
                   value={manualDraft.time}
-                  onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, time: text }))}
+                  onChange={(time) => setManualDraft((prev) => ({ ...prev, time }))}
+                  styles={styles}
+                  theme={theme}
+                  placeholder="Time (optional)"
+                  testID="manual-itinerary-item-time"
+                  accessibilityLabel="Time"
                 />
                 <TextInput
                   style={styles.input}
