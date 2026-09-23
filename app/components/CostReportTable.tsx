@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Text, View } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
+import { fixedTableColumn } from '../utils/tableColumns';
 
 type Member = {
   id: string;
@@ -40,49 +41,49 @@ const CostReportTableComponent: React.FC<CostReportTableProps> = ({
   >
     <View style={styles.table}>
       <View style={[styles.tableRow, styles.tableHeader]}>
-        <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+        <View style={[styles.cell, fixedTableColumn(140)]}>
           <Text style={styles.headerText}>Category</Text>
         </View>
         {members.map((m) => (
-          <View key={m.id} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+          <View key={m.id} style={[styles.cell, fixedTableColumn(120)]}>
             <Text style={styles.headerText}>{formatMemberName(m)}</Text>
           </View>
         ))}
-        <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
+        <View style={[styles.cell, styles.lastCell, fixedTableColumn(120)]}>
           <Text style={styles.headerText}>Total</Text>
         </View>
       </View>
       {rows.map((row, idx, arr) => (
         <View key={row.label} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
-          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+          <View style={[styles.cell, fixedTableColumn(140)]}>
             <Text style={styles.cellText}>{row.label}</Text>
           </View>
           {members.map((m) => {
             const share = row.shares[m.id] ?? 0;
             return (
-              <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+              <View key={`${row.label}-${m.id}`} style={[styles.cell, fixedTableColumn(120)]}>
                 <Text style={styles.cellText}>${share.toFixed(2)}</Text>
               </View>
             );
           })}
-          <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
+          <View style={[styles.cell, styles.lastCell, fixedTableColumn(120)]}>
             <Text style={styles.cellText}>${row.total.toFixed(2)}</Text>
           </View>
         </View>
       ))}
       <View style={[styles.tableRow, styles.tableHeader]}>
-        <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+        <View style={[styles.cell, fixedTableColumn(140)]}>
           <Text style={styles.headerText}>Overall</Text>
         </View>
         {members.map((m) => {
           const total = overallShares[m.id] ?? 0;
           return (
-            <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+            <View key={`overall-${m.id}`} style={[styles.cell, fixedTableColumn(120)]}>
               <Text style={styles.headerText}>${total.toFixed(2)}</Text>
             </View>
           );
         })}
-        <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
+        <View style={[styles.cell, styles.lastCell, fixedTableColumn(120)]}>
           <Text style={styles.headerText}>${overallCost.toFixed(2)}</Text>
         </View>
       </View>

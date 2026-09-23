@@ -14,6 +14,7 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { toWebStyle } from '../utils/webStyle';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { usePersistedState } from '../hooks/usePersistedState';
+import { fixedTableColumn } from '../utils/tableColumns';
 
 type Trip = {
   id: string;
@@ -832,21 +833,21 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           <View style={styles.table} testID="daily-expenses-table">
             <View style={[styles.tableRow, styles.tableHeader]}>
               {['Date', ...categoryOptions, 'Total'].map((header, index) => (
-                <View key={header} style={[styles.cell, { minWidth: index === 0 ? 120 : 110, flex: 1 }, index === categoryOptions.length + 1 && styles.lastCell]}>
+                <View key={header} style={[styles.cell, fixedTableColumn(index === 0 ? 120 : 110), index === categoryOptions.length + 1 && styles.lastCell]}>
                   <Text style={styles.headerText}>{header}</Text>
                 </View>
               ))}
             </View>
             {tripDates.map((date, idx) => (
               <View key={date} style={[styles.tableRow, idx === tripDates.length - 1 && styles.lastRow]}>
-                <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                <View style={[styles.cell, fixedTableColumn(120)]}>
                   <Text style={styles.cellText}>{formatDateLabel(date)}</Text>
                 </View>
                 {categoryOptions.map((category) => {
                   const value = dailyTotals[date]?.[category] ?? 0;
                   const content = value ? `$${value.toFixed(2)}` : '-';
                   return (
-                    <View key={`${date}-${category}`} style={[styles.cell, { minWidth: 110, flex: 1 }]}>
+                    <View key={`${date}-${category}`} style={[styles.cell, fixedTableColumn(110)]}>
                       {value ? (
                         <TouchableOpacity onPress={() => setDetailTarget({ date, category })} testID={`expense-cell-${date}-${category}`}>
                           <Text style={[styles.cellText, styles.linkText]}>{content}</Text>
@@ -857,7 +858,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     </View>
                   );
                 })}
-                <View style={[styles.cell, styles.lastCell, { minWidth: 110, flex: 1 }]}>
+                <View style={[styles.cell, styles.lastCell, fixedTableColumn(110)]}>
                   <Text style={styles.cellText}>${(dailyTotalsByDay[date] ?? 0).toFixed(2)}</Text>
                 </View>
               </View>
@@ -888,30 +889,30 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
             <View style={styles.table} testID="other-expenses-table">
               <View style={[styles.tableRow, styles.tableHeader]}>
                 {['Date', 'Category', 'Description', 'For', 'Amount', 'Action'].map((header, index) => (
-                  <View key={header} style={[styles.cell, { minWidth: index === 4 ? 90 : 130, flex: 1 }, index === 5 && styles.lastCell]}>
+                  <View key={header} style={[styles.cell, fixedTableColumn(index === 4 ? 90 : 130), index === 5 && styles.lastCell]}>
                     <Text style={styles.headerText}>{header}</Text>
                   </View>
                 ))}
               </View>
               {otherExpenses.map((expense, index) => (
                 <View key={expense.id} style={[styles.tableRow, index === otherExpenses.length - 1 && styles.lastRow]} testID={`other-expense-row-${expense.id}`}>
-                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{formatDateLabel(expense.expenseDate)}</Text>
                   </View>
-                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.category}</Text>
                     {expense.sourceType ? <Text style={styles.helperText}>from itinerary</Text> : null}
                   </View>
-                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.vendor || expense.notes || '-'}</Text>
                   </View>
-                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.forIds.length ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
                   </View>
-                  <View style={[styles.cell, { minWidth: 90, flex: 1 }]}>
+                  <View style={[styles.cell, fixedTableColumn(90)]}>
                     <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
                   </View>
-                  <View style={[styles.cell, styles.lastCell, { minWidth: 130, flex: 1 }]}>
+                  <View style={[styles.cell, styles.lastCell, fixedTableColumn(130)]}>
                     <TouchableOpacity
                       style={[styles.tableActionButton, styles.tableActionButtonDanger]}
                       onPress={() => setPendingDeleteExpense(expense)}
@@ -982,7 +983,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 <View style={[styles.table, { minWidth: 620 }]}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
                     {['Description', 'For', 'Payers', 'Amount', 'Action'].map((header, index) => (
-                      <View key={header} style={[styles.cell, { minWidth: index === 3 ? 90 : 150, flex: 1 }, index === 4 && styles.lastCell]}>
+                      <View key={header} style={[styles.cell, fixedTableColumn(index === 3 ? 90 : 150), index === 4 && styles.lastCell]}>
                         <Text style={styles.headerText}>{header}</Text>
                       </View>
                     ))}
@@ -990,23 +991,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <ScrollView style={{ maxHeight: viewportHeight ? Math.min(360, viewportHeight * 0.4) : 360 }} nestedScrollEnabled>
                     {detailItems.map((expense, index) => (
                       <View key={expense.id} style={[styles.tableRow, index === detailItems.length - 1 && styles.lastRow]}>
-                        <View style={[styles.cell, { minWidth: 150, flex: 1 }]}>
+                        <View style={[styles.cell, fixedTableColumn(150)]}>
                           <Text style={styles.cellText}>{expense.vendor || expense.notes || '-'}</Text>
                         </View>
-                        <View style={[styles.cell, { minWidth: 150, flex: 1 }]}>
+                        <View style={[styles.cell, fixedTableColumn(150)]}>
                           <Text style={styles.cellText}>
                             {expense.forIds.length ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}
                           </Text>
                         </View>
-                        <View style={[styles.cell, { minWidth: 150, flex: 1 }]}>
+                        <View style={[styles.cell, fixedTableColumn(150)]}>
                           <Text style={styles.cellText}>
                             {expense.payerIds.length ? expense.payerIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}
                           </Text>
                         </View>
-                        <View style={[styles.cell, { minWidth: 90, flex: 1 }]}>
+                        <View style={[styles.cell, fixedTableColumn(90)]}>
                           <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
                         </View>
-                        <View style={[styles.cell, styles.lastCell, { minWidth: 150, flex: 1 }]}>
+                        <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
                           <TouchableOpacity
                             style={[styles.tableActionButton, styles.tableActionButtonDanger]}
                             onPress={() => setPendingDeleteExpense(expense)}
@@ -1019,7 +1020,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     ))}
                     {!detailItems.length ? (
                       <View style={[styles.tableRow, styles.lastRow]}>
-                        <View style={[styles.cell, styles.lastCell, { minWidth: 150, flex: 1 }]}>
+                        <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
                           <Text style={styles.helperText}>No expenses recorded.</Text>
                         </View>
                       </View>
