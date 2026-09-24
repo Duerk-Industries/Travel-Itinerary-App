@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -300,6 +300,9 @@ type TourTabProps = {
   featureActivityLodgingCsvImport?: boolean;
   featureActivityLodgingCsvExport?: boolean;
   featureStandardizedItemDialogs?: boolean;
+  externalEditTourId?: string | null;
+  onExternalEditHandled?: () => void;
+  showList?: boolean;
   // Kill switch for row-tap-to-edit + sticky identity/actions columns
   // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
   featureTapToEditTables?: boolean;
@@ -332,6 +335,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureActivityLodgingCsvImport = false,
   featureActivityLodgingCsvExport = false,
   featureStandardizedItemDialogs = false,
+  externalEditTourId,
+  onExternalEditHandled,
+  showList = true,
   featureTapToEditTables = true,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
@@ -391,7 +397,18 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const closeTourEditor = () => {
     setEditingTour(null);
     setEditingTourId(null);
+    onExternalEditHandled?.();
   };
+
+  useEffect(() => {
+    if (!externalEditTourId) return;
+    const target = tours.find((tour) => tour.id === externalEditTourId);
+    if (target) {
+      openTourEditor(target);
+    } else {
+      onExternalEditHandled?.();
+    }
+  }, [externalEditTourId, tours]);
 
   const saveTour = () => {
     if (readOnly) return;
@@ -836,7 +853,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   );
 
   return (
-    <View style={styles.card}>
+    <View style={showList ? styles.card : undefined}>
+      {showList ? (
+        <>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
         {!readOnly ? (
@@ -1003,6 +1022,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </View>
         ) : null}
       </View>
+        </>
+      ) : null}
       {selectedTour && !featureStandardizedItemDialogs ? (
         <Modal transparent visible={Boolean(selectedTour)} animationType="fade" onRequestClose={() => setSelectedTourId(null)}>
           <View style={styles.modalOverlay} testID="activity-details-modal">

@@ -173,10 +173,9 @@ describe('DailyExpensesTab', () => {
     }
   });
 
-  it('surfaces and deletes expenses the daily grid cannot reach (wrong category or date)', async () => {
+  it('surfaces unreachable expenses and opens linked itinerary items from their description', () => {
     const setExpenses = jest.fn();
-    const fetchMock = jest.fn(async () => ({ ok: true, status: 204, json: async () => ({}) }) as any);
-    (global as any).fetch = fetchMock;
+    const onEditItineraryItem = jest.fn();
 
     const list = [
       ...expenses,
@@ -188,7 +187,8 @@ describe('DailyExpensesTab', () => {
     const screen = render(
       <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
         groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles}
-        itineraryExpenseDescriptions={{ 'activity:a1': 'Rome Food Tour', 'activity:a2': 'Colosseum Tour' }} costTrackingAllowed />
+        itineraryExpenseDescriptions={{ 'activity:a1': 'Rome Food Tour', 'activity:a2': 'Colosseum Tour' }}
+        onEditItineraryItem={onEditItineraryItem} costTrackingAllowed />
     );
 
     // The grid can't show any of these three; the "Other expenses" table does.
@@ -199,13 +199,13 @@ describe('DailyExpensesTab', () => {
     expect(within(screen.getByTestId('other-expense-row-act-1')).getByText('Rome Food Tour')).toBeTruthy();
     expect(within(screen.getByTestId('other-expense-row-act-1')).getAllByText('Alex Rider')).toHaveLength(2);
     expect(screen.queryByText('from itinerary')).toBeNull();
+    expect(screen.queryByText('Action')).toBeNull();
+    expect(screen.queryByTestId('expense-delete-act-1')).toBeNull();
     // e1 (Breakfast, in range) stays in the grid, not here.
     expect(screen.queryByTestId('other-expense-row-e1')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('expense-delete-act-1'));
-    fireEvent.press(screen.getByLabelText('Delete')); // ConfirmDialog confirm
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('http://example.test/api/expenses/act-1', expect.objectContaining({ method: 'DELETE' })));
-    expect(setExpenses).toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('other-expense-edit-source-act-1'));
+    expect(onEditItineraryItem).toHaveBeenCalledWith('activity', 'a1');
 
     // The bulk "remove zero-amount" shortcut only shows with 2+ zero entries; here there is 1.
     expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();

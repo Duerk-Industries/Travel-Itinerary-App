@@ -1,6 +1,6 @@
 
 // @ts-nocheck
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -36,6 +36,9 @@ type LodgingTabProps = {
   featureStandardizedItemDialogs?: boolean;
   featureActivityLodgingCsvImport?: boolean;
   featureActivityLodgingCsvExport?: boolean;
+  externalEditLodgingId?: string | null;
+  onExternalEditHandled?: () => void;
+  showList?: boolean;
   // Kill switch for row-tap-to-edit + sticky identity/actions columns
   // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
   featureTapToEditTables?: boolean;
@@ -72,6 +75,9 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   featureStandardizedItemDialogs = false,
   featureActivityLodgingCsvImport = false,
   featureActivityLodgingCsvExport = false,
+  externalEditLodgingId,
+  onExternalEditHandled,
+  showList = true,
   featureTapToEditTables = true,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -133,7 +139,18 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     setShowEditor(false);
     setEditingLodging(null);
     setLodgingDraft(null);
+    onExternalEditHandled?.();
   };
+
+  useEffect(() => {
+    if (!externalEditLodgingId) return;
+    const target = lodgings.find((lodging) => lodging.id === externalEditLodgingId);
+    if (target) {
+      openEditDialog(target);
+    } else {
+      onExternalEditHandled?.();
+    }
+  }, [externalEditLodgingId, lodgings]);
 
   const closeDetails = () => {
     setShowDetails(false);
@@ -307,7 +324,9 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const travelerName = (id: string) => travelerNames.get(id) ?? 'Unknown';
 
   return (
-    <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
+    <View style={showList ? [styles.card, { flex: 1, minHeight: 0 }] : undefined}>
+      {showList ? (
+        <>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Lodging</Text>
         {!readOnly ? (
@@ -443,6 +462,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         </HorizontalTableScroll>
       </> : null}
       </ScrollView>
+        </>
+      ) : null}
 
       {showDetails && selectedLodging && featureStandardizedItemDialogs ? (
         <TripItemDetailsDialog

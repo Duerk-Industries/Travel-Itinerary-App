@@ -78,6 +78,8 @@ type DailyExpensesTabProps = {
   styles: Record<string, any>;
   /** Names for itinerary items whose generated expenses appear in this table. */
   itineraryExpenseDescriptions?: Readonly<Record<string, string>>;
+  /** Opens the linked itinerary item's standard editor. */
+  onEditItineraryItem?: (sourceType: string, sourceId: string) => void;
   costTrackingAllowed?: boolean;
   readOnly?: boolean;
 };
@@ -167,6 +169,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   defaultPayerId,
   styles,
   itineraryExpenseDescriptions = {},
+  onEditItineraryItem,
   costTrackingAllowed,
   readOnly = false,
 }) => {
@@ -852,7 +855,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <View style={{ marginTop: 18 }}>
           <Text style={styles.sectionTitle}>Other expenses ({otherExpenses.length})</Text>
           <Text style={styles.helperText}>
-            Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Delete any that shouldn’t be here. Editing the linked itinerary item will re-create its expense.
+            Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Select a linked description to edit its itinerary item.
           </Text>
           {otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length >= 2 ? (
             <TouchableOpacity
@@ -869,8 +872,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table} testID="other-expenses-table">
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Date', 'Category', 'Description', 'Paid by', 'For', 'Amount', 'Action'].map((header, index) => (
-                  <View key={header} style={[styles.cell, fixedTableColumn(index === 5 ? 90 : index === 2 ? 200 : 130), index === 6 && styles.lastCell]}>
+                {['Date', 'Category', 'Description', 'Paid by', 'For', 'Amount'].map((header, index) => (
+                  <View key={header} style={[styles.cell, fixedTableColumn(index === 5 ? 90 : index === 2 ? 200 : 130), index === 5 && styles.lastCell]}>
                     <Text style={styles.headerText}>{header}</Text>
                   </View>
                 ))}
@@ -884,7 +887,18 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     <Text style={styles.cellText}>{expense.category}</Text>
                   </View>
                   <View style={[styles.cell, fixedTableColumn(200)]}>
-                    <Text style={styles.cellText}>{otherExpenseDescription(expense)}</Text>
+                    {!readOnly && expense.sourceType && expense.sourceId && onEditItineraryItem ? (
+                      <TouchableOpacity
+                        accessibilityRole="link"
+                        accessibilityLabel={`Edit ${otherExpenseDescription(expense)}`}
+                        onPress={() => onEditItineraryItem(expense.sourceType as string, expense.sourceId as string)}
+                        testID={`other-expense-edit-source-${expense.id}`}
+                      >
+                        <Text style={[styles.cellText, styles.linkText]}>{otherExpenseDescription(expense)}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.cellText}>{otherExpenseDescription(expense)}</Text>
+                    )}
                   </View>
                   <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.payerIds.length ? expense.payerIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
@@ -894,15 +908,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </View>
                   <View style={[styles.cell, fixedTableColumn(90)]}>
                     <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lastCell, fixedTableColumn(130)]}>
-                    <TouchableOpacity
-                      style={[styles.tableActionButton, styles.tableActionButtonDanger]}
-                      onPress={() => setPendingDeleteExpense(expense)}
-                      testID={`expense-delete-${expense.id}`}
-                    >
-                      <Text style={styles.buttonText}>Delete</Text>
-                    </TouchableOpacity>
                   </View>
                 </View>
               ))}
