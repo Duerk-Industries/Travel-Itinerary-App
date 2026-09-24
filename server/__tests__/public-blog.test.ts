@@ -4,6 +4,13 @@ import { initDb } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
 import { randomUUID } from 'crypto';
 
+// The real client would hit GCS; here we just confirm the route calls it with the rendition
+// naming convention and puts the result on the response, without exercising real storage.
+jest.mock('../src/services/blogStorageClient', () => ({
+  createBlogReadUrl: jest.fn(async (objectKey: string) => `https://signed.test/${objectKey}`),
+  blogRenditionKey: (uploaderUserId: string, assetId: string, rendition: string) => `trip-blog/${uploaderUserId}/${assetId}/${rendition}`,
+}));
+
 describe('Public Blog API', () => {
   let tripId: string;
   let userId: string;
@@ -29,6 +36,17 @@ describe('Public Blog API', () => {
     await queryBlog('INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, audience, sort_key, author_user_id, last_editor_user_id) VALUES ($1, $2, $3, \'core.text\', \'public\', \'001\', $4, $4)', [itemId, tripId, dayId, userId]);
     await queryBlog('INSERT INTO blog_text_contents (item_id, body) VALUES ($1, \'We arrived today!\')', [itemId]);
 
+    // A public photo, so the response's media-URL-signing path (attachPublicMediaUrls) is exercised.
+    const photoItemId = randomUUID();
+    const assetId = randomUUID();
+    await queryBlog('INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, audience, sort_key, author_user_id, last_editor_user_id) VALUES ($1, $2, $3, \'media.photo\', \'public\', \'002\', $4, $4)', [photoItemId, tripId, dayId, userId]);
+    await queryBlog(
+      `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, object_key, physical_bytes, billable_bytes)
+       VALUES ($1, $2, $3, $3, 'photo', 'ready', $4, 1, 1)`,
+      [assetId, tripId, userId, `trip-blog/${userId}/${assetId}/source`]
+    );
+    await queryBlog('INSERT INTO blog_item_assets (item_id, asset_id, position) VALUES ($1, $2, 0)', [photoItemId, assetId]);
+
     // Add an expense (should be hidden)
     await queryBlog('INSERT INTO expenses (id, trip_id, amount, category, expense_date, user_id, group_id) SELECT $1, $2, 100, \'Food\', $3::date, $4, group_id FROM trips WHERE id = $2', [randomUUID(), tripId, '2026-05-01', userId]);
   });
@@ -39,6 +57,16 @@ describe('Public Blog API', () => {
     expect(res.body.title).toBe('Paris Blog');
     expect(res.body.days[0].headline).toBe('Arrival in Paris');
     expect(res.body.days[0].items[0].body).toBe('We arrived today!');
+  });
+
+  it('signs a URL for a public photo and never exposes its storage object key or uploader', async () => {
+    const res = await request(app).get('/public/blog/testuser/paris-2026');
+    const photoItem = res.body.days[0].items.find((item: any) => item.mediaKind === 'photo');
+    expect(photoItem).toBeTruthy();
+    expect(photoItem.primaryUrl).toMatch(/^https:\/\/signed\.test\//);
+    expect(photoItem.thumbnailUrl).toMatch(/^https:\/\/signed\.test\//);
+    expect(photoItem.objectKey).toBeUndefined();
+    expect(photoItem.uploaderUserId).toBeUndefined();
   });
 
   it('does not expose expense or cost data in public response', async () => {

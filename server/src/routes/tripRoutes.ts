@@ -21,6 +21,8 @@ import {
   listTripActivity,
   listTrips,
   listTripShareInvites,
+  listTripFollowers,
+  removeTripFollower,
   rejectTripShareInvite,
   revokeTripShareInvite,
   searchTripContacts,
@@ -257,6 +259,27 @@ router.get('/:id/share/invites', async (req, res) => {
       return;
     }
     res.status(400).json({ error: message });
+  }
+});
+
+router.get('/:id/share/followers', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    res.json({ tripId: req.params.id, followers: await listTripFollowers(userId, req.params.id) });
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.delete('/:id/share/followers/:followerUserId', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    await removeTripFollower(userId, req.params.id, req.params.followerUserId);
+    res.status(204).send();
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
   }
 });
 

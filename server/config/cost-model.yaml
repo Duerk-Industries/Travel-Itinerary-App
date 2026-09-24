@@ -79,6 +79,19 @@ usagePerUser:
       requests: 2
     airportDataset:
       requests: 0
+    tripBlogSocial:
+      cloud_run_requests: 18
+      # Includes bounded Phase 7 search/places reads; Firestore reserves the configured scan
+      # ceiling before each request, while this is the expected (not hard-cap) monthly case.
+      firestore_reads: 180
+      firestore_writes: 5
+      firestore_deletes: 0.5
+      retained_kib_month: 4
+      static_map_requests: 0.5
+      ai_caption_input_tokens: 0
+      ai_caption_output_tokens: 0
+      voice_note_gb_month: 0
+      keepsake_exports: 0.25
     googleCloudHosting:
       # Incremental Activities grid planning allowance: +2 requests, +80 reads,
       # and +40 writes per Basic user/month.
@@ -176,6 +189,18 @@ usagePerUser:
       requests: 50
     airportDataset:
       requests: 0
+    tripBlogSocial:
+      cloud_run_requests: 70
+      firestore_reads: 1200
+      firestore_writes: 22
+      firestore_deletes: 2
+      retained_kib_month: 16
+      static_map_requests: 1.5
+      # Ten caption suggestions plus retry/headroom, bounded by api-limits.yaml.
+      ai_caption_input_tokens: 13000
+      ai_caption_output_tokens: 2100
+      voice_note_gb_month: 0.01
+      keepsake_exports: 1
     googleCloudHosting:
       # Incremental Activities grid planning allowance: +6 requests, +480 reads,
       # and +240 writes per Premium user/month.
@@ -419,6 +444,43 @@ costSources:
         unitCostUsd: 0.000024
       - metric: output_gb_month
         unitCostUsd: 0.026
+
+  - id: trip_blog_social
+    name: Trip blog social, recap, and generated artifacts
+    type: variable
+    api: tripBlogSocial
+    usageLevels:
+      - metric: cloud_run_requests
+        unitCostUsd: 0.40
+        perUnits: 1000000
+      - metric: firestore_reads
+        unitCostUsd: 0.06
+        perUnits: 100000
+      - metric: firestore_writes
+        unitCostUsd: 0.18
+        perUnits: 100000
+      - metric: firestore_deletes
+        unitCostUsd: 0.18
+        perUnits: 100000
+      - metric: retained_kib_month
+        unitCostUsd: 0.026
+        perUnits: 1048576
+      - metric: static_map_requests
+        unitCostUsd: 0.002
+      # Conservative mini-model planning rates; actual calls remain attributed to the selected
+      # provider by the standard AI registry and caller limiter.
+      - metric: ai_caption_input_tokens
+        unitCostUsd: 0.15
+        perUnits: 1000000
+      - metric: ai_caption_output_tokens
+        unitCostUsd: 0.60
+        perUnits: 1000000
+      # Phase 7 keepsakes render from data already loaded on-device, so the operation has no
+      # provider charge. Voice bytes use the same GCS price as other uploader-owned blog media.
+      - metric: voice_note_gb_month
+        unitCostUsd: 0.026
+      - metric: keepsake_exports
+        unitCostUsd: 0
 
   - id: plaid_transactions_subscription
     name: Plaid Transactions per connected account

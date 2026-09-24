@@ -28,7 +28,6 @@ interface ExpenseCoveringProps {
 
 const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
   groupMembers,
-  reportableMembers,
   coveredBy,
   setCoveredBy,
   formatMemberName,
@@ -37,17 +36,30 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
   theme,
 }) => {
   const textColor = theme?.colors.text ?? styles.cellText?.color;
+  const activeMembers = groupMembers.filter((member) => member.status !== 'removed');
+
+  const wouldCreateCycle = (coveredId: string, candidateId: string): boolean => {
+    const seen = new Set<string>();
+    let current: string | undefined = candidateId;
+    while (current && !seen.has(current)) {
+      if (current === coveredId) return true;
+      seen.add(current);
+      current = coveredBy[current];
+    }
+    return false;
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Expense Covering</Text>
       <Text style={styles.helperText}>
         Assign a traveler's expenses to be covered by another traveler. The covered traveler will not appear in cost reports.
       </Text>
-      {groupMembers.filter(m => !Object.values(coveredBy).includes(m.id)).map(member => {
+      {activeMembers.map(member => {
         const options: SelectFieldOption[] = [
           { label: 'No one', value: '' },
-          ...reportableMembers
-            .filter((m) => m.id !== member.id)
+          ...activeMembers
+            .filter((m) => m.id !== member.id && !wouldCreateCycle(member.id, m.id))
             .map((coveringMember) => ({ label: formatMemberName(coveringMember), value: coveringMember.id })),
         ];
         return (

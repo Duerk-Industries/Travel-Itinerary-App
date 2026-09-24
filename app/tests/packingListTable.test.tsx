@@ -78,6 +78,35 @@ describe('PackingListTable', () => {
     });
   });
 
+  test('rolls back an optimistic checkmark when the server rejects the save', async () => {
+    jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        travelers: [{ id: 'traveler-1', name: 'Alex' }],
+        items: [{ id: 'item-1', category: 'Documents', label: 'Passport', position: 0, packedBy: [] }],
+      }),
+    } as any).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Packing item or traveler not found' }),
+    } as any);
+
+    const { findByText, getByTestId } = render(
+      <PackingListTable
+        backendUrl="http://localhost"
+        headers={{ Authorization: 'Bearer token' }}
+        tripId="trip-1"
+        variant="trip"
+      />
+    );
+
+    await findByText('Passport');
+    const checkbox = getByTestId('packing-check-item-1-traveler-1');
+    fireEvent.press(checkbox);
+    expect(await findByText('Packing item or traveler not found')).toBeTruthy();
+    expect(checkbox.findAll((node: any) => node.props.children === '✓')).toHaveLength(0);
+  });
+
   test('edits a user default list and saves ordered items', async () => {
     const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
       ok: true,

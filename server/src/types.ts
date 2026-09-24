@@ -8,6 +8,7 @@ export type ActivityType =
   | 'Fun & Games'
   | 'Hike'
   | 'Nightlife'
+  | 'Other'
   | 'Open Access'
   | 'Outdoor Activity'
   | 'Reservation'
@@ -266,7 +267,9 @@ export type AuditAction =
   | 'DEPLOY_CUTOVER'
   | 'DEPLOY_DIRECT_PROD'
   | 'DEPLOY_ROLLBACK'
-  | 'DEPLOY_TEARDOWN';
+  | 'DEPLOY_TEARDOWN'
+  | 'BLOG_COMMENT_HIDDEN'
+  | 'BLOG_COMMENT_UNHIDDEN';
 
 export interface AuditLogEntry {
   id: string;
@@ -597,6 +600,8 @@ export interface Lodging {
   total_cost: number;
   cost_per_night: number;
   address: string;
+  notes?: string | null;
+  features?: string[];
   paid_by: string[];
   traveler_ids?: string[];
   imageUrl?: string;

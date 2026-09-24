@@ -1,8 +1,10 @@
 import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 import { blogMediaRepository } from '../src/blog/repository';
+
+const TRIP_DAY = futureDateString();
 
 describe('trip blog JIT storage purchase', () => {
   const user = { firstName: 'JIT', lastName: 'Tester', email: 'blog-jit@example.com', password: 'Password123!' };
@@ -19,7 +21,7 @@ describe('trip blog JIT storage purchase', () => {
     const login = await loginWebUser(user);
     token = login.body.token;
     userId = login.body.user.id;
-    const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`).send({ name: 'JIT Trip', startDate: '2026-09-01', endDate: '2026-09-01', participants: [] }).expect(201);
+    const trip = await request(app).post('/api/trips/wizard').set('Authorization', `Bearer ${token}`).send({ name: 'JIT Trip', startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] }).expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
 
     // Artificially set included_bytes to very low (1KB) to trigger quota quickly
@@ -34,7 +36,7 @@ describe('trip blog JIT storage purchase', () => {
       .post(`/api/trips/${tripId}/blog/media/upload-init`)
       .set('Authorization', `Bearer ${token}`)
       .set('Idempotency-Key', 'jit-fail')
-      .send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 2048 })
+      .send({ dayDate: TRIP_DAY, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 2048 })
       .expect(413);
 
     expect(fail.body.code).toBe('QUOTA_EXCEEDED');
@@ -47,7 +49,7 @@ describe('trip blog JIT storage purchase', () => {
       .post(`/api/trips/${tripId}/blog/media/upload-init`)
       .set('Authorization', `Bearer ${token}`)
       .set('Idempotency-Key', 'jit-success')
-      .send({ dayDate: '2026-09-01', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 2048 })
+      .send({ dayDate: TRIP_DAY, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 2048 })
       .expect(201);
 
     expect(success.body.asset.id).toBeDefined();

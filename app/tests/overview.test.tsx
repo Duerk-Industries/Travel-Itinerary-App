@@ -343,6 +343,25 @@ describe('Overview UI (nested itinerary)', () => {
     await findByTestId('overview-day-card-1');
   });
 
+  test('renders a cached itinerary without requesting itinerary data while offline', async () => {
+    const onItineraryCacheChange = jest.fn();
+    const { findByText } = await renderOverview(
+      <OverviewTab
+        {...baseProps}
+        cachedItinerary={{
+          id: 'offline-itinerary',
+          planMarkdown: 'Offline itinerary notes',
+          details: [{ id: 'offline-detail', day: 1, time: '09:00', activity: 'Cached museum visit' }],
+        }}
+        onItineraryCacheChange={onItineraryCacheChange}
+      />
+    );
+
+    expect(await findByText('Test City - Cached museum visit')).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]: [unknown]) => String(url).includes('/api/itineraries'))).toBe(false);
+    expect(onItineraryCacheChange).not.toHaveBeenCalled();
+  });
+
   // implementation-plan-ux-remediation.md Initiative B: a day hero card with
   // no resolved image falls back to the designed placeholder (flag on) or
   // the plain empty tile it replaced (flag off).

@@ -110,6 +110,10 @@ export const ensureUserInTrip = async (...args: Parameters<ReturnType<typeof ada
   adapter().ensureUserInTrip(...args);
 export const ensureUserCanReadTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserCanReadTrip']>) =>
   adapter().ensureUserCanReadTrip(...args);
+export const ensureUserFollowsTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserFollowsTrip']>) =>
+  adapter().ensureUserFollowsTrip(...args);
+export const ensureUserOwnsTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserOwnsTrip']>) =>
+  adapter().ensureUserOwnsTrip(...args);
 export const getTripGroupId = async (...args: Parameters<ReturnType<typeof adapter>['getTripGroupId']>) =>
   adapter().getTripGroupId(...args);
 export const getTripById = async (...args: Parameters<ReturnType<typeof adapter>['getTripById']>) =>
@@ -252,6 +256,10 @@ export const unfollowTrip = async (...args: Parameters<ReturnType<typeof adapter
   adapter().unfollowTrip(...args);
 export const listTripShareInvites = async (...args: Parameters<ReturnType<typeof adapter>['listTripShareInvites']>) =>
   adapter().listTripShareInvites(...args);
+export const listTripFollowers = async (...args: Parameters<ReturnType<typeof adapter>['listTripFollowers']>) =>
+  adapter().listTripFollowers(...args);
+export const removeTripFollower = async (...args: Parameters<ReturnType<typeof adapter>['removeTripFollower']>) =>
+  adapter().removeTripFollower(...args);
 export const createTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['createTripShareInvite']>) =>
   adapter().createTripShareInvite(...args);
 export const listPendingTripShareInvitesForUser = async (

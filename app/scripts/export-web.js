@@ -58,7 +58,7 @@ const STATIC_PUBLIC_SECTION = `
             <a href="${TERMS_URL}" style="color:#45B7C6;text-decoration:underline">Terms of Service</a> ·
             <a href="https://wander-bunnies.com/cookies.html" style="color:#45B7C6;text-decoration:underline">Cookie Policy</a>
           </nav>
-          <p>© 2026 WanderBunnies · Owned and operated by Bryan Duerk</p>
+          <p>© 2026 WanderBunnies · Owned and operated by Tristan Duerk, all rights reserved</p>
         </footer>
       </div>`;
 

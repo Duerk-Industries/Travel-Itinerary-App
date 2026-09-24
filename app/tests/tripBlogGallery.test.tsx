@@ -68,13 +68,13 @@ describe('TripBlogTab gallery rendering', () => {
     <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} styles={styles} theme={{ colors: {} }} readOnly={false} />
   );
 
-  it('flattens a gallery item into the combined day view: one photo shown by default, not a grid', async () => {
-    const { findByTestId, queryByTestId } = renderTab();
-    // Default view shows exactly one photo (the day's cover) plus prev/next — the gallery's three
-    // assets are combined into this one browsable set, not rendered as three separate posts.
-    await findByTestId('day-media-open-lightbox');
-    expect(queryByTestId('day-media-prev')).toBeTruthy();
-    expect(queryByTestId('day-media-next')).toBeTruthy();
+  it('flattens a gallery item into the combined day view: every asset shown as its own mosaic tile', async () => {
+    const { findByTestId } = renderTab();
+    // The gallery's three assets are combined into one browsable day mosaic, not rendered as
+    // three separate posts, and not hidden one-at-a-time behind prev/next arrows.
+    await findByTestId('day-media-grid-tile-asset-1');
+    expect(await findByTestId('day-media-grid-tile-asset-2')).toBeTruthy();
+    expect(await findByTestId('day-media-grid-tile-asset-3')).toBeTruthy();
   });
 
   it('shows linked activities in the authenticated traveler/follower read-only view', async () => {
@@ -111,8 +111,8 @@ describe('TripBlogTab gallery rendering', () => {
 
   it('opens the tiled lightbox on tap and shows every gallery asset as its own tile', async () => {
     const { findByTestId, getByTestId } = renderTab();
-    await findByTestId('day-media-open-lightbox');
-    fireEvent.press(getByTestId('day-media-open-lightbox'));
+    await findByTestId('day-media-grid-tile-asset-1');
+    fireEvent.press(getByTestId('day-media-grid-tile-asset-1'));
 
     await waitFor(() => expect(getByTestId('day-media-tile-asset-1')).toBeTruthy());
     expect(getByTestId('day-media-tile-asset-2')).toBeTruthy();
@@ -127,8 +127,7 @@ describe('TripBlogTab gallery rendering', () => {
     // The remove control only renders in edit mode.
     fireEvent.press(await findByText('Edit blog'));
     const callsBeforeRemove = blogGetCalls();
-    // Default view opens on the day's cover, which is asset-1.
-    const removeButton = await findByTestId('day-media-remove');
+    const removeButton = await findByTestId('day-media-remove-asset-1');
     fireEvent.press(removeButton);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(

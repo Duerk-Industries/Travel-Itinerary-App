@@ -154,8 +154,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    // Neutral grey rather than a black tint: a pure-black overlay all but
+    // disappears against a dark-mode surface, leaving the chip outline (and
+    // the near-black `count`/`countActive` text below, when no `theme` is
+    // supplied) unreadable. Grey keeps some contrast on either background.
+    borderColor: 'rgba(128,128,128,0.25)',
+    backgroundColor: 'rgba(128,128,128,0.12)',
   },
   buttonActiveUp: {
     backgroundColor: 'rgba(46, 125, 50, 0.12)',
@@ -174,20 +178,25 @@ const styles = StyleSheet.create({
   glyphActive: {
     fontSize: 14,
   },
+  // These are only a fallback for a caller that omits `theme` — the current
+  // (only) production caller always passes it, and `themedStyles` above
+  // takes over with theme-aware colors whenever it's present. A mid-grey
+  // fallback, rather than near-black, keeps some legibility in dark mode
+  // too instead of assuming a light background.
   count: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#444',
+    color: '#6b7280',
   },
   countActive: {
-    color: '#111',
+    color: '#6b7280',
   },
   score: {
     minWidth: 28,
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '700',
-    color: '#444',
+    color: '#6b7280',
   },
 });
 

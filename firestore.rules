@@ -373,6 +373,38 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Phase 2 of docs/trip-blog-social-implementation-plan.md — server-only, deny-direct
+    // collections (architecture §3.5). Same pattern as tiers/feature_flags/audit_log above: only
+    // the Admin SDK (blog/firebaseEngagementRepository.ts) ever touches these; no client SDK path
+    // exists or should exist, since blogEngagementService.ts is the sole authorization surface.
+    match /blog_reactions/{reactionId} {
+      allow read, write: if false;
+    }
+
+    match /blog_comments/{commentId} {
+      allow read, write: if false;
+    }
+
+    match /blog_engagement_counters/{counterId} {
+      allow read, write: if false;
+    }
+
+    match /blog_comment_mentions/{mentionId} {
+      allow read, write: if false;
+    }
+
+    match /blog_comment_reports/{reportId} {
+      allow read, write: if false;
+    }
+
+    match /blog_comment_strikes/{strikeId} {
+      allow read, write: if false;
+    }
+
+    match /blog_recap_snapshots/{snapshotId} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

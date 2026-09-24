@@ -88,7 +88,7 @@ exit 1
         // etc.) stay resolvable.
         `export PATH=${shellQuote(toBashPath(workDir))}":$PATH"`,
         `export DEPLOY_CONFIG_FILE=${shellQuote(toBashPath(deployConfigPath))}`,
-        'export GITHUB_ACTOR=Bryan',
+        'export GITHUB_ACTOR=bryanduerk',
         `bash ${shellQuote(toBashPath(path.join(root, 'scripts/teardown-old-production.sh')))} --confirm yes-delete`,
       ].join('; '),
     ], {

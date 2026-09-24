@@ -167,7 +167,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
   const navItems = [
-    { key: 'overview', label: 'Overview', icon: '🧭' },
+    { key: 'overview', label: 'Itinerary', icon: '🧭' },
     { key: 'blog', label: 'Trip Blog', icon: '📖' },
     { key: 'flights', label: 'Transfers', icon: '✈️' },
     { key: 'lodging', label: 'Lodging', icon: '🏨' },

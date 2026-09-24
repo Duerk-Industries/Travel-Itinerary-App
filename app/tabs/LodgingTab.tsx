@@ -10,17 +10,19 @@ import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import TripItemDetailsDialog from '../components/TripItemDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import CsvTransferControls from '../components/CsvTransferControls';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import type { AppTheme } from '../theme/theme';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
 import { ITINERARY_STATUSES } from '../utils/itineraryStatus';
+import { fixedTableColumn } from '../utils/tableColumns';
 
 type LodgingTabProps = {
   backendUrl: string;
   jsonHeaders: Record<string, string>,
   requestHeaders: Record<string, string>,
-  trip: { id: string, startDate?: string | null } | null;
+  trip: { id: string, startDate?: string | null, endDate?: string | null } | null;
   lodgings: Lodging[];
   groupMembers: any[];
   defaultPayerId: string | null;
@@ -32,6 +34,8 @@ type LodgingTabProps = {
   theme?: AppTheme;
   readOnly?: boolean;
   featureStandardizedItemDialogs?: boolean;
+  featureActivityLodgingCsvImport?: boolean;
+  featureActivityLodgingCsvExport?: boolean;
   // Kill switch for row-tap-to-edit + sticky identity/actions columns
   // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
   featureTapToEditTables?: boolean;
@@ -66,6 +70,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   theme,
   readOnly = false,
   featureStandardizedItemDialogs = false,
+  featureActivityLodgingCsvImport = false,
+  featureActivityLodgingCsvExport = false,
   featureTapToEditTables = true,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -314,6 +320,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               <TouchableOpacity style={[styles.button, { width: 36, height: 36, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }]} onPress={redoGridChange} disabled={gridSaving || !gridRedo.length} testID="lodging-table-redo"><Text style={styles.buttonText}>↷</Text></TouchableOpacity>
             </> : null}
             {!tableEditing ? <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add"><Text style={styles.buttonText}>+</Text></TouchableOpacity> : null}
+            {!tableEditing ? <CsvTransferControls entity="lodgings" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={trip?.startDate} tripEnd={trip?.endDate} rows={lodgings} styles={styles} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onRefreshLodgings} /> : null}
           </View>
         ) : null}
       </View>
@@ -335,31 +342,31 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         >
         <View style={[styles.table, styles.lodgingTable, { minWidth: 878 }]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabNameCol, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortLodgingTable('name')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(160), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]} onPress={() => sortLodgingTable('name')}>
               <Text style={styles.headerText}>Name</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('checkInDate')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('checkInDate')}>
               <Text style={styles.headerText}>Check-In</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('checkOutDate')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('checkOutDate')}>
               <Text style={styles.headerText}>Check-Out</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('status')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('status')}>
               <Text style={styles.headerText}>Status</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('netVotes')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('netVotes')}>
               <Text style={styles.headerText}>Votes</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tableHeaderCell, styles.lodgingTabDateCol]} onPress={() => sortLodgingTable('netRating')}>
+            <TouchableOpacity style={[styles.tableHeaderCell, fixedTableColumn(110)]} onPress={() => sortLodgingTable('netRating')}>
               <Text style={styles.headerText}>Rating</Text>
             </TouchableOpacity>
-            <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
+            <View style={[styles.tableHeaderCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any)]}>
               <Text style={styles.headerText}>Actions</Text>
             </View>
           </View>
           {sortedLodgings.map((lodging) => (
             <TouchableOpacity key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`} onPress={() => { if (!readOnly && featureTapToEditTables) openEditDialog(lodging); }} activeOpacity={0.8}>
-              <View style={[styles.tableCell, styles.lodgingTabNameCol, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+              <View style={[styles.tableCell, fixedTableColumn(160), Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <TouchableOpacity
                   style={styles.tableNameButton}
                   onPress={(event: any) => { event?.stopPropagation?.(); openDetailsDialog(lodging); }}
@@ -367,16 +374,16 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   <Text style={[styles.cellText, styles.cellTextWrap]}>{lodging.name}</Text>
                 </TouchableOpacity>
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+              <View style={[styles.tableCell, fixedTableColumn(110)]}>
                 <Text style={styles.cellText}>{formatShortDate(lodging.checkInDate)}</Text>
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+              <View style={[styles.tableCell, fixedTableColumn(110)]}>
                 <Text style={styles.cellText}>{formatShortDate(lodging.checkOutDate)}</Text>
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+              <View style={[styles.tableCell, fixedTableColumn(110)]}>
                 <Text style={styles.cellText}>{normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+              <View style={[styles.tableCell, fixedTableColumn(110)]}>
                 {!readOnly && shouldShowVoteButtons(lodging.status, (lodging as any).userVote) ? (
                   <View style={styles.actionCell}>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnLodging(lodging.id, 1)}>
@@ -390,7 +397,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   <Text style={styles.cellText}>{formatNetVotes((lodging as any).netVotes ?? 0)}</Text>
                 )}
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+              <View style={[styles.tableCell, fixedTableColumn(110)]}>
                 {!readOnly && shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
                   <View style={styles.actionCell}>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnLodging(lodging.id, 1)}>
@@ -406,7 +413,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   <Text style={styles.cellText}>-</Text>
                 )}
               </View>
-              <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
+              <View style={[styles.tableCell, fixedTableColumn(168), styles.lastCell, Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any)]}>
                 <View style={[styles.actionCell, { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' }]}>
                   {!readOnly ? (
                     <>

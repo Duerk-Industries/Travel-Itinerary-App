@@ -5,6 +5,7 @@ const SMTP_CALLER_SHARE_EMAIL = 'SHARE_EMAIL';
 const SMTP_CALLER_VERIFICATION_EMAIL = 'VERIFICATION_EMAIL';
 const SMTP_CALLER_TRIP_INVITE_EMAIL = 'TRIP_INVITE_EMAIL';
 const SMTP_CALLER_BILLING_TRIAL_REMINDER = 'BILLING_TRIAL_REMINDER';
+const SMTP_CALLER_NOTIFICATION_EMAIL = 'NOTIFICATION_EMAIL';
 
 export const sendShareEmailViaSmtpApi = async (
   transporter: Transporter,
@@ -45,6 +46,17 @@ export const sendBillingTrialReminderEmailViaSmtpApi = async (
 ): Promise<void> => {
   await sendSmtpMail({
     caller: SMTP_CALLER_BILLING_TRIAL_REMINDER,
+    transporter,
+    message,
+  });
+};
+
+export const sendNotificationEmailViaSmtpApi = async (
+  transporter: Transporter,
+  message: SendMailOptions
+): Promise<void> => {
+  await sendSmtpMail({
+    caller: SMTP_CALLER_NOTIFICATION_EMAIL,
     transporter,
     message,
   });

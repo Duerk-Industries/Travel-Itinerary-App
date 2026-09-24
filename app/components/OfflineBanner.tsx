@@ -1,11 +1,15 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { useConnectionState } from '../hooks/useConnectionState';
+import type { ConnectionStatus } from '../hooks/useConnectionState';
 
 type OfflineBannerProps = {
   /** Optional style overrides. Banner is hidden when connection is healthy. */
   containerStyle?: Record<string, unknown>;
   textStyle?: Record<string, unknown>;
+  /** Supplied by the app's single connection-state subscription. */
+  status: ConnectionStatus;
+  /** Cached trip data is visible, but editing must remain unavailable offline. */
+  offlineReadOnly?: boolean;
 };
 
 const defaultContainer: Record<string, unknown> = {
@@ -27,10 +31,10 @@ const messageFor = (status: string): string => {
   return '';
 };
 
-const OfflineBanner: React.FC<OfflineBannerProps> = ({ containerStyle, textStyle }) => {
-  const { status, isDegraded } = useConnectionState();
-  if (!isDegraded) return null;
-  const message = messageFor(status);
+const OfflineBanner: React.FC<OfflineBannerProps> = ({ containerStyle, textStyle, status, offlineReadOnly = false }) => {
+  const isDegraded = status !== 'online';
+  if (!isDegraded && !offlineReadOnly) return null;
+  const message = offlineReadOnly ? 'Offline — cached trip data is read-only.' : messageFor(status);
   return (
     <View
       style={[defaultContainer, containerStyle] as any}

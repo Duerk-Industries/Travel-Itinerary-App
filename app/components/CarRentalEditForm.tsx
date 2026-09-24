@@ -6,24 +6,15 @@ import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { CarRentalDraft } from '../tabs/carRentals';
+import NativeDateTimePicker from './NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import NativeDatePickerSheet from './NativeDatePickerSheet';
 
 // Single source of truth for the "add/edit car rental" form, styled to match
 // FlightEditingForm/LodgingForm/ActivityEditForm (same modalCard shell, per-field
 // labels, plain text inputs, toggle-chip pickers) instead of the panel's previous
 // bespoke unlabeled grid layout. Shared by CarRentalsPanel (the Car Rentals tab)
 // and the Overview day-detail "quick edit" so both present an identical dialog.
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch {
-    NativeDateTimePicker = null;
-  }
-}
 
 export type CarRentalFormMember = {
   id: string;
@@ -44,7 +35,7 @@ export type CarRentalEditFormProps = {
   onSave: () => void | Promise<void>;
   onCancel: () => void;
   isNew: boolean;
-  /** Already filtered to the members eligible to be assigned a rental (non-guest, active) — see caller. */
+  /** Group members eligible to be assigned a rental. Removed members are filtered locally. */
   members: CarRentalFormMember[];
   styles: Record<string, any>;
   theme?: AppTheme;
@@ -62,6 +53,10 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
 }) => {
   const [dateField, setDateField] = useState<CarRentalDateField | null>(null);
   const [pickerValue, setPickerValue] = useState<Date>(new Date());
+  // Keep this list in sync with lodging and activity editors: guests and
+  // pending travelers are valid trip participants, while removed members are
+  // never offered for new assignments.
+  const activeMembers = members.filter((member) => member.status !== 'removed' && !member.removedAt);
 
   const toggleBaseStyle = styles.toggleOption ?? {
     paddingHorizontal: 10,
@@ -81,7 +76,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
   const openDatePicker = (field: CarRentalDateField) => {
     setDateField(field);
     const current = draft[field];
-    setPickerValue(current ? new Date(current) : new Date());
+    setPickerValue(parseLocalDateOnly(current));
   };
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
@@ -218,7 +213,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
             />
             <Text style={styles.modalLabel}>For</Text>
             <View style={styles.payerChips}>
-              {members.map((m) => {
+              {activeMembers.map((m) => {
                 const selected = draft.travelerIds.includes(m.id);
                 const name = formatMemberDisplayName(m);
                 return (
@@ -239,7 +234,7 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
             </View>
             <Text style={styles.modalLabel}>Paid by</Text>
             <View style={styles.payerChips}>
-              {members.map((m) => {
+              {activeMembers.map((m) => {
                 const selected = draft.paidBy.includes(m.id);
                 const name = formatMemberDisplayName(m);
                 return (
@@ -269,20 +264,27 @@ const CarRentalEditForm: React.FC<CarRentalEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={pickerValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
-              setDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            onChange((prev) => ({ ...prev, [dateField]: iso }));
-            setDateField(null);
-          }}
-        />
+      {Platform.OS !== 'web' ? (
+        <NativeDatePickerSheet
+          visible={!!dateField}
+          onRequestClose={() => setDateField(null)}
+          theme={theme}
+          testID="car-rental-date-picker"
+        >
+          <NativeDateTimePicker
+            value={pickerValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setDateField(null);
+                return;
+              }
+              const iso = formatLocalDateOnly(date);
+              onChange((prev) => ({ ...prev, [dateField as NonNullable<typeof dateField>]: iso }));
+              if (Platform.OS === 'android') setDateField(null);
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
     </Modal>
   );

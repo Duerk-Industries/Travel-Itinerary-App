@@ -184,6 +184,27 @@ export const cleanupTestUsersByEmail = async (emails: string[]): Promise<void> =
   }
 };
 
+/**
+ * A YYYY-MM-DD date `offsetDays` ahead of the real current date — for trip-creation fixtures that
+ * need to stay in the future indefinitely rather than drift into the past as calendar time moves
+ * on. Several blog-* suites used to hardcode a literal date (e.g. '2026-09-01'); once real time
+ * passed it, trip creation started 403ing (isPastUtcDate blocks non-admins from creating trips
+ * that end in the past) and every one of those suites failed for reasons with nothing to do with
+ * the code under test. See server_test_gotchas memory note for the incident this fixes.
+ */
+export const futureDateString = (offsetDays = 90): string => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+};
+
+/** `futureDateString`, `daysAfter` days later — for fixtures needing several consecutive dates. */
+export const futureDateStringPlusDays = (daysAfter: number, offsetDays = 90): string => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + offsetDays + daysAfter);
+  return d.toISOString().slice(0, 10);
+};
+
 export const waitFor = async (predicate: () => Promise<boolean>, timeoutMs = 5000, intervalMs = 50): Promise<void> => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {

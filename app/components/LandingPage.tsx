@@ -394,7 +394,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* 4. CONTROLLER IDENTIFICATION - Aligns with Privacy Policy data controller */}
         <Text style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.lg, textAlign: 'center' }}>
-          &copy; 2026 WanderBunnies · Owned and operated by Bryan Duerk
+          &copy; 2026 WanderBunnies · Owned and operated by Tristan Duerk, all rights reserved
         </Text>
       </View>
     </ScrollView>

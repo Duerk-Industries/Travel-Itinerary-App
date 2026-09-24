@@ -1224,7 +1224,17 @@ export const setTripPackingItemPacked = async (userId: string, tripId: string, i
     tripPackingCollection(tripId).doc(itemId).get(),
     getDb().collection('group_members').doc(travelerId).get(),
   ]);
-  if (!item.exists || !member.exists || (member.data() as any).groupId !== access.groupId || (member.data() as any).removedAt) {
+  const validTraveler = member.exists
+    && (member.data() as any).groupId === access.groupId
+    && !(member.data() as any).removedAt;
+  // Packing Lists v2 derives preset and personal items on demand instead of materializing them
+  // under trip_packing_lists/{tripId}/items. The old legacy-only existence check therefore
+  // rejected every v2 checkbox mutation in Firebase production. Retain the cheap legacy lookup,
+  // then validate a missing item against the same derived view returned by GET /packing-list.
+  const validV2Item = item.exists
+    ? true
+    : (await getPackingListV2(userId, tripId)).items?.some((candidate) => candidate.id === itemId) === true;
+  if (!validV2Item || !validTraveler) {
     throw new Error('Packing item or traveler not found');
   }
   const ref = tripPackingChecksCollection(tripId).doc(`${itemId}_${travelerId}`);
@@ -1409,29 +1419,34 @@ export const ensureWebPasswordAccountForOAuth = async (
   userId: string,
   email: string,
   firstName?: string,
-  lastName?: string
+  lastName?: string,
+  provider?: string
 ): Promise<{ requiresPasswordSetup: boolean }> => {
   const db = getDb();
+  // Sign in with Apple and Sign in with Google both already authenticate the user via the
+  // provider's own identity check, so neither should ever be asked to create a password here.
+  const skipsPasswordSetup = provider === 'apple' || provider === 'google';
   const doc = await db.collection('web_users').doc(userId).get();
   if (doc.exists) {
     const data = doc.data() as any;
-    return { requiresPasswordSetup: Boolean(data.passwordSetupRequired) };
+    return { requiresPasswordSetup: skipsPasswordSetup ? false : Boolean(data.passwordSetupRequired) };
   }
 
   const salt = randomBytes(16).toString('hex');
   const randomSecret = randomBytes(32).toString('hex');
   const passwordHash = hashPassword(randomSecret, salt);
+  const requiresPasswordSetup = !skipsPasswordSetup;
   await db.collection('web_users').doc(userId).set({
     email: normalizeEmail(email),
     firstName: firstName ?? '',
     lastName: lastName ?? '',
     passwordHash,
     salt,
-    passwordSetupRequired: true,
+    passwordSetupRequired: requiresPasswordSetup,
     createdAt: nowIso(),
   });
   await upsertUserEmail(userId, normalizeEmail(email), { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
-  return { requiresPasswordSetup: true };
+  return { requiresPasswordSetup };
 };
 
 export const verifyWebUserCredentials = async (
@@ -1875,6 +1890,37 @@ export const isPasswordSetupRequired = async (userId: string): Promise<boolean> 
   return Boolean(data.passwordSetupRequired);
 };
 
+// Phase 4 of docs/trip-blog-social-implementation-plan.md — mirrors the scrub-then-recompute logic
+// added to db.postgres.ts's deleteWebUserAndCleanup. Firebase has no FK cascade, so both the
+// reaction deletion and the comment-body scrub are explicit here rather than falling out of a
+// `DELETE FROM users`. Doc ids (`${targetKind}:${targetId}:${userId}` for reactions,
+// `${targetKind}:${targetId}:${audience}` for counters) are re-derived rather than imported from
+// firebaseEngagementRepository.ts, which does not export them — they are a stable, documented
+// convention (see that file), not private implementation detail.
+const scrubBlogEngagementForDeletedUser = async (userId: string): Promise<void> => {
+  const db = getDb();
+  const [reactions, comments] = await Promise.all([
+    db.collection('blog_reactions').where('userId', '==', userId).get(),
+    db.collection('blog_comments').where('authorUserId', '==', userId).get(),
+  ]);
+  const now = new Date().toISOString();
+  for (const doc of reactions.docs) {
+    const data = doc.data() as any;
+    const counterRef = db.collection('blog_engagement_counters').doc(`${data.targetKind}:${data.targetId}:${data.audience}`);
+    await doc.ref.delete();
+    await counterRef.set({ reactionTotal: FieldValue.increment(-1), reactionCounts: { [data.emoji]: FieldValue.increment(-1) }, updatedAt: now }, { merge: true });
+  }
+  for (const doc of comments.docs) {
+    const data = doc.data() as any;
+    const alreadyTombstoned = Boolean(data.deletedAt);
+    await doc.ref.set({ body: null, deletedAt: data.deletedAt ?? now, updatedAt: now }, { merge: true });
+    if (!alreadyTombstoned && !data.hiddenAt) {
+      const counterRef = db.collection('blog_engagement_counters').doc(`${data.targetKind}:${data.targetId}:${data.audience}`);
+      await counterRef.set({ commentCount: FieldValue.increment(-1), updatedAt: now }, { merge: true });
+    }
+  }
+};
+
 export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
   const db = getDb();
   const [
@@ -1896,6 +1942,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('user_emails').where('userId', '==', userId).get(),
     db.collection('billing_subscriptions').where('userId', '==', userId).get(),
   ]);
+  await scrubBlogEngagementForDeletedUser(userId);
   const refs = [
     db.collection('users').doc(userId),
     db.collection('web_users').doc(userId),
@@ -3084,6 +3131,32 @@ export const ensureUserCanReadTrip = async (
   return null;
 };
 
+// Phase 2 — mirrors db.postgres.ts's ensureUserFollowsTrip. Queries trip_followers directly
+// rather than reading the canWrite===false proxy on the trip_access projection above: that
+// projection conflates "not a writer" with "specifically a follower," and this needs to be
+// unambiguous for blogEngagementService.resolveEngagementTarget.
+export const ensureUserFollowsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const db = getDb();
+  const snap = await db.collection('trip_followers')
+    .where('tripId', '==', tripId)
+    .where('followerUserId', '==', userId)
+    .limit(1)
+    .get();
+  return !snap.empty;
+};
+
+// Mirrors db.postgres.ts's ensureUserOwnsTrip — trip ownership is the group's ownerId, not group
+// membership (architecture §4's moderation-action gate).
+export const ensureUserOwnsTrip = async (tripId: string, userId: string): Promise<boolean> => {
+  const db = getDb();
+  const trip = await db.collection('trips').doc(tripId).get();
+  if (!trip.exists) return false;
+  const groupId = (trip.data() as any)?.groupId;
+  if (!groupId) return false;
+  const group = await db.collection('groups').doc(groupId).get();
+  return group.exists && (group.data() as any)?.ownerId === userId;
+};
+
 export const getTripFollowCode = async (
   userId: string,
   tripId: string
@@ -4104,6 +4177,8 @@ const normalizeLodgingRecord = (data: any) => ({
   refundBy: data.refundBy ?? data.refund_by,
   totalCost: data.totalCost ?? data.total_cost ?? 0,
   costPerNight: data.costPerNight ?? data.cost_per_night ?? 0,
+  notes: data.notes ?? null,
+  features: Array.isArray(data.features) ? data.features : [],
   paidBy: Array.isArray(data.paidBy) ? data.paidBy : Array.isArray(data.paid_by) ? data.paid_by : [],
   travelerIds: Array.isArray(data.travelerIds) ? data.travelerIds : Array.isArray(data.traveler_ids) ? data.traveler_ids : [],
   placeId: data.placeId ?? data.place_id ?? '',
@@ -4217,6 +4292,8 @@ export const upsertLocation = async (data: {
   place_id: string;
   name: string;
   address?: string;
+  notes?: string | null;
+  features?: string[];
   lat?: number;
   lng?: number;
   types?: string[];
@@ -4674,6 +4751,8 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  notes?: string | null;
+  features?: string[];
   place_id?: string;
   placeId?: string;
   paid_by?: string[];
@@ -4703,6 +4782,8 @@ export const insertLodging = async (lodging: {
     total_cost: lodging.totalCost,
     cost_per_night: lodging.costPerNight,
     address: lodging.address ?? '',
+    notes: lodging.notes ?? null,
+    features: lodging.features ?? [],
     place_id: lodging.place_id ?? lodging.placeId ?? '',
     paid_by: lodging.paid_by ?? [],
     traveler_ids: lodging.traveler_ids ?? lodging.paid_by ?? [],
@@ -5226,6 +5307,42 @@ export const listTripPayments = async (userId: string, tripId: string): Promise<
     return String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
   });
   return rows;
+};
+
+export const listTripFollowers = async (userId: string, tripId: string) => {
+  const db = getDb();
+  const context = await getTripOwnerContextFirebase(tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const snapshot = await db.collection('trip_followers').where('tripId', '==', tripId).get();
+  const rows = await Promise.all(snapshot.docs.map(async (doc) => {
+    const data = doc.data() as any;
+    const followerUserId = String(data.followerUserId ?? '').trim();
+    const [userDoc, profileDoc] = await Promise.all([
+      followerUserId ? db.collection('users').doc(followerUserId).get() : Promise.resolve(null),
+      followerUserId ? db.collection('web_users').doc(followerUserId).get() : Promise.resolve(null),
+    ]);
+    const user = userDoc?.exists ? userDoc.data() as any : {};
+    const profile = profileDoc?.exists ? profileDoc.data() as any : {};
+    return {
+      userId: followerUserId,
+      firstName: String(profile.firstName ?? ''),
+      lastName: String(profile.lastName ?? ''),
+      email: String(user.email ?? profile.email ?? ''),
+      createdAt: data.createdAt ?? null,
+    };
+  }));
+  return rows;
+};
+
+export const removeTripFollower = async (userId: string, tripId: string, followerUserId: string): Promise<void> => {
+  const db = getDb();
+  const context = await getTripOwnerContextFirebase(tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const snapshot = await db.collection('trip_followers').where('tripId', '==', tripId).where('followerUserId', '==', followerUserId).get();
+  if (snapshot.empty) throw new Error('Follower not found');
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()));
+  await rebuildTripAccessForTrip(tripId);
+  await writeActivity(tripId, userId, 'FOLLOW_REMOVED', 'Follower removed', 'A trip owner removed a follower.', { followerUserId });
 };
 
 export const insertTripPayment = async (payment: {
@@ -7288,16 +7405,22 @@ export const reserveCapacity = async (params: {
     // use a distributed counter or a summary document.
     const committedSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', true));
     const activeSnap = await tx.get(reservationsColl.where('provider', '==', params.provider).where('committed', '==', false).where('expiresAt', '>', new Date().toISOString()));
+    const ref = reservationsColl.doc(params.id);
+    const existing = await tx.get(ref);
 
     let current = 0;
     committedSnap.docs.forEach(doc => { current += doc.data().units; });
     activeSnap.docs.forEach(doc => { current += doc.data().units; });
 
+    if (existing.exists) {
+      const data = existing.data() as any;
+      if (data.committed === true || Date.parse(String(data.expiresAt ?? '')) > Date.now()) return { allowed: true, current };
+    }
+
     if (current + params.units > params.limit) {
       return { allowed: false, current };
     }
 
-    const ref = reservationsColl.doc(params.id);
     tx.set(ref, {
       provider: params.provider,
       caller: params.caller,

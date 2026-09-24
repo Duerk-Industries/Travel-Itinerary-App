@@ -136,6 +136,12 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       'expo-video',
       'expo-dev-client',
       [
+        'expo-local-authentication',
+        {
+          faceIDPermission: 'WanderBunnies uses Face ID to unlock cached trip information while you are offline.',
+        },
+      ],
+      [
         // Lets a traveler "send to" WanderBunnies from the phone's native Photos/share sheet,
         // same as sharing to a messaging app — see app/utils/incomingShare.ts for the receiving
         // side. Photos and videos only (matches SUPPORTED_MIME_TYPES in app/tabs/tripBlog.tsx);
@@ -164,6 +170,23 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
           photosPermission: 'WanderBunnies needs access to your photos so you can add them to a trip blog.',
         },
       ],
+      [
+        // Lets a traveler dictate a trip-blog photo caption instead of typing it — see
+        // app/components/BlogMediaMetadataEditor.tsx's Record button. Recording is short and
+        // ephemeral (never persisted as a blog media asset), so no background-recording mode.
+        'expo-audio',
+        {
+          microphonePermission: 'WanderBunnies needs access to your microphone to record a spoken caption.',
+        },
+      ],
+      // Real push delivery (server/src/apis/expoPushApi.ts, notificationOutboxWorker.ts) needs a
+      // registered device token, which only exists once this plugin has wired up the native
+      // notification entitlements — see app/utils/pushNotifications.ts for the client side. No
+      // custom `icon`/`color` configured here — there's no dedicated monochrome Android
+      // notification icon asset yet (Android requires white-on-transparent, distinct from the app
+      // icon at app/assets/wanderbunnies-app-icon.png), so this falls back to the platform
+      // default until that asset is designed.
+      'expo-notifications',
       [
         sentryExpoPlugin,
         {
@@ -196,7 +219,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
               ? 'http://localhost:4000'
               : 'https://wander-bunnies.com'),
       refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
-      sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,
+      sessionCacheTimeoutMinutes: 43200,
       premiumTrialsEnabled: String(process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED ?? 'true').toLowerCase() !== 'false',
       eas: {
         projectId: '06966c0b-d878-4346-850c-090c762f1916',

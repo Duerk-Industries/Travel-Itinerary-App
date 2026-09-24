@@ -109,7 +109,7 @@ test.describe('Keyboard-only accessibility', () => {
     await expect(page.getByTestId('home-nav-overview')).toBeVisible({ timeout: 15_000 });
   });
 
-  test('after login, can Tab to the Overview nav and activate it via keyboard', async ({ page }) => {
+  test('after login, can Tab to the Itinerary nav and activate it via keyboard', async ({ page }) => {
     // Programmatic login (not under test) so we arrive at home deterministically;
     // focus here is on post-auth keyboard navigation.
     const credentials = await registerUser(page.request);
@@ -145,7 +145,7 @@ test.describe('Keyboard-only accessibility', () => {
     expect(tabs).toBeLessThan(MAX_TAB_PRESSES);
     await page.keyboard.press('Enter');
 
-    // Overview tab renders an "Overview" section heading once activated.
-    await expect(page.getByText('Overview', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+    // Itinerary tab (formerly "Overview") renders its nav label once activated.
+    await expect(page.getByText('Itinerary', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
   });
 });

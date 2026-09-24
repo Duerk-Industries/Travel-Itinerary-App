@@ -263,6 +263,25 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
         onChangeText={(text: string) => setDraft((prev) => ({ ...prev, address: text }))}
         commitOnBlur={false}
       />
+
+      <Text style={styles.modalLabel}>Notes</Text>
+      <DraftTextInput
+        style={[styles.input, { minHeight: 70 }]}
+        placeholder="Notes"
+        value={draft.notes ?? ''}
+        onChangeText={(text: string) => setDraft((prev) => ({ ...prev, notes: text }))}
+        commitOnBlur={false}
+        multiline
+      />
+
+      <Text style={styles.modalLabel}>Features</Text>
+      <DraftTextInput
+        style={styles.input}
+        placeholder="Breakfast, Dinner, Laundry"
+        value={(draft.features ?? []).join(', ')}
+        onChangeText={(text: string) => setDraft((prev) => ({ ...prev, features: text.split(',').map((item) => item.trim()).filter(Boolean) }))}
+        commitOnBlur={false}
+      />
     </>
   );
 };

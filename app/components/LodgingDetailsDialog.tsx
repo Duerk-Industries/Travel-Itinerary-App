@@ -207,6 +207,8 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
                 { label: 'Travelers', value: travelersLabel },
                 { label: 'Total cost', value: totalCostLabel },
                 { label: 'Cost per night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : '$0' },
+                { label: 'Features', value: lodging.features?.length ? lodging.features.join(', ') : 'None listed' },
+                { label: 'Notes', value: lodging.notes || 'None' },
               ] as DetailRow[]
             ).map((row) => (
               <View key={row.label} style={detailStyles.detailRow}>

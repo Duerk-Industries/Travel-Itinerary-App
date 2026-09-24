@@ -5,6 +5,7 @@ import ExpenseCovering from './ExpenseCovering';
 import PaymentDialog from '../components/PaymentDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import type { AppTheme } from '../theme/theme';
+import { fixedTableColumn } from '../utils/tableColumns';
 import {
   buildSettlementMatrix,
   formatCents,
@@ -102,7 +103,7 @@ const renderLedgerTable = ({
             key={header}
             style={[
               styles.cell,
-              { minWidth: idx === 0 ? 160 : 140, flex: 1 },
+              fixedTableColumn(idx === 0 ? 160 : 140),
               idx === arr.length - 1 && styles.lastCell,
             ]}
           >
@@ -116,39 +117,39 @@ const renderLedgerTable = ({
           style={[styles.tableRow, idx === memberIds.length - 1 && styles.lastRow]}
           testID={`ledger-row-${memberId}`}
         >
-          <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+          <View style={[styles.cell, fixedTableColumn(160)]}>
             <Text style={styles.cellText}>{memberNameMap.get(memberId) ?? 'Traveler'}</Text>
           </View>
-          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+          <View style={[styles.cell, fixedTableColumn(140)]}>
             <Text style={styles.cellText}>{formatMoney(paidTotals[memberId] ?? 0)}</Text>
           </View>
-          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+          <View style={[styles.cell, fixedTableColumn(140)]}>
             <Text style={styles.cellText}>{formatMoney(usedTotals[memberId] ?? 0)}</Text>
           </View>
-          <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
+          <View style={[styles.cell, styles.lastCell, fixedTableColumn(140)]}>
             <Text style={styles.cellText}>-</Text>
           </View>
         </View>
       ))}
       {memberIds.length ? (
         <View style={[styles.tableRow, styles.tableHeader]} testID="ledger-overall-row">
-          <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+          <View style={[styles.cell, fixedTableColumn(160)]}>
             <Text style={styles.headerText}>Overall</Text>
           </View>
-          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+          <View style={[styles.cell, fixedTableColumn(140)]}>
             <Text style={styles.headerText}>{formatMoney(overallPaid)}</Text>
           </View>
-          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+          <View style={[styles.cell, fixedTableColumn(140)]}>
             <Text style={styles.headerText}>{formatMoney(overallUsed)}</Text>
           </View>
-          <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
+          <View style={[styles.cell, styles.lastCell, fixedTableColumn(140)]}>
             <Text style={styles.headerText}>{formatMoney(overallTotal)}</Text>
           </View>
         </View>
       ) : null}
       {!memberIds.length ? (
         <View style={[styles.tableRow, styles.lastRow]}>
-          <View style={[styles.cell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
+          <View style={[styles.cell, styles.lastCell, fixedTableColumn(160)]}>
             <Text style={styles.helperText}>No travelers available.</Text>
           </View>
         </View>
@@ -398,7 +399,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
     return (
       <View
         key={`${fromId}-${toId}`}
-        style={[styles.cell, { minWidth: 120, flex: 1 }, isDiagonal && greyCellStyle]}
+        style={[styles.cell, fixedTableColumn(120), isDiagonal && greyCellStyle]}
         testID={`settlement-cell-${fromId}-${toId}`}
       >
         <Text style={styles.cellText}>{label}</Text>
@@ -418,15 +419,15 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
       >
         <View style={styles.table} testID="settlement-matrix">
           <View style={[styles.tableRow, styles.tableHeader]}>
-            <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+            <View style={[styles.cell, fixedTableColumn(160)]}>
               <Text style={styles.headerText}>Owes ↓ / To →</Text>
             </View>
             {sortedParticipants.map((p) => (
-              <View key={`header-col-${p.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+              <View key={`header-col-${p.id}`} style={[styles.cell, fixedTableColumn(120)]}>
                 <Text style={styles.headerText}>{memberNameMap.get(p.id) ?? 'Traveler'}</Text>
               </View>
             ))}
-            <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
+            <View style={[styles.cell, styles.lastCell, fixedTableColumn(120)]}>
               <Text style={styles.headerText}>Totals</Text>
             </View>
           </View>
@@ -439,13 +440,13 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
                 style={styles.tableRow}
                 testID={`settlement-row-${rowMember.id}`}
               >
-                <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+                <View style={[styles.cell, fixedTableColumn(160)]}>
                   <Text style={styles.cellText}>{memberNameMap.get(rowMember.id) ?? 'Traveler'}</Text>
                 </View>
                 {sortedParticipants.map((colMember) =>
                   renderMatrixCell(rowMember.id, colMember.id, rowMember.id === colMember.id)
                 )}
-                <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
+                <View style={[styles.cell, styles.lastCell, fixedTableColumn(120)]}>
                   <Text style={styles.cellText}>
                     {rowTotalCents === 0 ? '' : formatCents(rowTotalCents, tripCurrency)}
                   </Text>
@@ -455,13 +456,13 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           })}
 
           <View style={[styles.tableRow, styles.tableHeader, styles.lastRow]} testID="settlement-totals-row">
-            <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+            <View style={[styles.cell, fixedTableColumn(160)]}>
               <Text style={styles.headerText}>Totals</Text>
             </View>
             {sortedParticipants.map((colMember) => {
               const colCents = matrix.columnTotalsCents[colMember.id] ?? 0;
               return (
-                <View key={`total-col-${colMember.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                <View key={`total-col-${colMember.id}`} style={[styles.cell, fixedTableColumn(120)]}>
                   <Text style={styles.headerText}>
                     {colCents === 0 ? '' : formatCents(colCents, tripCurrency)}
                   </Text>
@@ -469,7 +470,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
               );
             })}
             <View
-              style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }, greyCellStyle]}
+              style={[styles.cell, styles.lastCell, fixedTableColumn(120), greyCellStyle]}
               testID="settlement-grand-total"
             >
               <Text style={styles.headerText}></Text>
@@ -496,6 +497,8 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           const label = `${memberNameMap.get(payment.payerId) ?? 'Someone'} paid ${
             memberNameMap.get(payment.receiverId) ?? 'someone'
           } ${formatCents(payment.amountCents, tripCurrency)}`;
+          const paymentDescription = `${memberNameMap.get(payment.payerId) ?? 'Someone'} paid ${memberNameMap.get(payment.receiverId) ?? 'someone'}`;
+          const paymentAmount = formatCents(payment.amountCents, tripCurrency);
           return (
             <View
               key={`payment-${payment.id}`}
@@ -504,17 +507,26 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
                 {
                   alignItems: isNarrowLayout ? 'stretch' : 'center',
                   flexDirection: isNarrowLayout ? 'column' : 'row',
-                  flexWrap: 'nowrap',
+                  flexWrap: isNarrowLayout ? 'wrap' : 'nowrap',
                   gap: 8,
+                  width: '100%',
+                  maxWidth: '100%',
                 },
               ]}
               testID={`payment-row-${payment.id}`}
             >
-              <Text
-                style={[styles.cellText, { flex: 1, minWidth: 0, flexShrink: 1 }]}
-              >
-                {payment.paymentDate} — {label}
-              </Text>
+              {isNarrowLayout ? (
+                <View style={{ width: '100%', minWidth: 0 }}>
+                  <Text style={[styles.cellText, { width: '100%', flexShrink: 1 }]}>
+                    {payment.paymentDate} — {paymentDescription}
+                  </Text>
+                  <Text style={[styles.cellText, { width: '100%', flexShrink: 1 }]}>{paymentAmount}</Text>
+                </View>
+              ) : (
+                <Text style={[styles.cellText, { flex: 1, minWidth: 0, flexShrink: 1 }]}>
+                  {payment.paymentDate} — {label}
+                </Text>
+              )}
               {!readOnly ? (
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.dangerButton, isNarrowLayout && { alignSelf: 'flex-start' }]}

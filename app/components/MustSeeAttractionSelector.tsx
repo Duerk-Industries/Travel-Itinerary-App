@@ -168,7 +168,7 @@ const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProp
 
   const handleKeyPress = (e: any) => {
     if (Platform.OS === 'web') {
-      if (e.nativeEvent.key === 'Tab' && query.trim()) {
+      if (e?.nativeEvent?.key === 'Tab' && query.trim()) {
         e.preventDefault();
         handleSubmit();
       }

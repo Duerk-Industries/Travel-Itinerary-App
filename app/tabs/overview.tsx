@@ -58,6 +58,9 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
+import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
+import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import ActivityEditForm from '../components/ActivityEditForm';
 import CarRentalEditForm from '../components/CarRentalEditForm';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
@@ -98,18 +101,6 @@ import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itin
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
-
-type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
-let NativeDateTimePicker: NativeDateTimePickerType | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    const mod = require('@react-native-community/datetimepicker');
-    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
-  } catch (err) {
-    console.warn('DateTimePicker unavailable, falling back to text inputs');
-    NativeDateTimePicker = null;
-  }
-}
 
 type Trip = {
   id: string;
@@ -264,6 +255,17 @@ type OverviewTabProps = {
   featureItineraryItemKinds?: boolean;
   featureItineraryDocumentImport?: boolean;
   userTier?: string | null;
+  /** Defined in offline mode (including null when this trip has no itinerary). */
+  cachedItinerary?: {
+    id: string | null;
+    planMarkdown: string | null;
+    details: unknown[];
+  } | null;
+  onItineraryCacheChange?: (tripId: string, snapshot: {
+    id: string | null;
+    planMarkdown: string | null;
+    details: unknown[];
+  }) => void;
 };
 
 type DayCard = {
@@ -476,6 +478,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   featureItineraryItemKinds = true,
   featureItineraryDocumentImport = false,
   userTier,
+  cachedItinerary,
+  onItineraryCacheChange,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
@@ -669,6 +673,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     const loadItinerary = async () => {
+      if (cachedItinerary !== undefined) {
+        setItineraryDetails((cachedItinerary?.details ?? []) as ItineraryDetail[]);
+        setItineraryId(cachedItinerary?.id ?? null);
+        setItineraryPlanMarkdown(cachedItinerary?.planMarkdown ?? null);
+        setItineraryLoading(false);
+        return;
+      }
       if (!trip?.id) {
         setItineraryDetails([]);
         setItineraryId(null);
@@ -716,7 +727,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
     };
     loadItinerary();
-  }, [backendUrl, headers, trip?.id]);
+  }, [backendUrl, cachedItinerary, headers, trip?.id]);
+
+  useEffect(() => {
+    if (cachedItinerary !== undefined || !onItineraryCacheChange || !trip?.id) return;
+    onItineraryCacheChange(trip.id, {
+      id: itineraryId,
+      planMarkdown: itineraryPlanMarkdown,
+      details: itineraryDetails,
+    });
+  }, [
+    itineraryDetails,
+    itineraryId,
+    itineraryPlanMarkdown,
+    cachedItinerary,
+    onItineraryCacheChange,
+    trip?.id,
+  ]);
 
   const sortedItineraryDetails = useMemo(
     () =>
@@ -1491,9 +1518,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, [backendUrl, headers, blogDayImages, dayCards, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const base = field === 'start' ? dateDraft.startDate : dateDraft.endDate;
-      const date = base ? new Date(base) : new Date();
+      const date = parseLocalDateOnly(base);
       setDateValue(date);
       setDateField(field);
       return;
@@ -1511,15 +1538,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const openModalDatePicker = (field: ModalDateField, current?: string) => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
-      const base = current?.trim() ? new Date(current) : new Date();
+    if (Platform.OS !== 'web') {
+      const fieldValue = current ?? (
+        field === 'flightDeparture'
+          ? editingFlightDraft?.departureDate
+          : field === 'lodgingCheckIn'
+            ? lodgingDraft.checkInDate
+            : field === 'lodgingCheckOut'
+              ? lodgingDraft.checkOutDate
+              : lodgingDraft.refundBy
+      );
+      const base = parseLocalDateOnly(fieldValue);
       setModalDateValue(base);
       setModalDateField(field);
     }
   };
 
   const openTimePicker = (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => {
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+    if (Platform.OS !== 'web') {
       const base = new Date();
       const match = current?.match(/(\d{1,2}):(\d{2})/);
       if (match) {
@@ -2434,7 +2470,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return 'Free day';
   };
 
-  const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
+  const buildDayNarrative = (
+    info: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] } | undefined,
+    date?: string,
+  ) => {
     if (!info) return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) {
@@ -2448,7 +2487,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
     }
     if (info.lodgings.length) {
-      return info.lodgings.map((l) => `Check-in at ${l.name}.`);
+      const day = normalizeDateString(date ?? '');
+      return info.lodgings
+        .filter((lodging) => normalizeDateString(lodging.checkInDate) === day)
+        .map((lodging) => `Check-in at ${lodging.name}.`);
     }
     if (info.rentals.length) {
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
@@ -2654,7 +2696,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const renderDayBar = (activeDate: string | null) => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator
+      nestedScrollEnabled
+      style={{ width: '100%', maxWidth: '100%', minWidth: 0, flexGrow: 0, flexShrink: 1, alignSelf: 'stretch', marginVertical: 8 }}
+      contentContainerStyle={{ paddingRight: 8, flexGrow: 0, flexShrink: 0 }}
+      testID="overview-day-bar-scroll"
+    >
       <TouchableOpacity
         testID="overview-day-pill-overview"
         style={[styles.dayPill, !activeDate && styles.dayPillActive]}
@@ -2763,7 +2812,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const startLocation = buildDayStartLocation(activeDayInfo);
         const summary = buildDaySummary(activeDayInfo);
         const heroTitle = buildHeroTitle(startLocation, summary);
-        const narrativeLines = buildDayNarrative(activeDayInfo);
+        const narrativeLines = buildDayNarrative(activeDayInfo, activeDayCard.date);
         const flightsForDay = activeDayInfo.flights;
         const activityTimeKey = (tour: Tour) => {
           const value = String(tour.startTime ?? '').trim();
@@ -2833,7 +2882,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 paddingTop: isPhoneLayout ? 48 : 56,
                 paddingBottom: 24,
               }}
-              onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+              onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
               scrollEventThrottle={16}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
@@ -3141,7 +3190,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     <Text
                                       style={[
                                         styles.helperText,
-                                        checked && { textDecorationLine: 'line-through', color: '#777' },
+                                        checked && { textDecorationLine: 'line-through', color: theme.colors.textMuted },
                                       ]}
                                     >
                                       {it.label}
@@ -3269,7 +3318,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ref={scrollRef}
           style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
           contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
-          onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+          onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -3333,7 +3382,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ref={scrollRef}
         style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
         contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
-        onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+          onScroll={(e: any) => { const y = e?.nativeEvent?.contentOffset?.y; if (typeof y === 'number') setScrollY(y); }}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -3787,7 +3836,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   style={styles.flightRow}
                   onPress={() => openFlightEditor(flight)}
                   onLayout={(e: LayoutChangeEvent) => {
-                    setFlightRowOffsets((prev) => ({ ...prev, [flight.id]: e.nativeEvent.layout.y }));
+                    // Native can deliver a final layout callback with a null
+                    // nativeEvent while the overview switches into edit mode
+                    // and replaces the row tree. Ignore that callback rather
+                    // than crashing the root error boundary.
+                    const y = e?.nativeEvent?.layout?.y;
+                    if (typeof y !== 'number' || !Number.isFinite(y)) return;
+                    setFlightRowOffsets((prev) => ({ ...prev, [flight.id]: y }));
                   }}
                 >
                   <Text style={styles.flightTitle}>
@@ -3982,70 +4037,87 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {renderContent()}
       {!isEditing && showFlightEditor ? renderOverviewFlightEditor() : null}
       {!isEditing && showAddLodging ? renderOverviewLodgingEditor() : null}
-      {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={timePickerValue}
-          mode="time"
-          display="spinner"
-          onChange={(event, date) => {
-            if (event?.type === 'dismissed') {
-              setTimePickerTarget(null);
-              return;
-            }
-            if (!date) return;
-            const hh = String(date.getHours()).padStart(2, '0');
-            const mm = String(date.getMinutes()).padStart(2, '0');
-            const value = `${hh}:${mm}`;
-            if (timePickerTarget === 'edit-dep') {
-              setEditingFlightDraft((prev) => (prev ? { ...prev, departureTime: value } : prev));
-            } else if (timePickerTarget === 'edit-arr') {
-              setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
-            }
-            setTimePickerTarget(null);
-          }}
-        />
+      {Platform.OS !== 'web' ? (
+        <NativeDatePickerSheet
+          visible={!!timePickerTarget}
+          onRequestClose={() => setTimePickerTarget(null)}
+          testID="overview-time-picker"
+        >
+          <NativeDateTimePicker
+            value={timePickerValue}
+            mode="time"
+            onChange={(event, date) => {
+              if (event?.type === 'dismissed') {
+                setTimePickerTarget(null);
+                return;
+              }
+              if (!date) return;
+              const hh = String(date.getHours()).padStart(2, '0');
+              const mm = String(date.getMinutes()).padStart(2, '0');
+              const value = `${hh}:${mm}`;
+              if (timePickerTarget === 'edit-dep') {
+                setEditingFlightDraft((prev) => (prev ? { ...prev, departureTime: value } : prev));
+              } else if (timePickerTarget === 'edit-arr') {
+                setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
+              }
+              if (Platform.OS === 'android') setTimePickerTarget(null);
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={dateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
-              setDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (dateField === 'start') {
-              setDateDraft((prev) => ({ ...prev, startDate: iso }));
-            } else {
-              setDateDraft((prev) => ({ ...prev, endDate: iso }));
-            }
-            setDateField(null);
-          }}
-        />
+      {Platform.OS !== 'web' ? (
+        <NativeDatePickerSheet
+          visible={!!dateField}
+          onRequestClose={() => setDateField(null)}
+          testID="overview-date-picker"
+        >
+          <NativeDateTimePicker
+            value={dateValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setDateField(null);
+                return;
+              }
+              const iso = formatLocalDateOnly(date);
+              if (dateField === 'start') {
+                setDateDraft((prev) => ({ ...prev, startDate: iso }));
+              } else {
+                setDateDraft((prev) => ({ ...prev, endDate: iso }));
+              }
+              if (Platform.OS === 'android') setDateField(null);
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
-      {Platform.OS !== 'web' && modalDateField && NativeDateTimePicker ? (
-        <NativeDateTimePicker
-          value={modalDateValue}
-          mode="date"
-          onChange={(_, date) => {
-            if (!date) {
-              setModalDateField(null);
-              return;
-            }
-            const iso = date.toISOString().slice(0, 10);
-            if (modalDateField === 'flightDeparture') {
-              setEditingFlightDraft((prev) => (prev ? { ...prev, departureDate: iso } : prev));
-            } else if (modalDateField === 'lodgingCheckIn') {
-              setLodgingDraft((prev) => ({ ...prev, checkInDate: iso }));
-            } else if (modalDateField === 'lodgingCheckOut') {
-              setLodgingDraft((prev) => ({ ...prev, checkOutDate: iso }));
-            } else if (modalDateField === 'lodgingRefundBy') {
-              setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
-            }
-            setModalDateField(null);
-          }}
-        />
+      {Platform.OS !== 'web' ? (
+        <NativeDatePickerSheet
+          visible={!!modalDateField}
+          onRequestClose={() => setModalDateField(null)}
+          testID="overview-modal-date-picker"
+        >
+          <NativeDateTimePicker
+            value={modalDateValue}
+            mode="date"
+            onChange={(_, date) => {
+              if (!date) {
+                setModalDateField(null);
+                return;
+              }
+              const iso = formatLocalDateOnly(date);
+              if (modalDateField === 'flightDeparture') {
+                setEditingFlightDraft((prev) => (prev ? { ...prev, departureDate: iso } : prev));
+              } else if (modalDateField === 'lodgingCheckIn') {
+                setLodgingDraft((prev) => ({ ...prev, checkInDate: iso }));
+              } else if (modalDateField === 'lodgingCheckOut') {
+                setLodgingDraft((prev) => ({ ...prev, checkOutDate: iso }));
+              } else if (modalDateField === 'lodgingRefundBy') {
+                setLodgingDraft((prev) => ({ ...prev, refundBy: iso }));
+              }
+              if (Platform.OS === 'android') setModalDateField(null);
+            }}
+          />
+        </NativeDatePickerSheet>
       ) : null}
 
       {showAddTour ? (
@@ -4068,7 +4140,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           onSave={saveRental}
           onCancel={closeRentalModal}
           isNew={!editingRentalId}
-          members={userMembers}
+          members={groupMembers}
           styles={styles}
           theme={theme}
         />

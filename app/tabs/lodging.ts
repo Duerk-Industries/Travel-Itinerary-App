@@ -25,6 +25,8 @@ export type Lodging = {
   totalCost: string;
   costPerNight: string;
   address: string;
+  notes?: string | null;
+  features?: string[];
   placeId?: string;
   paidBy: string[];
   travelerIds: string[];
@@ -41,6 +43,8 @@ export type LodgingDraft = {
   totalCost: string;
   costPerNight: string;
   address: string;
+  notes?: string | null;
+  features?: string[];
   placeId?: string;
   paidBy: string[];
   travelerIds: string[];
@@ -58,6 +62,8 @@ export const createInitialLodgingState = (overrides: Partial<LodgingDraft> = {})
   totalCost: '',
   costPerNight: '',
   address: '',
+  notes: '',
+  features: [],
   placeId: '',
   paidBy: [],
   travelerIds: [],
@@ -91,6 +97,8 @@ export const normalizeLodgingFromApi = (l: any): Lodging => ({
   totalCost: String(l.total_cost ?? ''),
   costPerNight: String(l.cost_per_night ?? ''),
   address: l.address ?? '',
+  notes: l.notes ?? null,
+  features: Array.isArray(l.features) ? l.features : [],
   placeId: l.place_id ?? l.placeId ?? '',
   paidBy: Array.isArray(l.paid_by) ? l.paid_by : [],
   travelerIds: Array.isArray(l.traveler_ids)
@@ -251,6 +259,8 @@ export const toLodgingDraft = (
     totalCost: lodging.totalCost || '',
     costPerNight: lodging.costPerNight || '',
     address: lodging.address || '',
+    notes: lodging.notes ?? '',
+    features: Array.isArray(lodging.features) ? lodging.features : [],
     placeId: lodging.placeId || '',
     paidBy: Array.isArray(lodging.paidBy) && lodging.paidBy.length ? lodging.paidBy : opts?.defaultPayerId ? [opts.defaultPayerId] : [],
     travelerIds: Array.isArray(lodging.travelerIds) && lodging.travelerIds.length

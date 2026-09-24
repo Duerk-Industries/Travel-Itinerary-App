@@ -263,7 +263,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
 
   const handleCountryStateKeyPress = (e: any) => {
     if (Platform.OS === 'web') {
-      if (e.nativeEvent.key === 'Tab' && countryStateQuery.trim()) {
+      if (e?.nativeEvent?.key === 'Tab' && countryStateQuery.trim()) {
         e.preventDefault();
         handleCountryStateSubmit();
       }
@@ -272,7 +272,7 @@ const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
 
   const handleCityKeyPress = (e: any) => {
     if (Platform.OS === 'web') {
-      if (e.nativeEvent.key === 'Tab' && cityQuery.trim()) {
+      if (e?.nativeEvent?.key === 'Tab' && cityQuery.trim()) {
         e.preventDefault();
         handleCitySubmit();
       }

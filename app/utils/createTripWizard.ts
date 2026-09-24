@@ -1,3 +1,5 @@
+import { localTodayDateOnly } from './dateOnly';
+
 export type TripDetails = {
   name: string;
   description: string;
@@ -61,7 +63,7 @@ export const getDefaultTripRangeDates = (params: {
   endDate?: string | null;
   today?: Date;
 }): { startDate: string; endDate: string } => {
-  const todayIso = isoDateString(params.today ?? new Date());
+  const todayIso = params.today ? isoDateString(params.today) : localTodayDateOnly();
   const startDate = params.startDate || todayIso;
   const endDate = ensureRangeEndDate(startDate, params.endDate ?? undefined);
   return { startDate, endDate };

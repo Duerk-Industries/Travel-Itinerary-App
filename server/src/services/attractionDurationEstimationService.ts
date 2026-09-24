@@ -25,6 +25,7 @@ export const ACTIVITY_TYPE_DURATION_MINUTES: Record<ActivityType, number> = {
   Reservation: 90,
   'Spa/Wellness': 120,
   'Open Access': 60,
+  Other: 90,
 };
 
 const NAME_DURATION_OVERRIDES: Array<{ pattern: RegExp; minutes: number }> = [

@@ -99,6 +99,31 @@ describe('packing lists v2', () => {
     expect(manual.body.groups.some((group: any) => group.items.some((item: any) => item.label === 'Trip-only item' && item.category === 'Trip notes'))).toBe(true);
   });
 
+  it('persists a checkmark on a derived v2 item after the packing list is reloaded', async () => {
+    await replaceUserPackingPreferencesV2(ownerId, ['general'], []);
+    const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'Persistent checkmark trip', members: [] });
+    const initial = await getPackingListV2(ownerId, created.trip.id);
+    const item = initial.groups.flatMap((group) => group.items)[0];
+    const traveler = initial.travelers.find((candidate) => candidate.userId === ownerId);
+    expect(item).toBeDefined();
+    expect(traveler).toBeDefined();
+
+    await request(app)
+      .patch(`/api/trips/${created.trip.id}/packing-list/checks`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ itemId: item.id, travelerId: traveler!.id, packed: true })
+      .expect(204);
+
+    const reloaded = await request(app)
+      .get(`/api/trips/${created.trip.id}/packing-list`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const reloadedItem = reloaded.body.groups
+      .flatMap((group: any) => group.items)
+      .find((candidate: any) => candidate.id === item.id);
+    expect(reloadedItem.packedBy).toContain(traveler!.id);
+  });
+
   it('retracts profile contributions when a member is removed', async () => {
     const friend = { email: 'packing-v2-friend@example.com', firstName: 'Friend', lastName: 'V2', password: 'testtest' };
     await cleanupTestUsersByEmail([friend.email]);
@@ -210,6 +235,14 @@ describe('packing lists v2', () => {
     const created = await createTripWithGroupAndMembers({ ownerId, tripName: 'Dedup trip', members: [] });
     const tripId = created.trip.id;
 
+    // createTripWithGroupAndMembers seeds the trip's default packing list (see
+    // config/defaultPackingList.ts), which already includes a "sunscreen" item. Left in place,
+    // that gives normalized_label='sunscreen' THREE candidate rows instead of the two this test
+    // means to create below, so the migration's MIN(id::text) canonical pick can land on that
+    // pre-existing row instead of either keepId/dropId — the assertion below only accounts for
+    // two. Remove it so this test's own two dirty rows are the only "sunscreen" duplicates.
+    await p.query(`DELETE FROM trip_packing_list_items WHERE trip_id = $1 AND normalized_label = 'sunscreen'`, [tripId]);
+
     // Simulate the pre-migration (v1) state, where two rows for the same
     // trip could share a normalized label but differ in exact casing/
     // whitespace — something the (trip_id, normalized_label) unique index
@@ -217,15 +250,20 @@ describe('packing lists v2', () => {
     await p.query('DROP INDEX IF EXISTS idx_trip_packing_v2_normalized_label');
     const keepId = randomUUID();
     const dropId = randomUUID();
+    // Use a normalized_label unique to this test run (not the shared literal
+    // "sunscreen") so the GROUP BY (trip_id, normalized_label) below can't
+    // pick up unrelated single-row "sunscreen" items other tests in this
+    // file seed for their own trips.
+    const dedupLabel = `sunscreen-dedup-${keepId}`;
     await p.query(
       `INSERT INTO trip_packing_list_items (id, trip_id, category, label, normalized_label, position)
-       VALUES ($1, $2, 'General', 'Sunscreen', 'sunscreen', 0)`,
-      [keepId, tripId]
+       VALUES ($1, $2, 'General', 'Sunscreen', $3, 0)`,
+      [keepId, tripId, dedupLabel]
     );
     await p.query(
       `INSERT INTO trip_packing_list_items (id, trip_id, category, label, normalized_label, position)
-       VALUES ($1, $2, 'Beach', 'sunscreen ', 'sunscreen', 1)`,
-      [dropId, tripId]
+       VALUES ($1, $2, 'Beach', 'sunscreen ', $3, 1)`,
+      [dropId, tripId, dedupLabel]
     );
 
     // Attach a contribution/source and a packed-check to the row that is
@@ -293,8 +331,8 @@ describe('packing lists v2', () => {
     // lowest id, which is arbitrary from the test's point of view, so assert
     // on whichever one actually remains rather than assuming keepId "wins".
     const remaining: any = await p.query(
-      `SELECT id FROM trip_packing_list_items WHERE trip_id = $1 AND normalized_label = 'sunscreen'`,
-      [tripId]
+      `SELECT id FROM trip_packing_list_items WHERE trip_id = $1 AND normalized_label = $2`,
+      [tripId, dedupLabel]
     );
     expect(remaining.rows).toHaveLength(1);
     expect([keepId, dropId]).toContain(remaining.rows[0].id);

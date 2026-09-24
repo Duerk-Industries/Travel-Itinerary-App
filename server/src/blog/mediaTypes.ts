@@ -24,8 +24,17 @@ export interface BlogMediaAsset {
   physicalBytes: number;
   billableBytes: number;
   capturedAt: string | null;
+  // Phase 5 of docs/trip-blog-social-implementation-plan.md, architecture §3.3/§7.1/C2 — EXIF
+  // geotags captured client-side at upload (server never parses EXIF itself), stored only when the
+  // trip's photo_location_enabled toggle was on at upload time (PR-3: enabling later is not
+  // retroactive — see initUpload in postgresMediaRepository.ts). `undefined` here means "this read
+  // path doesn't project it at all" (e.g. any public/follower-facing asset shape); `null` means "no
+  // geotag, or the toggle was off."
+  capturedLat?: number | null;
+  capturedLng?: number | null;
   caption: string | null;
   altText: string | null;
+  isDecorative?: boolean;
   createdAt?: string;
   primaryUrl?: string | null;
   thumbnailUrl?: string | null;
@@ -45,6 +54,10 @@ export interface BlogUploadInitInput {
   mimeType: string;
   byteSize: number;
   capturedAt?: string | null;
+  // Only ever persisted by the repository when the trip's photo_location_enabled toggle is on at
+  // upload time — the route/repository, not the caller, enforces that gate (see initUpload).
+  capturedLat?: number | null;
+  capturedLng?: number | null;
   caption?: string | null;
   altText?: string | null;
   idempotencyKey: string;
@@ -52,6 +65,22 @@ export interface BlogUploadInitInput {
   // standalone blog item. The gallery's own day is authoritative; dayDate above is ignored in that case.
   galleryItemId?: string | null;
 }
+
+export type BlogMediaAuthoringContext = {
+  id: string;
+  tripId: string;
+  dayDate: string;
+  dayHeadline: string | null;
+  caption: string | null;
+  altText: string | null;
+  isDecorative: boolean;
+};
+
+export type BlogMediaMetadataPatch = {
+  caption?: string | null;
+  altText?: string | null;
+  isDecorative?: boolean;
+};
 
 export interface BlogUploadInitResult {
   asset: BlogMediaAsset;

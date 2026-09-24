@@ -1,0 +1,13 @@
+Check In,Check Out,Days,Suggested Location,Hotel,Booked?,Breakfast?,Dinner?,Laundry?,Cancel By,Cost,Booked On,Address
+"Tue, Nov 10, ","Thu, Nov 12, ",2,Tokyo — Ueno / Yanaka,,,,,,,,,
+"Thu, Nov 12, ","Sat, Nov 14, ",2,Fujikawaguchiko — Lake Kawaguchi north shore,Kawaguchiko Lakeside Hotel,Yes,Yes,No,No,"Thu, Nov 5, ",$529,Booking.com,"Yamanashi, Fujikawaguchiko, Kodachi 1226, Japan"
+"Sat, Nov 14, ","Sun, Nov 15, ",1,Matsumoto — station area or Nakamachi,Richmond Hotel Matsumoto,Yes,Yes,No,No,"Fri, Nov 13, ",$229,Booking.com,"Nagano, Matsumoto, Chuo 1-10-7, Japan"
+"Sun, Nov 15, ","Tue, Nov 17, ",2,Kanazawa — Korinbo,Hotel Kanazawa Zoushi,Yes,$9/per,No,Near,"Tue, Nov 10, ",$538,Booking.com,"Ishikawa, Kanazawa, 12-37 Yasuechō, Kanazawa, Ishikawa, Japan"
+"Tue, Nov 17, ","Wed, Nov 18, ",1,Gero Onsen,Yunoshimakan Ryokan,Yes,Yes,Yes,No,"Fri, Nov 13, ",$469,Hotel Website,"645 Yunoshima, Gero-shi, Gifu-ken 509-2517, Japan"
+"Wed, Nov 18, ","Thu, Nov 19, ",1,Magome,Yanagiya Iri,Yes,No,No,Yes,"Fri, Nov 13, ",$338,Booking.com,"Gifu, Nakatsugawa, 馬籠４７２４, Japan"
+"Thu, Nov 19, ","Sun, Nov 22, ",3,Osaka — Namba / Shinsaibashi,,,,,,,,,
+"Sun, Nov 22, ","Mon, Nov 23, ",1,Koyasan — SHUKUBO (temple lodging),Koyasan Shukubo Yochiin,Yes,Yes,Yes,No,"Thu, Nov 19, ",$451,Booking.com,"Wakayama, Koyasan, Koyasan 293, Japan"
+"Mon, Nov 23, ","Tue, Nov 24, ",1,Kurashiki — Bikan historical quarter,Royal Park Hotel Kurashiki,Yes,Yes,No,Yes,"Sun, Nov 22, ",$173,Booking.com,"Okayama, Kurashiki, Achi 2-6-7, Japan"
+"Tue, Nov 24, ","Fri, Nov 27, ",3,Miyajima — on the island,Hatsukaichi AirBnB,Yes,No,No,Yes,"Sun, Oct 25, ",$997,AirBnB,
+"Fri, Nov 27, ","Fri, Dec 4, ",7,Kyoto — Karasuma-Oike / Shijo-Karasuma,,,,,,,,,
+"Fri, Dec 4, ","Tue, Dec 8, ",4,Tokyo — Ueno / Yanaka,,,,,,,,,
