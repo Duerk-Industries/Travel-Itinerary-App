@@ -76,6 +76,8 @@ type DailyExpensesTabProps = {
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   defaultPayerId: string | null;
   styles: Record<string, any>;
+  /** Names for itinerary items whose generated expenses appear in this table. */
+  itineraryExpenseDescriptions?: Readonly<Record<string, string>>;
   costTrackingAllowed?: boolean;
   readOnly?: boolean;
 };
@@ -164,6 +166,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   setExpenses,
   defaultPayerId,
   styles,
+  itineraryExpenseDescriptions = {},
   costTrackingAllowed,
   readOnly = false,
 }) => {
@@ -180,6 +183,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     });
     return map;
   }, [activeMembers]);
+
+  const otherExpenseDescription = (expense: Expense): string => {
+    const sourceKey = expense.sourceType && expense.sourceId
+      ? `${expense.sourceType}:${expense.sourceId}`
+      : '';
+    return itineraryExpenseDescriptions[sourceKey] || expense.vendor || expense.notes || '-';
+  };
 
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;
@@ -859,8 +869,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table} testID="other-expenses-table">
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Date', 'Category', 'Description', 'For', 'Amount', 'Action'].map((header, index) => (
-                  <View key={header} style={[styles.cell, fixedTableColumn(index === 4 ? 90 : 130), index === 5 && styles.lastCell]}>
+                {['Date', 'Category', 'Description', 'Paid by', 'For', 'Amount', 'Action'].map((header, index) => (
+                  <View key={header} style={[styles.cell, fixedTableColumn(index === 5 ? 90 : index === 2 ? 200 : 130), index === 6 && styles.lastCell]}>
                     <Text style={styles.headerText}>{header}</Text>
                   </View>
                 ))}
@@ -872,10 +882,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </View>
                   <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.category}</Text>
-                    {expense.sourceType ? <Text style={styles.helperText}>from itinerary</Text> : null}
+                  </View>
+                  <View style={[styles.cell, fixedTableColumn(200)]}>
+                    <Text style={styles.cellText}>{otherExpenseDescription(expense)}</Text>
                   </View>
                   <View style={[styles.cell, fixedTableColumn(130)]}>
-                    <Text style={styles.cellText}>{expense.vendor || expense.notes || '-'}</Text>
+                    <Text style={styles.cellText}>{expense.payerIds.length ? expense.payerIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
                   </View>
                   <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.forIds.length ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>

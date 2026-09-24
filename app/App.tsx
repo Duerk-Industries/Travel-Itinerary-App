@@ -1446,6 +1446,33 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
 
+  const itineraryExpenseDescriptions = useMemo(() => {
+    const descriptions: Record<string, string> = {};
+    const addDescription = (sourceType: string, sourceId: string | null | undefined, description: string) => {
+      const id = String(sourceId ?? '').trim();
+      const name = description.trim();
+      if (id && name) descriptions[`${sourceType}:${id}`] = name;
+    };
+
+    flights.forEach((flight) => {
+      const carrierAndNumber = [flight.carrier, flight.flight_number].filter(Boolean).join(' ').trim();
+      const departure = flight.departure_location || flight.departure_airport_code;
+      const arrival = flight.arrival_location || flight.arrival_airport_code;
+      const route = departure && arrival ? `${departure} → ${arrival}` : departure || arrival || '';
+      addDescription('flight', flight.id, [carrierAndNumber, route].filter(Boolean).join(' · '));
+    });
+    lodgings.forEach((lodging) => addDescription('lodging', lodging.id, lodging.name));
+    tours.forEach((tour) => addDescription('activity', tour.id, tour.name));
+    carRentals.forEach((rental) => {
+      const rentalName = [rental.vendor, rental.model].filter(Boolean).join(' · ').trim();
+      const route = rental.pickupLocation && rental.dropoffLocation
+        ? `${rental.pickupLocation} → ${rental.dropoffLocation}`
+        : rental.pickupLocation || rental.dropoffLocation;
+      addDescription('car_rental', rental.id, rentalName || route);
+    });
+    return descriptions;
+  }, [flights, lodgings, tours, carRentals]);
+
   const allExpenses = useMemo(
     () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, activeTrip?.currency ?? 'USD', allMemberIds),
     [flights, lodgings, tours, carRentals, expenses, allMemberIds, activeTrip?.currency]
@@ -3335,6 +3362,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   setExpenses={setExpenses}
                   defaultPayerId={defaultPayerId}
                   styles={styles}
+                  itineraryExpenseDescriptions={itineraryExpenseDescriptions}
                   costTrackingAllowed={costTrackingAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
                 />

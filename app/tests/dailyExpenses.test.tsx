@@ -5,7 +5,7 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import DailyExpensesTab from '../tabs/dailyExpenses';
 import { getAppTheme } from '../theme/theme';
@@ -187,13 +187,18 @@ describe('DailyExpensesTab', () => {
 
     const screen = render(
       <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
-        groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+        groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles}
+        itineraryExpenseDescriptions={{ 'activity:a1': 'Rome Food Tour', 'activity:a2': 'Colosseum Tour' }} costTrackingAllowed />
     );
 
     // The grid can't show any of these three; the "Other expenses" table does.
     expect(screen.getByText('Other expenses (3)')).toBeTruthy();
     expect(screen.getByTestId('other-expense-row-act-1')).toBeTruthy();
     expect(screen.getByTestId('other-expense-row-old-1')).toBeTruthy();
+    expect(screen.getByText('Paid by')).toBeTruthy();
+    expect(within(screen.getByTestId('other-expense-row-act-1')).getByText('Rome Food Tour')).toBeTruthy();
+    expect(within(screen.getByTestId('other-expense-row-act-1')).getAllByText('Alex Rider')).toHaveLength(2);
+    expect(screen.queryByText('from itinerary')).toBeNull();
     // e1 (Breakfast, in range) stays in the grid, not here.
     expect(screen.queryByTestId('other-expense-row-e1')).toBeNull();
 
