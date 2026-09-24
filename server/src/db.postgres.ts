@@ -5430,6 +5430,88 @@ export const insertExpense = async (expense: {
   };
 };
 
+export const updateExpense = async (
+  expenseId: string,
+  userId: string,
+  expense: {
+    tripId: string;
+    expenseDate: string;
+    category: string;
+    amount: number;
+    currency?: string | null;
+    amountInTripCurrency?: number | null;
+    exchangeRateToTripCurrency?: number | null;
+    exchangeRateDate?: string | null;
+    payerIds?: string[];
+    forIds?: string[];
+    vendor?: string | null;
+    notes?: string | null;
+  }
+): Promise<any | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      UPDATE expenses
+      SET expense_date = $4,
+          category = $5,
+          amount = $6,
+          currency = COALESCE($7, currency),
+          amount_in_trip_currency = $8,
+          exchange_rate_to_trip_currency = $9,
+          exchange_rate_date = $10::date,
+          payer_ids = $11::jsonb,
+          for_ids = $12::jsonb,
+          vendor = $13,
+          notes = $14
+      WHERE id = $1
+        AND trip_id = $2
+        AND source_type IS NULL
+        AND group_id IN (SELECT group_id FROM group_members WHERE user_id = $3)
+      RETURNING id,
+                trip_id as "tripId",
+                group_id as "groupId",
+                user_id as "userId",
+                to_char(expense_date, 'YYYY-MM-DD') as "expenseDate",
+                category,
+                amount::numeric as amount,
+                currency,
+                amount_in_trip_currency::numeric as "amountInTripCurrency",
+                exchange_rate_to_trip_currency::numeric as "exchangeRateToTripCurrency",
+                to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
+                COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
+                COALESCE(for_ids, '[]'::jsonb) as "forIds",
+                source_type as "sourceType",
+                source_id as "sourceId",
+                vendor,
+                notes,
+                created_at as "createdAt"
+    `,
+    [
+      expenseId,
+      expense.tripId,
+      userId,
+      expense.expenseDate,
+      expense.category,
+      expense.amount ?? 0,
+      expense.currency ?? null,
+      expense.amountInTripCurrency ?? null,
+      expense.exchangeRateToTripCurrency ?? null,
+      expense.exchangeRateDate ?? null,
+      JSON.stringify(expense.payerIds ?? []),
+      JSON.stringify(expense.forIds ?? []),
+      expense.vendor ?? null,
+      expense.notes ?? null,
+    ]
+  );
+  const row = rows[0] as any;
+  if (!row) return null;
+  return {
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  };
+};
+
 export const upsertExpenseForSource = async (expense: {
   userId: string;
   tripId: string;

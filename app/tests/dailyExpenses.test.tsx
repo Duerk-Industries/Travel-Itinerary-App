@@ -140,6 +140,42 @@ describe('DailyExpensesTab', () => {
     expect(setExpenses).toHaveBeenCalled();
   });
 
+  it('edits a daily expense from the category detail dialog', async () => {
+    const setExpenses = jest.fn();
+    const updatedExpense = { ...expenses[0], amount: 18.75, vendor: 'Flour Bakery', notes: null };
+    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => updatedExpense }) as any);
+    const originalFetch = global.fetch;
+    global.fetch = fetchMock as any;
+
+    try {
+      const screen = render(
+        <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{ Authorization: 'Bearer token' }} jsonHeaders={{ Authorization: 'Bearer token', 'Content-Type': 'application/json' }} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+      );
+
+      fireEvent.press(screen.getAllByText('$12.00')[0]);
+      fireEvent.press(screen.getByTestId('expense-edit-e1'));
+      expect(screen.getByText('Edit Expense')).toBeTruthy();
+      expect(screen.getByPlaceholderText('Description').props.value).toBe('Cafe Nero');
+      expect(screen.queryByPlaceholderText('Notes')).toBeNull();
+
+      fireEvent.changeText(screen.getByPlaceholderText('Amount'), '18.75');
+      fireEvent.changeText(screen.getByPlaceholderText('Description'), 'Flour Bakery');
+      fireEvent.press(screen.getByText('Save Changes'));
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+        'http://example.test/api/expenses/e1',
+        expect.objectContaining({ method: 'PUT' }),
+      ));
+      const body = JSON.parse((fetchMock.mock.calls[0] as any[])[1].body);
+      expect(body).toEqual(expect.objectContaining({ amount: 18.75, vendor: 'Flour Bakery' }));
+      expect(body.notes).toBeUndefined();
+      expect(setExpenses).toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
   it('does not allow expense mutations while cached trip data is read-only', async () => {
     const fetchMock = jest.fn();
     const originalFetch = global.fetch;
@@ -211,7 +247,7 @@ describe('DailyExpensesTab', () => {
     expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();
   });
 
-  it('sends vendor and notes when creating a daily expense', async () => {
+  it('saves a description when creating a daily expense', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -219,7 +255,6 @@ describe('DailyExpensesTab', () => {
         id: 'e2',
         amount: 18.75,
         vendor: 'Flour Bakery',
-        notes: 'Receipt reviewed',
       }),
     });
     const originalFetch = global.fetch;
@@ -245,8 +280,8 @@ describe('DailyExpensesTab', () => {
 
       fireEvent.press(getByText('+ Add Expense'));
       fireEvent.changeText(getByPlaceholderText('Amount'), '18.75');
-      fireEvent.changeText(getByPlaceholderText('Vendor'), 'Flour Bakery');
-      fireEvent.changeText(getByPlaceholderText('Notes'), 'Receipt reviewed');
+      fireEvent.changeText(getByPlaceholderText('Description'), 'Flour Bakery');
+      expect(() => getByPlaceholderText('Notes')).toThrow();
       fireEvent.press(getByText('Save Expense'));
       await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
@@ -261,9 +296,9 @@ describe('DailyExpensesTab', () => {
       const body = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(body).toEqual(expect.objectContaining({
         vendor: 'Flour Bakery',
-        notes: 'Receipt reviewed',
         amount: 18.75,
       }));
+      expect(body.notes).toBeUndefined();
     } finally {
       global.fetch = originalFetch;
     }
@@ -365,8 +400,7 @@ describe('DailyExpensesTab', () => {
 
       fireEvent.press(firstLoad.getByTestId('expense-add-button'));
       fireEvent.changeText(firstLoad.getByPlaceholderText('Amount'), '18.75');
-      fireEvent.changeText(firstLoad.getByPlaceholderText('Vendor'), 'Flour Bakery');
-      fireEvent.changeText(firstLoad.getByPlaceholderText('Notes'), 'Receipt reviewed');
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Description'), 'Flour Bakery');
       // The dialog overlay has no dismissal action, so a backdrop click leaves
       // the draft and dialog alone.
       fireEvent.press(firstLoad.getByTestId('expense-add-modal'));
@@ -393,8 +427,8 @@ describe('DailyExpensesTab', () => {
 
       expect(refreshed.getByTestId('expense-add-modal')).toBeTruthy();
       expect(refreshed.getByPlaceholderText('Amount').props.value).toBe('18.75');
-      expect(refreshed.getByPlaceholderText('Vendor').props.value).toBe('Flour Bakery');
-      expect(refreshed.getByPlaceholderText('Notes').props.value).toBe('Receipt reviewed');
+      expect(refreshed.getByPlaceholderText('Description').props.value).toBe('Flour Bakery');
+      expect(refreshed.queryByPlaceholderText('Notes')).toBeNull();
       expect(fetchMock).not.toHaveBeenCalled();
 
       fireEvent.press(refreshed.getByTestId('expense-cancel'));

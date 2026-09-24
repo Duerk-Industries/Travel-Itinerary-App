@@ -99,7 +99,6 @@ type DailyExpenseDraft = {
   currency: string;
   amount: string;
   vendor: string;
-  notes: string;
   forIds: string[];
   payerIds: string[];
 };
@@ -205,7 +204,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       currency: trip?.currency ?? 'USD',
       amount: '',
       vendor: '',
-      notes: '',
       forIds: activeMembers.map((member) => member.id),
       payerIds: defaultPayerId ? [defaultPayerId] : [],
     };
@@ -221,7 +219,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     currency: draftCurrency,
     amount: draftAmount,
     vendor: draftVendor,
-    notes: draftNotes,
     forIds: draftForIds,
     payerIds: draftPayerIds,
   } = expenseDraft;
@@ -233,7 +230,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const setDraftCurrency = (currency: string) => updateExpenseDraft({ currency });
   const setDraftAmount = (amount: string) => updateExpenseDraft({ amount });
   const setDraftVendor = (vendor: string) => updateExpenseDraft({ vendor });
-  const setDraftNotes = (notes: string) => updateExpenseDraft({ notes });
   const setDraftForIds = (next: React.SetStateAction<string[]>) => {
     setExpenseDraft((current) => {
       const draft = current ?? defaultExpenseDraft;
@@ -257,6 +253,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const receiptFileInputRef = useRef<any>(null);
 
   const expenseItems = useMemo(
@@ -310,12 +307,31 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
 
   const openAddExpenseModal = () => {
+    setEditingExpenseId(null);
     updateExpenseDraft({ isOpen: true });
   };
 
   const cancelAddExpenseModal = () => {
     setExpenseDraft(null);
+    setEditingExpenseId(null);
     setReceiptError(null);
+  };
+
+  const openEditExpenseModal = (expense: Expense) => {
+    if (readOnly) return;
+    setPendingDeleteExpense(null);
+    setDetailTarget(null);
+    setEditingExpenseId(expense.id);
+    setExpenseDraft({
+      isOpen: true,
+      date: expense.expenseDate,
+      category: expense.category as CategoryOption,
+      currency: expense.currency || trip?.currency || 'USD',
+      amount: String(expense.amount ?? ''),
+      vendor: expense.vendor || expense.notes || '',
+      forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+      payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
+    });
   };
 
   const handleReceiptPickerPress = () => {
@@ -340,14 +356,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     if (typeof parsed.amount === 'number' && Number.isFinite(parsed.amount)) {
       setDraftAmount(parsed.amount.toFixed(2));
     }
-    setDraftVendor(parsed.vendor ?? '');
-    setDraftNotes(
+    setDraftVendor(
       [
+        parsed.vendor ?? '',
         parsed.notes ?? '',
         parsedDateOutsideTrip && parsed.expenseDate
           ? `Receipt date ${formatDateLabel(parsed.expenseDate)} is outside this trip's dates.`
           : '',
-      ].filter(Boolean).join(' ')
+      ].filter(Boolean).join(' — ')
     );
     openAddExpenseModal();
   };
@@ -450,20 +466,21 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       payerIds: draftPayerIds,
       forIds: draftForIds,
       vendor: draftVendor || undefined,
-      notes: draftNotes || undefined,
     };
     try {
-      const res = await fetch(`${backendUrl}/api/expenses`, {
-        method: 'POST',
+      const res = await fetch(editingExpenseId ? `${backendUrl}/api/expenses/${editingExpenseId}` : `${backendUrl}/api/expenses`, {
+        method: editingExpenseId ? 'PUT' : 'POST',
         headers: jsonHeaders,
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alertMessage(data.error || 'Unable to save expense');
+        alertMessage(data.error || `Unable to ${editingExpenseId ? 'update' : 'save'} expense`);
         return;
       }
-      setExpenses((prev) => [data as Expense, ...prev.filter((e) => e.id !== data.id)]);
+      setExpenses((prev) => editingExpenseId
+        ? prev.map((expense) => expense.id === data.id ? data as Expense : expense)
+        : [data as Expense, ...prev.filter((expense) => expense.id !== data.id)]);
       cancelAddExpenseModal();
     } catch (err) {
       alertMessage((err as Error).message || 'Unable to save expense');
@@ -545,7 +562,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     : styles.expenseFieldDate;
   const amountFieldStyle = [styles.input, styles.expenseFieldAmount, narrowAmountField];
   const vendorFieldStyle = [styles.input, styles.expenseFieldVendor, fullWidthExpenseField];
-  const notesFieldStyle = [styles.input, styles.expenseFieldNotes, fullWidthExpenseField];
   const narrowCardsScrollStyle = isNarrowLayout
     ? [
         styles.dailyExpensesVerticalScroll,
@@ -615,7 +631,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       {expenseDraft.isOpen ? (
         <DialogShell
           visible
-          title="Add Expense"
+          title={editingExpenseId ? 'Edit Expense' : 'Add Expense'}
           styles={styles}
           // Backdrop, Escape, and the native back action must not discard a
           // partially entered expense. Cancel is the explicit discard action.
@@ -688,17 +704,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 <View style={styles.expenseFieldRow}>
                   <DraftTextInput
                     style={vendorFieldStyle}
-                    placeholder="Vendor"
+                    placeholder="Description"
                     value={draftVendor}
                     onChangeText={setDraftVendor}
-                    commitOnBlur={false}
-                  />
-                  <DraftTextInput
-                    style={notesFieldStyle}
-                    placeholder="Notes"
-                    value={draftNotes}
-                    onChangeText={setDraftNotes}
-                    multiline
                     commitOnBlur={false}
                   />
                 </View>
@@ -747,7 +755,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
                 <View style={styles.row}>
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveExpense} testID="expense-save">
-                    <Text style={styles.buttonText}>Save Expense</Text>
+                    <Text style={styles.buttonText}>{editingExpenseId ? 'Save Changes' : 'Save Expense'}</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -974,13 +982,22 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                           <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
                         </View>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
-                          <TouchableOpacity
-                            style={[styles.tableActionButton, styles.tableActionButtonDanger]}
-                            onPress={() => setPendingDeleteExpense(expense)}
-                            testID={`expense-delete-${expense.id}`}
-                          >
-                            <Text style={styles.buttonText}>Delete</Text>
-                          </TouchableOpacity>
+                          <View style={[styles.actionCell, { flexWrap: 'wrap' }]}>
+                            <TouchableOpacity
+                              style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
+                              onPress={() => openEditExpenseModal(expense)}
+                              testID={`expense-edit-${expense.id}`}
+                            >
+                              <Text style={styles.buttonText}>Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.tableActionButton, styles.tableActionButtonDanger]}
+                              onPress={() => setPendingDeleteExpense(expense)}
+                              testID={`expense-delete-${expense.id}`}
+                            >
+                              <Text style={styles.buttonText}>Delete</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       </View>
                     ))}
