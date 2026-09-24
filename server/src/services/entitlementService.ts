@@ -209,6 +209,11 @@ const FAIL_CLOSED_FLAGS = new Set([
   'trip_blog_trip_awards',
   'trip_blog_keepsake_export',
   'trip_blog_nudges',
+  // Unlike ai_assistant_guide (read-only Q&A, fail-open), this flag gates the
+  // on-device assistant proposing real mutations (addActivity/updateItineraryStatus).
+  // An unseeded DB row must not silently enable AI-driven writes on a fresh or
+  // misconfigured deployment.
+  'ai_assistant_actions',
 ]);
 
 /**

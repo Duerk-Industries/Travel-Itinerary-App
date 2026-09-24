@@ -145,6 +145,7 @@ const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
 import ChatOverlay from './components/ChatOverlay';
+import AssistantChat from './components/AssistantChat';
 import HorizontalTableScroll from './components/HorizontalTableScroll';
 import CostReportTable from './components/CostReportTable';
 import { connectSocket, disconnectSocket } from './utils/socket';
@@ -728,6 +729,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   } = useAccountProfile();
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
   const aiItineraryGenerationAllowed = accountProfile.entitlements?.aiItineraryGeneration === true;
+  const aiAssistantGuideAllowed = accountProfile.entitlements?.aiAssistantGuide === true;
+  const aiAssistantActionsAllowed = accountProfile.entitlements?.aiAssistantActions === true;
   const logoutRef = useRef<() => void>(() => undefined);
   const handleUnauthorized = useCallback(() => logoutRef.current(), []);
 
@@ -4223,6 +4226,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         userName={userName ?? null}
         theme={theme}
       />
+      {/* Native has no on-device inference story yet (no WebGPU) -- this stays
+          web-only until that's solved (Phase 4), rather than showing a FAB
+          whose panel can only ever say "not available here" on native. */}
+      {userToken && aiAssistantGuideAllowed && Platform.OS === 'web' ? (
+        <AssistantChat
+          theme={theme}
+          userId={userId ?? null}
+          actionsAllowed={aiAssistantActionsAllowed}
+          activities={tours}
+          dispatchContext={{ backendUrl, jsonHeaders, activeTripId, defaultPayerId }}
+        />
+      ) : null}
     </SafeAreaView>
       </ChatProvider>
     </PresenceProvider>
