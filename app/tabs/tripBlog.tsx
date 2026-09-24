@@ -1497,15 +1497,22 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               <View
                 key={item.id}
                 style={{ marginTop: 8 }}
-                {...(Platform.OS === 'web' && canEdit && capabilities.trip_blog_authoring_assist ? {
-                  draggable: true,
-                  onDragStart: (event) => {
+                ref={Platform.OS === 'web' && canEdit && capabilities.trip_blog_authoring_assist ? (node) => {
+                  // react-native-web's View only forwards a fixed prop allowlist onto the
+                  // underlying <div> (modules/forwardedProps) -- draggable/onDragStart/onDragOver/
+                  // onDrop aren't in it, so passing them as JSX props (the old approach here) gets
+                  // silently stripped before the DOM ever sees them, and drag-and-drop never fires.
+                  // `ref` IS forwarded straight to that div, so set the native DOM properties
+                  // directly instead of going through RN's synthetic prop system.
+                  if (!node) return;
+                  node.draggable = true;
+                  node.ondragstart = (event) => {
                     draggedItemId.current = item.id;
                     event?.dataTransfer?.setData?.('text/plain', item.id);
-                  },
-                  onDragOver: (event) => event?.preventDefault?.(),
-                  onDrop: (event) => { event?.preventDefault?.(); void dropItem(day, item); },
-                } : {})}
+                  };
+                  node.ondragover = (event) => event?.preventDefault?.();
+                  node.ondrop = (event) => { event?.preventDefault?.(); void dropItem(day, item); };
+                } : undefined}
               >
                 {canEdit && capabilities.trip_blog_authoring_assist ? <Text style={{ color: mutedColor, fontSize: 11, marginBottom: 3 }}>⠿ Drag to reorder</Text> : null}
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
