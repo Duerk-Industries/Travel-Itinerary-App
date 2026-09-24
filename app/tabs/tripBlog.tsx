@@ -1120,9 +1120,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       >
         <View style={{ width: '100%', maxWidth: 1200, alignSelf: 'center', gap: 20 }}>
       <View style={{ backgroundColor: surfaceColor, borderRadius: 16, padding: 18 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           {canEdit ? (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, minWidth: 140 }}>
               <TextInput
                 testID="blog-masthead-title-input"
                 value={mastheadDraft?.title ?? (blog?.title ?? '')}
@@ -1142,7 +1142,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               {saveStateLabel('masthead') ? <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>{saveStateLabel('masthead')}</Text> : null}
             </View>
           ) : (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, minWidth: 140 }}>
               <Text style={[styles.sectionTitle, { fontFamily: displayFont, fontSize: 26 }]}>{blog?.title || 'Trip Blog'}</Text>
               {blog?.subtitle ? <Text style={{ color: mutedColor, fontSize: 14, marginTop: 2, fontFamily: displayFontItalic }}>{blog.subtitle}</Text> : null}
             </View>
