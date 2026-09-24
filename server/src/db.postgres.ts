@@ -4812,11 +4812,21 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
     ]
   );
   const row = rows[0];
-  return {
+  const created = {
     ...row,
     paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [],
     travelerIds: Array.isArray((row as any).travelerIds) ? (row as any).travelerIds : [],
   };
+  // TOUR_ADDED was a defined-but-dead TripActivityType before this -- no caller
+  // ever wrote one, so activity adds (manual or assistant-driven) produced no
+  // trip-activity-feed entry despite the type existing. Placed here, not in the
+  // route handler, matching how every other writeActivity call in this file
+  // lives inside the adapter function that performs the actual write (see
+  // addItineraryDetail/followTripByCode above), not in a route.
+  await writeActivity(created.tripId, created.userId, 'TOUR_ADDED', 'Activity added', created.name, {
+    activityId: created.id,
+  });
+  return created;
 };
 
 export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {

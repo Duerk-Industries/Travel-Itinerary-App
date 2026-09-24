@@ -23,6 +23,8 @@ export type AccountProfile = {
   entitlements?: {
     costTracking?: boolean;
     aiItineraryGeneration?: boolean;
+    aiAssistantGuide?: boolean;
+    aiAssistantActions?: boolean;
   };
   tierKey?: string;
 };

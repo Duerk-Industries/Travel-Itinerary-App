@@ -70,6 +70,7 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 
 ## Architecture, Entitlements, and Roadmap Notes
 
+- [Implementation Plan: AI Trip Assistant](implementation_plans/implementation-plan-ai-assistant.md)
 - [Implementation Plan: Entitlements](implementation-plan-entitlements.md)
 - [Implementation Plan: UX Remediation](implementation_plans/implementation-plan-ux-remediation.md)
 - [Implementation Plan: Wanderlog Competitive Analysis](implementation_plans/implementation-plan-wanderlog-competitive-analysis.md)
