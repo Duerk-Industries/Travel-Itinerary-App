@@ -65,9 +65,7 @@ import { MustSeeAttractionSelector, type AttractionOption } from '../components/
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
-import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
-import NativeDateTimePicker from '../components/NativeDateTimePicker';
-import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import DateField from '../components/DateField';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { fixedTableColumn } from '../utils/tableColumns';
   
@@ -280,12 +278,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [wizardTours, setWizardTours] = useState<Tour[]>([]);
   const [wizardCarRentals, setWizardCarRentals] = useState<CarRental[]>([]);
   const [wizardCarDraft, setWizardCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
-  const [wizardCarDateField, setWizardCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
-  const [wizardCarDateValue, setWizardCarDateValue] = useState<Date>(new Date());
   const [editingWizardLodgingId, setEditingWizardLodgingId] = useState<string | null>(null);
   const [editingWizardLodging, setEditingWizardLodging] = useState<LodgingDraft | null>(null);
-  const [wizardLodgingDateField, setWizardLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
-  const [wizardLodgingDateValue, setWizardLodgingDateValue] = useState<Date>(new Date());
   const [itineraryEnabled, setItineraryEnabled] = useState(false);
   const [itineraryItems, setItineraryItems] = useState<ItineraryItemInput[]>([]);
   const [itineraryDraft, setItineraryDraft] = useState<ItineraryItemInput>({ date: '', time: '', activity: '' });
@@ -307,15 +301,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
-  const [dateField, setDateField] = useState<'start' | 'end' | 'itinerary' | null>(null);
-  const [dateValue, setDateValue] = useState<Date>(new Date());
-  const startDateRef = useRef<any>(null);
-  const endDateRef = useRef<any>(null);
-  const itineraryDateRef = useRef<any>(null);
-  const wizardEditLodgingCheckInRef = useRef<any>(null);
-  const wizardEditLodgingCheckOutRef = useRef<any>(null);
-  const wizardCarPickupDateRef = useRef<any>(null);
-  const wizardCarDropoffDateRef = useRef<any>(null);
   const descriptionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -405,6 +390,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   );
   const webDateInputStyleFlex = useMemo(() => ({ ...webDateInputStyle, flex: 1 }), [webDateInputStyle]);
   const wizardCarInputStyle = useMemo(() => [styles.input, { marginBottom: 0, minHeight: 42 }], [styles]);
+  const wizardCarDateInputStyle = useMemo(() => ({ marginBottom: 0, minHeight: 42 }), []);
   const wizardCarWebInputStyle = useMemo(
     () => ({ ...webDateInputStyle, height: 42, minHeight: 42, marginBottom: 0 }),
     [webDateInputStyle]
@@ -796,37 +782,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
-  const openDatePicker = (field: 'start' | 'end' | 'itinerary') => {
-    if (field === 'start' || field === 'end') {
-      primeRangeDates();
-    }
-    if (Platform.OS !== 'web') {
-      const rangeDefaults = field === 'start' || field === 'end'
-        ? getDefaultTripRangeDates({ startDate: dates.startDate, endDate: dates.endDate })
-        : null;
-      const base =
-        field === 'start'
-          ? rangeDefaults?.startDate
-          : field === 'end'
-            ? rangeDefaults?.endDate
-            : itineraryDraft.date;
-      const date = parseLocalDateOnly(base);
-      setDateValue(date);
-      setDateField(field);
-      return;
-    }
-    const ref = field === 'start' ? startDateRef.current : field === 'end' ? endDateRef.current : itineraryDateRef.current;
-    if ((ref as any)?.showPicker) {
-      (ref as any).showPicker();
-      return;
-    }
-    if (typeof ref?.click === 'function') {
-      ref.click();
-      return;
-    }
-    ref?.focus();
-  };
-
   const canMoveNext = useMemo(() => {
     if (stepIndex === 0) return !validateTripDetails(details);
     if (stepIndex === 1) {
@@ -908,42 +863,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
-  const applyWizardLodgingDate = (field: 'checkIn' | 'checkOut', value: string) => {
-    setEditingWizardLodging((prev) =>
-      prev ? { ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value } : prev
-    );
-  };
-
-  const openWizardLodgingDatePicker = (field: 'checkIn' | 'checkOut' | 'refundBy', current?: string) => {
-    if (Platform.OS === 'web') {
-      const ref =
-        field === 'checkIn'
-          ? wizardEditLodgingCheckInRef.current
-          : field === 'checkOut'
-            ? wizardEditLodgingCheckOutRef.current
-            : null;
-      if ((ref as any)?.showPicker) {
-        (ref as any).showPicker();
-        return;
-      }
-      if (typeof ref?.click === 'function') {
-        ref.click();
-        return;
-      }
-      ref?.focus();
-      return;
-    }
-    const fieldValue = current ?? (
-      field === 'checkIn'
-        ? editingWizardLodging?.checkInDate
-        : field === 'checkOut'
-          ? editingWizardLodging?.checkOutDate
-          : editingWizardLodging?.refundBy
-    );
-    setWizardLodgingDateValue(parseLocalDateOnly(fieldValue));
-    setWizardLodgingDateField(field === 'refundBy' ? 'refund' : field);
-  };
-
   const openWizardLodgingEditor = (lodging: Lodging | null) => {
     if (lodging) {
       setEditingWizardLodgingId(lodging.id);
@@ -965,29 +884,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardLodgings((prev) => prev.filter((l) => l.id !== id));
   };
 
-  const applyWizardCarDate = (field: 'pickup' | 'dropoff', value: string) => {
-    setWizardCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
-  };
-
-  const openWizardCarDatePicker = (field: 'pickup' | 'dropoff') => {
-    if (Platform.OS !== 'web') {
-      const base = (field === 'pickup' ? wizardCarDraft.pickupDate : wizardCarDraft.dropoffDate) || '';
-      const date = parseLocalDateOnly(base);
-      setWizardCarDateValue(date);
-      setWizardCarDateField(field);
-      return;
-    }
-    const ref = field === 'pickup' ? wizardCarPickupDateRef.current : wizardCarDropoffDateRef.current;
-    if ((ref as any)?.showPicker) {
-      (ref as any).showPicker();
-      return;
-    }
-    if (typeof ref?.click === 'function') {
-      ref.click();
-      return;
-    }
-    ref?.focus();
-  };
 
   const addWizardCarRental = () => {
     const result = buildCarRentalFromDraft(wizardCarDraft, wizardDefaultPayerId, wizardMemberIds);
@@ -1400,18 +1296,26 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       <Text style={styles.modalLabel}>Dates</Text>
       <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
         <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
-          {Platform.OS === 'web' ? (
-            <input ref={startDateRef as any} type="date" title="Start date" value={dates.startDate} onChange={(e) => setStartDateWithRangeGuard(e.target.value)} style={webDateInputStyle} data-testid="quick-start-start-date" />
-          ) : (
-            <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')} testID="quick-start-start-date"><Text style={styles.cellText}>{dates.startDate || 'YYYY-MM-DD'}</Text></TouchableOpacity>
-          )}
+          <DateField
+            value={dates.startDate}
+            onChange={setStartDateWithRangeGuard}
+            styles={styles}
+            theme={theme}
+            onOpen={primeRangeDates}
+            testID="quick-start-start-date"
+            accessibilityLabel="Start date"
+          />
         </View>
         <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
-          {Platform.OS === 'web' ? (
-            <input ref={endDateRef as any} type="date" title="End date" value={dates.endDate} onChange={(e) => setDates((prev) => ({ ...prev, mode: 'range', endDate: normalizeDateString(e.target.value) }))} style={webDateInputStyle} data-testid="quick-start-end-date" />
-          ) : (
-            <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')} testID="quick-start-end-date"><Text style={styles.cellText}>{dates.endDate || 'YYYY-MM-DD'}</Text></TouchableOpacity>
-          )}
+          <DateField
+            value={dates.endDate}
+            onChange={(endDate) => setDates((prev) => ({ ...prev, mode: 'range', endDate }))}
+            styles={styles}
+            theme={theme}
+            onOpen={primeRangeDates}
+            testID="quick-start-end-date"
+            accessibilityLabel="End date"
+          />
         </View>
       </View>
       {computedDays ? <Text style={styles.helperText}>{computedDays} day(s)</Text> : null}
@@ -1545,48 +1449,26 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <>
                 <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
                   <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={startDateRef as any}
-                        type="date"
-                        title="Start date"
-                        value={dates.startDate}
-                        onChange={(e) => setStartDateWithRangeGuard(e.target.value)}
-                        onFocus={primeRangeDates}
-                        style={webDateInputStyle}
-                      />
-                    ) : (
-                      <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')}>
-                        <Text style={styles.cellText}>{dates.startDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    {Platform.OS !== 'web' ? (
-                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
-                        <Text style={styles.selectCaret}>v</Text>
-                      </TouchableOpacity>
-                    ) : null}
+                    <DateField
+                      value={dates.startDate}
+                      onChange={setStartDateWithRangeGuard}
+                      styles={styles}
+                      theme={theme}
+                      onOpen={primeRangeDates}
+                      testID="wizard-start-date"
+                      accessibilityLabel="Start date"
+                    />
                   </View>
                   <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={endDateRef as any}
-                        type="date"
-                        title="End date"
-                        value={dates.endDate}
-                        onChange={(e) => setDates((prev) => ({ ...prev, endDate: normalizeDateString(e.target.value) }))}
-                        onFocus={primeRangeDates}
-                        style={webDateInputStyle}
-                      />
-                    ) : (
-                      <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')}>
-                        <Text style={styles.cellText}>{dates.endDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    {Platform.OS !== 'web' ? (
-                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
-                        <Text style={styles.selectCaret}>v</Text>
-                      </TouchableOpacity>
-                    ) : null}
+                    <DateField
+                      value={dates.endDate}
+                      onChange={(endDate) => setDates((prev) => ({ ...prev, endDate }))}
+                      styles={styles}
+                      theme={theme}
+                      onOpen={primeRangeDates}
+                      testID="wizard-end-date"
+                      accessibilityLabel="End date"
+                    />
                   </View>
                 </View>
                 {computedDays ? <Text style={styles.helperText}>Trip length: {computedDays} day(s)</Text> : null}
@@ -2019,12 +1901,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 useNativeModal
                 testID="manual-itinerary-item-dialog"
               >
-                <TextInput
-                  style={styles.input}
-                  placeholder="Time (optional)"
-                  accessibilityLabel="Time"
+                <DateField
+                  mode="time"
                   value={manualDraft.time}
-                  onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, time: text }))}
+                  onChange={(time) => setManualDraft((prev) => ({ ...prev, time }))}
+                  styles={styles}
+                  theme={theme}
+                  placeholder="Time (optional)"
+                  testID="manual-itinerary-item-time"
+                  accessibilityLabel="Time"
                 />
                 <TextInput
                   style={styles.input}
@@ -2071,6 +1956,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               findActiveTrip={() => wizardTripDefaults}
               fetchGroupMembersForActiveTrip={async () => undefined}
               styles={styles}
+              theme={theme}
               airportOptions={airportOptions}
               onSearchAirports={onSearchAirports}
               modalOverlayStyle={{
@@ -2212,6 +2098,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 payerName={wizardPayerName}
                 defaultPayerId={wizardDefaultPayerId}
                 styles={styles}
+                theme={theme}
                 onSave={() => saveWizardLodging(editingWizardLodging, editingWizardLodgingId)}
                 onSaveAndAddAnother={
                   !editingWizardLodgingId
@@ -2219,7 +2106,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     : undefined
                 }
                 onCancel={closeWizardLodgingEditor}
-                onOpenDatePicker={(field) => openWizardLodgingDatePicker(field)}
               />
             ) : null}
             <View style={{ marginTop: 12 }}>
@@ -2253,7 +2139,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               payerTotals={wizardToursPayerTotals}
               toursTotal={wizardToursTotal}
               styles={styles}
-              nativeDateTimePicker={NativeDateTimePicker}
+              theme={theme}
               fetchTours={async () => undefined}
               mode="wizard"
               defaultActivityDate={dates.mode === 'range' ? dates.startDate : null}
@@ -2342,29 +2228,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </View>
                   <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <View style={wizardCarDateWrapStyle}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          ref={wizardCarPickupDateRef as any}
-                          type="date"
-                          title="Pick up date"
-                          value={wizardCarDraft.pickupDate}
-                          onChange={(e) => setWizardCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                          style={wizardCarWebInputStyle}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[wizardCarInputStyle, styles.dateTouchable]}
-                          onPress={() => openWizardCarDatePicker('pickup')}
-                        >
-                          <Text style={styles.cellText}>{wizardCarDraft.pickupDate || 'YYYY-MM-DD'}</Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        style={styles.dateIcon}
-                        onPress={() => openWizardCarDatePicker('pickup')}
-                      >
-                        <Text style={styles.selectCaret}>v</Text>
-                      </TouchableOpacity>
+                      <DateField
+                        value={wizardCarDraft.pickupDate}
+                        onChange={(pickupDate) => setWizardCarDraft((p) => ({ ...p, pickupDate }))}
+                        styles={styles}
+                        theme={theme}
+                        style={wizardCarDateInputStyle}
+                        testID="wizard-car-pickup-date"
+                        accessibilityLabel="Pick up date"
+                      />
                     </View>
                   </View>
                   <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
@@ -2378,29 +2250,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </View>
                   <View style={[wizardCarInputCellStyle, fixedTableColumn(140)]}>
                     <View style={wizardCarDateWrapStyle}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          ref={wizardCarDropoffDateRef as any}
-                          type="date"
-                          title="Drop off date"
-                          value={wizardCarDraft.dropoffDate}
-                          onChange={(e) => setWizardCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                          style={wizardCarWebInputStyle}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[wizardCarInputStyle, styles.dateTouchable]}
-                          onPress={() => openWizardCarDatePicker('dropoff')}
-                        >
-                          <Text style={styles.cellText}>{wizardCarDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        style={styles.dateIcon}
-                        onPress={() => openWizardCarDatePicker('dropoff')}
-                      >
-                          <Text style={styles.selectCaret}>v</Text>
-                      </TouchableOpacity>
+                      <DateField
+                        value={wizardCarDraft.dropoffDate}
+                        onChange={(dropoffDate) => setWizardCarDraft((p) => ({ ...p, dropoffDate }))}
+                        styles={styles}
+                        theme={theme}
+                        style={wizardCarDateInputStyle}
+                        testID="wizard-car-dropoff-date"
+                        accessibilityLabel="Drop off date"
+                      />
                     </View>
                   </View>
                   <View style={[wizardCarInputCellStyle, fixedTableColumn(130)]}>
@@ -2794,86 +2652,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!dateField}
-          onRequestClose={() => setDateField(null)}
-          theme={theme}
-          testID="wizard-date-picker"
-        >
-          <NativeDateTimePicker
-            value={dateValue}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setDateField(null);
-                return;
-              }
-              const iso = formatLocalDateOnly(date);
-              if (dateField === 'start') {
-                setStartDateWithRangeGuard(iso);
-              } else if (dateField === 'end') {
-                setDates((prev) => ({ ...prev, endDate: iso }));
-              } else {
-                setItineraryDraft((prev) => ({ ...prev, date: iso }));
-              }
-              if (Platform.OS === 'android') setDateField(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!wizardLodgingDateField}
-          onRequestClose={() => setWizardLodgingDateField(null)}
-          theme={theme}
-          testID="wizard-lodging-date-picker"
-        >
-          <NativeDateTimePicker
-            value={wizardLodgingDateValue}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setWizardLodgingDateField(null);
-                return;
-              }
-              const iso = formatLocalDateOnly(date);
-              if (wizardLodgingDateField === 'refund') {
-                setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: iso } : prev));
-              } else if (wizardLodgingDateField === 'checkIn' || wizardLodgingDateField === 'checkOut') {
-                applyWizardLodgingDate(wizardLodgingDateField, iso);
-              } else {
-                setWizardLodgingDateField(null);
-                return;
-              }
-              if (Platform.OS === 'android') setWizardLodgingDateField(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!wizardCarDateField}
-          onRequestClose={() => setWizardCarDateField(null)}
-          theme={theme}
-          testID="wizard-car-date-picker"
-        >
-          <NativeDateTimePicker
-            value={wizardCarDateValue}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setWizardCarDateField(null);
-                return;
-              }
-              if (!wizardCarDateField) return;
-              const iso = formatLocalDateOnly(date);
-              applyWizardCarDate(wizardCarDateField, iso);
-              if (Platform.OS === 'android') setWizardCarDateField(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
       {editingWizardLodging && editingWizardLodgingId ? (
         <View style={styles.passengerOverlay}>
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeWizardLodgingEditor} />
@@ -2889,65 +2667,23 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, name: text } : prev))}
               />
               <Text style={styles.modalLabel}>Check-in</Text>
-              <View style={styles.dateInputWrap}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={wizardEditLodgingCheckInRef as any}
-                    type="date"
-                    title="Check-in date"
-                    value={editingWizardLodging.checkInDate}
-                    onChange={(e) =>
-                      setEditingWizardLodging((prev) =>
-                        prev ? { ...prev, checkInDate: normalizeDateString(e.target.value) } : prev
-                      )
-                    }
-                    style={webDateInputStyle}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openWizardLodgingDatePicker('checkIn', editingWizardLodging.checkInDate)}
-                  >
-                    <Text style={styles.cellText}>{editingWizardLodging.checkInDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.dateIcon}
-                  onPress={() => openWizardLodgingDatePicker('checkIn', editingWizardLodging.checkInDate)}
-                >
-                  <Text style={styles.selectCaret}>v</Text>
-                </TouchableOpacity>
-              </View>
+              <DateField
+                value={editingWizardLodging.checkInDate}
+                onChange={(checkInDate) => setEditingWizardLodging((prev) => (prev ? { ...prev, checkInDate } : prev))}
+                styles={styles}
+                theme={theme}
+                testID="wizard-lodging-check-in-date"
+                accessibilityLabel="Check-in date"
+              />
               <Text style={styles.modalLabel}>Check-out</Text>
-              <View style={styles.dateInputWrap}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={wizardEditLodgingCheckOutRef as any}
-                    type="date"
-                    title="Check-out date"
-                    value={editingWizardLodging.checkOutDate}
-                    onChange={(e) =>
-                      setEditingWizardLodging((prev) =>
-                        prev ? { ...prev, checkOutDate: normalizeDateString(e.target.value) } : prev
-                      )
-                    }
-                    style={webDateInputStyle}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openWizardLodgingDatePicker('checkOut', editingWizardLodging.checkOutDate)}
-                  >
-                    <Text style={styles.cellText}>{editingWizardLodging.checkOutDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.dateIcon}
-                  onPress={() => openWizardLodgingDatePicker('checkOut', editingWizardLodging.checkOutDate)}
-                >
-                  <Text style={styles.selectCaret}>v</Text>
-                </TouchableOpacity>
-              </View>
+              <DateField
+                value={editingWizardLodging.checkOutDate}
+                onChange={(checkOutDate) => setEditingWizardLodging((prev) => (prev ? { ...prev, checkOutDate } : prev))}
+                styles={styles}
+                theme={theme}
+                testID="wizard-lodging-check-out-date"
+                accessibilityLabel="Check-out date"
+              />
               <Text style={styles.modalLabel}>Rooms</Text>
               <TextInput
                 style={styles.input}
@@ -2958,25 +2694,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
               />
               <Text style={styles.modalLabel}>Refund by</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  aria-label="Refund by date"
-                  value={editingWizardLodging.refundBy}
-                  onChange={(e) => setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
-                  style={webDateInputStyle}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={editingWizardLodging.refundBy}
-                  placeholder="YYYY-MM-DD"
-                  accessibilityLabel="Refund by date"
-                  onChangeText={(text: string) =>
-                    setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))
-                  }
-                />
-              )}
+              <DateField
+                value={editingWizardLodging.refundBy}
+                onChange={(refundBy) => setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy } : prev))}
+                styles={styles}
+                theme={theme}
+                testID="wizard-lodging-refund-date"
+                accessibilityLabel="Refund by date"
+              />
               <Text style={styles.modalLabel}>Total cost</Text>
               <TextInput
                 style={styles.input}

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { usePolling } from '../hooks/usePolling';
+import DateField from '../components/DateField';
+import type { AppTheme } from '../theme/theme';
 
 type ReviewItem = {
   id: string;
@@ -70,6 +72,7 @@ type IngestionTabProps = {
   backendUrl: string;
   headers: Record<string, string>;
   styles: Record<string, any>;
+  theme?: AppTheme;
   onNavigate: (page: string) => void;
   onAssignmentApplied?: (params: { itemType: string; tripId: string }) => void | Promise<void>;
   // Admins get the full operational view (search/status/source/type/date/confidence filters,
@@ -105,6 +108,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   backendUrl,
   headers,
   styles,
+  theme,
   onNavigate,
   onAssignmentApplied,
   userRole = 'user',
@@ -500,7 +504,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
           <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={statusFilter} onChangeText={setStatusFilter} placeholder="Status or ALL" />
           <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={sourceFilter} onChangeText={setSourceFilter} placeholder="Source or ALL" />
           <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={typeFilter} onChangeText={setTypeFilter} placeholder="Type or ALL" />
-          <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={dateFilter} onChangeText={setDateFilter} placeholder="Date from (YYYY-MM-DD)" />
+          <DateField value={dateFilter} onChange={setDateFilter} styles={styles} theme={theme} style={{ flex: 1, minWidth: 120 }} placeholder="Date from" testID="ingestion-date-filter" accessibilityLabel="Date from" />
           <TextInput style={[styles.input, { flex: 1, minWidth: 100 }]} value={confidenceFilter} onChangeText={setConfidenceFilter} placeholder="Min confidence" keyboardType="numeric" />
         </View>
       ) : null}

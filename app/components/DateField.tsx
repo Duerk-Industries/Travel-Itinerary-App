@@ -1,31 +1,39 @@
-// The one date-entry control every screen should use. Before this, ~10 files each reimplemented
-// their own date picker independently — some `<input type="date">`, some three `<select>`
-// dropdowns, native handling copy-pasted with small drifts — which is exactly the kind of
-// inconsistency that produces the bug App Store review hit on iPad: "date selection was
+// The one date/time-entry control every screen should use (`mode="date"`, the default, or
+// `mode="time"`). Before this, ~10 files each reimplemented their own picker independently —
+// some `<input type="date">`, some three `<select>` dropdowns, native handling copy-pasted with
+// small drifts, and several parents owning picker state for a child Modal — which is exactly the
+// kind of inconsistency that produced the bug App Store review hit on iPad: "date selection was
 // unresponsive to taps."
 //
-// Root cause (confirmed against react-native-datetimepicker's own issue tracker): with no
-// explicit `display` prop, iOS's default UIDatePicker presentation for `mode="date"` is a
-// popover anchored to the triggering view. Every existing call site rendered the picker as a
-// bare sibling at the bottom of a large scrollable form, nowhere near the button that opened it
-// — on iPad specifically (a much bigger, differently-laid-out canvas than iPhone, and the actual
-// review device), that popover can anchor to a degenerate/incorrect rect and end up effectively
-// untappable. `display="inline"` avoids the popover but has its own known freeze when nested in
-// a Modal. `display="spinner"` needs no anchor at all — it's a self-contained wheel — which is
-// why this component always uses it on iOS, presented inside an explicit bottom-sheet Modal with
-// real Cancel/Done affordances instead of an ambiguous tap-outside-to-dismiss.
-import React, { useMemo, useState } from 'react';
-import { Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
+// Per platform:
+// - Web: a native `<input type="date|time">` styled like the app's other inputs, with the CSS
+//   `color-scheme` pinned to the app's resolved appearance so the browser's calendar/clock icon
+//   and popup match light/dark mode instead of the OS default.
+// - iOS: a tappable field that opens `NativeDatePickerSheet` (spinner wheel in a bottom sheet,
+//   Cancel/Done, wheel text pinned to the app theme). See that file for the iPad popover writeup.
+// - Android: a tappable field that opens the OS picker dialog, committing on pick.
+//
+// Because the sheet is rendered by this component (i.e. inside whatever Modal the field lives
+// in), it always presents above that Modal — callers never need to hoist picker state up to a
+// parent and pass it back down.
+import React, { useEffect, useMemo, useState } from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { toWebStyle } from '../utils/webStyle';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
+import type { AppTheme } from '../theme/theme';
 import NativeDateTimePicker from './NativeDateTimePicker';
+import NativeDatePickerSheet from './NativeDatePickerSheet';
+
+export type DateFieldMode = 'date' | 'time';
 
 export type DateFieldProps = {
-  value: string; // 'YYYY-MM-DD', or '' for empty
-  onChange: (isoDate: string) => void;
+  /** 'YYYY-MM-DD' in date mode, 'HH:MM' (24h) in time mode, or '' for empty. */
+  value: string;
+  onChange: (value: string) => void;
   styles: Record<string, any>;
-  theme?: { mode?: 'light' | 'dark' };
+  theme?: AppTheme;
+  mode?: DateFieldMode;
   placeholder?: string;
   minDate?: string;
   maxDate?: string;
@@ -33,17 +41,57 @@ export type DateFieldProps = {
   accessibilityLabel?: string;
   style?: any;
   disabled?: boolean;
+  /** Fired when the user starts interacting (web focus / native picker open) — e.g. to seed defaults. */
+  onOpen?: () => void;
 };
 
+const flattenStyle = (style: any): Record<string, any> => {
+  if (Array.isArray(style)) {
+    return style.reduce<Record<string, any>>(
+      (flattened, entry) => ({ ...flattened, ...flattenStyle(entry) }),
+      {},
+    );
+  }
+  return (StyleSheet.flatten(style) ?? {}) as Record<string, any>;
+};
+
+const parseTimeValue = (value: string): Date => {
+  const base = new Date();
+  const match = value?.match(/^(\d{1,2}):(\d{2})/);
+  if (match) base.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  else base.setHours(0, 0, 0, 0);
+  return base;
+};
+
+const formatTimeValue = (date: Date): string =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
 const DateField: React.FC<DateFieldProps> = ({
-  value, onChange, styles, theme, placeholder = 'YYYY-MM-DD', minDate, maxDate, testID, accessibilityLabel, style, disabled = false,
+  value, onChange, styles, theme, mode = 'date', placeholder, minDate, maxDate, testID, accessibilityLabel, style, disabled = false, onOpen,
 }) => {
+  const isTime = mode === 'time';
+  const parseValue = (raw: string) => (isTime ? parseTimeValue(raw) : parseLocalDateOnly(raw));
+  const formatValue = (date: Date) => (isTime ? formatTimeValue(date) : formatLocalDateOnly(date));
+  const resolvedPlaceholder = placeholder ?? (isTime ? 'HH:MM' : 'YYYY-MM-DD');
+
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [draftDate, setDraftDate] = useState<Date>(() => parseLocalDateOnly(value));
+  const [draftDate, setDraftDate] = useState<Date>(() => parseValue(value));
+
+  // If the value changes while the sheet is open (e.g. `onOpen` seeded a default), start the
+  // wheel from it rather than from the stale value captured at open time.
+  useEffect(() => {
+    if (pickerOpen) setDraftDate(parseValue(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   const webInputStyle = useMemo(
-    () => toWebStyle([styles.input, style], {
+    // Precedence: theme input style < full-width defaults < caller `style` (e.g. a grid cell's
+    // fixed width) < color-scheme, which always tracks the app appearance.
+    () => toWebStyle({
+      ...flattenStyle(styles.input),
       width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
+      ...flattenStyle(style),
+    }, {
       colorScheme: theme?.mode === 'dark' ? 'dark' : 'light',
     }),
     [styles, style, theme?.mode]
@@ -52,20 +100,20 @@ const DateField: React.FC<DateFieldProps> = ({
   if (Platform.OS === 'web') {
     return (
       <input
-        type="date"
-        title={accessibilityLabel || placeholder}
-        aria-label={accessibilityLabel || placeholder}
+        type={mode}
+        title={accessibilityLabel || resolvedPlaceholder}
+        aria-label={accessibilityLabel || resolvedPlaceholder}
         // Both attributes point at the same value on purpose: `data-testid` is what a real
-        // browser DOM query looks for (matches the convention every other `<input type="date">`
-        // in this app already uses), while `testID` is what @testing-library/react-native's
+        // browser DOM query looks for, while `testID` is what @testing-library/react-native's
         // getByTestId reads when this same JSX is rendered off react-test-renderer in unit tests.
         data-testid={testID}
         {...({ testID } as any)}
         value={value || ''}
-        min={minDate || undefined}
-        max={maxDate || undefined}
+        min={isTime ? undefined : minDate || undefined}
+        max={isTime ? undefined : maxDate || undefined}
         disabled={disabled}
-        onChange={(e) => onChange(normalizeDateString(e.target.value))}
+        onFocus={onOpen}
+        onChange={(e) => onChange(isTime ? e.target.value : normalizeDateString(e.target.value))}
         style={webInputStyle}
       />
     );
@@ -73,7 +121,8 @@ const DateField: React.FC<DateFieldProps> = ({
 
   const openPicker = () => {
     if (disabled) return;
-    setDraftDate(parseLocalDateOnly(value));
+    onOpen?.();
+    setDraftDate(parseValue(value));
     setPickerOpen(true);
   };
 
@@ -82,52 +131,38 @@ const DateField: React.FC<DateFieldProps> = ({
       <TouchableOpacity
         testID={testID}
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel || placeholder}
-        style={[styles.input, style, disabled && styles.buttonDisabled]}
+        accessibilityLabel={accessibilityLabel || resolvedPlaceholder}
+        style={[styles.input, { justifyContent: 'center' }, style, disabled && styles.buttonDisabled]}
         onPress={openPicker}
         disabled={disabled}
       >
-        <Text style={styles.cellText}>{value || placeholder}</Text>
+        <Text style={[styles.cellText, !value && { color: theme?.colors.textMuted }]}>{value || resolvedPlaceholder}</Text>
       </TouchableOpacity>
-      {pickerOpen ? (
-        <Modal visible transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
-          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-            <View style={{ backgroundColor: theme?.mode === 'dark' ? '#1C2B3A' : '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 8 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme?.mode === 'dark' ? '#385266' : '#E6ECEF' }}>
-                <TouchableOpacity testID={testID ? `${testID}-cancel` : undefined} accessibilityRole="button" onPress={() => setPickerOpen(false)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}>
-                  <Text style={{ color: theme?.mode === 'dark' ? '#B8C2CC' : '#6B7280', fontSize: 16 }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID={testID ? `${testID}-done` : undefined}
-                  accessibilityRole="button"
-                  onPress={() => { onChange(formatLocalDateOnly(draftDate)); setPickerOpen(false); }}
-                  style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
-                >
-                  <Text style={{ color: theme?.mode === 'dark' ? '#5FD2E0' : '#0369a1', fontSize: 16, fontWeight: '700' }}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <NativeDateTimePicker
-                value={draftDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={minDate ? parseLocalDateOnly(minDate) : undefined}
-                maximumDate={maxDate ? parseLocalDateOnly(maxDate) : undefined}
-                onChange={(event, date) => {
-                  // Android's "default" display is already its own modal dialog that dismisses
-                  // itself on pick/cancel — apply immediately and close, don't wait for a Done
-                  // button that isn't shown for that display mode's own native chrome.
-                  if (Platform.OS === 'android') {
-                    setPickerOpen(false);
-                    if (event?.type === 'set' && date) onChange(formatLocalDateOnly(date));
-                    return;
-                  }
-                  if (date) setDraftDate(date);
-                }}
-              />
-            </View>
-          </View>
-        </Modal>
-      ) : null}
+      <NativeDatePickerSheet
+        visible={pickerOpen}
+        onRequestClose={() => setPickerOpen(false)}
+        onCancel={() => setPickerOpen(false)}
+        onDone={() => { onChange(formatValue(draftDate)); setPickerOpen(false); }}
+        theme={theme}
+        testID={testID}
+      >
+        <NativeDateTimePicker
+          value={draftDate}
+          mode={mode}
+          minimumDate={!isTime && minDate ? parseLocalDateOnly(minDate) : undefined}
+          maximumDate={!isTime && maxDate ? parseLocalDateOnly(maxDate) : undefined}
+          onChange={(event, date) => {
+            // Android's picker is its own system dialog that dismisses itself on pick/cancel —
+            // apply immediately and close; there is no Done button to wait for.
+            if (Platform.OS === 'android') {
+              setPickerOpen(false);
+              if (event?.type === 'set' && date) onChange(formatValue(date));
+              return;
+            }
+            if (date) setDraftDate(date);
+          }}
+        />
+      </NativeDatePickerSheet>
     </>
   );
 };

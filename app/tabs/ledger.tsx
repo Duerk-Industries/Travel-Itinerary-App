@@ -638,6 +638,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
         participantLabel={(id) => memberNameMap.get(id) ?? 'Traveler'}
         defaultPayerId={currentUserMemberId && eligibleSortedIds.includes(currentUserMemberId) ? currentUserMemberId : null}
         styles={styles}
+        theme={theme}
         onCancel={() => setPaymentDialogOpen(false)}
         onSave={handleSavePayment}
       />

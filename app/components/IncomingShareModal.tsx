@@ -7,6 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DialogShell from './DialogShell';
+import DateField from './DateField';
 import { useShareIntent, planShareUpload, normalizeShareIntentFiles } from '../utils/incomingShare';
 import { uploadOneBlogFile, uploadBlogFiles, createDayTextItem, isVideoMimeType } from '../utils/blogUpload';
 
@@ -44,6 +45,11 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
   const mutedColor = theme?.colors?.textMuted ?? '#6b7280';
   const borderColor = theme?.colors?.border ?? '#ccd4df';
   const surfaceColor = theme?.colors?.surface ?? '#ffffff';
+  const dateFieldStyles = {
+    ...(styles ?? {}),
+    cellText: { ...(styles?.cellText ?? {}), color: textColor },
+  };
+  const dateFieldStyle = { borderWidth: 1, borderColor, borderRadius: 8, padding: 8, color: textColor, marginBottom: 12 };
 
   useEffect(() => {
     if (!hasShareIntent) return;
@@ -158,13 +164,17 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
         ) : null}
 
         <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Day (YYYY-MM-DD)</Text>
-        <TextInput
+        <DateField
           testID="share-day-input"
           value={dayDate}
-          onChangeText={setDayDate}
-          placeholder="2026-08-01"
-          placeholderTextColor={mutedColor}
-          style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 8, color: textColor, marginBottom: 12 }}
+          onChange={setDayDate}
+          minDate={selectedTrip?.startDate ?? undefined}
+          maxDate={selectedTrip?.endDate ?? undefined}
+          placeholder="Select day"
+          styles={dateFieldStyles}
+          theme={theme}
+          style={dateFieldStyle}
+          accessibilityLabel="Trip day"
         />
 
         <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Message (optional)</Text>

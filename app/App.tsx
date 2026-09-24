@@ -93,7 +93,6 @@ import {
   type OfflineItinerarySnapshot,
 } from './utils/offlineTripCache';
 import { requestOfflineUnlock } from './utils/offlineAccess';
-import NativeDateTimePicker from './components/NativeDateTimePicker';
 
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -562,6 +561,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [isAppIdle, setIsAppIdle] = useState(false);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
+  const [externalActivityEditId, setExternalActivityEditId] = useState<string | null>(null);
+  const [externalLodgingEditId, setExternalLodgingEditId] = useState<string | null>(null);
+  const [externalCarRentalEditId, setExternalCarRentalEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
   const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
   const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
@@ -1247,6 +1249,26 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setExternalFlightEditId(flightId);
   }, []);
 
+  const openItineraryExpenseEditor = useCallback((sourceType: string, sourceId: string) => {
+    if (isFollowingMode || offlineReadOnly) return;
+    switch (sourceType) {
+      case 'flight':
+        setExternalFlightEditId(sourceId);
+        break;
+      case 'activity':
+        setExternalActivityEditId(sourceId);
+        break;
+      case 'lodging':
+        setExternalLodgingEditId(sourceId);
+        break;
+      case 'car_rental':
+        setExternalCarRentalEditId(sourceId);
+        break;
+      default:
+        break;
+    }
+  }, [isFollowingMode, offlineReadOnly]);
+
   const saveCarRentalDraft = useCallback(async (rentalId?: string | null, draftOverride?: CarRentalDraft) => {
     if (isFollowingMode) return false;
     if (!activeTripId) {
@@ -1449,6 +1471,33 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
+
+  const itineraryExpenseDescriptions = useMemo(() => {
+    const descriptions: Record<string, string> = {};
+    const addDescription = (sourceType: string, sourceId: string | null | undefined, description: string) => {
+      const id = String(sourceId ?? '').trim();
+      const name = description.trim();
+      if (id && name) descriptions[`${sourceType}:${id}`] = name;
+    };
+
+    flights.forEach((flight) => {
+      const carrierAndNumber = [flight.carrier, flight.flight_number].filter(Boolean).join(' ').trim();
+      const departure = flight.departure_location || flight.departure_airport_code;
+      const arrival = flight.arrival_location || flight.arrival_airport_code;
+      const route = departure && arrival ? `${departure} → ${arrival}` : departure || arrival || '';
+      addDescription('flight', flight.id, [carrierAndNumber, route].filter(Boolean).join(' · '));
+    });
+    lodgings.forEach((lodging) => addDescription('lodging', lodging.id, lodging.name));
+    tours.forEach((tour) => addDescription('activity', tour.id, tour.name));
+    carRentals.forEach((rental) => {
+      const rentalName = [rental.vendor, rental.model].filter(Boolean).join(' · ').trim();
+      const route = rental.pickupLocation && rental.dropoffLocation
+        ? `${rental.pickupLocation} → ${rental.dropoffLocation}`
+        : rental.pickupLocation || rental.dropoffLocation;
+      addDescription('car_rental', rental.id, rentalName || route);
+    });
+    return descriptions;
+  }, [flights, lodgings, tours, carRentals]);
 
   const allExpenses = useMemo(
     () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, activeTrip?.currency ?? 'USD', allMemberIds),
@@ -3100,6 +3149,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchExpenses();
   }, [fetchExpenses, fetchTours]);
   const handleExternalEditHandled = useCallback(() => setExternalFlightEditId(null), []);
+  const handleExternalActivityEditHandled = useCallback(() => setExternalActivityEditId(null), []);
+  const handleExternalLodgingEditHandled = useCallback(() => setExternalLodgingEditId(null), []);
+  const handleExternalCarRentalEditHandled = useCallback(() => setExternalCarRentalEditId(null), []);
   const handleUnfollowTrip = useCallback(
     async (tripId: string) => {
       const res = await fetch(`${backendUrl}/api/trips/${tripId}/follow`, {
@@ -3311,7 +3363,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   toursTotal={toursTotal}
                   styles={styles}
                   theme={theme}
-                  nativeDateTimePicker={NativeDateTimePicker}
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode || offlineReadOnly}
                   defaultActivityDate={activeTrip?.startDate ?? null}
@@ -3322,10 +3373,36 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   featureActivityLodgingCsvImport={featureActivityLodgingCsvImport}
                   featureActivityLodgingCsvExport={featureActivityLodgingCsvExport}
                   featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+                  externalEditTourId={externalActivityEditId}
+                  onExternalEditHandled={handleExternalActivityEditHandled}
                   featureTapToEditTables={featureTapToEditTables}
                 />
               )
             : null}
+
+          {activePage !== 'tours' && externalActivityEditId ? (
+            <ActivityTab
+              backendUrl={backendUrl}
+              userToken={userToken}
+              activeTripId={activeTripId}
+              tours={tours}
+              setTours={setTours}
+              defaultPayerId={defaultPayerId}
+              payerName={payerName}
+              formatMemberName={formatMemberName}
+              groupMembers={groupMembers}
+              jsonHeaders={jsonHeaders}
+              payerTotals={tourPayerTotals}
+              toursTotal={toursTotal}
+              styles={styles}
+              theme={theme}
+              fetchTours={fetchTours}
+              externalEditTourId={externalActivityEditId}
+              onExternalEditHandled={handleExternalActivityEditHandled}
+              showList={false}
+              readOnly={isFollowingMode || offlineReadOnly}
+            />
+          ) : null}
 
           {activePage === 'expenses'
             ? renderSharedPageScroll(
@@ -3340,6 +3417,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   setExpenses={setExpenses}
                   defaultPayerId={defaultPayerId}
                   styles={styles}
+                  itineraryExpenseDescriptions={itineraryExpenseDescriptions}
+                  onEditItineraryItem={openItineraryExpenseEditor}
                   costTrackingAllowed={costTrackingAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
                 />
@@ -3404,6 +3483,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     backendUrl={backendUrl}
                     headers={headers}
                     styles={styles}
+                    theme={theme}
                     onNavigate={handleHomeNavigate}
                     onAssignmentApplied={handleIngestionAssignmentApplied}
                     userRole={userRole}
@@ -3523,12 +3603,35 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               payerName={payerName}
               readOnly={isFollowingMode || offlineReadOnly}
               featureStandardizedItemDialogs={featureStandardizedItemDialogs}
+              externalEditLodgingId={externalLodgingEditId}
+              onExternalEditHandled={handleExternalLodgingEditHandled}
               featureTapToEditTables={featureTapToEditTables}
               featureActivityLodgingCsvImport={featureActivityLodgingCsvImport}
               featureActivityLodgingCsvExport={featureActivityLodgingCsvExport}
             />
           )
         : null}
+
+      {activePage !== 'lodging' && externalLodgingEditId ? (
+        <LodgingTab
+          backendUrl={backendUrl}
+          jsonHeaders={jsonHeaders}
+          requestHeaders={headers}
+          trip={activeTripForHome ?? activeTrip}
+          lodgings={lodgings}
+          groupMembers={groupMembers}
+          defaultPayerId={defaultPayerId}
+          styles={styles}
+          theme={theme}
+          onOpenMap={openMaps}
+          formatMemberName={formatMemberName}
+          payerName={payerName}
+          externalEditLodgingId={externalLodgingEditId}
+          onExternalEditHandled={handleExternalLodgingEditHandled}
+          showList={false}
+          readOnly={isFollowingMode || offlineReadOnly}
+        />
+      ) : null}
 
       {activePage === 'packing'
         ? renderSharedPageScroll(
@@ -3554,6 +3657,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           userMembers={groupMembers}
           styles={styles}
           theme={theme}
+          externalEditCarRentalId={externalCarRentalEditId}
+          onExternalEditHandled={handleExternalCarRentalEditHandled}
           payerName={payerName}
           formatMemberName={formatMemberName}
           onAddCarRental={addCarRental}
@@ -3562,6 +3667,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onVoteCarRental={voteOnCarRental}
           onRateCarRental={rateOnCarRental}
           featureTapToEditTables={featureTapToEditTables}
+        />
+      ) : null}
+      {activePage !== 'car' && externalCarRentalEditId ? (
+        <CarRentalsPanel
+          carRentals={carRentals}
+          carDraft={carDraft}
+          setCarDraft={setCarDraft}
+          isFollowingMode={isFollowingMode || offlineReadOnly}
+          userMembers={groupMembers}
+          styles={styles}
+          theme={theme}
+          payerName={payerName}
+          formatMemberName={formatMemberName}
+          onAddCarRental={addCarRental}
+          onUpdateCarRental={updateCarRental}
+          onRemoveCarRental={removeCarRental}
+          onVoteCarRental={voteOnCarRental}
+          onRateCarRental={rateOnCarRental}
+          externalEditCarRentalId={externalCarRentalEditId}
+          onExternalEditHandled={handleExternalCarRentalEditHandled}
+          showList={false}
         />
       ) : null}
 

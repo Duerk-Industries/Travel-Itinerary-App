@@ -81,7 +81,6 @@ describe('ActivityTab read-only mode', () => {
         payerTotals={{ 'member-1': 40 }}
         toursTotal={40}
         styles={styles as any}
-        nativeDateTimePicker={null}
         fetchTours={jest.fn().mockResolvedValue(undefined)}
         readOnly
       />

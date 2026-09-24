@@ -5208,6 +5208,48 @@ export const insertExpense = async (expense: {
   return payload;
 };
 
+export const updateExpense = async (
+  expenseId: string,
+  userId: string,
+  expense: {
+    tripId: string;
+    expenseDate: string;
+    category: string;
+    amount: number;
+    currency?: string | null;
+    amountInTripCurrency?: number | null;
+    exchangeRateToTripCurrency?: number | null;
+    exchangeRateDate?: string | null;
+    payerIds?: string[];
+    forIds?: string[];
+    vendor?: string | null;
+    notes?: string | null;
+  }
+): Promise<any | null> => {
+  const db = getDb();
+  const doc = await db.collection('expenses').doc(expenseId).get();
+  if (!doc.exists) return null;
+  const current = doc.data() as any;
+  if (current.tripId !== expense.tripId || current.sourceType) return null;
+  const membership = await ensureUserInTrip(current.tripId, userId);
+  if (!membership) return null;
+  const payload = {
+    expenseDate: expense.expenseDate,
+    category: expense.category,
+    amount: expense.amount ?? 0,
+    currency: expense.currency ?? current.currency ?? 'USD',
+    amountInTripCurrency: expense.amountInTripCurrency ?? null,
+    exchangeRateToTripCurrency: expense.exchangeRateToTripCurrency ?? null,
+    exchangeRateDate: expense.exchangeRateDate ?? null,
+    payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
+    forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    vendor: expense.vendor ?? null,
+    notes: expense.notes ?? null,
+  };
+  await doc.ref.update(payload);
+  return { ...current, ...payload, id: current.id ?? doc.id };
+};
+
 export const upsertExpenseForSource = async (expense: {
   userId: string;
   tripId: string;

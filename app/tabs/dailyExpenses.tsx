@@ -7,8 +7,7 @@ import DialogShell from '../components/DialogShell';
 import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
-import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
-import NativeDateTimePicker from '../components/NativeDateTimePicker';
+import DateField from '../components/DateField';
 import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -77,6 +76,10 @@ type DailyExpensesTabProps = {
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   defaultPayerId: string | null;
   styles: Record<string, any>;
+  /** Names for itinerary items whose generated expenses appear in this table. */
+  itineraryExpenseDescriptions?: Readonly<Record<string, string>>;
+  /** Opens the linked itinerary item's standard editor. */
+  onEditItineraryItem?: (sourceType: string, sourceId: string) => void;
   costTrackingAllowed?: boolean;
   readOnly?: boolean;
 };
@@ -96,7 +99,6 @@ type DailyExpenseDraft = {
   currency: string;
   amount: string;
   vendor: string;
-  notes: string;
   forIds: string[];
   payerIds: string[];
 };
@@ -165,6 +167,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   setExpenses,
   defaultPayerId,
   styles,
+  itineraryExpenseDescriptions = {},
+  onEditItineraryItem,
   costTrackingAllowed,
   readOnly = false,
 }) => {
@@ -182,6 +186,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     return map;
   }, [activeMembers]);
 
+  const otherExpenseDescription = (expense: Expense): string => {
+    const sourceKey = expense.sourceType && expense.sourceId
+      ? `${expense.sourceType}:${expense.sourceId}`
+      : '';
+    return itineraryExpenseDescriptions[sourceKey] || expense.vendor || expense.notes || '-';
+  };
+
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;
   const defaultExpenseDraft = useMemo<DailyExpenseDraft>(() => {
@@ -193,7 +204,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       currency: trip?.currency ?? 'USD',
       amount: '',
       vendor: '',
-      notes: '',
       forIds: activeMembers.map((member) => member.id),
       payerIds: defaultPayerId ? [defaultPayerId] : [],
     };
@@ -209,7 +219,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     currency: draftCurrency,
     amount: draftAmount,
     vendor: draftVendor,
-    notes: draftNotes,
     forIds: draftForIds,
     payerIds: draftPayerIds,
   } = expenseDraft;
@@ -221,7 +230,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const setDraftCurrency = (currency: string) => updateExpenseDraft({ currency });
   const setDraftAmount = (amount: string) => updateExpenseDraft({ amount });
   const setDraftVendor = (vendor: string) => updateExpenseDraft({ vendor });
-  const setDraftNotes = (notes: string) => updateExpenseDraft({ notes });
   const setDraftForIds = (next: React.SetStateAction<string[]>) => {
     setExpenseDraft((current) => {
       const draft = current ?? defaultExpenseDraft;
@@ -240,12 +248,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       };
     });
   };
-  const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [importExpensesVisible, setImportExpensesVisible] = useState(false);
   const [receiptParsing, setReceiptParsing] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const receiptFileInputRef = useRef<any>(null);
 
   const expenseItems = useMemo(
@@ -299,13 +307,31 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
 
   const openAddExpenseModal = () => {
+    setEditingExpenseId(null);
     updateExpenseDraft({ isOpen: true });
   };
 
   const cancelAddExpenseModal = () => {
     setExpenseDraft(null);
-    setDatePickerVisible(false);
+    setEditingExpenseId(null);
     setReceiptError(null);
+  };
+
+  const openEditExpenseModal = (expense: Expense) => {
+    if (readOnly) return;
+    setPendingDeleteExpense(null);
+    setDetailTarget(null);
+    setEditingExpenseId(expense.id);
+    setExpenseDraft({
+      isOpen: true,
+      date: expense.expenseDate,
+      category: expense.category as CategoryOption,
+      currency: expense.currency || trip?.currency || 'USD',
+      amount: String(expense.amount ?? ''),
+      vendor: expense.vendor || expense.notes || '',
+      forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+      payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
+    });
   };
 
   const handleReceiptPickerPress = () => {
@@ -330,14 +356,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     if (typeof parsed.amount === 'number' && Number.isFinite(parsed.amount)) {
       setDraftAmount(parsed.amount.toFixed(2));
     }
-    setDraftVendor(parsed.vendor ?? '');
-    setDraftNotes(
+    setDraftVendor(
       [
+        parsed.vendor ?? '',
         parsed.notes ?? '',
         parsedDateOutsideTrip && parsed.expenseDate
           ? `Receipt date ${formatDateLabel(parsed.expenseDate)} is outside this trip's dates.`
           : '',
-      ].filter(Boolean).join(' ')
+      ].filter(Boolean).join(' — ')
     );
     openAddExpenseModal();
   };
@@ -440,20 +466,21 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       payerIds: draftPayerIds,
       forIds: draftForIds,
       vendor: draftVendor || undefined,
-      notes: draftNotes || undefined,
     };
     try {
-      const res = await fetch(`${backendUrl}/api/expenses`, {
-        method: 'POST',
+      const res = await fetch(editingExpenseId ? `${backendUrl}/api/expenses/${editingExpenseId}` : `${backendUrl}/api/expenses`, {
+        method: editingExpenseId ? 'PUT' : 'POST',
         headers: jsonHeaders,
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alertMessage(data.error || 'Unable to save expense');
+        alertMessage(data.error || `Unable to ${editingExpenseId ? 'update' : 'save'} expense`);
         return;
       }
-      setExpenses((prev) => [data as Expense, ...prev.filter((e) => e.id !== data.id)]);
+      setExpenses((prev) => editingExpenseId
+        ? prev.map((expense) => expense.id === data.id ? data as Expense : expense)
+        : [data as Expense, ...prev.filter((expense) => expense.id !== data.id)]);
       cancelAddExpenseModal();
     } catch (err) {
       alertMessage((err as Error).message || 'Unable to save expense');
@@ -525,15 +552,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     );
   }
 
-  const formattedDraftDate = draftDate ? formatDateLabel(draftDate) : '';
   const fullWidthExpenseField = isNarrowLayout ? { flexBasis: '100%', minWidth: '100%', maxWidth: '100%' } : null;
   const narrowSelectField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 150, minWidth: 132, maxWidth: '100%' } : null;
   const narrowAmountField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 120, minWidth: 120, maxWidth: '100%' } : null;
   const categoryFieldStyle = [styles.expenseFieldCategory, narrowSelectField];
   const currencyFieldStyle = [styles.expenseFieldCurrency, narrowSelectField];
+  const dateFieldStyle = isNarrowLayout
+    ? { ...(styles.expenseFieldDate ?? {}), ...(fullWidthExpenseField ?? {}) }
+    : styles.expenseFieldDate;
   const amountFieldStyle = [styles.input, styles.expenseFieldAmount, narrowAmountField];
   const vendorFieldStyle = [styles.input, styles.expenseFieldVendor, fullWidthExpenseField];
-  const notesFieldStyle = [styles.input, styles.expenseFieldNotes, fullWidthExpenseField];
   const narrowCardsScrollStyle = isNarrowLayout
     ? [
         styles.dailyExpensesVerticalScroll,
@@ -603,7 +631,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       {expenseDraft.isOpen ? (
         <DialogShell
           visible
-          title="Add Expense"
+          title={editingExpenseId ? 'Edit Expense' : 'Add Expense'}
           styles={styles}
           // Backdrop, Escape, and the native back action must not discard a
           // partially entered expense. Cancel is the explicit discard action.
@@ -625,35 +653,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               </View>
               <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8, overflow: 'visible', paddingBottom: 8 }}>
                 <View style={styles.expenseFieldRow}>
-                  <View style={[styles.expenseFieldDate, fullWidthExpenseField]}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        type="date"
-                        value={draftDate}
-                        onChange={(event) => setDraftDate(event.target.value)}
-                        style={{
-                          ...toWebStyle(styles.input),
-                          width: '100%',
-                          maxWidth: '100%',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    ) : (
-                      <View style={styles.dateInputWrap}>
-                        <TouchableOpacity
-                          style={[styles.input, styles.dateTouchable]}
-                          onPress={() => setDatePickerVisible(true)}
-                        >
-                          <Text style={draftDate ? styles.cellText : styles.placeholderText}>
-                            {draftDate ? formattedDraftDate : 'Select date'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.dateIcon} onPress={() => setDatePickerVisible(true)}>
-                          <Text style={styles.selectCaret}>📅</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
+                  <DateField
+                    value={draftDate}
+                    onChange={setDraftDate}
+                    styles={styles}
+                    theme={theme}
+                    minDate={trip.startDate ?? undefined}
+                    maxDate={trip.endDate ?? undefined}
+                    testID="daily-expense-date"
+                    accessibilityLabel="Expense date"
+                    style={dateFieldStyle}
+                  />
                   <SelectField
                     styles={styles}
                     value={draftCategory}
@@ -694,17 +704,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 <View style={styles.expenseFieldRow}>
                   <DraftTextInput
                     style={vendorFieldStyle}
-                    placeholder="Vendor"
+                    placeholder="Description"
                     value={draftVendor}
                     onChangeText={setDraftVendor}
-                    commitOnBlur={false}
-                  />
-                  <DraftTextInput
-                    style={notesFieldStyle}
-                    placeholder="Notes"
-                    value={draftNotes}
-                    onChangeText={setDraftNotes}
-                    multiline
                     commitOnBlur={false}
                   />
                 </View>
@@ -753,7 +755,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
                 <View style={styles.row}>
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveExpense} testID="expense-save">
-                    <Text style={styles.buttonText}>Save Expense</Text>
+                    <Text style={styles.buttonText}>{editingExpenseId ? 'Save Changes' : 'Save Expense'}</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -861,7 +863,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <View style={{ marginTop: 18 }}>
           <Text style={styles.sectionTitle}>Other expenses ({otherExpenses.length})</Text>
           <Text style={styles.helperText}>
-            Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Delete any that shouldn’t be here. Editing the linked itinerary item will re-create its expense.
+            Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Select a linked description to edit its itinerary item.
           </Text>
           {otherExpenses.filter((e) => (Number(e.amount) || 0) === 0).length >= 2 ? (
             <TouchableOpacity
@@ -878,8 +880,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table} testID="other-expenses-table">
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Date', 'Category', 'Description', 'For', 'Amount', 'Action'].map((header, index) => (
-                  <View key={header} style={[styles.cell, fixedTableColumn(index === 4 ? 90 : 130), index === 5 && styles.lastCell]}>
+                {['Date', 'Category', 'Description', 'Paid by', 'For', 'Amount'].map((header, index) => (
+                  <View key={header} style={[styles.cell, fixedTableColumn(index === 5 ? 90 : index === 2 ? 200 : 130), index === 5 && styles.lastCell]}>
                     <Text style={styles.headerText}>{header}</Text>
                   </View>
                 ))}
@@ -891,10 +893,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </View>
                   <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.category}</Text>
-                    {expense.sourceType ? <Text style={styles.helperText}>from itinerary</Text> : null}
+                  </View>
+                  <View style={[styles.cell, fixedTableColumn(200)]}>
+                    {!readOnly && expense.sourceType && expense.sourceId && onEditItineraryItem ? (
+                      <TouchableOpacity
+                        accessibilityRole="link"
+                        accessibilityLabel={`Edit ${otherExpenseDescription(expense)}`}
+                        onPress={() => onEditItineraryItem(expense.sourceType as string, expense.sourceId as string)}
+                        testID={`other-expense-edit-source-${expense.id}`}
+                      >
+                        <Text style={[styles.cellText, styles.linkText]}>{otherExpenseDescription(expense)}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.cellText}>{otherExpenseDescription(expense)}</Text>
+                    )}
                   </View>
                   <View style={[styles.cell, fixedTableColumn(130)]}>
-                    <Text style={styles.cellText}>{expense.vendor || expense.notes || '-'}</Text>
+                    <Text style={styles.cellText}>{expense.payerIds.length ? expense.payerIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
                   </View>
                   <View style={[styles.cell, fixedTableColumn(130)]}>
                     <Text style={styles.cellText}>{expense.forIds.length ? expense.forIds.map((id) => memberNameMap.get(id) ?? 'Traveler').join(', ') : '-'}</Text>
@@ -902,42 +917,11 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <View style={[styles.cell, fixedTableColumn(90)]}>
                     <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
                   </View>
-                  <View style={[styles.cell, styles.lastCell, fixedTableColumn(130)]}>
-                    <TouchableOpacity
-                      style={[styles.tableActionButton, styles.tableActionButtonDanger]}
-                      onPress={() => setPendingDeleteExpense(expense)}
-                      testID={`expense-delete-${expense.id}`}
-                    >
-                      <Text style={styles.buttonText}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
               ))}
             </View>
           </HorizontalTableScroll>
         </View>
-      ) : null}
-
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={datePickerVisible}
-          onRequestClose={() => setDatePickerVisible(false)}
-          theme={theme}
-          testID="daily-expenses-date-picker"
-        >
-          <NativeDateTimePicker
-            value={parseLocalDateOnly(draftDate)}
-            mode="date"
-            onChange={(_, date) => {
-              if (!date) {
-                setDatePickerVisible(false);
-                return;
-              }
-              setDraftDate(formatLocalDateOnly(date));
-              if (Platform.OS === 'android') setDatePickerVisible(false);
-            }}
-          />
-        </NativeDatePickerSheet>
       ) : null}
 
       {detailTarget ? (
@@ -998,13 +982,22 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                           <Text style={styles.cellText}>${(Number(expense.amount) || 0).toFixed(2)}</Text>
                         </View>
                         <View style={[styles.cell, styles.lastCell, fixedTableColumn(150)]}>
-                          <TouchableOpacity
-                            style={[styles.tableActionButton, styles.tableActionButtonDanger]}
-                            onPress={() => setPendingDeleteExpense(expense)}
-                            testID={`expense-delete-${expense.id}`}
-                          >
-                            <Text style={styles.buttonText}>Delete</Text>
-                          </TouchableOpacity>
+                          <View style={[styles.actionCell, { flexWrap: 'wrap' }]}>
+                            <TouchableOpacity
+                              style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
+                              onPress={() => openEditExpenseModal(expense)}
+                              testID={`expense-edit-${expense.id}`}
+                            >
+                              <Text style={styles.buttonText}>Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.tableActionButton, styles.tableActionButtonDanger]}
+                              onPress={() => setPendingDeleteExpense(expense)}
+                              testID={`expense-delete-${expense.id}`}
+                            >
+                              <Text style={styles.buttonText}>Delete</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       </View>
                     ))}

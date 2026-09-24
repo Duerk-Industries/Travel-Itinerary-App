@@ -5,7 +5,8 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor, within } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import DailyExpensesTab from '../tabs/dailyExpenses';
 import { getAppTheme } from '../theme/theme';
 
@@ -139,6 +140,42 @@ describe('DailyExpensesTab', () => {
     expect(setExpenses).toHaveBeenCalled();
   });
 
+  it('edits a daily expense from the category detail dialog', async () => {
+    const setExpenses = jest.fn();
+    const updatedExpense = { ...expenses[0], amount: 18.75, vendor: 'Flour Bakery', notes: null };
+    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => updatedExpense }) as any);
+    const originalFetch = global.fetch;
+    global.fetch = fetchMock as any;
+
+    try {
+      const screen = render(
+        <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{ Authorization: 'Bearer token' }} jsonHeaders={{ Authorization: 'Bearer token', 'Content-Type': 'application/json' }} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+      );
+
+      fireEvent.press(screen.getAllByText('$12.00')[0]);
+      fireEvent.press(screen.getByTestId('expense-edit-e1'));
+      expect(screen.getByText('Edit Expense')).toBeTruthy();
+      expect(screen.getByPlaceholderText('Description').props.value).toBe('Cafe Nero');
+      expect(screen.queryByPlaceholderText('Notes')).toBeNull();
+
+      fireEvent.changeText(screen.getByPlaceholderText('Amount'), '18.75');
+      fireEvent.changeText(screen.getByPlaceholderText('Description'), 'Flour Bakery');
+      fireEvent.press(screen.getByText('Save Changes'));
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+        'http://example.test/api/expenses/e1',
+        expect.objectContaining({ method: 'PUT' }),
+      ));
+      const body = JSON.parse((fetchMock.mock.calls[0] as any[])[1].body);
+      expect(body).toEqual(expect.objectContaining({ amount: 18.75, vendor: 'Flour Bakery' }));
+      expect(body.notes).toBeUndefined();
+      expect(setExpenses).toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
   it('does not allow expense mutations while cached trip data is read-only', async () => {
     const fetchMock = jest.fn();
     const originalFetch = global.fetch;
@@ -172,10 +209,9 @@ describe('DailyExpensesTab', () => {
     }
   });
 
-  it('surfaces and deletes expenses the daily grid cannot reach (wrong category or date)', async () => {
+  it('surfaces unreachable expenses and opens linked itinerary items from their description', () => {
     const setExpenses = jest.fn();
-    const fetchMock = jest.fn(async () => ({ ok: true, status: 204, json: async () => ({}) }) as any);
-    (global as any).fetch = fetchMock;
+    const onEditItineraryItem = jest.fn();
 
     const list = [
       ...expenses,
@@ -186,26 +222,32 @@ describe('DailyExpensesTab', () => {
 
     const screen = render(
       <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
-        groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles} costTrackingAllowed />
+        groupMembers={groupMembers} expenses={list as any} setExpenses={setExpenses} defaultPayerId="m1" styles={styles}
+        itineraryExpenseDescriptions={{ 'activity:a1': 'Rome Food Tour', 'activity:a2': 'Colosseum Tour' }}
+        onEditItineraryItem={onEditItineraryItem} costTrackingAllowed />
     );
 
     // The grid can't show any of these three; the "Other expenses" table does.
     expect(screen.getByText('Other expenses (3)')).toBeTruthy();
     expect(screen.getByTestId('other-expense-row-act-1')).toBeTruthy();
     expect(screen.getByTestId('other-expense-row-old-1')).toBeTruthy();
+    expect(screen.getByText('Paid by')).toBeTruthy();
+    expect(within(screen.getByTestId('other-expense-row-act-1')).getByText('Rome Food Tour')).toBeTruthy();
+    expect(within(screen.getByTestId('other-expense-row-act-1')).getAllByText('Alex Rider')).toHaveLength(2);
+    expect(screen.queryByText('from itinerary')).toBeNull();
+    expect(screen.queryByText('Action')).toBeNull();
+    expect(screen.queryByTestId('expense-delete-act-1')).toBeNull();
     // e1 (Breakfast, in range) stays in the grid, not here.
     expect(screen.queryByTestId('other-expense-row-e1')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('expense-delete-act-1'));
-    fireEvent.press(screen.getByLabelText('Delete')); // ConfirmDialog confirm
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('http://example.test/api/expenses/act-1', expect.objectContaining({ method: 'DELETE' })));
-    expect(setExpenses).toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('other-expense-edit-source-act-1'));
+    expect(onEditItineraryItem).toHaveBeenCalledWith('activity', 'a1');
 
     // The bulk "remove zero-amount" shortcut only shows with 2+ zero entries; here there is 1.
     expect(screen.queryByTestId('other-expenses-clear-zero')).toBeNull();
   });
 
-  it('sends vendor and notes when creating a daily expense', async () => {
+  it('saves a description when creating a daily expense', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -213,7 +255,6 @@ describe('DailyExpensesTab', () => {
         id: 'e2',
         amount: 18.75,
         vendor: 'Flour Bakery',
-        notes: 'Receipt reviewed',
       }),
     });
     const originalFetch = global.fetch;
@@ -239,8 +280,8 @@ describe('DailyExpensesTab', () => {
 
       fireEvent.press(getByText('+ Add Expense'));
       fireEvent.changeText(getByPlaceholderText('Amount'), '18.75');
-      fireEvent.changeText(getByPlaceholderText('Vendor'), 'Flour Bakery');
-      fireEvent.changeText(getByPlaceholderText('Notes'), 'Receipt reviewed');
+      fireEvent.changeText(getByPlaceholderText('Description'), 'Flour Bakery');
+      expect(() => getByPlaceholderText('Notes')).toThrow();
       fireEvent.press(getByText('Save Expense'));
       await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
@@ -255,11 +296,83 @@ describe('DailyExpensesTab', () => {
       const body = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(body).toEqual(expect.objectContaining({
         vendor: 'Flour Bakery',
-        notes: 'Receipt reviewed',
         amount: 18.75,
       }));
+      expect(body.notes).toBeUndefined();
     } finally {
       global.fetch = originalFetch;
+    }
+  });
+
+  it('renders a bounded web date input and keeps a selected expense date', () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      const screen = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      const dateInput = screen.getByTestId('daily-expense-date') as any;
+      expect(dateInput.props.type).toBe('date');
+      expect(dateInput.props.min).toBe('2025-02-01');
+      expect(dateInput.props.max).toBe('2025-02-02');
+
+      fireEvent(dateInput, 'change', { target: { value: '2025-02-02' } });
+      expect(screen.getByTestId('daily-expense-date').props.value).toBe('2025-02-02');
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
+  it('opens a native date picker outside the scrolling expense form and commits its selection', () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'ios';
+    try {
+      const screen = render(
+        <DailyExpensesTab
+          backendUrl="http://example.test"
+          theme={theme}
+          headers={{}}
+          jsonHeaders={{}}
+          trip={trip}
+          groupMembers={groupMembers}
+          expenses={[]}
+          setExpenses={() => {}}
+          defaultPayerId="m1"
+          styles={styles}
+          costTrackingAllowed
+        />,
+      );
+
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      fireEvent.press(screen.getByTestId('daily-expense-date'));
+
+      const picker = screen.getByTestId('native-date-time-picker');
+      expect(picker.props.display).toBe('spinner');
+      expect(picker.props.minimumDate).toEqual(new Date(2025, 1, 1));
+      expect(picker.props.maximumDate).toEqual(new Date(2025, 1, 2));
+
+      act(() => {
+        picker.props.onValueChange({ nativeEvent: {} }, new Date(2025, 1, 2));
+      });
+      fireEvent.press(screen.getByTestId('daily-expense-date-done'));
+
+      expect(screen.getByText('2025-02-02')).toBeTruthy();
+    } finally {
+      Platform.OS = originalOS;
     }
   });
 
@@ -287,8 +400,7 @@ describe('DailyExpensesTab', () => {
 
       fireEvent.press(firstLoad.getByTestId('expense-add-button'));
       fireEvent.changeText(firstLoad.getByPlaceholderText('Amount'), '18.75');
-      fireEvent.changeText(firstLoad.getByPlaceholderText('Vendor'), 'Flour Bakery');
-      fireEvent.changeText(firstLoad.getByPlaceholderText('Notes'), 'Receipt reviewed');
+      fireEvent.changeText(firstLoad.getByPlaceholderText('Description'), 'Flour Bakery');
       // The dialog overlay has no dismissal action, so a backdrop click leaves
       // the draft and dialog alone.
       fireEvent.press(firstLoad.getByTestId('expense-add-modal'));
@@ -315,8 +427,8 @@ describe('DailyExpensesTab', () => {
 
       expect(refreshed.getByTestId('expense-add-modal')).toBeTruthy();
       expect(refreshed.getByPlaceholderText('Amount').props.value).toBe('18.75');
-      expect(refreshed.getByPlaceholderText('Vendor').props.value).toBe('Flour Bakery');
-      expect(refreshed.getByPlaceholderText('Notes').props.value).toBe('Receipt reviewed');
+      expect(refreshed.getByPlaceholderText('Description').props.value).toBe('Flour Bakery');
+      expect(refreshed.queryByPlaceholderText('Notes')).toBeNull();
       expect(fetchMock).not.toHaveBeenCalled();
 
       fireEvent.press(refreshed.getByTestId('expense-cancel'));

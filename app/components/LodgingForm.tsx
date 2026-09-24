@@ -5,6 +5,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { AppTheme } from '../theme/theme';
+import DateField from './DateField';
 import DraftTextInput from './DraftTextInput';
 
 type MemberOption = {
@@ -26,7 +27,6 @@ type LodgingFormProps = {
   defaultPayerId?: string | null;
   styles: Record<string, any>;
   theme?: AppTheme;
-  onOpenDatePicker?: (field: 'checkIn' | 'checkOut' | 'refundBy') => void;
   isCompact: boolean;
 };
 
@@ -39,7 +39,6 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
   defaultPayerId,
   styles,
   theme,
-  onOpenDatePicker,
   isCompact,
 }) => {
   const activeMembers = useMemo(
@@ -83,26 +82,16 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
     field: 'checkIn' | 'checkOut' | 'refundBy',
     value: string,
     onChange: (next: string) => void
-  ) => {
-    if (Platform.OS === 'web') {
-      return (
-        <input
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-        />
-      );
-    }
-    return (
-      <TouchableOpacity
-        style={styles.input}
-        onPress={() => (onOpenDatePicker ? onOpenDatePicker(field) : undefined)}
-      >
-        <Text style={styles.cellText}>{value || 'YYYY-MM-DD'}</Text>
-      </TouchableOpacity>
-    );
-  };
+  ) => (
+    <DateField
+      value={value}
+      onChange={onChange}
+      styles={styles}
+      theme={theme}
+      testID={`lodging-${field === 'checkIn' ? 'check-in' : field === 'checkOut' ? 'check-out' : 'refund-by'}-date`}
+      accessibilityLabel={`${field === 'checkIn' ? 'Check-in' : field === 'checkOut' ? 'Check-out' : 'Refund by'} date`}
+    />
+  );
 
   return (
     <>

@@ -3,7 +3,9 @@ import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import DialogShell from './DialogShell';
+import DateField from './DateField';
 import DraftTextInput from './DraftTextInput';
+import type { AppTheme } from '../theme/theme';
 
 type Participant = {
   id: string;
@@ -22,6 +24,7 @@ type PaymentDialogProps = {
   participantLabel: (id: string) => string;
   defaultPayerId: string | null;
   styles: Record<string, any>;
+  theme?: AppTheme;
   testID?: string;
 };
 
@@ -41,6 +44,7 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
   participantLabel,
   defaultPayerId,
   styles,
+  theme,
   testID,
 }) => {
   const initialPayer = useMemo(() => {
@@ -197,31 +201,15 @@ const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
           <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
             <View style={{ gap: 4 }}>
               <Text style={styles.headerText}>Payment Date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={paymentDate}
-                  max={todayStr}
-                  onChange={(event) => setPaymentDate(event.target.value)}
-                  style={{
-                    ...toWebStyle(styles.input),
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
-                  }}
-                  data-testid="payment-date-input"
-                  aria-label="Payment date"
-                />
-              ) : (
-                <DraftTextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  value={paymentDate}
-                  onChangeText={setPaymentDate}
-                  commitOnBlur={false}
-                  accessibilityLabel="Payment date"
-                />
-              )}
+              <DateField
+                value={paymentDate}
+                onChange={setPaymentDate}
+                maxDate={todayStr}
+                styles={styles}
+                theme={theme}
+                testID="payment-date-input"
+                accessibilityLabel="Payment date"
+              />
             </View>
 
             {renderDropdown('Payer', payerId, setPayerId, payerOptions, 'payment-payer')}

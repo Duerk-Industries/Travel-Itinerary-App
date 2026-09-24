@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View, useWindowDimens
 import type { LodgingDraft } from '../tabs/lodging';
 import LodgingForm from './LodgingForm'; // Assuming we extract the form fields into this component
 import DialogShell from './DialogShell';
+import type { AppTheme } from '../theme/theme';
 
 type MemberOption = {
   id: string;
@@ -24,10 +25,10 @@ type LodgingDialogProps = {
   payerName: (id: string) => string;
   defaultPayerId?: string | null;
   styles: Record<string, any>;
+  theme?: AppTheme;
   onSave: () => void;
   onSaveAndAddAnother?: () => void;
   onCancel: () => void;
-  onOpenDatePicker?: (field: 'checkIn' | 'checkOut' | 'refundBy') => void;
   testID?: string;
 };
 

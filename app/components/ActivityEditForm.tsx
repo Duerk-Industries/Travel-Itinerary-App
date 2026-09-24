@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { ACTIVITY_TYPES, type ActivityType, type TourDraft } from '../tabs/activities';
-import NativeDateTimePicker from './NativeDateTimePicker';
-import { formatLocalDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
-import NativeDatePickerSheet from './NativeDatePickerSheet';
+import DateField from './DateField';
 
 // Single source of truth for the "add/edit activity" form so the Activities tab and the
 // Overview day-detail "quick edit" share one implementation instead of two hand-copied
@@ -25,8 +22,6 @@ export type ActivityFormMember = {
   status?: 'active' | 'pending' | 'removed';
   removedAt?: string | null;
 };
-
-type ActivityDateField = 'date' | 'startTime' | 'freeCancel';
 
 export type ActivityEditFormProps = {
   draft: TourDraft;
@@ -49,9 +44,6 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
   styles,
   theme,
 }) => {
-  const [dateField, setDateField] = useState<ActivityDateField | null>(null);
-  const [pickerValue, setPickerValue] = useState<Date>(new Date());
-
   const activeMembers = members.filter((m) => m.status !== 'removed' && !m.removedAt);
 
   const toggleBaseStyle = styles.toggleOption ?? {
@@ -69,22 +61,6 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
   const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
   const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
 
-  const openDatePicker = (field: ActivityDateField) => {
-    setDateField(field);
-    const current = field === 'date' ? draft.date : field === 'startTime' ? draft.startTime : draft.freeCancelBy;
-    if (field === 'startTime') {
-      const base = new Date();
-      if (current && /^\d{1,2}:\d{2}/.test(current)) {
-        const [h, m] = current.split(':').map(Number);
-        if (!Number.isNaN(h) && !Number.isNaN(m)) {
-          base.setHours(h, m, 0, 0);
-        }
-      }
-      setPickerValue(base);
-    } else {
-      setPickerValue(parseLocalDateOnly(current));
-    }
-  };
 
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
   const activityType = draft.activityType || 'Tour';
@@ -97,19 +73,14 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
           <Text style={styles.sectionTitle}>{isNew ? 'Add Activity' : 'Edit Activity'}</Text>
           <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
             <Text style={styles.modalLabel}>Date</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                type="date"
-                title="Activity date"
-                value={draft.date}
-                onChange={(e) => onChange((prev) => ({ ...prev, date: e.target.value }))}
-              />
-            ) : (
-              <TouchableOpacity style={styles.input} onPress={() => openDatePicker('date')}>
-                <Text style={styles.cellText}>{formatDateLong(draft.date)}</Text>
-              </TouchableOpacity>
-            )}
+            <DateField
+              value={draft.date}
+              onChange={(date) => onChange((prev) => ({ ...prev, date }))}
+              styles={styles}
+              theme={theme}
+              testID="activity-date"
+              accessibilityLabel="Activity date"
+            />
             <Text style={styles.modalLabel}>Status</Text>
             {Platform.OS === 'web' ? (
               <select
@@ -188,19 +159,16 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
               onChangeText={(text: string) => onChange((prev) => ({ ...prev, startLocation: text }))}
             />
             <Text style={styles.modalLabel}>Start time</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                type="time"
-                title="Start time"
-                value={draft.startTime}
-                onChange={(e) => onChange((prev) => ({ ...prev, startTime: e.target.value }))}
-              />
-            ) : (
-              <TouchableOpacity style={styles.input} onPress={() => openDatePicker('startTime')}>
-                <Text style={styles.cellText}>{draft.startTime || 'Select time'}</Text>
-              </TouchableOpacity>
-            )}
+            <DateField
+              mode="time"
+              value={draft.startTime}
+              onChange={(startTime) => onChange((prev) => ({ ...prev, startTime }))}
+              styles={styles}
+              theme={theme}
+              placeholder="Select time"
+              testID="activity-start-time"
+              accessibilityLabel="Start time"
+            />
             <Text style={styles.modalLabel}>Duration</Text>
             <TextInput
               style={styles.input}
@@ -222,19 +190,14 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
                 <Text style={styles.linkText}>Clear</Text>
               </TouchableOpacity>
             </View>
-            {Platform.OS === 'web' ? (
-              <input
-                style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                type="date"
-                title="Free cancellation by date"
-                value={draft.freeCancelBy}
-                onChange={(e) => onChange((prev) => ({ ...prev, freeCancelBy: e.target.value }))}
-              />
-            ) : (
-              <TouchableOpacity style={styles.input} onPress={() => openDatePicker('freeCancel')}>
-                <Text style={styles.cellText}>{draft.freeCancelBy ? formatDateLong(draft.freeCancelBy) : 'Select date'}</Text>
-              </TouchableOpacity>
-            )}
+            <DateField
+              value={draft.freeCancelBy}
+              onChange={(freeCancelBy) => onChange((prev) => ({ ...prev, freeCancelBy }))}
+              styles={styles}
+              theme={theme}
+              testID="activity-free-cancellation-date"
+              accessibilityLabel="Free cancellation by date"
+            />
             <Text style={styles.modalLabel}>Platform Booked On</Text>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               <TextInput
@@ -312,36 +275,6 @@ const ActivityEditForm: React.FC<ActivityEditFormProps> = ({
           </View>
         </View>
       </View>
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={!!dateField}
-          onRequestClose={() => setDateField(null)}
-          theme={theme}
-          testID="activity-date-picker"
-        >
-          <NativeDateTimePicker
-            value={pickerValue}
-            mode={dateField === 'startTime' ? 'time' : 'date'}
-            onChange={(_, date) => {
-              if (!date) {
-                setDateField(null);
-                return;
-              }
-              const iso = formatLocalDateOnly(date);
-              onChange((prev) => {
-                if (dateField === 'startTime') {
-                  const hours = String(date.getHours()).padStart(2, '0');
-                  const mins = String(date.getMinutes()).padStart(2, '0');
-                  return { ...prev, startTime: `${hours}:${mins}` };
-                }
-                if (dateField === 'date') return { ...prev, date: iso };
-                return { ...prev, freeCancelBy: iso };
-              });
-              if (Platform.OS === 'android') setDateField(null);
-            }}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
     </Modal>
   );
 };
