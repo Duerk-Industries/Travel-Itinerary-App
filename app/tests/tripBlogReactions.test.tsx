@@ -101,7 +101,7 @@ describe('TripBlogTab — reaction wiring (day, item, gallery)', () => {
     await waitFor(() => expect(requestedPath).toContain('/blog/item/item-1/reactions'));
   });
 
-  it('a photo already carrying reaction counts on load renders its chip without any interaction', async () => {
+  it('a photo\'s reaction bar only appears once its individual picture is opened in the lightbox, not in the gallery grid', async () => {
     const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
     (global as any).fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -115,8 +115,17 @@ describe('TripBlogTab — reaction wiring (day, item, gallery)', () => {
       throw new Error(`Unhandled fetch: ${method} ${url}`);
     });
 
-    const { findByTestId } = renderTab();
-    const chip = await findByTestId('day-media-reactions-asset-1-chip-heart');
+    const { findByTestId, queryByTestId, getByTestId } = renderTab();
+
+    // Gallery grid (before opening the lightbox): no interactive reaction bar for the photo.
+    await findByTestId('day-media-grid-tile-asset-1');
+    expect(queryByTestId('day-media-reactions-asset-1-chip-heart')).toBeNull();
+
+    // Open the lightbox and expand that photo to its individual view.
+    await act(async () => { fireEvent.press(getByTestId('day-media-grid-tile-asset-1')); });
+    await act(async () => { fireEvent.press(await findByTestId('day-media-tile-asset-1')); });
+
+    const chip = await findByTestId('lightbox-reactions-asset-1-chip-heart');
     expect(chip).toBeTruthy();
   });
 });

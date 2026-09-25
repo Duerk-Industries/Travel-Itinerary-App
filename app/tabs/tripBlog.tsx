@@ -1633,10 +1633,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                         borderColor={borderColor}
                         backgroundColor={inputColor}
                         styles={styles}
-                        canEngage={canEngage}
-                        getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
-                        onToggleReaction={engagement.toggle}
-                        onReactionError={handleEngagementError}
                         theme={theme}
                         canEditMetadata={canEdit && capabilities.trip_blog_alt_text}
                         canSuggestMetadata={canEdit && capabilities.trip_blog_caption_ai}

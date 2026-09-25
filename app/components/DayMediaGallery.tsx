@@ -13,7 +13,6 @@
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { BlogMediaPreview } from './BlogMediaPreview';
-import BlogReactionBar from './BlogReactionBar';
 import BlogMediaMetadataEditor, { type BlogMediaMetadataPatch } from './BlogMediaMetadataEditor';
 
 type DayMediaGalleryProps = {
@@ -32,10 +31,6 @@ type DayMediaGalleryProps = {
   borderColor?: string;
   backgroundColor?: string;
   styles?: any;
-  canEngage?: boolean;
-  getEngagementSummary?: (assetId: string) => any;
-  onToggleReaction?: (targetKind: 'asset', targetId: string, emoji: string) => Promise<void>;
-  onReactionError?: (message: string) => void;
   theme?: any;
   canEditMetadata?: boolean;
   canSuggestMetadata?: boolean;
@@ -69,10 +64,6 @@ const DayMediaGallery = ({
   borderColor,
   backgroundColor,
   styles,
-  canEngage = false,
-  getEngagementSummary,
-  onToggleReaction,
-  onReactionError,
   theme,
   canEditMetadata = false,
   canSuggestMetadata = false,
@@ -185,26 +176,6 @@ const DayMediaGallery = ({
   return (
     <View style={{ marginTop: 8 }}>
       {mosaic}
-      {canEngage && getEngagementSummary && onToggleReaction ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-          {visible.map((item) => (
-            <BlogReactionBar
-              key={item.assetId}
-              testID={`day-media-reactions-${item.assetId}`}
-              targetKind="asset"
-              targetId={item.assetId}
-              summary={getEngagementSummary(item.assetId)}
-              canEngage={canEngage}
-              onToggle={onToggleReaction}
-              onError={onReactionError}
-              textColor={textColor}
-              mutedColor={mutedColor}
-              theme={theme}
-              size="compact"
-            />
-          ))}
-        </View>
-      ) : null}
       {visible.some((item) => item.caption) ? (
         <View style={{ marginTop: 4, gap: 2 }}>
           {visible.filter((item) => item.caption).map((item) => (
