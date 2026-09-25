@@ -84,22 +84,38 @@ const DayMediaGallery = ({
 
   const editRow = (item: any) => {
     const isCover = item.id === coverItemId;
-    const showSetCover = canSetCover && !isAudioItem(item) && !isCover;
+    const showCoverControl = canSetCover && !isAudioItem(item);
     const showMetadata = (canEditMetadata || canRecordCaption) && !isAudioItem(item) && onSaveMetadata;
-    if (!showSetCover && !canRemove && !showMetadata) return null;
+    if (!showCoverControl && !canRemove && !showMetadata) return null;
     return (
       <View style={{ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4 }} pointerEvents="box-none">
-        {showSetCover ? (
-          <TouchableOpacity
-            testID={`day-media-set-cover-${item.id}`}
-            accessibilityRole="button"
-            accessibilityLabel="Set as day default"
-            disabled={settingCover}
-            onPress={() => onSetCover(item)}
-            style={{ backgroundColor: 'rgba(17,24,39,0.65)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
-          >
-            <Text style={{ color: '#fff', fontSize: 13 }}>{settingCover ? '…' : '⭐'}</Text>
-          </TouchableOpacity>
+        {showCoverControl ? (
+          // Every eligible tile always carries a cover control -- either the filled badge marking
+          // the current cover, or an outlined button offering to make this the cover -- rather than
+          // the old design where the button was simply absent on whichever tile happened to be the
+          // cover. That made cover selection look like buttons randomly appearing/disappearing on
+          // other tiles after a click, instead of one obvious, consistent toggle per tile.
+          isCover ? (
+            <View
+              testID={`day-media-cover-badge-${item.id}`}
+              accessibilityLabel="This is the current cover photo for this day"
+              style={{ backgroundColor: '#F59E0B', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 3 }}
+            >
+              <Text style={{ fontSize: 12 }}>⭐</Text>
+              <Text style={{ color: '#111827', fontSize: 11, fontWeight: '700' }}>Cover</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              testID={`day-media-set-cover-${item.id}`}
+              accessibilityRole="button"
+              accessibilityLabel="Set as this day's cover photo"
+              disabled={settingCover}
+              onPress={() => onSetCover(item)}
+              style={{ backgroundColor: 'rgba(17,24,39,0.65)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 7 }}
+            >
+              <Text style={{ color: '#fff', fontSize: 13 }}>{settingCover ? '…' : '☆'}</Text>
+            </TouchableOpacity>
+          )
         ) : null}
         {showMetadata ? (
           <TouchableOpacity

@@ -49,19 +49,27 @@ describe('DayMediaGallery — photo mosaic', () => {
     expect(getByTestId('day-media-overflow-count').props.children.join('')).toBe('+1');
   });
 
-  it('only offers "Set as day default" in edit mode, and hides it on the tile that is already the cover', () => {
+  it('only offers cover controls in edit mode', () => {
     const items = makeItems();
     const readOnlyRender = render(
       <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover={false} onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
     );
     expect(readOnlyRender.queryByTestId('day-media-set-cover-item-2')).toBeNull();
+    expect(readOnlyRender.queryByTestId('day-media-cover-badge-item-1')).toBeNull();
+  });
 
-    const editRender = render(
+  it('shows a filled "Cover" badge on the current cover tile and an actionable star on every other tile, so the two states read consistently instead of a button just disappearing', () => {
+    const items = makeItems();
+    const { getByTestId, queryByTestId } = render(
       <DayMediaGallery items={items} dayDate="2026-09-10" coverItemId="item-1" canSetCover onSetCover={() => {}} onOpenLightbox={() => {}} styles={styles} />
     );
-    // item-1 is the cover — its own set-cover control is hidden; item-2's is not.
-    expect(editRender.queryByTestId('day-media-set-cover-item-1')).toBeNull();
-    expect(editRender.getByTestId('day-media-set-cover-item-2')).toBeTruthy();
+    // item-1 is the cover — it shows the non-interactive badge, not the action button.
+    expect(getByTestId('day-media-cover-badge-item-1')).toBeTruthy();
+    expect(queryByTestId('day-media-set-cover-item-1')).toBeNull();
+    // Every other eligible tile shows the actionable button, not a badge.
+    expect(getByTestId('day-media-set-cover-item-2')).toBeTruthy();
+    expect(queryByTestId('day-media-cover-badge-item-2')).toBeNull();
+    expect(getByTestId('day-media-set-cover-item-3')).toBeTruthy();
   });
 
   it('calls onSetCover with the pressed tile\'s own item', () => {
