@@ -24,6 +24,7 @@ type Props = {
   // When the composer is opened from a specific day's "+ Photo/Video" button, photos the server
   // can't place by capture date default to that day instead of blocking commit.
   defaultDayDate?: string;
+  defaultTags?: string[];
   onClose: () => void;
   onCommitted: (summary: { succeeded: number; failed: number; quotaBlocked: boolean }) => void;
   styles: any;
@@ -39,7 +40,7 @@ const MB = 1024 * 1024;
 const mb = (bytes: number): string => `${(bytes / MB).toFixed(1)} MB`;
 
 const PhotoFirstComposer: React.FC<Props> = ({
-  visible, files, dayDates, context, defaultDayDate, onClose, onCommitted,
+  visible, files, dayDates, context, defaultDayDate, defaultTags = [], onClose, onCommitted,
   styles, theme, textColor = '#111827', mutedColor = '#6b7280', borderColor = '#ccd4df',
   backgroundColor = '#ffffff', testID = 'photo-composer',
 }) => {
@@ -146,6 +147,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
     const errors: string[] = [];
     for (const [dayDate, group] of byDay) {
       const result = await uploadBlogFiles(context, dayDate, group, {
+        tags: defaultTags,
         onProgress: (current) => setProgress({ current: done + current, total: included.length }),
       });
       succeeded += result.succeeded;
@@ -256,6 +258,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
                     : `Using ${mb(neededBytes)} of ${mb(headroom.availableBytes)} available`
                   : `This batch is about ${mb(neededBytes)}`}
               </Text>
+              {defaultTags.length ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 8 }}>Tagged: {defaultTags.map((tag) => `#${tag}`).join(' ')}</Text> : null}
 
               <ScrollView style={{ flexGrow: 0 }}>
                 {unplaced.length > 0 ? (

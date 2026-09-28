@@ -68,7 +68,8 @@ export const uploadOneBlogFile = async (
   { backendUrl, headers, tripId }: BlogUploadContext,
   dayDate: string,
   pickedFile: PickedMediaFile,
-  caption?: string | null
+  caption?: string | null,
+  tags?: string[]
 ): Promise<UploadOneFileResult> => {
   const mediaKind = isAudioMimeType(pickedFile.mimeType) ? 'audio' : isVideoMimeType(pickedFile.mimeType) ? 'video' : 'photo';
   const idempotencyKey = createIdempotencyKey('up');
@@ -88,6 +89,7 @@ export const uploadOneBlogFile = async (
         mimeType: pickedFile.mimeType == null ? null : String(pickedFile.mimeType),
         byteSize: Number.isFinite(Number(pickedFile.size)) ? Number(pickedFile.size) : 0,
         caption: caption == null ? null : String(caption),
+        tags: Array.isArray(tags) ? tags : [],
         capturedAt: typeof pickedFile.capturedAt === 'string' ? pickedFile.capturedAt : null,
         capturedLat: num(pickedFile.capturedLat),
         capturedLng: num(pickedFile.capturedLng),
@@ -148,7 +150,7 @@ export const uploadBlogFiles = async (
   context: BlogUploadContext,
   dayDate: string,
   files: PickedMediaFile[],
-  options: { caption?: string | null; onProgress?: (current: number, total: number) => void } = {}
+  options: { caption?: string | null; tags?: string[]; onProgress?: (current: number, total: number) => void } = {}
 ): Promise<UploadBatchResult> => {
   let succeeded = 0;
   let failed = 0;
@@ -163,7 +165,7 @@ export const uploadBlogFiles = async (
     try {
       // A caption only ever applies to a lone shared item (see planShareUpload in
       // incomingShare.ts) — a multi-file batch never sets one here.
-      const result = await uploadOneBlogFile(context, dayDate, files[index], files.length === 1 ? options.caption ?? null : null);
+      const result = await uploadOneBlogFile(context, dayDate, files[index], files.length === 1 ? options.caption ?? null : null, options.tags);
       if (result.outcome === 'quota_exceeded') { quotaBlocked = true; break; }
       if (result.outcome === 'entitlement_required') { entitlementSkipped += 1; continue; }
       if (result.outcome === 'error') { failed += 1; if (result.error) errors.push(result.error); continue; }
@@ -184,12 +186,13 @@ export const uploadBlogFiles = async (
 export const createDayTextItem = async (
   { backendUrl, headers, tripId }: BlogUploadContext,
   dayDate: string,
-  body: string
+  body: string,
+  tags: string[] = []
 ): Promise<any> => {
   const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/items`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ kindKey: 'core.text', dayDate, body }),
+    body: JSON.stringify({ kindKey: 'core.text', dayDate, body, tags }),
   });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to add blog item');
   return response.json();

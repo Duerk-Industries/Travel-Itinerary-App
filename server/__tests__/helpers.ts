@@ -140,6 +140,7 @@ export const seedTiersForTest = async (): Promise<void> => {
     ['trip_sharing', 'Share trips with other users', true],
     ['trip_following', 'Follow trips as read-only observer', true],
     ['cost_tracking', 'Expense and cost tracking', true],
+    ['receipt_scanning', 'Scan receipt images into expenses', true],
     ['multiple_groups', 'Create more than one group', true],
     ['trip_creation', 'Create new trips', true],
   ];
@@ -154,12 +155,15 @@ export const seedTiersForTest = async (): Promise<void> => {
     ['free', 'flight_parser', false],
     ['free', 'trip_sharing', true],
     ['free', 'trip_following', true],
-    ['free', 'cost_tracking', false],
+    ['free', 'cost_tracking', true],
+    ['free', 'receipt_scanning', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['premium', 'cost_tracking', true],
+    ['premium', 'receipt_scanning', true],
     ['premium', 'flight_parser', true],
     ['pro', 'cost_tracking', true],
+    ['pro', 'receipt_scanning', true],
     ['pro', 'flight_parser', true],
   ];
   const allFeatures = await listFeatures();

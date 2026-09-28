@@ -22,6 +22,7 @@ export type AccountProfile = {
   mapPreference?: MapApp;
   entitlements?: {
     costTracking?: boolean;
+    receiptScanning?: boolean;
     aiItineraryGeneration?: boolean;
     aiAssistantGuide?: boolean;
     aiAssistantActions?: boolean;

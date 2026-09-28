@@ -32,6 +32,8 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 | `trip_sharing` | Trip sharing |
 | `trip_following` | Trip following |
 | `cost_tracking` | Expense tracking |
+| `receipt_scanning` | Receipt scanning to prefill an expense |
+| `activity_recap` | Completed-activity recap prompt, completion notification, and tagged blog capture flow |
 | `multiple_groups` | Multi-group support |
 | `trip_creation` | Trip creation |
 | `feature_ingest_manual_upload` | Phase 1 manual upload, parse, review, assign/delete |

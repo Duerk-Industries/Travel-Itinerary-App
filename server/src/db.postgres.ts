@@ -1561,6 +1561,7 @@ export const initDb = async (): Promise<void> => {
     ['trip_sharing',            'Share trips with other users',       true],
     ['trip_following',          'Follow trips as read-only observer', true],
     ['cost_tracking',           'Expense and cost tracking',          true],
+    ['receipt_scanning',        'Scan receipt images into expenses',  true],
     ['multiple_groups',         'Create more than one group',         true],
     ['trip_creation',           'Create new trips',                   true],
     ['itinerary_document_import', 'Import itinerary documents',       true],
@@ -1587,14 +1588,17 @@ export const initDb = async (): Promise<void> => {
     ['free', 'car_rentals', true],
     ['free', 'trip_sharing', true],
     ['free', 'trip_following', true],
-    ['free', 'cost_tracking', false],
+    ['free', 'cost_tracking', true],
+    ['free', 'receipt_scanning', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['free', 'itinerary_document_import', false],
     ['premium', 'itinerary_document_import', true],
     ['pro', 'itinerary_document_import', true],
     ['premium', 'cost_tracking', true],
+    ['premium', 'receipt_scanning', true],
     ['pro', 'cost_tracking', true],
+    ['pro', 'receipt_scanning', true],
   ];
   for (const [tierKey, featureKey, isAllowed] of tierEntitlementSeeds) {
     if (!tierIdCache[tierKey]) {
@@ -1638,7 +1642,7 @@ export const initDb = async (): Promise<void> => {
   }
 
   // Seed feature flags
-  for (const key of ['ai_itinerary_generation', 'csv_export', 'car_rentals', 'trip_sharing', 'trip_following', 'cost_tracking', 'multiple_groups', 'trip_creation']) {
+  for (const key of ['ai_itinerary_generation', 'csv_export', 'car_rentals', 'trip_sharing', 'trip_following', 'cost_tracking', 'receipt_scanning', 'multiple_groups', 'trip_creation']) {
     await p.query(
       `INSERT INTO feature_flags (id, key, enabled) VALUES ($1, $2, true) ON CONFLICT (key) DO NOTHING`,
       [randomUUID(), key]

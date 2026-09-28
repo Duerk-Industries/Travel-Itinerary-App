@@ -34,6 +34,9 @@ flags:
   cost_tracking:
     enabled: true
     description: "Enable cost/expense tracking for trips"
+  receipt_scanning:
+    enabled: true
+    description: "Enable AI receipt scanning to prefill a daily expense"
   multiple_groups:
     enabled: true
     description: "Enable multiple traveler groups per account"
@@ -247,6 +250,9 @@ flags:
   trip_blog_nudges:
     enabled: true
     description: "B6 — bounded contribution nudges; requires durable notification inbox/outbox"
+  activity_recap:
+    enabled: false
+    description: "Completion recap prompt: rate an activity and add tagged trip-blog notes, photos, or videos"
   # Phase 4.5 — architecture §9.1's notification flag table. All four are fail-closed
   # (entitlementService.ts's FAIL_CLOSED_FLAGS) since each either contacts a person outside the
   # app or is the kill switch for the delivery worker that would. Discovered missing entirely

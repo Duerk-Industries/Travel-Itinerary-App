@@ -92,15 +92,18 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
     ['free', 'car_rentals', true],
     ['free', 'trip_sharing', true],
     ['free', 'trip_following', true],
-    ['free', 'cost_tracking', false],
+    ['free', 'cost_tracking', true],
+    ['free', 'receipt_scanning', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['free', 'flight_parser', false],
     ['free', 'itinerary_document_import', false],
     ['premium', 'cost_tracking', true],
+    ['premium', 'receipt_scanning', true],
     ['premium', 'flight_parser', true],
     ['premium', 'itinerary_document_import', true],
     ['pro', 'cost_tracking', true],
+    ['pro', 'receipt_scanning', true],
     ['pro', 'flight_parser', true],
     ['pro', 'itinerary_document_import', true],
   ];
@@ -209,6 +212,9 @@ const FAIL_CLOSED_FLAGS = new Set([
   'trip_blog_trip_awards',
   'trip_blog_keepsake_export',
   'trip_blog_nudges',
+  // Completion prompts create a new notification and authoring entry point; do not expose that
+  // workflow on deployments where its feature-flag seed has not arrived yet.
+  'activity_recap',
   // Unlike ai_assistant_guide (read-only Q&A, fail-open), this flag gates the
   // on-device assistant proposing real mutations (addActivity/updateItineraryStatus).
   // An unseeded DB row must not silently enable AI-driven writes on a fresh or

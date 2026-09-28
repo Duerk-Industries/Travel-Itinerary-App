@@ -124,7 +124,7 @@ Response:
 }
 ```
 
-The endpoint must require auth, `cost_tracking` entitlement, and trip membership.
+The endpoint must require auth, the Premium/Pro `receipt_scanning` entitlement, and trip membership.
 
 ## Receipt Parsing Design
 

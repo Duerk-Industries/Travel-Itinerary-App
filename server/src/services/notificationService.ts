@@ -28,6 +28,7 @@ const DEFAULT_PREFERENCES: Record<string, { inApp: boolean; push: boolean; email
   // runDayPhotoReminderJob): a traveler must explicitly set a preference (PATCH
   // /api/notifications/preferences) before this category ever reaches them at all.
   blog_day_photo_reminder: { inApp: false, push: false, email: false },
+  activity_recap: { inApp: true, push: true, email: false },
 };
 
 export const notify = async (options: NotifyOptions): Promise<void> => {
@@ -36,12 +37,14 @@ export const notify = async (options: NotifyOptions): Promise<void> => {
 
   try {
     const preferences = await notificationRepository().getPreferences(userIds);
-    const prefMap = new Map(preferences.map((p) => [p.user_id, p]));
+    // Preferences are per user *and* category. Keying only by user meant whichever row happened
+    // to be returned first controlled every notification type, including the new activity recap.
+    const prefMap = new Map(preferences.map((p) => [`${p.user_id ?? p.userId}:${p.category}`, p]));
 
     for (const userId of userIds) {
       if (threadKey && await notificationRepository().isThreadMuted(userId, threadKey)) continue;
 
-      const userPref = prefMap.get(userId) || DEFAULT_PREFERENCES[category] || { inApp: true, push: false, email: false };
+      const userPref = prefMap.get(`${userId}:${category}`) || DEFAULT_PREFERENCES[category] || { inApp: true, push: false, email: false };
       // A stored preference row (getPreferences) is a raw DB row (snake_case, in_app); the
       // in-code DEFAULT_PREFERENCES fallback is camelCase (inApp) — normalized here rather than
       // reading userPref.in_app directly, which would silently ignore the default object's own

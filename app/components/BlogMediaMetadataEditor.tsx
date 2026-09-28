@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
 
-export type BlogMediaMetadataPatch = { caption: string; altText: string; isDecorative: boolean };
+export type BlogMediaMetadataPatch = { caption: string; altText: string; isDecorative: boolean; tags: string[] };
 
 type RecordingState = 'idle' | 'recording' | 'transcribing';
 
@@ -30,6 +30,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
   const [caption, setCaption] = useState('');
   const [altText, setAltText] = useState('');
   const [isDecorative, setIsDecorative] = useState(false);
+  const [tags, setTags] = useState('');
   const [notice, setNotice] = useState('');
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -38,9 +39,10 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
     setCaption(String(item?.caption ?? ''));
     setAltText(String(item?.altText ?? ''));
     setIsDecorative(Boolean(item?.isDecorative));
+    setTags(Array.isArray(item?.tags) ? item.tags.join(', ') : '');
     setNotice('');
     setRecordingState('idle');
-  }, [item?.assetId, item?.caption, item?.altText, item?.isDecorative]);
+  }, [item?.assetId, item?.caption, item?.altText, item?.isDecorative, item?.tags]);
 
   const suggest = async () => {
     if (!onSuggest || busy) return;
@@ -95,7 +97,7 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
 
   const save = async () => {
     try {
-      await onSave({ caption: caption.trim().slice(0, 500), altText: isDecorative ? '' : altText.trim().slice(0, 1000), isDecorative });
+      await onSave({ caption: caption.trim().slice(0, 500), tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean), altText: isDecorative ? '' : altText.trim().slice(0, 1000), isDecorative });
       setNotice('Saved');
     } catch (error: any) {
       setNotice(error?.message || 'Unable to save photo details');
@@ -112,6 +114,14 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         placeholder="Add a caption"
         placeholderTextColor={mutedColor}
         multiline
+        style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
+      />
+      <TextInput
+        testID="blog-media-tags-input"
+        value={tags}
+        onChangeText={(value) => setTags(value.slice(0, 720))}
+        placeholder="Tags (optional, comma-separated)"
+        placeholderTextColor={mutedColor}
         style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
       />
       <TextInput

@@ -33,6 +33,7 @@ export interface BlogMediaAsset {
   capturedLat?: number | null;
   capturedLng?: number | null;
   caption: string | null;
+  tags: string[];
   altText: string | null;
   isDecorative?: boolean;
   createdAt?: string;
@@ -59,6 +60,7 @@ export interface BlogUploadInitInput {
   capturedLat?: number | null;
   capturedLng?: number | null;
   caption?: string | null;
+  tags?: string[];
   altText?: string | null;
   idempotencyKey: string;
   // When set, the uploaded asset joins this existing core.gallery item instead of creating a new
@@ -72,12 +74,14 @@ export type BlogMediaAuthoringContext = {
   dayDate: string;
   dayHeadline: string | null;
   caption: string | null;
+  tags: string[];
   altText: string | null;
   isDecorative: boolean;
 };
 
 export type BlogMediaMetadataPatch = {
   caption?: string | null;
+  tags?: string[];
   altText?: string | null;
   isDecorative?: boolean;
 };

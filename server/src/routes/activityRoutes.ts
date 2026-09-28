@@ -22,6 +22,7 @@ import { createActivityDto, updateActivityDto, voteOrRatingDto, bulkActivitiesDt
 import { isFeatureEnabled } from '../services/entitlementService';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 import { HttpRateLimitExceededError, reserveActivitiesBulkSaveRateLimit } from '../services/httpRateLimitService';
+import { notify } from '../services/notificationService';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'Class',
@@ -60,6 +61,29 @@ const reserveActivityUsage = async (caller: string, res: Response): Promise<bool
     res.status(err instanceof ApiLimitExceededError ? 429 : 500).json({ error: (err as Error).message });
     return false;
   }
+};
+
+// A completion event is the durable signal for the recap prompt. It intentionally fires only on
+// a transition (not every subsequent edit of an already-completed activity), and honors the
+// master rollout flag before creating any notification work.
+const notifyActivityCompleted = async (previous: any, updated: any, membership: any, actorUserId: string): Promise<void> => {
+  if (!previous || !updated || normalizeItineraryStatus(previous.status) === 'Completed' || normalizeItineraryStatus(updated.status) !== 'Completed') return;
+  if (!(await isFeatureEnabled('activity_recap'))) return;
+  const members = await listGroupMembers(membership.groupId, actorUserId).catch(() => []);
+  const userIds = Array.from(new Set(members.map((member: any) => String(member.userId ?? member.user_id ?? '')).filter(Boolean)));
+  if (!userIds.length) return;
+  const name = String(updated.name || 'this activity').trim() || 'this activity';
+  await notify({
+    userIds,
+    category: 'activity_recap',
+    tripId: updated.tripId,
+    actorUserId,
+    title: `How was ${name}?`,
+    body: 'Rate the activity and add photos, videos, or a note to the trip blog.',
+    deepLink: `wanderbunnies://activity-recap?tripId=${encodeURIComponent(String(updated.tripId))}&activityId=${encodeURIComponent(String(updated.id))}`,
+    payload: { type: 'activity_recap', tripId: updated.tripId, activityId: updated.id },
+    dedupeKey: `activity-recap:${updated.id}`,
+  });
 };
 
 router.get('/', async (req, res) => {
@@ -189,6 +213,7 @@ router.patch('/bulk', async (req, res) => {
   for (const update of dto.updates) {
     try {
       await reserveApiUsageOrThrow({ provider: 'ACTIVITIES_API', caller: 'ACTIVITIES_ACTIVITY_ROW_WRITE' });
+      const previous = await getActivityById(update.id);
       const fields = update.fields;
       const normalizedPaidBy = Array.isArray(fields.paidBy)
         ? (fields.paidBy.length ? fields.paidBy.map((p) => String(p)) : undefined)
@@ -237,6 +262,7 @@ router.patch('/bulk', async (req, res) => {
           sourceType: 'activity',
           sourceId: updated.id,
         });
+        await notifyActivityCompleted(previous, updated, membership, userId);
       }
       updates.push({ id: update.id, ok: true, activity: updated });
     } catch (err) {
@@ -279,6 +305,7 @@ router.put('/:id', async (req, res) => {
     finalActivityType = normalizedActivityType;
   }
   const finalStatus = dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status));
+  const previous = await getActivityById(id);
   const normalizedTravelers = Array.isArray(dto.travelerIds)
     ? dto.travelerIds.map((id: any) => String(id)).filter(Boolean)
     : undefined;
@@ -320,6 +347,7 @@ router.put('/:id', async (req, res) => {
       sourceType: 'activity',
       sourceId: updated.id,
     });
+    await notifyActivityCompleted(previous, updated, membership, userId);
   }
   res.json(updated);
 });
@@ -345,6 +373,7 @@ router.patch('/:id', async (req, res) => {
     finalActivityType = normalizedActivityType;
   }
   const finalStatus = dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status));
+  const previous = await getActivityById(id);
   const normalizedTravelers = Array.isArray(dto.travelerIds)
     ? dto.travelerIds.map((id: any) => String(id)).filter(Boolean)
     : undefined;
@@ -386,6 +415,7 @@ router.patch('/:id', async (req, res) => {
       sourceType: 'activity',
       sourceId: updated.id,
     });
+    await notifyActivityCompleted(previous, updated, membership, userId);
   }
   res.json(updated);
 });

@@ -23,6 +23,7 @@ export type TripItemDetailsDialogProps = {
   onEdit: () => void;
   onDelete: () => void;
   supplementalContent?: React.ReactNode;
+  secondaryAction?: { label: string; onPress: () => void; testID?: string } | null;
   testID?: string;
 };
 
@@ -40,6 +41,7 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
   onEdit,
   onDelete,
   supplementalContent,
+  secondaryAction = null,
   testID,
 }) => {
   const detailStyles = useMemo(() => StyleSheet.create({
@@ -117,6 +119,7 @@ const TripItemDetailsDialogComponent: React.FC<TripItemDetailsDialogProps> = ({
         </View>
         {!readOnly ? (
           <View style={detailStyles.actionGroup}>
+            {secondaryAction ? <TouchableOpacity style={styles.button} onPress={secondaryAction.onPress} accessibilityRole="button" testID={secondaryAction.testID}><Text style={styles.buttonText}>{secondaryAction.label}</Text></TouchableOpacity> : null}
             <TouchableOpacity style={styles.button} onPress={onEdit} accessibilityRole="button" accessibilityLabel={`Edit ${kind}`} testID={`${kind}-details-edit`}><Text style={styles.buttonText}>Edit</Text></TouchableOpacity>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onDelete} accessibilityRole="button" accessibilityLabel={`Delete ${kind}`} testID={`${kind}-details-delete`}><Text style={styles.dangerButtonText}>Delete</Text></TouchableOpacity>
           </View>

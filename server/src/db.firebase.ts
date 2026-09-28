@@ -839,6 +839,7 @@ export const initDb = async (): Promise<void> => {
     { key: 'trip_sharing',            description: 'Share trips with other users' },
     { key: 'trip_following',          description: 'Follow trips as read-only observer' },
     { key: 'cost_tracking',           description: 'Expense and cost tracking' },
+    { key: 'receipt_scanning',        description: 'Scan receipt images into expenses' },
     { key: 'multiple_groups',         description: 'Create more than one group' },
     { key: 'trip_creation',           description: 'Create new trips' },
     { key: 'itinerary_document_import', description: 'Import itinerary documents' },
@@ -858,14 +859,17 @@ export const initDb = async (): Promise<void> => {
     { tierKey: 'free', featureKey: 'car_rentals', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_sharing', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_following', isAllowed: true },
-    { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: false },
+    { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'free', featureKey: 'receipt_scanning', isAllowed: false },
     { tierKey: 'free', featureKey: 'multiple_groups', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_creation', isAllowed: true },
     { tierKey: 'free', featureKey: 'itinerary_document_import', isAllowed: false },
     { tierKey: 'premium', featureKey: 'itinerary_document_import', isAllowed: true },
     { tierKey: 'pro', featureKey: 'itinerary_document_import', isAllowed: true },
     { tierKey: 'premium', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'premium', featureKey: 'receipt_scanning', isAllowed: true },
     { tierKey: 'pro', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'pro', featureKey: 'receipt_scanning', isAllowed: true },
   ];
   for (const { tierKey, featureKey, isAllowed } of tierEntitlementSeeds) {
     const docId = `${tierKey}_${featureKey}`;

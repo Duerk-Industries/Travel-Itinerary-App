@@ -37,6 +37,7 @@ const seedTiersForTest = async () => {
     ['trip_sharing', 'Share trips with other users', true],
     ['trip_following', 'Follow trips as read-only observer', true],
     ['cost_tracking', 'Expense and cost tracking', true],
+    ['receipt_scanning', 'Scan receipt images into expenses', true],
     ['multiple_groups', 'Create more than one group', true],
     ['trip_creation', 'Create new trips', true],
   ];
@@ -50,11 +51,14 @@ const seedTiersForTest = async () => {
     ['free', 'car_rentals', true],
     ['free', 'trip_sharing', true],
     ['free', 'trip_following', true],
-    ['free', 'cost_tracking', false],
+    ['free', 'cost_tracking', true],
+    ['free', 'receipt_scanning', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['premium', 'cost_tracking', true],
+    ['premium', 'receipt_scanning', true],
     ['pro', 'cost_tracking', true],
+    ['pro', 'receipt_scanning', true],
   ];
   const allFeatures = await db.listFeatures();
   for (const [tierKey, featureKey, isAllowed] of entitlements) {

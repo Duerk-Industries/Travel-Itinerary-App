@@ -140,6 +140,7 @@ import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
 import TripBlogTab from './tabs/tripBlog';
+import ActivityRecapDialog, { type ActivityRecapTarget } from './components/ActivityRecapDialog';
 import PublicTripBlogPage from './components/PublicTripBlogPage';
 const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
@@ -604,6 +605,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // Set when the traveler taps the evening trip reminder notification — tells TripBlogTab to open
   // the add-photos flow once it's mounted and ready. See tripReminderNotifications.ts.
   const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
+  const [autoOpenActivityCapture, setAutoOpenActivityCapture] = useState<{ date: string; tags: string[] } | null>(null);
+  const [activityRecapTarget, setActivityRecapTarget] = useState<ActivityRecapTarget | null>(null);
+  const [pendingActivityRecap, setPendingActivityRecap] = useState<{ tripId: string; activityId: string } | null>(null);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineItineraries, setOfflineItineraries] = useState<Record<string, OfflineItinerarySnapshot | null>>({});
   const [pendingOfflineUnlock, setPendingOfflineUnlock] = useState<PendingOfflineUnlock | null>(null);
@@ -690,6 +694,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
   const [featureActivityLodgingCsvImport, setFeatureActivityLodgingCsvImport] = useState(false);
   const [featureActivityLodgingCsvExport, setFeatureActivityLodgingCsvExport] = useState(false);
+  const [featureActivityRecap, setFeatureActivityRecap] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -709,6 +714,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
           setFeatureActivityLodgingCsvImport(Boolean(data.featureActivityLodgingCsvImport));
           setFeatureActivityLodgingCsvExport(Boolean(data.featureActivityLodgingCsvExport));
+          setFeatureActivityRecap(Boolean(data.featureActivityRecap));
         }
       })
       .catch(() => undefined);
@@ -728,6 +734,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearAccountProfile,
   } = useAccountProfile();
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
+  const receiptScanningAllowed = accountProfile.entitlements?.receiptScanning === true;
   const aiItineraryGenerationAllowed = accountProfile.entitlements?.aiItineraryGeneration === true;
   const aiAssistantGuideAllowed = accountProfile.entitlements?.aiAssistantGuide === true;
   const aiAssistantActionsAllowed = accountProfile.entitlements?.aiAssistantActions === true;
@@ -2097,6 +2104,42 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setTours(data);
   }, [activeTripId, backendUrl, offlineReadOnly, userToken]);
 
+  useEffect(() => {
+    if (!pendingActivityRecap || pendingActivityRecap.tripId !== activeTripId) return;
+    const activity = tours.find((tour) => tour.id === pendingActivityRecap.activityId);
+    if (!activity) return;
+    setActivityRecapTarget(activity);
+    setPendingActivityRecap(null);
+  }, [activeTripId, pendingActivityRecap, tours]);
+
+  const saveActivityRecap = useCallback(async ({ rating, note, tags }: { rating: -1 | 1 | null; note: string; tags: string[] }) => {
+    const activity = activityRecapTarget;
+    if (!activity || !activeTripId) throw new Error('Choose an activity first.');
+    if (rating != null) {
+      const response = await fetch(`${backendUrl}/api/activities/${activity.id}/rating`, {
+        method: 'POST', headers: jsonHeaders, body: JSON.stringify({ value: rating }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save your rating.');
+    }
+    if (note) {
+      const escaped = note.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
+        method: 'POST', headers: { ...jsonHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kindKey: 'core.text', dayDate: activity.date, body: `<p>${escaped}</p>`, tags }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to add the blog note.');
+    }
+    if (rating != null) await fetchTours();
+  }, [activeTripId, activityRecapTarget, backendUrl, fetchTours, jsonHeaders]);
+
+  const addActivityRecapMedia = useCallback(async ({ tags }: { tags: string[] }) => {
+    const activity = activityRecapTarget;
+    if (!activity) throw new Error('Choose an activity first.');
+    setActivityRecapTarget(null);
+    setAutoOpenActivityCapture({ date: activity.date, tags });
+    setActivePage('blog');
+  }, [activityRecapTarget]);
+
   const fetchCarRentals = useCallback(async (token?: string) => {
     if (offlineReadOnly) return;
     if (!activeTripId || !(token ?? userToken)) {
@@ -2523,11 +2566,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         const Notifications = await import('expo-notifications');
         if (cancelled) return;
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-          const data = response.notification.request.content.data as { type?: string; tripId?: string } | undefined;
-          if (data?.type !== 'evening_trip_reminder' || !data.tripId) return;
-          setActiveTripId(data.tripId);
-          setActivePage('blog');
-          setAutoOpenAddPhotos(true);
+          const data = response.notification.request.content.data as { type?: string; tripId?: string; deepLink?: string | null } | undefined;
+          if (data?.type === 'evening_trip_reminder' && data.tripId) {
+            setActiveTripId(data.tripId);
+            setActivePage('blog');
+            setAutoOpenAddPhotos(true);
+            return;
+          }
+          // Server-delivered Expo notifications include their durable deep link in `data`.
+          // Parse only this app-owned route; other links remain inert rather than becoming an
+          // accidental navigation surface.
+          const match = String(data?.deepLink ?? '').match(/^wanderbunnies:\/\/activity-recap\?([^#]+)$/i);
+          if (!match) return;
+          const params = new URLSearchParams(match[1]);
+          const tripId = params.get('tripId');
+          const activityId = params.get('activityId');
+          if (!tripId || !activityId) return;
+          setActiveTripId(tripId);
+          setActivePage('tours');
+          setPendingActivityRecap({ tripId, activityId });
         });
       } catch {
         // Best effort — see pushNotifications.ts's file-level note for the same rationale.
@@ -3342,6 +3399,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   carRentals={carRentals}
                   autoOpenAddPhotos={autoOpenAddPhotos}
                   onAutoOpenHandled={() => setAutoOpenAddPhotos(false)}
+                  autoOpenActivityCapture={autoOpenActivityCapture}
+                  onAutoOpenActivityCaptureHandled={() => setAutoOpenActivityCapture(null)}
                 />
               )
             : null}
@@ -3376,6 +3435,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   externalEditTourId={externalActivityEditId}
                   onExternalEditHandled={handleExternalActivityEditHandled}
                   featureTapToEditTables={featureTapToEditTables}
+                  featureActivityRecap={featureActivityRecap}
+                  onOpenActivityRecap={setActivityRecapTarget}
                 />
               )
             : null}
@@ -3401,6 +3462,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onExternalEditHandled={handleExternalActivityEditHandled}
               showList={false}
               readOnly={isFollowingMode || offlineReadOnly}
+              featureActivityRecap={featureActivityRecap}
+              onOpenActivityRecap={setActivityRecapTarget}
             />
           ) : null}
 
@@ -3420,6 +3483,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   itineraryExpenseDescriptions={itineraryExpenseDescriptions}
                   onEditItineraryItem={openItineraryExpenseEditor}
                   costTrackingAllowed={costTrackingAllowed}
+                  receiptScanningAllowed={receiptScanningAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
                 />
               )
@@ -4133,6 +4197,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           theme={theme}
         />
       ) : null}
+      <ActivityRecapDialog
+        visible={Boolean(activityRecapTarget)}
+        activity={activityRecapTarget}
+        styles={styles}
+        theme={theme}
+        onClose={() => setActivityRecapTarget(null)}
+        onSave={saveActivityRecap}
+        onAddMedia={addActivityRecapMedia}
+      />
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
           <View style={styles.wizardModal}>

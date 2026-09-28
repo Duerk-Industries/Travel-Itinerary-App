@@ -32,7 +32,8 @@ Tiers are entitlement controls, not deployment toggles. Runtime truth lives in t
 | `ai_itinerary_generation` | allowed | inherited | inherited |
 | `car_rentals` | allowed | inherited | inherited |
 | `csv_export` | allowed | inherited | inherited |
-| `cost_tracking` | denied | allowed | allowed |
+| `cost_tracking` | allowed | allowed | allowed |
+| `receipt_scanning` | denied | allowed | allowed |
 
 ## Ingestion quotas
 

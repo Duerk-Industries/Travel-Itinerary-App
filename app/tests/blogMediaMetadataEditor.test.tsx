@@ -16,7 +16,7 @@ describe('BlogMediaMetadataEditor', () => {
 
     fireEvent.changeText(view.getByTestId('blog-media-alt-text-input'), 'Two travelers beside a lake');
     fireEvent.press(view.getByTestId('blog-media-save-metadata'));
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ caption: '', altText: 'Two travelers beside a lake', isDecorative: false }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ caption: '', tags: [], altText: 'Two travelers beside a lake', isDecorative: false }));
   });
 
   it('keeps AI output as an editable draft and never saves it automatically', async () => {
@@ -35,7 +35,16 @@ describe('BlogMediaMetadataEditor', () => {
     const view = render(<BlogMediaMetadataEditor item={{ assetId: 'asset-3' }} onSave={onSave} styles={{ button: {}, buttonText: {} }} />);
     fireEvent.press(view.getByTestId('blog-media-decorative-toggle'));
     fireEvent.press(view.getByTestId('blog-media-save-metadata'));
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ caption: '', altText: '', isDecorative: true }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ caption: '', tags: [], altText: '', isDecorative: true }));
+  });
+
+  it('saves optional comma-separated tags with the media details', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    const view = render(<BlogMediaMetadataEditor item={{ assetId: 'asset-tags' }} onSave={onSave} styles={{ button: {}, buttonText: {} }} />);
+    fireEvent.changeText(view.getByTestId('blog-media-alt-text-input'), 'A night market');
+    fireEvent.changeText(view.getByTestId('blog-media-tags-input'), 'Food, Taipei, Night market');
+    fireEvent.press(view.getByTestId('blog-media-save-metadata'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ caption: '', tags: ['Food', 'Taipei', 'Night market'], altText: 'A night market', isDecorative: false }));
   });
 
   it('records and transcribes a dictated caption as an editable draft', async () => {

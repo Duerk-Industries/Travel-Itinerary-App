@@ -108,6 +108,7 @@ describe('DailyExpensesTab', () => {
         defaultPayerId="m1"
         styles={styles}
         costTrackingAllowed
+        receiptScanningAllowed
       />
     );
 
@@ -118,6 +119,28 @@ describe('DailyExpensesTab', () => {
     expect(getByTestId('expense-detail-modal')).toBeTruthy();
     // Description column shows the vendor (falling back to notes).
     expect(getByText('Cafe Nero')).toBeTruthy();
+  });
+
+  it('hides receipt scanning when the user is not entitled', () => {
+    const screen = render(
+      <DailyExpensesTab
+        backendUrl="http://example.test"
+        theme={theme}
+        headers={{}}
+        jsonHeaders={{}}
+        trip={trip}
+        groupMembers={groupMembers}
+        expenses={expenses}
+        setExpenses={() => {}}
+        defaultPayerId="m1"
+        styles={styles}
+        costTrackingAllowed
+        receiptScanningAllowed={false}
+      />
+    );
+
+    expect(screen.queryByTestId('expense-scan-receipt-button')).toBeNull();
+    expect(screen.queryByTestId('expense-receipt-input')).toBeNull();
   });
 
   it('deletes a daily (in-grid) expense from the category detail dialog', async () => {
@@ -184,7 +207,7 @@ describe('DailyExpensesTab', () => {
     try {
       const screen = render(
         <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
-          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed readOnly />
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed receiptScanningAllowed readOnly />
       );
 
       expect(screen.getByTestId('expense-add-button').props.disabled).toBe(true);

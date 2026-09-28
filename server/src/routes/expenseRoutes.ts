@@ -173,6 +173,7 @@ router.post('/receipt/parse', receiptUpload.single('image'), async (req, res) =>
   }
   try {
     await assertCanUseFeature(userId, 'cost_tracking', role);
+    await assertCanUseFeature(userId, 'receipt_scanning', role);
   } catch (err) {
     if (err instanceof EntitlementError) {
       res.status(402).json({ error: err.message, code: err.code });

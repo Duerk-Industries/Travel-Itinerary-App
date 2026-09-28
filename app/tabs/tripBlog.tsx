@@ -64,7 +64,7 @@ const promptsForDay = (dayDate) => {
   return [0, 1, 2].map((offset) => WRITING_PROMPTS[(start + offset) % WRITING_PROMPTS.length]);
 };
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {} }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {}, autoOpenActivityCapture = null as { date: string; tags: string[] } | null, onAutoOpenActivityCaptureHandled = () => {} }) => {
   // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
   // headlines, everything else stays on the system font. Loaded here rather than at the app
   // root so this stays scoped to the trip blog; while it loads, headings just render in the
@@ -84,6 +84,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const [addingDay, setAddingDay] = useState(null);
   const [composerFiles, setComposerFiles] = useState(null); // photo-first composer (A2): picked files awaiting day assignment
   const [composerDefaultDay, setComposerDefaultDay] = useState(null); // set when opened from a specific day's button
+  const [composerDefaultTags, setComposerDefaultTags] = useState([]);
   // Destination trip for the "+ Add photos to this trip" flow — defaults to whichever trip is
   // active today, falling back to the app's currently-selected trip, but never overrides an
   // explicit choice the traveler already made from the dropdown this session.
@@ -101,6 +102,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   );
   const uploadTrip = uploadTripsSorted.find((trip) => trip.id === uploadTripId) ?? trips.find((trip) => trip.id === uploadTripId);
   const [newBody, setNewBody] = useState('');
+  const [newTags, setNewTags] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [publication, setPublication] = useState(null);
@@ -671,7 +673,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
 
   // Photo-first composer (A2): pick once, sort by day, commit as a batch. The per-day
   // "+ Photo/Video" button (handleUpload) stays for adding to one specific day.
-  const openPhotoComposer = async (defaultDayDate = null) => {
+  const openPhotoComposer = async (defaultDayDate = null, defaultTags = []) => {
     // Guard: a bare onPress={openPhotoComposer} would hand us the press event here.
     const forDay = typeof defaultDayDate === 'string' ? defaultDayDate : null;
     if (!canEdit) return;
@@ -683,9 +685,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       return;
     }
     setComposerDefaultDay(forDay);
+    setComposerDefaultTags(Array.isArray(defaultTags) ? defaultTags.map((tag) => String(tag).trim()).filter(Boolean) : []);
     setComposerFiles(supported);
   };
-  const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); };
+  const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); setComposerDefaultTags([]); };
 
   // Deep-link target for the evening trip reminder notification (see tripReminderNotifications.ts
   // / App.tsx's notification response listener) — opens the same picker the "+ Add photos" button
@@ -697,6 +700,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     openPhotoComposer(localDateString());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenAddPhotos, canEdit, capabilities.trip_blog_photo_composer, visibleDays.length, composerFiles]);
+
+  // The activity recap prompt routes here after the traveler chooses photos/videos. It uses the
+  // same photo-first composer as every other blog upload, with the activity name stamped as a
+  // searchable association tag.
+  useEffect(() => {
+    if (!autoOpenActivityCapture?.date) return;
+    if (!canEdit || !capabilities.trip_blog_photo_composer || visibleDays.length === 0 || composerFiles) return;
+    onAutoOpenActivityCaptureHandled();
+    openPhotoComposer(autoOpenActivityCapture.date, autoOpenActivityCapture.tags ?? []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenActivityCapture, canEdit, capabilities.trip_blog_photo_composer, visibleDays.length, composerFiles]);
 
   const handleComposerCommitted = async ({ succeeded, failed, quotaBlocked }) => {
     closePhotoComposer();
@@ -997,15 +1011,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         );
         setOfflineQueueCount(queued.length);
         setNewBody('');
+        setNewTags('');
         setAddingDay(null);
         return;
       }
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kindKey: 'core.text', dayDate, body }),
+        body: JSON.stringify({ kindKey: 'core.text', dayDate, body, tags: newTags.split(',').map((tag) => tag.trim()).filter(Boolean) }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to add blog item');
       setNewBody('');
+      setNewTags('');
       setAddingDay(null);
       await load();
     } catch (error) { alertMessage('Trip blog', error.message || 'Unable to add blog item'); }
@@ -1457,6 +1473,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     textColor={textColor}
                   />
                 )}
+                {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
                 {item.engagement ? (
                   <BlogReactionBar
                     testID={`blog-item-reactions-${item.id}`}
@@ -1695,9 +1712,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   backgroundColor={inputColor}
                   textColor={textColor}
                 />
+                <TextInput
+                  testID={`blog-new-note-tags-${day.localDate}`}
+                  value={newTags}
+                  onChangeText={setNewTags}
+                  placeholder="Tags (optional, comma-separated)"
+                  placeholderTextColor={mutedColor}
+                  style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
+                />
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                   <TouchableOpacity style={styles.button} disabled={creating || isRichTextEmpty(newBody)} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => setAddingDay(null)}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => { setAddingDay(null); setNewTags(''); }}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
                 </View>
               </View>
             ) : null}
@@ -1859,6 +1884,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         files={composerFiles || []}
         dayDates={visibleDays.map((day) => day.localDate)}
         defaultDayDate={composerDefaultDay}
+        defaultTags={composerDefaultTags}
         context={{ backendUrl, headers, tripId: uploadTripId || activeTripId }}
         onClose={closePhotoComposer}
         onCommitted={handleComposerCommitted}

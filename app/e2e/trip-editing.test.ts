@@ -319,11 +319,9 @@ test.describe('Trip Content Editing', () => {
   // -------------------------------------------------------------------------
   // Daily Expenses
   // -------------------------------------------------------------------------
-  // Daily Expenses is now gated behind the `cost_tracking` tier entitlement
-  // (see server/src/routes/accountRoutes.ts) — free-tier users (what
-  // loginAsNewUser creates) are correctly blocked from saving expenses.
-  // There is no e2e fixture yet to grant a test user premium tier, so these
-  // are skipped rather than left as an unexplained failure.
+  // These are skipped pending an e2e fixture that creates expenses with the
+  // now-required payerIds and forIds fields. Expense tracking itself is
+  // available to Free users; only receipt scanning is Premium/Pro.
   test.describe('Daily Expenses', () => {
     test.skip('adds a daily expense and it appears in the grid', async ({ page }) => {
       await openTab(page, 'expenses');

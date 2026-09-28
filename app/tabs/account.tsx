@@ -26,6 +26,7 @@ export interface AccountProfile {
   temperatureUnit: TemperatureUnit;
   entitlements?: {
     costTracking?: boolean;
+    receiptScanning?: boolean;
   };
   tierKey?: string;
 }
