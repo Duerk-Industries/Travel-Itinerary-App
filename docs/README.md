@@ -31,6 +31,8 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Production Deployment Guide](production-deployment-guide.md)
 - [Cloud Run OOM (SIGABRT) Remediation Plan](implementation_plans/cloud-run-oom-remediation.md)
 - [Admin Notes](admin.md)
+- [Analytics Upgrade: Collection, Goals, and Behavior](analytics-upgrade.md)
+- [Analytics Upgrade Implementation Plan](implementation_plans/analytics-upgrade.md)
 - [Feature Flags](feature-flags.md)
 - [Tiers](tiers.md)
 - [E2E Test Plan](e2e-test-plan.md)
