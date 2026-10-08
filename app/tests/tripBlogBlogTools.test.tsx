@@ -35,6 +35,20 @@ const mount = (readOnly: boolean, features: Record<string, boolean>) => {
 };
 
 describe('TripBlogTab — "Blog tools" drawer visibility', () => {
+  it('places blog actions below the title at phone width', async () => {
+    const native = require('react-native') as typeof import('react-native');
+    const viewport = jest.spyOn(native, 'useWindowDimensions').mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 });
+    try {
+      const screen = mount(false, { trip_blog_keepsake_export: true });
+      await waitFor(() => expect(screen.getByText('Edit blog')).toBeTruthy());
+      expect(screen.getByTestId('blog-masthead-layout').props.style.flexDirection).toBe('column');
+      expect(screen.getByTestId('blog-masthead-actions').props.style.flexWrap).toBe('wrap');
+      expect(screen.getByText('Blog')).toBeTruthy();
+    } finally {
+      viewport.mockRestore();
+    }
+  });
+
   it('is hidden for a follower who has nothing in it', async () => {
     const screen = mount(true, {});
     await waitFor(() => expect(screen.queryByText('2026-09-01')).toBeTruthy());

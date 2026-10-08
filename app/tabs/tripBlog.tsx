@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
@@ -65,6 +65,8 @@ const promptsForDay = (dayDate) => {
 };
 
 const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {}, autoOpenActivityCapture = null as { date: string; tags: string[] } | null, onAutoOpenActivityCaptureHandled = () => {} }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const compactMasthead = viewportWidth < 600;
   // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
   // headlines, everything else stays on the system font. Loaded here rather than at the app
   // root so this stays scoped to the trip blog; while it loads, headings just render in the
@@ -1136,9 +1138,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       >
         <View style={{ width: '100%', maxWidth: 1200, alignSelf: 'center', gap: 20 }}>
       <View style={{ backgroundColor: surfaceColor, borderRadius: 16, padding: 18 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <View testID="blog-masthead-layout" style={{ flexDirection: compactMasthead ? 'column' : 'row', alignItems: compactMasthead ? 'stretch' : 'center', justifyContent: 'space-between', gap: 12 }}>
           {canEdit ? (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: compactMasthead ? undefined : 1, minWidth: compactMasthead ? undefined : 200 }}>
               <TextInput
                 testID="blog-masthead-title-input"
                 value={mastheadDraft?.title ?? (blog?.title ?? '')}
@@ -1158,35 +1160,37 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               {saveStateLabel('masthead') ? <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>{saveStateLabel('masthead')}</Text> : null}
             </View>
           ) : (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: compactMasthead ? undefined : 1, minWidth: compactMasthead ? undefined : 200 }}>
               <Text style={[styles.sectionTitle, { fontFamily: displayFont, fontSize: 26 }]}>{blog?.title || 'Trip Blog'}</Text>
               {blog?.subtitle ? <Text style={{ color: mutedColor, fontSize: 14, marginTop: 2, fontFamily: displayFontItalic }}>{blog.subtitle}</Text> : null}
             </View>
           )}
-          {!readOnly ? (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={toggleEditMode}
-              style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : undefined }]}
-            >
-              <Text style={editMode ? { color: textColor } : styles.buttonText}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
-            </TouchableOpacity>
-          ) : null}
-          {publicPageUrl ? (
-            <TouchableOpacity
-              accessibilityRole="link"
-              onPress={() => { void Linking.openURL(publicPageUrl).catch(() => {}); }}
-              style={{ paddingVertical: 6, paddingHorizontal: 8 }}
-            >
-              <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>View public page ↗</Text>
-            </TouchableOpacity>
-          ) : null}
-          {canEdit && ((Platform.OS === 'ios' && capabilities.trip_blog_mobile_share_ios) || (Platform.OS === 'android' && capabilities.trip_blog_mobile_share_android)) ? (
-            <TouchableOpacity testID="blog-quick-capture" accessibilityRole="button" onPress={() => { const today = new Date().toISOString().slice(0, 10); const day = visibleDays.find((candidate) => candidate.localDate === today)?.localDate ?? visibleDays[0]?.localDate; if (day) { setAddingDay(day); setNewBody(''); } }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
-              <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
-            </TouchableOpacity>
-          ) : null}
-          {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+          <View testID="blog-masthead-actions" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: compactMasthead ? 'flex-start' : 'flex-end', gap: 8, maxWidth: compactMasthead ? '100%' : '60%' }}>
+            {!readOnly ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={toggleEditMode}
+                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : undefined }]}
+              >
+                <Text style={editMode ? { color: textColor } : styles.buttonText}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {publicPageUrl ? (
+              <TouchableOpacity
+                accessibilityRole="link"
+                onPress={() => { void Linking.openURL(publicPageUrl).catch(() => {}); }}
+                style={{ paddingVertical: 6, paddingHorizontal: 8 }}
+              >
+                <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>View public page ↗</Text>
+              </TouchableOpacity>
+            ) : null}
+            {canEdit && ((Platform.OS === 'ios' && capabilities.trip_blog_mobile_share_ios) || (Platform.OS === 'android' && capabilities.trip_blog_mobile_share_android)) ? (
+              <TouchableOpacity testID="blog-quick-capture" accessibilityRole="button" onPress={() => { const today = new Date().toISOString().slice(0, 10); const day = visibleDays.find((candidate) => candidate.localDate === today)?.localDate ?? visibleDays[0]?.localDate; if (day) { setAddingDay(day); setNewBody(''); } }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+                <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
+              </TouchableOpacity>
+            ) : null}
+            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+          </View>
         </View>
         {/* Phase 1 masthead stat row (redesign proposal §1) — the "trip at a glance" strip. */}
         <View testID="blog-trip-stats" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 6, marginBottom: 10 }}>
