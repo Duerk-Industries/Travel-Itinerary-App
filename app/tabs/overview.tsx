@@ -57,6 +57,7 @@ import {
   type CarRental,
   type CarRentalDraft,
 } from '../tabs/carRentals';
+import AvatarStack from '../components/AvatarStack';
 import DestinationPlaceholderCard from '../components/DestinationPlaceholderCard';
 import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
 import NativeDateTimePicker from '../components/NativeDateTimePicker';
@@ -195,6 +196,7 @@ type OverviewTabProps = {
   group: GroupView | null;
   attendees: Array<{
     id: string;
+    userId?: string | null;
     guestName?: string;
     email?: string;
     userEmail?: string;
@@ -1067,6 +1069,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   
   const groupMembers: GroupMemberOption[] = useMemo(
     () => attendees.map((a) => ({ ...a })),
+    [attendees]
+  );
+  // Everyone on the trip, shown as a row of colored initials under the trip name.
+  const travelerAvatars = useMemo(
+    () => attendees
+      .filter((a) => a.status !== 'removed' && !a.removedAt)
+      .map((a) => ({ id: String(a.userId || a.id), name: formatUserDisplayName(a as GroupMemberOption) })),
     [attendees]
   );
 
@@ -2433,18 +2442,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   // Priority mirrors the day title rule: activities beat the transfer, which
   // beats lodging, so a lodging stay no longer masks a day that has activities
-  // (or at least a transfer) happening on it.
+  // (or at least a transfer) happening on it. Empty when nothing is known, so
+  // titles read "Train to Sintra" rather than a placeholder "Trip Day - Train to Sintra".
   const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
-    if (!info) return tripLocationLabel || 'Trip Day';
+    if (!info) return tripLocationLabel || '';
     const tour = info.tours[0];
-    if (tour) return tour.startLocation || tour.name || tripLocationLabel || 'Trip Day';
+    if (tour) return tour.startLocation || tour.name || tripLocationLabel || '';
     const flight = info.flights[0];
-    if (flight) return flight.departure_location || flight.departure_airport_code || tripLocationLabel || 'Trip Day';
+    if (flight) return flight.departure_location || flight.departure_airport_code || tripLocationLabel || '';
     const lodging = info.lodgings[0];
-    if (lodging) return lodging.name || tripLocationLabel || 'Trip Day';
+    if (lodging) return lodging.name || tripLocationLabel || '';
     const rental = info.rentals[0];
-    if (rental) return rental.pickupLocation || rental.vendor || tripLocationLabel || 'Trip Day';
-    return tripLocationLabel || 'Trip Day';
+    if (rental) return rental.pickupLocation || rental.vendor || tripLocationLabel || '';
+    return tripLocationLabel || '';
   };
 
   // startLocation and summary can end up describing the same activity (e.g. a
@@ -3339,6 +3349,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
           {renderDocumentImporter()}
           <Text style={styles.flightTitle}>{trip.name}</Text>
+          {travelerAvatars.length ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }} testID="overview-travelers">
+              <AvatarStack people={travelerAvatars} size={26} max={6} testID="overview-traveler-avatars" />
+              <Text style={styles.helperText}>
+                {travelerAvatars.length} {travelerAvatars.length === 1 ? 'traveler' : 'travelers'} planning together
+              </Text>
+            </View>
+          ) : null}
 
           {trip.description ? (
             <View>

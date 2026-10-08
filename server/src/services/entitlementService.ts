@@ -92,7 +92,7 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
     ['free', 'car_rentals', true],
     ['free', 'trip_sharing', true],
     ['free', 'trip_following', true],
-    ['free', 'cost_tracking', false],
+    ['free', 'cost_tracking', true],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['free', 'flight_parser', false],

@@ -858,7 +858,7 @@ export const initDb = async (): Promise<void> => {
     { tierKey: 'free', featureKey: 'car_rentals', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_sharing', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_following', isAllowed: true },
-    { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: false },
+    { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: true },
     { tierKey: 'free', featureKey: 'multiple_groups', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_creation', isAllowed: true },
     { tierKey: 'free', featureKey: 'itinerary_document_import', isAllowed: false },
@@ -5030,14 +5030,14 @@ export const getItemVoteSummaries = async (
   itemType: VoteItemType,
   itemIds: string[],
   kind: ReactionKind = 'vote'
-): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null }>> => {
+): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null; upVotes: number; downVotes: number; upVoterIds: string[]; downVoterIds: string[] }>> => {
   const normalized = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
   if (!normalized.length) return {};
   const db = getDb();
   const itemTypeKey = reactionItemTypeKey(itemType, kind);
-  const result: Record<string, { netVotes: number; userVote: -1 | 1 | null }> = {};
+  const result: Record<string, { netVotes: number; userVote: -1 | 1 | null; upVotes: number; downVotes: number; upVoterIds: string[]; downVoterIds: string[] }> = {};
   normalized.forEach((id) => {
-    result[id] = { netVotes: 0, userVote: null };
+    result[id] = { netVotes: 0, userVote: null, upVotes: 0, downVotes: 0, upVoterIds: [], downVoterIds: [] };
   });
   const chunk = <T>(items: T[], size = 10): T[][] => {
     const chunks: T[][] = [];
@@ -5057,6 +5057,13 @@ export const getItemVoteSummaries = async (
       if (!result[itemId]) return;
       const value = vote.value === -1 ? -1 : 1;
       result[itemId].netVotes += value;
+      if (value === 1) {
+        result[itemId].upVotes += 1;
+        result[itemId].upVoterIds.push(String(vote.userId));
+      } else {
+        result[itemId].downVotes += 1;
+        result[itemId].downVoterIds.push(String(vote.userId));
+      }
       if (String(vote.userId) === String(userId)) {
         result[itemId].userVote = value;
       }

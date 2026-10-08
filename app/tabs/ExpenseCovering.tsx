@@ -50,7 +50,7 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} testID="expense-covering">
       <Text style={styles.sectionTitle}>Expense Covering</Text>
       <Text style={styles.helperText}>
         Assign a traveler's expenses to be covered by another traveler. The covered traveler will not appear in cost reports.
@@ -92,7 +92,7 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
           />
         </View>
       )})}
-        <TouchableOpacity style={[styles.button, {marginTop: 12}]} onPress={saveCoveredBy}>
+        <TouchableOpacity style={[styles.button, {marginTop: 12}]} onPress={saveCoveredBy} testID="covering-save">
           <Text style={styles.buttonText}>Save Covering Rules</Text>
       </TouchableOpacity>
     </View>

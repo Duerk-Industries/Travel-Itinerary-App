@@ -1461,6 +1461,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
+  // Costs that came from bookings (flights, lodgings, activities, car rentals) rather than
+  // hand-entered expenses; the ledger lists them so the group can see they're already counted.
+  const bookingExpenses = useMemo(
+    () => allExpenses.filter((e) => !e.id.startsWith('expense-') && e.amount > 0),
+    [allExpenses]
+  );
 
   const costReportRows = useMemo(() => {
     const categories = [...new Set(allExpenses.map(e => e.category))].sort();
@@ -2331,8 +2337,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'expenses':
         case 'ledger':
         case 'cost':
+          // Totals come from buildAllExpenses, which folds in booking costs (flights, lodgings,
+          // activities, car rentals) — fetch them here too, or a session that lands on these
+          // pages first silently leaves every booking out of the ledger and cost report.
           await Promise.all([
             fetchTrips(authToken),
+            fetchFlights(authToken),
+            fetchLodgings(authToken),
+            fetchTours(authToken),
+            fetchCarRentals(authToken),
             fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
             fetchTripPayments(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
           ]);
@@ -3365,6 +3378,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   payerName={payerName}
                   saveCoveredBy={saveCoveredBy}
                   readOnly={isFollowingMode || offlineReadOnly}
+                  bookingExpenses={bookingExpenses}
                   payments={tripPayments}
                   currentUserMemberId={currentUserMemberId}
                   onAddPayment={addTripPayment}
