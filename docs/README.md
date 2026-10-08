@@ -31,8 +31,6 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Production Deployment Guide](production-deployment-guide.md)
 - [Cloud Run OOM (SIGABRT) Remediation Plan](implementation_plans/cloud-run-oom-remediation.md)
 - [Admin Notes](admin.md)
-- [Analytics Upgrade: Collection, Goals, and Behavior](analytics-upgrade.md)
-- [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md)
 - [Feature Flags](feature-flags.md)
 - [Tiers](tiers.md)
 - [E2E Test Plan](e2e-test-plan.md)
@@ -42,6 +40,11 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Ingestion Mailbox Deployment](ingestion-mailbox-deployment.md)
 - [Ingestion Rollout](ingestion-rollout.md)
 - [Security / Key Management](security/key-management.md)
+
+## Privacy, Analytics, and Compliance
+
+- [Analytics Upgrade: Collection, Goals, and Behavior](analytics-upgrade.md) — comprehensive overview of analytics collection, privacy goals, default-off opt-in architecture, GDPR/UK GDPR compliance, iOS ATT/Privacy Manifests, and Android Data Safety policies.
+- [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md) — 5-phase engineering and compliance delivery plan, privacy policy page deliverables, test coverage matrix, performance budgets, and cost model.
 
 ## Authentication and Account Rollout
 

@@ -51,8 +51,11 @@ For deployment and environment setup, use the guides in [`DEPLOYMENT-GCP-FIREBAS
 - [Feature Flags](docs/feature-flags.md)
 - [Tiers](docs/tiers.md)
 - [Admin Notes](docs/admin.md)
-- [Analytics Upgrade: Collection, Goals, and Behavior](docs/analytics-upgrade.md)
-- [Analytics Upgrade Implementation Plan](docs/implementation-plans/analytics-upgrade.md)
+
+### Privacy, Analytics, and Compliance
+
+- [Analytics Upgrade: Collection, Goals, and Behavior](docs/analytics-upgrade.md) — comprehensive overview of analytics collection, privacy goals, default-off opt-in architecture, GDPR/UK GDPR compliance, iOS ATT/Privacy Manifests, and Android Data Safety policies.
+- [Analytics Upgrade Implementation Plan](docs/implementation-plans/analytics-upgrade.md) — 5-phase engineering and compliance delivery plan, privacy policy page deliverables, test coverage matrix, performance budgets, and cost model.
 
 ### Auth, Access, and Security
 
