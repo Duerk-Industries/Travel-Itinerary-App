@@ -2,7 +2,7 @@
 
 Status: proposed; documentation only.
 Created and reviewed: October 8, 2026.
-Revision: 3. Canonical path: `docs/implementation-plans/analytics-upgrade.md`; the former underscore-directory path is a forwarding document.
+Revision: 4 (adds required notice text changes per page, concrete mobile-store tasks, cost sensitivity, load/native tests, and open decisions; fixes the age rule and deliverables anchor). Canonical path: `docs/implementation-plans/analytics-upgrade.md`; the former underscore-directory path is a forwarding document.
 Design and collection inventory: [Analytics Upgrade: Collection, Goals, and Behavior](../analytics-upgrade.md).
 
 ## Outcome and Delivery Rules
@@ -33,10 +33,10 @@ Repository rules that apply throughout:
    - `/privacy.html` → `app/public/privacy.html`, linked from `app/tabs/account.tsx`. Last updated July 17, 2026; GDPR-style controller section; contact `bryan.duerk@gmail.com`; "under 16 may not hold an account".
    - `docs/legal/privacy-policy.md` matches the older `/privacy` text.
 
-   These must be reconciled on facts (controller, contact, minimum age; see the `registration_age_gate` migration), not by picking one silently.
+   These must be reconciled on facts, not by picking one silently. Minimum age is already settled by code: `server/src/services/registrationAgeGate.ts` enforces **16** globally, so the "under 13" text is wrong. Controller/operator and contact address still need a decision.
 7. The older notices claim "we do not access camera, photo library…". The Expo config registers image/video share intents and the blog supports media upload, so verify the wording against actual native permissions before republishing.
 8. `app/public/cookies.html` promises consent before optional diagnostics/analytics. Sentry's current startup behavior does not yet meet that promise.
-9. The iOS config in `expo.config.shared.cjs` has **no `ios.privacyManifests`** entry. The required-reason APIs used by React Native, Expo modules, and the Sentry SDK (e.g. `UserDefaults`, file timestamps, system boot time) need verification in the archived build's privacy report.
+9. The iOS config in `expo.config.shared.cjs` has **no `ios.privacyManifests`** entry, and the Android config has **no `blockedPermissions`** entry, so `AD_ID` may be merged in by a dependency. The required-reason APIs used by React Native, Expo modules, and the Sentry SDK (e.g. `UserDefaults`, file timestamps, system boot time) need verification in the archived build's privacy report.
 10. Expo push tokens (`app/utils/pushNotifications.ts`) are device identifiers that must appear in store disclosures, even though they are not used for analytics.
 
 ---
@@ -98,14 +98,14 @@ Design rules:
 - `GET` / `PATCH /api/account/privacy-preferences` in `accountRoutes.ts`: Authenticated owner only, optimistic `revision` check, server timestamps, append to `privacy_choice_events`. No admin can grant consent on a user's behalf.
 - `server/src/services/privacyConsentService.ts`: Purpose-specific admission checks and optimistic preference updates. Serialize preference/epoch validation with event admission using a DB transaction or equivalent consistency boundary in each adapter. Do not use cached grants for admission.
 - Feature flags in `server/config/feature-flags.yaml`: `analytics_collection_enabled` (kill switch) and `diagnostics_user_linked_enabled`, both **default disabled and fail-closed**. These must not inherit entitlement fail-open behavior. When disabled, consent updates, export, and deletion must still work.
-- Review `server/src/instrument.ts`: `sendDefaultPii: false`; strip `user.ip_address`, cookies, auth headers, request bodies, and query strings in `beforeSend`/`beforeSendTransaction`.
+- Review `server/src/instrument.ts`: `sendDefaultPii: false`; strip `user.ip_address`, cookies, auth headers, request bodies, and query strings in `beforeSend`/`beforeSendTransaction`. Server-side Sentry stays on as necessary processing (legitimate interest in service security and reliability) and does not depend on the user's optional choice. Set its event retention to the approved 30 days.
 
 ### Client Implementation
 - New `app/utils/privacyConsent.ts` (state machine: unknown/off, granted, withdrawn, obsolete-notice) and `app/hooks/usePrivacyConsent.ts`. Fetch on bootstrap and on foreground. Server stays authoritative.
 - First-run consent sheet with equal-weight **Accept** / **Reject** / **Customize**. Show it once after login, not before the user can use the app. No nagging after refusal.
 - **Account → Privacy** section in `app/tabs/account.tsx` / `AccountProfileManagement.tsx`: Two switches, a necessary-processing explanation, and links to export, delete analytics data, delete account, privacy policy, cookie notice, and privacy choices.
 - Web: Handle `Sec-GPC: 1` at the server and `navigator.globalPrivacyControl` in the browser. Active GPC or DNT keeps product analytics off.
-- **Sentry Redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`): Default the optional client SDK to uninitialized until `optional_diagnostics` is granted. Disable automatic session/network/console capture before permission. Verify SDK/native shutdown semantics so withdrawal discards pending data rather than flushing it.
+- **Sentry Redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`): Move `initSentry()` out of `AppEntry.js` startup into the consent bootstrap, and call it only when `optional_diagnostics` is granted. Keep `wrapApp()`'s error boundary unconditional so the app's crash UI doesn't change. Before permission, no SDK runs, so there are no automatic sessions, breadcrumbs, or network/console capture. On grant, init with `sendDefaultPii: false` and set the Sentry user to the analytics pseudonym, never the raw user ID or email. On withdrawal, call `Sentry.close()` and drop pending envelopes. Disable the `@sentry/react-native/expo` plugin's native auto-init (`autoInitializeNativeSdk: false`) and verify on device that the native layer does not start on its own. Accepted trade-off: no client crash reports from non-consenting users. Server error rates make up for this partly, and the reliability dashboard shows the consenting share.
 
 ### Independent Purpose & Revocation Matrix
 
@@ -124,11 +124,11 @@ Design rules:
 
 **Owners:** Frontend Lead, Backend Lead. Development depends on Phase 1.
 
-- **Registry:** One canonical definition under `server/src/analytics/` generates client types and strict server Zod schemas. Share model types through `server/src/types.ts`.
+- **Registry:** New workspace package `packages/analytics` (`@wanderbunnies/analytics`), modeled on `packages/domain` and `packages/messaging`. It exports event names, strict Zod schemas, and metadata (purpose, owner, consent category, retention, sampling), and both `app/` and `server/` import it directly. No code generation, no mirrored copies. Persisted record types that the DB adapters return go in `server/src/types.ts`.
 - **Client Utility:** `app/utils/analytics/track.ts` plus `useTrackView(feature)`.
 - **Instrumentation:** Routing/trip selection in `app/App.tsx`, then overview, itinerary, activities, lodging, transfers, expenses, packing, imports, blog, and collaboration. Guard against duplicate render events in React 19 Strict Mode.
 - **Ingest Route:** `POST /api/analytics/events` in `analyticsRoutes.ts`, authenticated users only.
-- **Validation & Limits:** 20 events per batch, 32 KiB payload, 30-second foreground flush, max 100 queued events and 24-hour expiry. Enforce max event age (24h) and future skew (5m). Store receipt time and reject invalid clocks. Freeze batches/IDs for retries and deduplicate per subject/purpose epoch.
+- **Validation & Limits:** 20 events per batch, 32 KiB payload, 30-second foreground flush plus a flush on background/`visibilitychange` (`fetch` with `keepalive` on web, so the auth header is still sent), max 100 queued events and 24-hour expiry. Enforce max event age (24h) and future skew (5m). Store receipt time and reject invalid clocks. Freeze batches/IDs for retries and deduplicate per subject/purpose epoch.
 - **Queue:** In-memory only initially. A durable offline queue requires encrypted storage, expiry, withdrawal purge, and a storage notice update.
 - **Server Outcomes:** After the business transaction commits, pass consent-filtered events to a bounded asynchronous writer.
 - **Trip Phase:** `server/src/utils/tripPhase.ts` (pure function with date/timezone version).
@@ -179,7 +179,7 @@ Design rules:
 | **Assessed Anonymous Aggregates** | 25 months, then review/purge | Aggregate lifecycle job and disclosure review |
 | **Cost Ledger & Billing** | Legally required accounting schedule | Internal cost telemetry kept separate from behavioral analytics |
 
-### 3. Privacy Policy and Web Page Deliverables
+### Privacy Policy and Web Page Deliverables
 
 **Step 1: Consolidate Canonical Source**
 Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/build-legal-pages.mjs` to compile it into `app/public/privacy.html` and `server/src/legal/privacyPolicyHtml.ts`. CI fails if outputs drift.
@@ -188,7 +188,7 @@ Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/bu
 
 | Surface | Required Deliverable |
 |---|---|
-| `docs/legal/privacy-policy.md` (canonical) | Reconcile controller/operator, contact (`tristan.duerk@gmail.com`), and age gate (16 EU/UK, 13 US). Include updated collection, dual opt-in toggles, GPC/DNT rules, retention schedule, rights, and subprocessors. |
+| `docs/legal/privacy-policy.md` (canonical) | Reconcile controller/operator and one contact address (proposed `tristan.duerk@gmail.com`, confirmed in Phase 0). Minimum age **16 everywhere**, matching `registrationAgeGate.ts`. Apply every change in Step 3. Add version number, effective date, and a change summary at the top. |
 | `app/public/privacy.html` | Compiled from canonical source. Serves web policy page. |
 | `server/src/legal/privacyPolicyHtml.ts` → `/privacy` | Compiled from canonical source or 301 redirect to `/privacy.html`. |
 | `app/public/cookies.html` | Inventory storage keys, purpose, operator, and duration. Interactive "Manage Preferences" button. |
@@ -197,7 +197,58 @@ Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/bu
 | `app/tabs/account.tsx`, `AccountProfileManagement.tsx` | Account → Privacy UI with 2 switches, necessary processing text, and legal links. |
 | `server/src/app.ts` | Serve `/privacy`, `/privacy.html`, `/cookies.html`, `/privacy-choices`, `/delete-account` with stable aliases. Static pages matched before SPA fallback. |
 | Web Footer / Login Screen | Add "Privacy Choices" link next to Privacy and Terms links. |
-| App Store & Google Play Packets | Updated App Privacy labels, ATT verification, Privacy Manifests (`ios.privacyManifests`), Data Safety declarations, `AD_ID` removal, and Delete account URL. |
+| App Store & Google Play Packets | Updated App Privacy labels, ATT verification, Privacy Manifests (`ios.privacyManifests`), Data Safety declarations, `AD_ID` removal, and Delete account URL. See section 4 below. |
+| `docs/sentry.md`, `docs/feature-flags.md`, `docs/admin.md` | Consent-gated client init, server scrubbing and retention, the two new flags, metric definitions, and the kill-switch runbook. |
+
+**Step 3: Required notice content changes**
+
+Changes to the current text (found in the July 2026 notices):
+
+| Current statement | Where | Required change |
+|---|---|---|
+| "We use Sentry to automatically collect crash reports and performance diagnostics" | `/privacy`, `privacy-policy.md` | Server error monitoring is necessary processing (scrubbed, 30 days). App crash/performance diagnostics are collected **only if you turn on Detailed Diagnostics**. |
+| "We do not use third-party advertising or marketing-analytics SDKs" | `/privacy`, `privacy-policy.md` | Keep the no-advertising promise, and add that WanderBunnies runs **first-party** product analytics, only with opt-in consent. |
+| "We do not access your device's … camera, photo library" | `/privacy`, `privacy-policy.md` | Verify against the share-intent and blog-media permissions (Finding 7) and rewrite to describe actual access ("only photos/videos you choose to share or upload"). |
+| "not directed at children under 13" | `/privacy`, `privacy-policy.md` | Accounts require age 16+. Travelers under 16 can be listed by an adult but are never analytics subjects. |
+| Legal-basis row "Use optional analytics, advertising, or non-essential cookies — Consent, where required" | `privacy.html` | Replace with explicit rows: product analytics (consent), detailed diagnostics (consent), cost metering and quotas (contract/legitimate interests), security logs and server error monitoring (legitimate interests), billing records (legal obligation). |
+| "Device, usage, and security data … diagnostic telemetry" | `privacy.html` | Split into necessary technical data and optional analytics/diagnostics, and add push notification tokens (purpose, encryption, deleted on logout/account deletion). |
+| Retention section (criteria only) | All | Add the approved schedule (raw events 90 days, daily facts 13 months, diagnostics 30 days, aggregates 25 months), published only once configured and tested. |
+
+New sections to add:
+
+1. **Product analytics**: what is collected (feature views, task outcomes, session timing, platform/app version/browser family, trip phase derived from trip dates, never location), the pseudonymous account linkage (still personal data), and that it is off unless you opt in.
+2. **Your privacy choices**: the two switches, where to find them (Account → Privacy, `/privacy-choices`), withdrawal at any time, GPC/DNT honored as refusal, and no loss of features or price difference for refusing.
+3. **Rights**: access/export, correction, deletion (account and analytics-only), restriction, objection (including to legitimate-interest processing), portability, complaint to a supervisory authority, the US-state appeal process, response times (1 month GDPR / 45 days CCPA), and how to submit (in-app, web page, email).
+4. **Recipients and transfers**: Google Cloud/Firebase, Sentry, AI providers, email providers. Transfer mechanism per provider (adequacy, EU–US Data Privacy Framework, or SCCs) and a link to the subprocessor list.
+5. **What we don't do**: no sale/sharing for cross-context advertising, no advertising IDs, no fingerprinting, no session replay, no GPS, no use of Gmail or Plaid content for analytics (keep the existing Google Limited Use and Plaid sections word-for-word unless reviewed).
+6. **Changes to this notice**: a material change to analytics purposes bumps the notice version and asks for consent again; an unchanged choice is never assumed.
+
+`app/public/cookies.html` gets one row per storage key, each with name, purpose, necessary/optional, duration, and operator:
+- consent record (necessary, until changed)
+- analytics session ID (optional, 30 minutes of inactivity)
+- in-memory queue (no persistent storage)
+- Sentry SDK storage (optional, cleared on withdrawal)
+
+It also gets a "Manage preferences" control that opens the same choices as `/privacy-choices`.
+
+`app/public/privacy-choices.html` and `app/public/delete-account.html` must:
+- name the app and the operator
+- work while signed out
+- generate no optional analytics
+- link back to the canonical policy
+
+`delete-account.html` also states what is deleted, what is retained and why (billing/legal, consent evidence), identity verification, and timing.
+
+### 4. Mobile Store Compliance Tasks
+
+| Task | Change | Verification |
+|---|---|---|
+| iOS privacy manifest | Add `ios.privacyManifests` to `expo.config.shared.cjs`: `NSPrivacyTracking: false`; `NSPrivacyCollectedDataTypes` for product interaction, user ID, device ID, crash and performance data (linked, not tracking, with purposes); `NSPrivacyAccessedAPITypes` for the reasons the build actually reports. | Xcode **Privacy Report** from the archived EAS production build; reconcile against the SDK manifests from React Native, Expo, and Sentry. |
+| iOS App Privacy labels | Update App Store Connect to match the manifest and the policy. Optional collection is still declared. | Reviewer notes in `docs/app-store-review-packet.md` with screenshots of the consent sheet and Account → Privacy. |
+| ATT | No prompt and no `NSUserTrackingUsageDescription`. | Proxy capture of a release build shows no IDFA access and no third-party tracking domains. |
+| Android AD_ID | Add `android.blockedPermissions: ['com.google.android.gms.permission.AD_ID']`. | Inspect the merged `AndroidManifest.xml` from the EAS build. Play Console advertising-ID declaration: No. |
+| Play Data safety | Update data types, purposes, optionality, encryption in transit, and deletion. Add the `/delete-account.html` URL. | Form answers stored in the review packet and diffed against the analytics registry metadata at each release. |
+| Disclosure drift check | CI test that every registry event's consent category maps to a declared store data type. | Fails the build when a new event category is added without a disclosure update. |
 
 ---
 
@@ -227,7 +278,9 @@ Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/bu
 - **Volume Assumption:** 1,000 MAU × 8 sessions/month × 25 events/session = 200,000 events/month (~10,000 batches).
 - **Postgres Storage:** ~195 MiB/month raw payload (~586 MiB for 90 days retention).
 - **Firestore Operations:** 200,000 document writes/month, precomputed rollup reads, TTL purge deletes.
-- **Cost Cap & Kill Switch:** Monthly budget cap defined in `cost-model.yaml` with automated alerts at 80% and 100%. `analytics_collection_enabled` kill switch disables optional collection instantly if needed.
+- **Sentry:** Only consenting users generate client events, so quota grows with the opt-in rate rather than with MAU. Set explicit `tracesSampleRate` and per-project quotas.
+- **Sensitivity:** Re-run the model at 1×, 5×, and 10× volume with current Postgres, Firestore, Cloud Run job, and Sentry pricing before Phase 2 ships. If Firestore write cost becomes material, the first optimization is storing one document per ingest batch, with rollups computed by the daily job. This trades simpler per-event erasure for about 20× fewer writes.
+- **Cost Cap & Kill Switch:** Approved monthly budget recorded in `cost-model.yaml`. Alerts at 80% and 100% come from a Google Cloud Billing budget plus the Sentry quota alert. Response: reduce sampling first, then turn off the `analytics_collection_enabled` kill switch. Consent changes, rights requests, and required accounting keep working.
 
 ### 3. Maintainability
 - Single event registry, Zod schemas, CI drift checks between client, server, and legal pages.
@@ -247,7 +300,9 @@ Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/bu
 | **Data Subject Rights** | Export schema v2 completeness, analytics deletion endpoint, full account deletion cascade, tombstone integrity, GCS capture purging | `accountExport.test.ts`<br>`accountDelete.test.ts`<br>`analytics-erasure.test.ts` |
 | **Legal Pages** | Generated HTML matches canonical Markdown, stable alias routing, 200 status verification | `server/__tests__/legal-pages.test.ts` |
 | **Web E2E (Playwright)** | Consent sheet Accept/Reject/Customize, GPC/DNT signal response, zero network calls when rejected, public choices & deletion links | `app/e2e/privacy-consent.test.ts` |
-| **Native Release** | iOS Privacy Manifest, App Store Nutrition Labels, ATT verification, Android Data Safety, `AD_ID` removal, in-app deletion | `docs/app-store-review-packet.md` checklist |
+| **Native Release** | iOS Privacy Manifest, App Store Nutrition Labels, ATT verification, Android Data Safety, `AD_ID` removal, in-app deletion; proxy capture showing zero optional traffic before consent and after withdrawal; startup/background/resume behavior | `docs/app-store-review-packet.md` checklist |
+| **Store Disclosure Drift** | Every registry consent category maps to a declared App Privacy / Data safety type | `server/__tests__/analytics-disclosures.test.ts` |
+| **Load & Failure** | 20-event batches at forecast peak on Postgres and Firestore (emulator plus a staging run); DB/provider outage isolation (travel actions still succeed); queue caps and backoff; replica restart with daily-job leases; client `track()` p95 on reference devices | `app/e2e/performance.test.ts` (extend), `scripts/analytics-load.mjs` |
 
 ---
 
@@ -255,8 +310,22 @@ Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/bu
 
 1. Merge schemas, privacy controls, and permission-aware Sentry init with collection flags **off**.
 2. Deploy consolidated policy pages (`docs/legal/privacy-policy.md`, `privacy.html`, `privacyPolicyHtml.ts`, `cookies.html`, `privacy-choices.html`, `delete-account.html`).
-3. Prepare and submit App Store and Google Play disclosures (Privacy Manifests, ATT, Data Safety, Delete account URL) **before** shipping the consent UI mobile build.
+3. Update App Store and Google Play disclosures (privacy manifest, App Privacy labels, Data safety, Delete account URL) with the first mobile build that **contains** the collection code, even though collection is still flagged off server-side. Store disclosures cover what a build can collect, not just what a flag currently enables.
 4. Enable `analytics_collection_enabled` for a consenting canary cohort, then scale gradually.
 5. Monitor ingest failure rates, consent enforcement, report freshness, and cost budgets.
 
+The kill switch stops optional producers, ingest admission, and client SDK export. Preference changes, erasure, export, retention jobs, and required accounting keep working. Rollback never drops ledger records or recreates withdrawn or deleted data.
+
 **Done When:** All 5 dashboards are live and trusted; privacy controls are verified across web, iOS, and Android; canonical privacy notices are published across all endpoints; rights and retention jobs are operational; store submission requirements are fulfilled; and test coverage and performance budget evidence is verified.
+
+**Open decisions for Phase 0** (optional production collection stays disabled while any remain open):
+- legal controller/operator and single privacy contact
+- launch jurisdictions, EU/UK representative, and DPO need
+- approved retention schedules, including consent evidence
+- shared-cost allocation rule
+- trip timezone fallback
+- reference devices and load baseline
+- consent re-prompt triggers
+- each processor's deletion capability (Sentry, AI providers)
+- whether a BigQuery export is justified
+- confirmation that Google/Apple sign-in enforce the 16+ age gate

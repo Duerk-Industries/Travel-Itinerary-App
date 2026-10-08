@@ -2,7 +2,7 @@
 
 Status: proposed design. No new collection, SDK, or policy change is enabled by this document.
 Assessment and requirements review: October 8, 2026.
-Revision: 3; expands privacy compliance (GDPR/UK GDPR, ePrivacy/PECR, US state laws, Apple iOS ATT & Privacy Manifests, Google Play Data Safety), details required privacy policy page updates, and refines performance, maintainability, test coverage, and cost models.
+Revision: 4; separates current state from target state for mobile-store controls, aligns the age rule with the enforced registration gate, clarifies client versus server diagnostics, moves the event registry to a shared workspace package, and adds a retention summary.
 Delivery plan: [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md).
 
 This document explains what analytics WanderBunnies collects today, what the upgrade adds, why, how collection behaves on web, iOS, and Android, and which privacy commitments and regulatory frameworks constrain it. The accompanying [implementation plan](implementation-plans/analytics-upgrade.md) covers execution sequencing, privacy-policy page changes, automated tests, performance budgets, and cost governance.
@@ -16,7 +16,7 @@ This document explains what analytics WanderBunnies collects today, what the upg
 - **Privacy Default:** Optional product analytics and optional detailed diagnostics are **off by default until the user opts in**, on every platform and in every region. Refusing optional analytics changes nothing about the core travel-planning features.
 - **Granular Consent Separation:** Users independently grant or revoke **Product Analytics** and **Detailed Diagnostics**. Granting one does not grant the other.
 - **Purpose Separation:** Necessary operational records (security logs, quotas, billing, cost metering) are strictly separated from optional behavioral analytics and are never silently repurposed as behavioral tracking.
-- **Compliance Posture:** Designed for full compliance with GDPR / UK GDPR, ePrivacy / PECR, US state privacy laws (CCPA/CPRA, etc.), Apple App Store privacy policies (App Privacy Labels, ATT, Privacy Manifests, In-App Deletion), and Google Play policies (Data Safety, User Data Policy, AD_ID removal, Public Account Deletion URL).
+- **Compliance Posture:** Designed to support compliance with GDPR / UK GDPR, ePrivacy / PECR, US state privacy laws (CCPA/CPRA, etc.), Apple App Store privacy policies (App Privacy Labels, ATT, Privacy Manifests, In-App Deletion), and Google Play policies (Data Safety, User Data Policy, AD_ID removal, Public Account Deletion URL). Legal review and store submission evidence are still required; this document does not certify compliance.
 
 ---
 
@@ -37,7 +37,7 @@ This assessment describes the repository's target implementation, not verified p
 | **Per-User Usage** | Trip creations, successful itinerary generations, selected AI calls/tokens/estimated costs, weather and import operations | `usage_events` (user, metric key, amount, JSON metadata, timestamp); `usage_counters` (totals by window) | [entitlementService.ts](../server/src/services/entitlementService.ts), [openaiApi.ts](../server/src/apis/openaiApi.ts), [aiProviderRegistry.ts](../server/src/ai/registry/aiProviderRegistry.ts). |
 | **Provider Limits & Budgets** | Provider/caller/window usage; provider/window estimated spend in USD microdollars | `api_usage_counters`; `api_cost_counters` | [usageLimiter.ts](../server/src/apis/usageLimiter.ts), [providerBudgeting.ts](../server/src/apis/providerBudgeting.ts). Provider totals alone do not constitute a per-user cost ledger. |
 | **Itinerary Telemetry** | User/trip ID, outcome, tokens, cost estimate, stage latency, parse failures, quality, cache/fallback hits, avoided inference | `itinerary_generation_metrics`: indexed columns plus JSONB | [itineraryMetricsService.ts](../server/src/services/itineraryMetricsService.ts). Best-effort writes. User/trip linkage means this data is personal data. |
-| **AI Captures & Evaluation** | Parsing/generation captures, evaluations, experiments, provider/model/prompt and cost rollups | Gzipped JSON locally or in Google Cloud Storage; DB metrics by period/dimension | [captureService.ts](../server/src/ai/capture/captureService.ts), [aggregationJob.ts](../server/src/ai/analytics/aggregationJob.ts). The aggregation job reads local files; production completeness requires GCS sync. |
+| **AI Captures & Evaluation** | Parsing/generation captures, evaluations, experiments, provider/model/prompt and cost rollups | Gzipped JSON locally or in Google Cloud Storage; DB metrics by period/dimension | [captureService.ts](../server/src/ai/capture/captureService.ts), [aggregationJob.ts](../server/src/ai/analytics/aggregationJob.ts). The aggregation job reads local files, so production captures in GCS may be missed until it reads the configured backend. |
 | **Ingestion Operations** | Job/stage outcomes, duplicates, retries, dead letters, quota, related LLM usage | Durable import records and admin JSON; in-memory queue gauges | [ingestionMetricsService.ts](../server/src/services/ingestionMetricsService.ts), [admin reference](admin.md). |
 | **Trip Activity** | Selected changes, actor, trip, type, metadata, timestamps | `trip_activity` records; grouped feed | [activityFeed.ts](../server/src/services/activityFeed.ts). Contributions are visible. Reading and abandoned actions are not recorded. |
 | **Admin Audit** | Actor/target, before/after, reason, timestamp | `audit_log` | [admin reference](admin.md). Administrative actions only. |
@@ -109,7 +109,7 @@ $$\text{During-Trip Engagement Rate} = \frac{\text{Consenting eligible account t
 
 ## Behavioral Event Contract
 
-One typed, versioned registry under `server/src/analytics/`. Every event declares purpose, owner, allowed properties, units, emitting boundary, consent category, retention, and sampling. Shared models live in `server/src/types.ts`, and client input is validated with strict Zod schemas.
+One typed, versioned registry in a new shared workspace package, `packages/analytics` (`@wanderbunnies/analytics`), following the existing `@wanderbunnies/domain` and `@wanderbunnies/messaging` pattern so the app and server import the same event names and Zod schemas without code generation. Every event declares purpose, owner, allowed properties, units, emitting boundary, consent category, retention, and sampling. Shared models live in `server/src/types.ts`, and client input is validated with strict Zod schemas.
 
 - **Envelope:** `event_id`, `schema_version`, `event_name`, `occurred_at`, `received_at`, `source`, `purpose`, `session_id`, `platform`, `app_version`, `environment`.
 - **Server-Derived (clients cannot assert):** `analytics_subject_id`, `tier`, `user_role`, `authorized_trip_ref`, `consent_revision`, `purpose_epoch`.
@@ -170,8 +170,10 @@ Raw email/name, age, gender, home address, destination or place text, GPS coordi
 - **Account → Privacy** on web, iOS, and Android, plus a public **Privacy Choices** page on web (`/privacy-choices`).
 - Two optional switches, both **off by default**:
   1. **Product Analytics**: Feature views, task outcomes, session timing, platform, and trip-phase events.
-  2. **Detailed Diagnostics**: User-linked crash reports, performance diagnostics, and session tracking in Sentry.
-- A plain-language explanation of **Necessary Processing** (security logs, quotas, billing, cost metering, aggregate error monitoring) that has no misleading "off" switch.
+  2. **Detailed Diagnostics**: All client-side Sentry collection (crash reports, performance traces, session tracking) from the user's device.
+- A plain-language explanation of **Necessary Processing** (security logs, quotas, billing, cost metering, scrubbed **server-side** error monitoring) that has no misleading "off" switch.
+
+Client crash reporting sits behind the Detailed Diagnostics switch because the Sentry SDK stores and reads data on the device (ePrivacy/PECR) and links crashes to a session. As a result, crashes from non-consenting users are not reported. Server-side error rates, failed-request counts, and support reports partly make up for this, and reliability dashboards state the consenting share so the gap is visible.
 - Direct links to **Export Data**, **Delete Analytics Data**, **Delete Account**, **Privacy Policy**, and **Cookie Notice**.
 
 The first-run consent sheet offers **Accept**, **Reject**, and **Customize** with equal prominence. There are no preselected switches, no bundling with terms acceptance, no repeated nagging after refusal, and no loss of core travel features or price discrimination for refusing.
@@ -188,7 +190,7 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
 - **Authoritative Server Enforcement:** The account-level choice is stored in `privacy_preferences` and enforced on the server.
 - **Epoch Management:** Re-granting consent increments the purpose epoch and rotates the subject pseudonym. Events queued before withdrawal are never replayed.
 - **Global Privacy Control (GPC) & Do Not Track (DNT):** Honor applicable legal sale/sharing/targeted-advertising opt-outs. An active GPC signal keeps optional product analytics **off**. DNT is treated as an optional-analytics refusal.
-- **Age Gate Consistency:** Aligned with the app's `registration_age_gate` (minimum account age 16 for EU/UK or 13 for US, reconciled across all policy pages). No analytics profiling of minors.
+- **Age Gate Consistency:** Registration enforces a global minimum account age of **16** (`MINIMUM_ACCOUNT_AGE` in `server/src/services/registrationAgeGate.ts`). Because no account holder is under 16, analytics consent never needs the GDPR Art. 8 parental-consent mechanism. Every policy page must state 16, and the "under 13" wording on `/privacy` must be removed. Minors entered as travelers or dependents are never analytics subjects, and no analytics profiling of minors occurs. Confirm that Google/Apple sign-in paths enforce the same gate.
 
 ### 3. GDPR and UK GDPR Compliance
 
@@ -198,9 +200,9 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
 - **Data Subject Rights:**
   - **Access & Portability (Art. 15 & 20):** `GET /api/account/export` (Schema v2) includes current privacy preferences, choice history, user's behavioral events, daily facts, pseudonym, cost ledger rows, and diagnostic metadata.
   - **Erasure / Right to be Forgotten (Art. 17):** `DELETE /api/account/analytics-data` erases analytics events, subject mappings, daily facts, AI captures, and Sentry diagnostics. `DELETE /api/account` performs full account deletion including analytics erasure.
-  - **Restriction & Objection (Art. 18 & 21):** Withdrawing consent immediately halts processing.
-- **Record of Processing Activities (ROPA):** Maintained under Art. 30 GDPR covering purpose, data types, basis, retention, and security measures.
-- **Data Protection Impact Assessment (DPIA):** Completed DPIA screening; full DPIA executed if high-risk processing criteria are triggered.
+  - **Restriction & Objection (Art. 18 & 21):** For consent-based analytics and diagnostics, withdrawing consent immediately stops processing. For processing based on legitimate interests (cost metering joins, security logs), users can object through the privacy contact. Each objection is assessed and logged, and the outcome is recorded in the rights-request tracker.
+- **Record of Processing Activities (ROPA):** To be created in Phase 0 under Art. 30 GDPR, covering purpose, data types, basis, recipients, retention, transfers, and security measures.
+- **Data Protection Impact Assessment (DPIA):** DPIA screening is a Phase 0 deliverable, with a full DPIA if high-risk criteria apply. Neither has been done yet.
 
 ### 4. ePrivacy Directive and UK PECR
 
@@ -210,6 +212,7 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
 
 ### 5. US State Privacy Laws (CCPA / CPRA and Successors)
 
+- Applicability thresholds (revenue, volume of consumers' data) are assessed in Phase 0. The controls below are built regardless, because they cost little and match the global opt-in design.
 - Provides rights to Know, Delete, Correct, and Opt-Out of Sale/Sharing.
 - WanderBunnies **does not sell or share** personal information for cross-context behavioral advertising.
 - Public web page `/privacy-choices` serves as the "Your Privacy Choices" link for US residents.
@@ -217,23 +220,31 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
 
 ### 6. Mobile Platform Policies
 
+Status as of this revision: **Done** means already true in the repository; **Required** means work in the implementation plan.
+
 #### Apple iOS / App Store Policies
-- **App Privacy Nutrition Labels:** Discloses Product Interaction, User ID (pseudonymous), Device Identifiers (push token), and Diagnostics under appropriate purposes and linkage in App Store Connect.
-- **App Tracking Transparency (ATT):** Not required because WanderBunnies does not track users across third-party apps/websites, sell data, or use advertising identifiers (no IDFA). Verified no data-broker SDKs.
-- **Privacy Manifests (`ios.privacyManifests`):** Configured in `expo.config.shared.cjs` declaring required-reason APIs used by Expo, React Native, and Sentry (e.g. `UserDefaults`, file timestamps, system boot time) with approved reason codes.
-- **In-App Account Deletion (Guideline 5.1.1(v)):** Direct in-app initiation under Account → Delete Account with complete data erasure.
+
+| Control | Status | Target behavior |
+|---|---|---|
+| App Privacy labels | Required | App Store Connect declares Product Interaction (analytics, linked), User ID (app functionality and analytics, linked), Device ID (push token, app functionality), and Crash/Performance Data (analytics, linked; optional). "Used for tracking": No. |
+| App Tracking Transparency | Required (verification) | No ATT prompt, because nothing links data with other companies' data for advertising and no IDFA is accessed. Must be confirmed by network inspection of the release build's SDKs. |
+| Privacy manifest | Required (not configured) | Add `ios.privacyManifests` to `expo.config.shared.cjs` declaring `NSPrivacyTracking: false`, collected data types matching the labels, and required-reason APIs (e.g. `UserDefaults` CA92.1, file timestamps, system boot time). Verify with the Xcode privacy report of the archived EAS build. |
+| In-app account deletion (5.1.1(v)) | Done (DB cascade); Required (analytics/Sentry scope) | `DELETE /api/account` exists in the app. It must also erase analytics stores and request Sentry deletion. |
 
 #### Google Android / Google Play Policies
-- **Data Safety Section:** Accurate declaration of collected data types (App interactions, User IDs, Push tokens, Diagnostics), optionality, and security measures.
-- **Advertising ID Removal:** `com.google.android.gms.permission.AD_ID` is explicitly blocked in `expo.config.shared.cjs`. Declared "No" to Advertising ID in Play Console.
-- **User Data Policy:** Prominent in-app disclosure and consent sheet before any collection.
-- **Account Deletion Requirement:** In-app account deletion plus a dedicated public web URL (`/delete-account.html`) submitted in Play Console.
+
+| Control | Status | Target behavior |
+|---|---|---|
+| Data safety form | Required | Declares App interactions (optional), User IDs, Device or other IDs (push token), and Crash logs/Diagnostics (optional), encryption in transit, and deletion availability. |
+| Advertising ID | Required (not configured) | Add `com.google.android.gms.permission.AD_ID` to `android.blockedPermissions` in `expo.config.shared.cjs`, confirm it is absent from the merged manifest, and answer "No" in Play Console. |
+| User Data policy | Required | Prominent in-app disclosure (the consent sheet) appears before any optional collection. |
+| Account deletion | Done (in-app); Required (web URL) | Add a public `/delete-account.html` page and enter it as the Delete account URL in Play Console. |
 
 ---
 
 ## Privacy Policy and Web Page Deliverables
 
-All privacy documentation is consolidated into **one canonical Markdown file**: `docs/legal/privacy-policy.md`. An automated build script (`scripts/build-legal-pages.mjs`) compiles this canonical source into public HTML and server TypeScript strings, verified by CI.
+Target state: the privacy notice is maintained in **one canonical Markdown file**, `docs/legal/privacy-policy.md`. A build script (`scripts/build-legal-pages.mjs`) compiles it into the public HTML page and the server's TypeScript string, and CI verifies they match. Today the three copies disagree (see Finding 6 in the plan). The exact content changes for each page are listed in the [implementation plan](implementation-plans/analytics-upgrade.md#privacy-policy-and-web-page-deliverables).
 
 ```
                   ┌───────────────────────────────────┐
@@ -260,6 +271,24 @@ app/public/privacy.html  server/src/legal/privacyPolicyHtml.ts  CI Parity Check
 
 ---
 
+## Data Retention (Proposed)
+
+Approved in Phase 0; only schedules that are configured and tested get published in the privacy policy.
+
+| Data | Proposed retention |
+|---|---|
+| Unsent client analytics queue | 24 hours, or until withdrawal/logout |
+| Raw behavioral events | 90 days |
+| Linked daily user/trip facts | 13 months |
+| Client diagnostics (Sentry) and minimized server logs/traces | 30 days |
+| AI captures | ≤ 30 days |
+| Assessed anonymous aggregates | 25 months, then review |
+| Consent evidence, cost ledger, billing | Purpose-specific/legal schedules set in Phase 0 |
+
+Withdrawing consent stops new collection immediately. **Delete my analytics data** or account deletion erases the history.
+
+---
+
 ## Ease of Analysis, Maintainability, Performance, and Cost
 
 ### 1. Ease of Analysis & Reporting
@@ -271,11 +300,11 @@ app/public/privacy.html  server/src/legal/privacyPolicyHtml.ts  CI Parity Check
   4. **Platform Mix:** Web vs iOS vs Android cohorts, app version distribution.
   5. **Trip-Phase Engagement:** Pre-trip, during-trip, and post-trip engagement metrics.
 - **Statistical Integrity:** Curated daily rollups. Non-additive metrics (like unique users) are computed with explicit set logic. Cohorts smaller than 10 users are suppressed in reports and exports to prevent filter-differencing re-identification.
-- **Ad-Hoc Analysis Path:** Scheduled export of anonymized rollups to CSV in Cloud Storage / BigQuery.
+- **Ad-Hoc Analysis Path:** Scheduled export of suppressed aggregate rollups (never raw events or user-level facts) to CSV in Cloud Storage, with BigQuery only if Phase 0 approves it. "Anonymous" is a claim made only after a re-identification assessment.
 
 ### 2. Maintainability
 
-- **Single Event Registry:** `server/src/analytics/registry.ts` generates client types and server Zod schemas.
+- **Single Event Registry:** `packages/analytics` exports event names, Zod schemas, and metadata consumed directly by both `app/` and `server/`, with no generated copies to drift.
 - **Dual-Adapter DB Facade:** Implemented in `db.postgres.ts` and `db.firebase.ts` simultaneously, with `db.memory.ts` providing fast, complete unit/integration test execution.
 - **CI Drift Prevention:** Automated build checks verify that client event names match the registry, generated legal HTML files match canonical Markdown, and Zod schemas validate all payloads.
 
@@ -292,4 +321,4 @@ app/public/privacy.html  server/src/legal/privacyPolicyHtml.ts  CI Parity Check
 
 - **Priced Metering:** `settleProviderAttempt()` records attempt ID, provider, model, caller, feature, initiating user, trip, units, cache status, and price version in integer USD microdollars.
 - **No Double Counting:** Separates quota reservations from settled cost. Shared background costs are allocated once under an explicit formula.
-- **Monthly Dollar Cap & Alerts:** Hard budget cap set in `cost-model.yaml` with automated alerts at 80% and 100%. If exceeded, optional collection can be paused via the `analytics_collection_enabled` kill switch without affecting travel features.
+- **Monthly Dollar Cap & Alerts:** The approved analytics budget is recorded in `cost-model.yaml` for forecasting. Alerts at 80% and 100% come from a Google Cloud Billing budget, plus the Sentry quota alert. When the budget is exceeded, an operator reduces sampling or pauses optional collection with the `analytics_collection_enabled` kill switch, without affecting travel features, consent changes, or rights requests.
