@@ -29,6 +29,10 @@ export { getProvider as getCurrentDbProvider, resetDbAdapter, type DbProvider };
 
 export const closePool = async (): Promise<void> => adapter().closePool();
 export const initDb = async (): Promise<void> => adapter().initDb();
+export const getPrivacyPreferences = async (...args: Parameters<ReturnType<typeof adapter>['getPrivacyPreferences']>) =>
+  adapter().getPrivacyPreferences(...args);
+export const updatePrivacyPreferences = async (...args: Parameters<ReturnType<typeof adapter>['updatePrivacyPreferences']>) =>
+  adapter().updatePrivacyPreferences(...args);
 export const findOrCreateUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateUser']>) =>
   adapter().findOrCreateUser(...args);
 export const findOrCreateGoogleUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateGoogleUser']>) =>

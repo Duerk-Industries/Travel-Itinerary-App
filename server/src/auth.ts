@@ -119,6 +119,7 @@ const isAgeVerificationAllowlistedRequest = (req: Request): boolean => {
   if (method === 'POST' && path === '/api/account/age-verification/apple') return true;
   if (method === 'PATCH' && path === '/api/account/password') return true;
   if (method === 'GET' && path === '/api/account/export') return true;
+  if (path === '/api/account/privacy-preferences' && (method === 'GET' || method === 'PATCH')) return true;
   if (method === 'DELETE' && path === '/api/account') return true;
   return false;
 };

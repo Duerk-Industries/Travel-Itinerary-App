@@ -51,6 +51,8 @@ import ShareTripModal from './components/ShareTripModal';
 import IncomingShareModal from './components/IncomingShareModal';
 import { clearOfflineBlogAccount } from './utils/blogOfflineQueue';
 import AccountTab, { fetchAccountProfile, type AccountPage } from './tabs/account';
+import { usePrivacyConsent } from './hooks/usePrivacyConsent';
+import { PrivacyChoiceDialog } from './components/PrivacySettings';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -554,6 +556,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     applySession,
     clearSessionState,
   } = useAuthSession();
+  const privacy = usePrivacyConsent(backendUrl, userToken);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -3636,6 +3639,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ? renderSharedPageScroll(
                 <AccountTab
                   backendUrl={backendUrl}
+                  privacy={privacy}
                   userToken={userToken}
                   activePage={activePage}
                   onNavigate={(page) => requestPageChange(page)}
@@ -4186,6 +4190,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onVerified={() => setAgeVerificationRequired(false)}
           onSignOut={logout}
         />
+      ) : null}
+      {userToken && !requirePasswordSetup && ageVerificationRequired === false ? (
+        <PrivacyChoiceDialog privacy={privacy} backendUrl={backendUrl} />
       ) : null}
       <PremiumTrialWelcomeDialog
         visible={Boolean(userToken && premiumTrialWelcomeVisible && !ageVerificationRequired && arePremiumTrialsEnabled())}

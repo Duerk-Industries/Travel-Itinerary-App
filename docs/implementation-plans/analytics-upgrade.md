@@ -1,8 +1,8 @@
 # Analytics Upgrade Implementation Plan
 
-Status: proposed; documentation only.
+Status: Phase 1 code implemented with collection flags off; release validation and later phases remain open.
 Created and reviewed: October 8, 2026.
-Revision: 6 (adds recommendations for the open Phase 0 decisions). Canonical path: `docs/implementation-plans/analytics-upgrade.md`; the former underscore-directory path is a forwarding document.
+Revision: 7 (records Phase 1 implementation and remaining release checks). Canonical path: `docs/implementation-plans/analytics-upgrade.md`; the former underscore-directory path is a forwarding document.
 Design and collection inventory: [Analytics Upgrade: Collection, Goals, and Behavior](../analytics-upgrade.md).
 Phase 0 evidence and review state: [Analytics Phase 0](../analytics-phase-0.md).
 Proposed approvals and decision order: [Phase 0 recommendations](../analytics-phase-0.md#recommendations-for-the-open-decisions).
@@ -108,7 +108,7 @@ Design rules:
 - First-run consent sheet with equal-weight **Accept** / **Reject** / **Customize**. Show it once after login, not before the user can use the app. No nagging after refusal.
 - **Account → Privacy** section in `app/tabs/account.tsx` / `AccountProfileManagement.tsx`: Two switches, a necessary-processing explanation, and links to export, delete analytics data, delete account, privacy policy, cookie notice, and privacy choices.
 - Web: Handle `Sec-GPC: 1` at the server and `navigator.globalPrivacyControl` in the browser. Active GPC or DNT keeps product analytics off.
-- **Sentry Redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`): Move `initSentry()` out of `AppEntry.js` startup into the consent bootstrap, and call it only when `optional_diagnostics` is granted. Keep `wrapApp()`'s error boundary unconditional so the app's crash UI doesn't change. Before permission, no SDK runs, so there are no automatic sessions, breadcrumbs, or network/console capture. On grant, init with `sendDefaultPii: false` and set the Sentry user to the analytics pseudonym, never the raw user ID or email (decision 8). With 30-day retention, the policy can say diagnostics expire within 30 days. On withdrawal, call `Sentry.close()` and drop pending envelopes. Disable the `@sentry/react-native/expo` plugin's native auto-init (`autoInitializeNativeSdk: false`) and verify on device that the native layer does not start on its own. Accepted trade-off: no client crash reports from non-consenting users. Server error rates make up for this partly, and the reliability dashboard shows the consenting share.
+- **Sentry Redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`): Move `initSentry()` out of `AppEntry.js` startup into the consent bootstrap, and call it only when `optional_diagnostics` is granted and its collection flag is enabled. Keep `wrapApp()`'s error boundary around the app when a DSN is configured. Before permission, no SDK init occurs. On grant, init with `sendDefaultPii: false`, scrub request/context payloads, and set the Sentry user to a rotating diagnostic pseudonym, never the raw user ID or email. On withdrawal or account switch, close Sentry and verify on devices that queued/native envelopes cannot leave afterward. The installed Android Sentry manifest sets `io.sentry.auto-init=false`; `autoInitializeNativeSdk` is a **runtime SDK option**, not an Expo-plugin switch, and setting it false on grant would also disable native initialization then. Verify iOS startup and both native transports in a release build. Publish a 30-day expiry claim only after checking the Sentry project setting. Accepted trade-off: no client crash reports from non-consenting users.
 
 ### Independent Purpose & Revocation Matrix
 
@@ -120,6 +120,8 @@ Design rules:
 | On | On | Both, independently gated and revocable |
 
 **Acceptance:** Network and storage evidence shows zero optional data before permission and after withdrawal, including error paths and account switches. Core trip, quota, and billing regression suites pass.
+
+**Phase 1 implementation state (October 8, 2026):** The two default-off/fail-closed flags, authenticated revisioned preferences, atomic choice evidence in Postgres/Firestore, GPC/DNT handling, first-run sheet, Account privacy controls, and consent-gated Sentry initialization are implemented. The account links include public choice/deletion request pages and an authenticated export; analytics-data deletion currently routes to support because the Phase 2 event store and Phase 4 self-service erasure endpoint do not exist yet. No product events are collected in Phase 1. Grant requests are refused while their flag is off; refusal and withdrawal still work. Targeted API tests passed in the in-memory Postgres adapter and the Firestore emulator. A Playwright pre-login check of an exported web build with a fake configured Sentry DSN showed no Sentry request; its backend was intentionally absent, so this does not prove signed-in choice or withdrawal behavior. Remaining acceptance evidence: signed-in web/iOS/Android network traces (including Sentry queue behavior and startup), actual Sentry project retention/processor terms, updated canonical legal pages and store disclosures, and full release/regression checks. Keep both flags off until these gates close.
 
 ---
 

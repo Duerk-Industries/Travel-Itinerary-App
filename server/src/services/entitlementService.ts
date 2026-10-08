@@ -202,6 +202,8 @@ const FAIL_CLOSED_FLAGS = new Set([
   // Blocking accounts without a declared date of birth would lock out app
   // builds that predate the prompt, so an unseeded row must default to off.
   'age_gate_enforcement',
+  'analytics_collection_enabled',
+  'diagnostics_user_linked_enabled',
   'notifications_web_push',
   'notifications_email',
   'trip_blog_caption_ai',

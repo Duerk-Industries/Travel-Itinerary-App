@@ -29,9 +29,34 @@ const parseSampleRate = (raw: string | undefined, fallback: number): number => {
   return Number.isFinite(value) && value >= 0 && value <= 1 ? value : fallback;
 };
 
+const scrubDiagnosticEvent = <T extends Sentry.Event>(event: T): T => {
+  // Retain an error category and stack, but no request, account, breadcrumb,
+  // span or arbitrary application payload that could contain trip content.
+  delete event.user;
+  delete event.request;
+  delete event.breadcrumbs;
+  delete event.extra;
+  delete event.tags;
+  delete event.contexts;
+  delete event.spans;
+  delete event.message;
+  delete event.transaction;
+  for (const exception of event.exception?.values ?? []) {
+    delete exception.value;
+    for (const frame of exception.stacktrace?.frames ?? []) {
+      if (frame.filename) frame.filename = frame.filename.split('?')[0];
+      delete frame.vars;
+    }
+  }
+  return event;
+};
+
 if (dsn) {
   Sentry.init({
     dsn,
+    sendDefaultPii: false,
+    beforeSend: scrubDiagnosticEvent,
+    beforeSendTransaction: scrubDiagnosticEvent,
     // Environment bucket: explicit override, else NODE_ENV, else production.
     environment:
       getEnvValue('SENTRY_ENVIRONMENT') || getEnvValue('NODE_ENV') || 'production',

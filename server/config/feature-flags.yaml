@@ -271,6 +271,12 @@ flags:
   age_gate_enforcement:
     enabled: false
     description: "Server-side block on accounts without a declared 16+ date of birth (403 AGE_VERIFICATION_REQUIRED). The client prompt ships regardless; enable only once app builds with the prompt are the supported minimum. Fails CLOSED if unseeded -- see docs/implementation-plans/analytics-upgrade.md (open decision 10)"
+  analytics_collection_enabled:
+    enabled: false
+    description: "Optional product analytics collection; fails closed when missing"
+  diagnostics_user_linked_enabled:
+    enabled: false
+    description: "Optional client Sentry diagnostics; fails closed when missing"
   notifications_web_push:
     enabled: true
     description: "Web push notification delivery"

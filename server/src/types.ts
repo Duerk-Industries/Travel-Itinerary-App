@@ -1145,3 +1145,26 @@ export interface BillingPriceHistory {
   createdAt: string;
   retiredAt: string | null;
 }
+/** Server-owned, per-account choices. Null means the purpose has never been answered. */
+export interface PrivacyPreferences {
+  userId: string;
+  productAnalytics: boolean | null;
+  optionalDiagnostics: boolean | null;
+  productEpoch: number;
+  diagnosticsEpoch: number;
+  diagnosticPseudonym: string | null;
+  revision: number;
+  noticeVersion: string | null;
+  productNoticeVersion: string | null;
+  diagnosticsNoticeVersion: string | null;
+  updatedAt: string | null;
+}
+
+export interface PrivacyPreferenceUpdate {
+  revision: number;
+  productAnalytics?: boolean;
+  optionalDiagnostics?: boolean;
+  platform: 'web' | 'ios' | 'android';
+  productNoticeVersion: string;
+  diagnosticsNoticeVersion: string;
+}

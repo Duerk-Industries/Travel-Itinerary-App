@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
+import { z } from 'zod';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
 import { getUserRole, writeAuditLog, getUserPackingListV2, getUserPackingPreferencesV2, listPackingPresetsV2, replaceUserPackingPreferencesV2, reconcileUserPackingListsV2 } from '../db';
@@ -53,11 +54,52 @@ import { cancelAllSubscriptionsForUser, syncEmailToStripeCustomer } from '../bil
 import { accountPasswordRateLimit } from '../services/httpRateLimitService';
 import { declareDateOfBirth, isAgeGateEnforced, isAgeVerificationRequired, recordAppleAgeRange } from '../services/ageVerificationService';
 import { MINIMUM_ACCOUNT_AGE_YEARS } from '../services/registrationAgeGate';
+import { getPrivacyStatus, savePrivacyChoice } from '../services/privacyConsentService';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
+
+const privacyChoiceSchema = z.object({
+  revision: z.number().int().nonnegative(),
+  productAnalytics: z.boolean().optional(),
+  optionalDiagnostics: z.boolean().optional(),
+  platform: z.enum(['web', 'ios', 'android']),
+}).strict().refine((value) => value.productAnalytics !== undefined || value.optionalDiagnostics !== undefined);
+
+const hasPrivacySignal = (req: Request): boolean =>
+  req.get('Sec-GPC') === '1' || req.get('DNT') === '1';
+
+router.get('/privacy-preferences', async (req, res) => {
+  try {
+    res.json(await getPrivacyStatus((req as any).user.userId, hasPrivacySignal(req)));
+  } catch (error) {
+    logError('[privacy] preference read failed', error);
+    res.status(503).json({ error: 'Privacy preferences unavailable', code: 'PRIVACY_UNAVAILABLE' });
+  }
+});
+
+router.patch('/privacy-preferences', async (req, res) => {
+  const parsed = privacyChoiceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid privacy choice', code: 'INVALID_PRIVACY_CHOICE' });
+    return;
+  }
+  try {
+    res.json(await savePrivacyChoice((req as any).user.userId, parsed.data, hasPrivacySignal(req)));
+  } catch (error) {
+    const code = (error as Error & { code?: string }).code;
+    if (code === 'PRIVACY_REVISION_CONFLICT') {
+      res.status(409).json({ error: (error as Error).message, code });
+    } else if (code === 'PRIVACY_PURPOSE_UNAVAILABLE') {
+      res.status(403).json({ error: (error as Error).message, code });
+    } else {
+      logError('[privacy] preference update failed', error);
+      res.status(503).json({ error: 'Privacy preferences unavailable', code: 'PRIVACY_UNAVAILABLE' });
+    }
+  }
+});
 
 const ensureUserInGroup = async (groupId: string, userId: string): Promise<boolean> => {
   const groups = await listGroupsForUser(userId);

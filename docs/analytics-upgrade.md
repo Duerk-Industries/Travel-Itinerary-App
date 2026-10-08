@@ -1,6 +1,6 @@
 # Analytics Upgrade: Collection, Goals, and Behavior
 
-Status: proposed design. No new collection, SDK, or policy change is enabled by this document.
+Status: Phase 1 privacy controls implemented in source with optional collection flags off; event pipeline and release approvals remain open.
 Assessment and requirements review: October 8, 2026.
 Revision: 6; includes the verified Phase 0 technical baseline, draft processing register and event dictionary. Product choices remain subject to the review gates recorded in the Phase 0 audit.
 Delivery plan: [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md).
@@ -42,7 +42,8 @@ This assessment describes the repository's target implementation, not verified p
 | **Ingestion Operations** | Job/stage outcomes, duplicates, retries, dead letters, quota, related LLM usage | Durable import records and admin JSON; in-memory queue gauges | [ingestionMetricsService.ts](../server/src/services/ingestionMetricsService.ts), [admin reference](admin.md). |
 | **Trip Activity** | Selected changes, actor, trip, type, metadata, timestamps | `trip_activity` records; grouped feed | [activityFeed.ts](../server/src/services/activityFeed.ts). Contributions are visible. Reading and abandoned actions are not recorded. |
 | **Admin Audit** | Actor/target, before/after, reason, timestamp | `audit_log` | [admin reference](admin.md). Administrative actions only. |
-| **Sentry** | Client/server crashes, sampled performance, client auto-session tracking | Sentry events/traces; default trace sampling 10% | [app/utils/sentry.ts](../app/utils/sentry.ts), [instrument.ts](../server/src/instrument.ts), [Sentry guide](sentry.md). **Currently initializes in `AppEntry.js` before any privacy choice exists.** |
+| **Sentry** | Server crashes/traces and, after a current diagnostics grant and enabled flag, client crashes/performance | Sentry events/traces; code defaults to 10% trace sampling | [app/utils/sentry.ts](../app/utils/sentry.ts), [instrument.ts](../server/src/instrument.ts), [Sentry guide](sentry.md). Phase 1 source removes pre-choice client initialization; deployed build behavior and vendor retention still require verification. |
+| **Privacy choices** | Separate product-analytics and detailed-diagnostics choices, revision/epoch, notice version, coarse platform and timestamp | `privacy_preferences` and `privacy_choice_events` in Postgres/Firestore | [privacyConsentService.ts](../server/src/services/privacyConsentService.ts). Phase 1 controls only; product behavior events are not yet collected. |
 | **Push Tokens** | Expo push token per device (encrypted at rest) | `notification_devices` | [pushNotifications.ts](../app/utils/pushNotifications.ts), [pushTokenCrypto.ts](../server/src/utils/pushTokenCrypto.ts). Device identifier for store disclosures; not an analytics identifier. |
 | **Server Counters & Gauges** | Cache totals/ratios, queue depths | Per-process maps; admin JSON and `/metrics` Prometheus text | [metrics.ts](../server/src/metrics.ts). Restart resets values. **`recordTiming` calls a no-op `emit`, so no latency is currently retained.** |
 | **Cost Forecasting** | Assumed usage, pricing, infrastructure line items | YAML/admin settings and estimate responses | [cost-model.yaml](../server/config/cost-model.yaml), [costEstimatorService.ts](../server/src/services/costEstimatorService.ts). Forecasts are not incurred cost. |

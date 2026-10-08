@@ -5,11 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
 import { Platform, StyleSheet, Text, StatusBar, View } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { initSentry, wrapApp } from './utils/sentry';
-
-// Initialize Sentry as early as possible so startup-time crashes still get
-// reported. No-op when EXPO_PUBLIC_SENTRY_DSN is unset.
-initSentry();
+import { wrapApp } from './utils/sentry';
 
 let startupError = null;
 const startupErrorListeners = new Set();

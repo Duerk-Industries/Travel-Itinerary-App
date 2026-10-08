@@ -1,4 +1,5 @@
 // server/src/db.ts
+import type { PrivacyPreferences, PrivacyPreferenceUpdate } from './types';
 import { Pool, PoolClient } from 'pg';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
@@ -10228,6 +10229,105 @@ export const upsertFeature = async (key: string, description: string, defaultEna
      ON CONFLICT (key) DO NOTHING`,
     [key, description, defaultEnabled],
   );
+};
+
+const emptyPrivacyPreferences = (userId: string): PrivacyPreferences => ({
+  userId, productAnalytics: null, optionalDiagnostics: null, productEpoch: 0,
+  diagnosticsEpoch: 0, diagnosticPseudonym: null, revision: 0,
+  noticeVersion: null, productNoticeVersion: null, diagnosticsNoticeVersion: null, updatedAt: null,
+});
+
+const mapPrivacyPreferences = (userId: string, row?: Record<string, any>): PrivacyPreferences => row ? ({
+  userId,
+  productAnalytics: row.product_analytics,
+  optionalDiagnostics: row.optional_diagnostics,
+  productEpoch: Number(row.product_epoch),
+  diagnosticsEpoch: Number(row.diagnostics_epoch),
+  diagnosticPseudonym: row.diagnostic_pseudonym,
+  revision: Number(row.revision),
+  noticeVersion: row.notice_version,
+  productNoticeVersion: row.product_notice_version,
+  diagnosticsNoticeVersion: row.diagnostics_notice_version,
+  updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+}) : emptyPrivacyPreferences(userId);
+
+export const getPrivacyPreferences = async (userId: string): Promise<PrivacyPreferences> => {
+  const { rows } = await getPool().query(`SELECT * FROM privacy_preferences WHERE user_id = $1`, [userId]);
+  return mapPrivacyPreferences(userId, rows[0]);
+};
+
+/** Compare-and-swap and the matching evidence rows commit in one transaction. */
+export const updatePrivacyPreferences = async (userId: string, update: PrivacyPreferenceUpdate): Promise<PrivacyPreferences> => {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO privacy_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+      [userId],
+    );
+    const { rows } = await client.query(`SELECT * FROM privacy_preferences WHERE user_id = $1`, [userId]);
+    const current = mapPrivacyPreferences(userId, rows[0]);
+    if (current.revision !== update.revision) {
+      const error = new Error('Privacy preferences changed; refresh and try again');
+      (error as Error & { code?: string }).code = 'PRIVACY_REVISION_CONFLICT';
+      throw error;
+    }
+    const productAnalytics = update.productAnalytics ?? current.productAnalytics;
+    const optionalDiagnostics = update.optionalDiagnostics ?? current.optionalDiagnostics;
+    const productChanged = update.productAnalytics !== undefined &&
+      (productAnalytics !== current.productAnalytics || (productAnalytics && update.productNoticeVersion !== current.productNoticeVersion));
+    const diagnosticsChanged = update.optionalDiagnostics !== undefined &&
+      (optionalDiagnostics !== current.optionalDiagnostics || (optionalDiagnostics && update.diagnosticsNoticeVersion !== current.diagnosticsNoticeVersion));
+    if (!productChanged && !diagnosticsChanged) {
+      await client.query('COMMIT');
+      return current;
+    }
+    const productEpoch = current.productEpoch + Number(productChanged);
+    const diagnosticsEpoch = current.diagnosticsEpoch + Number(diagnosticsChanged);
+    const diagnosticPseudonym = diagnosticsChanged
+      ? (optionalDiagnostics ? randomUUID() : null)
+      : current.diagnosticPseudonym;
+    const result = await client.query(
+      `UPDATE privacy_preferences
+       SET product_analytics = $3, optional_diagnostics = $4,
+           product_epoch = $5, diagnostics_epoch = $6, diagnostic_pseudonym = $7,
+           revision = revision + 1, notice_version = $8,
+           product_notice_version = $9, diagnostics_notice_version = $10,
+           updated_at = NOW()
+       WHERE user_id = $1 AND revision = $2 RETURNING *`,
+      [userId, update.revision, productAnalytics, optionalDiagnostics, productEpoch,
+        diagnosticsEpoch, diagnosticPseudonym,
+        productChanged ? update.productNoticeVersion : (diagnosticsChanged ? update.diagnosticsNoticeVersion : current.noticeVersion),
+        productChanged ? update.productNoticeVersion : current.productNoticeVersion,
+        diagnosticsChanged ? update.diagnosticsNoticeVersion : current.diagnosticsNoticeVersion],
+    );
+    if (!result.rows.length) {
+      const error = new Error('Privacy preferences changed; refresh and try again');
+      (error as Error & { code?: string }).code = 'PRIVACY_REVISION_CONFLICT';
+      throw error;
+    }
+    const next = mapPrivacyPreferences(userId, result.rows[0]);
+    for (const [purpose, changed, granted, epoch] of [
+      ['product_analytics', productChanged, productAnalytics, productEpoch],
+      ['optional_diagnostics', diagnosticsChanged, optionalDiagnostics, diagnosticsEpoch],
+    ] as const) {
+      if (!changed) continue;
+      await client.query(
+        `INSERT INTO privacy_choice_events
+          (id, user_id, purpose, granted, epoch, revision, notice_version, platform)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [randomUUID(), userId, purpose, granted, epoch, next.revision,
+          purpose === 'product_analytics' ? update.productNoticeVersion : update.diagnosticsNoticeVersion, update.platform],
+      );
+    }
+    await client.query('COMMIT');
+    return next;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {

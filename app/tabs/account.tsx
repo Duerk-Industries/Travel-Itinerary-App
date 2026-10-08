@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { AccountPrivacySettings } from '../components/PrivacySettings';
+import type { PrivacyController } from '../hooks/usePrivacyConsent';
 import { Platform, Pressable, StyleSheet, Text, TouchableOpacity, View, useColorScheme, Linking } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
 import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
@@ -144,6 +146,7 @@ export const fetchFellowTravelers = async ({ backendUrl, token, setFellowTravele
 
 interface AccountTabProps {
   backendUrl: string;
+  privacy?: PrivacyController;
   userToken: string | null;
   activePage: string;
   onNavigate?: (page: AccountPage) => void;
@@ -188,6 +191,7 @@ export type AccountPage = 'account' | 'account-fellow-travelers' | 'account-pack
 
 const AccountTab: React.FC<AccountTabProps> = ({
   backendUrl,
+  privacy,
   userToken,
   activePage,
   onNavigate = () => undefined,
@@ -340,6 +344,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         logout={logout}
         styles={styles}
       /> : null}
+      {!isSubPage && privacy ? <AccountPrivacySettings privacy={privacy} backendUrl={backendUrl} token={userToken} /> : null}
       {!isSubPage ? <PremiumSubscriptionPanel
         backendUrl={backendUrl}
         token={userToken}

@@ -69,6 +69,7 @@ import {
   ItineraryComparison,
 } from './types';
 import type { AccountEmail, AppleProfile } from './db.postgres';
+import type { PrivacyPreferences, PrivacyPreferenceUpdate } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
@@ -1752,6 +1753,11 @@ export const removeUserEmail = async (userId: string, email: string): Promise<Ac
 
 export const deleteUserRecord = async (userId: string): Promise<void> => {
   const db = getDb();
+  const choiceEvents = await db.collection('privacy_choice_events').where('userId', '==', userId).get();
+  await deleteDocRefsInBatches([
+    db.collection('privacy_preferences').doc(userId),
+    ...choiceEvents.docs.map((doc) => doc.ref),
+  ]);
   await db.collection('web_users').doc(userId).delete();
   await db.collection('users').doc(userId).delete();
 };
@@ -1970,6 +1976,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     tripRemovals,
     userEmails,
     billingSubscriptions,
+    privacyChoiceEvents,
   ] = await Promise.all([
     db.collection('group_members').where('userId', '==', userId).get(),
     db.collection('group_invites').where('inviteeUserId', '==', userId).get(),
@@ -1979,6 +1986,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('trip_removals').where('userId', '==', userId).get(),
     db.collection('user_emails').where('userId', '==', userId).get(),
     db.collection('billing_subscriptions').where('userId', '==', userId).get(),
+    db.collection('privacy_choice_events').where('userId', '==', userId).get(),
   ]);
   await scrubBlogEngagementForDeletedUser(userId);
   const refs = [
@@ -1992,6 +2000,8 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     ...tripRemovals.docs.map((doc) => doc.ref),
     ...userEmails.docs.map((doc) => doc.ref),
     db.collection('billing_customers').doc(userId),
+    db.collection('privacy_preferences').doc(userId),
+    ...privacyChoiceEvents.docs.map((doc) => doc.ref),
     ...billingSubscriptions.docs.map((doc) => doc.ref),
   ];
   await deleteDocRefsInBatches(refs);
@@ -6795,6 +6805,79 @@ export const upsertFeature = async (key: string, description: string, defaultEna
   if (!doc.exists) {
     await ref.set({ key, description, defaultEnabled, createdAt: nowIso() });
   }
+};
+
+const emptyPrivacyPreferences = (userId: string): PrivacyPreferences => ({
+  userId, productAnalytics: null, optionalDiagnostics: null, productEpoch: 0,
+  diagnosticsEpoch: 0, diagnosticPseudonym: null, revision: 0,
+  noticeVersion: null, updatedAt: null,
+  productNoticeVersion: null, diagnosticsNoticeVersion: null,
+});
+
+const mapPrivacyPreferences = (userId: string, data?: FirebaseFirestore.DocumentData): PrivacyPreferences => data ? ({
+  userId,
+  productAnalytics: data.productAnalytics ?? null,
+  optionalDiagnostics: data.optionalDiagnostics ?? null,
+  productEpoch: Number(data.productEpoch ?? 0),
+  diagnosticsEpoch: Number(data.diagnosticsEpoch ?? 0),
+  diagnosticPseudonym: data.diagnosticPseudonym ?? null,
+  revision: Number(data.revision ?? 0),
+  noticeVersion: data.noticeVersion ?? null,
+  productNoticeVersion: data.productNoticeVersion ?? null,
+  diagnosticsNoticeVersion: data.diagnosticsNoticeVersion ?? null,
+  updatedAt: data.updatedAt ?? null,
+}) : emptyPrivacyPreferences(userId);
+
+export const getPrivacyPreferences = async (userId: string): Promise<PrivacyPreferences> => {
+  const doc = await getDb().collection('privacy_preferences').doc(userId).get();
+  return mapPrivacyPreferences(userId, doc.exists ? doc.data() : undefined);
+};
+
+/** The preference and every evidence record are committed atomically. */
+export const updatePrivacyPreferences = async (userId: string, update: PrivacyPreferenceUpdate): Promise<PrivacyPreferences> => {
+  const db = getDb();
+  const ref = db.collection('privacy_preferences').doc(userId);
+  return db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(ref);
+    const current = mapPrivacyPreferences(userId, snap.exists ? snap.data() : undefined);
+    if (current.revision !== update.revision) {
+      const error = new Error('Privacy preferences changed; refresh and try again');
+      (error as Error & { code?: string }).code = 'PRIVACY_REVISION_CONFLICT';
+      throw error;
+    }
+    const productAnalytics = update.productAnalytics ?? current.productAnalytics;
+    const optionalDiagnostics = update.optionalDiagnostics ?? current.optionalDiagnostics;
+    const productChanged = update.productAnalytics !== undefined &&
+      (productAnalytics !== current.productAnalytics || (productAnalytics && update.productNoticeVersion !== current.productNoticeVersion));
+    const diagnosticsChanged = update.optionalDiagnostics !== undefined &&
+      (optionalDiagnostics !== current.optionalDiagnostics || (optionalDiagnostics && update.diagnosticsNoticeVersion !== current.diagnosticsNoticeVersion));
+    if (!productChanged && !diagnosticsChanged) return current;
+    const next: PrivacyPreferences = {
+      userId, productAnalytics, optionalDiagnostics,
+      productEpoch: current.productEpoch + Number(productChanged),
+      diagnosticsEpoch: current.diagnosticsEpoch + Number(diagnosticsChanged),
+      diagnosticPseudonym: diagnosticsChanged ? (optionalDiagnostics ? randomUUID() : null) : current.diagnosticPseudonym,
+      revision: current.revision + 1,
+      noticeVersion: productChanged ? update.productNoticeVersion : update.diagnosticsNoticeVersion,
+      productNoticeVersion: productChanged ? update.productNoticeVersion : current.productNoticeVersion,
+      diagnosticsNoticeVersion: diagnosticsChanged ? update.diagnosticsNoticeVersion : current.diagnosticsNoticeVersion,
+      updatedAt: nowIso(),
+    };
+    transaction.set(ref, next);
+    for (const [purpose, changed, granted, epoch] of [
+      ['product_analytics', productChanged, productAnalytics, next.productEpoch],
+      ['optional_diagnostics', diagnosticsChanged, optionalDiagnostics, next.diagnosticsEpoch],
+    ] as const) {
+      if (!changed) continue;
+      const eventRef = db.collection('privacy_choice_events').doc(randomUUID());
+      transaction.create(eventRef, {
+        userId, purpose, granted, epoch, revision: next.revision,
+        noticeVersion: purpose === 'product_analytics' ? update.productNoticeVersion : update.diagnosticsNoticeVersion,
+        platform: update.platform, occurredAt: next.updatedAt,
+      });
+    }
+    return next;
+  });
 };
 
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
