@@ -22,15 +22,16 @@ export const ensureLodgingLocation = async (placeId: string, name: string, addre
 
   logInfo(`[lodging-location] resolving facts for placeId=${placeId} name=${name}`);
 
-  // Real implementation would call Google Places/Time Zone APIs here.
-  // For this plan, we provide a placeholder with a reasonable default.
+  // No Places/Time Zone lookup exists yet, so coordinates and zone stay unknown (null) rather
+  // than fake values: 'UTC' at 0,0 looked valid and would misclassify trip phases. Older rows
+  // holding exactly that placeholder are ignored by tripTimezoneService.
   const location: LodgingLocation = {
     placeId,
     name,
     address: address || null,
-    ianaTimezone: 'UTC', // Placeholder
-    latitude: 0,
-    longitude: 0,
+    ianaTimezone: null,
+    latitude: null,
+    longitude: null,
   };
 
   await (adapter as any).upsertLodgingLocation(location);

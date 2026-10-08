@@ -73,15 +73,21 @@ describe('Admin bootstrap', () => {
     expect(role).toBe('admin');
   });
 
-  it('JWT issued by shared OAuth login includes role: admin for tristan.duerk@gmail.com', async () => {
-    const res = await request(app)
-      .post('/api/auth/oauth')
-      .send({ email: BOOTSTRAP_EMAIL_2, provider: 'google' })
-      .expect(200);
-
+  it('JWT issued by password login includes role: admin for tristan.duerk@gmail.com', async () => {
+    await cleanupTestUsersByEmail([BOOTSTRAP_EMAIL_2]);
+    await registerAndLoginWebUser(bootstrapUser2);
+    const res = await loginWebUser(bootstrapUser2);
     const payload = JSON.parse(Buffer.from(res.body.token.split('.')[1], 'base64url').toString());
     expect(payload.role).toBe('admin');
     expect(await getUserRole(payload.userId)).toBe('admin');
+  });
+
+  it('no longer exposes the unauthenticated token routes (they minted tokens for any email)', async () => {
+    for (const path of ['/api/auth/email', '/api/auth/oauth', '/api/web-auth/email', '/api/web-auth/oauth']) {
+      const res = await request(app).post(path).send({ email: BOOTSTRAP_EMAIL_2, provider: 'google' });
+      expect(res.status).toBe(404);
+      expect(res.body?.token).toBeUndefined();
+    }
   });
 
   it('match is case-insensitive (uppercase email)', async () => {

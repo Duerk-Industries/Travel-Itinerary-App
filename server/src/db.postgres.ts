@@ -13623,3 +13623,21 @@ export const listAnalyticsEventsBetween = async (fromIso: string, toIso_: string
   );
   return rows.map(rowToAnalyticsEvent);
 };
+
+export const getAnalyticsSubjectTimezone = async (subjectId: string): Promise<string | null> => {
+  const { rows } = await getPool().query(`SELECT last_device_timezone FROM analytics_subjects WHERE subject_id = $1`, [subjectId]);
+  return (rows[0] as any)?.last_device_timezone ?? null;
+};
+
+export const setAnalyticsSubjectTimezone = async (subjectId: string, timezone: string): Promise<void> => {
+  await getPool().query(`UPDATE analytics_subjects SET last_device_timezone = $2 WHERE subject_id = $1`, [subjectId, timezone]);
+};
+
+export const getTripTimezone = async (tripId: string): Promise<string | null> => {
+  const { rows } = await getPool().query(`SELECT timezone FROM trips WHERE id = $1`, [tripId]);
+  return (rows[0] as any)?.timezone ?? null;
+};
+
+export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
+  await getPool().query(`UPDATE trips SET timezone = $2 WHERE id = $1`, [tripId, timezone]);
+};

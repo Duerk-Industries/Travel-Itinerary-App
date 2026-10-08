@@ -74,9 +74,18 @@ const privacyChoiceSchema = z.object({
 const hasPrivacySignal = (req: Request): boolean =>
   req.get('Sec-GPC') === '1' || req.get('DNT') === '1';
 
+/** Rollout context: role from the token, device zone from the client's X-Device-Timezone header (Phase 6). */
+const collectionContext = (req: Request) => {
+  const zone = req.get('X-Device-Timezone');
+  return {
+    role: (req as any).user?.role as string | undefined,
+    deviceTimezone: zone && /^[A-Za-z0-9_+\-/]{1,64}$/.test(zone) ? zone : null,
+  };
+};
+
 router.get('/privacy-preferences', async (req, res) => {
   try {
-    res.json(await getPrivacyStatus((req as any).user.userId, hasPrivacySignal(req)));
+    res.json(await getPrivacyStatus((req as any).user.userId, hasPrivacySignal(req), collectionContext(req)));
   } catch (error) {
     logError('[privacy] preference read failed', error);
     res.status(503).json({ error: 'Privacy preferences unavailable', code: 'PRIVACY_UNAVAILABLE' });
@@ -90,7 +99,7 @@ router.patch('/privacy-preferences', async (req, res) => {
     return;
   }
   try {
-    res.json(await savePrivacyChoice((req as any).user.userId, parsed.data, hasPrivacySignal(req)));
+    res.json(await savePrivacyChoice((req as any).user.userId, parsed.data, hasPrivacySignal(req), collectionContext(req)));
   } catch (error) {
     const code = (error as Error & { code?: string }).code;
     if (code === 'PRIVACY_REVISION_CONFLICT') {

@@ -16,6 +16,7 @@ import { toWebStyle } from '../utils/webStyle';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { fixedTableColumn } from '../utils/tableColumns';
+import { startItemSaveTask } from '../utils/analytics/track';
 
 type Trip = {
   id: string;
@@ -473,8 +474,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       forIds: draftForIds,
       vendor: draftVendor || undefined,
     };
+    const saveTask = startItemSaveTask('expenses', Boolean(editingExpenseId), trip.id);
     try {
-      const res = await fetch(editingExpenseId ? `${backendUrl}/api/expenses/${editingExpenseId}` : `${backendUrl}/api/expenses`, {
+      const res = await saveTask.request(editingExpenseId ? `${backendUrl}/api/expenses/${editingExpenseId}` : `${backendUrl}/api/expenses`, {
         method: editingExpenseId ? 'PUT' : 'POST',
         headers: jsonHeaders,
         body: JSON.stringify(payload),

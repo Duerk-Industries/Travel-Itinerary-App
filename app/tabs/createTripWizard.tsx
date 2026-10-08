@@ -23,6 +23,9 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardCarRentals, saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
 import { toWebStyle } from '../utils/webStyle';
+import { track } from '../utils/analytics/track';
+
+const CREATE_TRIP_TASK = { task: 'create_trip', feature: 'create_trip' } as const;
 import type { AppTheme } from '../theme/theme';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -291,6 +294,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [itineraryDepartureAirport, setItineraryDepartureAirport] = useState('');
   const [showItineraryAirportSuggestions, setShowItineraryAirportSuggestions] = useState(false);
   const itineraryAirportRef = useRef<any>(null);
+  // create_trip task: started once when the wizard opens, cancelled when the user exits it,
+  // failed on each failed submit; the server's trip_created event is the outcome.
+  const createTripTaskStarted = useRef(false);
+  useEffect(() => {
+    if (createTripTaskStarted.current) return;
+    createTripTaskStarted.current = true;
+    track('task_started', CREATE_TRIP_TASK);
+  }, []);
+  const cancelWizard = () => {
+    track('task_cancelled', CREATE_TRIP_TASK);
+    onCancel();
+  };
   const [itineraryAirportAnchor, setItineraryAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [generateItinerary, setGenerateItinerary] = useState(false);
   const [itineraryMode, setItineraryMode] = useState<'ai' | 'manual' | null>(null);
@@ -856,6 +871,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const pref = loadStoredMapPreference('google');
     const url = buildMapUrl(address, pref);
     if (!url) return;
+    track('map_link_opened', { provider: pref, feature: 'create_trip' });
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
@@ -1105,6 +1121,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const participantError = quickStartMode ? null : validateParticipants(participants);
     if (detailError || dateError || participantError || destinationError) {
       setWizardError(detailError || dateError || participantError || destinationError || '');
+      track('task_failed', { ...CREATE_TRIP_TASK, failure: 'validation' });
       return;
     }
     const currentUserEmailNormalized = normalizeEmail(currentUserEmail);
@@ -1261,6 +1278,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       setCreatedTripId(tripId);
       handleTripCreated(tripId);
     } catch (err) {
+      track('task_failed', { ...CREATE_TRIP_TASK, failure: /network|fetch/i.test((err as Error).message) ? 'network' : 'server' });
       setWizardError((err as Error).message);
     } finally {
       setIsSubmitting(false);
@@ -2547,7 +2565,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               { flex: 1 },
               stepIndex === 0 ? styles.dangerButton : (styles.mapOptionButton ?? styles.button),
             ]}
-            onPress={quickStartMode || stepIndex === 0 ? onCancel : goBack}
+            onPress={quickStartMode || stepIndex === 0 ? cancelWizard : goBack}
           >
             <Text style={quickStartMode || stepIndex === 0 ? styles.dangerButtonText : (styles.mapOptionText ?? styles.buttonText)}>
               {quickStartMode || stepIndex === 0 ? 'Cancel' : 'Back'}
@@ -2785,7 +2803,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         cancelLabel="Stay"
         onConfirm={() => {
           setShowExitConfirm(false);
-          onCancel();
+          cancelWizard();
         }}
         onCancel={() => setShowExitConfirm(false)}
         styles={styles}

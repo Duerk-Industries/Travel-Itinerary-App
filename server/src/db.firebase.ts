@@ -9601,3 +9601,22 @@ export const listAnalyticsEventsBetween = async (fromIso: string, toIsoValue: st
     .where('occurredAt', '>=', fromIso).where('occurredAt', '<', toIsoValue).limit(limit).get();
   return snap.docs.map((doc) => doc.data() as AnalyticsEventRecord).sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
 };
+
+export const getAnalyticsSubjectTimezone = async (subjectId: string): Promise<string | null> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('subjectId', '==', subjectId).limit(1).get();
+  return snap.empty ? null : ((snap.docs[0].data() as any).lastDeviceTimezone ?? null);
+};
+
+export const setAnalyticsSubjectTimezone = async (subjectId: string, timezone: string): Promise<void> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('subjectId', '==', subjectId).limit(1).get();
+  if (!snap.empty) await snap.docs[0].ref.update({ lastDeviceTimezone: timezone });
+};
+
+export const getTripTimezone = async (tripId: string): Promise<string | null> => {
+  const doc = await getDb().collection('trips').doc(tripId).get();
+  return doc.exists ? ((doc.data() as any).timezone ?? null) : null;
+};
+
+export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
+  await getDb().collection('trips').doc(tripId).set({ timezone }, { merge: true });
+};

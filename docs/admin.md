@@ -105,7 +105,9 @@ Provider spend is settled per attempt in `provider_cost_ledger` (see the [analyt
 
 ## Privacy rights requests and erasure jobs
 
-See the [analytics plan, Phase 4](implementation-plans/analytics-upgrade.md#phase-4-rights-retention-and-policy--web-page-deliverables).
+See the [analytics plan, Phase 4](implementation-plans/analytics-upgrade.md#phase-4-rights-retention-and-policy--web-page-deliverables). The step-by-step procedure is in the [runbook](analytics-runbook.md#privacy-rights-requests).
+
+Admin → **Privacy Requests** is the UI for everything below. Its **Requests** tab lists active requests overdue-first with a banner, records new ones and applies status changes or the extension, all with a required reason. Its **Erasure jobs** tab shows each job's step progress and failed steps.
 
 - **Self-service first.** Users can export their data, delete analytics data, and delete their account in the app. Log a request here only when it arrives another way (usually email to support@wander-bunnies.com) or needs manual work, such as rectification, objection, restriction, or an appeal.
 - `POST /api/admin/privacy/rights-requests` with `{ requestType, jurisdiction, channel?, receivedAt?, accountUserId?, notes?, reason }`:

@@ -8,6 +8,8 @@ import type { GroupMemberOption, GroupView, Trip } from '../types/trips';
 type MutationResult = {
   ok: boolean;
   error?: string;
+  /** HTTP status of a failed request (absent for network errors); used for analytics failure categories. */
+  status?: number;
   tripId?: string;
 };
 
@@ -233,7 +235,11 @@ export const useTripsData = ({
         }
         return { ok: true };
       } catch (error) {
-        return { ok: false, error: handleRequestError(error) ?? 'Unable to add member' };
+        return {
+          ok: false,
+          error: handleRequestError(error) ?? 'Unable to add member',
+          status: error instanceof ApiClientError ? error.status : undefined,
+        };
       }
     },
     [activeTripId, backendUrl, fetchGroupMembersForActiveTrip, fetchGroups, handleRequestError, userToken]

@@ -69,6 +69,13 @@ describe('analytics metric definitions (Phase 5)', () => {
     expect(packing).toMatchObject({ reachAccounts: { value: null, suppressed: true }, reach: null });
   });
 
+  it('withholds rates for features whose flag is off instead of reporting low adoption', () => {
+    const events = subjects(20, 'f').map((s) => ev(s));
+    const lodging = buildAll(events, new Set(['lodging'])).adoption.features.find((f) => f.feature === 'lodging')!;
+    expect(lodging).toMatchObject({ available: false, reach: null, meaningfulAdoption: null, repeatUse: null });
+    expect(buildAll(events).adoption.features.find((f) => f.feature === 'lodging')).toMatchObject({ available: true, reach: 1 });
+  });
+
   it('reports task failure rates only for large enough cohorts', () => {
     const many = subjects(10, 't');
     const events = [

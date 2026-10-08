@@ -43,3 +43,53 @@ describe('store privacy configuration', () => {
     expect(config.android.blockedPermissions).toContain('com.google.android.gms.permission.AD_ID');
   });
 });
+
+/**
+ * Registry → store disclosure drift check (analytics plan, Phase 4 §4 / Phase 7). Every consent
+ * purpose used by an event in packages/analytics must map to App Store data types that the iOS
+ * manifest declares (with the Analytics purpose) and that the review packet's App Privacy table
+ * lists. Adding a new purpose or data category fails here until the disclosures are updated.
+ */
+describe('analytics registry vs store disclosures', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { ANALYTICS_EVENTS } = require('../../packages/analytics/src/registry');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { createExpoConfig } = require('../../expo.config.shared.cjs');
+  const fs = require('fs') as typeof import('fs');
+  const manifest = createExpoConfig({ appDir: path.resolve(__dirname, '..') }).ios.privacyManifests;
+  const packet = fs.readFileSync(path.resolve(__dirname, '../../docs/app-store-review-packet.md'), 'utf8');
+
+  const PURPOSE_DISCLOSURES: Record<string, Array<{ manifestType: string; packetLabel: string }>> = {
+    product_analytics: [
+      { manifestType: 'ProductInteraction', packetLabel: 'Product Interaction' },
+      { manifestType: 'UserID', packetLabel: 'User ID' },
+    ],
+  };
+
+  const events = Object.entries(ANALYTICS_EVENTS) as Array<[string, any]>;
+
+  it('maps every registry purpose to declared, linked, non-tracking analytics data types', () => {
+    for (const [name, def] of events) {
+      const required = PURPOSE_DISCLOSURES[def.purpose];
+      expect({ event: name, mapped: Boolean(required) }).toEqual({ event: name, mapped: true });
+      for (const { manifestType, packetLabel } of required) {
+        const declared = manifest.NSPrivacyCollectedDataTypes.find((t: any) => t.NSPrivacyCollectedDataType === `NSPrivacyCollectedDataType${manifestType}`);
+        expect(declared).toBeDefined();
+        expect(declared.NSPrivacyCollectedDataTypePurposes).toContain('NSPrivacyCollectedDataTypePurposeAnalytics');
+        expect(declared.NSPrivacyCollectedDataTypeLinked).toBe(true);
+        expect(declared.NSPrivacyCollectedDataTypeTracking).toBe(false);
+        expect(packet).toContain(packetLabel);
+      }
+    }
+  });
+
+  it('keeps every event property bounded (enum, boolean or bounded integer — never free text)', () => {
+    for (const [, def] of events) {
+      for (const spec of Object.values(def.properties) as any[]) {
+        expect(['enum', 'boolean', 'int']).toContain(spec.type);
+        if (spec.type === 'enum') expect(spec.values.length).toBeGreaterThan(0);
+        if (spec.type === 'int') expect(Number.isFinite(spec.min) && Number.isFinite(spec.max)).toBe(true);
+      }
+    }
+  });
+});

@@ -99,6 +99,7 @@ import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itin
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { printItinerary as openPrintableItinerary } from '../utils/printableItinerary';
+import { startItemSaveTask } from '../utils/analytics/track';
 
 type Trip = {
   id: string;
@@ -1647,8 +1648,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       trip.id,
       defaultPayerId
     );
+    // Item tasks are attributed to the item's feature, wherever the form was opened.
+    const saveTask = startItemSaveTask('transfers', editingFlightId !== 'new', trip.id);
     if (editingFlightId === 'new') {
-      const res = await fetch(`${backendUrl}/api/transfers`, {
+      const res = await saveTask.request(`${backendUrl}/api/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
@@ -1663,7 +1666,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       onFlightDataChanged();
       return;
     }
-    const res = await fetch(`${backendUrl}/api/transfers/${editingFlightId}`, {
+    const res = await saveTask.request(`${backendUrl}/api/transfers/${editingFlightId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(payload),
@@ -1761,7 +1764,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         Alert.alert(error || 'Unable to save activity');
         return;
       }
-      const res = await fetch(`${backendUrl}/api/activities/${editingTourId}`, {
+      const res = await startItemSaveTask('activities', true, trip?.id).request(`${backendUrl}/api/activities/${editingTourId}`, {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify({ ...payload, tripId: trip?.id }),

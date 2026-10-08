@@ -41,6 +41,8 @@ import type { PrivacyJurisdiction, PrivacyRightsRequest, PrivacyRightsRequestTyp
 import { buildCostLedgerReport } from '../services/costLedgerReportService';
 import { CSV_VIEWS, getAnalyticsReport, getReliabilityReport, isReportWindow, renderReportCsv } from '../analytics/reportService';
 import type { ReportWindowDays } from '../analytics/metrics';
+import { getRolloutConfig, parseRolloutConfig, saveRolloutConfig, type RolloutPurpose } from '../analytics/rolloutService';
+import { isFeatureEnabled } from '../services/entitlementService';
 import { ITINERARY_QUALITY_BASELINE_SETTING_KEY } from '../services/itineraryQualityGateService';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -2264,6 +2266,54 @@ router.get('/analytics/reliability', async (req, res) => {
   } catch (err) {
     logError('[admin] reliability report failed', err);
     res.status(500).json({ error: 'Failed to build reliability report' });
+  }
+});
+
+// Canary rollout (Phase 6): who is offered each optional purpose while its flag is on.
+const ROLLOUT_PURPOSES: RolloutPurpose[] = ['product_analytics', 'optional_diagnostics'];
+
+router.get('/analytics/rollout', async (_req, res) => {
+  try {
+    const [product, diagnostics, productFlag, diagnosticsFlag] = await Promise.all([
+      getRolloutConfig('product_analytics'),
+      getRolloutConfig('optional_diagnostics'),
+      isFeatureEnabled('analytics_collection_enabled'),
+      isFeatureEnabled('diagnostics_user_linked_enabled'),
+    ]);
+    res.json({
+      product_analytics: { flagEnabled: productFlag, ...product },
+      optional_diagnostics: { flagEnabled: diagnosticsFlag, ...diagnostics },
+    });
+  } catch (err) {
+    logError('[admin] rollout read failed', err);
+    res.status(500).json({ error: 'Failed to read rollout' });
+  }
+});
+
+router.put('/analytics/rollout/:purpose', async (req, res) => {
+  const purpose = String(req.params.purpose) as RolloutPurpose;
+  const reasonStr = requireReason(req.body?.reason);
+  const config = parseRolloutConfig({ mode: req.body?.mode, percent: req.body?.percent ?? 0, excludeEurope: req.body?.excludeEurope });
+  if (!ROLLOUT_PURPOSES.includes(purpose) || !config || !reasonStr) {
+    res.status(400).json({ error: 'purpose (product_analytics|optional_diagnostics), mode (off|internal|percentage|all), percent (0-100), excludeEurope (boolean) and reason are required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const { before, after } = await saveRolloutConfig(purpose, config, actorId);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'ADMIN_SETTING_UPDATED',
+      beforeState: { purpose, ...before },
+      afterState: { purpose, ...after },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ purpose, ...after });
+  } catch (err) {
+    logError('[admin] rollout update failed', err);
+    res.status(500).json({ error: 'Failed to update rollout' });
   }
 });
 

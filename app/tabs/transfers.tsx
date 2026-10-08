@@ -14,6 +14,7 @@ import EditableDataGrid, { type GridCellError, type GridColumn } from '../compon
 import DateField from '../components/DateField';
 import type { AppTheme } from '../theme/theme';
 import { fixedTableColumn } from '../utils/tableColumns';
+import { startItemSaveTask } from '../utils/analytics/track';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -370,7 +371,7 @@ export const createFlightForTrip = async (params: {
   const { backendUrl, headers, draft, tripId, defaultPayerId } = params;
   const { payload, error } = buildFlightPayloadForCreate(draft, tripId, defaultPayerId);
   if (error || !payload) return { ok: false, error };
-  const res = await fetch(`${backendUrl}/api/transfers`, {
+  const res = await startItemSaveTask('transfers', false, tripId).request(`${backendUrl}/api/transfers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(payload),
@@ -768,7 +769,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           departureLocation: row.departure_location || row.departure_airport_code || '', departureAirportCode: row.departure_airport_code || row.departure_location || '', departureTime: row.departure_time || '',
           arrivalLocation: row.arrival_location || row.arrival_airport_code || '', arrivalAirportCode: row.arrival_airport_code || row.arrival_location || '', layoverLocation: row.layover_location || '', layoverLocationCode: row.layover_location_code || '', layoverDuration: row.layover_duration || '', arrivalTime: row.arrival_time || '', cost: String(row.cost ?? ''), carrier: row.carrier || '', flightNumber: row.flight_number || '', bookingReference: row.booking_reference || '', paidBy: row.paidBy ?? row.paid_by ?? [],
         };
-        const response = await fetch(`${backendUrl}/api/transfers/${row.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(buildFlightPayload(draft, undefined, defaultPayerId)) });
+        const response = await startItemSaveTask('transfers', true, activeTripId).request(`${backendUrl}/api/transfers/${row.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(buildFlightPayload(draft, undefined, defaultPayerId)) });
         const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.error || 'Unable to save transfer.');
       }
       onDataChanged ? onDataChanged() : await fetchFlights();
@@ -1195,6 +1196,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     if (!userToken) return;
+    const saveTask = startItemSaveTask('transfers', editingFlightId !== 'new', activeTripId);
     let res: Response;
     if (editingFlightId === 'new') {
       const { payload, error } = buildFlightPayloadForCreate(
@@ -1204,9 +1206,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       );
       if (error || !payload) {
         Alert.alert(error || 'Unable to add flight');
+        saveTask.failed('validation');
         return;
       }
-      res = await fetch(`${backendUrl}/api/transfers`, {
+      res = await saveTask.request(`${backendUrl}/api/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
@@ -1217,7 +1220,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         undefined,
         defaultPayerId
       );
-      res = await fetch(`${backendUrl}/api/transfers/${editingFlightId}`, {
+      res = await saveTask.request(`${backendUrl}/api/transfers/${editingFlightId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
@@ -1240,9 +1243,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       Alert.alert('Select an active trip before adding a transfer.');
       return false;
     }
+    const saveTask = startItemSaveTask('transfers', false, activeTripId);
 
     if (!shouldRelaxRequiredFields(newFlight.status) && !newFlight.passengerIds.length) {
       Alert.alert('Select at least one passenger');
+      saveTask.failed('validation');
       return false;
     }
     const payload = buildFlightPayload(
@@ -1250,7 +1255,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       activeTripId,
       defaultPayerId
     );
-    const res = await fetch(`${backendUrl}/api/transfers`, {
+    const res = await saveTask.request(`${backendUrl}/api/transfers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({

@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { mapColumns, ACTIVITY_HEADER_ALIASES, LODGING_HEADER_ALIASES, parseCsv, toActivityReviewRows, toCsv, toLodgingReviewRows, type ImportReviewRow } from '../utils/dataTransfer';
 import { pickCsvFile, shareCsvFile } from '../utils/dataTransferPlatform';
+import { taskFailure, track, type TaskFailure } from '../utils/analytics/track';
 
 type Props = {
   entity: 'activities' | 'lodgings';
@@ -41,22 +42,33 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
   const visibleRows = useMemo(() => reviewRows.filter((row) => !excluded.has(row.sourceRow)), [reviewRows, excluded]);
   const blockingRows = useMemo(() => visibleRows.filter((row) => row.errors.length > 0), [visibleRows]);
 
+  const importTask = { task: 'import', feature: entity === 'activities' ? 'activities' : 'lodging' } as const;
+  const trackImport = (eventName: 'task_started' | 'task_cancelled') => track(eventName, importTask, { tripId });
+  const trackImportFailed = (failure: TaskFailure) => track('task_failed', { ...importTask, failure }, { tripId });
+
+  const cancelReview = () => {
+    if (busy) return;
+    setModalVisible(false);
+    trackImport('task_cancelled');
+  };
+
   const importCsv = async () => {
     if (!tripId) { Alert.alert('Select a trip first.'); return; }
+    trackImport('task_started');
     try {
       const picked = await pickCsvFile();
-      if (!picked) return;
+      if (!picked) { trackImport('task_cancelled'); return; }
       const parsed = parseCsv(picked.text);
-      if (parsed.issues.some((issue) => issue.severity === 'error')) { Alert.alert('Unable to import CSV', parsed.issues.slice(0, 4).map((issue) => issue.message).join('\n')); return; }
+      if (parsed.issues.some((issue) => issue.severity === 'error')) { trackImportFailed('validation'); Alert.alert('Unable to import CSV', parsed.issues.slice(0, 4).map((issue) => issue.message).join('\n')); return; }
       const mapped = mapColumns(parsed.headers, definition);
       if (mapped.issues.length || mapped.unknown.length) {
         const detail = [...mapped.issues.map((issue) => issue.message), mapped.unknown.length ? `Ignored columns: ${mapped.unknown.join(', ')}` : ''].filter(Boolean).join('\n');
-        if (mapped.issues.length) { Alert.alert('Review column mapping', detail); return; }
-        Alert.alert('Review column mapping', detail, [{ text: 'Cancel', style: 'cancel' }, { text: 'Continue', onPress: () => openReview(parsed.rows, mapped.mapping) }]);
+        if (mapped.issues.length) { trackImportFailed('validation'); Alert.alert('Review column mapping', detail); return; }
+        Alert.alert('Review column mapping', detail, [{ text: 'Cancel', style: 'cancel', onPress: () => trackImport('task_cancelled') }, { text: 'Continue', onPress: () => openReview(parsed.rows, mapped.mapping) }]);
         return;
       }
       openReview(parsed.rows, mapped.mapping);
-    } catch (error) { Alert.alert('Unable to import CSV', (error as Error).message); }
+    } catch (error) { trackImportFailed('other'); Alert.alert('Unable to import CSV', (error as Error).message); }
   };
 
   const openReview = (rawRows: Array<Record<string, string>>, mapping: Record<string, string>) => {
@@ -90,18 +102,26 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
   const commit = async () => {
     if (!tripId || !visibleRows.length) return;
     setBusy(true);
+    let failureTracked = false;
     try {
       const rowsToSend = visibleRows.map((row) => ({ sourceRow: row.sourceRow, action: row.action === 'update' || row.existingId ? 'update' : 'create', existingId: row.existingId, expectedFingerprint: row.expectedFingerprint, fields: row.fields }));
       const importId = importIdRef.current ?? createImportId();
       importIdRef.current = importId;
       const response = await fetch(`${backendUrl}/api/${entity}/import`, { method: 'POST', headers, body: JSON.stringify({ tripId, importId, rows: rowsToSend }) });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error || `Import failed (${response.status}).`);
+      if (!response.ok) {
+        trackImportFailed(taskFailure(response.status));
+        failureTracked = true;
+        throw new Error(body.error || `Import failed (${response.status}).`);
+      }
       setModalVisible(false);
       importIdRef.current = null;
       Alert.alert('Import complete', `${body.created ?? 0} created, ${body.updated ?? 0} updated, ${reviewRows.length - visibleRows.length} skipped.`);
       onImported?.();
-    } catch (error) { Alert.alert('Import failed', (error as Error).message); } finally { setBusy(false); }
+    } catch (error) {
+      if (!failureTracked) trackImportFailed('network');
+      Alert.alert('Import failed', (error as Error).message);
+    } finally { setBusy(false); }
   };
 
   const exportCsv = async () => {
@@ -118,7 +138,7 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
       {enabledImport && !readOnly ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Import ${entity} CSV`} style={styles.button} onPress={importCsv} testID={`${entity}-import`}><Text style={styles.buttonText}>Import CSV</Text></TouchableOpacity> : null}
       {enabledExport ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Export ${entity} CSV`} style={styles.outlineButton ?? styles.button} onPress={exportCsv} testID={`${entity}-export`}><Text style={styles.buttonText}>Export CSV</Text></TouchableOpacity> : null}
     </View>
-    <Modal visible={modalVisible} animationType="slide" onRequestClose={() => !busy && setModalVisible(false)}>
+    <Modal visible={modalVisible} animationType="slide" onRequestClose={cancelReview}>
       <View style={{ flex: 1, padding: 16, paddingTop: Platform.OS === 'web' ? 16 : 48, backgroundColor: '#fff' }}>
         <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 8 }}>Review {entity}</Text>
         <Text style={{ marginBottom: 12 }}>{visibleRows.length} rows selected; {reviewRows.length - visibleRows.length} skipped.{blockingRows.length ? ` ${blockingRows.length} rows need correction or skipping.` : ''}</Text>
@@ -131,7 +151,7 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
           removeClippedSubviews={Platform.OS !== 'web'}
           renderItem={({ item: row }) => <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ddd', opacity: excluded.has(row.sourceRow) ? 0.5 : 1 }}><Text style={{ fontWeight: '600' }}>Source row {row.sourceRow}: {String(row.fields.name ?? '')}</Text><Text>{row.errors.length ? row.errors.map((issue) => issue.message).join(' ') : row.warnings.map((issue) => issue.message).join(' ') || 'Ready to import'}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`${excluded.has(row.sourceRow) ? 'Include' : 'Skip'} source row ${row.sourceRow}`} onPress={() => setExcluded((current) => { const next = new Set(current); if (next.has(row.sourceRow)) next.delete(row.sourceRow); else next.add(row.sourceRow); return next; })}><Text style={{ color: '#1769aa', marginTop: 6 }}>{excluded.has(row.sourceRow) ? 'Include row' : 'Skip row'}</Text></TouchableOpacity></View>}
         />
-        <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12 }}><TouchableOpacity style={styles.outlineButton ?? styles.button} onPress={() => setModalVisible(false)} disabled={busy}><Text style={styles.buttonText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.button} onPress={commit} disabled={busy || !visibleRows.length || blockingRows.length > 0}><Text style={styles.buttonText}>{busy ? 'Importing…' : 'Import selected'}</Text></TouchableOpacity></View>
+        <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12 }}><TouchableOpacity style={styles.outlineButton ?? styles.button} onPress={cancelReview} disabled={busy}><Text style={styles.buttonText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.button} onPress={commit} disabled={busy || !visibleRows.length || blockingRows.length > 0}><Text style={styles.buttonText}>{busy ? 'Importing…' : 'Import selected'}</Text></TouchableOpacity></View>
       </View>
     </Modal>
   </>;

@@ -1,4 +1,5 @@
 /// <reference types="jest" />
+import { clearRolloutCacheForTesting, saveRolloutConfig } from '../src/analytics/rolloutService';
 import request from 'supertest';
 import { app } from '../src/app';
 import { closePool, getPrivacyPreferences, initDb, setFeatureFlag } from '../src/db';
@@ -12,7 +13,13 @@ describe('privacy preferences', () => {
   const auth = () => ({ Authorization: `Bearer ${token}` });
   const endpoint = '/api/account/privacy-preferences';
 
-  beforeAll(async () => { await initDb(); });
+  beforeAll(async () => {
+    await initDb();
+    // Rollout targeting is covered by analytics-rollout.test.ts; here everyone is in the cohort.
+    await saveRolloutConfig('product_analytics', { mode: 'all', percent: 0, excludeEurope: false }, null);
+    await saveRolloutConfig('optional_diagnostics', { mode: 'all', percent: 0, excludeEurope: false }, null);
+    clearRolloutCacheForTesting();
+  });
   beforeEach(async () => {
     await cleanupTestUsersByEmail([email]);
     await setFeatureFlag('analytics_collection_enabled', false, null);

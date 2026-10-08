@@ -34,6 +34,8 @@ type State = {
   queue: ClientAnalyticsEvent[];
   inFlight: boolean;
   sessionId: string | null;
+  sessionStartedAt: number;
+  summarizedSessionId: string | null;
   lastActivityAt: number;
   backoffUntil: number;
   backoffMs: number;
@@ -50,6 +52,8 @@ const state: State = {
   queue: [],
   inFlight: false,
   sessionId: null,
+  sessionStartedAt: 0,
+  summarizedSessionId: null,
   lastActivityAt: 0,
   backoffUntil: 0,
   backoffMs: 0,
@@ -80,6 +84,15 @@ const deviceTimezone = (): string | undefined => {
   } catch {
     return undefined;
   }
+};
+
+/**
+ * Rollout context for privacy requests (Phase 6): lets the server keep optional collection
+ * off for devices the canary rollout excludes. A time zone, not a location.
+ */
+export const deviceTimezoneHeaders = (): Record<string, string> => {
+  const zone = deviceTimezone();
+  return zone ? { 'X-Device-Timezone': zone } : {};
 };
 
 const platform = (): ClientAnalyticsEvent['platform'] =>
@@ -118,6 +131,7 @@ const touchSession = (): void => {
   if (state.sessionId === null || idle) {
     const resumed = state.sessionId !== null;
     state.sessionId = randomId('ses');
+    state.sessionStartedAt = at;
     state.viewed.clear();
     state.lastActivityAt = at;
     enqueue('session_started', { resumed });
@@ -131,6 +145,51 @@ export const track = (eventName: AnalyticsEventName, properties: Properties = {}
   touchSession();
   enqueue(eventName, properties, options.tripId);
   if (state.queue.length >= ANALYTICS_LIMITS.maxBatchEvents) void flushAnalytics();
+};
+
+export type TaskFailure = 'validation' | 'network' | 'server' | 'permission' | 'quota' | 'other';
+
+/**
+ * Maps a failed request to the coarse task_failed.failure enum. Pass the HTTP status when a
+ * response arrived; a thrown fetch (no status) counts as a network failure. Never pass error
+ * text into analytics — only this category leaves the device.
+ */
+export const taskFailure = (status?: number | null): TaskFailure => {
+  if (status === undefined || status === null || status === 0) return 'network';
+  if (status === 400 || status === 409 || status === 422) return 'validation';
+  if (status === 401 || status === 403 || status === 404) return 'permission';
+  if (status === 402 || status === 429) return 'quota';
+  if (status >= 500) return 'server';
+  return 'other';
+};
+
+/**
+ * Item add/edit task, fired when the user submits the form (not when it opens), so
+ * task_started − task_failed approximates attempted saves; the server's item_saved event is
+ * the authoritative outcome. Returns a reporter for the failure path.
+ */
+export const startItemSaveTask = (feature: AnalyticsFeature, editing: boolean, tripId?: string | null) => {
+  const properties = { task: editing ? 'edit_item' : 'add_item', feature } as const;
+  track('task_started', properties, { tripId });
+  const failed = (statusOrFailure?: number | null | TaskFailure) => {
+    const failure = typeof statusOrFailure === 'string' ? statusOrFailure : taskFailure(statusOrFailure);
+    track('task_failed', { ...properties, failure }, { tripId });
+  };
+  return {
+    /** Pass the HTTP status, nothing for a thrown request, or an explicit category. */
+    failed,
+    /** fetch() that reports a non-OK status or a thrown request as task_failed. */
+    request: async (url: string, init?: RequestInit): Promise<Response> => {
+      try {
+        const response = await fetch(url, init);
+        if (!response.ok) failed(response.status);
+        return response;
+      } catch (err) {
+        failed();
+        throw err;
+      }
+    },
+  };
 };
 
 /** Sends up to one batch. Safe to call often; concurrent calls are coalesced. */
@@ -173,16 +232,39 @@ export const flushAnalytics = async (options: { keepalive?: boolean } = {}): Pro
   }
 };
 
+const durationBucket = (ms: number): 'lt_1m' | '1_5m' | '5_15m' | '15_60m' | 'gt_60m' =>
+  ms < 60_000 ? 'lt_1m' : ms < 5 * 60_000 ? '1_5m' : ms < 15 * 60_000 ? '5_15m' : ms < 60 * 60_000 ? '15_60m' : 'gt_60m';
+
+/**
+ * One engaged_session_summary per session, when the app goes to the background: foreground
+ * time from session start to the last tracked activity (never time spent hidden).
+ */
+export const summarizeSession = (): void => {
+  if (!state.enabled || !state.token || !state.sessionId || state.summarizedSessionId === state.sessionId) return;
+  state.summarizedSessionId = state.sessionId;
+  const featuresViewed = Math.min(50, state.viewed.size);
+  enqueue('engaged_session_summary', {
+    duration_bucket: durationBucket(Math.max(0, state.lastActivityAt - state.sessionStartedAt)),
+    features_viewed: featuresViewed,
+  });
+};
+
 let lifecycleAttached = false;
 const attachLifecycle = (): void => {
   if (lifecycleAttached) return;
   lifecycleAttached = true;
   AppState.addEventListener('change', (next) => {
-    if (next === 'background' || next === 'inactive') void flushAnalytics({ keepalive: true });
+    if (next === 'background' || next === 'inactive') {
+      summarizeSession();
+      void flushAnalytics({ keepalive: true });
+    }
   });
   const doc = (globalThis as { document?: { addEventListener?: (type: string, cb: () => void) => void; visibilityState?: string } }).document;
   doc?.addEventListener?.('visibilitychange', () => {
-    if (doc.visibilityState === 'hidden') void flushAnalytics({ keepalive: true });
+    if (doc.visibilityState === 'hidden') {
+      summarizeSession();
+      void flushAnalytics({ keepalive: true });
+    }
   });
 };
 
@@ -231,7 +313,7 @@ export const __resetAnalyticsForTests = (overrides: { fetcher?: Fetcher; now?: (
   if (state.timer) clearInterval(state.timer);
   Object.assign(state, {
     enabled: false, backendUrl: '', token: null, queue: [], inFlight: false, sessionId: null,
-    lastActivityAt: 0, backoffUntil: 0, backoffMs: 0, viewed: new Set<string>(), timer: null,
+    sessionStartedAt: 0, summarizedSessionId: null, lastActivityAt: 0, backoffUntil: 0, backoffMs: 0, viewed: new Set<string>(), timer: null,
   });
   fetcher = overrides.fetcher ?? ((url, init) => fetch(url, init));
   now = overrides.now ?? (() => Date.now());

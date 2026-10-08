@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Share, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../theme/theme';
 
 /**
@@ -9,7 +9,7 @@ import type { AppTheme } from '../../theme/theme';
  */
 
 type Suppressible = { value: number | null; suppressed: boolean };
-type View_ = 'adoption' | 'cost' | 'reliability' | 'platform' | 'trip_phase';
+type View_ = 'adoption' | 'cost' | 'reliability' | 'platform' | 'trip_phase' | 'rollout';
 const WINDOWS = [7, 30, 90] as const;
 const VIEWS: Array<{ key: View_; label: string }> = [
   { key: 'adoption', label: 'Feature adoption' },
@@ -17,6 +17,7 @@ const VIEWS: Array<{ key: View_; label: string }> = [
   { key: 'reliability', label: 'Reliability' },
   { key: 'platform', label: 'Platform mix' },
   { key: 'trip_phase', label: 'Trip phase' },
+  { key: 'rollout', label: 'Rollout' },
 ];
 
 const fetchAdmin = async (backendUrl: string, headers: Record<string, string>, path: string) => {
@@ -26,6 +27,93 @@ const fetchAdmin = async (backendUrl: string, headers: Record<string, string>, p
     throw new Error((body as { error?: string })?.error ?? `HTTP ${res.status}`);
   }
   return res;
+};
+
+type RolloutMode = 'off' | 'internal' | 'percentage' | 'all';
+type PurposeRollout = { flagEnabled: boolean; mode: RolloutMode; percent: number; excludeEurope: boolean };
+const PURPOSES: Array<{ key: 'product_analytics' | 'optional_diagnostics'; label: string; flag: string }> = [
+  { key: 'product_analytics', label: 'Product analytics', flag: 'analytics_collection_enabled' },
+  { key: 'optional_diagnostics', label: 'Detailed diagnostics', flag: 'diagnostics_user_linked_enabled' },
+];
+
+/** Canary rollout editor (Phase 6). The feature flags remain the kill switches. */
+const RolloutPanel: React.FC<{ backendUrl: string; headers: Record<string, string>; theme: AppTheme }> = ({ backendUrl, headers, theme }) => {
+  const c = theme.colors;
+  const [rollout, setRollout] = useState<Record<string, PurposeRollout> | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, PurposeRollout & { reason: string }>>({});
+  const [message, setMessage] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const data = await (await fetchAdmin(backendUrl, headers, '/analytics/rollout')).json();
+    setRollout(data);
+    setDrafts(Object.fromEntries(Object.entries(data).map(([k, v]) => [k, { ...(v as PurposeRollout), reason: '' }])));
+  }, [backendUrl, headers]);
+  useEffect(() => { load().catch((e) => setMessage((e as Error).message)); }, [load]);
+  const save = async (purpose: string) => {
+    const draft = drafts[purpose];
+    if (!draft || draft.reason.trim().length < 3) return; // the server also requires a reason
+    setMessage(null);
+    try {
+      const res = await fetch(`${backendUrl}/api/admin/analytics/rollout/${purpose}`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: draft.mode, percent: draft.percent, excludeEurope: draft.excludeEurope, reason: draft.reason }),
+      });
+      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? `HTTP ${res.status}`);
+      setMessage('Saved. Takes effect within a minute; recorded in the audit log.');
+      await load();
+    } catch (e) {
+      setMessage((e as Error).message);
+    }
+  };
+  if (!rollout) return message ? <Text style={[styles.note, { color: c.error }]}>{message}</Text> : null;
+  return (
+    <View testID="admin-analytics-rollout" style={{ gap: 12 }}>
+      <Text style={[styles.note, { color: c.textMuted }]}>
+        Who is offered each optional purpose while its feature flag is on. Internal means admins and internal canary accounts.
+        Excluding Europe keeps collection off for devices in European (or unknown) time zones until counsel signs off.
+        Turning a flag off in Feature Flags stops everything immediately.
+      </Text>
+      {PURPOSES.map((p) => {
+        const draft = drafts[p.key];
+        if (!draft) return null;
+        const update = (patch: Partial<PurposeRollout & { reason: string }>) =>
+          setDrafts((d) => ({ ...d, [p.key]: { ...d[p.key], ...patch } }));
+        const canSave = draft.reason.trim().length >= 3;
+        return (
+          <View key={p.key} style={[styles.card, { borderColor: c.border }]}>
+            <Text style={[styles.heading, { color: c.text, marginTop: 0 }]}>{p.label}</Text>
+            <Text style={[styles.note, { color: rollout[p.key].flagEnabled ? c.text : c.error }]}>
+              {`Kill switch ${p.flag}: ${rollout[p.key].flagEnabled ? 'on' : 'OFF (nothing is collected)'}`}
+            </Text>
+            <View style={styles.pills}>
+              {(['off', 'internal', 'percentage', 'all'] as RolloutMode[]).map((mode) => (
+                <TouchableOpacity key={mode} accessibilityRole="button" testID={`admin-rollout-${p.key}-${mode}`} onPress={() => update({ mode })}
+                  style={[styles.pill, { borderColor: draft.mode === mode ? c.primary : c.border, backgroundColor: draft.mode === mode ? c.primary : 'transparent' }]}>
+                  <Text style={{ color: draft.mode === mode ? c.onPrimary : c.text }}>{mode}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {draft.mode === 'percentage' ? (
+              <TextInput accessibilityLabel={`${p.label} percentage`} keyboardType="number-pad" value={String(draft.percent)}
+                onChangeText={(t) => update({ percent: Math.max(0, Math.min(100, Number(t.replace(/[^0-9]/g, '')) || 0)) })}
+                style={[styles.input, { borderColor: c.border, color: c.text }]} />
+            ) : null}
+            <View style={[styles.row, { borderColor: 'transparent', alignItems: 'center' }]}>
+              <Text style={[styles.cell, { color: c.text }]}>Exclude Europe</Text>
+              <Switch accessibilityLabel={`${p.label} exclude Europe`} value={draft.excludeEurope} onValueChange={(v) => update({ excludeEurope: v })} />
+            </View>
+            <TextInput accessibilityLabel={`${p.label} reason`} placeholder="Reason (required, audited)" value={draft.reason}
+              onChangeText={(t) => update({ reason: t })} style={[styles.input, { borderColor: c.border, color: c.text }]} />
+            <TouchableOpacity accessibilityRole="button" testID={`admin-rollout-${p.key}-save`} onPress={() => { void save(p.key); }}
+              disabled={!canSave} style={[styles.pill, { borderColor: c.primary, alignSelf: 'flex-start', opacity: canSave ? 1 : 0.5 }]}>
+              <Text style={{ color: c.text }}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+      {message ? <Text style={[styles.note, { color: c.textMuted }]}>{message}</Text> : null}
+    </View>
+  );
 };
 
 const count = (s: Suppressible | undefined | null): string => (!s || s.value === null ? '—' : String(s.value));
@@ -50,7 +138,9 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
     setLoading(true);
     setError(null);
     try {
-      if (view === 'cost') {
+      if (view === 'rollout') {
+        // RolloutPanel loads its own data.
+      } else if (view === 'cost') {
         const month = new Date().toISOString().slice(0, 7);
         setCost(await (await fetchAdmin(backendUrl, headers, `/costs/ledger?month=${month}`)).json());
       } else if (view === 'reliability') {
@@ -111,6 +201,7 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
   ) : null;
 
   const renderBody = () => {
+    if (view === 'rollout') return <RolloutPanel backendUrl={backendUrl} headers={headers} theme={theme} />;
     if (view === 'cost' && cost) {
       return (
         <View testID="admin-analytics-cost">
@@ -159,7 +250,9 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
           <Note>{`Reach: ${definitions.reach} Adoption: ${definitions.meaningfulAdoption} Repeat: ${definitions.repeatUse}`}</Note>
           <Row header cells={['Feature', 'Reached', 'Reach', 'Adopted', 'Adoption', 'Repeat use']} />
           {report.adoption.features.map((f: any) => (
-            <Row key={f.feature} cells={[f.feature, count(f.reachAccounts), pct(f.reach), count(f.adoptedAccounts), pct(f.meaningfulAdoption), pct(f.repeatUse)]} />
+            <Row key={f.feature} cells={f.available === false
+              ? [`${f.feature} (flag off)`, count(f.reachAccounts), 'n/a', count(f.adoptedAccounts), 'n/a', 'n/a']
+              : [f.feature, count(f.reachAccounts), pct(f.reach), count(f.adoptedAccounts), pct(f.meaningfulAdoption), pct(f.repeatUse)]} />
           ))}
           {!report.adoption.features.length ? <Note>No events in this window.</Note> : null}
         </View>
@@ -206,7 +299,7 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
           </TouchableOpacity>
         ))}
       </View>
-      {view !== 'cost' ? (
+      {view !== 'cost' && view !== 'rollout' ? (
         <View style={styles.pills}>
           {WINDOWS.map((w) => (
             <TouchableOpacity key={w} accessibilityRole="button" testID={`admin-analytics-window-${w}`}
@@ -225,9 +318,9 @@ export const AnalyticsSection: React.FC<{ backendUrl: string; headers: Record<st
       {exportMessage ? <Note>{exportMessage}</Note> : null}
       {error ? <Text style={[styles.note, { color: c.error }]}>{error}</Text> : null}
       {loading ? <Note>Loading…</Note> : null}
-      {view !== 'cost' && view !== 'reliability' ? <MetaBlock /> : null}
+      {view !== 'cost' && view !== 'reliability' && view !== 'rollout' ? <MetaBlock /> : null}
       {renderBody()}
-      {meta?.notes && view !== 'cost' ? meta.notes.map((n: string) => <Note key={n}>{n}</Note>) : null}
+      {meta?.notes && view !== 'cost' && view !== 'rollout' ? meta.notes.map((n: string) => <Note key={n}>{n}</Note>) : null}
     </View>
   );
 };
@@ -244,6 +337,8 @@ const styles = StyleSheet.create({
   cell: { flex: 1, fontSize: 13 },
   firstCell: { flex: 1.6 },
   headerCell: { fontWeight: '600', fontSize: 12 },
+  card: { borderWidth: 1, borderRadius: 8, padding: 12, gap: 8 },
+  input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
 });
 
 export default AnalyticsSection;

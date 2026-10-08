@@ -116,6 +116,7 @@ router.post('/follow', async (req, res) => {
   try {
     await assertCanUseFeature(userId, 'trip_following', role);
     const result = await followTripByCode(userId, dto.inviteCode);
+    if (!result.alreadyFollowing) recordServerEvent({ userId, role, eventName: 'invite_accepted', properties: { invite_type: 'follow' } });
     res.status(result.alreadyFollowing ? 200 : 201).json({
       trip: result.trip,
       inviterName: result.inviterName,
@@ -156,6 +157,7 @@ router.post('/share/invites/:inviteId/accept', async (req, res) => {
   }
   try {
     const accepted = await acceptTripShareInviteById(userId, email, req.params.inviteId);
+    recordServerEvent({ userId, eventName: 'invite_accepted', properties: { invite_type: 'trip_share' } });
     res.status(200).json(accepted);
   } catch (err) {
     const message = (err as Error).message;
@@ -201,6 +203,7 @@ router.post('/share/invites/:token/accept', async (req, res) => {
   }
   try {
     const accepted = await acceptTripShareInvite(userId, email, token);
+    recordServerEvent({ userId, eventName: 'invite_accepted', properties: { invite_type: 'trip_share' } });
     res.status(200).json(accepted);
   } catch (err) {
     const message = (err as Error).message;

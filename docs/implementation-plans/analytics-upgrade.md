@@ -540,6 +540,139 @@ The rules that apply to every view:
 
 ---
 
+## Phase 6: Rollout Readiness
+
+**Owners:** Backend Lead, Frontend Lead, Operations. Depends on Phases 0–5.
+**Status:** Implemented October 8, 2026 (not yet deployed).
+
+**Canary targeting (`server/src/analytics/rolloutService.ts`).** A per-purpose rollout for product analytics and detailed diagnostics, stored in admin settings `ANALYTICS_ROLLOUT_PRODUCT` / `ANALYTICS_ROLLOUT_DIAGNOSTICS`.
+- **Modes:** `off`, `internal` (admins and internal canary accounts; the default when unset), `percentage` (stable SHA-256 bucket of the account and purpose, so increasing the percentage only adds people), or `all`.
+- **The feature flags remain the global kill switches.** A purpose is offered only when its flag, rollout membership and, if set, the region rule all allow it.
+- **Choices follow the rollout.** `productCollectionEnabled` / `diagnosticsCollectionEnabled` in the privacy status reflect it, so out-of-cohort users aren't offered the switch, and an opt-in through the API is refused (`PRIVACY_PURPOSE_UNAVAILABLE`).
+- **`excludeEurope`** (on by default) keeps collection off for devices whose time zone is in Europe (`Europe/*`, plus the EU/EEA Atlantic and Cyprus zones and legacy aliases) or unknown, until counsel resolves the Art. 27 question.
+  - Privacy-status requests carry `X-Device-Timezone`, and each event carries `device_timezone` (rejected as `region_excluded`).
+  - Server outcome events have no device zone, so they use the pseudonym's last-seen zone (new column `analytics_subjects.last_device_timezone`, migration `20261011`). If none is known, the event is dropped.
+  - A time zone is a deliberately conservative proxy for location, not a geolocation.
+- **Admin:**
+  - `GET /api/admin/analytics/rollout` shows both purposes and their flags.
+  - `PUT /api/admin/analytics/rollout/:purpose` requires a reason and is audited as `ADMIN_SETTING_UPDATED`.
+  - Admin → Analytics → **Rollout** tab.
+
+**Release gate.** `npm run check:analytics-release` (`scripts/analytics-release-gate.mjs`) checks:
+- legal page drift and analytics registry drift;
+- that the analytics, diagnostics and age-gate flags seed off and are fail-closed;
+- the iOS privacy manifest and Android `AD_ID` block;
+- that the privacy migrations are present;
+- the privacy notice's required phrases;
+- that the unauthenticated login routes are removed.
+
+It also lists the open manual items from the follow-ups §0–4. `--strict` fails while any remain. All automated checks now pass, including the unauthenticated-route check, since those routes were removed (Phase 7 addendum).
+
+**Staging smoke test.** `npm run smoke:analytics -- --confirm` (`scripts/analytics-smoke.mjs`) runs rollout read → offered → opt-in → ingest → report/reliability → delete analytics data → export, against a deployed environment with a dedicated test account.
+
+**Runbook.** [docs/analytics-runbook.md](../analytics-runbook.md) covers:
+- controls and how fast each takes effect;
+- pre-step checks and the rollout ladder (internal → 5% → 25% → all, with Europe excluded until counsel signs off);
+- the signals to watch;
+- incident procedures: wrong collection with the 72-hour breach assessment, consent not respected, failed deletions, cost overrun, and rollback;
+- the routine cadence.
+
+**Tests:**
+- `server/__tests__/analytics-rollout.test.ts` (9): config validation, bucket stability and uniformity, the region rule, internal/percentage/off/kill-switch behavior, Europe exclusion across status, opt-in, ingest and server events, the admin API and audit, and the **end-to-end journey**: 10 consenting travelers → client and server events → admin report → one withdraws (403) → erases (subject gone, report drops) → retention purges the rest.
+- `app/tests/adminAnalyticsSection.test.tsx` (+1, the Rollout tab).
+- Existing consent and ingest suites now put test users in the cohort explicitly.
+
+---
+
+## Phase 7: Closing the Phase 2–5 Leftovers
+
+**Status:** Implemented October 8, 2026 (not yet deployed).
+
+**Instrumentation**
+- **`item_saved`:** `server/src/analytics/itemSavedTracker.ts` is mounted on the transfers/flights, lodgings, activities, car-rentals and expenses routers. After a 2xx create (`POST /`) or update (`PUT|PATCH /:id`), it queues `item_saved` with the item type, whether it was created, and the request's trip. No handler code changed. Failed requests and deeper paths record nothing.
+- **`invite_accepted`:** now also recorded for trip-share invites (both accept routes) and follow codes (first follow only).
+- **Client events:**
+  - `map_link_opened` from the trip map links and the creation wizard;
+  - `report_exported` for the paid and incurred cost-report CSVs;
+  - `task_started` / `task_failed` (validation, network or server) for trip creation in the wizard;
+  - `engaged_session_summary` once per session on background or hidden, with the foreground duration bucket and the number of features viewed.
+
+**Trip time zone (decision 5)**
+- **Lookup.** `server/src/services/tripTimezoneService.ts` resolves a trip's IANA zone **offline**, using `@photostructure/tz-lookup` (CC0, no network or cost). The source is the arrival airport coordinates of the trip's earliest transfer. The result is stored in the new `trips.timezone` column (migration `20261012`) and cached.
+- **Use in classification.** Ingest and server events now classify phase as trip zone → device zone. Server events use the pseudonym's last-seen device zone as the fallback.
+- **Placeholder fixed.** `ensureLodgingLocation` used to write `ianaTimezone: 'UTC'` and 0,0 coordinates for every lodging, which looked valid but was wrong. It now writes null, so lodgings aren't used as a source until a real Places integration provides coordinates.
+
+**Disclosure drift check.** `app/tests/storePrivacyConfig.test.ts` maps every registry consent purpose to the App Store data types it requires. It fails unless the iOS manifest declares them (linked, not tracking, with the Analytics purpose) and the review packet lists them. It also enforces that every registry property is an enum, boolean or bounded integer.
+
+**Eligibility in reports.** Features gated by a global flag are marked `available: false` in reports when the flag is off: `car_rentals`, `cost_tracking` (expenses, ledger, cost report), `trip_following`, `trip_sharing`, `trip_creation`, `feature_ingest_manual_upload` and `trip_blog`. Their rates are withheld instead of reported as low adoption, and the admin UI shows "flag off".
+
+**Tests:**
+- `server/__tests__/trip-timezone.test.ts` (4).
+- `analytics-ingest.test.ts` (+2): `item_saved` only on success, and trip-zone classification.
+- `analytics-reports.test.ts` (+1): availability.
+- `app/tests/analyticsTrack.test.tsx` (+1): session summary.
+- `app/tests/storePrivacyConfig.test.ts` (+2): drift check and bounded properties.
+
+**Still not modelled**
+- **Tier and role eligibility** in denominators. That needs a pseudonym → account → tier join; only flags are covered.
+- **Per-segment time zones**, from each transfer's own arrival.
+- **Lodging coordinates.** These need a real Places details integration.
+- **Abandoned item forms.** Item tasks start on submit (see the addendum), so closing an item form without saving isn't counted.
+
+### Phase 7 addendum (October 8, 2026; not yet deployed)
+
+**Unauthenticated login routes removed (security).**
+- `POST /api/auth/email` and `POST /api/auth/oauth` issued a signed 30-day token for any email address, without a password or any OAuth proof. That included admin tokens for the bootstrap admin emails. Both routes and `handleLogin` (`server/src/auth.ts`) are gone. No client called them; Google and Apple use the verified OAuth callbacks.
+- `admin-bootstrap.test.ts` now gets the admin JWT through password login and asserts that all four paths (`/api/auth/*` and the `/api/web-auth/*` aliases) return 404 with no token.
+- **Production keeps the hole until the next deploy.**
+
+**Task instrumentation for imports, invites and edits.** Every event carries only the task, the feature and, on failure, a coarse category. Email addresses, file contents and error text never leave the device.
+- **Helpers in `app/utils/analytics/track.ts`:**
+  - `taskFailure(status)` maps HTTP status to `validation` / `permission` / `quota` / `server` / `network` / `other`.
+  - `startItemSaveTask(feature, editing, tripId)` emits `task_started` (`add_item` or `edit_item`) and returns `failed()` and a `request()` fetch wrapper that reports non-2xx responses and thrown requests.
+- **Imports (`task: import`):**
+  - CSV import for activities and lodging (`CsvTransferControls`): start, cancel (dismissed picker, mapping dialog or review modal), validation failure (parse or mapping) and commit failure.
+  - Document import (`ItineraryDocumentImport`): starts on preview, or on a direct import without one; fails on validation, HTTP status, or a failed or timed-out job.
+  - The Imports tab (file upload and Gmail import), with no trip, because items are assigned to a trip later in review.
+- **Invites (`task: invite`, feature `collaboration`):**
+  - Trip-share invites (`ShareTripModal`).
+  - Group member adds (`App.tsx` `addMemberToGroup`, now with the HTTP status on `MutationResult`).
+  - Outcomes stay server-side as `invite_accepted`.
+- **Item add/edit:**
+  - Transfers: the form, quick add, grid row edits and overview edits.
+  - Activities: the form, the shared `createActivityForTrip`, grid bulk saves (one task per save with updates) and overview edits.
+  - Lodging: once, in the shared `saveLodgingApi`, which covers the form, grid and overview.
+  - Car rentals: the form and overview adds.
+  - Expenses.
+  - Item tasks start **on submit**, so `task_started − task_failed` ≈ attempted saves; `item_saved` stays the authoritative outcome. Wizard-local items aren't item tasks, because they belong to trip creation.
+- **Trip creation:** `task_started` now fires once when the wizard opens, `task_cancelled` on Cancel or the exit confirmation, and `task_failed` on each failed submit, so abandonment is measurable.
+
+**Admin → Privacy Requests** (`app/components/admin/PrivacyRequestsSection.tsx`), over the existing Phase 4 admin API:
+- **Requests tab:**
+  - Lists active requests overdue-first, with a banner.
+  - Filters by status.
+  - Records a new request: type, jurisdiction, channel, date received, an optional account ID (stored only as its hash), notes and a required reason.
+  - Edits status and notes, and applies the one-time statutory extension, with a required reason. Everything is audited server-side.
+- **Erasure jobs tab:** status filter, step progress, failed steps with their errors, and an overdue flag. No raw user IDs are shown.
+- **Not built:** admin-initiated erasure, which is in the follow-ups §7.
+
+**Sign-off preparation.** [docs/legal/analytics-signoff-packet.md](../legal/analytics-signoff-packet.md) contains:
+- the operator confirmation statement, the address confirmation and the EU/UK representative decision options;
+- pointers to the DPIA signature tables;
+- the dictionary sign-off;
+- an operations evidence table (C1–C10) and a per-processor DPA/transfer table (C11);
+- drafts of the version 3.0 user email, the in-app notice and the App Review note for the date-of-birth prompt;
+- the go/no-go checklist for the first canary.
+
+The runbook gained a privacy-rights-request procedure.
+
+**Tests:**
+- `app/tests/analyticsTaskTracking.test.tsx` (7): the failure mapping; the item-save helper including no-consent; invite validation and server failures with no email in the queue; CSV cancel and validation.
+- `app/tests/adminPrivacyRequestsSection.test.tsx` (6): due labels; overdue ordering and the banner; the status filter; create with a required reason and the hashed account; status update with extension; erasure jobs.
+- `server/__tests__/admin-bootstrap.test.ts` (+1, and the oauth test replaced).
+
+---
+
 ## Performance Budgets, Cost Model, Maintainability, and Test Coverage
 
 ### 1. Performance Budgets

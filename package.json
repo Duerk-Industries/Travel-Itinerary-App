@@ -35,6 +35,8 @@
     "check:legal": "node scripts/build-legal-pages.mjs --check",
     "sync:analytics-registry": "node scripts/sync-analytics-registry.mjs",
     "check:analytics-registry": "node scripts/sync-analytics-registry.mjs --check",
+    "check:analytics-release": "node scripts/analytics-release-gate.mjs",
+    "smoke:analytics": "node scripts/analytics-smoke.mjs",
     "lint": "npm run lint:app && npm run lint:server && npm run lint:messaging && npm run lint:domain",
     "test": "npm run test:app && npm run test:server",
     "typecheck": "npm run typecheck:app && npm run typecheck:server && npm run typecheck:messaging && npm run typecheck:domain && npm run typecheck:analytics",

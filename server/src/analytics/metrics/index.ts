@@ -55,7 +55,24 @@ export const DEFINITIONS = {
   duringTripEngagement: 'Traveler–trip pairs with any event during the trip\'s dates ÷ traveler–trip pairs with any classified (non-unknown) event in the window. Measures app use during scheduled dates, not physical presence; trips nobody opened are not in the denominator.',
 } as const;
 
-export const buildFeatureAdoption = (events: AnalyticsEventRecord[]) => {
+/**
+ * Features gated by a global feature flag. When the flag is off the feature is unavailable
+ * to everyone, so its rates are withheld instead of reported as low adoption. Tier and
+ * role eligibility are not modelled yet (see the plan's Phase 7 record).
+ */
+export const FEATURE_FLAGS: Record<string, string> = {
+  car_rentals: 'car_rentals',
+  expenses: 'cost_tracking',
+  ledger: 'cost_tracking',
+  cost_report: 'cost_tracking',
+  follow: 'trip_following',
+  collaboration: 'trip_sharing',
+  create_trip: 'trip_creation',
+  imports: 'feature_ingest_manual_upload',
+  blog: 'trip_blog',
+};
+
+export const buildFeatureAdoption = (events: AnalyticsEventRecord[], unavailable: ReadonlySet<string> = new Set()) => {
   const active = cohort(distinct(events.map((e) => e.subjectId)));
   const viewers = new Map<string, Set<string>>();
   const viewDays = new Map<string, Map<string, Set<string>>>();
@@ -77,8 +94,12 @@ export const buildFeatureAdoption = (events: AnalyticsEventRecord[]) => {
       const reached = cohort(viewers.get(feature)?.size ?? 0);
       const adopted = cohort(outcomes.get(feature)?.size ?? 0);
       const repeat = cohort(Array.from(viewDays.get(feature)?.values() ?? []).filter((days) => days.size >= 2).length);
+      if (unavailable.has(feature)) {
+        return { feature, available: false, reachAccounts: reached, reach: null, adoptedAccounts: adopted, meaningfulAdoption: null, repeatAccounts: repeat, repeatUse: null };
+      }
       return {
         feature,
+        available: true,
         reachAccounts: reached,
         reach: rate(reached, active),
         adoptedAccounts: adopted,
@@ -218,10 +239,10 @@ export const toCsvRows = (view: 'adoption' | 'platform' | 'trip_phase', report: 
   ];
 };
 
-export const buildAll = (allEvents: AnalyticsEventRecord[]) => {
+export const buildAll = (allEvents: AnalyticsEventRecord[], unavailableFeatures: ReadonlySet<string> = new Set()) => {
   const events = reportable(allEvents);
   return {
-    adoption: buildFeatureAdoption(events),
+    adoption: buildFeatureAdoption(events, unavailableFeatures),
     platform: buildPlatformMix(events),
     tripPhase: buildTripPhaseEngagement(events),
   };

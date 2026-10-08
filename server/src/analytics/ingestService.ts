@@ -2,7 +2,9 @@ import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import {
   ensureUserInTrip,
+  getAnalyticsSubjectTimezone,
   getOrCreateAnalyticsSubject,
+  setAnalyticsSubjectTimezone,
   getTripById,
   insertAnalyticsEvents,
   isInternalCanaryAccount,
@@ -14,6 +16,8 @@ import { getPrivacyStatus } from '../services/privacyConsentService';
 import { getErasedAt } from '../services/privacyRightsService';
 import type { AnalyticsEventRecord } from '../types';
 import { classifyTripPhase } from '../utils/tripPhase';
+import { resolveTripTimezone } from '../services/tripTimezoneService';
+import { getRolloutConfig, isRegionExcluded, type RolloutConfig } from './rolloutService';
 import {
   ANALYTICS_EVENTS,
   ANALYTICS_EVENT_NAMES,
@@ -44,7 +48,7 @@ export class AnalyticsAdmissionError extends Error {
 
 export type RejectReason =
   | 'invalid' | 'unknown_event' | 'server_only_event' | 'clock_out_of_range'
-  | 'trip_not_accessible' | 'not_trip_scoped' | 'erased';
+  | 'trip_not_accessible' | 'not_trip_scoped' | 'erased' | 'region_excluded';
 
 export type IngestResult = {
   accepted: number;
@@ -93,6 +97,7 @@ const expiresAt = (receivedAt: Date, def: EventDefinition): string =>
   new Date(receivedAt.getTime() + def.retentionDays * RAW_EVENT_DAY_MS).toISOString();
 
 type Admitted = {
+  rollout: RolloutConfig;
   subjectId: string;
   epoch: number;
   analyticsErasedAt: number | null;
@@ -100,7 +105,8 @@ type Admitted = {
 };
 
 const admit = async (userId: string, role: string | undefined, privacySignalActive: boolean): Promise<Admitted> => {
-  const status = await getPrivacyStatus(userId, privacySignalActive);
+  // Flag + canary rollout membership + consent; the region check is per event (Phase 6).
+  const status = await getPrivacyStatus(userId, privacySignalActive, { role });
   if (!status.productCollectionEnabled) {
     throw new AnalyticsAdmissionError('ANALYTICS_COLLECTION_DISABLED', 'Product analytics collection is disabled');
   }
@@ -111,11 +117,13 @@ const admit = async (userId: string, role: string | undefined, privacySignalActi
     throw new AnalyticsAdmissionError('ANALYTICS_CONSENT_REQUIRED', 'Account has been erased');
   }
   const erasedAt = await getErasedAt(userId, 'analytics');
-  const [subjectId, canary] = await Promise.all([
+  const [subjectId, canary, rollout] = await Promise.all([
     getOrCreateAnalyticsSubject(userId, status.productEpoch),
     isInternalCanaryAccount(userId).catch(() => false),
+    getRolloutConfig('product_analytics'),
   ]);
   return {
+    rollout,
     subjectId,
     epoch: status.productEpoch,
     analyticsErasedAt: erasedAt ? new Date(erasedAt).getTime() : null,
@@ -124,19 +132,19 @@ const admit = async (userId: string, role: string | undefined, privacySignalActi
   };
 };
 
-type TripContext = { accessible: boolean; startDate: string | null; endDate: string | null };
+type TripContext = { accessible: boolean; startDate: string | null; endDate: string | null; timezone: string | null };
 
 const loadTrip = async (userId: string, tripId: string, cache: Map<string, TripContext>): Promise<TripContext> => {
   const cached = cache.get(tripId);
   if (cached) return cached;
-  let context: TripContext = { accessible: false, startDate: null, endDate: null };
+  let context: TripContext = { accessible: false, startDate: null, endDate: null, timezone: null };
   try {
     if (await ensureUserInTrip(tripId, userId)) {
-      const trip = await getTripById(tripId);
-      context = { accessible: true, startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null };
+      const [trip, timezone] = await Promise.all([getTripById(tripId), resolveTripTimezone(tripId, userId).catch(() => null)]);
+      context = { accessible: true, startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null, timezone };
     }
   } catch {
-    context = { accessible: false, startDate: null, endDate: null };
+    context = { accessible: false, startDate: null, endDate: null, timezone: null };
   }
   cache.set(tripId, context);
   return context;
@@ -191,6 +199,10 @@ export const ingestClientEvents = async (params: {
       reject(event.event_id, 'erased');
       continue;
     }
+    if (isRegionExcluded(admitted.rollout, event.device_timezone)) {
+      reject(event.event_id, 'region_excluded');
+      continue;
+    }
     let ref: string | null = null;
     let phase = classifyTripPhase({ occurredAt: event.occurred_at });
     if (event.trip_id) {
@@ -208,6 +220,7 @@ export const ingestClientEvents = async (params: {
         occurredAt: event.occurred_at,
         startDate: trip.startDate,
         endDate: trip.endDate,
+        tripTimezone: trip.timezone,
         deviceTimezone: event.device_timezone,
       });
     }
@@ -238,6 +251,10 @@ export const ingestClientEvents = async (params: {
   }
 
   const inserted = records.length ? await insertAnalyticsEvents(records) : [];
+  // Remember the latest device zone so server-side events can apply the region rule.
+  const latestZone = (batch.data.events as Array<{ device_timezone?: unknown }>)
+    .map((e) => e?.device_timezone).filter((z): z is string => typeof z === 'string').pop();
+  if (inserted.length && latestZone) await setAnalyticsSubjectTimezone(admitted.subjectId, latestZone).catch(() => undefined);
   const result = { accepted: inserted.length, duplicates: records.length - inserted.length, rejected };
   incrementMetric('analytics.events_accepted', undefined, result.accepted);
   if (result.duplicates) incrementMetric('analytics.events_duplicate', undefined, result.duplicates);
@@ -275,15 +292,24 @@ const storeServerEvent = async (input: ServerEventInput): Promise<boolean> => {
     if (err instanceof AnalyticsAdmissionError) return false; // no consent / disabled: silently not collected
     throw err;
   }
+  if (admitted.rollout.excludeEurope) {
+    // No device zone on the server: use the pseudonym's last-seen zone; unknown → not collected.
+    const zone = await getAnalyticsSubjectTimezone(admitted.subjectId).catch(() => null);
+    if (isRegionExcluded(admitted.rollout, zone)) return false;
+  }
   const occurredAt = input.occurredAt ?? new Date().toISOString();
   const receivedAt = new Date();
   let phase = classifyTripPhase({ occurredAt });
   let ref: string | null = null;
   if (input.tripId && def.tripScoped) {
-    const trip = await getTripById(input.tripId).catch(() => null);
+    const [trip, tripTimezone, lastDeviceZone] = await Promise.all([
+      getTripById(input.tripId).catch(() => null),
+      resolveTripTimezone(input.tripId, input.userId).catch(() => null),
+      getAnalyticsSubjectTimezone(admitted.subjectId).catch(() => null),
+    ]);
     ref = tripRef(input.tripId);
-    // Servers have no device zone; without a trip timezone the phase stays unknown.
-    phase = classifyTripPhase({ occurredAt, startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null });
+    // Trip zone first; otherwise the pseudonym's last-seen device zone (an unverified proxy).
+    phase = classifyTripPhase({ occurredAt, startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null, tripTimezone, deviceTimezone: lastDeviceZone });
   }
   const eventId = `srv_${createHmac('sha256', getAuthSecret()).update(`${input.userId}:${input.eventName}:${occurredAt}:${Math.random()}`).digest('hex').slice(0, 24)}`;
   const props = properties.data as Record<string, string | number | boolean>;

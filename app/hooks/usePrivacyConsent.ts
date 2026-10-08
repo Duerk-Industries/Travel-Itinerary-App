@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { closeSentry, initSentry } from '../utils/sentry';
+import { deviceTimezoneHeaders } from '../utils/analytics/track';
 import {
   applyLocalPrivacySignal, localPrivacySignalActive, needsPrivacyChoice, privacyPlatform,
   type PrivacyChoice, type PrivacyStatus,
@@ -38,7 +39,7 @@ export const usePrivacyConsent = (backendUrl: string, token: string | null): Pri
     setLoading(true);
     try {
       const response = await fetch(`${backendUrl}/api/account/privacy-preferences`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, ...deviceTimezoneHeaders() },
       });
       if (!response.ok) throw new Error('Privacy settings are unavailable');
       const next = applyLocalPrivacySignal(await response.json() as PrivacyStatus);
@@ -113,7 +114,7 @@ export const usePrivacyConsent = (backendUrl: string, token: string | null): Pri
     try {
       const response = await fetch(`${backendUrl}/api/account/privacy-preferences`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...deviceTimezoneHeaders() },
         body: JSON.stringify({ ...choice, revision: activeStatus.revision, platform: privacyPlatform() }),
       });
       const body = await response.json().catch(() => ({}));

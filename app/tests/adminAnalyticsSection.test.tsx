@@ -72,3 +72,34 @@ describe('Admin → Analytics', () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => u === 'http://api.test/api/admin/analytics/export.csv?days=30&view=trip_phase')).toBe(true));
   });
 });
+
+describe('Admin → Analytics → Rollout', () => {
+  it('requires a reason and saves the chosen mode for one purpose', async () => {
+    const rollout = {
+      product_analytics: { flagEnabled: true, mode: 'internal', percent: 0, excludeEurope: true },
+      optional_diagnostics: { flagEnabled: false, mode: 'off', percent: 0, excludeEurope: true },
+    };
+    const calls: Array<[string, any]> = [];
+    global.fetch = jest.fn(async (url: string, init?: any) => {
+      calls.push([url, init]);
+      return { ok: true, status: 200, json: async () => (url.endsWith('/analytics/rollout') ? rollout : report), text: async () => '' };
+    }) as unknown as typeof fetch;
+
+    const view = render(<AnalyticsSection backendUrl="http://api.test" headers={{ Authorization: 'Bearer admin' }} theme={theme} />);
+    fireEvent.press(view.getByTestId('admin-analytics-view-rollout'));
+    await waitFor(() => expect(view.getByTestId('admin-analytics-rollout')).toBeTruthy());
+    expect(view.getByText(/diagnostics_user_linked_enabled: OFF/)).toBeTruthy();
+
+    fireEvent.press(view.getByTestId('admin-rollout-product_analytics-percentage'));
+    fireEvent.changeText(view.getByLabelText('Product analytics percentage'), '25');
+    fireEvent.press(view.getByTestId('admin-rollout-product_analytics-save'));
+    expect(calls.some(([u, init]) => init?.method === 'PUT')).toBe(false); // no reason yet
+
+    fireEvent.changeText(view.getByLabelText('Product analytics reason'), 'Canary step 2');
+    fireEvent.press(view.getByTestId('admin-rollout-product_analytics-save'));
+    await waitFor(() => expect(calls.some(([, init]) => init?.method === 'PUT')).toBe(true));
+    const [url, init] = calls.find(([, i]) => i?.method === 'PUT')!;
+    expect(url).toBe('http://api.test/api/admin/analytics/rollout/product_analytics');
+    expect(JSON.parse(init.body)).toEqual({ mode: 'percentage', percent: 25, excludeEurope: true, reason: 'Canary step 2' });
+  });
+});

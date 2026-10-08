@@ -795,3 +795,11 @@ export const deleteExpiredAnalyticsEvents = async (...args: Parameters<ReturnTyp
   adapter().deleteExpiredAnalyticsEvents(...args);
 export const listAnalyticsEventsBetween = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsEventsBetween']>) =>
   adapter().listAnalyticsEventsBetween(...args);
+export const getAnalyticsSubjectTimezone = async (...args: Parameters<ReturnType<typeof adapter>['getAnalyticsSubjectTimezone']>) =>
+  adapter().getAnalyticsSubjectTimezone(...args);
+export const setAnalyticsSubjectTimezone = async (...args: Parameters<ReturnType<typeof adapter>['setAnalyticsSubjectTimezone']>) =>
+  adapter().setAnalyticsSubjectTimezone(...args);
+export const getTripTimezone = async (...args: Parameters<ReturnType<typeof adapter>['getTripTimezone']>) =>
+  adapter().getTripTimezone(...args);
+export const setTripTimezone = async (...args: Parameters<ReturnType<typeof adapter>['setTripTimezone']>) =>
+  adapter().setTripTimezone(...args);

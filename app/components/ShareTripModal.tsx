@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } 
 import Constants from 'expo-constants';
 import { buildFollowShareLink } from '../utils/shareLinks';
 import { copyToClipboard } from '../utils/clipboard';
+import { taskFailure, track } from '../utils/analytics/track';
 
 type Trip = {
   id: string;
@@ -132,14 +133,18 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
 
   const sendInvites = async () => {
     if (!backendUrl || !headers || !trip?.id) return;
+    const taskProps = { task: 'invite', feature: 'collaboration' } as const;
+    track('task_started', taskProps, { tripId: trip.id });
     const emails = parseEmails(inviteInput);
     if (!emails.length) {
       setInviteFeedback('Enter at least one email.');
+      track('task_failed', { ...taskProps, failure: 'validation' }, { tripId: trip.id });
       return;
     }
     const invalid = emails.find((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
     if (invalid) {
       setInviteFeedback(`Invalid email: ${invalid}`);
+      track('task_failed', { ...taskProps, failure: 'validation' }, { tripId: trip.id });
       return;
     }
 
@@ -156,6 +161,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setInviteFeedback(data.error || 'Unable to send invites');
+        track('task_failed', { ...taskProps, failure: taskFailure(res.status) }, { tripId: trip.id });
         return;
       }
       const created = Array.isArray(data?.invites) ? data.invites.length : emails.length;
@@ -164,6 +170,7 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
       await loadShareData();
     } catch (err) {
       setInviteFeedback((err as Error).message || 'Unable to send invites');
+      track('task_failed', { ...taskProps, failure: 'network' }, { tripId: trip.id });
     } finally {
       setInviteSubmitting(false);
     }

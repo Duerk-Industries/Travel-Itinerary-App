@@ -1,6 +1,7 @@
 import { getPrivacyPreferences, updatePrivacyPreferences } from '../db';
 import type { PrivacyPreferenceUpdate, PrivacyPreferences } from '../types';
 import { isFeatureEnabled } from './entitlementService';
+import { getRolloutConfig, isInRollout, isRegionExcluded } from '../analytics/rolloutService';
 
 /** Increment when a material change to the analytics notice is published. */
 export const PRODUCT_NOTICE_VERSION = 'analytics-v1';
@@ -16,14 +17,31 @@ export type PrivacyStatus = Omit<PrivacyPreferences, 'userId'> & {
   privacySignalActive: boolean;
 };
 
-const collectionFlags = async () => {
+/**
+ * Who is offered collection right now: the global kill-switch flag AND the user's canary
+ * rollout membership (Phase 6) AND, when the rollout excludes Europe, a non-European device
+ * time zone. Without a device time zone (server-side checks) only flag + membership apply;
+ * the per-event region check happens at ingest.
+ */
+export type CollectionContext = { role?: string; deviceTimezone?: string | null };
+
+const collectionFlags = async (userId: string, context?: CollectionContext) => {
   // Flags use the existing bounded 60-second cache. User grants are never
   // cached, and missing flag rows fail closed in entitlementService.
-  const [product, diagnostics] = await Promise.all([
+  const [productFlag, diagnosticsFlag, productConfig, diagnosticsConfig, productMember, diagnosticsMember] = await Promise.all([
     isFeatureEnabled('analytics_collection_enabled'),
     isFeatureEnabled('diagnostics_user_linked_enabled'),
+    getRolloutConfig('product_analytics'),
+    getRolloutConfig('optional_diagnostics'),
+    isInRollout(userId, context?.role, 'product_analytics'),
+    isInRollout(userId, context?.role, 'optional_diagnostics'),
   ]);
-  return { product, diagnostics };
+  const regionOk = (config: Awaited<ReturnType<typeof getRolloutConfig>>) =>
+    context?.deviceTimezone === undefined || !isRegionExcluded(config, context.deviceTimezone);
+  return {
+    product: productFlag && productMember && regionOk(productConfig),
+    diagnostics: diagnosticsFlag && diagnosticsMember && regionOk(diagnosticsConfig),
+  };
 };
 
 const toStatus = (
@@ -53,8 +71,8 @@ const toStatus = (
   privacySignalActive,
 });
 
-export const getPrivacyStatus = async (userId: string, privacySignalActive = false): Promise<PrivacyStatus> => {
-  const [preferences, flags] = await Promise.all([getPrivacyPreferences(userId), collectionFlags()]);
+export const getPrivacyStatus = async (userId: string, privacySignalActive = false, context?: CollectionContext): Promise<PrivacyStatus> => {
+  const [preferences, flags] = await Promise.all([getPrivacyPreferences(userId), collectionFlags(userId, context)]);
   return toStatus(preferences, flags, privacySignalActive);
 };
 
@@ -62,8 +80,9 @@ export const savePrivacyChoice = async (
   userId: string,
   update: Omit<PrivacyPreferenceUpdate, 'productNoticeVersion' | 'diagnosticsNoticeVersion'>,
   privacySignalActive = false,
+  context?: CollectionContext,
 ): Promise<PrivacyStatus> => {
-  const flags = await collectionFlags();
+  const flags = await collectionFlags(userId, context);
   if ((update.productAnalytics === true && (!flags.product || privacySignalActive)) ||
       (update.optionalDiagnostics === true && !flags.diagnostics)) {
     const error = new Error('This optional purpose is unavailable');

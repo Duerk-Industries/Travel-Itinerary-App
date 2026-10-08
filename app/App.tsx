@@ -103,7 +103,7 @@ import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
 import AgeVerificationDialog, { fetchAgeVerificationStatus, verifyAgeWithAppleIfAvailable } from './components/AgeVerificationDialog';
 import { markLoginStarted, markTripReady, useScreenReadyMark } from './utils/readinessMarks';
-import { configureAnalytics, useTrackView } from './utils/analytics/track';
+import { configureAnalytics, startItemSaveTask, taskFailure, track, useTrackView } from './utils/analytics/track';
 import { analyticsViewForPage } from './utils/analytics/features';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
@@ -1260,6 +1260,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const openMaps = useCallback((address: string) => {
     const url = buildMapUrl(address, mapApp);
     if (!url) return;
+    track('map_link_opened', { provider: mapApp, feature: analyticsView.feature ?? 'overview' }, { tripId: analyticsView.tripId });
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
@@ -1267,7 +1268,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       // surface the error to the user instead of crashing with an unhandled rejection.
       Linking.openURL(url).catch((err) => Alert.alert('Could not open map', err?.message ?? String(err)));
     }
-  }, [mapApp]);
+  }, [mapApp, analyticsView.feature, analyticsView.tripId]);
 
   const openFlightInFlightsTab = useCallback((flightId: string) => {
     setExternalFlightEditId(flightId);
@@ -1308,7 +1309,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       ...result.rental,
       cost: Number(result.rental.cost) || 0,
     };
-    const res = await fetch(rentalId ? `${backendUrl}/api/car-rentals/${rentalId}` : `${backendUrl}/api/car-rentals`, {
+    const saveTask = startItemSaveTask('car_rentals', Boolean(rentalId), activeTripId);
+    const res = await saveTask.request(rentalId ? `${backendUrl}/api/car-rentals/${rentalId}` : `${backendUrl}/api/car-rentals`, {
       method: rentalId ? 'PATCH' : 'POST',
       headers: jsonHeaders,
       body: JSON.stringify(rentalId ? payload : { ...payload, tripId: activeTripId }),
@@ -1349,7 +1351,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       Alert.alert('Select an active trip before adding a car rental.');
       return;
     }
-    const res = await fetch(`${backendUrl}/api/car-rentals`, {
+    const res = await startItemSaveTask('car_rentals', false, activeTripId).request(`${backendUrl}/api/car-rentals`, {
       method: 'POST',
       headers: jsonHeaders,
       body: JSON.stringify({
@@ -2872,13 +2874,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!userToken) return;
     const email = groupAddEmail[groupId] ?? '';
     const relationshipId = groupAddRelationship[groupId] ?? '';
+    const inviteTask = { task: 'invite', feature: 'collaboration' } as const;
+    track('task_started', inviteTask);
 
     if (type === 'user' && !email.trim()) {
       Alert.alert('Enter an email to add a user');
+      track('task_failed', { ...inviteTask, failure: 'validation' });
       return;
     }
     if (type === 'relationship' && !relationshipId) {
       Alert.alert('Select a relationship');
+      track('task_failed', { ...inviteTask, failure: 'validation' });
       return;
     }
 
@@ -2893,6 +2899,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const rel = familyRelationships.find((r) => r.id === relationshipId);
       if (!rel) {
         Alert.alert('Select a relationship');
+        track('task_failed', { ...inviteTask, failure: 'validation' });
         return;
       }
       const relEmail = rel.relative?.email?.trim();
@@ -2905,6 +2912,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const result = await addGroupMemberRequest(groupId, payload);
     if (!result.ok) {
       Alert.alert(result.error || 'Unable to add member');
+      track('task_failed', { ...inviteTask, failure: taskFailure(result.status) });
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
@@ -3611,6 +3619,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       const csv = convertExpensesToCsv('paid');
                       const fileName = `paid-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
+                      track('report_exported', { report: 'cost_csv' }, { tripId: activeTripId });
                     }}
                   >
                     <Text style={styles.buttonText}>Export Paid CSV</Text>
@@ -3621,6 +3630,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       const csv = convertExpensesToCsv('incurred');
                       const fileName = `incurred-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
+                      track('report_exported', { report: 'cost_csv' }, { tripId: activeTripId });
                     }}
                   >
                     <Text style={styles.buttonText}>Export Incurred CSV</Text>

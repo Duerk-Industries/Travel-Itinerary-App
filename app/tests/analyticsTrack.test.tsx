@@ -159,3 +159,21 @@ describe('analyticsViewForPage', () => {
     expect(analyticsViewForPage('account-privacy', 'trip-1')).toEqual({ feature: 'account', tripId: null });
   });
 });
+
+describe('engaged session summary', () => {
+  it('summarizes each session once, with a duration bucket and feature count, and only with consent', () => {
+    const { summarizeSession } = require('../utils/analytics/track');
+    summarizeSession();
+    expect(getAnalyticsQueueForTesting()).toEqual([]); // no consent → nothing
+
+    enable();
+    track('feature_viewed', { feature: 'lodging', entry_point: 'nav' });
+    clock += 3 * 60_000;
+    track('task_started', { task: 'add_item', feature: 'lodging' });
+    summarizeSession();
+    summarizeSession(); // second background in the same session: no duplicate
+    const summaries = getAnalyticsQueueForTesting().filter((e) => e.event_name === 'engaged_session_summary');
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].properties).toEqual({ duration_bucket: '1_5m', features_viewed: 0 });
+  });
+});

@@ -3,8 +3,10 @@ import { listAnalyticsEventsBetween, listProviderCostLedgerEntries } from '../db
 import { getEnvValue } from '../env';
 import { logError, logInfo } from '../logger';
 import { getMetricCounterSnapshot } from '../metrics';
+import { isFeatureEnabled } from '../services/entitlementService';
 import {
   DEFINITIONS,
+  FEATURE_FLAGS,
   METRIC_VERSION,
   MIN_COHORT,
   REPORT_WINDOWS_DAYS,
@@ -49,15 +51,23 @@ export type AnalyticsReport = ReturnType<typeof buildAll> & {
   };
 };
 
+/** Features whose gating flag is currently off (unavailable to everyone). */
+const unavailableFeatures = async (): Promise<Set<string>> => {
+  const entries = await Promise.all(
+    Object.entries(FEATURE_FLAGS).map(async ([feature, flag]) => [feature, await isFeatureEnabled(flag).catch(() => true)] as const),
+  );
+  return new Set(entries.filter(([, enabled]) => !enabled).map(([feature]) => feature));
+};
+
 export const getAnalyticsReport = async (windowDays: ReportWindowDays, now = new Date()): Promise<AnalyticsReport> => {
   const cached = cache.get(windowDays);
   if (cached && cached.expiresAt > now.getTime()) return cached.report;
   const to = now.toISOString();
   const from = new Date(now.getTime() - windowDays * DAY_MS).toISOString();
-  const events = await listAnalyticsEventsBetween(from, to, MAX_EVENTS);
+  const [events, unavailable] = await Promise.all([listAnalyticsEventsBetween(from, to, MAX_EVENTS), unavailableFeatures()]);
   const latestReceivedAt = events.reduce<string | null>((latest, e) => (!latest || e.receivedAt > latest ? e.receivedAt : latest), null);
   const report: AnalyticsReport = {
-    ...buildAll(events),
+    ...buildAll(events, unavailable),
     meta: {
       metricVersion: METRIC_VERSION,
       windowDays,
@@ -74,6 +84,7 @@ export const getAnalyticsReport = async (windowDays: ReportWindowDays, now = new
         'Consenting users only: accounts that never opted in are not represented, so rates are not "all users".',
         `Counts of fewer than ${MIN_COHORT} distinct accounts are suppressed, and rates built on them are blank.`,
         'Admin and internal canary traffic is excluded.',
+        'Features whose feature flag is off are marked unavailable; their rates are withheld. Tier and role eligibility are not yet reflected in denominators.',
         'Windows are rolling UTC periods ending at generation time; results are cached for 10 minutes.',
       ],
     },

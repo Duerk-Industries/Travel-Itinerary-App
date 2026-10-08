@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
+import { taskFailure, track } from '../utils/analytics/track';
 
 type PreviewItem = { type: string; id: string | null; summary: string };
 type ImportResult = {
@@ -88,8 +89,14 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
   };
 
   const submit = async (dryRun: boolean) => {
+    // One task per document: the preview starts it, and a direct import without a preview
+    // starts it too. Only the failure category leaves the device, never the document.
+    const importTask = { task: 'import', feature: 'imports' } as const;
+    if (dryRun || !preview) track('task_started', importTask, { tripId });
+    let failureTracked = false;
     if (!selectedFile && !documentText.trim()) {
       setErrorMessage('Paste itinerary text or choose a document first.');
+      track('task_failed', { ...importTask, failure: 'validation' }, { tripId });
       return;
     }
     setErrorMessage(null);
@@ -116,6 +123,8 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
       });
       const submitData = await response.json().catch(() => ({}));
       if (!response.ok) {
+        track('task_failed', { ...importTask, failure: taskFailure(response.status) }, { tripId });
+        failureTracked = true;
         const message = submitData.code === 'FEATURE_DISABLED'
           ? 'Document import is currently disabled by its feature flag. Enable itinerary_document_import in Admin, then try again.'
           : submitData.error || `Unable to import this document (HTTP ${response.status})`;
@@ -132,6 +141,11 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
         if (Platform.OS !== 'web') Alert.alert('Document imported', message);
       }
     } catch (error) {
+      if (!failureTracked) {
+        // A thrown fetch is a network failure; a failed or timed-out job is the server's.
+        const failure = error instanceof TypeError || /network|fetch/i.test((error as Error).message) ? 'network' : 'server';
+        track('task_failed', { ...importTask, failure }, { tripId });
+      }
       setErrorMessage((error as Error).message || 'Unable to import this document.');
     } finally {
       setBusy(false);

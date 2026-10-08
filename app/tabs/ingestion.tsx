@@ -3,6 +3,10 @@ import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity
 import { usePolling } from '../hooks/usePolling';
 import DateField from '../components/DateField';
 import type { AppTheme } from '../theme/theme';
+import { taskFailure, track } from '../utils/analytics/track';
+
+// Imports from the Imports tab carry no trip: items are assigned to a trip later, in review.
+const IMPORT_TASK = { task: 'import', feature: 'imports' } as const;
 
 type ReviewItem = {
   id: string;
@@ -379,16 +383,27 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   };
 
   const uploadFiles = async () => {
+    track('task_started', IMPORT_TASK);
     const files = await openFilePicker();
-    if (!files.length) return;
+    if (!files.length) {
+      track('task_cancelled', IMPORT_TASK);
+      return;
+    }
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
-    const response = await fetch(`${backendUrl}/api/ingestion/upload`, {
-      method: 'POST',
-      headers: headers.Authorization ? { Authorization: headers.Authorization } : headers,
-      body: formData,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${backendUrl}/api/ingestion/upload`, {
+        method: 'POST',
+        headers: headers.Authorization ? { Authorization: headers.Authorization } : headers,
+        body: formData,
+      });
+    } catch (err) {
+      track('task_failed', { ...IMPORT_TASK, failure: 'network' });
+      throw err;
+    }
     if (!response.ok) {
+      track('task_failed', { ...IMPORT_TASK, failure: taskFailure(response.status) });
       const body = await response.json().catch(() => ({}));
       setError((body as any).error ?? 'Upload failed.');
       return;
@@ -452,13 +467,21 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   };
 
   const runGmailImport = async () => {
-    const response = await fetch(`${backendUrl}/api/ingestion/gmail/import`, {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
+    track('task_started', IMPORT_TASK);
+    let response: Response;
+    try {
+      response = await fetch(`${backendUrl}/api/ingestion/gmail/import`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+    } catch (err) {
+      track('task_failed', { ...IMPORT_TASK, failure: 'network' });
+      throw err;
+    }
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
+      track('task_failed', { ...IMPORT_TASK, failure: taskFailure(response.status) });
       setError((body as any).error ?? 'Unable to import Gmail messages.');
       return;
     }

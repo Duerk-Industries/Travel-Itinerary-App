@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
+import { startItemSaveTask } from '../utils/analytics/track';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
@@ -209,7 +210,7 @@ export const createActivityForTrip = async (params: {
   if (!activeTripId) return { ok: false, error: 'Select an active trip before saving an activity.' };
   const { payload, error } = buildActivityPayload(draft, defaultPayerId);
   if (error || !payload) return { ok: false, error };
-  const res = await fetch(`${backendUrl}/api/activities`, {
+  const res = await startItemSaveTask('activities', false, activeTripId).request(`${backendUrl}/api/activities`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({
@@ -485,9 +486,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     // Close the editor immediately on Save — the request below runs in the
     // background so the dialog never appears to hang while it's in flight.
     closeTourEditor();
+    const saveTask = startItemSaveTask('activities', Boolean(editingTourId), activeTripId);
     (async () => {
       try {
-        const res = await fetch(url, {
+        const res = await saveTask.request(url, {
           method,
           headers: jsonHeaders,
           body: JSON.stringify({
@@ -812,20 +814,21 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       return;
     }
     setGridSaving(true);
+    // One edit task per grid save (deletes alone are not edits).
+    const gridTask = operations.some((operation) => operation.kind === 'update') ? startItemSaveTask('activities', true, activeTripId) : null;
     const succeededUpdateIds = new Set<string>();
     const succeededDeleteIds = new Set<string>();
     const failures: GridCellError[] = [];
     for (let index = 0; index < operations.length; index += 50) {
       const chunk = operations.slice(index, index + 50);
-      const response = await fetch(`${backendUrl}/api/activities/bulk`, {
-        method: 'PATCH',
-        headers: jsonHeaders,
-        body: JSON.stringify({
+      const bulkRequest = { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({
           tripId: activeTripId,
           updates: chunk.filter((operation) => operation.kind === 'update').map((operation) => ({ id: operation.id, fields: operation.fields })),
           deletes: chunk.filter((operation) => operation.kind === 'delete').map((operation) => operation.id),
         }),
-      });
+      };
+      const bulkUrl = `${backendUrl}/api/activities/bulk`;
+      const response = gridTask ? await gridTask.request(bulkUrl, bulkRequest) : await fetch(bulkUrl, bulkRequest);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         setGridMessage(payload.error || 'Unable to save activity changes.');

@@ -15,6 +15,7 @@ import {
 } from '../src/db';
 import { flushServerEventsForTesting, recordServerEvent, tripRef } from '../src/analytics/ingestService';
 import { ANALYTICS_LIMITS } from '../src/analytics/registry';
+import { clearRolloutCacheForTesting, saveRolloutConfig } from '../src/analytics/rolloutService';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { savePrivacyChoice } from '../src/services/privacyConsentService';
 import { clearErasureCacheForTesting, requestErasure } from '../src/services/privacyRightsService';
@@ -66,6 +67,10 @@ describe('analytics ingest (Phase 2)', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
+    // Rollout targeting is covered by analytics-rollout.test.ts; here everyone is in the cohort.
+    await saveRolloutConfig('product_analytics', { mode: 'all', percent: 0, excludeEurope: false }, null);
+    await saveRolloutConfig('optional_diagnostics', { mode: 'all', percent: 0, excludeEurope: false }, null);
+    clearRolloutCacheForTesting();
   });
   beforeEach(async () => {
     clearErasureCacheForTesting();
@@ -126,6 +131,15 @@ describe('analytics ingest (Phase 2)', () => {
     const serialized = JSON.stringify(stored);
     expect(serialized).not.toContain(user.userId);
     expect(serialized).not.toContain(tripId);
+  });
+
+  it('classifies trip phase with the trip destination zone when one is known', async () => {
+    const user = await newUser();
+    const tripId = await createTrip(user.token, user.userId);
+    await db.setTripTimezone(tripId, 'Asia/Tokyo');
+    await post(user.token, [event({ trip_id: tripId, device_timezone: 'America/New_York' })]).expect(200);
+    const [stored] = await storedFor(user.userId);
+    expect(stored).toMatchObject({ timezoneSource: 'trip', tripPhase: 'pre_trip' });
   });
 
   it('rejects unknown fields, free text, unknown events, server-only events and spoofed identity', async () => {
@@ -196,6 +210,25 @@ describe('analytics ingest (Phase 2)', () => {
     const names = (await storedFor(consented.userId)).map((e) => [e.eventName, e.source]).sort();
     expect(names).toEqual([['item_saved', 'server'], ['trip_created', 'server']]);
     expect(await storedFor(refused.userId)).toEqual([]);
+  });
+
+  it('records item_saved for successful item creates and updates only', async () => {
+    const user = await newUser();
+    const tripId = await createTrip(user.token, user.userId);
+    const lodging = await request(app).post('/api/lodgings').set('Authorization', `Bearer ${user.token}`)
+      .send({ tripId, name: 'Analytics Hotel', checkInDate: futureDateString(30), checkOutDate: futureDateStringPlusDays(2, 30), rooms: 1, totalCost: 200, costPerNight: 100, paidBy: [] })
+      .expect(201);
+    const lodgingId = lodging.body.id ?? lodging.body.lodging?.id;
+    await request(app).post('/api/lodgings').set('Authorization', `Bearer ${user.token}`).send({ tripId }).expect(400); // invalid → no event
+    if (lodgingId) {
+      await request(app).put(`/api/lodgings/${lodgingId}`).set('Authorization', `Bearer ${user.token}`)
+        .send({ tripId, name: 'Analytics Hotel 2', checkInDate: futureDateString(30), checkOutDate: futureDateStringPlusDays(2, 30), rooms: 1, totalCost: 200, costPerNight: 100, paidBy: [] });
+    }
+    await flushServerEventsForTesting();
+    const saved = (await storedFor(user.userId)).filter((e) => e.eventName === 'item_saved');
+    expect(saved.length).toBeGreaterThanOrEqual(1);
+    expect(saved[0]).toMatchObject({ source: 'server', tripRef: tripRef(tripId), properties: { item_type: 'lodging', created: true } });
+    expect(saved.every((e) => e.properties.item_type === 'lodging')).toBe(true);
   });
 
   it('erases events with Delete analytics data, exports them, and expires them by retention', async () => {
