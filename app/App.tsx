@@ -99,6 +99,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
+import AgeVerificationDialog, { fetchAgeVerificationStatus, verifyAgeWithAppleIfAvailable } from './components/AgeVerificationDialog';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
@@ -568,6 +569,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
   const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
   const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
+  const [ageVerificationRequired, setAgeVerificationRequired] = useState(false);
+  const [ageVerifiedReloadKey, setAgeVerifiedReloadKey] = useState(0);
   const {
     deferFirstLoginRedirect,
     showResendConfirmation,
@@ -1629,6 +1632,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setRequirePasswordSetup(false);
     setPasswordSetupLoading(false);
     setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
+    setAgeVerificationRequired(false);
     setPageForwardHistory([]);
     setActivePage('home');
     setPageHistory([]);
@@ -2656,13 +2660,38 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [offlineReadOnly, userToken]);
 
   useEffect(() => {
-    if (userToken && !requirePasswordSetup && !offlineReadOnly) {
+    // Accounts without a declared date of birth (including every Google/Apple
+    // sign-up) must confirm 16+ before continuing; see AgeVerificationDialog.
+    if (!userToken || requirePasswordSetup || offlineReadOnly) return;
+    let cancelled = false;
+    void (async () => {
+      const status = await fetchAgeVerificationStatus(backendUrl, userToken);
+      if (cancelled || !status) return;
+      if (!status.required) {
+        setAgeVerificationRequired(false);
+        return;
+      }
+      // iOS 26+: let Apple confirm 16+ first; otherwise show the date-of-birth prompt.
+      const verifiedByApple = await verifyAgeWithAppleIfAvailable(backendUrl, userToken, status.minimumAge);
+      if (cancelled) return;
+      setAgeVerificationRequired(!verifiedByApple);
+      // Data requests made while the check ran were rejected under enforcement;
+      // the prompt path reloads when ageVerificationRequired flips, this one must ask.
+      if (verifiedByApple && status.enforced) setAgeVerifiedReloadKey((n) => n + 1);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userToken, requirePasswordSetup, offlineReadOnly]);
+
+  useEffect(() => {
+    if (userToken && !requirePasswordSetup && !ageVerificationRequired && !offlineReadOnly) {
       fetchTrips();
       fetchGroups();
       fetchInvites();
       fetchPendingTripShareInvites();
     }
-  }, [userToken, requirePasswordSetup, offlineReadOnly, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
+  }, [userToken, requirePasswordSetup, ageVerificationRequired, ageVerifiedReloadKey, offlineReadOnly, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
 
   useEffect(() => {
     // Best-effort, native-only (see pushNotifications.ts) — never awaited/blocking, and safe to
@@ -4148,8 +4177,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      {userToken && !requirePasswordSetup && ageVerificationRequired ? (
+        <AgeVerificationDialog
+          visible
+          styles={styles}
+          backendUrl={backendUrl}
+          token={userToken}
+          onVerified={() => setAgeVerificationRequired(false)}
+          onSignOut={logout}
+        />
+      ) : null}
       <PremiumTrialWelcomeDialog
-        visible={Boolean(userToken && premiumTrialWelcomeVisible && arePremiumTrialsEnabled())}
+        visible={Boolean(userToken && premiumTrialWelcomeVisible && !ageVerificationRequired && arePremiumTrialsEnabled())}
         styles={styles}
         onViewPlans={openPremiumPlansFromWelcome}
         onDismiss={dismissPremiumTrialWelcome}

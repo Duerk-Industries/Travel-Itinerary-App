@@ -268,6 +268,9 @@ flags:
   notifications_push:
     enabled: false
     description: "Push notification delivery via Expo"
+  age_gate_enforcement:
+    enabled: false
+    description: "Server-side block on accounts without a declared 16+ date of birth (403 AGE_VERIFICATION_REQUIRED). The client prompt ships regardless; enable only once app builds with the prompt are the supported minimum. Fails CLOSED if unseeded -- see docs/implementation-plans/analytics-upgrade.md (open decision 10)"
   notifications_web_push:
     enabled: true
     description: "Web push notification delivery"

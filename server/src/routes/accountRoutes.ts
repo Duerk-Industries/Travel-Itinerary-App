@@ -51,6 +51,8 @@ import { deleteUserIngestionData } from '../ingestion/shared/repository';
 import { buildUserDataExport } from '../services/userDataExport';
 import { cancelAllSubscriptionsForUser, syncEmailToStripeCustomer } from '../billing/accountBillingLifecycle';
 import { accountPasswordRateLimit } from '../services/httpRateLimitService';
+import { declareDateOfBirth, isAgeGateEnforced, isAgeVerificationRequired, recordAppleAgeRange } from '../services/ageVerificationService';
+import { MINIMUM_ACCOUNT_AGE_YEARS } from '../services/registrationAgeGate';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -275,6 +277,55 @@ router.get('/export', async (req, res) => {
   } catch (err) {
     logError('[account] export failed', err);
     res.status(500).json({ error: 'Failed to generate export.' });
+  }
+});
+
+router.get('/age-verification', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const [required, enforced] = await Promise.all([isAgeVerificationRequired(userId), isAgeGateEnforced()]);
+    res.json({ required, enforced, minimumAge: MINIMUM_ACCOUNT_AGE_YEARS });
+  } catch (err) {
+    logError('[account] age verification status failed', err);
+    res.status(500).json({ error: 'Failed to load age verification status.' });
+  }
+});
+
+router.post('/age-verification', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const result = await declareDateOfBirth(userId, req.body?.dateOfBirth);
+    if (result.ok) {
+      res.json({ required: false });
+      return;
+    }
+    if (result.code === 'UNDER_MINIMUM_AGE') {
+      res.status(403).json({
+        error: `You must be at least ${MINIMUM_ACCOUNT_AGE_YEARS} years old to use WanderBunnies.`,
+        code: result.code,
+      });
+      return;
+    }
+    res.status(400).json({ error: 'dateOfBirth must be a valid YYYY-MM-DD date', code: result.code });
+  } catch (err) {
+    logError('[account] age verification failed', err);
+    res.status(500).json({ error: 'Failed to save date of birth.' });
+  }
+});
+
+// iOS shortcut: the client sends Apple's Declared Age Range lower bound. Only a
+// confirmed 16+ is accepted; anything else tells the client to show the prompt.
+router.post('/age-verification/apple', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (await recordAppleAgeRange(userId, req.body?.lowerBound)) {
+      res.json({ required: false });
+      return;
+    }
+    res.status(400).json({ error: 'Age range does not confirm the minimum age; use the date-of-birth prompt.', code: 'AGE_RANGE_NOT_CONFIRMED' });
+  } catch (err) {
+    logError('[account] Apple age range verification failed', err);
+    res.status(500).json({ error: 'Failed to record age verification.' });
   }
 });
 

@@ -8,6 +8,13 @@
       "exclude": [
         "@react-native-community/datetimepicker"
       ]
+    },
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "expo-age-range"
+        ]
+      }
     }
   },
   "workspaces": [

@@ -10,6 +10,7 @@ import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlem
 import { getEnvValue } from './env';
 import { getAuthAudience, getAuthIssuer, getAuthSecret } from './authConfig';
 import { setRequestContextUserId } from './requestContext';
+import { isAgeGateEnforced, isAgeVerificationRequired } from './services/ageVerificationService';
 
 export const initPassport = () => {
     const googleClientId = getEnvValue('GOOGLE_CLIENT_ID');
@@ -108,6 +109,20 @@ const isPasswordSetupAllowlistedRequest = (req: Request): boolean => {
   return false;
 };
 
+// An account without a declared date of birth may only declare one, finish
+// password setup, export its data, or delete itself.
+const isAgeVerificationAllowlistedRequest = (req: Request): boolean => {
+  const method = req.method.toUpperCase();
+  if (method === 'OPTIONS') return true;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  if (path === '/api/account/age-verification' && (method === 'GET' || method === 'POST')) return true;
+  if (method === 'POST' && path === '/api/account/age-verification/apple') return true;
+  if (method === 'PATCH' && path === '/api/account/password') return true;
+  if (method === 'GET' && path === '/api/account/export') return true;
+  if (method === 'DELETE' && path === '/api/account') return true;
+  return false;
+};
+
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -120,6 +135,14 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const mustSetupPassword = await isPasswordSetupRequired(decoded.userId);
     if (mustSetupPassword && !isPasswordSetupAllowlistedRequest(req)) {
       res.status(403).json({ error: 'Password setup required before accessing this endpoint.' });
+      return;
+    }
+    if (
+      !isAgeVerificationAllowlistedRequest(req) &&
+      (await isAgeGateEnforced()) &&
+      (await isAgeVerificationRequired(decoded.userId))
+    ) {
+      res.status(403).json({ error: 'Date of birth required before accessing this endpoint.', code: 'AGE_VERIFICATION_REQUIRED' });
       return;
     }
     (req as Request & { user?: TokenPayload }).user = decoded;

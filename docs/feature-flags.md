@@ -51,6 +51,7 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 | `expense_import_plaid_assignment` | Allow explicit assignment of a candidate to a WanderBunnies expense |
 | `expense_import_plaid_webhooks` | Process normal Plaid sync webhooks; revocation/deletion handling remains mandatory |
 | `expense_import_plaid_auto_category` | Show Plaid category suggestions for user confirmation |
+| `age_gate_enforcement` | Server-side 403 `AGE_VERIFICATION_REQUIRED` for accounts without a declared 16+ date of birth. Default off and fail-closed; enable only after app builds with the date-of-birth prompt are the supported minimum. The prompt itself ships regardless. |
 
 ## Ingestion note
 

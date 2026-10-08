@@ -1894,6 +1894,40 @@ export const isPasswordSetupRequired = async (userId: string): Promise<boolean> 
   return Boolean(data.passwordSetupRequired);
 };
 
+export const hasUserDateOfBirth = async (userId: string): Promise<boolean> => {
+  const db = getDb();
+  const doc = await db.collection('users').doc(userId).get();
+  if (!doc.exists) return false;
+  return Boolean((doc.data() as any)?.dateOfBirth);
+};
+
+/** Records a declared date of birth once; an already-declared value is never overwritten. */
+export const setUserDateOfBirth = async (userId: string, dateOfBirth: string): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('users').doc(userId);
+  const doc = await ref.get();
+  if (!doc.exists || (doc.data() as any)?.dateOfBirth) return;
+  await ref.update({ dateOfBirth });
+};
+
+/** True when the account has confirmed 16+ by any method (declared date of birth or Apple age range). */
+export const isUserAgeVerified = async (userId: string): Promise<boolean> => {
+  const db = getDb();
+  const doc = await db.collection('users').doc(userId).get();
+  if (!doc.exists) return false;
+  const data = doc.data() as any;
+  return Boolean(data?.dateOfBirth) || Boolean(data?.ageVerificationSource);
+};
+
+/** Records how 16+ was first confirmed; a later confirmation never overwrites the original. */
+export const recordUserAgeVerification = async (userId: string, source: string): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('users').doc(userId);
+  const doc = await ref.get();
+  if (!doc.exists || (doc.data() as any)?.ageVerificationSource) return;
+  await ref.update({ ageVerificationSource: source, ageVerifiedAt: new Date().toISOString() });
+};
+
 // Phase 4 of docs/trip-blog-social-implementation-plan.md — mirrors the scrub-then-recompute logic
 // added to db.postgres.ts's deleteWebUserAndCleanup. Firebase has no FK cascade, so both the
 // reaction deletion and the comment-body scrub are explicit here rather than falling out of a

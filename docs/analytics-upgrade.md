@@ -2,7 +2,7 @@
 
 Status: proposed design. No new collection, SDK, or policy change is enabled by this document.
 Assessment and requirements review: October 8, 2026.
-Revision: 4; separates current state from target state for mobile-store controls, aligns the age rule with the enforced registration gate, clarifies client versus server diagnostics, moves the event registry to a shared workspace package, and adds a retention summary.
+Revision: 5; applies the ten Phase 0 decisions (privacy contact, EU/UK targeting, retention, cost allocation, trip timezone, reference devices, re-prompt rule, processor deletion, BigQuery deferral) and documents the new account age verification.
 Delivery plan: [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md).
 
 This document explains what analytics WanderBunnies collects today, what the upgrade adds, why, how collection behaves on web, iOS, and Android, and which privacy commitments and regulatory frameworks constrain it. The accompanying [implementation plan](implementation-plans/analytics-upgrade.md) covers execution sequencing, privacy-policy page changes, automated tests, performance budgets, and cost governance.
@@ -76,6 +76,7 @@ Measure direct cost by initiating user, trip, feature, provider/model, and month
 
 - **Direct Attributable Cost**, **Allocated Shared Infrastructure Cost**, and **Total Cost** are reported separately, with the allocation rule and version visible.
 - A shared job is allocated once. A trip with five travelers does not incur five copies of one provider bill.
+- **Allocation rule (`allocation_v1`):** direct costs go to the initiating user and trip. Shared infrastructure is split equally across accounts active that month, with a request-volume split shown alongside for comparison.
 - Direct cost is the sum of priced billable units. An unknown price stays **unknown**, never zero. Show attribution coverage, pricing coverage, and invoice reconciliation variance. Store USD microdollars and label estimates separately from invoiced adjustments.
 - Useful views: median/p95 cost per user, cost by tier/feature/platform, cost per active trip, cost per successful generation/import, expensive-user distribution, contribution margin (with tax, refunds, store/payment fees handled consistently).
 
@@ -94,7 +95,7 @@ Report unique users and sessions separately, with native-only, web-only, and bot
 
 ### 5. Use During Trips
 
-Each trip-specific event is classified as `pre_trip`, `during_trip`, `post_trip`, or `unknown`. Classification uses the trip's inclusive start/end calendar dates in the trip's timezone, not the server's. Fallback order: segment timezone → trip timezone → `unknown`. Record the date/timezone version so later date edits do not silently rewrite history.
+Each trip-specific event is classified as `pre_trip`, `during_trip`, `post_trip`, or `unknown`. Classification uses the trip's inclusive start/end calendar dates in the trip's timezone, not the server's. Trips gain an optional IANA `timezone`, filled automatically from the destination or first lodging via cached Google Places details. Fallback order: segment timezone → trip timezone → device timezone reported on the event → `unknown`. Reports show how many events were classified at each fallback level. Record the date/timezone version so later date edits do not silently rewrite history.
 
 $$\text{During-Trip Engagement Rate} = \frac{\text{Consenting eligible account travelers with meaningful engagement on a trip during its dates}}{\text{Consenting eligible account travelers whose trip occurred in the window}}$$
 
@@ -187,12 +188,16 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
 | **Withdrawn** | Stops producers, clears queue and local identifiers, shuts down optional SDKs | Rejects new/in-flight events; deletion of history is triggered separately |
 | **Purpose Material Change** | Pauses affected purpose pending new choice | Rejects affected purpose until new grant |
 
+**Re-prompt rule:** users are asked again **only** after a material change: a new purpose, a new data category, or a new recipient category (such as adding a third-party analytics vendor). Wording edits never trigger a prompt, a refusal is never re-asked unless such a change occurs, and there is no periodic re-prompt.
+
 - **Authoritative Server Enforcement:** The account-level choice is stored in `privacy_preferences` and enforced on the server.
 - **Epoch Management:** Re-granting consent increments the purpose epoch and rotates the subject pseudonym. Events queued before withdrawal are never replayed.
 - **Global Privacy Control (GPC) & Do Not Track (DNT):** Honor applicable legal sale/sharing/targeted-advertising opt-outs. An active GPC signal keeps optional product analytics **off**. DNT is treated as an optional-analytics refusal.
-- **Age Gate Consistency:** Registration enforces a global minimum account age of **16** (`MINIMUM_ACCOUNT_AGE` in `server/src/services/registrationAgeGate.ts`). Because no account holder is under 16, analytics consent never needs the GDPR Art. 8 parental-consent mechanism. Every policy page must state 16, and the "under 13" wording on `/privacy` must be removed. Minors entered as travelers or dependents are never analytics subjects, and no analytics profiling of minors occurs. Confirm that Google/Apple sign-in paths enforce the same gate.
+- **Age Gate Consistency:** The minimum account age is **16** worldwide (`MINIMUM_ACCOUNT_AGE` in `server/src/services/registrationAgeGate.ts`). Until this revision, no client sent a date of birth and Google/Apple sign-in skipped the check entirely. Now every unverified account is checked after sign-in. On iOS 26+ (in builds with the entitlement enabled), Apple's Declared Age Range is asked first. If Apple confirms 16+, the account is recorded as "verified 16+ via Apple" with no birthdate collected, and no prompt appears. Otherwise, and on Android, web, and older iOS, the user sees a neutral date-of-birth screen that cannot be dismissed. Under-16 declarations are not stored, and those accounts can only be deleted or signed out of. Server-side blocking is controlled by the `age_gate_enforcement` flag (see the [plan, decision 10](implementation-plans/analytics-upgrade.md#decision-10-implementation-account-age-verification)). Because account holders are 16+, analytics consent does not need the GDPR Art. 8 parental-consent mechanism. Every policy page must state 16, and the "under 13" wording on `/privacy` must be removed. Minors entered as travelers or dependents are never analytics subjects.
 
 ### 3. GDPR and UK GDPR Compliance
+
+- **Scope and contact:** The EU/EEA and UK are targeted markets. The operator is Tristan Duerk (the company once Duerk Industries is registered). All privacy requests go to **`privacy@wander-bunnies.com`**, which forwards to both maintainers. No Art. 27 EU/UK representative is appointed yet; the exemption reasoning is recorded in the ROPA and revisited before public EU/UK marketing or significant EU/UK growth. No DPO is required, because analytics is opt-in, first-party, and small-scale.
 
 - **Lawful Basis:** Explicit, freely given, specific, informed, and unambiguous opt-in consent (Art. 6(1)(a) GDPR) for optional product analytics and detailed diagnostics. Necessary processing (security, billing, quota enforcement) uses contractual necessity (Art. 6(1)(b)) or legitimate interests (Art. 6(1)(f)) after documented necessity assessments.
 - **Withdrawal:** As easy to withdraw as to grant (Art. 7(3) GDPR). Available in-app at any time under Account → Privacy.
@@ -283,7 +288,11 @@ Approved in Phase 0; only schedules that are configured and tested get published
 | Client diagnostics (Sentry) and minimized server logs/traces | 30 days |
 | AI captures | ≤ 30 days |
 | Assessed anonymous aggregates | 25 months, then review |
-| Consent evidence, cost ledger, billing | Purpose-specific/legal schedules set in Phase 0 |
+| Consent evidence | Account lifetime + 3 years |
+| Cost ledger | User/trip linkage removed after 13 months; feature/provider totals kept |
+| Billing records | 7 years (tax/accounting) |
+
+Sentry receives only the analytics pseudonym, never a user ID or email. Diagnostic data therefore expires within 30 days instead of being deleted per user on request.
 
 Withdrawing consent stops new collection immediately. **Delete my analytics data** or account deletion erases the history.
 
@@ -300,7 +309,7 @@ Withdrawing consent stops new collection immediately. **Delete my analytics data
   4. **Platform Mix:** Web vs iOS vs Android cohorts, app version distribution.
   5. **Trip-Phase Engagement:** Pre-trip, during-trip, and post-trip engagement metrics.
 - **Statistical Integrity:** Curated daily rollups. Non-additive metrics (like unique users) are computed with explicit set logic. Cohorts smaller than 10 users are suppressed in reports and exports to prevent filter-differencing re-identification.
-- **Ad-Hoc Analysis Path:** Scheduled export of suppressed aggregate rollups (never raw events or user-level facts) to CSV in Cloud Storage, with BigQuery only if Phase 0 approves it. "Anonymous" is a claim made only after a re-identification assessment.
+- **Ad-Hoc Analysis Path:** Scheduled export of suppressed aggregate rollups (never raw events or user-level facts) to CSV in Cloud Storage. BigQuery is deferred until analysts need custom SQL more than about weekly or admin queries miss their 2 s budget. "Anonymous" is a claim made only after a re-identification assessment.
 
 ### 2. Maintainability
 
@@ -313,7 +322,8 @@ Withdrawing consent stops new collection immediately. **Delete my analytics data
 | Metric | Budget Target | Enforcement Mechanism |
 |---|---|---|
 | **Disabled Overhead** | 0 requests, 0 writes | Code short-circuit before queue or SDK init |
-| **Client `track()` Overhead** | p95 < 2 ms | Non-blocking, in-memory queue; async flush |
+| **Client `track()` Overhead** | p95 < 2 ms on reference devices (mid-range Android such as Pixel 6a, iPhone 12, mobile Safari, desktop Chrome) | Non-blocking, in-memory queue; async flush |
+| **Load Baseline** | Busiest hour of the last 30 days (Cloud Run logs), tested at 10× | Load script plus Firestore emulator and staging run |
 | **Server Ingest Throughput** | p95 < 200 ms per 20-event batch | Bounded async writer outside response path |
 | **Admin Report Queries** | p95 < 2 s for 30-day queries | Reads precomputed `analytics_rollups`, no full table scans |
 

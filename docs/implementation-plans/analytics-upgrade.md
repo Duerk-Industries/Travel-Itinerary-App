@@ -2,7 +2,7 @@
 
 Status: proposed; documentation only.
 Created and reviewed: October 8, 2026.
-Revision: 4 (adds required notice text changes per page, concrete mobile-store tasks, cost sensitivity, load/native tests, and open decisions; fixes the age rule and deliverables anchor). Canonical path: `docs/implementation-plans/analytics-upgrade.md`; the former underscore-directory path is a forwarding document.
+Revision: 5 (records the ten Phase 0 decisions and the implemented account age verification). Canonical path: `docs/implementation-plans/analytics-upgrade.md`; the former underscore-directory path is a forwarding document.
 Design and collection inventory: [Analytics Upgrade: Collection, Goals, and Behavior](../analytics-upgrade.md).
 
 ## Outcome and Delivery Rules
@@ -33,7 +33,7 @@ Repository rules that apply throughout:
    - `/privacy.html` → `app/public/privacy.html`, linked from `app/tabs/account.tsx`. Last updated July 17, 2026; GDPR-style controller section; contact `bryan.duerk@gmail.com`; "under 16 may not hold an account".
    - `docs/legal/privacy-policy.md` matches the older `/privacy` text.
 
-   These must be reconciled on facts, not by picking one silently. Minimum age is already settled by code: `server/src/services/registrationAgeGate.ts` enforces **16** globally, so the "under 13" text is wrong. Controller/operator and contact address still need a decision.
+   Resolved by [Phase 0 decisions](#phase-0-decisions-recorded-october-8-2026) 1 and 10: operator Tristan Duerk, single contact `privacy@wander-bunnies.com`, minimum age **16** (`MINIMUM_ACCOUNT_AGE` in `registrationAgeGate.ts`, now actually verified on every sign-in path). The "under 13" text is wrong and must be removed.
 7. The older notices claim "we do not access camera, photo library…". The Expo config registers image/video share intents and the blog supports media upload, so verify the wording against actual native permissions before republishing.
 8. `app/public/cookies.html` promises consent before optional diagnostics/analytics. Sentry's current startup behavior does not yet meet that promise.
 9. The iOS config in `expo.config.shared.cjs` has **no `ios.privacyManifests`** entry, and the Android config has **no `blockedPermissions`** entry, so `AD_ID` may be merged in by a dependency. The required-reason APIs used by React Native, Expo modules, and the Sentry SDK (e.g. `UserDefaults`, file timestamps, system boot time) need verification in the archived build's privacy report.
@@ -83,7 +83,7 @@ Design rules:
 - Approve the event/metric dictionary: eligibility, consent population, session rule, trip timezone fallback, outcome semantics, allowed dimensions.
 - Maintain a **Record of Processing Activities (ROPA)** (purpose, data, basis, recipients, retention, rights, transfers). Run DPIA screening and complete a DPIA if the high-risk criteria apply.
 - Document necessary metering/security purposes and any legitimate-interests assessment. Broad feature tracking is not "necessary" just because it helps the business.
-- Resolve the Finding 6 conflicts (legal controller/operator, contact address, minimum age matching `registration_age_gate`), territorial reach, EU/UK representative and DPO applicability, and legal retention schedules.
+- Apply the [recorded decisions](#phase-0-decisions-recorded-october-8-2026): operator and `privacy@wander-bunnies.com` contact, EU/UK targeting without representatives yet (exemption reasoning documented in the ROPA, with revisit triggers), DPO not required, and the retention schedule.
 - Approve global default-off for optional analytics and diagnostics with separate controls.
 
 **Acceptance:** Signed-off dictionary, deployment inventory, coverage map, processing register, retention proposal, policy gap list. Optional collection stays off.
@@ -105,7 +105,7 @@ Design rules:
 - First-run consent sheet with equal-weight **Accept** / **Reject** / **Customize**. Show it once after login, not before the user can use the app. No nagging after refusal.
 - **Account → Privacy** section in `app/tabs/account.tsx` / `AccountProfileManagement.tsx`: Two switches, a necessary-processing explanation, and links to export, delete analytics data, delete account, privacy policy, cookie notice, and privacy choices.
 - Web: Handle `Sec-GPC: 1` at the server and `navigator.globalPrivacyControl` in the browser. Active GPC or DNT keeps product analytics off.
-- **Sentry Redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`): Move `initSentry()` out of `AppEntry.js` startup into the consent bootstrap, and call it only when `optional_diagnostics` is granted. Keep `wrapApp()`'s error boundary unconditional so the app's crash UI doesn't change. Before permission, no SDK runs, so there are no automatic sessions, breadcrumbs, or network/console capture. On grant, init with `sendDefaultPii: false` and set the Sentry user to the analytics pseudonym, never the raw user ID or email. On withdrawal, call `Sentry.close()` and drop pending envelopes. Disable the `@sentry/react-native/expo` plugin's native auto-init (`autoInitializeNativeSdk: false`) and verify on device that the native layer does not start on its own. Accepted trade-off: no client crash reports from non-consenting users. Server error rates make up for this partly, and the reliability dashboard shows the consenting share.
+- **Sentry Redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`): Move `initSentry()` out of `AppEntry.js` startup into the consent bootstrap, and call it only when `optional_diagnostics` is granted. Keep `wrapApp()`'s error boundary unconditional so the app's crash UI doesn't change. Before permission, no SDK runs, so there are no automatic sessions, breadcrumbs, or network/console capture. On grant, init with `sendDefaultPii: false` and set the Sentry user to the analytics pseudonym, never the raw user ID or email (decision 8). With 30-day retention, the policy can say diagnostics expire within 30 days. On withdrawal, call `Sentry.close()` and drop pending envelopes. Disable the `@sentry/react-native/expo` plugin's native auto-init (`autoInitializeNativeSdk: false`) and verify on device that the native layer does not start on its own. Accepted trade-off: no client crash reports from non-consenting users. Server error rates make up for this partly, and the reliability dashboard shows the consenting share.
 
 ### Independent Purpose & Revocation Matrix
 
@@ -131,7 +131,7 @@ Design rules:
 - **Validation & Limits:** 20 events per batch, 32 KiB payload, 30-second foreground flush plus a flush on background/`visibilitychange` (`fetch` with `keepalive` on web, so the auth header is still sent), max 100 queued events and 24-hour expiry. Enforce max event age (24h) and future skew (5m). Store receipt time and reject invalid clocks. Freeze batches/IDs for retries and deduplicate per subject/purpose epoch.
 - **Queue:** In-memory only initially. A durable offline queue requires encrypted storage, expiry, withdrawal purge, and a storage notice update.
 - **Server Outcomes:** After the business transaction commits, pass consent-filtered events to a bounded asynchronous writer.
-- **Trip Phase:** `server/src/utils/tripPhase.ts` (pure function with date/timezone version).
+- **Trip Phase:** `server/src/utils/tripPhase.ts` (pure function with date/timezone version). Adds an optional IANA `timezone` on trips, filled from cached Places details, with fallback segment → trip → event device timezone → `unknown` (decision 5).
 - **Exclusions:** Sessions use bounded foreground intervals, never API polls. Admins, E2E/automation users, prefetch, and background workers are marked for exclusion.
 
 **Acceptance:** Golden fixture journeys produce expected deduplicated events and phase classifications with no prohibited properties. Consent-denied journeys produce no optional events.
@@ -144,7 +144,7 @@ Design rules:
 
 - Route all cost recording through `settleProviderAttempt()` recording attempt ID, provider/model/caller, feature, initiating user, trip, units, cache status, failure/retry state, and price version in integer USD microdollars.
 - Audit `openaiApi.ts` and `aiProviderRegistry.ts` accounting to prevent double settlement. Add a uniqueness constraint on attempt ID.
-- Unattributed calls recorded as `system`/`unattributed`. Shared trip/background costs classified once under an explicit allocation rule.
+- Unattributed calls recorded as `system`/`unattributed`. Shared trip/background costs classified once under `allocation_v1`: equal split across accounts active that month, with a request-volume split shown for comparison (decision 4).
 - Monthly invoice reconciliation covering credits, refunds, committed spend, and currency metadata.
 - **Fix `metrics.ts`:** Retain timings as fixed-bucket histograms with low-cardinality labels, export on `/metrics`, add a unique process identity (`K_REVISION` plus random instance ID), and expose `countersStartedAt`.
 - Screen/trip readiness spans and task outcomes under the appropriate consent category. Use browser Performance API on web and native startup/frame measurements where supported.
@@ -173,11 +173,12 @@ Design rules:
 | **Client Optional Queue** | 24 hours, or withdrawal / logout | Client-side expiry and immediate purge |
 | **Raw Behavioral Events** | 90 days | Exclude expired records from queries immediately; batched deletion + Firestore TTL |
 | **Linked Daily User/Trip Facts** | 13 months | Scheduled daily purge job + subject erasure cascade |
-| **Consent Choice Evidence** | Purpose-specific duration approved in Phase 0 | Minimal restricted evidence in `privacy_choice_events` |
+| **Consent Choice Evidence** | Account lifetime + 3 years | Minimal restricted evidence in `privacy_choice_events`; purge job keyed on account deletion date |
 | **Minimized Diagnostic Logs/Traces** | 30 days | Cloud Logging bucket retention, Sentry project retention |
 | **AI Captures** | ≤ 30 days for diagnostics | GCS object lifecycle rule + subject deletion cascade |
 | **Assessed Anonymous Aggregates** | 25 months, then review/purge | Aggregate lifecycle job and disclosure review |
-| **Cost Ledger & Billing** | Legally required accounting schedule | Internal cost telemetry kept separate from behavioral analytics |
+| **Cost Ledger** | User/trip linkage 13 months; feature/provider totals retained | Scheduled de-linking job; kept separate from behavioral analytics |
+| **Billing Records** | 7 years (tax/accounting) | Existing Stripe/billing tables; documented legal hold |
 
 ### Privacy Policy and Web Page Deliverables
 
@@ -188,7 +189,7 @@ Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/bu
 
 | Surface | Required Deliverable |
 |---|---|
-| `docs/legal/privacy-policy.md` (canonical) | Reconcile controller/operator and one contact address (proposed `tristan.duerk@gmail.com`, confirmed in Phase 0). Minimum age **16 everywhere**, matching `registrationAgeGate.ts`. Apply every change in Step 3. Add version number, effective date, and a change summary at the top. |
+| `docs/legal/privacy-policy.md` (canonical) | Operator Tristan Duerk (company name once registered). Single contact **`privacy@wander-bunnies.com`**, replacing both personal addresses. Minimum age **16 everywhere**, matching `registrationAgeGate.ts`. Do not claim an EU/UK representative. Apply every change in Step 3. Add version number, effective date, and a change summary at the top. |
 | `app/public/privacy.html` | Compiled from canonical source. Serves web policy page. |
 | `server/src/legal/privacyPolicyHtml.ts` → `/privacy` | Compiled from canonical source or 301 redirect to `/privacy.html`. |
 | `app/public/cookies.html` | Inventory storage keys, purpose, operator, and duration. Interactive "Manage Preferences" button. |
@@ -260,7 +261,7 @@ It also gets a "Manage preferences" control that opens the same choices as `/pri
 - Reuse admin components and RBAC; endpoints under `/api/admin/analytics/*`.
 - Metric calculations in `server/src/analytics/metrics/` shared by API and CSV export.
 - Cohort suppression (<10 users) on all views and exports.
-- Scheduled export of anonymized rollups to CSV in Cloud Storage / BigQuery for ad-hoc analysis.
+- Scheduled export of suppressed aggregate rollups to CSV in Cloud Storage for ad-hoc analysis. No BigQuery for now (decision 9).
 
 ---
 
@@ -318,14 +319,62 @@ The kill switch stops optional producers, ingest admission, and client SDK expor
 
 **Done When:** All 5 dashboards are live and trusted; privacy controls are verified across web, iOS, and Android; canonical privacy notices are published across all endpoints; rights and retention jobs are operational; store submission requirements are fulfilled; and test coverage and performance budget evidence is verified.
 
-**Open decisions for Phase 0** (optional production collection stays disabled while any remain open):
-- legal controller/operator and single privacy contact
-- launch jurisdictions, EU/UK representative, and DPO need
-- approved retention schedules, including consent evidence
-- shared-cost allocation rule
-- trip timezone fallback
-- reference devices and load baseline
-- consent re-prompt triggers
-- each processor's deletion capability (Sentry, AI providers)
-- whether a BigQuery export is justified
-- confirmation that Google/Apple sign-in enforce the 16+ age gate
+---
+
+## Phase 0 Decisions (Recorded October 8, 2026)
+
+The ten open decisions have been made. They are applied throughout this plan and the [design document](../analytics-upgrade.md). Each item still needs the verification work listed under "Follow-up" before optional production collection is turned on.
+
+| # | Decision | Choice | Rationale | Follow-up |
+|---|---|---|---|---|
+| 1 | Controller/operator and privacy contact | Operator **Tristan Duerk** until Duerk Industries is formally registered, then the company. Single contact **`privacy@wander-bunnies.com`**, forwarding to both Tristan and Bryan. | A role address survives changes in ownership and staffing without republishing policies and store listings, and two recipients cover response deadlines. | Create the mailbox/forwarding and verify delivery. Replace both personal addresses on every policy page, store listing, and in `app/public/support.html`. |
+| 2 | Jurisdictions, representatives, DPO | **EU/EEA and UK are targeted markets.** No Art. 27 EU or UK representative is appointed **yet**. No DPO. | The existing notice already targets EU users (GDPR sections, withdrawal form, DSA page). Analytics is opt-in, first-party, and small-scale, and monitoring is not a core activity, so no DPO is needed. | Art. 27 requires a representative for a non-EU/UK controller targeting those markets unless processing is occasional and low-risk. Record the exemption reasoning in the ROPA. **Revisit before public EU/UK marketing, before passing ~1,000 EU/UK accounts, or if any regulator or user contact arrives.** The privacy policy must not claim a representative exists. |
+| 3 | Retention | Approve the proposed schedule. **Consent evidence:** account lifetime + 3 years. **Billing records:** 7 years (tax/accounting). **Cost ledger:** user/trip linkage removed after 13 months, keeping feature/provider totals. | Consent records only need to prove past consent, and the user link in cost data is only needed while per-user analysis is useful. | Implement in the Phase 4 purge jobs; publish only after the jobs are tested. |
+| 4 | Shared-cost allocation | Direct costs → initiating user and trip. Shared infrastructure → **equal split across accounts active that month**, with a **request-volume split** shown alongside for comparison. | Simple, explainable, hard to game. Add complexity only if the two views diverge materially. | Version the rule as `allocation_v1` in `provider_cost_ledger` reports. |
+| 5 | Trip timezone fallback | Add an optional `timezone` (IANA) field to trips, filled automatically from the destination/first lodging via cached Google Places details. Fallback order: segment timezone → trip timezone → **device timezone reported on the event** → `unknown`. | Trips have no timezone today. A traveler's device usually switches to local time, so it is a reasonable proxy. | Schema change in both adapters plus migration; classification in `server/src/utils/tripPhase.ts`. Reports show the share of events classified by each fallback level. |
+| 6 | Reference devices and load baseline | Devices: **mid-range Android** (Pixel 6a or Galaxy A-series), **iPhone 12**, **mobile Safari**, **desktop Chrome**. Load: busiest hour of the last 30 days from Cloud Run request logs, tested at **10×** with modeled analytics batches added. | Flagship phones hide main-thread costs, and the real peak grounds the targets. | Capture the baseline number in Phase 0 and record it in this plan. |
+| 7 | Consent re-prompt triggers | Re-ask **only on a material change**: a new purpose, a new data category, or a new recipient category (e.g. adding a third-party analytics vendor). Wording edits never re-prompt. A refusal is **never re-asked** unless such a change occurs. No periodic re-prompt. | Repeated prompts after refusal are a common enforcement finding. | `notice_version` bumps only for material changes, with a changelog entry stating why. |
+| 8 | Processor deletion | **Sentry:** receives only the analytics pseudonym (never user ID or email), with 30-day retention. The policy states that diagnostic data expires within 30 days instead of promising per-user deletion. **AI providers:** confirm API retention terms, use zero-retention options where eligible, and never put user identifiers in prompts. | Reliable per-user deletion in Sentry is impractical; short retention plus pseudonyms achieves the same result verifiably. | Set the Sentry project retention, and verify scrubbing in a staging event. Record each AI provider's retention term in the subprocessor list. |
+| 9 | BigQuery | **Not now.** Start with the five admin views plus a scheduled CSV export of suppressed aggregate rollups to Cloud Storage. | Avoids another data store, transfer path, and permission surface. | Revisit when analysts need custom SQL more than about weekly, or admin queries miss the 2 s p95 budget. |
+| 10 | Age gate on all sign-in paths | **Implemented** (see below). | Accounts created through Google/Apple sign-in, and any registration without a date of birth, had no age check, which contradicted the 16+ policy. | Enable `age_gate_enforcement` once app builds with the prompt are the supported minimum. |
+
+### Decision 10 implementation: account age verification
+
+Finding: `validateRegistrationAge` accepted a missing date of birth as "pending", **no client ever sent one**, and the Google (`findOrCreateGoogleUser`) and Apple (`findOrCreateAppleUser`) sign-in paths never called it. So in practice **no sign-up path verified 16+**.
+
+What was built:
+
+| Layer | Change |
+|---|---|
+| DB | `hasUserDateOfBirth` and `setUserDateOfBirth` in `db.postgres.ts` and `db.firebase.ts` (memory adapter inherits), exposed through `db.ts`. A declared date is written once and never overwritten. |
+| Service | `server/src/services/ageVerificationService.ts`: `isAgeVerificationRequired` (positive results cached in-process, bounded at 50k users, so verified users cost no extra queries), `declareDateOfBirth` (an under-16 declaration is **not stored**, for data minimization), and `isAgeGateEnforced`. |
+| API | `GET /api/account/age-verification` → `{ required, enforced, minimumAge }`. `POST /api/account/age-verification` `{ dateOfBirth }` → 200, 400 `INVALID_DATE_OF_BIRTH`, or 403 `UNDER_MINIMUM_AGE`. |
+| Enforcement | `authenticate` in `server/src/auth.ts` returns 403 `AGE_VERIFICATION_REQUIRED` for unverified accounts when the **`age_gate_enforcement`** flag is on. Allowlisted: age-verification status/declaration, password setup, data export, and account deletion. The flag is **default off and fail-closed**, so app builds from before the prompt are not locked out. |
+| Client | `app/components/AgeVerificationDialog.tsx`, shown after sign-in (web, iOS, Android) for any account not yet verified, unless the iOS shortcut below verifies it first. It is a neutral age screen that doesn't reveal the threshold before entry and can't be dismissed. An under-16 result offers **Delete my account** or **Sign out**. Trip data loads only after verification. |
+| iOS shortcut (Apple Declared Age Range) | On iOS 26+, before showing the prompt, `app/utils/appleAgeRange.ts` asks Apple, through `expo-age-range` with a single age gate at 16, whether the Apple Account is 16+. If Apple confirms, the client calls `POST /api/account/age-verification/apple` `{ lowerBound }`. The server stores only `age_verification_source = 'apple_declared_age_range'` plus `age_verified_at`, with **no birthdate**, and the prompt is skipped. A decline, under 16, "not available", older iOS, Android, web, a build without the entitlement, or any error falls back to the date-of-birth prompt. A lower bound under 16, missing, or not an integer gets 400 `AGE_RANGE_NOT_CONFIRMED`, which also falls back. |
+| Verification record | New `users.age_verification_source` (`self_declared_dob` or `apple_declared_age_range`) and `age_verified_at` columns (migration `20261008_add_age_verification_source.sql`; Firebase fields `ageVerificationSource` / `ageVerifiedAt`). The first verification is never overwritten. The gate treats either a date of birth or a source as verified. |
+| Tests | `server/__tests__/age-verification.test.ts` (17 cases: status, invalid/future dates, 16th-birthday boundary, under-age not stored, Apple bounds 16/18/21 accepted without a birthdate, under-16/missing/non-integer/string rejected, enforcement on/off, allowlist, self-deletion), `app/tests/AgeVerificationDialog.test.tsx`, and `app/tests/appleAgeRange.test.ts` (never calls Apple on web, Android, iOS < 26, or without the entitlement flag; decline, below-minimum, and unavailable fall back; server rejection falls back). |
+
+**Apple shortcut setup and caveats:**
+- **Enable per build:**
+  1. Turn on the **Declared Age Range** capability on the App ID in the Apple Developer portal. Capability auto-sync is disabled for this app (`EXPO_NO_CAPABILITY_SYNC`), so this is manual.
+  2. Set `APPLE_DECLARED_AGE_RANGE_ENABLED=1` for the EAS build. That adds the `com.apple.developer.declared-age-range` entitlement and `extra.appleDeclaredAgeRangeEnabled`.
+
+  Without both, the app always uses the prompt.
+- **Xcode 26:** `expo-age-range` imports Apple's `DeclaredAgeRange` framework, so iOS builds must use an Xcode 26+ EAS image. Confirm the image before the next iOS build.
+- **Alpha package:** `expo-age-range` 0.2.x is marked alpha by Expo. Re-check its API on each Expo SDK upgrade, and test on a physical device signed in to an Apple Account (simulators are unreliable).
+- **iOS < 26 must stay guarded:** on iOS < 26 and web, `expo-age-range` returns `lowerBound: 18` without asking anyone. The wrapper's iOS 26+ check prevents that from verifying users, and a test covers it.
+- **Android excluded:** the package is excluded from Android autolinking (`expo.autolinking.android.exclude` in both `package.json` files), so Google Play Age Signals is not bundled. Android uses the prompt.
+- **Same trust level as the prompt:** Apple provides no server-verifiable attestation for the range, so this is a client assertion, like a typed date of birth. The difference is that the age comes from the Apple Account (self- or guardian-declared, and sometimes confirmed by Apple).
+- **Disclosures:** the privacy policy should say that on iOS, age may be confirmed through Apple's age-range feature, and that only the fact "16+ confirmed via Apple" is stored. The App Privacy answers are unchanged, since no birthdate or range is collected.
+
+Rollout:
+1. Ship the server and the client prompt with the flag off. Existing and new users are prompted on their next sign-in.
+2. Once the minimum supported native build includes the prompt, turn on `age_gate_enforcement`.
+3. Then tighten registration to require `dateOfBirth`, adding the field to the registration form.
+
+Known limits:
+- Self-declared age gates can be circumvented by entering a false date. This matches common practice and the policy's "we do not knowingly" standard.
+- Under-age accounts that neither delete nor sign out stay blocked once enforcement is on. A scheduled purge of accounts that stay unverified (e.g. 30 days after enforcement) is a follow-up.
+
+Apple's guidelines forbid *forcing* extra account-creation steps after Sign in with Apple (this exact issue caused a past rejection over password setup). Collecting a date of birth for a legal age requirement is a different case, but explain it in the App Review notes.

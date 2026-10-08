@@ -39,6 +39,13 @@
         "@sentry/react-native",
         "@react-native-community/datetimepicker"
       ]
+    },
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "expo-age-range"
+        ]
+      }
     }
   },
   "dependencies": {
@@ -54,6 +61,7 @@
     "@sentry/react-native": "~7.2.0",
     "caniuse-lite": "^1.0.30001770",
     "expo": "~54.0.37",
+    "expo-age-range": "~0.2.1",
     "expo-apple-authentication": "~8.0.8",
     "expo-audio": "~1.1.1",
     "expo-clipboard": "~8.0.8",

@@ -68,6 +68,12 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
   // EAS sets EAS_BUILD=true. A built artifact runs on a real device/simulator,
   // so it must never fall back to a localhost backend.
   const isEasBuild = process.env.EAS_BUILD === 'true' || process.env.EAS_BUILD === '1';
+  // Apple Declared Age Range (iOS 26+) lets Apple confirm a user is 16+ so the
+  // date-of-birth prompt can be skipped. Opt-in per build: capability sync is
+  // disabled above, so the "Declared Age Range" capability must first be enabled
+  // on the App ID by hand, or signing fails. Without this flag the app always
+  // uses the date-of-birth prompt. See app/utils/appleAgeRange.ts.
+  const appleDeclaredAgeRangeEnabled = process.env.APPLE_DECLARED_AGE_RANGE_ENABLED === '1';
   const sentryExpoPlugin =
     assetPrefix === './app/'
       ? resolvePluginFromApp('@sentry/react-native/expo', appDir)
@@ -106,6 +112,9 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
         // use it and tries to turn APPLE_ID_AUTH OFF on an app record that
         // already depends on it, which Apple's API rejects.
         usesAppleSignIn: true,
+        ...(appleDeclaredAgeRangeEnabled
+          ? { entitlements: { 'com.apple.developer.declared-age-range': true } }
+          : {}),
         infoPlist: {
           ITSAppUsesNonExemptEncryption: false,
           NSAppTransportSecurity: {
@@ -221,6 +230,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
       sessionCacheTimeoutMinutes: 43200,
       premiumTrialsEnabled: String(process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED ?? 'true').toLowerCase() !== 'false',
+      appleDeclaredAgeRangeEnabled,
       eas: {
         projectId: '06966c0b-d878-4346-850c-090c762f1916',
       },

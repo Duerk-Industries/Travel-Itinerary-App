@@ -96,6 +96,14 @@ export const setInitialWebUserPassword = async (...args: Parameters<ReturnType<t
   adapter().setInitialWebUserPassword(...args);
 export const isPasswordSetupRequired = async (...args: Parameters<ReturnType<typeof adapter>['isPasswordSetupRequired']>) =>
   adapter().isPasswordSetupRequired(...args);
+export const hasUserDateOfBirth = async (...args: Parameters<ReturnType<typeof adapter>['hasUserDateOfBirth']>) =>
+  adapter().hasUserDateOfBirth(...args);
+export const setUserDateOfBirth = async (...args: Parameters<ReturnType<typeof adapter>['setUserDateOfBirth']>) =>
+  adapter().setUserDateOfBirth(...args);
+export const isUserAgeVerified = async (...args: Parameters<ReturnType<typeof adapter>['isUserAgeVerified']>) =>
+  adapter().isUserAgeVerified(...args);
+export const recordUserAgeVerification = async (...args: Parameters<ReturnType<typeof adapter>['recordUserAgeVerification']>) =>
+  adapter().recordUserAgeVerification(...args);
 export const deleteWebUserAndCleanup = async (...args: Parameters<ReturnType<typeof adapter>['deleteWebUserAndCleanup']>) =>
   adapter().deleteWebUserAndCleanup(...args);
 export const deleteAllUsers = async (...args: Parameters<ReturnType<typeof adapter>['deleteAllUsers']>) =>

@@ -479,6 +479,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_internal_canary BOOLEAN NOT NULL DEFAULT FALSE;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_verification_source TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_verified_at TIMESTAMPTZ;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_normalized ON users(username_normalized);`);
 
 
@@ -2647,6 +2649,46 @@ export const isPasswordSetupRequired = async (userId: string): Promise<boolean> 
     [userId]
   );
   return Boolean(rows[0]?.passwordSetupRequired);
+};
+
+export const hasUserDateOfBirth = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ dateOfBirth: unknown }>(
+    `SELECT date_of_birth as "dateOfBirth" FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  return rows[0]?.dateOfBirth != null;
+};
+
+/** Records a declared date of birth once; an already-declared value is never overwritten. */
+export const setUserDateOfBirth = async (userId: string, dateOfBirth: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE users SET date_of_birth = COALESCE(date_of_birth, $2::date) WHERE id = $1`,
+    [userId, dateOfBirth]
+  );
+};
+
+/** True when the account has confirmed 16+ by any method (declared date of birth or Apple age range). */
+export const isUserAgeVerified = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ dateOfBirth: unknown; source: string | null }>(
+    `SELECT date_of_birth as "dateOfBirth", age_verification_source as "source" FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  return rows[0]?.dateOfBirth != null || Boolean(rows[0]?.source);
+};
+
+/** Records how 16+ was first confirmed; a later confirmation never overwrites the original. */
+export const recordUserAgeVerification = async (userId: string, source: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE users
+        SET age_verification_source = COALESCE(age_verification_source, $2),
+            age_verified_at = COALESCE(age_verified_at, NOW())
+      WHERE id = $1`,
+    [userId, source]
+  );
 };
 
 export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
