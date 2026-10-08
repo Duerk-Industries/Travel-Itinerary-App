@@ -52,7 +52,7 @@ For deployment and environment setup, use the guides in [`DEPLOYMENT-GCP-FIREBAS
 - [Tiers](docs/tiers.md)
 - [Admin Notes](docs/admin.md)
 - [Analytics Upgrade: Collection, Goals, and Behavior](docs/analytics-upgrade.md)
-- [Analytics Upgrade Implementation Plan](docs/implementation_plans/analytics-upgrade.md)
+- [Analytics Upgrade Implementation Plan](docs/implementation-plans/analytics-upgrade.md)
 
 ### Auth, Access, and Security
 
