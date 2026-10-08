@@ -1,10 +1,10 @@
 # WanderBunnies Privacy Policy
 
-**Last updated: July 21, 2026**
+**Last updated: October 8, 2026**
 
 This policy explains what information WanderBunnies ("the app," "we," "us") collects, how we use it, and who we share it with. WanderBunnies is currently operated by Tristan Duerk. [UPDATE ONCE INCORPORATED: replace with the legal entity name once Duerk Industries or successor entity is formally registered.]
 
-If you have questions about this policy, contact us at **tristan.duerk@gmail.com**.
+If you have questions about this policy, contact us at **support@wander-bunnies.com**.
 
 ---
 
@@ -95,7 +95,7 @@ We retain your information for as long as your account is active. If you delete 
 - **Deletion**: You can permanently delete your account and associated data at any time from your account settings (Account → Delete Account). This also cancels any active subscriptions.
 - **Correction**: You can edit most of your profile and trip information directly in the app.
 
-If you'd rather not use the app to request deletion, email us at **tristan.duerk@gmail.com** and we'll process the request manually.
+If you'd rather not use the app to request deletion, email us at **support@wander-bunnies.com** and we'll process the request manually.
 
 ---
 
@@ -119,7 +119,7 @@ We may update this policy from time to time. If we make material changes, we'll 
 
 ## 10. Contact Us
 
-Questions about this policy or your data? Contact us at **tristan.duerk@gmail.com**.
+Questions about this policy or your data? Contact us at **support@wander-bunnies.com**.
 
 ---
 

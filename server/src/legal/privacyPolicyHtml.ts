@@ -38,11 +38,11 @@ export const privacyPolicyHtml = `<!doctype html>
 <body>
 
 <h1>WanderBunnies Privacy Policy</h1>
-<p class="updated">Last updated: July 21, 2026</p>
+<p class="updated">Last updated: October 8, 2026</p>
 
 <p>This policy explains what information WanderBunnies ("the app," "we," "us") collects, how we use it, and who we share it with. WanderBunnies is currently operated by Tristan Duerk.</p>
 
-<p>If you have questions about this policy, contact us at <strong><a href="mailto:tristan.duerk@gmail.com">tristan.duerk@gmail.com</a></strong>.</p>
+<p>If you have questions about this policy, contact us at <strong><a href="mailto:support@wander-bunnies.com">support@wander-bunnies.com</a></strong>.</p>
 
 <hr />
 
@@ -129,7 +129,7 @@ export const privacyPolicyHtml = `<!doctype html>
   <li><strong>Deletion</strong>: You can permanently delete your account and associated data at any time from your account settings (Account → Delete Account). This also cancels any active subscriptions.</li>
   <li><strong>Correction</strong>: You can edit most of your profile and trip information directly in the app.</li>
 </ul>
-<p>If you'd rather not use the app to request deletion, email us at <strong><a href="mailto:tristan.duerk@gmail.com">tristan.duerk@gmail.com</a></strong> and we'll process the request manually.</p>
+<p>If you'd rather not use the app to request deletion, email us at <strong><a href="mailto:support@wander-bunnies.com">support@wander-bunnies.com</a></strong> and we'll process the request manually.</p>
 
 <hr />
 
@@ -149,7 +149,7 @@ export const privacyPolicyHtml = `<!doctype html>
 <hr />
 
 <h2>10. Contact Us</h2>
-<p>Questions about this policy or your data? Contact us at <strong><a href="mailto:tristan.duerk@gmail.com">tristan.duerk@gmail.com</a></strong>.</p>
+<p>Questions about this policy or your data? Contact us at <strong><a href="mailto:support@wander-bunnies.com">support@wander-bunnies.com</a></strong>.</p>
 
 </body>
 </html>

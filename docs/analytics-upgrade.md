@@ -2,8 +2,9 @@
 
 Status: proposed design. No new collection, SDK, or policy change is enabled by this document.
 Assessment and requirements review: October 8, 2026.
-Revision: 5; applies the ten Phase 0 decisions (privacy contact, EU/UK targeting, retention, cost allocation, trip timezone, reference devices, re-prompt rule, processor deletion, BigQuery deferral) and documents the new account age verification.
+Revision: 6; includes the verified Phase 0 technical baseline, draft processing register and event dictionary. Product choices remain subject to the review gates recorded in the Phase 0 audit.
 Delivery plan: [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md).
+Phase 0 evidence: [verified baseline, dictionary and privacy review](analytics-phase-0.md).
 
 This document explains what analytics WanderBunnies collects today, what the upgrade adds, why, how collection behaves on web, iOS, and Android, and which privacy commitments and regulatory frameworks constrain it. The accompanying [implementation plan](implementation-plans/analytics-upgrade.md) covers execution sequencing, privacy-policy page changes, automated tests, performance budgets, and cost governance.
 
@@ -193,11 +194,11 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
 - **Authoritative Server Enforcement:** The account-level choice is stored in `privacy_preferences` and enforced on the server.
 - **Epoch Management:** Re-granting consent increments the purpose epoch and rotates the subject pseudonym. Events queued before withdrawal are never replayed.
 - **Global Privacy Control (GPC) & Do Not Track (DNT):** Honor applicable legal sale/sharing/targeted-advertising opt-outs. An active GPC signal keeps optional product analytics **off**. DNT is treated as an optional-analytics refusal.
-- **Age Gate Consistency:** The minimum account age is **16** worldwide (`MINIMUM_ACCOUNT_AGE` in `server/src/services/registrationAgeGate.ts`). Until this revision, no client sent a date of birth and Google/Apple sign-in skipped the check entirely. Now every unverified account is checked after sign-in. On iOS 26+ (in builds with the entitlement enabled), Apple's Declared Age Range is asked first. If Apple confirms 16+, the account is recorded as "verified 16+ via Apple" with no birthdate collected, and no prompt appears. Otherwise, and on Android, web, and older iOS, the user sees a neutral date-of-birth screen that cannot be dismissed. Under-16 declarations are not stored, and those accounts can only be deleted or signed out of. Server-side blocking is controlled by the `age_gate_enforcement` flag (see the [plan, decision 10](implementation-plans/analytics-upgrade.md#decision-10-implementation-account-age-verification)). Because account holders are 16+, analytics consent does not need the GDPR Art. 8 parental-consent mechanism. Every policy page must state 16, and the "under 13" wording on `/privacy` must be removed. Minors entered as travelers or dependents are never analytics subjects.
+- **Age Gate Consistency:** The minimum account age is **16** worldwide (`MINIMUM_ACCOUNT_AGE` in `server/src/services/registrationAgeGate.ts`). Until this revision, no client sent a date of birth and Google/Apple sign-in skipped the check entirely. A post-sign-in age-check path is implemented for current clients, while server blocking remains gated by `age_gate_enforcement` and older builds may remain supported. On iOS 26+ (in builds with the entitlement enabled), Apple's Declared Age Range is asked first. If Apple confirms 16+, the account is recorded as "verified 16+ via Apple" with no birthdate collected, and no prompt appears. Otherwise, and on Android, web, and older iOS, the user sees a neutral date-of-birth screen that cannot be dismissed. Under-16 declarations are not stored, and those accounts can only be deleted or signed out of. Server-side blocking is controlled by the `age_gate_enforcement` flag (see the [plan, decision 10](implementation-plans/analytics-upgrade.md#decision-10-implementation-account-age-verification)). Because account holders are 16+, analytics consent does not need the GDPR Art. 8 parental-consent mechanism. Every policy page must state 16, and the "under 13" wording on `/privacy` must be removed. Minors entered as travelers or dependents are never analytics subjects.
 
 ### 3. GDPR and UK GDPR Compliance
 
-- **Scope and contact:** The EU/EEA and UK are targeted markets. The operator is Tristan Duerk (the company once Duerk Industries is registered). All privacy requests go to **`privacy@wander-bunnies.com`**, which forwards to both maintainers. No Art. 27 EU/UK representative is appointed yet; the exemption reasoning is recorded in the ROPA and revisited before public EU/UK marketing or significant EU/UK growth. No DPO is required, because analytics is opt-in, first-party, and small-scale.
+- **Scope and contact:** EU/EEA and UK are treated as targeted markets for planning. The operator is Tristan Duerk and the privacy contact is `support@wander-bunnies.com` (decided 2026-10-08). The live public pages still name Bryan Duerk until they are synchronized. A [draft Article 27 assessment](legal/eu-uk-representative-assessment.md) and the [draft DPIA](legal/analytics-dpia.md) await counsel and controller sign-off. The [Phase 0 audit](analytics-phase-0.md#recorded-decisions-and-sign-off-state) records these unresolved facts.
 
 - **Lawful Basis:** Explicit, freely given, specific, informed, and unambiguous opt-in consent (Art. 6(1)(a) GDPR) for optional product analytics and detailed diagnostics. Necessary processing (security, billing, quota enforcement) uses contractual necessity (Art. 6(1)(b)) or legitimate interests (Art. 6(1)(f)) after documented necessity assessments.
 - **Withdrawal:** As easy to withdraw as to grant (Art. 7(3) GDPR). Available in-app at any time under Account → Privacy.
@@ -206,8 +207,8 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
   - **Access & Portability (Art. 15 & 20):** `GET /api/account/export` (Schema v2) includes current privacy preferences, choice history, user's behavioral events, daily facts, pseudonym, cost ledger rows, and diagnostic metadata.
   - **Erasure / Right to be Forgotten (Art. 17):** `DELETE /api/account/analytics-data` erases analytics events, subject mappings, daily facts, AI captures, and Sentry diagnostics. `DELETE /api/account` performs full account deletion including analytics erasure.
   - **Restriction & Objection (Art. 18 & 21):** For consent-based analytics and diagnostics, withdrawing consent immediately stops processing. For processing based on legitimate interests (cost metering joins, security logs), users can object through the privacy contact. Each objection is assessed and logged, and the outcome is recorded in the rights-request tracker.
-- **Record of Processing Activities (ROPA):** To be created in Phase 0 under Art. 30 GDPR, covering purpose, data types, basis, recipients, retention, transfers, and security measures.
-- **Data Protection Impact Assessment (DPIA):** DPIA screening is a Phase 0 deliverable, with a full DPIA if high-risk criteria apply. Neither has been done yet.
+- **Record of Processing Activities (ROPA):** A draft purpose/data/recipient register is recorded in the [Phase 0 audit](analytics-phase-0.md#processing-register-draft-ropa); the privacy owner must complete and approve basis, transfers, contracts and security measures.
+- **Data Protection Impact Assessment (DPIA):** Phase 0 screening is recorded; a full DPIA is recommended and requires privacy-owner approval before optional collection.
 
 ### 4. ePrivacy Directive and UK PECR
 
@@ -217,7 +218,7 @@ The first-run consent sheet offers **Accept**, **Reject**, and **Customize** wit
 
 ### 5. US State Privacy Laws (CCPA / CPRA and Successors)
 
-- Applicability thresholds (revenue, volume of consumers' data) are assessed in Phase 0. The controls below are built regardless, because they cost little and match the global opt-in design.
+- Applicability thresholds (revenue, volume of consumers' data) still require documented review; Phase 0 records the current gap. The controls below are built regardless, because they cost little and match the global opt-in design.
 - Provides rights to Know, Delete, Correct, and Opt-Out of Sale/Sharing.
 - WanderBunnies **does not sell or share** personal information for cross-context behavioral advertising.
 - Public web page `/privacy-choices` serves as the "Your Privacy Choices" link for US residents.
@@ -278,7 +279,7 @@ app/public/privacy.html  server/src/legal/privacyPolicyHtml.ts  CI Parity Check
 
 ## Data Retention (Proposed)
 
-Approved in Phase 0; only schedules that are configured and tested get published in the privacy policy.
+Proposed in the recorded product decisions; purpose-specific legal approval and technical enforcement remain open. Publish only schedules that are configured and tested.
 
 | Data | Proposed retention |
 |---|---|
@@ -292,7 +293,7 @@ Approved in Phase 0; only schedules that are configured and tested get published
 | Cost ledger | User/trip linkage removed after 13 months; feature/provider totals kept |
 | Billing records | 7 years (tax/accounting) |
 
-Sentry receives only the analytics pseudonym, never a user ID or email. Diagnostic data therefore expires within 30 days instead of being deleted per user on request.
+The target is to send only a diagnostic pseudonym to Sentry and configure 30-day retention. Current SDK payloads, retention settings and deletion capabilities have not been verified, so neither claim belongs in the live policy yet.
 
 Withdrawing consent stops new collection immediately. **Delete my analytics data** or account deletion erases the history.
 
@@ -331,4 +332,4 @@ Withdrawing consent stops new collection immediately. **Delete my analytics data
 
 - **Priced Metering:** `settleProviderAttempt()` records attempt ID, provider, model, caller, feature, initiating user, trip, units, cache status, and price version in integer USD microdollars.
 - **No Double Counting:** Separates quota reservations from settled cost. Shared background costs are allocated once under an explicit formula.
-- **Monthly Dollar Cap & Alerts:** The approved analytics budget is recorded in `cost-model.yaml` for forecasting. Alerts at 80% and 100% come from a Google Cloud Billing budget, plus the Sentry quota alert. When the budget is exceeded, an operator reduces sampling or pauses optional collection with the `analytics_collection_enabled` kill switch, without affecting travel features, consent changes, or rights requests.
+- **Monthly Dollar Cap & Alerts:** A monthly analytics budget must be approved and recorded in `cost-model.yaml` for forecasting; no approved cap was verified in Phase 0. Alerts at 80% and 100% come from a Google Cloud Billing budget, plus the Sentry quota alert. When the budget is exceeded, an operator reduces sampling or pauses optional collection with the `analytics_collection_enabled` kill switch, without affecting travel features, consent changes, or rights requests.

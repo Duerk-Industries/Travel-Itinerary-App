@@ -130,7 +130,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
     if (deleted) {
       onSignOut();
     } else {
-      setMessage('Could not delete your account. Try again or contact privacy@wander-bunnies.com.');
+      setMessage('Could not delete your account. Try again or contact support@wander-bunnies.com.');
     }
   };
 
