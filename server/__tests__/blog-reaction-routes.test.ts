@@ -45,7 +45,7 @@ describe('blog reaction routes (PUT/DELETE/GET .../reactions)', () => {
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ name: 'Reaction Route Trip', startDate: '2026-10-07', endDate: '2026-10-07', participants: [] })
+      .send({ name: 'Reaction Route Trip', startDate: '2030-10-07', endDate: '2030-10-07', participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
@@ -54,14 +54,14 @@ describe('blog reaction routes (PUT/DELETE/GET .../reactions)', () => {
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2026-10-07', body: 'React to this', audience: 'public' })
+      .send({ kindKey: 'core.text', dayDate: '2030-10-07', body: 'React to this', audience: 'public' })
       .expect(201);
     itemId = item.body.id;
 
     const travelersOnly = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2026-10-07', body: 'Travelers only', audience: 'travelers' })
+      .send({ kindKey: 'core.text', dayDate: '2030-10-07', body: 'Travelers only', audience: 'travelers' })
       .expect(201);
     travelersOnlyItemId = travelersOnly.body.id;
   });

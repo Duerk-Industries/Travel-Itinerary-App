@@ -28,7 +28,7 @@ describe('blog counter reconciliation', () => {
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ name: 'Reconciliation Trip', startDate: '2026-10-06', endDate: '2026-10-06', participants: [] })
+      .send({ name: 'Reconciliation Trip', startDate: '2030-10-06', endDate: '2030-10-06', participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
@@ -36,7 +36,7 @@ describe('blog counter reconciliation', () => {
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2026-10-06', body: 'Reconciliation target', audience: 'public' })
+      .send({ kindKey: 'core.text', dayDate: '2030-10-06', body: 'Reconciliation target', audience: 'public' })
       .expect(201);
     itemId = item.body.id;
   });

@@ -71,7 +71,7 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ name: 'Matrix Trip', startDate: '2026-10-05', endDate: '2026-10-05', participants: [] })
+      .send({ name: 'Matrix Trip', startDate: '2030-10-05', endDate: '2030-10-05', participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
 
@@ -84,11 +84,11 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
     // before ever writing anything.
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
 
-    travelersItemId = await createTextItem('2026-10-05', 'travelers', 'Only travelers see this');
-    publicItemId = await createTextItem('2026-10-05', 'public', 'Everyone sees this');
-    followersItemId = await createTextItem('2026-10-05', 'followers', 'Followers and travelers see this');
+    travelersItemId = await createTextItem('2030-10-05', 'travelers', 'Only travelers see this');
+    publicItemId = await createTextItem('2030-10-05', 'public', 'Everyone sees this');
+    followersItemId = await createTextItem('2030-10-05', 'followers', 'Followers and travelers see this');
 
-    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, '2026-10-05']);
+    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, '2030-10-05']);
     dayId = dayRow.rows[0].id;
   });
 
@@ -204,7 +204,7 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
       const otherTrip = await request(app)
         .post('/api/trips/wizard')
         .set('Authorization', `Bearer ${travelerToken}`)
-        .send({ name: 'Other Trip', startDate: '2026-11-01', endDate: '2026-11-01', participants: [] })
+        .send({ name: 'Other Trip', startDate: '2030-11-01', endDate: '2030-11-01', participants: [] })
         .expect(201);
       const otherTripId = otherTrip.body.trip?.id ?? otherTrip.body.id;
       const comment = await postComment(tripId, travelerId, 'item', publicItemId, 'Belongs to the matrix trip');
