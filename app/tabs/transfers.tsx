@@ -11,8 +11,7 @@ import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/me
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import EditableDataGrid, { type GridCellError, type GridColumn } from '../components/EditableDataGrid';
-import NativeDateTimePicker from '../components/NativeDateTimePicker';
-import NativeDatePickerSheet from '../components/NativeDatePickerSheet';
+import DateField from '../components/DateField';
 import type { AppTheme } from '../theme/theme';
 import { fixedTableColumn } from '../utils/tableColumns';
 import {
@@ -654,8 +653,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const modalArrLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
   const modalLayoverLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
   const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null>(null);
-  const [timePickerValue, setTimePickerValue] = useState<Date>(new Date());
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
@@ -1094,45 +1091,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     hideAirportDropdown();
   };
 
-  const openTimePicker = (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => {
-    if (Platform.OS !== 'web') {
-      const base = new Date();
-      const match = current.match(/(\d{1,2}):(\d{2})/);
-      if (match) {
-        base.setHours(Number(match[1]), Number(match[2]), 0, 0);
-      } else {
-        base.setHours(0, 0, 0, 0);
-      }
-      setTimePickerValue(base);
-      setTimePickerTarget(target);
-    }
-  };
-
-  const handleTimePickerChange = (
-    event: { type?: string } | undefined,
-    date: Date | undefined,
-    target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null
-  ) => {
-    if (event?.type === 'dismissed') {
-      setTimePickerTarget(null);
-      return;
-    }
-    if (!date) return;
-    const hh = String(date.getHours()).padStart(2, '0');
-    const mm = String(date.getMinutes()).padStart(2, '0');
-    const value = `${hh}:${mm}`;
-    if (target === 'edit-dep') {
-      setEditingFlight((prev) => (prev ? { ...prev, departureTime: value } : prev));
-    } else if (target === 'edit-arr') {
-      setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
-    } else if (target === 'new-dep') {
-      setNewFlight((prev) => ({ ...prev, departureTime: value }));
-    } else if (target === 'new-arr') {
-      setNewFlight((prev) => ({ ...prev, arrivalTime: value }));
-    }
-    if (Platform.OS === 'android') setTimePickerTarget(null);
-  };
-
   const openFlightDetails = (flight: Flight) => {
     if (readOnly) return;
     const normalizedPassengerIds = canonicalizeMemberSelectionIds(
@@ -1555,7 +1513,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       </View>
       {gridMessage ? <Text style={styles.helperText}>{gridMessage}</Text> : null}
       {tableEditing ? <HorizontalTableScroll style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-        <EditableDataGrid rows={sortedGridRows} columns={gridColumns} disabled={gridSaving} cellErrors={gridErrors} stagedDeleteIds={gridDeleteIds} onCellChange={changeGridCell} onDeleteRow={toggleGridDelete} onUndo={undoGridChange} onRedo={redoGridChange} sortKey={flightSort.key} sortDirection={flightSort.direction} onSort={sortFlightTable} styles={styles} theme={theme} nativeDateTimePicker={NativeDateTimePicker} />
+        <EditableDataGrid rows={sortedGridRows} columns={gridColumns} disabled={gridSaving} cellErrors={gridErrors} stagedDeleteIds={gridDeleteIds} onCellChange={changeGridCell} onDeleteRow={toggleGridDelete} onUndo={undoGridChange} onRedo={redoGridChange} sortKey={flightSort.key} sortDirection={flightSort.direction} onSort={sortFlightTable} styles={styles} theme={theme} />
       </HorizontalTableScroll> : null}
       {!tableEditing ? <>
       <HorizontalTableScroll
@@ -1929,42 +1887,24 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 }
 
                 if (col.key === 'departure_time' || col.key === 'arrival_time') {
-                  const display = valueMap[col.key] || 'HH:MM';
-                  const target = col.key === 'departure_time' ? 'new-dep' : 'new-arr';
-                  if (Platform.OS === 'web') {
-                    return (
-                      <View
-                        key={`input-${col.key}`}
-                        style={[
-                          styles.cell,
-                          fixedTableColumn(col.minWidth ?? 120),
-                          isLast && styles.lastCell,
-                        ]}
-                      >
-                        <input
-                          type="time"
-                          value={valueMap[col.key]}
-                          onChange={(e) => setters[col.key](e.target.value)}
-                          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                        />
-                      </View>
-                    );
-                  }
                   return (
                     <View
-                  key={`input-${col.key}`}
-                  style={[
-                    styles.cell,
-                    fixedTableColumn(col.minWidth ?? 120),
+                      key={`input-${col.key}`}
+                      style={[
+                        styles.cell,
+                        fixedTableColumn(col.minWidth ?? 120),
                         isLast && styles.lastCell,
                       ]}
                     >
-                      <TouchableOpacity
-                        style={[styles.input, { justifyContent: 'center' }]}
-                        onPress={() => openTimePicker(target, valueMap[col.key])}
-                      >
-                        <Text style={styles.cellText}>{display}</Text>
-                      </TouchableOpacity>
+                      <DateField
+                        mode="time"
+                        value={valueMap[col.key]}
+                        onChange={setters[col.key]}
+                        styles={styles}
+                        theme={theme}
+                        testID={`transfer-new-${col.key === 'departure_time' ? 'departure' : 'arrival'}-time`}
+                        accessibilityLabel={col.key === 'departure_time' ? 'Departure time' : 'Arrival time'}
+                      />
                     </View>
                   );
                 }
@@ -2119,25 +2059,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
         </View>
       ) : null}
-      {/* 'edit-dep'/'edit-arr' render inside FlightEditingForm's own Modal component instead — a
-          native RN Modal presents in its own window layered above everything else, so a picker
-          rendered here (a sibling outside that Modal) would be mounted but visually hidden behind
-          the Transfer Details modal, exactly matching the "can't see the date picker" report. Only
-          'new-dep'/'new-arr' (the inline add-transfer grid, not inside any modal) belong here. */}
-      {Platform.OS !== 'web' ? (
-        <NativeDatePickerSheet
-          visible={timePickerTarget === 'new-dep' || timePickerTarget === 'new-arr'}
-          onRequestClose={() => handleTimePickerChange({ type: 'dismissed' }, undefined, timePickerTarget)}
-          theme={theme}
-          testID="transfers-time-picker"
-        >
-          <NativeDateTimePicker
-            value={timePickerValue}
-            mode="time"
-            onChange={(event, date) => handleTimePickerChange(event, date, timePickerTarget)}
-          />
-        </NativeDatePickerSheet>
-      ) : null}
       {!readOnly && showPasteModal ? (
         <Modal transparent visible={showPasteModal} animationType="fade" onRequestClose={() => setShowPasteModal(false)}>
           <View style={[styles.passengerOverlay, { backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 16 }]}>
@@ -2193,16 +2114,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         groupMembers={groupMembers}
         userMembers={userMembers}
         styles={styles}
+        theme={theme}
         formatMemberName={formatMemberName}
         payerName={payerName}
         getLocationInputValue={getLocationInputValue}
         showAirportDropdown={showAirportDropdown}
         parseLayoverDuration={parseLayoverDuration}
-        openTimePicker={openTimePicker}
-        timePickerTarget={timePickerTarget === 'edit-dep' || timePickerTarget === 'edit-arr' ? timePickerTarget : null}
-        timePickerValue={timePickerValue}
-        onTimePickerChange={handleTimePickerChange}
-        nativeDateTimePicker={NativeDateTimePicker}
         onAirportEnter={applyTopAirportSuggestion}
         setFlight={setEditingFlight}
         setPassengerIds={setEditingFlightPassengers}

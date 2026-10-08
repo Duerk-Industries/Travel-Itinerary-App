@@ -127,7 +127,6 @@ const renderActivityHarness = (initialTours: Tour[], extraProps: Record<string, 
         payerTotals={{}}
         toursTotal={0}
         styles={styles as any}
-        nativeDateTimePicker={null}
         fetchTours={jest.fn()}
         onDataChanged={jest.fn()}
         mode="live"

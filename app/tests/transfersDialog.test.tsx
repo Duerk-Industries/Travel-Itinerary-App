@@ -73,7 +73,6 @@ describe('Flights dialog', () => {
         showAirportDropdown={jest.fn()}
         onAirportEnter={jest.fn()}
         parseLayoverDuration={() => ({ hours: '', minutes: '' })}
-        openTimePicker={jest.fn()}
         setFlight={setFlight}
         setPassengerIds={(ids) => setFlight((prev) => (prev ? { ...prev, passengerIds: ids } : prev))}
         modalDepLocationRef={{ current: null }}
@@ -164,7 +163,6 @@ describe('Flights dialog', () => {
           showAirportDropdown={jest.fn()}
           onAirportEnter={jest.fn()}
           parseLayoverDuration={() => ({ hours: '', minutes: '' })}
-          openTimePicker={jest.fn()}
           setFlight={setFlight}
           setPassengerIds={(ids) => setFlight((prev) => (prev ? { ...prev, passengerIds: ids } : prev))}
           modalDepLocationRef={{ current: null }}
@@ -228,7 +226,6 @@ describe('Flights dialog', () => {
           showAirportDropdown={jest.fn()}
           onAirportEnter={jest.fn()}
           parseLayoverDuration={() => ({ hours: '', minutes: '' })}
-          openTimePicker={jest.fn()}
           setFlight={jest.fn()}
           setPassengerIds={jest.fn()}
           modalDepLocationRef={{ current: null }}
@@ -301,7 +298,6 @@ describe('Flights dialog', () => {
           showAirportDropdown={jest.fn()}
           onAirportEnter={jest.fn()}
           parseLayoverDuration={() => ({ hours: '', minutes: '' })}
-          openTimePicker={jest.fn()}
           setFlight={jest.fn()}
           setPassengerIds={jest.fn()}
           modalDepLocationRef={{ current: null }}
@@ -328,13 +324,9 @@ describe('Flights dialog', () => {
   // Regression: the time-of-day picker for the edit modal used to render as a sibling outside
   // this component's <Modal>, so on iOS it was mounted but invisible (a native Modal presents in
   // its own window above everything else). It must render inside this component's Modal instead.
-  test('renders the native time picker inside the modal for an edit-dep target', () => {
-    const FakeTimePicker = (props: any) => {
-      pickerProps = props;
-      return null;
-    };
-    let pickerProps: any = null;
-    const onTimePickerChange = jest.fn();
+  test('renders the native time picker inside the modal and commits the picked departure time', () => {
+    const setFlight = jest.fn();
+    const draft = createFlightDraftForTrip(trip, member.id);
 
     let testRenderer: any;
     act(() => {
@@ -342,7 +334,7 @@ describe('Flights dialog', () => {
         <FlightEditingForm
           visible
           flightId="new"
-          flight={createFlightDraftForTrip(trip, member.id)}
+          flight={draft}
           groupMembers={[member]}
           userMembers={[member]}
           styles={styles}
@@ -353,12 +345,7 @@ describe('Flights dialog', () => {
           showAirportDropdown={jest.fn()}
           onAirportEnter={jest.fn()}
           parseLayoverDuration={() => ({ hours: '', minutes: '' })}
-          openTimePicker={jest.fn()}
-          timePickerTarget="edit-dep"
-          timePickerValue={new Date('2026-07-31T08:00:00.000Z')}
-          onTimePickerChange={onTimePickerChange}
-          nativeDateTimePicker={FakeTimePicker}
-          setFlight={jest.fn()}
+          setFlight={setFlight}
           setPassengerIds={jest.fn()}
           modalDepLocationRef={{ current: null }}
           modalArrLocationRef={{ current: null }}
@@ -369,15 +356,25 @@ describe('Flights dialog', () => {
       );
     });
     const root = testRenderer!.root;
+    const byTestId = (id: string, handler = 'onPress') =>
+      root.findAll((node: any) => node.props?.testID === id && typeof node.props[handler] === 'function')[0];
 
-    expect(root.findAllByType(FakeTimePicker)).toHaveLength(1);
-    expect(pickerProps).toBeTruthy();
-
-    const date = new Date('2026-07-31T09:30:00.000Z');
     act(() => {
-      pickerProps.onChange({ type: 'set' }, date);
+      byTestId('transfer-departure-time').props.onPress();
     });
-    expect(onTimePickerChange).toHaveBeenCalledWith({ type: 'set' }, date, 'edit-dep');
+    const picker = byTestId('native-date-time-picker', 'onValueChange');
+    expect(picker).toBeTruthy();
+    expect(picker.props.mode).toBe('time');
+
+    act(() => {
+      picker.props.onValueChange({ nativeEvent: {} }, new Date(2026, 6, 31, 9, 30));
+    });
+    act(() => {
+      byTestId('transfer-departure-time-done').props.onPress();
+    });
+    expect(setFlight).toHaveBeenCalledTimes(1);
+    const updater = setFlight.mock.calls[0][0];
+    expect(updater(draft).departureTime).toBe('09:30');
   });
 });
 

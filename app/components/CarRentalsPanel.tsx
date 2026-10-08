@@ -41,6 +41,9 @@ export type CarRentalsPanelProps = {
   /** Post-trip rating (±1). */
   onRateCarRental: (id: string, value: 1 | -1) => void | Promise<void>;
   theme?: AppTheme;
+  externalEditCarRentalId?: string | null;
+  onExternalEditHandled?: () => void;
+  showList?: boolean;
   /** Kill switch for row-tap-to-edit + sticky identity/actions columns
    * (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`. */
   featureTapToEditTables?: boolean;
@@ -71,6 +74,9 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   onVoteCarRental,
   onRateCarRental,
   theme,
+  externalEditCarRentalId,
+  onExternalEditHandled,
+  showList = true,
   featureTapToEditTables = true,
 }) => {
   const [editorOpen, setEditorOpen] = React.useState(false);
@@ -116,13 +122,23 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
     setEditorOpen(false);
     setEditingCarId(null);
     setCarDraft(createInitialCarRentalDraft());
+    onExternalEditHandled?.();
   };
+
+  React.useEffect(() => {
+    if (!externalEditCarRentalId) return;
+    const target = carRentals.find((car) => car.id === externalEditCarRentalId);
+    if (target) {
+      openEditDialog(target);
+    } else {
+      onExternalEditHandled?.();
+    }
+  }, [externalEditCarRentalId, carRentals]);
 
   const saveEditor = async () => {
     const saved = editingCarId ? await onUpdateCarRental(editingCarId) : await onAddCarRental();
     if (saved === false) return;
-    setEditorOpen(false);
-    setEditingCarId(null);
+    closeEditor();
   };
 
   const memberOptions = React.useMemo(() => userMembers.map((member) => ({ id: member.id, label: formatMemberName(member) })), [userMembers, formatMemberName]);
@@ -186,7 +202,9 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   };
 
   return (
-    <View style={styles.card} testID="car-rentals-panel">
+    <View style={showList ? styles.card : undefined} testID="car-rentals-panel">
+      {showList ? (
+        <>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Car Rentals</Text>
         {!isFollowingMode ? (
@@ -311,6 +329,8 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
       </View>
       </HorizontalTableScroll>
       </> : null}
+        </>
+      ) : null}
 
       {editorOpen ? (
         <CarRentalEditForm

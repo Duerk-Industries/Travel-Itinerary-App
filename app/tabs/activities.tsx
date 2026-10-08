@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -303,8 +303,6 @@ export const fetchActivitiesForTrip = async ({
   }));
 };
 
-type NativeDateTimePickerType = typeof import('../components/NativeDateTimePicker').default;
-
 type TourTabProps = {
   backendUrl: string;
   userToken: string | null;
@@ -320,7 +318,6 @@ type TourTabProps = {
   toursTotal: number;
   styles: ReturnType<typeof StyleSheet.create>;
   theme?: AppTheme;
-  nativeDateTimePicker: NativeDateTimePickerType | null;
   fetchTours: (token?: string) => Promise<void>;
   onDataChanged?: () => void;
   mode?: 'live' | 'wizard';
@@ -333,6 +330,9 @@ type TourTabProps = {
   featureActivityLodgingCsvImport?: boolean;
   featureActivityLodgingCsvExport?: boolean;
   featureStandardizedItemDialogs?: boolean;
+  externalEditTourId?: string | null;
+  onExternalEditHandled?: () => void;
+  showList?: boolean;
   // Kill switch for row-tap-to-edit + sticky identity/actions columns
   // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
   featureTapToEditTables?: boolean;
@@ -353,7 +353,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   toursTotal,
   styles,
   theme,
-  nativeDateTimePicker,
   fetchTours,
   onDataChanged,
   mode = 'live',
@@ -366,6 +365,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   featureActivityLodgingCsvImport = false,
   featureActivityLodgingCsvExport = false,
   featureStandardizedItemDialogs = false,
+  externalEditTourId,
+  onExternalEditHandled,
+  showList = true,
   featureTapToEditTables = true,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
@@ -388,7 +390,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const [gridSaving, setGridSaving] = useState(false);
   const [activitySort, setActivitySort] = useState<ActivitySort>({ key: null, direction: 'asc' });
   const [tourToDelete, setTourToDelete] = useState<Tour | null>(null);
-  const DateTimePickerComponent = nativeDateTimePicker;
   const activeMembers = useMemo(
     () => groupMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
     [groupMembers]
@@ -426,7 +427,18 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const closeTourEditor = () => {
     setEditingTour(null);
     setEditingTourId(null);
+    onExternalEditHandled?.();
   };
+
+  useEffect(() => {
+    if (!externalEditTourId) return;
+    const target = tours.find((tour) => tour.id === externalEditTourId);
+    if (target) {
+      openTourEditor(target);
+    } else {
+      onExternalEditHandled?.();
+    }
+  }, [externalEditTourId, tours]);
 
   const saveTour = () => {
     if (readOnly) return;
@@ -871,7 +883,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   );
 
   return (
-    <View style={styles.card}>
+    <View style={showList ? styles.card : undefined}>
+      {showList ? (
+        <>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
         {!readOnly ? (
@@ -950,7 +964,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             onError={setGridMessage}
             styles={styles}
             theme={theme}
-            nativeDateTimePicker={DateTimePickerComponent}
           />
           </HorizontalTableScroll>
         </>
@@ -1039,6 +1052,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </View>
         ) : null}
       </View>
+        </>
+      ) : null}
       {selectedTour && !featureStandardizedItemDialogs ? (
         <Modal transparent visible={Boolean(selectedTour)} animationType="fade" onRequestClose={() => setSelectedTourId(null)}>
           <View style={styles.modalOverlay} testID="activity-details-modal">

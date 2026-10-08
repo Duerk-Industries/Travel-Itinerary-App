@@ -5,7 +5,7 @@
 /// <reference types="node" />
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import PaymentDialog from '../components/PaymentDialog';
 import PendingInvitesModal from '../components/PendingInvitesModal';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
@@ -89,6 +89,25 @@ describe('PaymentDialog accessibility', () => {
     expect(alicePayer.props.accessibilityLabel).toBe('Payer: Alice');
     expect(alicePayer.props.accessibilityState).toEqual({ selected: true });
     expect(bobPayer.props.accessibilityState).toEqual({ selected: false });
+  });
+
+  it('opens a native date picker for the payment date', () => {
+    const { getByTestId } = render(
+      <PaymentDialog
+        visible
+        onCancel={() => {}}
+        onSave={() => {}}
+        participants={[]}
+        sortedIds={['alice', 'bob']}
+        participantLabel={(id) => id}
+        defaultPayerId="alice"
+        styles={bareStyles}
+      />
+    );
+
+    fireEvent.press(getByTestId('payment-date-input'));
+    expect(getByTestId('native-date-time-picker')).toBeTruthy();
+    fireEvent.press(getByTestId('payment-date-input-cancel'));
   });
 });
 

@@ -42,7 +42,7 @@ describe('Expenses API', () => {
     await closePool();
   });
 
-  it('creates, lists, and deletes expenses', async () => {
+  it('creates, updates, lists, and deletes manual expenses', async () => {
     const created = await request(app)
       .post('/api/expenses')
       .set('Authorization', `Bearer ${token}`)
@@ -67,6 +67,30 @@ describe('Expenses API', () => {
     expect(created.body.vendor).toBe('Flour Bakery');
     expect(created.body.notes).toBe('Receipt reviewed');
 
+    const updated = await request(app)
+      .put(`/api/expenses/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        tripId,
+        expenseDate: '2025-02-02',
+        category: 'Lunch',
+        amount: 18.75,
+        currency: 'USD',
+        amountInTripCurrency: 18.75,
+        exchangeRateToTripCurrency: 1,
+        exchangeRateDate: '2025-02-02',
+        payerIds: [memberId],
+        forIds: [memberId],
+        vendor: 'Updated description',
+      })
+      .expect(200);
+    expect(updated.body.id).toBe(created.body.id);
+    expect(updated.body.expenseDate).toBe('2025-02-02');
+    expect(updated.body.category).toBe('Lunch');
+    expect(updated.body.amount).toBe(18.75);
+    expect(updated.body.vendor).toBe('Updated description');
+    expect(updated.body.notes).toBeNull();
+
     const list = await request(app)
       .get(`/api/expenses?tripId=${tripId}`)
       .set('Authorization', `Bearer ${token}`)
@@ -77,8 +101,8 @@ describe('Expenses API', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: created.body.id,
-          vendor: 'Flour Bakery',
-          notes: 'Receipt reviewed',
+          vendor: 'Updated description',
+          notes: null,
         }),
       ])
     );

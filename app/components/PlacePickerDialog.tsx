@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
+import DateField from './DateField';
 
 export type PlacePickerSubmit = {
   day: number;
@@ -202,13 +203,18 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({
             </Text>
           ) : null}
           <Text style={[styles.label, colors && { color: colors.textMuted }]}>Time (optional)</Text>
-          <TextInput
+          <DateField
+            mode="time"
             testID="place-dialog-time"
-            style={[styles.input, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }]}
-            placeholderTextColor={colors?.textMuted}
+            accessibilityLabel="Time"
+            styles={{
+              input: [styles.input, colors && { color: colors.text, backgroundColor: colors.surfaceMuted, borderColor: colors.border }],
+              cellText: { color: colors?.text },
+            }}
+            theme={theme}
             value={time}
             placeholder="e.g. 09:00"
-            onChangeText={setTime}
+            onChange={setTime}
           />
           <Text style={[styles.label, colors && { color: colors.textMuted }]}>Notes (optional)</Text>
           <TextInput

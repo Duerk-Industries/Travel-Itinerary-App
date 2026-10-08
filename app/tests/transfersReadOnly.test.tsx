@@ -7,6 +7,7 @@ import React from 'react';
 import { describe, expect, test, jest } from '@jest/globals';
 import { fireEvent, render } from '@testing-library/react-native';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from '../tabs/transfers';
+import { getAppTheme } from '../theme/theme';
 
 const styles = {
   card: {},
@@ -129,6 +130,43 @@ describe('FlightsTab read-only mode', () => {
 
     fireEvent.press(getByTestId('transfer-row-flight-1'));
     expect(getByTestId('flight-modal-save')).toBeTruthy();
+  });
+
+  test('opens a native date picker for departure and arrival while adding a transfer', () => {
+    const theme = getAppTheme('dark', 'light');
+    const { getByTestId } = render(
+      <FlightsTab
+        backendUrl="http://localhost"
+        userToken="token"
+        activeTripId="trip-1"
+        flights={[flight]}
+        setFlights={jest.fn() as any}
+        groupMembers={[member]}
+        defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`}
+        payerName={() => 'Bryan Traveler'}
+        headers={{}}
+        jsonHeaders={{}}
+        findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
+        styles={styles}
+        theme={theme}
+        airportOptions={[]}
+        onSearchAirports={jest.fn() as any}
+      />,
+    );
+
+    fireEvent.press(getByTestId('transfer-add'));
+    fireEvent.press(getByTestId('transfer-departure-date'));
+    const departurePicker = getByTestId('native-date-time-picker');
+    expect(departurePicker).toBeTruthy();
+    expect(departurePicker.props.themeVariant).toBe('dark');
+    expect(departurePicker.props.textColor).toBe(theme.colors.text);
+    fireEvent.press(getByTestId('transfer-departure-date-cancel'));
+
+    fireEvent.press(getByTestId('transfer-arrival-date'));
+    expect(getByTestId('native-date-time-picker')).toBeTruthy();
+    fireEvent.press(getByTestId('transfer-arrival-date-cancel'));
   });
 
   test('does not open the edit form on row tap when featureTapToEditTables is disabled', () => {

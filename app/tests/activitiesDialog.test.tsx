@@ -125,7 +125,6 @@ const renderActivityHarness = (
         payerTotals={{}}
         toursTotal={0}
         styles={styles as any}
-        nativeDateTimePicker={null}
         fetchTours={jest.fn()}
         mode="wizard"
         defaultActivityDate={defaultActivityDate}
@@ -177,7 +176,20 @@ describe('Activity dialog layout', () => {
 
     fireEvent.press(getByTestId('activity-add'));
 
-    expect(getByText('Wed, Jul 1')).toBeTruthy();
+    expect(getByText('2026-07-01')).toBeTruthy();
+  });
+
+  it('opens native pickers for the activity and free-cancellation dates', () => {
+    const { getByTestId } = renderActivityHarness();
+
+    fireEvent.press(getByTestId('activity-add'));
+    fireEvent.press(getByTestId('activity-date'));
+    expect(getByTestId('native-date-time-picker')).toBeTruthy();
+    fireEvent.press(getByTestId('activity-date-cancel'));
+
+    fireEvent.press(getByTestId('activity-free-cancellation-date'));
+    expect(getByTestId('native-date-time-picker')).toBeTruthy();
+    fireEvent.press(getByTestId('activity-free-cancellation-date-cancel'));
   });
 
   it('closes the activity dialog from the cancel action', () => {

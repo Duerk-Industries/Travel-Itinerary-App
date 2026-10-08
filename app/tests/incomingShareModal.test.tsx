@@ -42,12 +42,12 @@ describe('IncomingShareModal', () => {
         shareIntent: { files: [{ path: 'file:///a.jpg', mimeType: 'image/jpeg', fileName: 'a.jpg', size: 100 }], text: null },
         resetShareIntent: jest.fn(),
       });
-      const { getByTestId } = render(
+      const { getByTestId, getByText } = render(
         <IncomingShareModal backendUrl="https://api.example.com" headers={{}} trips={trips} activeTripId="trip-2" styles={styles} />
       );
       expect(getByTestId('share-trip-trip-1')).toBeTruthy();
       expect(getByTestId('share-trip-trip-2')).toBeTruthy();
-      expect(getByTestId('share-day-input').props.value).toBe('2026-09-01'); // today is before the trip -> clamped to its start
+      expect(getByText('2026-09-01')).toBeTruthy(); // today is before the trip -> clamped to its start
     } finally {
       jest.useRealTimers();
     }

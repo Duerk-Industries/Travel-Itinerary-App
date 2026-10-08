@@ -142,6 +142,21 @@ describe('CarRentalsPanel', () => {
     expect(getByText('Pick-up Location')).toBeTruthy();
   });
 
+  it('opens native date pickers in both the add form and editable grid', () => {
+    const add = render(<CarRentalsPanel {...baseProps} />);
+    fireEvent.press(add.getByTestId('car-rental-add'));
+    fireEvent.press(add.getByTestId('car-rental-pickup-date'));
+    expect(add.getByTestId('native-date-time-picker')).toBeTruthy();
+    fireEvent.press(add.getByTestId('car-rental-pickup-date-cancel'));
+    add.unmount();
+
+    const grid = render(<CarRentalsPanel {...baseProps} carRentals={[makeCarRental()]} />);
+    fireEvent.press(grid.getByTestId('car-rental-table-edit'));
+    fireEvent.press(grid.getByTestId('grid-pickupDate-car-1'));
+    expect(grid.getByTestId('native-date-time-picker')).toBeTruthy();
+    fireEvent.press(grid.getByTestId('grid-pickupDate-car-1-done'));
+  });
+
   it('renders the Car Rentals heading and an empty table by default', () => {
     const { getByText, queryByTestId } = render(<CarRentalsPanel {...baseProps} />);
     expect(getByText('Car Rentals')).toBeTruthy();

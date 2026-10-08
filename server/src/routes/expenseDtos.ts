@@ -59,3 +59,7 @@ export const createExpenseDto = z.object({
   notes: nullableTrimmedText('notes', 2000),
 });
 export type CreateExpenseDto = z.infer<typeof createExpenseDto>;
+
+// Editing a daily expense replaces the same set of user-editable fields as creation.
+export const updateExpenseDto = createExpenseDto;
+export type UpdateExpenseDto = z.infer<typeof updateExpenseDto>;

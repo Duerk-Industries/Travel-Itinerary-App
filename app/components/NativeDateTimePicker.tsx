@@ -8,6 +8,9 @@ type UnderlyingPickerProps = {
   value: Date;
   mode: PickerMode;
   display?: PickerDisplay;
+  textColor?: string;
+  accentColor?: string;
+  themeVariant?: 'light' | 'dark';
   minimumDate?: Date;
   maximumDate?: Date;
   onValueChange: (event: { nativeEvent: unknown }, date: Date) => void;
@@ -18,6 +21,12 @@ type NativeDateTimePickerProps = {
   value: Date;
   mode: PickerMode;
   display?: PickerDisplay;
+  /** iOS spinner-wheel text color. Explicitly set to keep it legible on themed sheets. */
+  textColor?: string;
+  /** iOS picker action/accent color. */
+  accentColor?: string;
+  /** Explicitly match the app's resolved appearance instead of the device default. */
+  themeVariant?: 'light' | 'dark';
   /** Earliest selectable date; forwarded to the native picker. */
   minimumDate?: Date;
   /** Latest selectable date; forwarded to the native picker. */
