@@ -1,4 +1,5 @@
 import { Router, type Request } from 'express';
+import { recordServerEvent } from '../analytics/ingestService';
 import { z } from 'zod';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
@@ -946,6 +947,7 @@ groupsRouter.post('/invites/:id/accept', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
   try {
     await acceptGroupInvite(req.params.id, user.userId, user.email);
+    recordServerEvent({ userId: user.userId, eventName: 'invite_accepted', properties: { invite_type: 'group' } });
     res.status(204).send();
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });

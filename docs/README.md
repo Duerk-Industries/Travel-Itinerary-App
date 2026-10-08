@@ -46,6 +46,7 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Analytics Upgrade: Collection, Goals, and Behavior](analytics-upgrade.md) — comprehensive overview of analytics collection, privacy goals, default-off opt-in architecture, GDPR/UK GDPR compliance, iOS ATT/Privacy Manifests, and Android Data Safety policies.
 - [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md) — 5-phase engineering and compliance delivery plan, privacy policy page deliverables, test coverage matrix, performance budgets, and cost model.
 - [Analytics Phase 0 Baseline and Review](analytics-phase-0.md)
+- [Analytics Manual Follow-ups](analytics-manual-followups.md) — sign-offs, vendor settings, store submissions and deployment checks still to do
 - [Analytics DPIA (draft for sign-off)](legal/analytics-dpia.md)
 - [EU/UK Representative Assessment (draft for counsel)](legal/eu-uk-representative-assessment.md)
 

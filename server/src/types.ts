@@ -1301,3 +1301,32 @@ export interface UserItineraryMetricSummary {
   outcome: string;
   createdAt: string;
 }
+
+// ── Product analytics store (analytics Phase 2) ─────────────────────────────
+
+/** One accepted, server-enriched product analytics event. Never contains account IDs or raw trip IDs. */
+export interface AnalyticsEventRecord {
+  id: string;
+  eventId: string;
+  subjectId: string;
+  purposeEpoch: number;
+  eventName: string;
+  family: string;
+  source: 'client' | 'server';
+  feature: string | null;
+  platform: string;
+  appVersion: string;
+  sessionId: string | null;
+  /** Keyed hash of the trip ID; restricted personal data, never the raw ID. */
+  tripRef: string | null;
+  tripPhase: string;
+  timezoneSource: string;
+  dateVersion: string | null;
+  properties: Record<string, string | number | boolean>;
+  schemaVersion: number;
+  /** Set for admins and internal canary accounts; such events are kept out of product reports. */
+  excludedReason: string | null;
+  occurredAt: string;
+  receivedAt: string;
+  expiresAt: string;
+}

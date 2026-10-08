@@ -3,6 +3,9 @@ import {
   archivePrivacyChoiceEvidence,
   delinkItineraryGenerationMetricsForUser,
   delinkProviderCostLedgerUser,
+  deleteAnalyticsEventsForSubjects,
+  deleteAnalyticsSubjectsForUser,
+  listAnalyticsSubjectsForUser,
   getErasureJob,
   getErasureTombstone,
   listErasureJobs,
@@ -114,12 +117,15 @@ registerErasureStep({
   }),
 });
 registerErasureStep({
+  // Events first, then the pseudonym mapping, so a retry still finds the events.
   name: 'product_analytics_events',
   scopes: ['analytics', 'account'],
-  run: async () => ({
-    notApplicable: true,
-    note: 'Product analytics collection is not active yet (Phase 2); nothing stored.',
-  }),
+  run: async (userId) => {
+    const subjects = await listAnalyticsSubjectsForUser(userId);
+    const events = await deleteAnalyticsEventsForSubjects(subjects);
+    await deleteAnalyticsSubjectsForUser(userId);
+    return { affected: events, note: 'Product analytics events and their pseudonyms deleted.' };
+  },
 });
 
 const addDays = (iso: string, days: number): string => new Date(new Date(iso).getTime() + days * 86_400_000).toISOString();

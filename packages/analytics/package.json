@@ -1,0 +1,15 @@
+{
+  "name": "@wanderbunnies/analytics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canonical product-analytics event registry (names, allowed properties, consent purpose, retention) shared by app and server",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "lint": "npm run typecheck",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

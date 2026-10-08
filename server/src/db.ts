@@ -777,3 +777,21 @@ export const getPrivacyRightsRequest = async (...args: Parameters<ReturnType<typ
   adapter().getPrivacyRightsRequest(...args);
 export const listPrivacyRightsRequests = async (...args: Parameters<ReturnType<typeof adapter>['listPrivacyRightsRequests']>) =>
   adapter().listPrivacyRightsRequests(...args);
+
+// Analytics Phase 2: product analytics store.
+export const getOrCreateAnalyticsSubject = async (...args: Parameters<ReturnType<typeof adapter>['getOrCreateAnalyticsSubject']>) =>
+  adapter().getOrCreateAnalyticsSubject(...args);
+export const listAnalyticsSubjectsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsSubjectsForUser']>) =>
+  adapter().listAnalyticsSubjectsForUser(...args);
+export const deleteAnalyticsSubjectsForUser = async (...args: Parameters<ReturnType<typeof adapter>['deleteAnalyticsSubjectsForUser']>) =>
+  adapter().deleteAnalyticsSubjectsForUser(...args);
+export const insertAnalyticsEvents = async (...args: Parameters<ReturnType<typeof adapter>['insertAnalyticsEvents']>) =>
+  adapter().insertAnalyticsEvents(...args);
+export const listAnalyticsEventsForSubjects = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsEventsForSubjects']>) =>
+  adapter().listAnalyticsEventsForSubjects(...args);
+export const deleteAnalyticsEventsForSubjects = async (...args: Parameters<ReturnType<typeof adapter>['deleteAnalyticsEventsForSubjects']>) =>
+  adapter().deleteAnalyticsEventsForSubjects(...args);
+export const deleteExpiredAnalyticsEvents = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpiredAnalyticsEvents']>) =>
+  adapter().deleteExpiredAnalyticsEvents(...args);
+export const listAnalyticsEventsBetween = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsEventsBetween']>) =>
+  adapter().listAnalyticsEventsBetween(...args);

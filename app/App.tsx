@@ -103,6 +103,8 @@ import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
 import AgeVerificationDialog, { fetchAgeVerificationStatus, verifyAgeWithAppleIfAvailable } from './components/AgeVerificationDialog';
 import { markLoginStarted, markTripReady, useScreenReadyMark } from './utils/readinessMarks';
+import { configureAnalytics, useTrackView } from './utils/analytics/track';
+import { analyticsViewForPage } from './utils/analytics/features';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
@@ -667,6 +669,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [activePage, setActivePage] = useState<Page>('home');
   // Consent-gated (Detailed Diagnostics) page-paint timing; see utils/readinessMarks.ts.
   useScreenReadyMark(activePage);
+  // Optional product analytics: inert unless the server reports productAnalyticsAllowed.
+  useEffect(() => {
+    configureAnalytics({ backendUrl, token: userToken, enabled: privacy.status?.productAnalyticsAllowed === true });
+  }, [userToken, privacy.status?.productAnalyticsAllowed]);
+  const analyticsView = analyticsViewForPage(activePage, activeTripId);
+  useTrackView(analyticsView.feature, analyticsView.tripId);
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);

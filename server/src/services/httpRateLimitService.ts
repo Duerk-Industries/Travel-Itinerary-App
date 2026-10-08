@@ -121,6 +121,17 @@ export const reserveActivitiesBulkSaveRateLimit = async (
 // rate limit"), the one resolution step Phase 2's blogEngagementService.ts explicitly left for
 // the route layer. Reads reactionsPerMinutePerUser from caching.tripBlog (server/config/api-limits.yaml),
 // not a route-local constant, per the "route-local numeric constants are forbidden" convention.
+// Analytics Phase 2: clients flush at most every 30 s, so 30 batches/minute per
+// account only trips on a misbehaving or malicious client.
+export const reserveAnalyticsIngestRateLimit = async (userId: string): Promise<void> => {
+  await reserveHttpRateLimitOrThrow({
+    name: 'analytics_ingest',
+    identity: `user:${userId}`,
+    limit: testSafeDefault(30),
+    windowMs: 60_000,
+  });
+};
+
 export const reserveBlogReactionRateLimit = async (
   userId: string,
   ip: string | null | undefined,

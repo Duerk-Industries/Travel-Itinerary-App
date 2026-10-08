@@ -160,7 +160,7 @@ describe('privacy rights (analytics Phase 4)', () => {
     expect(res.body.ageVerification).toHaveProperty('source');
     expect(res.body.costLedger).toEqual([expect.objectContaining({ provider: 'GOOGLE_STATIC_MAPS', estimatedCostUsd: 0.002 })]);
     expect(res.body.diagnostics.itineraryGenerations).toEqual([expect.objectContaining({ tripId: 'trip-export', outcome: 'success' })]);
-    expect(res.body.analytics.productAnalytics.status).toBe('not_collected');
+    expect(res.body.analytics.productAnalytics).toEqual({ status: 'none', events: [] });
   });
 
   it('computes statutory deadlines and one-time extensions per jurisdiction', () => {

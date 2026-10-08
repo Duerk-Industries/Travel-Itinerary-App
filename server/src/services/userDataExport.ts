@@ -25,6 +25,8 @@ import {
   getUserAgeVerificationRecord,
   listProviderCostLedgerEntriesForUser,
   listItineraryGenerationMetricsForUser,
+  listAnalyticsSubjectsForUser,
+  listAnalyticsEventsForSubjects,
 } from '../db';
 import { listErasureJobsForUser } from './privacyRightsService';
 
@@ -140,8 +142,22 @@ export const buildUserDataExport = async (userId: string): Promise<UserDataExpor
     listItineraryGenerationMetricsForUser(userId).catch(() => []),
   ]);
 
+  const subjects = await listAnalyticsSubjectsForUser(userId).catch(() => [] as string[]);
+  const productEvents = await listAnalyticsEventsForSubjects(subjects).catch(() => []);
   const analytics: Record<string, unknown> = {
-    productAnalytics: { status: 'not_collected', note: 'Product analytics events are not collected yet.' },
+    // Internal pseudonyms and keyed trip references are join keys, not the user's data; omitted.
+    productAnalytics: {
+      status: productEvents.length ? 'collected' : 'none',
+      events: productEvents.map((e) => ({
+        eventName: e.eventName,
+        occurredAt: e.occurredAt,
+        feature: e.feature,
+        platform: e.platform,
+        appVersion: e.appVersion,
+        tripPhase: e.tripPhase,
+        properties: e.properties,
+      })),
+    },
   };
   for (const [name, build] of extraAnalyticsSections) {
     analytics[name] = await build(userId).catch(() => ({ status: 'unavailable' }));

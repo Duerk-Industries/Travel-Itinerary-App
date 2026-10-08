@@ -141,6 +141,82 @@ Design rules:
 
 **Acceptance:** Golden fixture journeys produce expected deduplicated events and phase classifications with no prohibited properties. Consent-denied journeys produce no optional events.
 
+### Phase 2 implementation record (October 8, 2026; not yet deployed, collection flag still off)
+
+**Registry**
+- **Canonical copy.** `packages/analytics/src/registry.ts` (`@wanderbunnies/analytics`, a new npm workspace) defines:
+  - the 11 events, each with family, purpose, client or server `source`, `tripScoped`, owner, product question and retention;
+  - stable feature names;
+  - ingest limits;
+  - the client envelope type.
+- **Properties are bounded by construction.** They can only be enums, booleans or bounded integers, so the registry cannot express free text, IDs, URLs or content. The registry is plain data, so the app imports it (by relative path, like `messaging`) without a validator.
+- **Server mirror.** The server deploy uploads `server/` alone, so the plan's "no mirrored copies" wasn't possible. `server/src/analytics/registry.ts` is a byte-identical mirror written by `npm run sync:analytics-registry`. `npm run check:analytics-registry`, also run in `analytics-ingest.test.ts`, fails on drift. This follows the existing `server/src/socket/messaging.ts` convention.
+
+**Store**
+- **Tables.** Migration `20261010_add_analytics_events.sql` adds two tables, mirrored as Firestore collections:
+  - `analytics_subjects`: a random pseudonym per account and consent epoch, so regranting after a withdrawal starts a new pseudonym;
+  - `analytics_events`: one row per event.
+- **Idempotency.** The row ID is `subject:epoch:event_id`, so retried batches are idempotent.
+- **What a row holds.** Each row has a 90-day `expiresAt`, also usable as a Firestore TTL field. It contains no account ID and no raw trip ID: the trip is stored as an HMAC (`tripRef`).
+- **Adapters.** Implemented in both `db.postgres.ts` and `db.firebase.ts`.
+
+**Ingest (`POST /api/analytics/events`, `server/src/analytics/ingestService.ts`).** Admission runs in this order:
+1. Authentication.
+2. Payload limit (32 KiB) and per-account rate limit (30 batches per minute).
+3. The `analytics_collection_enabled` flag (403 `ANALYTICS_COLLECTION_DISABLED`).
+4. A fresh server-side consent check, including GPC/DNT (403 `ANALYTICS_CONSENT_REQUIRED`). The client stops instead of retrying.
+5. Account erasure tombstone.
+6. Batch shape (1–20 events).
+7. Strict per-event Zod validation built from the registry. Unknown fields are rejected, including any client-supplied identity.
+8. Client-only events.
+9. Clock bounds (24 h old, 5 min ahead).
+10. The analytics-erasure tombstone: events queued before "Delete analytics data" are refused.
+11. Trip access, checked with `ensureUserInTrip`.
+
+The server then derives the subject, epoch, trip reference and trip phase.
+
+The response reports accepted, duplicate and rejected-with-reason counts. Admin and internal-canary traffic is stored with `excludedReason` so reports can leave it out.
+
+**Server outcome events.** `recordServerEvent()` is a bounded (1,000), fire-and-forget queue with the same consent check per event, so it can never slow or fail the business action. It is wired to:
+- `trip_created`, from both the plain and wizard create routes;
+- `invite_accepted`, when a group invite is accepted.
+
+**Trip phase (`server/src/utils/tripPhase.ts`).**
+- Uses inclusive trip-local dates, with the zone fallback segment → trip → device → `unknown`.
+- Records `timezoneSource` and a `dateVersion` fingerprint.
+- Handles Postgres `DATE` values that arrive as JS `Date` objects at local or UTC midnight.
+- Today only the device zone is available. A trip `timezone` column, filled from Places, is still to do.
+
+**Phase 4 hooks now live**
+- The erasure step `product_analytics_events` deletes events, then pseudonyms.
+- The retention step `analyticsEventsExpired` purges past-expiry events.
+- Export v2's `analytics.productAnalytics` lists the user's own events, without pseudonyms or trip references.
+
+**Client (`app/utils/analytics/track.ts`)**
+- **Inert until consent.** `configureAnalytics` follows the server's `productAnalyticsAllowed`. Disabling, signing out or switching accounts purges the queue.
+- **Memory-only queue.** At most 100 events, each dropped after 24 h.
+- **Batching.** Frozen batches of 20 with stable IDs. Flushes every 30 s, at a full batch, and on background or `visibilitychange` (`keepalive`).
+- **Errors.** Backoff on network, 5xx and 429 errors; stop on 401 or 403.
+- **Sessions.** A new session after 30 minutes idle, with `session_started` carrying `resumed`.
+- **Views.** `useTrackView` records one `feature_viewed` per feature, trip and session, which is Strict-Mode safe.
+- **Wiring.** `App.tsx` maps pages to features through `app/utils/analytics/features.ts`; admin is never tracked, and only trip pages attach the trip.
+
+**Tests:**
+- `server/__tests__/analytics-ingest.test.ts` (12): registry parity, no consent or flag off, GPC/DNT, withdrawal, idempotent retry with server-derived identity, validation and spoofing, size/batch/clock limits, trip access and scoping, erasure tombstone, exclusion, server events with and without consent, erase/export/retention.
+- `server/__tests__/trip-phase.test.ts` (7): trip-local boundaries, the date line, DST, the fallback chain, invalid dates, `dateVersion`, `Date` inputs.
+- `app/tests/analyticsTrack.test.tsx` (12).
+
+**Not done yet**
+- **More instrumentation:**
+  - `task_*`, `map_link_opened` and `report_exported` call sites in the tabs;
+  - `item_saved` in the item routes;
+  - `engaged_session_summary`;
+  - trip-share and follow `invite_accepted`.
+- **Trip `timezone` column** filled from Places details.
+- **The registry → store-disclosure drift check** (Phase 4 §4).
+- **Firestore emulator and load tests** at 10× peak.
+- **Consent check and write aren't serialized** in one transaction. A batch admitted just before a withdrawal can still be stored. Erasure and the tombstone cover that case.
+
 ---
 
 ## Phase 3: Cost Metering, Performance Monitoring, and `metrics.ts` Fixes

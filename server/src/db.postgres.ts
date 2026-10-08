@@ -1,5 +1,6 @@
 // server/src/db.ts
 import type {
+  AnalyticsEventRecord,
   ErasureScope,
   ErasureTombstone,
   JobLease,
@@ -13502,4 +13503,123 @@ export const listPrivacyRightsRequests = async (opts: { status?: string; limit?:
     params,
   );
   return rows.map(rowToRightsRequest);
+};
+
+// ── Product analytics store (analytics Phase 2) ─────────────────────────────
+
+/** Pseudonym for (account, consent epoch); created on first use. Race-safe via the unique key. */
+export const getOrCreateAnalyticsSubject = async (userId: string, productEpoch: number): Promise<string> => {
+  const p = getPool();
+  const find = async () => {
+    const { rows } = await p.query(
+      `SELECT subject_id FROM analytics_subjects WHERE user_id = $1 AND product_epoch = $2`,
+      [userId, productEpoch],
+    );
+    return (rows[0] as any)?.subject_id as string | undefined;
+  };
+  const existing = await find();
+  if (existing) return existing;
+  const subjectId = randomUUID();
+  try {
+    await p.query(
+      `INSERT INTO analytics_subjects (subject_id, user_id, product_epoch, created_at) VALUES ($1, $2, $3, $4)`,
+      [subjectId, userId, productEpoch, new Date().toISOString()],
+    );
+    return subjectId;
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    const raced = await find();
+    if (!raced) throw err;
+    return raced;
+  }
+};
+
+export const listAnalyticsSubjectsForUser = async (userId: string): Promise<string[]> => {
+  const { rows } = await getPool().query(`SELECT subject_id FROM analytics_subjects WHERE user_id = $1`, [userId]);
+  return (rows as any[]).map((row) => row.subject_id);
+};
+
+export const deleteAnalyticsSubjectsForUser = async (userId: string): Promise<number> => {
+  const result = await getPool().query(`DELETE FROM analytics_subjects WHERE user_id = $1`, [userId]);
+  return result.rowCount ?? 0;
+};
+
+/** Inserts events; returns the IDs actually inserted (already-stored IDs are skipped). */
+export const insertAnalyticsEvents = async (events: AnalyticsEventRecord[]): Promise<string[]> => {
+  const p = getPool();
+  const inserted: string[] = [];
+  for (const e of events) {
+    try {
+      await p.query(
+        `INSERT INTO analytics_events (id, event_id, subject_id, purpose_epoch, event_name, family, source, feature, platform,
+           app_version, session_id, trip_ref, trip_phase, timezone_source, date_version, properties, schema_version,
+           excluded_reason, occurred_at, received_at, expires_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+        [
+          e.id, e.eventId, e.subjectId, e.purposeEpoch, e.eventName, e.family, e.source, e.feature, e.platform,
+          e.appVersion, e.sessionId, e.tripRef, e.tripPhase, e.timezoneSource, e.dateVersion, JSON.stringify(e.properties),
+          e.schemaVersion, e.excludedReason, e.occurredAt, e.receivedAt, e.expiresAt,
+        ],
+      );
+      inserted.push(e.id);
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+    }
+  }
+  return inserted;
+};
+
+const rowToAnalyticsEvent = (row: any): AnalyticsEventRecord => ({
+  id: row.id,
+  eventId: row.event_id,
+  subjectId: row.subject_id,
+  purposeEpoch: Number(row.purpose_epoch),
+  eventName: row.event_name,
+  family: row.family,
+  source: row.source,
+  feature: row.feature ?? null,
+  platform: row.platform,
+  appVersion: row.app_version,
+  sessionId: row.session_id ?? null,
+  tripRef: row.trip_ref ?? null,
+  tripPhase: row.trip_phase,
+  timezoneSource: row.timezone_source,
+  dateVersion: row.date_version ?? null,
+  properties: parseJsonColumn(row.properties) ?? {},
+  schemaVersion: Number(row.schema_version),
+  excludedReason: row.excluded_reason ?? null,
+  occurredAt: toIso(row.occurred_at),
+  receivedAt: toIso(row.received_at),
+  expiresAt: toIso(row.expires_at),
+});
+
+export const listAnalyticsEventsForSubjects = async (subjectIds: string[], limit = 5_000): Promise<AnalyticsEventRecord[]> => {
+  if (!subjectIds.length) return [];
+  const placeholders = subjectIds.map((_, i) => '$' + (i + 1)).join(', ');
+  const { rows } = await getPool().query(
+    'SELECT * FROM analytics_events WHERE subject_id IN (' + placeholders + ') ORDER BY occurred_at ASC LIMIT $' + (subjectIds.length + 1),
+    [...subjectIds, limit],
+  );
+  return rows.map(rowToAnalyticsEvent);
+};
+
+export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Promise<number> => {
+  if (!subjectIds.length) return 0;
+  const placeholders = subjectIds.map((_, i) => '$' + (i + 1)).join(', ');
+  const result = await getPool().query('DELETE FROM analytics_events WHERE subject_id IN (' + placeholders + ')', subjectIds);
+  return result.rowCount ?? 0;
+};
+
+/** Retention: delete events whose expiry has passed. */
+export const deleteExpiredAnalyticsEvents = async (nowIso: string): Promise<number> => {
+  const result = await getPool().query(`DELETE FROM analytics_events WHERE expires_at < $1`, [nowIso]);
+  return result.rowCount ?? 0;
+};
+
+export const listAnalyticsEventsBetween = async (fromIso: string, toIso_: string, limit = 50_000): Promise<AnalyticsEventRecord[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM analytics_events WHERE occurred_at >= $1 AND occurred_at < $2 ORDER BY occurred_at ASC LIMIT $3`,
+    [fromIso, toIso_, limit],
+  );
+  return rows.map(rowToAnalyticsEvent);
 };

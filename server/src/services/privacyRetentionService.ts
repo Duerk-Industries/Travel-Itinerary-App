@@ -1,5 +1,6 @@
 import {
   delinkItineraryGenerationMetricsBefore,
+  deleteExpiredAnalyticsEvents,
   delinkProviderCostLedgerBefore,
   purgeConsentEvidenceArchivedBefore,
   releaseJobLease,
@@ -42,6 +43,11 @@ const steps: RetentionStep[] = [
     // Archived evidence is written at account deletion, so archived_at + 3 years = deletion + 3 years.
     name: 'consentEvidencePurged',
     run: (now) => purgeConsentEvidenceArchivedBefore(monthsBefore(now, CONSENT_EVIDENCE_RETENTION_YEARS * 12).toISOString()),
+  },
+  {
+    // Raw product analytics events: 90-day expiry stamped at ingest (registry retentionDays).
+    name: 'analyticsEventsExpired',
+    run: (now) => deleteExpiredAnalyticsEvents(now.toISOString()),
   },
   {
     name: 'erasureJobs',

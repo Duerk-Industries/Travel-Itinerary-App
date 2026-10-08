@@ -70,6 +70,7 @@ import {
 } from './types';
 import type { AccountEmail, AppleProfile } from './db.postgres';
 import type {
+  AnalyticsEventRecord,
   ErasureScope,
   ErasureTombstone,
   JobLease,
@@ -9514,4 +9515,89 @@ export const listPrivacyRightsRequests = async (opts: { status?: string; limit?:
     .map((doc) => doc.data() as PrivacyRightsRequest)
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
     .slice(0, Math.min(Math.max(opts.limit ?? 200, 1), 1000));
+};
+
+// ── Product analytics store (analytics Phase 2) ─────────────────────────────
+// One document per event (doc ID = record id), so retries are idempotent and
+// subject erasure is a simple query. `expiresAt` is a Firestore TTL candidate field.
+
+const ANALYTICS_SUBJECTS = 'analytics_subjects';
+const ANALYTICS_EVENTS = 'analytics_events';
+const analyticsDocId = (id: string): string => encodeURIComponent(id);
+
+export const getOrCreateAnalyticsSubject = async (userId: string, productEpoch: number): Promise<string> => {
+  const db = getDb();
+  // Deterministic doc ID makes creation race-safe inside a transaction.
+  const ref = db.collection(ANALYTICS_SUBJECTS).doc(`${userId}_${productEpoch}`);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (doc.exists) return (doc.data() as any).subjectId as string;
+    const subjectId = randomUUID();
+    tx.set(ref, { subjectId, userId, productEpoch, createdAt: nowIso() });
+    return subjectId;
+  });
+};
+
+export const listAnalyticsSubjectsForUser = async (userId: string): Promise<string[]> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('userId', '==', userId).get();
+  return snap.docs.map((doc) => (doc.data() as any).subjectId as string);
+};
+
+export const deleteAnalyticsSubjectsForUser = async (userId: string): Promise<number> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('userId', '==', userId).get();
+  await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
+  return snap.docs.length;
+};
+
+export const insertAnalyticsEvents = async (events: AnalyticsEventRecord[]): Promise<string[]> => {
+  if (!events.length) return [];
+  const db = getDb();
+  const refs = events.map((e) => db.collection(ANALYTICS_EVENTS).doc(analyticsDocId(e.id)));
+  return db.runTransaction(async (tx) => {
+    const existing = await tx.getAll(...refs);
+    const inserted: string[] = [];
+    events.forEach((e, i) => {
+      if (existing[i].exists) return;
+      tx.set(refs[i], { ...e });
+      inserted.push(e.id);
+    });
+    return inserted;
+  });
+};
+
+const subjectChunks = (ids: string[]): string[][] => {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10)); // Firestore 'in' limit
+  return chunks;
+};
+
+export const listAnalyticsEventsForSubjects = async (subjectIds: string[], limit = 5_000): Promise<AnalyticsEventRecord[]> => {
+  const all: AnalyticsEventRecord[] = [];
+  for (const chunk of subjectChunks(subjectIds)) {
+    const snap = await getDb().collection(ANALYTICS_EVENTS).where('subjectId', 'in', chunk).get();
+    snap.docs.forEach((doc) => all.push(doc.data() as AnalyticsEventRecord));
+  }
+  return all.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)).slice(0, limit);
+};
+
+export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Promise<number> => {
+  let deleted = 0;
+  for (const chunk of subjectChunks(subjectIds)) {
+    const snap = await getDb().collection(ANALYTICS_EVENTS).where('subjectId', 'in', chunk).get();
+    await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
+    deleted += snap.docs.length;
+  }
+  return deleted;
+};
+
+export const deleteExpiredAnalyticsEvents = async (nowIsoValue: string): Promise<number> => {
+  const snap = await getDb().collection(ANALYTICS_EVENTS).where('expiresAt', '<', nowIsoValue).limit(5_000).get();
+  await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
+  return snap.docs.length;
+};
+
+export const listAnalyticsEventsBetween = async (fromIso: string, toIsoValue: string, limit = 50_000): Promise<AnalyticsEventRecord[]> => {
+  const snap = await getDb().collection(ANALYTICS_EVENTS)
+    .where('occurredAt', '>=', fromIso).where('occurredAt', '<', toIsoValue).limit(limit).get();
+  return snap.docs.map((doc) => doc.data() as AnalyticsEventRecord).sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
 };

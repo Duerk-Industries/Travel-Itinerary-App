@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { recordServerEvent } from '../analytics/ingestService';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
@@ -667,6 +668,8 @@ router.post('/', async (req, res) => {
       currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
     });
     await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: trip.id });
+    // Optional product analytics: consent-checked and stored asynchronously; never blocks the response.
+    recordServerEvent({ userId, role, eventName: 'trip_created', tripId: trip.id, properties: { via_wizard: false } });
     res.status(201).json(trip);
   } catch (err) {
     if (err instanceof EntitlementError) {
@@ -771,6 +774,7 @@ router.post('/wizard', async (req, res) => {
       )
     );
 
+    recordServerEvent({ userId, role: ((req as any).user as TokenPayload)?.role, eventName: 'trip_created', tripId: result.trip.id, properties: { via_wizard: true } });
     res.status(201).json({ trip: result.trip, groupId: result.groupId, invites: result.invites });
   } catch (err) {
     if (err instanceof EntitlementError) {
