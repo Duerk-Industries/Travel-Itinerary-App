@@ -20,9 +20,28 @@ import {
   listUserAuthoredItems,
   getBillingCustomerByUserId,
   listActiveBillingSubscriptionsForUser,
+  getPrivacyPreferences,
+  listPrivacyChoiceEvents,
+  getUserAgeVerificationRecord,
+  listProviderCostLedgerEntriesForUser,
+  listItineraryGenerationMetricsForUser,
 } from '../db';
+import { listErasureJobsForUser } from './privacyRightsService';
 
-export const EXPORT_SCHEMA_VERSION = 1;
+/**
+ * v2 (analytics Phase 4) adds `privacy`, `ageVerification`, `costLedger`,
+ * `diagnostics` and `analytics`. Later stores (Phase 2 product analytics) add
+ * themselves to `analytics` through registerExportSection.
+ */
+export const EXPORT_SCHEMA_VERSION = 2;
+
+type ExportSection = (userId: string) => Promise<unknown>;
+const extraAnalyticsSections = new Map<string, ExportSection>();
+
+/** Adds a named section under `analytics` in every export. */
+export const registerExportSection = (name: string, build: ExportSection): void => {
+  extraAnalyticsSections.set(name, build);
+};
 
 export interface UserDataExport {
   schemaVersion: number;
@@ -48,6 +67,36 @@ export interface UserDataExport {
       cancelAtPeriodEnd: boolean;
     }>;
   };
+  privacy: {
+    preferences: {
+      productAnalytics: boolean | null;
+      optionalDiagnostics: boolean | null;
+      productNoticeVersion: string | null;
+      diagnosticsNoticeVersion: string | null;
+      updatedAt: string | null;
+    } | null;
+    choiceHistory: Awaited<ReturnType<typeof listPrivacyChoiceEvents>>;
+    erasureRequests: Array<{ id: string; scope: string; status: string; requestedAt: string; completedAt: string | null }>;
+  };
+  ageVerification: Awaited<ReturnType<typeof getUserAgeVerificationRecord>> | null;
+  /** Provider usage attributed to this account (operational cost metering). */
+  costLedger: Array<{
+    occurredAt: string;
+    provider: string;
+    model: string | null;
+    featureKey: string | null;
+    tripId: string | null;
+    unitType: string;
+    promptTokens: number;
+    completionTokens: number;
+    requestUnits: number;
+    outcome: string;
+    estimatedCostUsd: number | null;
+  }>;
+  diagnostics: {
+    itineraryGenerations: Awaited<ReturnType<typeof listItineraryGenerationMetricsForUser>>;
+  };
+  analytics: Record<string, unknown>;
 }
 
 export const buildUserDataExport = async (userId: string): Promise<UserDataExport> => {
@@ -82,6 +131,22 @@ export const buildUserDataExport = async (userId: string): Promise<UserDataExpor
     listActiveBillingSubscriptionsForUser(userId).catch(() => []),
   ]);
 
+  const [preferences, choiceHistory, erasureJobs, ageVerification, ledger, itineraryGenerations] = await Promise.all([
+    getPrivacyPreferences(userId).catch(() => null),
+    listPrivacyChoiceEvents(userId).catch(() => []),
+    listErasureJobsForUser(userId).catch(() => []),
+    getUserAgeVerificationRecord(userId).catch(() => null),
+    listProviderCostLedgerEntriesForUser(userId).catch(() => []),
+    listItineraryGenerationMetricsForUser(userId).catch(() => []),
+  ]);
+
+  const analytics: Record<string, unknown> = {
+    productAnalytics: { status: 'not_collected', note: 'Product analytics events are not collected yet.' },
+  };
+  for (const [name, build] of extraAnalyticsSections) {
+    analytics[name] = await build(userId).catch(() => ({ status: 'unavailable' }));
+  }
+
   return {
     schemaVersion: EXPORT_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
@@ -102,5 +167,41 @@ export const buildUserDataExport = async (userId: string): Promise<UserDataExpor
         cancelAtPeriodEnd: s.cancelAtPeriodEnd,
       })),
     },
+    privacy: {
+      // The diagnostics pseudonym is an internal join key, not the user's data to act on; omitted.
+      preferences: preferences
+        ? {
+            productAnalytics: preferences.productAnalytics,
+            optionalDiagnostics: preferences.optionalDiagnostics,
+            productNoticeVersion: preferences.productNoticeVersion,
+            diagnosticsNoticeVersion: preferences.diagnosticsNoticeVersion,
+            updatedAt: preferences.updatedAt,
+          }
+        : null,
+      choiceHistory,
+      erasureRequests: erasureJobs.map((job) => ({
+        id: job.id,
+        scope: job.scope,
+        status: job.status,
+        requestedAt: job.requestedAt,
+        completedAt: job.completedAt,
+      })),
+    },
+    ageVerification,
+    costLedger: ledger.map((entry) => ({
+      occurredAt: entry.occurredAt,
+      provider: entry.provider,
+      model: entry.model,
+      featureKey: entry.featureKey,
+      tripId: entry.tripId,
+      unitType: entry.unitType,
+      promptTokens: entry.promptTokens,
+      completionTokens: entry.completionTokens,
+      requestUnits: entry.requestUnits,
+      outcome: entry.outcome,
+      estimatedCostUsd: entry.estimatedCostMicros == null ? null : entry.estimatedCostMicros / 1_000_000,
+    })),
+    diagnostics: { itineraryGenerations },
+    analytics,
   };
 };

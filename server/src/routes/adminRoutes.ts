@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import {
@@ -27,7 +28,16 @@ import {
   countItineraryCacheBlocksByLocation,
   getItineraryGenerationMetrics,
 } from '../db';
-import { listProviderInvoiceRecords, upsertProviderInvoiceRecord } from '../db';
+import {
+  getPrivacyRightsRequest,
+  listErasureJobs,
+  listPrivacyRightsRequests,
+  listProviderInvoiceRecords,
+  savePrivacyRightsRequest,
+  upsertProviderInvoiceRecord,
+} from '../db';
+import { computeRightsDueDate, subjectHash as privacySubjectHash } from '../services/privacyRightsService';
+import type { PrivacyJurisdiction, PrivacyRightsRequest, PrivacyRightsRequestType } from '../types';
 import { buildCostLedgerReport } from '../services/costLedgerReportService';
 import { ITINERARY_QUALITY_BASELINE_SETTING_KEY } from '../services/itineraryQualityGateService';
 import { TokenPayload } from '../auth';
@@ -2090,6 +2100,142 @@ router.put('/costs/invoices/:provider/:month', async (req, res) => {
   } catch (err) {
     logError('[admin] invoice record failed', err);
     res.status(500).json({ error: 'Failed to record invoice' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Privacy rights (analytics Phase 4): manually received requests with
+// statutory deadlines, and visibility into erasure jobs.
+// ---------------------------------------------------------------------------
+
+const RIGHTS_REQUEST_TYPES: PrivacyRightsRequestType[] = ['access', 'rectification', 'erasure', 'restriction', 'objection', 'portability', 'opt_out', 'appeal'];
+const RIGHTS_JURISDICTIONS: PrivacyJurisdiction[] = ['GDPR', 'UK_GDPR', 'CCPA', 'US_STATE', 'OTHER'];
+const RIGHTS_CHANNELS: PrivacyRightsRequest['channel'][] = ['email', 'web', 'in_app', 'other'];
+const RIGHTS_STATUSES: PrivacyRightsRequest['status'][] = ['open', 'verifying', 'in_progress', 'completed', 'rejected'];
+const CLOSED_RIGHTS_STATUSES = new Set<PrivacyRightsRequest['status']>(['completed', 'rejected']);
+
+const withOverdue = (request: PrivacyRightsRequest, now = Date.now()) => ({
+  ...request,
+  overdue: !CLOSED_RIGHTS_STATUSES.has(request.status) && new Date(request.dueAt).getTime() < now,
+});
+
+router.get('/privacy/rights-requests', async (req, res) => {
+  const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+  if (status && !RIGHTS_STATUSES.includes(status as PrivacyRightsRequest['status'])) {
+    res.status(400).json({ error: `status must be one of ${RIGHTS_STATUSES.join(', ')}` });
+    return;
+  }
+  try {
+    const requests = (await listPrivacyRightsRequests({ status })).map((r) => withOverdue(r));
+    res.json({ requests, overdueCount: requests.filter((r) => r.overdue).length });
+  } catch (err) {
+    logError('[admin] rights request list failed', err);
+    res.status(500).json({ error: 'Failed to list rights requests' });
+  }
+});
+
+router.post('/privacy/rights-requests', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  const requestType = req.body?.requestType as PrivacyRightsRequestType;
+  const jurisdiction = req.body?.jurisdiction as PrivacyJurisdiction;
+  const channel = (req.body?.channel ?? 'email') as PrivacyRightsRequest['channel'];
+  const receivedAt = req.body?.receivedAt ? new Date(String(req.body.receivedAt)) : new Date();
+  if (!reasonStr || !RIGHTS_REQUEST_TYPES.includes(requestType) || !RIGHTS_JURISDICTIONS.includes(jurisdiction)
+    || !RIGHTS_CHANNELS.includes(channel) || Number.isNaN(receivedAt.getTime()) || receivedAt.getTime() > Date.now() + 60_000) {
+    res.status(400).json({
+      error: `requestType (${RIGHTS_REQUEST_TYPES.join('|')}), jurisdiction (${RIGHTS_JURISDICTIONS.join('|')}), a past receivedAt, and reason (min 3 chars) are required`,
+    });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const now = new Date().toISOString();
+    const receivedIso = receivedAt.toISOString();
+    // A known account is recorded only as its pseudonymous subject hash.
+    const accountUserId = typeof req.body?.accountUserId === 'string' && req.body.accountUserId.trim() ? req.body.accountUserId.trim() : null;
+    const record = await savePrivacyRightsRequest({
+      id: randomUUID(),
+      requestType,
+      jurisdiction,
+      channel,
+      status: 'open',
+      receivedAt: receivedIso,
+      dueAt: computeRightsDueDate(jurisdiction, receivedIso, false),
+      extended: false,
+      subjectHash: accountUserId ? privacySubjectHash(accountUserId) : null,
+      notes: typeof req.body?.notes === 'string' ? req.body.notes.slice(0, 1000) : null,
+      createdBy: actorId,
+      updatedAt: now,
+      closedAt: null,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'PRIVACY_RIGHTS_REQUEST_CREATED',
+      afterState: { ...record },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.status(201).json(withOverdue(record));
+  } catch (err) {
+    logError('[admin] rights request create failed', err);
+    res.status(500).json({ error: 'Failed to record rights request' });
+  }
+});
+
+router.patch('/privacy/rights-requests/:id', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  const status = req.body?.status as PrivacyRightsRequest['status'] | undefined;
+  if (!reasonStr || (status !== undefined && !RIGHTS_STATUSES.includes(status))) {
+    res.status(400).json({ error: `reason (min 3 chars) is required; status must be one of ${RIGHTS_STATUSES.join(', ')}` });
+    return;
+  }
+  try {
+    const before = await getPrivacyRightsRequest(String(req.params.id));
+    if (!before) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    // The statutory extension can be applied once and must be notified to the requester.
+    const extend = req.body?.extend === true && !before.extended;
+    const nextStatus = status ?? before.status;
+    const now = new Date().toISOString();
+    const after: PrivacyRightsRequest = {
+      ...before,
+      status: nextStatus,
+      extended: before.extended || extend,
+      dueAt: extend ? computeRightsDueDate(before.jurisdiction, before.receivedAt, true) : before.dueAt,
+      notes: typeof req.body?.notes === 'string' ? req.body.notes.slice(0, 1000) : before.notes,
+      updatedAt: now,
+      closedAt: CLOSED_RIGHTS_STATUSES.has(nextStatus) ? before.closedAt ?? now : null,
+    };
+    await savePrivacyRightsRequest(after);
+    const actorId = getActorId(req);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'PRIVACY_RIGHTS_REQUEST_UPDATED',
+      beforeState: { ...before },
+      afterState: { ...after },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json(withOverdue(after));
+  } catch (err) {
+    logError('[admin] rights request update failed', err);
+    res.status(500).json({ error: 'Failed to update rights request' });
+  }
+});
+
+router.get('/privacy/erasure-jobs', async (req, res) => {
+  const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+  try {
+    const jobs = await listErasureJobs({ status, limit: 200 });
+    // Raw user IDs never leave the server; pending jobs still hold one for retries.
+    res.json({ jobs: jobs.map(({ userId: _userId, ...job }) => job) });
+  } catch (err) {
+    logError('[admin] erasure job list failed', err);
+    res.status(500).json({ error: 'Failed to list erasure jobs' });
   }
 });
 

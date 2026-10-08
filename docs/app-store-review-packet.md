@@ -167,6 +167,62 @@ Never provide secret API keys, webhook signing secrets, OAuth client secrets, pr
 
 **Proposed response:** Not applicable as a highly regulated service. WanderBunnies uses third-party data and services under provider terms and maintains the relevant accounts, agreements, licenses, and attribution records. Supporting evidence can be supplied securely upon request.
 
+## 8. Privacy disclosures (App Store and Google Play)
+
+These answers must match the built app, `ios.privacyManifests` and `android.blockedPermissions` in `expo.config.shared.cjs` (guarded by `app/tests/storePrivacyConfig.test.ts`), and the [Privacy Notice](legal/privacy-policy.md). Update all of them together. Source: [analytics plan, Phase 4](implementation-plans/analytics-upgrade.md).
+
+**URLs**
+
+| Field | URL |
+|---|---|
+| Privacy policy | `https://wander-bunnies.com/privacy.html` |
+| Privacy choices (App Store) | `https://wander-bunnies.com/privacy-choices.html` |
+| Delete account (Play Console) | `https://wander-bunnies.com/delete-account.html` |
+
+**App Store Connect: App Privacy**
+
+- **Data used to track you:** none. There is no ATT prompt, no `NSUserTrackingUsageDescription`, and no IDFA access.
+- **Data linked to you.** Optional collection is still declared:
+
+| Data type | Purposes | Notes |
+|---|---|---|
+| Name, Email Address | App Functionality | Account |
+| User ID | App Functionality, Analytics | Account ID; analytics uses a pseudonym we can map back to the account |
+| Device ID | App Functionality | Push notification token |
+| Photos or Videos | App Functionality | Only items the user picks or shares into the app |
+| Emails or Text Messages | App Functionality | Optional Gmail import |
+| Other User Content | App Functionality | Trips, notes, chat |
+| Purchase History | App Functionality | Subscriptions |
+| Other Financial Info | App Functionality | Optional bank-transaction import (Plaid) |
+| Product Interaction | Analytics | Optional, opt-in only (off by default) |
+| Crash Data, Performance Data | App Functionality, Analytics | Optional detailed diagnostics, opt-in only |
+
+**Google Play: Data safety**
+
+- **Collected:**
+  - Personal info: Name, Email address, User IDs.
+  - Financial info: Purchase history, plus other financial info (optional).
+  - Photos and videos (optional).
+  - Messages: Emails (optional).
+  - App activity: App interactions (optional), Other user-generated content.
+  - App info and performance: Crash logs and Diagnostics (optional).
+  - Device or other IDs: push token.
+- **Shared:** none (service providers are processing on our behalf, not sharing).
+- **Security:**
+  - Data is encrypted in transit.
+  - Users can request deletion, in the app and at the Delete account URL.
+- **Advertising ID:** No. `AD_ID` is blocked in the merged manifest; confirm in the EAS build's `AndroidManifest.xml`.
+
+**Before each submission:**
+- Compare the Xcode **Privacy Report** for the archived EAS build with the manifest's required-reason APIs.
+- Proxy-capture a release build to confirm there are no third-party tracking domains.
+- Confirm that nothing optional is sent before consent or after withdrawal.
+
+**Reviewer notes:**
+- Account → Privacy shows two optional, off-by-default switches and **Delete analytics data**.
+- Account → Delete Account deletes the account in-app.
+- First sign-in may ask for a date of birth, because the minimum age is 16. On iOS 26+ builds with Declared Age Range enabled, Apple's age confirmation is used instead.
+
 ## Appendix A: Physical-device screen recording for item 1
 
 ### Recording preparation

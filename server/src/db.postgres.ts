@@ -1,5 +1,19 @@
 // server/src/db.ts
-import type { JobLease, PrivacyPreferences, PrivacyPreferenceUpdate, ProviderCostLedgerEntry, ProviderInvoiceRecord } from './types';
+import type {
+  ErasureScope,
+  ErasureTombstone,
+  JobLease,
+  PrivacyChoiceEventRecord,
+  PrivacyErasureJob,
+  PrivacyPreferences,
+  PrivacyPreferenceUpdate,
+  PrivacyRightsRequest,
+  ProviderCostLedgerEntry,
+  ProviderInvoiceRecord,
+  UserAgeVerificationRecord,
+  UserItineraryMetricSummary,
+} from './types';
+import { scrubIdentity } from './utils/scrubIdentity';
 import { Pool, PoolClient } from 'pg';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
@@ -282,7 +296,8 @@ function getPool(): Pool {
           return value.split(find).join(replaceWith);
         },
       });
-      db.public.registerFunction({ name: 'uuid_generate_v4', args: [], returns: DataType.uuid, implementation: () => randomUUID() });
+      // impure: without it pg-mem may evaluate the call once and reuse the same UUID for every row.
+      db.public.registerFunction({ name: 'uuid_generate_v4', args: [], returns: DataType.uuid, implementation: () => randomUUID(), impure: true });
       PoolFactory = pgMem.Pool;
     }
 
@@ -13207,4 +13222,284 @@ export const setJobLeaseCursor = async (name: string, holder: string, cursor: st
 export const getJobLease = async (name: string): Promise<JobLease | null> => {
   const { rows } = await getPool().query(`SELECT * FROM job_leases WHERE name = $1`, [name]);
   return rows[0] ? rowToJobLease(rows[0]) : null;
+};
+
+// ── Privacy rights and retention (analytics Phase 4) ─────────────────────────
+
+const isUniqueViolation = (err: unknown): boolean =>
+  (err as { code?: string }).code === '23505' || /duplicate key|unique constraint/i.test(String((err as Error)?.message));
+
+const parseJsonColumn = (value: unknown): any => {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return null; }
+  }
+  return value;
+};
+
+export const listPrivacyChoiceEvents = async (userId: string): Promise<PrivacyChoiceEventRecord[]> => {
+  const { rows } = await getPool().query(
+    `SELECT purpose, granted, epoch, revision, notice_version, platform, occurred_at
+       FROM privacy_choice_events WHERE user_id = $1 ORDER BY occurred_at ASC`,
+    [userId],
+  );
+  return rows.map((row: any) => ({
+    purpose: row.purpose,
+    granted: Boolean(row.granted),
+    epoch: Number(row.epoch),
+    revision: Number(row.revision),
+    noticeVersion: row.notice_version,
+    platform: row.platform,
+    occurredAt: toIso(row.occurred_at),
+  }));
+};
+
+/** Copies the account's consent evidence into the pseudonymous archive (retry-safe). */
+export const archivePrivacyChoiceEvidence = async (userId: string, subjectHash: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, purpose, granted, epoch, notice_version, platform, occurred_at FROM privacy_choice_events WHERE user_id = $1`,
+    [userId],
+  );
+  const archivedAt = new Date().toISOString();
+  let archived = 0;
+  for (const row of rows as any[]) {
+    try {
+      await p.query(
+        `INSERT INTO privacy_consent_evidence_archive
+           (id, subject_hash, purpose, granted, epoch, notice_version, platform, occurred_at, archived_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [String(row.id), subjectHash, row.purpose, row.granted, row.epoch, row.notice_version, row.platform, row.occurred_at, archivedAt],
+      );
+      archived += 1;
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+    }
+  }
+  return archived;
+};
+
+export const purgeConsentEvidenceArchivedBefore = async (beforeIso: string): Promise<number> => {
+  const result = await getPool().query(`DELETE FROM privacy_consent_evidence_archive WHERE archived_at < $1`, [beforeIso]);
+  return result.rowCount ?? 0;
+};
+
+/** New random diagnostics pseudonym, so later Sentry data cannot be joined to earlier data. */
+export const rotateDiagnosticPseudonym = async (userId: string): Promise<number> => {
+  const result = await getPool().query(
+    `UPDATE privacy_preferences SET diagnostic_pseudonym = $2 WHERE user_id = $1 AND diagnostic_pseudonym IS NOT NULL`,
+    [userId, randomUUID()],
+  );
+  return result.rowCount ?? 0;
+};
+
+const delinkMetricRows = async (rows: Array<{ id: string; metrics: unknown }>): Promise<number> => {
+  const p = getPool();
+  for (const row of rows) {
+    const scrubbed = scrubIdentity(parseJsonColumn(row.metrics) ?? {});
+    await p.query(
+      `UPDATE itinerary_generation_metrics SET user_id = NULL, trip_id = NULL, metrics = $2 WHERE id = $1`,
+      [row.id, JSON.stringify(scrubbed)],
+    );
+  }
+  return rows.length;
+};
+
+export const delinkItineraryGenerationMetricsForUser = async (userId: string): Promise<number> => {
+  const { rows } = await getPool().query(`SELECT id, metrics FROM itinerary_generation_metrics WHERE user_id = $1`, [userId]);
+  return delinkMetricRows(rows as any[]);
+};
+
+export const delinkItineraryGenerationMetricsBefore = async (beforeIso: string): Promise<number> => {
+  const { rows } = await getPool().query(
+    `SELECT id, metrics, user_id, trip_id FROM itinerary_generation_metrics WHERE created_at < $1`,
+    [beforeIso],
+  );
+  return delinkMetricRows((rows as any[]).filter((row) => row.user_id != null || row.trip_id != null));
+};
+
+export const listItineraryGenerationMetricsForUser = async (userId: string, limit = 500): Promise<UserItineraryMetricSummary[]> => {
+  const { rows } = await getPool().query(
+    `SELECT generation_id, trip_id, provider, model, outcome, created_at
+       FROM itinerary_generation_metrics WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit],
+  );
+  return (rows as any[]).map((row) => ({
+    generationId: row.generation_id,
+    tripId: row.trip_id ?? null,
+    provider: row.provider,
+    model: row.model,
+    outcome: row.outcome,
+    createdAt: toIso(row.created_at),
+  }));
+};
+
+export const listProviderCostLedgerEntriesForUser = async (userId: string, limit = 5_000): Promise<ProviderCostLedgerEntry[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM provider_cost_ledger WHERE user_id = $1 ORDER BY occurred_at ASC LIMIT $2`,
+    [userId, limit],
+  );
+  return rows.map(rowToProviderCostLedgerEntry);
+};
+
+export const getUserAgeVerificationRecord = async (userId: string): Promise<UserAgeVerificationRecord> => {
+  const { rows } = await getPool().query(
+    `SELECT date_of_birth, age_verification_source, age_verified_at FROM users WHERE id = $1`,
+    [userId],
+  );
+  const row = rows[0] as any;
+  const dob = row?.date_of_birth;
+  return {
+    dateOfBirth: dob == null ? null : dob instanceof Date ? dob.toISOString().slice(0, 10) : String(dob).slice(0, 10),
+    source: row?.age_verification_source ?? null,
+    verifiedAt: row?.age_verified_at ? toIso(row.age_verified_at) : null,
+  };
+};
+
+export const upsertErasureTombstone = async (tombstone: ErasureTombstone): Promise<void> => {
+  const p = getPool();
+  const updated = await p.query(
+    `UPDATE erasure_tombstones SET erased_at = $3 WHERE subject_hash = $1 AND scope = $2 RETURNING subject_hash`,
+    [tombstone.subjectHash, tombstone.scope, tombstone.erasedAt],
+  );
+  if (updated.rows.length) return;
+  try {
+    await p.query(
+      `INSERT INTO erasure_tombstones (subject_hash, scope, erased_at) VALUES ($1, $2, $3)`,
+      [tombstone.subjectHash, tombstone.scope, tombstone.erasedAt],
+    );
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+  }
+};
+
+export const getErasureTombstone = async (subjectHash: string, scope: ErasureScope): Promise<ErasureTombstone | null> => {
+  const { rows } = await getPool().query(
+    `SELECT subject_hash, scope, erased_at FROM erasure_tombstones WHERE subject_hash = $1 AND scope = $2`,
+    [subjectHash, scope],
+  );
+  const row = rows[0] as any;
+  return row ? { subjectHash: row.subject_hash, scope: row.scope, erasedAt: toIso(row.erased_at) } : null;
+};
+
+const rowToErasureJob = (row: any): PrivacyErasureJob => ({
+  id: row.id,
+  subjectHash: row.subject_hash,
+  userId: row.user_id ?? null,
+  scope: row.scope,
+  status: row.status,
+  steps: parseJsonColumn(row.steps) ?? {},
+  attempts: Number(row.attempts ?? 0),
+  lastError: row.last_error ?? null,
+  requestedBy: row.requested_by,
+  requestedAt: toIso(row.requested_at),
+  dueAt: toIso(row.due_at),
+  completedAt: row.completed_at ? toIso(row.completed_at) : null,
+});
+
+export const saveErasureJob = async (job: PrivacyErasureJob): Promise<PrivacyErasureJob> => {
+  const p = getPool();
+  const values = [
+    job.id, job.subjectHash, job.userId, job.scope, job.status, JSON.stringify(job.steps), job.attempts,
+    job.lastError, job.requestedBy, job.requestedAt, job.dueAt, job.completedAt,
+  ];
+  const updated = await p.query(
+    `UPDATE privacy_erasure_jobs SET subject_hash = $2, user_id = $3, scope = $4, status = $5, steps = $6, attempts = $7,
+        last_error = $8, requested_by = $9, requested_at = $10, due_at = $11, completed_at = $12
+      WHERE id = $1 RETURNING id`,
+    values,
+  );
+  if (!updated.rows.length) {
+    await p.query(
+      `INSERT INTO privacy_erasure_jobs (id, subject_hash, user_id, scope, status, steps, attempts, last_error,
+         requested_by, requested_at, due_at, completed_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      values,
+    );
+  }
+  return job;
+};
+
+export const getErasureJob = async (id: string): Promise<PrivacyErasureJob | null> => {
+  const { rows } = await getPool().query(`SELECT * FROM privacy_erasure_jobs WHERE id = $1`, [id]);
+  return rows[0] ? rowToErasureJob(rows[0]) : null;
+};
+
+export const listErasureJobs = async (opts: { status?: string; subjectHash?: string; limit?: number } = {}): Promise<PrivacyErasureJob[]> => {
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (opts.status) {
+    params.push(opts.status);
+    where.push('status = $' + params.length);
+  }
+  if (opts.subjectHash) {
+    params.push(opts.subjectHash);
+    where.push('subject_hash = $' + params.length);
+  }
+  params.push(Math.min(Math.max(opts.limit ?? 100, 1), 500));
+  const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  const { rows } = await getPool().query(
+    'SELECT * FROM privacy_erasure_jobs ' + whereSql + ' ORDER BY requested_at DESC LIMIT $' + params.length,
+    params,
+  );
+  return rows.map(rowToErasureJob);
+};
+
+const rowToRightsRequest = (row: any): PrivacyRightsRequest => ({
+  id: row.id,
+  requestType: row.request_type,
+  jurisdiction: row.jurisdiction,
+  channel: row.channel,
+  status: row.status,
+  receivedAt: toIso(row.received_at),
+  dueAt: toIso(row.due_at),
+  extended: Boolean(row.extended),
+  subjectHash: row.subject_hash ?? null,
+  notes: row.notes ?? null,
+  createdBy: row.created_by ?? null,
+  updatedAt: toIso(row.updated_at),
+  closedAt: row.closed_at ? toIso(row.closed_at) : null,
+});
+
+export const savePrivacyRightsRequest = async (request: PrivacyRightsRequest): Promise<PrivacyRightsRequest> => {
+  const p = getPool();
+  const values = [
+    request.id, request.requestType, request.jurisdiction, request.channel, request.status, request.receivedAt,
+    request.dueAt, request.extended, request.subjectHash, request.notes, request.createdBy, request.updatedAt, request.closedAt,
+  ];
+  const updated = await p.query(
+    `UPDATE privacy_rights_requests SET request_type = $2, jurisdiction = $3, channel = $4, status = $5, received_at = $6,
+        due_at = $7, extended = $8, subject_hash = $9, notes = $10, created_by = $11, updated_at = $12, closed_at = $13
+      WHERE id = $1 RETURNING id`,
+    values,
+  );
+  if (!updated.rows.length) {
+    await p.query(
+      `INSERT INTO privacy_rights_requests (id, request_type, jurisdiction, channel, status, received_at, due_at, extended,
+         subject_hash, notes, created_by, updated_at, closed_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      values,
+    );
+  }
+  return request;
+};
+
+export const getPrivacyRightsRequest = async (id: string): Promise<PrivacyRightsRequest | null> => {
+  const { rows } = await getPool().query(`SELECT * FROM privacy_rights_requests WHERE id = $1`, [id]);
+  return rows[0] ? rowToRightsRequest(rows[0]) : null;
+};
+
+export const listPrivacyRightsRequests = async (opts: { status?: string; limit?: number } = {}): Promise<PrivacyRightsRequest[]> => {
+  const params: unknown[] = [];
+  let whereSql = '';
+  if (opts.status) {
+    params.push(opts.status);
+    whereSql = 'WHERE status = $1';
+  }
+  params.push(Math.min(Math.max(opts.limit ?? 200, 1), 1000));
+  const { rows } = await getPool().query(
+    'SELECT * FROM privacy_rights_requests ' + whereSql + ' ORDER BY due_at ASC LIMIT $' + params.length,
+    params,
+  );
+  return rows.map(rowToRightsRequest);
 };

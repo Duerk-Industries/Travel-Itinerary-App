@@ -16,6 +16,7 @@ import { logError, logInfo } from '../logger';
 import { incrementMetric } from '../metrics';
 import { getRequestContext } from '../requestContext';
 import type { ProviderCostLedgerEntry } from '../types';
+import { isAccountErased } from '../services/privacyRightsService';
 
 export { getApiRequestPricingUsd } from '../config/apiLimits';
 
@@ -120,9 +121,12 @@ export type SettleProviderAttemptResult = {
 
 const NON_ACCOUNT_USER_IDS = new Set(['system', 'anonymous', 'unknown']);
 
-const resolveAttributedUserId = (explicit: string | null | undefined): string | null => {
+const resolveAttributedUserId = async (explicit: string | null | undefined): Promise<string | null> => {
   const candidate = (explicit ?? getRequestContext()?.userId ?? '').trim();
-  return candidate && !NON_ACCOUNT_USER_IDS.has(candidate) ? candidate : null;
+  if (!candidate || NON_ACCOUNT_USER_IDS.has(candidate)) return null;
+  // A job that finishes after its account was deleted must not re-link spend to it.
+  const erased = await isAccountErased(candidate).catch(() => false);
+  return erased ? null : candidate;
 };
 
 const safeCount = (value: unknown): number => {
@@ -168,7 +172,7 @@ export const settleProviderAttempt = async (input: SettleProviderAttemptInput): 
   const costStatus: ProviderCostLedgerEntry['costStatus'] =
     estimatedCostMicros == null ? 'unknown' : estimatedCostMicros > 0 ? 'estimated' : 'not_billable';
 
-  const userId = resolveAttributedUserId(input.userId);
+  const userId = await resolveAttributedUserId(input.userId);
   const entry: ProviderCostLedgerEntry = {
     attemptId,
     occurredAt: new Date().toISOString(),

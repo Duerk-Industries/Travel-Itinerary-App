@@ -121,6 +121,8 @@ const isAgeVerificationAllowlistedRequest = (req: Request): boolean => {
   if (method === 'GET' && path === '/api/account/export') return true;
   if (path === '/api/account/privacy-preferences' && (method === 'GET' || method === 'PATCH')) return true;
   if (method === 'DELETE' && path === '/api/account') return true;
+  if (method === 'DELETE' && path === '/api/account/analytics-data') return true;
+  if (method === 'GET' && path.startsWith('/api/account/erasure-requests')) return true;
   return false;
 };
 

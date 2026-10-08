@@ -263,6 +263,9 @@ export type AuditAction =
   | 'BILLING_PRICE_PUBLISHED'
   | 'BILLING_RECONCILIATION_RUN'
   | 'PROVIDER_INVOICE_RECORDED'
+  | 'PRIVACY_RIGHTS_REQUEST_CREATED'
+  | 'PRIVACY_RIGHTS_REQUEST_UPDATED'
+  | 'PRIVACY_ERASURE_REQUESTED'
   | 'RETENTION_TICK_RUN'
   | 'ITINERARY_CACHE_PREPOPULATE_RUN'
   | 'DEPLOY_CUTOVER'
@@ -1217,4 +1220,84 @@ export interface JobLease {
   holder: string;
   expiresAt: string;
   cursor: string | null;
+}
+
+// ── Privacy rights and retention (analytics Phase 4) ─────────────────────────
+
+export type ErasureScope = 'analytics' | 'account';
+
+export interface ErasureTombstone {
+  subjectHash: string;
+  scope: ErasureScope;
+  erasedAt: string;
+}
+
+export type ErasureStepState = {
+  status: 'pending' | 'done' | 'failed' | 'not_applicable';
+  affected?: number | null;
+  note?: string;
+  error?: string;
+};
+
+export interface PrivacyErasureJob {
+  id: string;
+  subjectHash: string;
+  /** Present until the job completes, so retries can act on the account's rows. */
+  userId: string | null;
+  scope: ErasureScope;
+  status: 'pending' | 'completed' | 'failed';
+  steps: Record<string, ErasureStepState>;
+  attempts: number;
+  lastError: string | null;
+  requestedBy: 'user' | 'admin' | 'system';
+  requestedAt: string;
+  dueAt: string;
+  completedAt: string | null;
+}
+
+export type PrivacyRightsRequestType =
+  | 'access' | 'rectification' | 'erasure' | 'restriction' | 'objection' | 'portability' | 'opt_out' | 'appeal';
+export type PrivacyJurisdiction = 'GDPR' | 'UK_GDPR' | 'CCPA' | 'US_STATE' | 'OTHER';
+
+export interface PrivacyRightsRequest {
+  id: string;
+  requestType: PrivacyRightsRequestType;
+  jurisdiction: PrivacyJurisdiction;
+  channel: 'email' | 'web' | 'in_app' | 'other';
+  status: 'open' | 'verifying' | 'in_progress' | 'completed' | 'rejected';
+  receivedAt: string;
+  dueAt: string;
+  extended: boolean;
+  /** HMAC of the account ID when the requester is a known account; never the raw ID or email. */
+  subjectHash: string | null;
+  notes: string | null;
+  createdBy: string | null;
+  updatedAt: string;
+  closedAt: string | null;
+}
+
+export interface PrivacyChoiceEventRecord {
+  purpose: string;
+  granted: boolean;
+  epoch: number;
+  revision: number;
+  noticeVersion: string;
+  platform: string;
+  occurredAt: string;
+}
+
+export interface UserAgeVerificationRecord {
+  dateOfBirth: string | null;
+  source: string | null;
+  verifiedAt: string | null;
+}
+
+/** Export view of user-linked itinerary generation telemetry (no stage payloads). */
+export interface UserItineraryMetricSummary {
+  generationId: string;
+  tripId: string | null;
+  provider: string;
+  model: string;
+  outcome: string;
+  createdAt: string;
 }

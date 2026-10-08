@@ -741,3 +741,39 @@ export const setJobLeaseCursor = async (...args: Parameters<ReturnType<typeof ad
   adapter().setJobLeaseCursor(...args);
 export const getJobLease = async (...args: Parameters<ReturnType<typeof adapter>['getJobLease']>) =>
   adapter().getJobLease(...args);
+
+// Analytics Phase 4: privacy rights and retention.
+export const listPrivacyChoiceEvents = async (...args: Parameters<ReturnType<typeof adapter>['listPrivacyChoiceEvents']>) =>
+  adapter().listPrivacyChoiceEvents(...args);
+export const archivePrivacyChoiceEvidence = async (...args: Parameters<ReturnType<typeof adapter>['archivePrivacyChoiceEvidence']>) =>
+  adapter().archivePrivacyChoiceEvidence(...args);
+export const purgeConsentEvidenceArchivedBefore = async (...args: Parameters<ReturnType<typeof adapter>['purgeConsentEvidenceArchivedBefore']>) =>
+  adapter().purgeConsentEvidenceArchivedBefore(...args);
+export const rotateDiagnosticPseudonym = async (...args: Parameters<ReturnType<typeof adapter>['rotateDiagnosticPseudonym']>) =>
+  adapter().rotateDiagnosticPseudonym(...args);
+export const delinkItineraryGenerationMetricsForUser = async (...args: Parameters<ReturnType<typeof adapter>['delinkItineraryGenerationMetricsForUser']>) =>
+  adapter().delinkItineraryGenerationMetricsForUser(...args);
+export const delinkItineraryGenerationMetricsBefore = async (...args: Parameters<ReturnType<typeof adapter>['delinkItineraryGenerationMetricsBefore']>) =>
+  adapter().delinkItineraryGenerationMetricsBefore(...args);
+export const listItineraryGenerationMetricsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listItineraryGenerationMetricsForUser']>) =>
+  adapter().listItineraryGenerationMetricsForUser(...args);
+export const listProviderCostLedgerEntriesForUser = async (...args: Parameters<ReturnType<typeof adapter>['listProviderCostLedgerEntriesForUser']>) =>
+  adapter().listProviderCostLedgerEntriesForUser(...args);
+export const getUserAgeVerificationRecord = async (...args: Parameters<ReturnType<typeof adapter>['getUserAgeVerificationRecord']>) =>
+  adapter().getUserAgeVerificationRecord(...args);
+export const upsertErasureTombstone = async (...args: Parameters<ReturnType<typeof adapter>['upsertErasureTombstone']>) =>
+  adapter().upsertErasureTombstone(...args);
+export const getErasureTombstone = async (...args: Parameters<ReturnType<typeof adapter>['getErasureTombstone']>) =>
+  adapter().getErasureTombstone(...args);
+export const saveErasureJob = async (...args: Parameters<ReturnType<typeof adapter>['saveErasureJob']>) =>
+  adapter().saveErasureJob(...args);
+export const getErasureJob = async (...args: Parameters<ReturnType<typeof adapter>['getErasureJob']>) =>
+  adapter().getErasureJob(...args);
+export const listErasureJobs = async (...args: Parameters<ReturnType<typeof adapter>['listErasureJobs']>) =>
+  adapter().listErasureJobs(...args);
+export const savePrivacyRightsRequest = async (...args: Parameters<ReturnType<typeof adapter>['savePrivacyRightsRequest']>) =>
+  adapter().savePrivacyRightsRequest(...args);
+export const getPrivacyRightsRequest = async (...args: Parameters<ReturnType<typeof adapter>['getPrivacyRightsRequest']>) =>
+  adapter().getPrivacyRightsRequest(...args);
+export const listPrivacyRightsRequests = async (...args: Parameters<ReturnType<typeof adapter>['listPrivacyRightsRequests']>) =>
+  adapter().listPrivacyRightsRequests(...args);

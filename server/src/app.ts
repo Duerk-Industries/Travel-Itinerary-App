@@ -182,6 +182,18 @@ const hasWebApp = fs.existsSync(webIndexPath);
 
 app.get('/login', (_req, res) => res.sendFile(loginPath));
 app.get('/privacy', (_req, res) => res.type('html').send(privacyPolicyHtml));
+// Stable extensionless URLs for the public legal pages (store listings, Play Console
+// deletion URL, footers). Registered before the SPA fallback so they never resolve
+// to the app shell.
+const LEGAL_PAGE_ALIASES: Record<string, string> = {
+  '/privacy-choices': '/privacy-choices.html',
+  '/delete-account': '/delete-account.html',
+  '/cookies': '/cookies.html',
+  '/terms': '/terms.html',
+};
+for (const [alias, target] of Object.entries(LEGAL_PAGE_ALIASES)) {
+  app.get(alias, (_req, res) => res.redirect(301, target));
+}
 app.get('/api/diagnostics/google-client-id', (_req, res) => {
   const clientId = getEnvValue('GOOGLE_CLIENT_ID') || '';
   res.json({ configured: Boolean(clientId), last6: clientId.trim().slice(-6) || null });

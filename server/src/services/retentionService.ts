@@ -9,6 +9,7 @@ import {
 import { writeAuditLog } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvFlag, getEnvValue } from '../env';
+import { runPrivacyRetention, type PrivacyRetentionResult } from './privacyRetentionService';
 
 export interface RetentionTickResult {
   /** Raw ISO cutoff used for this tick — any terminal row stamped before this is eligible for cleanup. */
@@ -17,6 +18,8 @@ export interface RetentionTickResult {
   deadLetterPayloadsDeleted: number;
   /** Number of `ingested_documents` rows whose normalized_text/html was tombstoned. */
   normalizedTextTombstoned: number;
+  /** Analytics/privacy retention schedule (privacyRetentionService); absent when it could not run. */
+  privacy?: PrivacyRetentionResult;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -57,6 +60,13 @@ export const runRetentionTick = async (opts: { now?: Date; retentionDays?: numbe
     logError('[retention] normalized-text tombstone sweep failed', err);
   }
 
+  let privacy: PrivacyRetentionResult | undefined;
+  try {
+    privacy = await runPrivacyRetention(now);
+  } catch (err) {
+    logError('[retention] privacy retention failed', err);
+  }
+
   // Persist an audit entry for every tick so admins can see the scheduler
   // running (including no-op ticks — they confirm the sweep is alive and
   // cut off at the expected window).
@@ -71,6 +81,7 @@ export const runRetentionTick = async (opts: { now?: Date; retentionDays?: numbe
         retentionDays: days,
         deadLetterPayloadsDeleted,
         normalizedTextTombstoned,
+        privacy: privacy ?? null,
       },
       reason: null,
     });
@@ -78,7 +89,7 @@ export const runRetentionTick = async (opts: { now?: Date; retentionDays?: numbe
     logError('[retention] audit log write failed', err);
   }
 
-  return { cutoffIso, deadLetterPayloadsDeleted, normalizedTextTombstoned };
+  return { cutoffIso, deadLetterPayloadsDeleted, normalizedTextTombstoned, privacy };
 };
 
 let schedulerHandle: ReturnType<typeof setInterval> | null = null;

@@ -221,6 +221,103 @@ Existing suites updated for the new settlement API: `aiProviderRegistry`, `googl
 ## Phase 4: Rights, Retention, and Policy & Web Page Deliverables
 
 **Owners:** Backend Lead, Privacy Owner. Depends on Phase 1 & 2.
+**Status:** Implemented October 8, 2026 for every store that exists today (not yet deployed). Phase 2's stores (raw events, pseudonym map, daily facts) aren't built yet; they plug in through the registries below without changes to this phase's code.
+
+### Implementation record
+
+**Erasure (`server/src/services/privacyRightsService.ts`)**
+- **Durable jobs.** Each erasure request becomes a durable `privacy_erasure_jobs` row that records a result per step (`done`, `not_applicable` with a reason, or `failed` with the error). The job keeps the raw user ID only until it completes. The daily retention tick retries failed steps, up to 5 attempts.
+- **Tombstones.** A tombstone in `erasure_tombstones` is keyed by an HMAC of the account ID, never the raw ID. Late writers check it: cost settlement attributes an erased account's spend to `system`, and Phase 2 ingest must reject events older than the analytics tombstone.
+- **Steps registered today:**
+
+  | Step | Scope | What it does |
+  |---|---|---|
+  | `consent_evidence_archive` | account | Copies `privacy_choice_events` to `privacy_consent_evidence_archive` under the subject hash *before* the account cascade deletes them. Previously, account deletion destroyed the consent evidence the retention schedule requires. |
+  | `itinerary_generation_metrics` | analytics, account | Removes user and trip IDs, including those nested in the metrics JSON. Previously Postgres only nulled `user_id`, and Firebase kept everything. |
+  | `diagnostic_pseudonym` | analytics | Rotates the Sentry pseudonym. |
+  | `cost_ledger` | account | Unlinks the account's cost-ledger rows. |
+  | `push_tokens` | account | Hard-deletes device rows. Previously Firestore never deleted them, and `deleteDevice` only disabled them, so encrypted push tokens outlived accounts. |
+  | `ai_captures` | analytics, account | `not_applicable`: captures carry only a salted hash and are removed by the 30-day lifecycle rule. |
+  | `product_analytics_events` | analytics, account | `not_applicable` until Phase 2. |
+
+  Phase 2 adds its stores with `registerErasureStep`.
+- **Account deletion.** `DELETE /api/account` runs the account-scope job before the cascade. Starting the job never blocks the deletion.
+
+**User endpoints**
+- `DELETE /api/account/analytics-data` ("Delete my analytics data") deletes analytics data without deleting the account, and is audited as `PRIVACY_ERASURE_REQUESTED`.
+- `GET /api/account/erasure-requests[/:id]` lets users follow their requests; another user's job returns 404.
+- These routes are allowlisted under the age gate, so a not-yet-verified account can still use them.
+- **Account → Privacy → Delete analytics data** now confirms in the app and calls the endpoint, instead of opening an email to support.
+
+**Export v2.** `EXPORT_SCHEMA_VERSION` 2 adds:
+- `privacy`: preferences, choice history and erasure requests (the diagnostics pseudonym is omitted);
+- `ageVerification`;
+- `costLedger`: the user's own rows, with cost in USD;
+- `diagnostics.itineraryGenerations`;
+- `analytics`: `not_collected` until Phase 2 registers sections via `registerExportSection`.
+
+**Rights-request tracker (admin).** `GET`/`POST`/`PATCH /api/admin/privacy/rights-requests` and `GET /api/admin/privacy/erasure-jobs`:
+- Deadlines: GDPR and UK GDPR, one calendar month (end-of-month clamped), extendable once to three months; CCPA and US states, 45 days (+45); otherwise 30 days (+30).
+- Each request has an overdue flag and is audited (`PRIVACY_RIGHTS_REQUEST_CREATED` / `_UPDATED`).
+- A known account is stored only as its subject hash.
+
+**Retention (`server/src/services/privacyRetentionService.ts`).** Runs inside the existing daily retention tick, guarded by a `job_leases` lease so one replica runs it:
+- unlink cost-ledger rows older than 13 months;
+- unlink itinerary telemetry older than 13 months;
+- purge archived consent evidence 3 years after deletion;
+- retry erasure jobs.
+
+The results are added to the `RETENTION_TICK_RUN` audit entry. Phase 2 adds its 90-day and 13-month purges with `registerRetentionStep`.
+
+**Policy pages**
+- **One source.** `docs/legal/privacy-policy.md` (version 3.0) is the canonical notice. `scripts/build-legal-pages.mjs` (run with `npm run build:legal`) generates both `app/public/privacy.html` and `server/src/legal/privacyPolicyHtml.ts`, so `/privacy` and `/privacy.html` are now identical.
+- **Drift guard.** `npm run check:legal`, also run by `server/__tests__/legal-pages.test.ts`, fails the build if either output is edited by hand.
+- **Step 3 content changes, all applied:**
+  - Sentry is no longer described as always on;
+  - first-party opt-in analytics is described;
+  - photos are limited to items the user picks or shares (no camera or location);
+  - the minimum age is 16;
+  - the legal-basis table is explicit;
+  - necessary and optional technical data are split, and push tokens are listed;
+  - the retention schedule, rights with response times, recipients and transfers, "what we don't do", and change handling are added;
+  - the Google Limited Use and Plaid sections are kept word for word.
+- **EU/UK representative.** The line now reads "none appointed at this time" instead of "Not applicable", per the draft Art. 27 assessment.
+- **Other pages:**
+  - `cookies.html`: consent stored server-side (no cookie), memory-only analytics, opt-in Sentry, and a "Manage preferences" link;
+  - `privacy-choices.html`: rewritten with both switches, GPC/DNT, analytics deletion and export, and "we do not sell or share";
+  - `delete-account.html`: rewritten with how to delete, what is deleted, what is kept and why, verification, and timing.
+- **Links and URLs.** Extensionless `/privacy-choices`, `/delete-account`, `/cookies` and `/terms` redirect (301) before the SPA fallback. "Your Privacy Choices" links were added to the landing page footer and the sign-in form.
+
+**Mobile store configuration**
+- `expo.config.shared.cjs` now declares `ios.privacyManifests`:
+  - `NSPrivacyTracking: false` and no tracking domains;
+  - 12 linked collected data types, matching the policy;
+  - required-reason APIs: UserDefaults CA92.1, FileTimestamp C617.1, SystemBootTime 35F9.1, DiskSpace E174.1.
+- It also sets `android.blockedPermissions: ['com.google.android.gms.permission.AD_ID']`.
+- Store form answers are recorded in `docs/app-store-review-packet.md` §8, and `app/tests/storePrivacyConfig.test.ts` guards the configuration.
+
+**Test-infrastructure fix.** The pg-mem `uuid_generate_v4` is now registered as `impure`. Without that, pg-mem could reuse one UUID for every default-ID insert, which the new telemetry tests exposed.
+
+**Tests:**
+- `server/__tests__/privacy-rights.test.ts` (8): analytics erasure, cross-user isolation, account-deletion archive/unlink/tombstone and late-settlement blocking, failed-step retry, export v2, deadline rules, the admin tracker and its audit, and retention.
+- `server/__tests__/legal-pages.test.ts` (8).
+- `app/tests/PrivacySettings.test.tsx` (+2) and `app/tests/storePrivacyConfig.test.ts` (4).
+- `accountExport.test.ts` updated to schema v2.
+
+**Remaining (needs people or later phases):**
+- **Before deploying the policy:**
+  - set Sentry project retention to 30 days, since the notice now says diagnostics "expire within 30 days";
+  - confirm the operator address for Tristan;
+  - publish and notify users of version 3.0.
+- **Store forms** must be updated in App Store Connect and Play Console with the first build containing these changes. Then verify the Xcode Privacy Report and the merged Android manifest.
+- **Phase 2 work:**
+  - register erasure, retention and export steps for raw events, the pseudonym map and daily facts;
+  - make ingest check the analytics tombstone;
+  - add the registry-to-store disclosure drift check (section 4).
+- **Not built:**
+  - backup-restore tombstone replay;
+  - a deletion-confirmation request to Sentry (decision 8 relies on 30-day expiry instead).
+- **Untested on real Firestore.** Firestore behavior is untested here (in-memory adapter only); run the emulator suite.
 
 ### 1. Rights Handling
 - Bump `EXPORT_SCHEMA_VERSION` to 2 in `userDataExport.ts` and add `privacy` (preferences/history), `analytics` (events, daily facts, pseudonym), `costs` (attributed ledger rows), and `diagnostics` (capture metadata). Use machine-readable JSON.

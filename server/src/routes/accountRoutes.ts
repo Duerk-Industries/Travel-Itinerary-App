@@ -50,7 +50,8 @@ import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
 import { buildUserDataExport } from '../services/userDataExport';
-import { delinkProviderCostLedgerUser } from '../db';
+import { getErasureJobForUser, listErasureJobsForUser, requestErasure } from '../services/privacyRightsService';
+import type { PrivacyErasureJob } from '../types';
 import { cancelAllSubscriptionsForUser, syncEmailToStripeCustomer } from '../billing/accountBillingLifecycle';
 import { accountPasswordRateLimit } from '../services/httpRateLimitService';
 import { declareDateOfBirth, isAgeGateEnforced, isAgeVerificationRequired, recordAppleAgeRange } from '../services/ageVerificationService';
@@ -100,6 +101,17 @@ router.patch('/privacy-preferences', async (req, res) => {
       res.status(503).json({ error: 'Privacy preferences unavailable', code: 'PRIVACY_UNAVAILABLE' });
     }
   }
+});
+
+/** Erasure job as shown to its subject: no internal hashes or raw IDs. */
+const publicErasureJob = (job: PrivacyErasureJob) => ({
+  id: job.id,
+  scope: job.scope,
+  status: job.status,
+  requestedAt: job.requestedAt,
+  dueAt: job.dueAt,
+  completedAt: job.completedAt,
+  steps: job.steps,
 });
 
 const ensureUserInGroup = async (groupId: string, userId: string): Promise<boolean> => {
@@ -301,6 +313,47 @@ router.delete('/packing-list/:itemId', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+// "Delete my analytics data" (analytics Phase 4): erases analytics and
+// diagnostics linked to the account without deleting the account. Separate from
+// withdrawing consent, which only stops future collection.
+router.delete('/analytics-data', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const job = await requestErasure(userId, 'analytics', 'user');
+    await writeAuditLog({
+      actorUserId: userId,
+      targetUserId: userId,
+      action: 'PRIVACY_ERASURE_REQUESTED',
+      afterState: { jobId: job.id, scope: job.scope, status: job.status },
+      reason: 'User requested deletion of analytics data',
+    }).catch(() => undefined);
+    res.status(job.status === 'completed' ? 200 : 202).json(publicErasureJob(job));
+  } catch (err) {
+    logError('[account] analytics data erasure failed', err);
+    res.status(500).json({ error: 'Failed to delete analytics data.' });
+  }
+});
+
+router.get('/erasure-requests', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    res.json({ requests: (await listErasureJobsForUser(userId)).map(publicErasureJob) });
+  } catch (err) {
+    logError('[account] erasure request list failed', err);
+    res.status(500).json({ error: 'Failed to load deletion requests.' });
+  }
+});
+
+router.get('/erasure-requests/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const job = await getErasureJobForUser(userId, String(req.params.id)).catch(() => null);
+  if (!job) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  res.json(publicErasureJob(job));
 });
 
 router.get('/export', async (req, res) => {
@@ -719,9 +772,11 @@ router.delete('/', async (req, res) => {
     // Cancel active Stripe subscriptions before wiping local records.
     await cancelAllSubscriptionsForUser(userId);
     await deleteUserIngestionData(userId).catch(() => undefined);
-    // Spend stays in the cost ledger for budgets and invoice reconciliation,
-    // but its link to this person is removed (analytics Phase 3 / Phase 4).
-    await delinkProviderCostLedgerUser(userId).catch((err) => logError('[account] cost ledger de-link failed', err));
+    // Durable erasure job (analytics Phase 4): archives consent evidence before
+    // the cascade below removes it, unlinks telemetry and the cost ledger, and
+    // tombstones the subject so late writers cannot re-link data. A failed step
+    // is retried by the retention tick; it never blocks the deletion itself.
+    await requestErasure(userId, 'account', 'user').catch((err) => logError('[account] erasure job failed to start', err));
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();
       try {

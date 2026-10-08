@@ -27,6 +27,16 @@ const ChoiceSwitch = ({ label, detail, value, disabled, onChange }: {
   </View>
 );
 
+/** Self-service "Delete my analytics data" (analytics Phase 4). Resolves with the erasure job. */
+export const deleteAnalyticsData = async (backendUrl: string, token: string): Promise<{ id: string; status: string }> => {
+  const response = await fetch(`${backendUrl}/api/account/analytics-data`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Could not delete analytics data');
+  return response.json();
+};
+
 const saveSafely = async (privacy: PrivacyController, choice: PrivacyChoice) => {
   try { await privacy.save(choice); }
   catch (error) { Alert.alert('Privacy settings', (error as Error).message); }
@@ -72,7 +82,26 @@ export const AccountPrivacySettings = ({ privacy, backendUrl, token }: {
   privacy: PrivacyController; backendUrl: string; token: string | null;
 }) => {
   const status = privacy.status;
+  const [confirmingErase, setConfirmingErase] = useState(false);
+  const [erasing, setErasing] = useState(false);
+  const [eraseMessage, setEraseMessage] = useState<string | null>(null);
   const open = (path: string) => { void Linking.openURL(`${backendUrl}${path}`); };
+  const eraseAnalytics = async () => {
+    if (!token) return;
+    setErasing(true);
+    setEraseMessage(null);
+    try {
+      const result = await deleteAnalyticsData(backendUrl, token);
+      setEraseMessage(result.status === 'completed'
+        ? 'Your analytics and diagnostics data has been deleted.'
+        : 'Deletion has started and will finish automatically. Check back later.');
+    } catch {
+      setEraseMessage('Could not delete analytics data. Try again or contact support@wander-bunnies.com.');
+    } finally {
+      setErasing(false);
+      setConfirmingErase(false);
+    }
+  };
   const exportData = async () => {
     if (!token) return;
     try {
@@ -109,8 +138,16 @@ export const AccountPrivacySettings = ({ privacy, backendUrl, token }: {
       <Pressable accessibilityRole="link" style={styles.button} onPress={() => open('/cookies.html')}><Text style={styles.buttonText}>Cookie notice</Text></Pressable>
       <Pressable accessibilityRole="link" style={styles.button} onPress={() => open('/privacy-choices.html')}><Text style={styles.buttonText}>Your choices</Text></Pressable>
       <Pressable accessibilityRole="button" style={styles.button} onPress={() => { void exportData(); }}><Text style={styles.buttonText}>Export account data</Text></Pressable>
-      <Pressable accessibilityRole="link" style={styles.button} onPress={() => { void Linking.openURL('mailto:support@wander-bunnies.com?subject=Delete%20my%20analytics%20data'); }}><Text style={styles.buttonText}>Delete analytics data</Text></Pressable>
+      <Pressable accessibilityRole="button" testID="privacy-delete-analytics" disabled={!token || erasing} style={[styles.button, (!token || erasing) && styles.disabled]} onPress={() => { setEraseMessage(null); setConfirmingErase(true); }}><Text style={styles.buttonText}>Delete analytics data</Text></Pressable>
       <Pressable accessibilityRole="link" style={styles.button} onPress={() => open('/delete-account.html')}><Text style={styles.buttonText}>Delete account</Text></Pressable>
     </View>
+    {confirmingErase ? <View style={styles.card} testID="privacy-delete-analytics-confirm">
+      <Text style={styles.text}>This deletes analytics and detailed-diagnostics data linked to your account. Your trips, account and choices stay as they are. To stop future collection, turn the switches above off.</Text>
+      <View style={styles.buttonRow}>
+        <Pressable accessibilityRole="button" testID="privacy-delete-analytics-confirm-button" disabled={erasing} style={[styles.button, erasing && styles.disabled]} onPress={() => { void eraseAnalytics(); }}><Text style={styles.buttonText}>{erasing ? 'Deleting…' : 'Delete'}</Text></Pressable>
+        <Pressable accessibilityRole="button" disabled={erasing} style={styles.button} onPress={() => setConfirmingErase(false)}><Text style={styles.buttonText}>Cancel</Text></Pressable>
+      </View>
+    </View> : null}
+    {eraseMessage ? <Text style={styles.text} testID="privacy-delete-analytics-result">{eraseMessage}</Text> : null}
   </View>;
 };

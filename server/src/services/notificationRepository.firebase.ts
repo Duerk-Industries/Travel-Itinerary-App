@@ -196,3 +196,15 @@ export const updateOutboxState = async (id: string, state: string, options: any 
 export const pruneNotifications = async (retentionDays: number, maxPerRow: number): Promise<void> => {
   // Pruning logic for Firestore can be implemented here.
 };
+
+/** Erasure: hard-deletes the user's devices, including encrypted push tokens (deleteDevice only disables). */
+export const purgeDevicesForUser = async (userId: string): Promise<number> => {
+  const db = getDb();
+  const snap = await db.collection('notification_devices').where('userId', '==', userId).get();
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 400).forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
+  return snap.docs.length;
+};
