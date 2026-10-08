@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { INSTANCE_ID, getMetricCounterSnapshot } from '../metrics';
+import { INSTANCE_ID, TIMING_BUCKETS_MS, getMetricCounterSnapshot } from '../metrics';
 
 const router = Router();
 
@@ -42,12 +42,33 @@ export const renderPrometheusSnapshot = (): string => {
   // so the label is always this instance's id.
   const instanceLabel = `instance="${escapeLabelValue(INSTANCE_ID)}"`;
 
-  // Counters (one TYPE line per distinct metric name).
+  // Counters: one TYPE line per distinct metric name, then one line per label
+  // set (bounded by MAX_SERIES_PER_METRIC in metrics.ts). An unlabeled
+  // counter is the single `{instance=...}` series.
   const counterNames = Object.keys(snapshot.counters).sort();
   for (const rawName of counterNames) {
     const promName = toPromName(rawName);
     lines.push(`# TYPE ${promName} counter`);
-    lines.push(`${promName}{${instanceLabel}} ${snapshot.counters[rawName]}`);
+    for (const series of snapshot.counterSeries.filter((s) => s.name === rawName)) {
+      lines.push(`${promName}${formatLabels({ instance: INSTANCE_ID, ...series.labels })} ${series.value}`);
+    }
+  }
+
+  // Timing histograms (milliseconds), Prometheus histogram convention:
+  // cumulative `_bucket{le=...}` series plus `_sum` and `_count`.
+  const timingNames = Array.from(new Set(snapshot.timings.map((t) => t.name))).sort();
+  for (const rawName of timingNames) {
+    const promName = toPromName(rawName);
+    lines.push(`# TYPE ${promName} histogram`);
+    for (const timing of snapshot.timings.filter((t) => t.name === rawName)) {
+      const base = { instance: INSTANCE_ID, ...timing.labels };
+      TIMING_BUCKETS_MS.forEach((upper, i) => {
+        lines.push(`${promName}_bucket${formatLabels({ ...base, le: String(upper) })} ${timing.buckets[i]}`);
+      });
+      lines.push(`${promName}_bucket${formatLabels({ ...base, le: '+Inf' })} ${timing.count}`);
+      lines.push(`${promName}_sum${formatLabels(base)} ${timing.sumMs}`);
+      lines.push(`${promName}_count${formatLabels(base)} ${timing.count}`);
+    }
   }
 
   // Explicit gauges (ingestion_jobs_by_state, ingestion_pending_depth, etc.).

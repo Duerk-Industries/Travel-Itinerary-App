@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordUsage } from '../services/entitlementService';
-import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
+import { getApiBudgetWindowKey, settleProviderAttempt, type ProviderAttemptAttribution } from './providerBudgeting';
 
 type OpenAiMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -20,6 +20,7 @@ export type OpenAiChatCompletionRequest = {
 };
 
 export type OpenAiChatCompletionResponse = {
+  id?: string;
   choices?: Array<{
     message?: {
       content?: string;
@@ -102,10 +103,19 @@ export const postOpenAiChatCompletion = async (params: {
   payload: OpenAiChatCompletionRequest;
   usageContext?: OpenAiUsageContext;
   skipApiUsageReservation?: boolean;
+  /** Cost-ledger attribution; always passed by the provider registry, even when usage accounting is off. */
+  attribution?: ProviderAttemptAttribution;
 }): Promise<OpenAiChatCompletionResponse> => {
   if (!params.skipApiUsageReservation) {
     await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
   }
+  const metadata = params.usageContext?.metadata ?? {};
+  const attribution: ProviderAttemptAttribution = {
+    caller: params.caller,
+    userId: params.attribution?.userId ?? params.usageContext?.userId ?? null,
+    featureKey: params.attribution?.featureKey ?? (typeof metadata.featureKey === 'string' ? metadata.featureKey : null),
+    tripId: params.attribution?.tripId ?? (typeof metadata.tripId === 'string' ? metadata.tripId : null),
+  };
   let response;
   try {
     response = await axios.post<OpenAiChatCompletionResponse>(
@@ -119,23 +129,28 @@ export const postOpenAiChatCompletion = async (params: {
       }
     );
   } catch (error) {
+    await settleProviderAttempt({
+      ...attribution,
+      provider: 'OPENAI',
+      unitType: 'tokens',
+      model: params.payload.model,
+      outcome: 'failed',
+    }).catch(() => undefined);
     throw normalizeAxiosError(error);
   }
   const usage = response.data?.usage;
-  const estimatedCostMicrosUsd = estimateAiCostMicros({
+  // Keyed by OpenAI's response ID so a replayed settlement cannot count twice.
+  const settlement = await settleProviderAttempt({
+    ...attribution,
     provider: 'OPENAI',
+    attemptId: response.data?.id,
+    unitType: 'tokens',
     model: params.payload.model,
     promptTokens: usage?.prompt_tokens ?? 0,
     completionTokens: usage?.completion_tokens ?? 0,
   });
-  if ((estimatedCostMicrosUsd ?? 0) > 0) {
-    await recordApiCost({
-      provider: 'OPENAI',
-      windowKey: getApiBudgetWindowKey(),
-      amountMicros: estimatedCostMicrosUsd ?? 0,
-    });
-  }
-  if (params.usageContext?.userId) {
+  const estimatedCostMicrosUsd = settlement.estimatedCostMicros;
+  if (params.usageContext?.userId && !settlement.duplicate) {
     const windowKey = params.usageContext.windowKey ?? getMonthWindowKey();
     const budgetWindowKey = getApiBudgetWindowKey();
     const baseMetadata = {

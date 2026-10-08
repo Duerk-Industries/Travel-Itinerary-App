@@ -108,8 +108,11 @@ const persistEvaluationIfNeeded = async (record: CaptureRecord, local: boolean):
   }
 };
 
+/** Captures go to local disk in local/test environments and to Cloud Storage everywhere else. */
+export const isLocalCaptureBackend = (): boolean => isLocalEnv() || process.env.NODE_ENV === 'test';
+
 const persistCaptureRecord = async (record: CaptureRecord): Promise<void> => {
-  const local = isLocalEnv() || process.env.NODE_ENV === 'test';
+  const local = isLocalCaptureBackend();
   const recordToStore =
     local && getEnvFlag('ENABLE_RAW_AI_CAPTURE', { defaultValue: false })
       ? record

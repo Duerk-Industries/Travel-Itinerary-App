@@ -87,3 +87,18 @@ When `feature_ingest_admin_observability` is enabled, the admin UI exposes inges
 - cost per user
 
 Use pagination for large result sets.
+
+## Cost ledger and invoice reconciliation
+
+Provider spend is settled per attempt in `provider_cost_ledger` (see the [analytics plan, Phase 3](implementation-plans/analytics-upgrade.md#phase-3-cost-metering-performance-monitoring-and-metricsts-fixes)).
+
+- `GET /api/admin/costs/ledger?month=YYYY-MM` returns an aggregate monthly report:
+  - totals by provider and by feature;
+  - attribution and pricing coverage;
+  - median/p95 direct cost per user;
+  - reconciliation against any recorded invoices.
+
+  Add `sharedCostUsd` (and optionally `activeAccounts`) to include the `allocation_v1` shared-cost split. No user IDs are returned.
+- `PUT /api/admin/costs/invoices/:provider/:month` with `{ invoicedAmount, creditsAmount?, currency?, fxRateToUsd?, notes?, reason }` records a provider invoice and writes a `PROVIDER_INVOICE_RECORDED` audit entry. Amounts are in the invoice currency; `fxRateToUsd` must be 1 for USD.
+- Unknown-priced attempts are counted separately and never treated as $0. Fix them by adding the provider or model price to `server/config/api-limits.yaml`.
+- `GET /api/admin/metrics` now also returns `counterSeries` (per-label counters) and `timings` (latency histograms with p50/p95). `/metrics` exports the same data as Prometheus counters and histograms.

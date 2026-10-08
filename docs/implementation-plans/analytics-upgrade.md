@@ -146,16 +146,75 @@ Design rules:
 ## Phase 3: Cost Metering, Performance Monitoring, and `metrics.ts` Fixes
 
 **Owners:** Backend Lead, Finance/Operations Owner. Depends on Phase 0.
+**Status:** Implemented October 8, 2026 (not yet deployed). Remaining gaps are listed at the end of this section.
 
-- Route all cost recording through `settleProviderAttempt()` recording attempt ID, provider/model/caller, feature, initiating user, trip, units, cache status, failure/retry state, and price version in integer USD microdollars.
-- Audit `openaiApi.ts` and `aiProviderRegistry.ts` accounting to prevent double settlement. Add a uniqueness constraint on attempt ID.
-- Unattributed calls recorded as `system`/`unattributed`. Shared trip/background costs classified once under `allocation_v1`: equal split across accounts active that month, with a request-volume split shown for comparison (decision 4).
-- Monthly invoice reconciliation covering credits, refunds, committed spend, and currency metadata.
-- **Fix `metrics.ts`:** Retain timings as fixed-bucket histograms with low-cardinality labels, export on `/metrics`, add a unique process identity (`K_REVISION` plus random instance ID), and expose `countersStartedAt`.
-- Screen/trip readiness spans and task outcomes under the appropriate consent category. Use browser Performance API on web and native startup/frame measurements where supported.
-- Fix AI aggregation job to read the configured capture backend (GCS in production) with durable cursors and leases.
+### Cost ledger and settlement
 
-**Acceptance:** Synthetic calls reconcile exactly; dashboards distinguish unknown, estimated, and billed costs. Performance data is retained, bounded, and labeled.
+- **One settlement path.** `settleProviderAttempt()` in `server/src/apis/providerBudgeting.ts` writes one `provider_cost_ledger` row per attempt, then increments the monthly `api_cost_counters` budget row by the same amount. Each row records attempt ID, provider/model/caller, feature, initiating user, trip, token/request units, cache status, outcome, cost status and price version, with cost in integer USD microdollars. `recordProviderRequestCost()` now delegates to it. `recordApiCost()` is kept as the counter-only primitive for the synthetic `SHADOW_PARSE` budget, whose spend is already in the ledger under the real provider.
+- **No double counting.** The attempt ID is the provider's response ID where one exists (`OPENAI:chatcmpl-…`), so a replayed or duplicated settlement is ignored (`cost_ledger.duplicate_attempt` metric) and the budget counter is not incremented again. The registry still skips OpenAI because `postOpenAiChatCompletion` settles it; the unique attempt ID now protects that rule as well.
+- **Callers routed through settlement:** `postOpenAiChatCompletion` (success and failed attempts), the AI provider registry (non-OpenAI providers, success and failure), the legacy document parser, both flight parsers, and every `recordProviderRequestCost` caller.
+- **Unknown is never $0.** Token attempts without model pricing, and request providers missing from `requestPricing`, are recorded with `costStatus: 'unknown'` and a null cost, and do not touch the budget counter. Providers explicitly priced at `0` are skipped entirely, so free APIs add no writes. A failed call with no reported usage is `not_billable`.
+- **Attribution.** Uses the explicit user/feature/trip when the caller has them (AI call context, `attribution` on `postOpenAiChatCompletion`), otherwise the request-context user. `system`, `anonymous` and empty IDs are recorded as `attribution: 'system'` with no user.
+- **Settlement failure.** If the ledger write fails, the budget counter is still incremented and `cost_ledger.settlement_failed` is counted, so spend is never silently understated.
+- **Privacy.** Account deletion unlinks the user's ledger rows (spend kept, user/trip removed) via `delinkProviderCostLedgerUser`. `delinkProviderCostLedgerBefore(windowKey)` implements the 13-month linkage limit for the Phase 4 retention job.
+- **Storage.** Migration `20261008_add_provider_cost_ledger.sql` (`provider_cost_ledger`, `provider_invoice_records`, `job_leases`). Firestore uses the same collection names and single-field queries only (no composite index needed).
+
+### Reporting, allocation and reconciliation
+
+- `GET /api/admin/costs/ledger?month=YYYY-MM[&sharedCostUsd=N][&activeAccounts=N]` returns an aggregate-only report:
+  - totals and breakdowns by provider and by feature;
+  - attribution coverage (share of estimated spend tied to an account) and pricing coverage (share of attempts with a known price);
+  - median/p95/max direct cost per user (nearest-rank over users, never averaged percentiles);
+  - the `allocation_v1` section: equal split across active accounts, plus a request-volume split for comparison;
+  - invoice reconciliation.
+
+  No user IDs are returned.
+- `PUT /api/admin/costs/invoices/:provider/:month` records a provider invoice: amount, credits, currency, FX rate to USD, and notes. A reason is required, and the change is written to `audit_log` as `PROVIDER_INVOICE_RECORDED`. Reconciliation reports invoiced net (in USD) minus the ledger estimate, and flags anything outside ±5%. Ledger estimates, allocated shared cost and invoiced cost are always reported separately.
+- When `activeAccounts` is not supplied, it defaults to the number of distinct ledger-attributed users and is labeled as such (an undercount).
+
+### `metrics.ts` and `/metrics`
+
+- **Labeled series.** Counters keep per-label-set series; `/metrics` emits one line per series and the admin snapshot adds `counterSeries`. Each metric is capped at 50 label sets, and further sets fold into one `{overflow="true"}` series.
+- **High-cardinality labels removed** at the call sites:
+  - the destination text on `itinerary_generation_success` (also a privacy leak on the unauthenticated scrape);
+  - the numeric count on `billing.reconcile.batch_processed`, now a separate `billing.reconcile.subscriptions_processed` amount;
+  - the three numeric labels on the GetYourGuide enrichment metrics, now counter amounts.
+- **Timing histograms.** `recordTiming` / `timedAsync` now keep fixed-bucket histograms (5 ms … 120 s). They are exported as Prometheus `_bucket` / `_sum` / `_count`, and the admin snapshot adds `timings` with bucket-interpolated p50/p95.
+- **Instance identity.** `INSTANCE_ID` is now `K_REVISION` plus a random per-process suffix, so replicas of one revision no longer share a series. `counters_started_timestamp_seconds` already exposed counter resets.
+
+### AI aggregation job
+
+- The daily rollup reads captures from the configured backend: local disk in local/test, Cloud Storage in production. In GCS it selects one day by glob (`*/{day}/*.json.gz`), skips evaluation sidecars, reads at most 5,000 objects with 8 in parallel, and handles both gzipped and already-decompressed objects.
+- A durable lease (`job_leases`, name `ai_daily_aggregation`) ensures only one replica runs a tick. Its cursor records the last aggregated day, so missed days are caught up oldest-first (at most 7 per tick). A failed day stops the run without advancing the cursor.
+
+### Client readiness timing
+
+- `app/utils/readinessMarks.ts` records two Sentry spans: `app.trip_ready` (cold start or login until the trip list loads) and `ui.screen_ready` (page change until the next frame after commit). Attributes are limited to `platform`, `page`, `trigger` and `hasTrips`.
+- Spans are recorded only when Sentry is initialized, i.e. only with Detailed Diagnostics consent (Phase 1). Measurements made before consent is known are dropped, not queued.
+
+### Tests
+
+| Area | Suite |
+|---|---|
+| Settlement, idempotency, unknown pricing, attribution, free/unlisted request providers, write-failure fallback, de-linking, OpenAI response-ID keying and failed attempts, report math, allocation, FX reconciliation, admin auth/validation/audit | `server/__tests__/provider-cost-ledger.test.ts` (14) |
+| Labeled series, cardinality cap, histograms/quantiles, Prometheus histogram output, instance suffix | `server/__tests__/metrics-histograms.test.ts` (8) |
+| Lease exclusivity, renewal, expiry takeover, cursor ownership; GCS day reader | `server/__tests__/job-leases-and-gcs-captures.test.ts` (3) |
+| Catch-up days, cursor advance, stop on failure, lease-held skip | `server/__tests__/ai/scheduledAggregation.test.ts` |
+| Consent gating, cold-start/login trip-ready, bounded attributes, page-change mark | `app/tests/readinessMarks.test.tsx` (5) |
+
+Existing suites updated for the new settlement API: `aiProviderRegistry`, `googleDirectApiAccounting`, `legacyDocumentParserAccounting`, `analyticsPhase8`.
+
+### Remaining gaps
+
+- **Whisper transcription** (`postOpenAiAudioTranscription`) is still not costed. It is priced per audio minute, which needs the duration from the upload.
+- **Invoices are entered by hand.** A GCP billing-export import could automate the Google rows.
+- **No scheduled retention job yet.** `delinkProviderCostLedgerBefore` exists but isn't scheduled; that belongs to the Phase 4 job.
+- **Reports are API-only.** The admin UI for the cost report is Phase 5.
+- **Pre-Phase 3 history is absent.** Months before this ships have budget counters but no ledger rows, and the report says so.
+- **Real Postgres and Firestore are untested.** The ledger and lease logic is tested on the in-memory adapter only. Run the Firebase emulator suite before relying on the Firestore transactions.
+- **Some cold starts aren't measured.** Client readiness spans need diagnostics consent to be known by the time trips load.
+
+**Acceptance:** synthetic calls reconcile exactly (covered by the report test), and the report distinguishes unknown, estimated, allocated and invoiced costs. Timings are retained as bounded histograms with their buckets visible.
 
 ---
 

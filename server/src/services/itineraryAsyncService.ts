@@ -946,7 +946,9 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     logInfo(
       `[itinerary][async] completed job=${jobId} trip=${input.tripId} itinerary=${itineraryId} details=${persisted.detailsCount} transfers=${persisted.transfersCount} lodgings=${persisted.lodgingsCount} activities=${persisted.activitiesCount} carRentals=${persisted.carRentalsCount}`
     );
-    incrementMetric('itinerary_generation_success', { destination: input.destinationSummary || 'unknown' });
+    // No destination label: free text is unbounded and is travel content that
+    // must not reach the unauthenticated /metrics scrape.
+    incrementMetric('itinerary_generation_success');
     recordTiming('itinerary_generation_duration_ms', Date.now() - jobStart, { success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

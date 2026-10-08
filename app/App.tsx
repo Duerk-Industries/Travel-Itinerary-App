@@ -102,6 +102,7 @@ import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
 import AgeVerificationDialog, { fetchAgeVerificationStatus, verifyAgeWithAppleIfAvailable } from './components/AgeVerificationDialog';
+import { markLoginStarted, markTripReady, useScreenReadyMark } from './utils/readinessMarks';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
@@ -664,6 +665,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearTraitsState,
   } = useTraits({ backendUrl, userToken });
   const [activePage, setActivePage] = useState<Page>('home');
+  // Consent-gated (Detailed Diagnostics) page-paint timing; see utils/readinessMarks.ts.
+  useScreenReadyMark(activePage);
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
@@ -1753,6 +1756,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const handleAuthSuccess = useCallback(
     (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
+    markLoginStarted();
     const decoded = decodeTokenClaims(token);
     const name =
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
@@ -2689,7 +2693,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     if (userToken && !requirePasswordSetup && !ageVerificationRequired && !offlineReadOnly) {
-      fetchTrips();
+      void fetchTrips().then((loaded) => markTripReady({ hasTrips: loaded.length > 0 }));
       fetchGroups();
       fetchInvites();
       fetchPendingTripShareInvites();

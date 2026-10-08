@@ -19,6 +19,11 @@ inside Sentry, so a single DSN is sufficient.
   existing `EntryErrorBoundary`.
 - **Light performance tracing** at a 10 % sample rate. Bump per-route
   via `Sentry.startSpan` in hot paths if needed.
+- **Readiness spans** (`app/utils/readinessMarks.ts`): `app.trip_ready` (cold
+  start or login until trips load) and `ui.screen_ready` (page change until the
+  next frame), with only `platform`/`page`/`trigger`/`hasTrips` attributes.
+  Like everything else here they exist only after detailed-diagnostics consent;
+  measurements taken before Sentry is initialized are dropped, not queued.
 
 Disabled on purpose:
 

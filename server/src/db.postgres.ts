@@ -1,5 +1,5 @@
 // server/src/db.ts
-import type { PrivacyPreferences, PrivacyPreferenceUpdate } from './types';
+import type { JobLease, PrivacyPreferences, PrivacyPreferenceUpdate, ProviderCostLedgerEntry, ProviderInvoiceRecord } from './types';
 import { Pool, PoolClient } from 'pg';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
@@ -13036,4 +13036,175 @@ export const upsertLodgingLocation = async (location: any): Promise<void> => {
        updated_at = NOW()`,
     [location.placeId, location.name, location.address, location.phoneNumber, location.ianaTimezone, location.latitude, location.longitude]
   );
+};
+
+// ── Provider cost ledger, invoice reconciliation and job leases (analytics Phase 3) ──
+
+const toIso = (value: unknown): string =>
+  value instanceof Date ? value.toISOString() : new Date(String(value)).toISOString();
+
+const rowToProviderCostLedgerEntry = (row: Record<string, any>): ProviderCostLedgerEntry => ({
+  attemptId: row.attempt_id,
+  occurredAt: toIso(row.occurred_at),
+  windowKey: row.window_key,
+  provider: row.provider,
+  model: row.model ?? null,
+  caller: row.caller ?? null,
+  featureKey: row.feature_key ?? null,
+  userId: row.user_id ?? null,
+  tripId: row.trip_id ?? null,
+  attribution: row.attribution,
+  unitType: row.unit_type,
+  promptTokens: Number(row.prompt_tokens ?? 0),
+  completionTokens: Number(row.completion_tokens ?? 0),
+  requestUnits: Number(row.request_units ?? 0),
+  cacheStatus: row.cache_status,
+  outcome: row.outcome,
+  costStatus: row.cost_status,
+  estimatedCostMicros: row.estimated_cost_micros == null ? null : Number(row.estimated_cost_micros),
+  priceVersion: row.price_version ?? null,
+});
+
+/** Inserts one attempt; returns false (and changes nothing) when the attempt ID was already settled. */
+export const insertProviderCostLedgerEntry = async (entry: ProviderCostLedgerEntry): Promise<boolean> => {
+  // Plain INSERT + primary-key violation rather than ON CONFLICT DO NOTHING RETURNING:
+  // pg-mem returns the row even on conflict, which would hide replays in tests.
+  try {
+    await getPool().query(
+    `INSERT INTO provider_cost_ledger (
+       attempt_id, occurred_at, window_key, provider, model, caller, feature_key, user_id, trip_id,
+       attribution, unit_type, prompt_tokens, completion_tokens, request_units, cache_status, outcome,
+       cost_status, estimated_cost_micros, price_version)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+    [
+      entry.attemptId, entry.occurredAt, entry.windowKey, entry.provider, entry.model, entry.caller,
+      entry.featureKey, entry.userId, entry.tripId, entry.attribution, entry.unitType, entry.promptTokens,
+      entry.completionTokens, entry.requestUnits, entry.cacheStatus, entry.outcome, entry.costStatus,
+      entry.estimatedCostMicros, entry.priceVersion,
+    ],
+    );
+    return true;
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === '23505' || /duplicate key|unique constraint/i.test(String((err as Error).message))) return false;
+    throw err;
+  }
+};
+
+export const listProviderCostLedgerEntries = async (windowKey: string, limit = 50_000): Promise<ProviderCostLedgerEntry[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM provider_cost_ledger WHERE window_key = $1 ORDER BY occurred_at ASC LIMIT $2`,
+    [windowKey, limit],
+  );
+  return rows.map(rowToProviderCostLedgerEntry);
+};
+
+/** Account deletion: keep the spend (needed for budgets/invoices) but drop the link to the person. */
+export const delinkProviderCostLedgerUser = async (userId: string): Promise<number> => {
+  const result = await getPool().query(
+    `UPDATE provider_cost_ledger SET user_id = NULL, trip_id = NULL WHERE user_id = $1`,
+    [userId],
+  );
+  return result.rowCount ?? 0;
+};
+
+/** Retention: remove user/trip linkage from windows older than `beforeWindowKey` (YYYY-MM, exclusive). */
+export const delinkProviderCostLedgerBefore = async (beforeWindowKey: string): Promise<number> => {
+  const result = await getPool().query(
+    `UPDATE provider_cost_ledger SET user_id = NULL, trip_id = NULL
+      WHERE window_key < $1 AND (user_id IS NOT NULL OR trip_id IS NOT NULL)`,
+    [beforeWindowKey],
+  );
+  return result.rowCount ?? 0;
+};
+
+const rowToProviderInvoiceRecord = (row: Record<string, any>): ProviderInvoiceRecord => ({
+  provider: row.provider,
+  windowKey: row.window_key,
+  invoicedMicros: Number(row.invoiced_micros),
+  creditsMicros: Number(row.credits_micros),
+  currency: row.currency,
+  fxRateToUsd: Number(row.fx_rate_to_usd),
+  notes: row.notes ?? null,
+  recordedBy: row.recorded_by ?? null,
+  recordedAt: toIso(row.recorded_at),
+});
+
+export const upsertProviderInvoiceRecord = async (record: ProviderInvoiceRecord): Promise<ProviderInvoiceRecord> => {
+  const { rows } = await getPool().query(
+    `INSERT INTO provider_invoice_records
+       (provider, window_key, invoiced_micros, credits_micros, currency, fx_rate_to_usd, notes, recorded_by, recorded_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     ON CONFLICT (provider, window_key) DO UPDATE SET
+       invoiced_micros = $3, credits_micros = $4, currency = $5, fx_rate_to_usd = $6,
+       notes = $7, recorded_by = $8, recorded_at = $9
+     RETURNING *`,
+    [
+      record.provider, record.windowKey, record.invoicedMicros, record.creditsMicros, record.currency,
+      record.fxRateToUsd, record.notes, record.recordedBy, record.recordedAt,
+    ],
+  );
+  return rowToProviderInvoiceRecord(rows[0]);
+};
+
+export const listProviderInvoiceRecords = async (windowKey: string): Promise<ProviderInvoiceRecord[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM provider_invoice_records WHERE window_key = $1 ORDER BY provider ASC`,
+    [windowKey],
+  );
+  return rows.map(rowToProviderInvoiceRecord);
+};
+
+const rowToJobLease = (row: Record<string, any>): JobLease => ({
+  name: row.name,
+  holder: row.holder,
+  expiresAt: toIso(row.expires_at),
+  cursor: row.cursor ?? null,
+});
+
+/**
+ * Takes the named lease when it is free or expired (or already held by `holder`).
+ * Race-safe: the conditional UPDATE serializes on the row, and a concurrent
+ * first INSERT loses on the primary key.
+ */
+export const tryAcquireJobLease = async (name: string, holder: string, ttlMs: number): Promise<JobLease | null> => {
+  const p = getPool();
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const updated = await p.query(
+    `UPDATE job_leases SET holder = $2, expires_at = $3
+      WHERE name = $1 AND (expires_at < NOW() OR holder = $2)
+      RETURNING *`,
+    [name, holder, expiresAt],
+  );
+  if (updated.rows.length) return rowToJobLease(updated.rows[0]);
+  try {
+    const inserted = await p.query(
+      `INSERT INTO job_leases (name, holder, expires_at, cursor) VALUES ($1, $2, $3, NULL) RETURNING *`,
+      [name, holder, expiresAt],
+    );
+    return rowToJobLease(inserted.rows[0]);
+  } catch {
+    return null; // another holder owns a live lease
+  }
+};
+
+export const releaseJobLease = async (name: string, holder: string): Promise<void> => {
+  await getPool().query(
+    `UPDATE job_leases SET expires_at = NOW() WHERE name = $1 AND holder = $2`,
+    [name, holder],
+  );
+};
+
+/** Advances the durable cursor; only the current holder may write it. */
+export const setJobLeaseCursor = async (name: string, holder: string, cursor: string): Promise<boolean> => {
+  const result = await getPool().query(
+    `UPDATE job_leases SET cursor = $3 WHERE name = $1 AND holder = $2 RETURNING name`,
+    [name, holder, cursor],
+  );
+  return result.rows.length > 0;
+};
+
+export const getJobLease = async (name: string): Promise<JobLease | null> => {
+  const { rows } = await getPool().query(`SELECT * FROM job_leases WHERE name = $1`, [name]);
+  return rows[0] ? rowToJobLease(rows[0]) : null;
 };

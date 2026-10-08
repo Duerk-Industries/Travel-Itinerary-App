@@ -126,7 +126,8 @@ export const runReconciliationBatch = async (
     }
   }
 
-  incrementMetric('billing.reconcile.batch_processed', { count: summary.processed });
+  incrementMetric('billing.reconcile.batch_processed');
+  incrementMetric('billing.reconcile.subscriptions_processed', undefined, summary.processed);
   logInfo(`[billing][reconcile] Batch complete processed=${summary.processed} repaired=${summary.repaired} tierChanged=${summary.tierChanged} errors=${summary.errors} orphaned=${summary.orphaned}`);
 
   await writeAuditLog({

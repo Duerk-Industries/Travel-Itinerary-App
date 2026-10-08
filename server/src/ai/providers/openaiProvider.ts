@@ -45,6 +45,7 @@ export const openaiProvider: AiChatProvider = {
             }),
       },
       skipApiUsageReservation: true,
+      attribution: { userId: ctx.userId, featureKey: ctx.featureKey, caller: ctx.callerId },
       usageContext: compatibilityContext.usageAccountingEnabled
         ? {
             userId: ctx.userId,

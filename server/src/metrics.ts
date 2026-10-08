@@ -1,4 +1,5 @@
 import os from 'node:os';
+import { randomBytes } from 'node:crypto';
 import { getRequestContext } from './requestContext';
 
 export type MetricLabels = Record<string, string | number | boolean>;
@@ -6,15 +7,17 @@ export type MetricLabels = Record<string, string | number | boolean>;
 /**
  * Identifier for *this* process, injected as the `instance` label on every
  * emitted metric so multi-instance Cloud Run / Kubernetes deployments can
- * `sum(...) by (instance)` in Prometheus. Prefer Cloud Run's `K_REVISION`
- * when set (uniqueness is per-revision + the Cloud Run platform appends an
- * instance suffix inside the container); fall back to the OS hostname for
- * bare-metal / Docker hosts; fall back to `local` for dev machines without
- * either.
+ * `sum(...) by (instance)` in Prometheus. `K_REVISION` alone is shared by
+ * every instance of a Cloud Run revision, so a random per-process suffix is
+ * appended — otherwise replicas' series collide and counter resets look like
+ * falling activity. Falls back to the OS hostname for bare-metal / Docker
+ * hosts and to `local` for dev machines without either.
  */
+const PROCESS_SUFFIX = randomBytes(3).toString('hex');
+
 const resolveInstanceId = (): string => {
   const k = process.env.K_REVISION;
-  if (k && k.trim()) return k.trim();
+  if (k && k.trim()) return `${k.trim()}-${PROCESS_SUFFIX}`;
   try {
     const host = os.hostname();
     if (host && host.trim()) return host.trim();
@@ -99,6 +102,52 @@ const gaugeKey = (name: string, labels?: MetricLabels): string => {
   return `${name}{${entries.map(([k, v]) => `${k}=${String(v)}`).join(',')}}`;
 };
 
+// ── Labeled series (counters + timing histograms) ───────────────────────────
+// Labels are kept per series so `/metrics` can break counters and latency down
+// by low-cardinality dimensions (eventType, reason, success, ...). Each metric
+// name may hold at most MAX_SERIES_PER_METRIC label sets; further label sets
+// fold into one `{overflow="true"}` series so a caller that accidentally
+// passes an unbounded value (an ID, free text, a count) cannot grow memory or
+// the scrape without bound. Never pass user/trip/request IDs or free text.
+export const MAX_SERIES_PER_METRIC = 50;
+const OVERFLOW_LABELS: MetricLabels = { overflow: 'true' };
+
+type SeriesStore<T> = Map<string, Map<string, { labels: MetricLabels; value: T }>>;
+
+const labelKey = (labels?: MetricLabels): string => (labels ? gaugeKey('', labels) : '');
+
+const resolveSeries = <T>(store: SeriesStore<T>, name: string, labels: MetricLabels | undefined, init: () => T) => {
+  let series = store.get(name);
+  if (!series) {
+    series = new Map();
+    store.set(name, series);
+  }
+  const key = labelKey(labels);
+  const existing = series.get(key);
+  if (existing) return existing;
+  if (series.size >= MAX_SERIES_PER_METRIC) {
+    const overflowKey = labelKey(OVERFLOW_LABELS);
+    const overflow = series.get(overflowKey) ?? { labels: OVERFLOW_LABELS, value: init() };
+    series.set(overflowKey, overflow);
+    return overflow;
+  }
+  const created = { labels: labels ?? {}, value: init() };
+  series.set(key, created);
+  return created;
+};
+
+const counterSeries: SeriesStore<number> = new Map();
+
+/**
+ * Fixed latency buckets (upper bounds, milliseconds) shared by every timing
+ * histogram so series can be aggregated across instances and names.
+ */
+export const TIMING_BUCKETS_MS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000, 120000] as const;
+
+type Histogram = { buckets: number[]; count: number; sumMs: number };
+const timingSeries: SeriesStore<Histogram> = new Map();
+const newHistogram = (): Histogram => ({ buckets: TIMING_BUCKETS_MS.map(() => 0), count: 0, sumMs: 0 });
+
 /** Increment a counter by `amount` (default 1). */
 export const incrementMetric = (
   name: string,
@@ -106,6 +155,7 @@ export const incrementMetric = (
   amount = 1
 ): void => {
   counterTotals.set(name, (counterTotals.get(name) ?? 0) + amount);
+  resolveSeries(counterSeries, name, labels, () => 0).value += amount;
   emit(baseEntry(name, 'counter', amount, labels));
 };
 
@@ -128,9 +178,31 @@ export interface MetricGaugeEntry {
   value: number;
 }
 
+export interface MetricSeriesEntry {
+  name: string;
+  labels: MetricLabels;
+  value: number;
+}
+
+export interface MetricTimingEntry {
+  name: string;
+  labels: MetricLabels;
+  count: number;
+  sumMs: number;
+  /** Cumulative counts per TIMING_BUCKETS_MS upper bound (Prometheus `le` semantics, +Inf = count). */
+  buckets: number[];
+  /** Bucket-interpolated estimates; null when no observations. */
+  p50Ms: number | null;
+  p95Ms: number | null;
+}
+
 export interface MetricCounterSnapshot {
   /** Monotonic-since-start counts of every `incrementMetric` name. */
   counters: Record<string, number>;
+  /** Per-label-set counter values; sums to `counters[name]` for each name. */
+  counterSeries: MetricSeriesEntry[];
+  /** Latency histograms recorded by `recordTiming` / `timedAsync`. */
+  timings: MetricTimingEntry[];
   /** Most-recent value per (name, label-set) for every `recordGauge` call. */
   gauges: MetricGaugeEntry[];
   /** Cache-namespace rollups derived from `*.cache_hit` / `*.cache_miss` entries. */
@@ -168,6 +240,28 @@ const buildCacheRatios = (counters: Map<string, number>): CacheRatioEntry[] => {
     .sort((a, b) => a.namespace.localeCompare(b.namespace));
 };
 
+/**
+ * Estimate a quantile from cumulative bucket counts by linear interpolation
+ * inside the bucket that crosses the target rank. Observations above the
+ * largest bound report that bound (the estimate is a floor, labeled as such
+ * by `/metrics` consumers using the raw buckets).
+ */
+const estimateQuantileMs = (cumulative: number[], count: number, q: number): number | null => {
+  if (count <= 0) return null;
+  const rank = q * count;
+  for (let i = 0; i < cumulative.length; i += 1) {
+    if (cumulative[i] >= rank) {
+      const lower = i === 0 ? 0 : TIMING_BUCKETS_MS[i - 1];
+      const upper = TIMING_BUCKETS_MS[i];
+      const below = i === 0 ? 0 : cumulative[i - 1];
+      const inBucket = cumulative[i] - below;
+      const fraction = inBucket > 0 ? (rank - below) / inBucket : 1;
+      return Math.round(lower + (upper - lower) * fraction);
+    }
+  }
+  return TIMING_BUCKETS_MS[TIMING_BUCKETS_MS.length - 1];
+};
+
 export const getMetricCounterSnapshot = (): MetricCounterSnapshot => {
   const counters: Record<string, number> = {};
   for (const [name, value] of counterTotals.entries()) {
@@ -176,8 +270,32 @@ export const getMetricCounterSnapshot = (): MetricCounterSnapshot => {
   const gauges = Array.from(gaugeValues.values())
     .map((entry) => ({ name: entry.name, labels: entry.labels, value: entry.value }))
     .sort((a, b) => a.name.localeCompare(b.name));
+  const counterSeriesEntries: MetricSeriesEntry[] = [];
+  for (const [name, series] of counterSeries.entries()) {
+    for (const { labels, value } of series.values()) counterSeriesEntries.push({ name, labels, value });
+  }
+  counterSeriesEntries.sort((a, b) => a.name.localeCompare(b.name) || labelKey(a.labels).localeCompare(labelKey(b.labels)));
+  const timings: MetricTimingEntry[] = [];
+  for (const [name, series] of timingSeries.entries()) {
+    for (const { labels, value } of series.values()) {
+      let running = 0;
+      const cumulative = value.buckets.map((n) => (running += n));
+      timings.push({
+        name,
+        labels,
+        count: value.count,
+        sumMs: value.sumMs,
+        buckets: cumulative,
+        p50Ms: estimateQuantileMs(cumulative, value.count, 0.5),
+        p95Ms: estimateQuantileMs(cumulative, value.count, 0.95),
+      });
+    }
+  }
+  timings.sort((a, b) => a.name.localeCompare(b.name) || labelKey(a.labels).localeCompare(labelKey(b.labels)));
   return {
     counters,
+    counterSeries: counterSeriesEntries,
+    timings,
     gauges,
     cacheRatios: buildCacheRatios(counterTotals),
     startedAtIso: countersStartedAtIso,
@@ -188,6 +306,8 @@ export const getMetricCounterSnapshot = (): MetricCounterSnapshot => {
 /** Test-only: zero every counter + gauge and reset the window start timestamp. */
 export const resetMetricCountersForTests = (): void => {
   counterTotals.clear();
+  counterSeries.clear();
+  timingSeries.clear();
   gaugeValues.clear();
   countersStartedAtIso = new Date().toISOString();
 };
@@ -202,12 +322,21 @@ export const recordGauge = (
   emit(baseEntry(name, 'gauge', value, labels));
 };
 
-/** Record a duration in milliseconds. */
+/**
+ * Record a duration in milliseconds into a fixed-bucket histogram, so the
+ * admin snapshot and `/metrics` can report counts, sums and p50/p95.
+ */
 export const recordTiming = (
   name: string,
   durationMs: number,
   labels?: MetricLabels
 ): void => {
+  if (!Number.isFinite(durationMs) || durationMs < 0) return;
+  const histogram = resolveSeries(timingSeries, name, labels, newHistogram).value;
+  const index = TIMING_BUCKETS_MS.findIndex((upper) => durationMs <= upper);
+  if (index >= 0) histogram.buckets[index] += 1;
+  histogram.count += 1;
+  histogram.sumMs += durationMs;
   emit(baseEntry(name, 'timing', durationMs, labels));
 };
 

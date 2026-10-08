@@ -27,6 +27,8 @@ import {
   countItineraryCacheBlocksByLocation,
   getItineraryGenerationMetrics,
 } from '../db';
+import { listProviderInvoiceRecords, upsertProviderInvoiceRecord } from '../db';
+import { buildCostLedgerReport } from '../services/costLedgerReportService';
 import { ITINERARY_QUALITY_BASELINE_SETTING_KEY } from '../services/itineraryQualityGateService';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -2001,6 +2003,94 @@ router.get('/metrics', (_req, res) => {
   // Per-instance best-effort aggregation — if the deployment has multiple
   // instances each returns its own counters. Client should label accordingly.
   res.json(getMetricCounterSnapshot());
+});
+
+// ---------------------------------------------------------------------------
+// Cost ledger (analytics Phase 3): monthly report and invoice reconciliation
+// ---------------------------------------------------------------------------
+
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+const usdToMicros = (value: unknown): number | null => {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 1_000_000) : null;
+};
+
+router.get('/costs/ledger', async (req, res) => {
+  const month = typeof req.query.month === 'string' ? req.query.month : '';
+  if (!MONTH_PATTERN.test(month)) {
+    res.status(400).json({ error: 'month (YYYY-MM) is required' });
+    return;
+  }
+  const sharedCostMicros = req.query.sharedCostUsd === undefined ? null : usdToMicros(req.query.sharedCostUsd);
+  if (req.query.sharedCostUsd !== undefined && sharedCostMicros == null) {
+    res.status(400).json({ error: 'sharedCostUsd must be a non-negative number' });
+    return;
+  }
+  const activeAccounts = req.query.activeAccounts === undefined ? null : Number(req.query.activeAccounts);
+  if (activeAccounts != null && (!Number.isInteger(activeAccounts) || activeAccounts <= 0)) {
+    res.status(400).json({ error: 'activeAccounts must be a positive integer' });
+    return;
+  }
+  try {
+    res.json(await buildCostLedgerReport({ windowKey: month, sharedCostMicros, activeAccounts }));
+  } catch (err) {
+    logError('[admin] cost ledger report failed', err);
+    res.status(500).json({ error: 'Failed to build cost ledger report' });
+  }
+});
+
+router.put('/costs/invoices/:provider/:month', async (req, res) => {
+  const provider = normalizeApiLimitKeyPart(String(req.params.provider ?? ''));
+  const month = String(req.params.month ?? '');
+  if (!provider || !MONTH_PATTERN.test(month)) {
+    res.status(400).json({ error: 'provider and month (YYYY-MM) are required' });
+    return;
+  }
+  const reasonStr = requireReason(req.body?.reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  const invoicedMicros = usdToMicros(req.body?.invoicedAmount);
+  const creditsMicros = req.body?.creditsAmount === undefined ? 0 : usdToMicros(req.body.creditsAmount);
+  const fxRateToUsd = req.body?.fxRateToUsd === undefined ? 1 : Number(req.body.fxRateToUsd);
+  const currency = typeof req.body?.currency === 'string' && /^[A-Z]{3}$/.test(req.body.currency) ? req.body.currency : 'USD';
+  if (invoicedMicros == null || creditsMicros == null || !Number.isFinite(fxRateToUsd) || fxRateToUsd <= 0) {
+    res.status(400).json({ error: 'invoicedAmount and creditsAmount must be non-negative numbers; fxRateToUsd must be positive' });
+    return;
+  }
+  if (currency === 'USD' && fxRateToUsd !== 1) {
+    res.status(400).json({ error: 'fxRateToUsd must be 1 for USD invoices' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const [before] = (await listProviderInvoiceRecords(month)).filter((r) => r.provider === provider);
+    const record = await upsertProviderInvoiceRecord({
+      provider,
+      windowKey: month,
+      invoicedMicros,
+      creditsMicros,
+      currency,
+      fxRateToUsd,
+      notes: typeof req.body?.notes === 'string' ? req.body.notes.slice(0, 500) : null,
+      recordedBy: actorId,
+      recordedAt: new Date().toISOString(),
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'PROVIDER_INVOICE_RECORDED',
+      beforeState: before ? { ...before } : null,
+      afterState: { ...record },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json(record);
+  } catch (err) {
+    logError('[admin] invoice record failed', err);
+    res.status(500).json({ error: 'Failed to record invoice' });
+  }
 });
 
 // ---------------------------------------------------------------------------

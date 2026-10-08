@@ -270,6 +270,16 @@ export const getApiCacheSetting = (group: string, setting: string): number | und
 export const getApiRequestPricingUsd = (provider: string): number =>
   loadConfigFromFile().requestPricing[normalizeApiLimitKeyPart(provider)] ?? 0;
 
+/**
+ * Like getApiRequestPricingUsd, but distinguishes "listed as $0" (free) from
+ * "not listed" (unknown, returned as null) so the cost ledger never reports an
+ * unpriced provider as free.
+ */
+export const findApiRequestPricingUsd = (provider: string): number | null => {
+  const price = loadConfigFromFile().requestPricing[normalizeApiLimitKeyPart(provider)];
+  return typeof price === 'number' && Number.isFinite(price) ? price : null;
+};
+
 export const updateApiLimitProviderConfig = (
   provider: string,
   nextProvider: {

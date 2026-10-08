@@ -50,6 +50,7 @@ import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
 import { buildUserDataExport } from '../services/userDataExport';
+import { delinkProviderCostLedgerUser } from '../db';
 import { cancelAllSubscriptionsForUser, syncEmailToStripeCustomer } from '../billing/accountBillingLifecycle';
 import { accountPasswordRateLimit } from '../services/httpRateLimitService';
 import { declareDateOfBirth, isAgeGateEnforced, isAgeVerificationRequired, recordAppleAgeRange } from '../services/ageVerificationService';
@@ -718,6 +719,9 @@ router.delete('/', async (req, res) => {
     // Cancel active Stripe subscriptions before wiping local records.
     await cancelAllSubscriptionsForUser(userId);
     await deleteUserIngestionData(userId).catch(() => undefined);
+    // Spend stays in the cost ledger for budgets and invoice reconciliation,
+    // but its link to this person is removed (analytics Phase 3 / Phase 4).
+    await delinkProviderCostLedgerUser(userId).catch((err) => logError('[account] cost ledger de-link failed', err));
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();
       try {

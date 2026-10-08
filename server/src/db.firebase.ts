@@ -69,7 +69,7 @@ import {
   ItineraryComparison,
 } from './types';
 import type { AccountEmail, AppleProfile } from './db.postgres';
-import type { PrivacyPreferences, PrivacyPreferenceUpdate } from './types';
+import type { JobLease, PrivacyPreferences, PrivacyPreferenceUpdate, ProviderCostLedgerEntry, ProviderInvoiceRecord } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
@@ -9199,4 +9199,115 @@ export const upsertLodgingLocation = async (location: any): Promise<void> => {
     longitude: location.longitude || null,
     updatedAt: nowIso(),
   }, { merge: true });
+};
+
+// ── Provider cost ledger, invoice reconciliation and job leases (analytics Phase 3) ──
+// Mirrors db.postgres.ts. Ledger queries filter on one field and sort in memory
+// so no composite index is required.
+
+const COST_LEDGER = 'provider_cost_ledger';
+const INVOICE_RECORDS = 'provider_invoice_records';
+const JOB_LEASES = 'job_leases';
+// Firestore document IDs cannot contain '/'; attempt IDs come from provider response IDs.
+const ledgerDocId = (attemptId: string): string => encodeURIComponent(attemptId);
+
+const runBatchedUpdates = async (
+  refs: FirebaseFirestore.DocumentReference[],
+  data: Record<string, unknown>,
+): Promise<number> => {
+  const db = getDb();
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = db.batch();
+    refs.slice(i, i + 400).forEach((ref) => batch.update(ref, data));
+    await batch.commit();
+  }
+  return refs.length;
+};
+
+export const insertProviderCostLedgerEntry = async (entry: ProviderCostLedgerEntry): Promise<boolean> => {
+  const db = getDb();
+  const ref = db.collection(COST_LEDGER).doc(ledgerDocId(entry.attemptId));
+  return db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (existing.exists) return false;
+    tx.set(ref, { ...entry });
+    return true;
+  });
+};
+
+export const listProviderCostLedgerEntries = async (windowKey: string, limit = 50_000): Promise<ProviderCostLedgerEntry[]> => {
+  const snap = await getDb().collection(COST_LEDGER).where('windowKey', '==', windowKey).limit(limit).get();
+  return snap.docs
+    .map((doc) => doc.data() as ProviderCostLedgerEntry)
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+};
+
+export const delinkProviderCostLedgerUser = async (userId: string): Promise<number> => {
+  const snap = await getDb().collection(COST_LEDGER).where('userId', '==', userId).get();
+  return runBatchedUpdates(snap.docs.map((doc) => doc.ref), { userId: null, tripId: null });
+};
+
+export const delinkProviderCostLedgerBefore = async (beforeWindowKey: string): Promise<number> => {
+  const snap = await getDb().collection(COST_LEDGER).where('windowKey', '<', beforeWindowKey).get();
+  const linked = snap.docs.filter((doc) => {
+    const data = doc.data();
+    return data.userId != null || data.tripId != null;
+  });
+  return runBatchedUpdates(linked.map((doc) => doc.ref), { userId: null, tripId: null });
+};
+
+export const upsertProviderInvoiceRecord = async (record: ProviderInvoiceRecord): Promise<ProviderInvoiceRecord> => {
+  await getDb().collection(INVOICE_RECORDS).doc(`${record.provider}_${record.windowKey}`).set({ ...record });
+  return record;
+};
+
+export const listProviderInvoiceRecords = async (windowKey: string): Promise<ProviderInvoiceRecord[]> => {
+  const snap = await getDb().collection(INVOICE_RECORDS).where('windowKey', '==', windowKey).get();
+  return snap.docs
+    .map((doc) => doc.data() as ProviderInvoiceRecord)
+    .sort((a, b) => a.provider.localeCompare(b.provider));
+};
+
+export const tryAcquireJobLease = async (name: string, holder: string, ttlMs: number): Promise<JobLease | null> => {
+  const db = getDb();
+  const ref = db.collection(JOB_LEASES).doc(name);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const current = doc.exists ? (doc.data() as JobLease) : null;
+    const now = Date.now();
+    if (current && current.holder !== holder && new Date(current.expiresAt).getTime() >= now) return null;
+    const lease: JobLease = {
+      name,
+      holder,
+      expiresAt: new Date(now + ttlMs).toISOString(),
+      cursor: current?.cursor ?? null,
+    };
+    tx.set(ref, lease);
+    return lease;
+  });
+};
+
+export const releaseJobLease = async (name: string, holder: string): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection(JOB_LEASES).doc(name);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (doc.exists && (doc.data() as JobLease).holder === holder) tx.update(ref, { expiresAt: nowIso() });
+  });
+};
+
+export const setJobLeaseCursor = async (name: string, holder: string, cursor: string): Promise<boolean> => {
+  const db = getDb();
+  const ref = db.collection(JOB_LEASES).doc(name);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists || (doc.data() as JobLease).holder !== holder) return false;
+    tx.update(ref, { cursor });
+    return true;
+  });
+};
+
+export const getJobLease = async (name: string): Promise<JobLease | null> => {
+  const doc = await getDb().collection(JOB_LEASES).doc(name).get();
+  return doc.exists ? (doc.data() as JobLease) : null;
 };

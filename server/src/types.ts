@@ -262,6 +262,7 @@ export type AuditAction =
   | 'BILLING_CONFIG_UPDATED'
   | 'BILLING_PRICE_PUBLISHED'
   | 'BILLING_RECONCILIATION_RUN'
+  | 'PROVIDER_INVOICE_RECORDED'
   | 'RETENTION_TICK_RUN'
   | 'ITINERARY_CACHE_PREPOPULATE_RUN'
   | 'DEPLOY_CUTOVER'
@@ -1167,4 +1168,53 @@ export interface PrivacyPreferenceUpdate {
   platform: 'web' | 'ios' | 'android';
   productNoticeVersion: string;
   diagnosticsNoticeVersion: string;
+}
+
+/**
+ * One settled outbound provider attempt (docs/implementation-plans/analytics-upgrade.md Phase 3).
+ * Written once per attempt ID; a replayed settlement is ignored so spend is never counted twice.
+ * `estimatedCostMicros` null means the price was unknown at settlement time — never treat it as $0.
+ */
+export interface ProviderCostLedgerEntry {
+  attemptId: string;
+  occurredAt: string;
+  windowKey: string;
+  provider: string;
+  model: string | null;
+  caller: string | null;
+  featureKey: string | null;
+  userId: string | null;
+  tripId: string | null;
+  attribution: 'user' | 'system';
+  unitType: 'tokens' | 'request';
+  promptTokens: number;
+  completionTokens: number;
+  requestUnits: number;
+  cacheStatus: 'none' | 'hit' | 'miss';
+  outcome: 'success' | 'failed';
+  costStatus: 'estimated' | 'unknown' | 'not_billable';
+  estimatedCostMicros: number | null;
+  priceVersion: string | null;
+}
+
+/** Monthly provider invoice figures entered by an admin for reconciliation against the ledger. */
+export interface ProviderInvoiceRecord {
+  provider: string;
+  windowKey: string;
+  invoicedMicros: number;
+  creditsMicros: number;
+  currency: string;
+  /** USD per unit of `currency`; 1 for USD. Applied to both amounts when reconciling. */
+  fxRateToUsd: number;
+  notes: string | null;
+  recordedBy: string | null;
+  recordedAt: string;
+}
+
+/** Durable single-holder lease plus cursor for scheduled jobs running on several replicas. */
+export interface JobLease {
+  name: string;
+  holder: string;
+  expiresAt: string;
+  cursor: string | null;
 }

@@ -95,7 +95,9 @@ export const maybeRunShadowParse = async (params: {
     // above via getCurrentApiBudgetStatus('SHADOW_PARSE') needs its OWN spend
     // recorded under that synthetic key, or it never accrues and the cap is a
     // no-op. Record it here, right after the call, using the cost the
-    // extractor already computed.
+    // extractor already computed. Counter-only on purpose: the attempt is
+    // already settled in provider_cost_ledger under the real provider, so a
+    // ledger row here would double count spend.
     const shadowCostUsd = llmResult.usageMetrics.estimatedCostUsd ?? 0;
     if (shadowCostUsd > 0) {
       await recordApiCost({

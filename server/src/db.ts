@@ -719,3 +719,25 @@ export const insertBillingPriceHistory = async (...args: Parameters<ReturnType<t
   adapter().insertBillingPriceHistory(...args);
 export const deactivateOldPricesForPlan = async (...args: Parameters<ReturnType<typeof adapter>['deactivateOldPricesForPlan']>) =>
   adapter().deactivateOldPricesForPlan(...args);
+
+// Analytics Phase 3: provider cost ledger, invoice reconciliation, job leases.
+export const insertProviderCostLedgerEntry = async (...args: Parameters<ReturnType<typeof adapter>['insertProviderCostLedgerEntry']>) =>
+  adapter().insertProviderCostLedgerEntry(...args);
+export const listProviderCostLedgerEntries = async (...args: Parameters<ReturnType<typeof adapter>['listProviderCostLedgerEntries']>) =>
+  adapter().listProviderCostLedgerEntries(...args);
+export const delinkProviderCostLedgerUser = async (...args: Parameters<ReturnType<typeof adapter>['delinkProviderCostLedgerUser']>) =>
+  adapter().delinkProviderCostLedgerUser(...args);
+export const delinkProviderCostLedgerBefore = async (...args: Parameters<ReturnType<typeof adapter>['delinkProviderCostLedgerBefore']>) =>
+  adapter().delinkProviderCostLedgerBefore(...args);
+export const upsertProviderInvoiceRecord = async (...args: Parameters<ReturnType<typeof adapter>['upsertProviderInvoiceRecord']>) =>
+  adapter().upsertProviderInvoiceRecord(...args);
+export const listProviderInvoiceRecords = async (...args: Parameters<ReturnType<typeof adapter>['listProviderInvoiceRecords']>) =>
+  adapter().listProviderInvoiceRecords(...args);
+export const tryAcquireJobLease = async (...args: Parameters<ReturnType<typeof adapter>['tryAcquireJobLease']>) =>
+  adapter().tryAcquireJobLease(...args);
+export const releaseJobLease = async (...args: Parameters<ReturnType<typeof adapter>['releaseJobLease']>) =>
+  adapter().releaseJobLease(...args);
+export const setJobLeaseCursor = async (...args: Parameters<ReturnType<typeof adapter>['setJobLeaseCursor']>) =>
+  adapter().setJobLeaseCursor(...args);
+export const getJobLease = async (...args: Parameters<ReturnType<typeof adapter>['getJobLease']>) =>
+  adapter().getJobLease(...args);
