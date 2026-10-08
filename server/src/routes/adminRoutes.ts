@@ -39,6 +39,8 @@ import {
 import { computeRightsDueDate, subjectHash as privacySubjectHash } from '../services/privacyRightsService';
 import type { PrivacyJurisdiction, PrivacyRightsRequest, PrivacyRightsRequestType } from '../types';
 import { buildCostLedgerReport } from '../services/costLedgerReportService';
+import { CSV_VIEWS, getAnalyticsReport, getReliabilityReport, isReportWindow, renderReportCsv } from '../analytics/reportService';
+import type { ReportWindowDays } from '../analytics/metrics';
 import { ITINERARY_QUALITY_BASELINE_SETTING_KEY } from '../services/itineraryQualityGateService';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -2224,6 +2226,70 @@ router.patch('/privacy/rights-requests/:id', async (req, res) => {
   } catch (err) {
     logError('[admin] rights request update failed', err);
     res.status(500).json({ error: 'Failed to update rights request' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Product analytics reports (analytics Phase 5). Aggregate-only, cohorts < 10
+// suppressed, fixed windows only (7/30/90 days) to limit differencing.
+// ---------------------------------------------------------------------------
+
+const parseWindow = (raw: unknown): ReportWindowDays | null => {
+  const days = raw === undefined ? 30 : Number(raw);
+  return isReportWindow(days) ? days : null;
+};
+
+router.get('/analytics/report', async (req, res) => {
+  const days = parseWindow(req.query.days);
+  if (days === null) {
+    res.status(400).json({ error: 'days must be 7, 30 or 90' });
+    return;
+  }
+  try {
+    res.json(await getAnalyticsReport(days));
+  } catch (err) {
+    logError('[admin] analytics report failed', err);
+    res.status(500).json({ error: 'Failed to build analytics report' });
+  }
+});
+
+router.get('/analytics/reliability', async (req, res) => {
+  const days = parseWindow(req.query.days);
+  if (days === null) {
+    res.status(400).json({ error: 'days must be 7, 30 or 90' });
+    return;
+  }
+  try {
+    res.json(await getReliabilityReport(days));
+  } catch (err) {
+    logError('[admin] reliability report failed', err);
+    res.status(500).json({ error: 'Failed to build reliability report' });
+  }
+});
+
+router.get('/analytics/export.csv', async (req, res) => {
+  const days = parseWindow(req.query.days);
+  const view = String(req.query.view ?? '');
+  if (days === null || !(CSV_VIEWS as readonly string[]).includes(view)) {
+    res.status(400).json({ error: `days must be 7, 30 or 90; view must be one of ${CSV_VIEWS.join(', ')}` });
+    return;
+  }
+  try {
+    const csv = renderReportCsv(view as (typeof CSV_VIEWS)[number], await getAnalyticsReport(days));
+    await writeAuditLog({
+      actorUserId: getActorId(req),
+      action: 'ANALYTICS_REPORT_EXPORTED',
+      afterState: { view, windowDays: days },
+      reason: null,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="wanderbunnies-${view}-${days}d.csv"`);
+    res.send(csv);
+  } catch (err) {
+    logError('[admin] analytics export failed', err);
+    res.status(500).json({ error: 'Failed to export analytics report' });
   }
 });
 

@@ -9,6 +9,7 @@ import {
 import { logError, logInfo } from '../logger';
 import { INSTANCE_ID } from '../metrics';
 import { processPendingErasureJobs } from './privacyRightsService';
+import { exportAnalyticsReportsToGcs } from '../analytics/reportService';
 
 /**
  * Privacy retention schedule (docs/implementation-plans/analytics-upgrade.md Phase 4),
@@ -52,6 +53,11 @@ const steps: RetentionStep[] = [
   {
     name: 'erasureJobs',
     run: async () => processPendingErasureJobs(),
+  },
+  {
+    // Phase 5: daily suppressed-aggregate CSVs for ad-hoc analysis (no-op without ANALYTICS_EXPORT_BUCKET).
+    name: 'analyticsCsvExport',
+    run: async (now) => (await exportAnalyticsReportsToGcs(now)).written ?? 0,
   },
 ];
 

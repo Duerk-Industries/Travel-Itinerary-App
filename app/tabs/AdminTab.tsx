@@ -5,6 +5,7 @@ import { getAppTheme, type AppTheme } from '../theme/theme';
 import { usePersistedState } from '../hooks/usePersistedState';
 import PackingListTable from '../components/PackingListTable';
 import { AiOperationsSection } from '../components/admin/aiOps/AiOperationsSection';
+import { AnalyticsSection } from '../components/admin/AnalyticsSection';
 import type { AiOpsSection } from '../components/admin/aiOps/types';
 export type { AiOpsSection } from '../components/admin/aiOps/types';
 
@@ -12,7 +13,7 @@ export type { AiOpsSection } from '../components/admin/aiOps/types';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'cost-estimate' | 'metrics' | 'billing';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'ai-ops' | 'packing-defaults' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'cost-estimate' | 'metrics' | 'billing' | 'analytics';
 
 type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
 type MetricsSnapshot = {
@@ -286,6 +287,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Billing', section: 'billing' as AdminSection, desc: 'Manage Premium pricing, trial, grace period, tax, and checkout' },
         { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
         { label: 'Metrics', section: 'metrics' as AdminSection, desc: 'In-process counters and cache hit rates' },
+        { label: 'Analytics', section: 'analytics' as AdminSection, desc: 'Feature adoption, cost, reliability, platform mix and trip-phase engagement (consenting users)' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
       <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme)]} onPress={() => onNav(item.section)}>
@@ -3473,6 +3475,8 @@ const AdminTab: React.FC<AdminTabProps> = ({
         return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'cost-estimate':
         return <CostEstimateSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'analytics':
+        return <AnalyticsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'metrics':
         return <MetricsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'billing':
@@ -3496,6 +3500,7 @@ const AdminTab: React.FC<AdminTabProps> = ({
     'api-limits': 'API Limits',
     'cost-estimate': 'Cost Estimator',
     metrics: 'Metrics',
+    analytics: 'Analytics',
     billing: 'Billing',
   };
 

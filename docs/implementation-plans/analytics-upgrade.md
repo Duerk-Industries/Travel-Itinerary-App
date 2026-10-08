@@ -500,6 +500,44 @@ It also gets a "Manage preferences" control that opens the same choices as `/pri
 - Cohort suppression (<10 users) on all views and exports.
 - Scheduled export of suppressed aggregate rollups to CSV in Cloud Storage for ad-hoc analysis. No BigQuery for now (decision 9).
 
+### Phase 5 implementation record (October 8, 2026; not yet deployed)
+
+**Metric definitions (`server/src/analytics/metrics/index.ts`, `METRIC_VERSION = 'v1'`).** Pure functions over stored events, shared by the API and the CSV export so the two cannot disagree. They produce:
+- **feature adoption:** reach, meaningful adoption (confirmed server outcomes), repeat use (views on two or more days), and per-task failure and cancel rates;
+- **platform mix:** web-only, native-only and both-platform cohorts, accounts and sessions per platform, and app versions;
+- **trip-phase engagement:** accounts and events per phase, during-trip engagement over traveler–trip pairs, and how often each time-zone fallback level was used.
+
+The rules that apply to every view:
+- **Population:** consenting active accounts. Admin and internal-canary traffic is excluded. Each report states that it covers consenting users only.
+- **Suppression:** every distinct-account count under 10 is returned as `null`, and any rate built on a suppressed count is `null` too. Zero is shown, because it reveals no one.
+- **No differencing filters:** only fixed 7, 30 or 90-day windows are offered.
+- **Correct aggregation:** distinct counts are computed directly over the window and rates from their own numerators and denominators. Daily uniques are never summed and averages are never averaged.
+
+**Reports (`server/src/analytics/reportService.ts`).** Computed on demand from the 90-day raw store (at most 50,000 events per report) and cached for 10 minutes.
+- **Deviation from the plan's precomputed rollups,** made deliberately at canary volume: there's no rollup store to erase or expire, and no extra job.
+- **Metadata on every report:** definitions, window, UTC timezone, events scanned, `truncated`, freshest event, metric version, minimum cohort, and notes.
+- **When to move to daily rollups:** when `truncated` appears, or when report time exceeds the 2 s budget.
+
+**Endpoints (admin RBAC):**
+- `GET /api/admin/analytics/report?days=7|30|90`;
+- `GET /api/admin/analytics/reliability?days=…`: server latency histograms (this instance), provider attempt failure rates from the cost ledger, and client task failure rates. Client readiness timings stay in Sentry.
+- `GET /api/admin/analytics/export.csv?days=…&view=adoption|platform|trip_phase`: CSV with a commented metadata header and blank suppressed cells, audited as `ANALYTICS_REPORT_EXPORTED`.
+- The **Cost** view reuses `GET /api/admin/costs/ledger`.
+
+**Scheduled export.** The daily `analyticsCsvExport` step in the lease-guarded retention tick writes the 30-day suppressed CSVs to `gs://$ANALYTICS_EXPORT_BUCKET/analytics-exports/YYYY-MM-DD/`. It does nothing until that environment variable is set.
+
+**UI.** Admin → **Analytics** (`app/components/admin/AnalyticsSection.tsx`) has the five views (Feature adoption, Cost, Reliability, Platform mix, Trip phase) and the 7/30/90-day windows. It shows definitions, population, freshness and truncation on every view, renders suppressed values as "—", and offers CSV download.
+
+**Tests:**
+- `server/__tests__/analytics-reports.test.ts` (8): suppression boundary and propagation, adoption/repeat/exclusion math, task cohorts, platform cohorts, during-trip pairs, CSV format, admin-only access and fixed windows, report/reliability/CSV with audit.
+- `app/tests/adminAnalyticsSection.test.tsx` (3).
+
+**Not done yet**
+- **Eligibility-aware denominators.** These would cover feature flags, tier access and traveler role; adoption currently uses all consenting active accounts.
+- **Expected-trip denominator for during-trip engagement.** The rate currently counts only trips with some activity. A version counting every scheduled trip whose travelers consented needs a trips join.
+- **Daily rollups** once volume requires them.
+- **Activation, collaboration, retention, AI value and monetization views.** Add these after the first five are trusted.
+
 ---
 
 ## Performance Budgets, Cost Model, Maintainability, and Test Coverage

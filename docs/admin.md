@@ -117,3 +117,15 @@ See the [analytics plan, Phase 4](implementation-plans/analytics-upgrade.md#phas
 - `GET /api/admin/privacy/rights-requests[?status=open]` lists requests ordered by due date, each with an `overdue` flag, plus `overdueCount`.
 - `PATCH /api/admin/privacy/rights-requests/:id` with `{ status?, extend?, notes?, reason }` changes a request's status or applies the statutory extension. The extension can be applied once and moves the deadline to three months (GDPR) or 90 days (CCPA); tell the requester when you extend. `completed` and `rejected` close the request. Every change is audited.
 - `GET /api/admin/privacy/erasure-jobs[?status=failed]` shows deletion jobs and their per-step results, without user IDs. Failed steps are retried by the daily retention tick (up to 5 attempts). A job that stays `failed` after that needs manual follow-up.
+
+## Product analytics reports
+
+Admin → **Analytics** shows five aggregate views over **consenting users only** (see the [analytics plan, Phase 5](implementation-plans/analytics-upgrade.md#phase-5-reporting-admin-dashboards-and-analysis)): Feature adoption, Cost, Reliability, Platform mix and Trip phase.
+
+- **Windows:** 7, 30 or 90 days, in UTC. There are no other filters, which limits singling out individuals by comparing filtered results.
+- **Suppression:** counts under 10 distinct accounts show as "—", and rates built on them are blank.
+- **Excluded traffic:** admin and internal canary traffic is never counted.
+- **Truncation:** a "Truncated" warning means a report hit its 50,000-event read limit. That's the signal to move to daily rollups.
+- **API:** `GET /api/admin/analytics/report?days=`, `GET /api/admin/analytics/reliability?days=`, and `GET /api/admin/analytics/export.csv?days=&view=adoption|platform|trip_phase`. Every CSV download is recorded in the audit log as `ANALYTICS_REPORT_EXPORTED`.
+- **Daily CSVs** of the same suppressed 30-day aggregates are written to `gs://$ANALYTICS_EXPORT_BUCKET/analytics-exports/YYYY-MM-DD/` when that environment variable is set.
+

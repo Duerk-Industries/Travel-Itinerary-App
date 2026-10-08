@@ -51,6 +51,8 @@ Optional product analytics and detailed diagnostics stay **off** (`analytics_col
 
   *Owner: Mobile lead.*
 
+- [ ] **Optional: set up the analytics CSV export bucket.** Create a private bucket in `us-east5` with a lifecycle rule (for example 25 months, matching the aggregate retention). Grant the Cloud Run service account write access, and set `ANALYTICS_EXPORT_BUCKET`. The daily export of suppressed aggregate CSVs stays off until this is done. *Owner: Operations.*
+
 ## 5. Age gate
 
 - [ ] **Turn on `age_gate_enforcement`** only once the oldest supported app build includes the date-of-birth prompt. *Owner: Engineering.*
@@ -73,4 +75,4 @@ Optional product analytics and detailed diagnostics stay **off** (`analytics_col
 - Phase 2 (pipeline built; see the plan's Phase 2 record): add the remaining instrumentation (`task_*`, `item_saved`, map links, report exports, session summaries, trip-share/follow invites); add a trip `timezone` column filled from Places; add the registry-to-store disclosure drift check; run Firestore emulator and load tests for ingest.
 - Phase 3 leftovers: cost Whisper transcription (per minute); optionally import GCP billing exports instead of entering invoices by hand.
 - Phase 4 leftovers: replay deletion tombstones after a backup restore.
-- Phase 5: an admin UI for the cost and rights reports.
+- Phase 5 (dashboards built; see the plan's Phase 5 record): eligibility-aware denominators, an expected-trip denominator for during-trip engagement, daily rollups once reports truncate, then the activation, collaboration, retention, AI value and monetization views; an admin UI for privacy rights requests.
