@@ -2,258 +2,334 @@
 
 Status: proposed; documentation only.
 Created: October 8, 2026.
-Design and collection inventory: [Analytics Upgrade](../analytics-upgrade.md).
+Design and collection inventory: [Analytics Upgrade: Collection, Goals, and Behavior](../analytics-upgrade.md).
 
 ## Outcome and delivery rules
 
-Deliver reliable reporting for feature use, cost per user/trip, technical and task performance, native/web use, and engagement during scheduled trips. Implement privacy controls and matching public disclosures before optional collection starts.
+Deliver reliable reporting for feature use, cost per user/trip, technical and task performance, native versus web use, and engagement during scheduled trips. Privacy controls, rights handling, and matching public disclosures (policy pages and app-store labels) must ship **before** any optional collection starts.
 
-This plan provides compliance capabilities and release evidence; it does not certify GDPR or app-store compliance. The privacy owner must resolve jurisdiction, controller, lawful-basis, provider-contract and retention questions against actual deployment. Recheck official rules before release because requirements change.
+This plan provides compliance capabilities and release evidence; it does not certify GDPR or app-store compliance. The privacy owner resolves jurisdiction, controller, lawful-basis, processor-contract, and retention questions against the actual deployment. Recheck official rules before release, because they change.
 
-Use strict TypeScript, shared types in server/src/types.ts, Zod validation, the existing DB facade, getEnvValue/getEnvFlag and logInfo/logError. Implement Postgres and Firebase operations together, plus the memory adapter where applicable. Add migrations using the repository's existing server/migrations convention. Preserve existing quota accounting and API aliases.
+Repository rules that apply throughout:
 
-No vendor selection, service provisioning, publishing or new SDK purchase is authorized by this documentation change. Initial delivery uses existing application infrastructure; a later architecture decision must justify additional services with observed costs and requirements.
+- Strict TypeScript, shared types in `server/src/types.ts`, Zod validation of all client input.
+- All storage goes through the `server/src/db.ts` facade, implemented in `db.postgres.ts` **and** `db.firebase.ts` together, with the memory adapter supporting tests. Postgres migrations go in `server/migrations/` with matching `.rollback.sql` files.
+- Env access only via `getEnvValue` / `getEnvFlag`; logging only via `logInfo` / `logError`.
+- Preserve existing quota accounting, entitlement behavior, and the `/api/flights` alias.
+- No vendor selection, service provisioning, store submission, or new paid SDK is authorized by this document. Initial delivery uses existing infrastructure.
 
 ## Findings that affect implementation
 
-1. Existing usage_events and AI accounting are a useful foundation, but do not cover all provider attempts or user behavior. Avoid counting the same AI operation in both old accounting and a new ledger.
-2. recordTiming in server/src/metrics.ts currently reaches a no-op emitter. Counters are keyed by name and lose labels; instance identity may be a revision shared by several replicas. Fix these before claiming percentile or instance-level reporting.
-3. AI capture storage supports Cloud Storage, while the inspected aggregation job reads local files. A successful aggregation job may therefore miss production captures.
-4. Frontend Sentry is initialized at entry before account preferences are known. Optional diagnostics cannot be controlled only by a settings switch added later.
-5. server/src/services/userDataExport.ts currently exports account/trip/authored-item/billing data but has no analytics or consent section. Existing deletion cascades do not establish complete removal of captures, nested metrics, logs or external telemetry.
-6. /privacy uses server/src/legal/privacyPolicyHtml.ts; account.tsx links /privacy.html from app/public/privacy.html. These disagree on operator/contact, minimum age, detail and effective date. docs/legal/privacy-policy.md follows the older disclosure. Resolve facts rather than silently choosing one.
-7. The current cookie page promises required choices for optional technologies. An implemented and verified consent flow must back that promise.
+1. `usage_events` and AI accounting are a useful base but do not cover every provider attempt or any user behavior. The same AI operation must not be counted in both the old accounting and a new ledger.
+2. `recordTiming` in `server/src/metrics.ts` calls `emit`, which is a no-op, so **no latency data is retained today**. Counters are keyed by name and drop labels, and the instance label may be a revision shared by replicas. Fix these before claiming percentile or per-instance reporting.
+3. AI capture storage supports Cloud Storage, but `aggregationJob.ts` reads local files. A "successful" production aggregation run may miss captures.
+4. Frontend Sentry is initialized in `app/AppEntry.js` before account preferences are known, with `enableAutoSessionTracking: true` and 10% trace sampling. A settings switch added later cannot control data that was already collected at startup.
+5. `server/src/services/userDataExport.ts` (`EXPORT_SCHEMA_VERSION = 1`) exports account, trip, authored-item, and billing data but has no analytics, consent, or diagnostics section. The account deletion route (`DELETE /api/account` in `accountRoutes.ts`) cascades DB rows and cancels Stripe, but it does not prove removal of captures, nested JSON identities, logs, or Sentry data.
+6. **Three conflicting privacy notices exist:**
+   - `/privacy` → `server/src/legal/privacyPolicyHtml.ts`. Last updated July 21, 2026; operator/contact Tristan Duerk (`tristan.duerk@gmail.com`); "not directed at children under 13".
+   - `/privacy.html` → `app/public/privacy.html`, linked from `app/tabs/account.tsx`. Last updated July 17, 2026; GDPR-style controller section; contact `bryan.duerk@gmail.com`; "under 16 may not hold an account".
+   - `docs/legal/privacy-policy.md` matches the older `/privacy` text.
+
+   These must be reconciled on facts (controller, contact, minimum age; see the `registration_age_gate` migration), not by picking one silently.
+7. The older notices claim "we do not access camera, photo library…". The Expo config registers image/video share intents and the blog supports media upload, so verify the wording against actual native permissions before republishing.
+8. `app/public/cookies.html` promises consent before optional diagnostics/analytics. Sentry's current startup behavior does not yet meet that promise.
+9. The iOS config in `expo.config.shared.cjs` has **no `ios.privacyManifests`** entry. The required-reason APIs used by React Native, Expo modules, and the Sentry SDK (e.g. `UserDefaults`, file timestamps, system boot time) need verification in the archived build's privacy report.
+10. Expo push tokens (`app/utils/pushNotifications.ts`) are device identifiers that must appear in store disclosures, even though they are not used for analytics.
 
 ## Architecture and storage
 
-Separate three processing paths:
+Three processing paths, kept separate in code, storage, access, and policy text:
 
 | Path | Purpose | Reliability and privacy rule |
 |---|---|---|
-| Optional behavioral events | Views, tasks, engagement and product funnels | Fail closed on unknown consent; collection failure must not break a travel action |
-| Operational/accounting records | Service delivery, quotas, justified security and cost administration | Preserve existing required accounting; document basis and never silently repurpose as behavioral tracking |
-| Optional detailed diagnostics | User-linked client performance/crash/session details | Permission-aware initialization and scrubbing; aggregate necessary reliability metrics remain narrowly scoped |
+| Optional behavioral events | Views, tasks, engagement, funnels | Fail **closed** on unknown consent; collection failure never breaks a travel action |
+| Operational/accounting records | Service delivery, quotas, security, cost metering | Preserve existing accounting; documented basis; never repurposed as behavioral tracking |
+| Optional detailed diagnostics | User-linked client crash/performance/session details | Permission-aware SDK initialization and scrubbing; necessary aggregate reliability stays narrowly scoped |
 
-Proposed tables/collections:
+Proposed tables/collections (Postgres table name = Firestore collection name):
 
-- privacy_preferences: current product_analytics and optional_diagnostics choices, revision, notice version and timestamps; essential processing descriptions are not optional flags.
-- privacy_choice_events: minimal consent/withdrawal evidence and notice versions, without behavioral payloads or unnecessary IP/device identifiers.
-- analytics_subjects: random per-account pseudonym mapping in a restricted store; no email-hash pseudonyms. Delete/rotate as required and prevent stitching across withdrawal/regrant periods unless specifically justified.
-- analytics_events: validated immutable envelopes and allowlisted properties, indexed by time/subject/event/feature; idempotent event ID. Optional trip pseudonyms and operation IDs remain restricted personal data.
-- analytics_eligible_daily: minimal consented eligible-user/trip/access/feature facts for denominator calculations, treated as personal data and deletable.
-- provider_cost_ledger: unique provider attempt, units, price version, user/trip/feature attribution, outcome, source, currency and reconciliation state.
-- analytics_daily_facts / analytics_rollups: bounded query shapes, definitions and aggregation version. User/trip facts are personal; only assessed sufficiently anonymous aggregates qualify for longer retention.
-- analytics_job_runs: durable cursor, lease, version, freshness, counts and errors; no raw payloads in job logs.
+| Store | Contents | Notes |
+|---|---|---|
+| `privacy_preferences` | One row per user: `product_analytics`, `optional_diagnostics`, `revision`, `epoch`, `notice_version`, timestamps | Necessary processing is described in the UI and not stored as a flag |
+| `privacy_choice_events` | Append-only consent/withdrawal evidence: choice, notice version, platform, timestamp | No behavioral payload, IP address, or device identifier |
+| `analytics_subjects` | Random per-account pseudonym ↔ user mapping, epoch | Restricted access. Never an email hash. Rotated on withdrawal/regrant. |
+| `analytics_events` | Validated immutable envelopes plus allowlisted properties; idempotent on `event_id` | Indexed by time/subject/event/feature. Postgres: one row per event. Firebase: one document per **batch** (see cost below), with TTL. |
+| `analytics_eligible_daily` | Minimal consented eligible user/trip/feature facts used as denominators | Personal data; deletable |
+| `provider_cost_ledger` | Unique provider attempt, units, price version, user/trip/feature attribution, outcome, reconciliation state | Necessary operational data; restricted access |
+| `analytics_daily_facts` / `analytics_rollups` | Bounded query shapes, definition and aggregation version | User/trip facts are personal. Only assessed anonymous aggregates get longer retention. |
+| `analytics_job_runs` | Durable cursor, lease, version, freshness, counts, errors | No raw payloads |
 
-Use named numeric fields for frequent dimensions and bounded JSON for uncommon event properties. Postgres time indexes and Firebase composite indexes/query limits must be designed from the same supported admin queries. Firebase cannot rely on scanning all events for interactive reports; precompute required views. Avoid per-user/operation identifiers as metric labels.
+Design rules:
 
-Daily jobs must use durable leases/cursors and idempotent upserts across replicas. Aggregation retries replace or reconcile the same input period; they must not add counts twice. Process late events with a documented watermark and bounded recomputation. Expose partial coverage if data has expired.
+- Use named columns for frequent dimensions (`event_name`, `feature`, `platform`, `trip_phase`, `occurred_at`) and bounded JSONB/maps for rare properties. Design Postgres indexes and Firestore composite indexes from the **same supported admin queries**.
+- Interactive Firebase reports never scan raw events; they read precomputed rollups.
+- Never use per-user or per-operation identifiers as metric labels.
+- Daily jobs use durable leases/cursors and idempotent upserts so they are safe with multiple Cloud Run replicas. Retries replace a period rather than adding to it. Late events use a documented watermark (proposed: 48 h) with bounded recomputation. Expose partial coverage when data has expired.
+- pg-mem constraints (from existing tests): avoid `NOT EXISTS`, `ANY($1::uuid[])`, `ON CONFLICT DO NOTHING` with `INSERT…SELECT`, and `IS NOT NULL` across joins in queries the memory adapter must run.
 
 ## Phase 0: Inventory, definitions and privacy decisions
 
-Owners: product lead, backend lead and privacy owner.
+Owners: product lead, backend lead, privacy owner.
 
-- Verify actual production DB provider, enabled Sentry/capture settings, existing volumes, SDK network traffic, vendor contracts, data regions and retention. Record facts without copying secrets.
-- Inventory every outbound provider path, including AI registry/direct callers, Places/maps, photography, email, weather, imports and background jobs. Mark currently attributable, priced and billable-failure coverage.
-- Approve an event/metric dictionary from the design, including eligibility, consent population, session rule, trip timezone behavior, outcome semantics and allowed dimensions.
-- Maintain a processing register covering purpose, data, basis, recipients, retention, rights handling and transfers. Perform DPIA screening; conduct an assessment if the proposed processing meets the applicable high-risk criteria.
-- Document necessary metering/security purposes and any legitimate-interests balancing. Do not label broad feature tracking necessary merely because it helps the business.
-- Resolve controller/contact/minimum-age conflicts, territorial reach, EU/UK representative and DPO applicability, and legal-retention schedules. A policy statement of “not applicable” is not the assessment.
-- Approve global default-off optional analytics/diagnostics and separate controls. If later relying on a regional analytics exemption, document its exact conditions and implement it as a reviewed exception.
+- Verify the production DB provider, Sentry/capture settings, volumes, SDK network traffic, vendor contracts, data regions, and retention. Record facts without copying secrets.
+- Inventory every outbound provider path (AI registry and direct callers, Places/maps, Unsplash, email, weather, imports, Plaid, background jobs) and mark whether each is attributable, priced, and covers billable failures.
+- Approve the event/metric dictionary: eligibility, consent population, session rule, trip timezone fallback, outcome semantics, allowed dimensions.
+- Maintain a **record of processing activities** (purpose, data, basis, recipients, retention, rights, transfers). Run DPIA screening and complete a DPIA if the high-risk criteria apply.
+- Document necessary metering/security purposes and any legitimate-interests assessment. Broad feature tracking is not "necessary" just because it helps the business.
+- Resolve the Finding 6 conflicts (legal controller/operator, contact address, minimum age), territorial reach, EU/UK representative and DPO applicability, and legal retention schedules. A policy that says "not applicable" does not count as the assessment.
+- Approve global default-off for optional analytics and diagnostics with separate controls. If a regional analytics exemption is used later, document its exact conditions as a reviewed exception.
 
-Acceptance: signed-off dictionary, deployment inventory, coverage map, lawful-purpose register, retention proposal and policy gap list exist. Optional collection remains off.
+**Acceptance:** signed-off dictionary, deployment inventory, coverage map, processing register, retention proposal, policy gap list. Optional collection stays off.
 
 ## Phase 1: Privacy settings and enforcement
 
-Owners: frontend/backend leads and privacy owner. Dependency: Phase 0.
+Owners: frontend/backend leads, privacy owner. Depends on Phase 0.
 
-- Add Account > Privacy, accessible consent UI on all three platforms, and public Privacy Choices access on web. Explain analytics, optional diagnostics, essential processing, withdrawal, export and deletion in plain language.
-- Provide equally accessible accept optional, reject optional and customize choices; no preselected optional switches, repeated nagging or loss of core service after refusal.
-- Add proposed GET/PATCH /api/account/privacy-preferences endpoints with authenticated ownership, optimistic revision checks, server timestamps and append-only minimal choice evidence. No admin can grant consent on another user's behalf.
-- Resolve account versus device choices: account withdrawal applies everywhere; a device/session denial remains restrictive until explicit action changes it. A login, reinstall or new device must not convert absence of local permission into acceptance.
-- Fetch current permission at bootstrap/foreground. Cache minimally for UI continuity, but the server checks authoritative state for every optional batch and optional server event. A stale allow cache must not admit events after withdrawal.
-- Client states: unknown/off, granted, withdrawn and obsolete-notice. Unknown/off states neither initialize optional SDK collection nor create optional event queues.
-- Regrant starts a new permission epoch. Reject old-epoch queued events even if the account is opted in again; do not replay pre-consent history.
-- Withdrawal stops producers immediately, disables SDK integrations, clears optional storage/identifiers and cancels flushes/retries. Server admission and deletion workers prevent queued/in-flight events from recreating purged data.
-- Redesign app/utils/sentry.ts and AppEntry.js so optional session/breadcrumb/performance collection waits for permission. Audit native auto-start behavior. On withdrawal, close/disable or replace the client and discard pending events; do not assume a UI flag stops an SDK.
-- Review server/src/instrument.ts separately for narrowly necessary diagnostics: disable unnecessary user/IP/body capture, scrub query values and apply scoped retention. Do not force essential server protection to depend on a user's optional choice.
-- Add explicit analytics collection flags and kill switches, default off when missing/unreadable. Existing entitlement fail-open behavior does not apply to privacy permission. Disabled collection must still permit consent updates and rights processing.
+**Server**
 
-Acceptance: network/storage evidence shows zero optional data before permission and after withdrawal, including error paths, login changes and stale devices. Core trip, quota and billing behavior passes regression checks.
+- `GET` / `PATCH /api/account/privacy-preferences` in `accountRoutes.ts`: authenticated owner only, optimistic `revision` check, server timestamps, append to `privacy_choice_events`. No admin can grant consent on a user's behalf.
+- `server/src/services/privacyConsentService.ts`: `getConsent(userId)` and `assertAnalyticsAllowed(userId, epoch)`, with a short TTL cache that is invalidated on `PATCH`.
+- Feature flags in `server/config/feature-flags.yaml`: `analytics_collection_enabled` (kill switch) and `diagnostics_user_linked_enabled`, both **default disabled and fail-closed**. These must not inherit entitlement fail-open behavior. When disabled, consent updates, export, and deletion must still work.
+- Review `server/src/instrument.ts`: `sendDefaultPii: false`; strip `user.ip_address`, cookies, auth headers, request bodies, and query strings in `beforeSend`/`beforeSendTransaction`. Necessary server error monitoring does not depend on the user's optional choice.
+
+**Client**
+
+- New `app/utils/privacyConsent.ts` (state machine: unknown/off, granted, withdrawn, obsolete-notice) and `app/hooks/usePrivacyConsent.ts`. Fetch on bootstrap and on foreground. Keep a minimal UI cache, but the server stays authoritative and a stale "allow" cache never admits events after withdrawal.
+- First-run consent sheet with equal-weight **Accept** / **Reject** / **Customize**. Show it once after login, not before the user can use the app. No nagging after refusal.
+- **Account → Privacy** section in `app/tabs/account.tsx` / `AccountProfileManagement.tsx`: two switches, a necessary-processing explanation, and links to export, delete analytics data, delete account, privacy policy, cookie notice, and privacy choices. testIDs follow `privacy-{action}`.
+- Web: honor `navigator.globalPrivacyControl` as a refusal unless the user later opts in explicitly in the UI.
+- **Sentry redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`). Start in a minimal necessary mode: crash capture only, `enableAutoSessionTracking: false`, no breadcrumbs from network/console/navigation, no traces, no user ID, `sendDefaultPii: false`. Enable session tracking, traces, and the user ID only after `optional_diagnostics` is granted. On withdrawal, call `Sentry.close()` (or re-init in minimal mode) and drop pending events. Audit native auto-start in the `@sentry/react-native/expo` plugin; do not assume a JS flag stops native collection.
+- Regrant starts a new epoch, and events from an old epoch are rejected. Login, reinstall, or a new device never turns missing permission into acceptance.
+
+**Acceptance:** network and storage evidence (web DevTools, iOS/Android proxy capture) shows zero optional data before permission and after withdrawal, including error paths, account switches, and stale devices. Core trip, quota, and billing regression suites pass.
 
 ## Phase 2: Event pipeline and initial feature instrumentation
 
-Owners: frontend/backend leads. Dependencies: Phase 1 and initial policy deliverables.
+Owners: frontend/backend leads. Depends on Phase 1 and the Phase 4 policy pages being drafted.
 
-- Create a small client analytics utility/hook and shared registry. Keep API helpers co-located with owning features under repository conventions; analytics is a cross-cutting utility rather than a new centralized business API layer.
-- Instrument app/App.tsx routing/trip selection and feature boundaries, avoiding duplicate render/effect events. Begin with trip references, itinerary, activities, lodging, transfers, expenses, packing, imports and collaboration.
-- Mount proposed POST /api/analytics/events; require authenticated user for initial product collection. Defer anonymous acquisition tracking to a separate consent/storage design.
-- Validate batch size, schema versions, event names, property types/lengths and timestamp bounds. Derive subject and consent from auth, verify trip access, normalize platform claims and reject spoofed identity fields.
-- Proposed limits: 20 events per batch, 32 KiB request payload, flush after 30 seconds while active, maximum 100 queued events and 24-hour expiry. Use bounded retry/backoff, deduplication and explicit accepted/rejected counts. No retry loop for denied consent.
-- Keep initial queue in memory to minimize storage/access complexity. If later adding durable offline queues, require encrypted appropriate storage, expiry, withdrawal purge and policy inventory first. Report lost offline events as coverage limitations.
-- Use server completion events after a committed outcome; separate authoritative business records from consent-filtered product events. Analytics failure cannot roll back the business action.
-- Capture trip phase through a reusable server utility with date/timezone-version context. Apply late-event permissions and access rules; do not rely on mutable current dates to rewrite historical phase silently.
-- Use session summaries with bounded foreground intervals; never use API polls as active sessions. Mark admins, automated checks, prefetch and background workers for exclusion.
+- **Registry:** `server/src/analytics/eventRegistry.ts` exports the Zod schemas and metadata (purpose, owner, consent category, retention, sampling). It is mirrored in `app/utils/analytics/eventRegistry.ts` with a CI drift check, following the same convention as `coveredBy.ts` and `itineraryStatus.ts`.
+- **Client utility:** `app/utils/analytics/track.ts` plus `useTrackView(feature)`. This is a cross-cutting utility, not a centralized business API layer. Tab files keep their own fetch helpers.
+- **Instrumentation:** routing and trip selection in `app/App.tsx`, then trip overview, itinerary, activities, lodging, transfers, expenses, packing, imports, and collaboration. Guard against duplicate render/effect events in React 19 Strict Mode.
+- **Ingest:** `POST /api/analytics/events` mounted in `app.ts` (new `analyticsRoutes.ts`), authenticated users only. Anonymous/acquisition tracking is deferred to a separate design.
+- **Validation:** batch size, schema versions, event names, property types and lengths, timestamp bounds (±24 h skew). The server derives subject and consent from auth, verifies trip access, normalizes platform claims, and rejects spoofed identity fields.
+- **Limits:** 20 events per batch, 32 KiB payload, flush every 30 s while active and on background/`visibilitychange` (`navigator.sendBeacon` on web), max 100 queued events, 24 h expiry. Bounded exponential backoff and deduplication. The response returns accepted/rejected counts. No retries on a consent denial (HTTP 403 with code `ANALYTICS_CONSENT_REQUIRED`).
+- **Queue:** in-memory only at first. A durable offline queue requires encrypted storage, expiry, a withdrawal purge, and a cookie/storage notice update first. Lost offline events are reported as a coverage limitation.
+- **Server outcomes:** emitted after the business transaction commits, via fire-and-forget `recordServerEvent()`. Analytics failure never rolls back the business action.
+- **Trip phase:** `server/src/utils/tripPhase.ts` (pure function with date/timezone version), so mutable current dates never silently rewrite history.
+- **Exclusions:** sessions use bounded foreground intervals and never API polls. Admins, E2E/automation users, prefetch, and background workers are marked for exclusion.
 
-Acceptance: golden fixture journeys produce the expected deduplicated events/phase classifications and contain no prohibited properties. Consent-denied journeys produce no optional events.
+**Acceptance:** golden fixture journeys produce the expected deduplicated events and phase classifications, with no prohibited properties. Consent-denied journeys produce no optional events.
 
 ## Phase 3: Cost attribution and performance
 
-Owners: backend lead and finance/operations owner. Dependency: Phase 0; optional user-linked diagnostics also require Phase 1.
+Owners: backend lead, finance/operations owner. Depends on Phase 0; user-linked diagnostics also need Phase 1.
 
-- Route all cost recording through one trusted settlement API. Include attempt ID, provider/model/caller, feature, initiating user, trip, units, cache status, failure/retry state and price version. Preserve budget/quota reservations separately from settled cost.
-- Audit existing openaiApi and aiProviderRegistry accounting to prevent duplicate settlement and retain compatibility. Add uniqueness and durable recovery for accounting writes; report settlement failures instead of silently understating spend.
-- Include calls without a user as system/unattributed. Classify background and shared-trip cost once, with an explicit allocation rule. Store adjustments rather than overwriting original estimates.
-- Test units against invoices and rate configuration, including cached-token pricing and non-token request units where relevant. Unknown rates/usage get an unknown status. Forecasts, avoided cost and billed expense must remain distinct.
-- Define allocation v1 (for example, monthly shared infrastructure divided by active service accounts) and show alternatives/sensitivity; finance approves the basis. Distinguish operational activity used for allocation from consented product engagement.
-- Add monthly invoice reconciliation with provider credits, refunds, committed spend and currency conversion metadata. Publish direct-cost coverage and unexplained variance.
-- Retain timings as bounded histograms or a verified exporter; preserve low-cardinality labels. Provide an actual unique process identity and prevent counter loss from masquerading as falling activity.
-- Add screen/trip readiness spans and user task outcomes under permitted diagnostics/analytics categories. Use available browser performance APIs for web and native startup/frame evidence where supported; do not claim native p95 without measurements.
-- Connect request/job IDs across logs and spans without exporting raw account/trip identifiers broadly. Protect /metrics from sensitive or unbounded dimensions.
-- Correct AI aggregation to process the configured capture backend with durable cursors and permissions; do not duplicate expensive capture reads per instance.
+- Route all cost recording through one trusted `settleProviderAttempt()` API that records attempt ID, provider/model/caller, feature, initiating user, trip, units, cache status, failure/retry state, and price version. Budget/quota reservations stay separate from settled cost.
+- Audit `openaiApi.ts` and `aiProviderRegistry.ts` accounting to prevent double settlement and keep compatibility. Add a uniqueness constraint on attempt ID and durable recovery. Report settlement failures instead of silently understating spend.
+- Calls without a user are recorded as `system`/`unattributed`. Shared-trip and background costs are classified once under an explicit allocation rule. Adjustments are stored as new rows rather than overwriting estimates.
+- Test units against invoices and rate config, including cached-token pricing and non-token request units. Unknown rates or usage are marked `unknown`. Forecast, avoided cost, and billed cost stay distinct.
+- Allocation v1 (e.g. monthly shared infrastructure ÷ active service accounts), with alternatives and sensitivity shown; finance approves it. Operational activity used for allocation is not consented product engagement.
+- Monthly invoice reconciliation covering credits, refunds, committed spend, and currency metadata. Publish direct-cost coverage and unexplained variance.
+- **Fix `metrics.ts`:** retain timings as fixed-bucket histograms with low-cardinality labels, export them on `/metrics`, add a unique process identity (`K_REVISION` plus a random instance ID), and expose `countersStartedAt` so counter resets are not mistaken for falling activity.
+- Screen/trip readiness spans and task outcomes under the appropriate consent category. Use the browser Performance API on web and native startup/frame measurements where supported. Do not claim native p95 without measurements.
+- Correlate request/job IDs across logs and spans without broadly exporting raw account/trip IDs. Keep `/metrics` free of sensitive or unbounded labels.
+- Fix the AI aggregation job to read the configured capture backend (GCS in production) with durable cursors and leases, so replicas do not repeat expensive reads.
 
-Acceptance: synthetic successful/failed/retried/cached calls reconcile exactly; dashboards distinguish unknown, estimated and billed costs. Performance measurements are actually retained, bounded and explain their sampling.
+**Acceptance:** synthetic successful/failed/retried/cached calls reconcile exactly, and dashboards distinguish unknown, estimated, and billed costs. Performance data is retained, bounded, and labeled with its sampling.
 
 ## Phase 4: Rights, retention and policy delivery
 
-Owners: backend lead and privacy owner. Dependency: new schemas and consent enforcement.
+Owners: backend lead, privacy owner. Depends on the new schemas and consent enforcement.
 
-- Extend userDataExport.ts and export schema to include preferences/history, linked behavioral data, costs and diagnostic/AI metadata where applicable. Provide machine-readable exports with pagination or asynchronous delivery for large accounts and secure expiry on download links.
-- Map access/correction/erasure/restriction/objection/portability requests to actual stores. Portability has legal scope distinct from general access. Do not expose other travelers' information through exports.
-- Extend deletion to nested JSON identities, pseudonym mappings, trip-linked analytics, raw events, user/trip facts, captures, processor data and relevant logs. Verify Postgres and Firebase independently.
-- Retain only genuinely necessary billing/security/consent evidence under documented exceptions, access controls and schedules. Shared-product content is a separate rights/store-policy review; retaining collaboration context does not justify retaining analytics linkage.
-- Withdrawal stops new optional processing; it does not automatically mean every historic record is legally erased. Offer a clear separate delete-analytics/request-erasure action and implement the approved retention/basis decision.
-- Suppress/rebuild attributable rollups after erasure. Retain aggregates only after re-identification assessment; proposed minimum cohort 10 is a guardrail, not proof of anonymity. Prevent drill-down/export filter differencing from revealing small groups.
-- Use durable deletion jobs with retries, tombstones, provider confirmation and status. Guard event ingestion, settlement and rollup replay against deleted/restricted subjects; satisfy any lawful metering requirement without resurrecting analytics.
-- Backups expire on a documented cycle. Restoration must reapply deletion/withdrawal tombstones before serving or reprocessing data. Logs/object storage/vendor data need lifecycle configuration, not only SQL cascades.
-- Track rights deadlines and exceptions with identity verification proportional to the request. GDPR requests generally require a response within one month; implement escalation and valid-extension notices rather than treating a cron SLA as the legal deadline. [European Commission rights guidance](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/dealing-requests-individuals_en)
+### Rights handling
 
-Proposed engineering defaults, to approve against actual purposes/provider capabilities:
+- Bump `EXPORT_SCHEMA_VERSION` to 2 in `userDataExport.ts` and add `privacy` (current preferences and choice history), `analytics` (the user's events, daily facts, pseudonym), `costs` (attributed ledger rows), and `diagnostics` (AI capture metadata where linked). Use machine-readable JSON with pagination or async delivery for large accounts and expiring download links. Never include other travelers' personal data.
+- Map access, correction, erasure, restriction, objection, and portability to actual stores. Portability has a narrower legal scope than access.
+- New `DELETE /api/account/analytics-data` ("Delete my analytics data"), separate from withdrawal. Withdrawal stops future processing; deletion erases history (subject to documented exceptions).
+- Extend account deletion to pseudonym mappings, trip-linked analytics, raw events, user/trip facts, captures, nested JSON identities, Sentry user data (via the Sentry API / data-scrubbing request), and relevant logs. Verify Postgres and Firebase independently.
+- Keep only genuinely necessary billing, security, and consent evidence under documented exceptions, access controls, and schedules. Keeping collaboration content does not justify keeping analytics linkage.
+- Suppress or rebuild attributable rollups after erasure. Keep aggregates only after a re-identification assessment. A minimum cohort of 10 is a guardrail, not proof of anonymity. Block filter-differencing in drill-downs and exports.
+- Durable deletion jobs with retries, tombstones, provider confirmation, and status. Event ingestion, settlement, and rollup replay check tombstones so deleted or restricted subjects are not recreated.
+- Backups expire on a documented cycle, and a restore reapplies tombstones before serving data. Logs, object storage, and vendor data need lifecycle configuration, not only SQL cascades.
+- Track rights deadlines with proportionate identity verification. GDPR generally requires a response within one month (extendable with notice); CCPA/CPRA within 45 days. [European Commission rights guidance](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/dealing-requests-individuals_en)
+
+### Retention (proposed; approve against actual purposes and provider capabilities)
 
 | Data | Proposed limit | Enforcement |
 |---|---|---|
-| In-memory optional queue | 24 hours or withdrawal/logout | Client expiry and purge |
-| Raw behavioral events | 90 days | Daily deletion job plus DB TTL/lifecycle where available |
-| Linked daily user/trip facts | 13 months | Scheduled purge and subject erasure |
-| Minimized diagnostic logs/traces | 30 days | Cloud/vendor/local rotation and scrubbing |
-| AI captures | At most 30 days for diagnostics; shorter where restricted-data terms require | Capture/object lifecycle plus subject deletion; no default extension for product analysis |
-| Assessed anonymous aggregates | 25 months then review/purge | Aggregate lifecycle and disclosure-control review |
-| Cost ledger, billing, consent evidence | Purpose-specific schedule approved in Phase 0 | Separate restricted stores and documented legal holds; no indefinite blanket retention |
+| Client optional queue | 24 h, or withdrawal/logout | Client expiry and purge |
+| Raw behavioral events | 90 days | Postgres: daily batched delete job. Firestore: TTL policy on `expires_at`. |
+| Linked daily user/trip facts | 13 months | Scheduled purge plus subject erasure |
+| Consent choice evidence | Account lifetime + 3 years (to prove past consent) | Restricted store; no behavioral payload |
+| Minimized diagnostic logs/traces | 30 days | Cloud Logging bucket retention, Sentry project retention, local rotation |
+| AI captures | ≤ 30 days for diagnostics, shorter where restricted-data terms require | GCS lifecycle rule plus subject deletion |
+| Assessed anonymous aggregates | 25 months, then review/purge | Aggregate lifecycle and disclosure review |
+| Cost ledger, billing | Tax/accounting schedule approved in Phase 0 | Separate restricted store; documented legal holds |
 
-These are proposed limits, not descriptions of existing retention or statutory defaults. Publish only schedules that have been configured and tested.
+Publish only schedules that have been configured and tested.
 
 ### Privacy policy and web page deliverables
 
-Make policy updates a release dependency, not a follow-up task:
+Policy updates are a **release dependency**, not a follow-up. Pick one canonical source and generate the rest from it.
+
+**Step 1: consolidate.** Make `docs/legal/privacy-policy.md` the single canonical source once the Finding 6 conflicts are resolved. Add a small build script (`scripts/build-legal-pages.mjs`) that renders it into `app/public/privacy.html` and `server/src/legal/privacyPolicyHtml.ts`, plus a CI check that fails if the generated outputs drift. Alternatively, `/privacy` can redirect (301) to `/privacy.html`.
+
+**Step 2: per-surface changes.**
 
 | Surface | Required change and verification |
 |---|---|
-| docs/legal/privacy-policy.md | Canonical reviewed notice: resolve controller/contact/age, then add analytics purposes, fields, basis, choices, recipients, retention, rights and transfers. Maintain version/effective date and change summary. |
-| app/public/privacy.html | Render the canonical approved notice. Replace generic optional-analytics language with the actual collection/controls and precise retention. Preserve Gmail/Plaid restricted-use promises. |
-| server/src/legal/privacyPolicyHtml.ts and /privacy | Generate from the same approved source or serve/redirect to the canonical page; eliminate contradictory embedded text. Test both routes in the production bundle. |
-| app/public/cookies.html | Inventory analytics preference/session storage, SDK storage, duration, operator and purposes. Link a working manage-preferences control. Describe necessary storage separately from optional technologies. |
-| app/public/privacy-choices.html (proposed) | Public explanation and working browser choices; account-wide settings require sign-in. Provide access/export/deletion routes and contact fallback. Page visitors must not generate optional analytics before permission. |
-| app/public/delete-account.html (proposed) | Public deletion-request path identifying app/operator, verification, scope, retained exceptions and timing. Support requests without reinstalling; link directly in Play Console. |
-| app/tabs/account.tsx and AccountProfileManagement.tsx | Add native/web Privacy settings and consistent notice, export and deletion links. Keep destructive confirmation proportional and do not require support contact for normal in-app deletion. |
-| server/src/app.ts and deployment exports | Verify /privacy, /privacy.html, /cookies.html and new choice/deletion pages on deployed routes; provide stable aliases and avoid SPA fallback masking missing pages. |
-| Store metadata and docs/app-store-review-packet.md | Update privacy/data-safety labels, policy/choices/deletion URLs, SDK inventory and reviewer steps/screenshots to match the built apps. |
-| docs/sentry.md, docs/admin.md and docs/feature-flags.md | Document permission gating, diagnostic retention/sampling, metric definitions, coverage, controls and rollout flags. |
+| `docs/legal/privacy-policy.md` (canonical) | Resolve controller/operator, contact, minimum age. Add the sections listed under "Required new or changed notice content" below. Version number, effective date, and change summary at the top. |
+| `app/public/privacy.html` | Generated from canonical. Replace generic "optional analytics, advertising, or non-essential cookies — consent where required" with the actual collection, controls, and retention. Keep the Gmail Limited Use and Plaid sections word-for-word unless reviewed. |
+| `server/src/legal/privacyPolicyHtml.ts` → `/privacy` | Generated from canonical or redirect. Remove the contradictory embedded text (under-13 statement, "no marketing-analytics SDKs" wording that needs to describe first-party analytics). Test both routes against the production bundle. |
+| `app/public/cookies.html` | Add a table row per analytics key (`wb_analytics_consent`, `wb_analytics_session`, queue key if persisted, Sentry storage), each with purpose, duration, necessary/optional, and operator. Add a working "Manage preferences" link. Keep necessary storage listed separately. |
+| `app/public/privacy-choices.html` (new) | Public explanation of the two optional controls. Browser-level opt-out for signed-out visitors (stored locally); account-wide settings after sign-in. Links to export, deletion, and contact. Generates no optional analytics itself. Also serves as the "Your Privacy Choices" link for US state laws. |
+| `app/public/delete-account.html` (new) | Public deletion-request page naming the app and operator, with identity verification, what is deleted, retained exceptions, and timing. Works without reinstalling the app. **This URL goes in the Play Console Data safety "Delete account URL" field.** |
+| `app/tabs/account.tsx`, `AccountProfileManagement.tsx` | Privacy section (Phase 1). Make the legal links point to the canonical routes. Keep in-app deletion with proportional confirmation; normal deletion must not require contacting support. |
+| `server/src/app.ts` | Serve `/privacy`, `/privacy.html`, `/cookies.html`, `/privacy-choices`, `/delete-account` with stable aliases. Static pages are matched **before** the SPA fallback so a missing page returns 404 instead of the app shell. |
+| Web footer / login screen | Add "Privacy Choices" next to the Privacy and Terms links. |
+| `docs/app-store-review-packet.md`, store metadata | Updated App Privacy and Data safety answers, policy/choices/deletion URLs, SDK inventory, and reviewer steps with screenshots of the consent sheet and Privacy settings. |
+| `docs/sentry.md`, `docs/admin.md`, `docs/feature-flags.md` | Permission gating, diagnostic sampling/retention, metric definitions, coverage, the new flags, and rollout runbook. |
 
-Required notice content: data categories and sources; optional feature/session/platform/trip-phase collection; pseudonymous linkage; direct/allocated cost metering; necessary versus optional purposes; consent/withdrawal; rights and complaint channels; retention; recipients and regions; lawful transfer safeguards; no GPS inference claim; no advertising IDs/fingerprinting/replay in this scope; how nonconsenting users affect reports. Do not promise anonymity, universal deletion or vendor behavior that implementation cannot demonstrate.
+**Required new or changed notice content:**
 
-Publish a purpose/data/recipient matrix and appropriate processor agreements. Verify access to processors, subprocessor changes and international transfers; EU SCCs or another valid mechanism require assessment, not just naming them in a policy. [European Commission transfer guidance](https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/rules-international-data-transfers_en)
+1. **What we collect for analytics**: feature views, task outcomes, session timing, platform/app version/browser family, and trip phase (before/during/after, from trip dates, not location). State that it is linked to a pseudonymous account ID and that this is still personal data.
+2. **Diagnostics**: necessary crash reporting versus optional detailed diagnostics (user-linked sessions/performance), with the provider (Sentry), region, and retention.
+3. **Cost metering**: per-user/trip AI and API usage recorded to run quotas and manage costs, on a necessary/legitimate-interests basis that does not depend on the analytics toggle.
+4. **Legal basis table**: consent for optional analytics/diagnostics; contract/legitimate interests for security, quotas, and cost metering; legal obligation for billing records.
+5. **Your choices**: how to opt in, opt out, and withdraw (Account → Privacy, Privacy Choices page). Refusing does not affect features. GPC/DNT are honored as refusal.
+6. **Retention**: the approved schedule from the table above, in plain language.
+7. **Recipients and transfers**: Google Cloud/Firebase (hosting/storage), Sentry, AI providers. Transfer mechanism (adequacy / EU-US Data Privacy Framework / SCCs) per provider, with a link to the subprocessor list.
+8. **Rights**: access, correction, deletion, restriction, objection, portability, withdrawal, complaint to a supervisory authority, US-state appeal process, response timelines, and how to submit (in-app, web page, email).
+9. **What we do not do**: no sale or sharing for cross-context behavioral advertising, no advertising IDs, no fingerprinting, no session replay, no GPS, no use of Gmail/Plaid content for analytics.
+10. **Device identifiers**: push notification tokens (purpose, encryption, deletion on logout/account deletion).
+11. **Children**: a single consistent minimum age matching the registration age gate, and no analytics profiling of minors or non-account companions.
+12. **Changes**: material changes to analytics purposes trigger an in-app notice and a new consent request (the notice-version bump moves users to the obsolete-notice state).
+
+Do not promise anonymity, universal deletion, or vendor behavior the implementation cannot demonstrate.
+
+Publish a purpose/data/recipient matrix and sign processor agreements (DPAs) with each provider. Verify subprocessor notifications and transfer mechanisms; naming SCCs in a policy is not the assessment. [European Commission transfer guidance](https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/rules-international-data-transfers_en)
 
 ## Regulatory and mobile release requirements
 
-### GDPR, ePrivacy and related laws
+### GDPR, UK GDPR, ePrivacy/PECR
 
-Use purpose limitation, minimization, retention and accountable access controls throughout. Record consent evidence and allow withdrawal without making core features conditional on optional tracking. Evaluate EU ePrivacy/national implementation and UK PECR storage/access rules independently from the personal-data processing basis; using localStorage or a native SDK instead of cookies is not an automatic exemption. This plan deliberately chooses opt-in globally, including where reviewed statistical exceptions might permit another approach. [EDPB consent guidance](https://www.edpb.europa.eu/documents/guideline/guidelines-052020-on-consent-under-regulation-2016679_en), [ICO storage/access guidance](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guide-to-pecr/cookies-and-similar-technologies/)
+- Purpose limitation, minimization, retention limits, and accountable access controls throughout.
+- Consent must be freely given, specific, informed, and unambiguous. Record evidence and make withdrawal as easy as giving consent. Core features never depend on optional tracking. [EDPB consent guidelines](https://www.edpb.europa.eu/documents/guideline/guidelines-052020-on-consent-under-regulation-2016679_en)
+- ePrivacy Art. 5(3) and UK PECR reg. 6 apply to **any** storage or access on the device, so `localStorage` and native SDK storage are not exempt because they are not cookies. Analytics storage is set only after consent. [ICO storage/access guidance](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guide-to-pecr/cookies-and-similar-technologies/)
+- This plan chooses opt-in globally, even where a reviewed statistical exemption (e.g. the UK DUA Act 2025 analytics exception, CNIL audience-measurement exemption) might allow otherwise. Any later use of an exemption is a documented, reviewed exception.
+- Article 30 record, DPIA screening, Article 27 representative and DPO applicability, and breach-response process (72 h notification).
 
-Maintain a jurisdiction/applicability matrix for EU/EEA, UK, relevant US states and launch markets, including Canada's PIPEDA/provincial requirements and other applicable local laws. Validate age requirements without adding demographic analytics. Prohibit secondary behavioral profiling of non-account companions or minors from travel documents.
+### US state privacy laws (CCPA/CPRA and similar)
 
-For applicable US state laws, support required access/correction/deletion/appeal and sale/sharing/targeted-advertising opt-outs, non-discrimination and recognized universal opt-out signals. This design includes no sale or targeted advertising; do not mislabel necessary service-provider processing as a sale or claim that every analytics toggle is a statutory sale opt-out. Honor GPC for its applicable legal purpose and, as a conservative product rule, keep optional analytics off when it is present unless a reviewed flow resolves the choice. [California Attorney General CCPA guidance](https://oag.ca.gov/privacy/ccpa)
+- Support access, correction, deletion, appeal, and non-discrimination. Honor GPC as a recognized opt-out signal.
+- This design includes no sale or targeted advertising. Do not mislabel necessary service-provider processing as a sale, and do not describe every analytics toggle as a statutory "Do Not Sell or Share" opt-out. Link "Your Privacy Choices" to `privacy-choices.html`. [California AG CCPA guidance](https://oag.ca.gov/privacy/ccpa)
+- Maintain an applicability matrix covering EU/EEA, UK, the relevant US states, Canada (PIPEDA/Quebec Law 25), and any launch markets.
 
-Keep an incident-response and privacy-review process for new events, SDK upgrades and exports. Assess third-party Gmail/Plaid contractual restrictions separately: consent to product analytics does not authorize content reuse forbidden by API agreements.
+### Restricted data sources
 
-### iPhone/iOS
+Gmail (Google API Limited Use) and Plaid terms apply independently. Consent to product analytics never authorizes reuse of their content, so no content-derived properties go into events.
 
-Update App Store Connect disclosures for actual Product Interaction, User ID and diagnostics, purposes and linkage. Account pseudonyms are not automatically unlinked data. Include optional collection when required by Apple's disclosure criteria. Provide public policy and choices URLs. [Apple App Privacy details](https://developer.apple.com/app-store/app-privacy-details/)
+### iOS / App Store
 
-The proposed first-party product analytics does not intentionally combine data with other companies' data for advertising or share with brokers. Validate all SDK behavior before deciding ATT is unnecessary; if tracking is introduced, gate it on ATT plus applicable legal permission. ATT is not GDPR consent. No IDFA access or fingerprinting is part of this plan. [Apple privacy and ATT guidance](https://developer.apple.com/app-store/user-privacy-and-data-use/)
+| Requirement | Action |
+|---|---|
+| App Privacy labels (App Store Connect) | Declare **Product Interaction** (analytics, linked to user), **User ID** (app functionality and analytics, linked), **Device ID** (push token, app functionality), **Crash Data** and **Performance Data** (app functionality, plus analytics when optional diagnostics are on), and **Other Diagnostic Data** as applicable. Optional collection must still be declared. "Used for tracking" is **No**. [Apple App Privacy details](https://developer.apple.com/app-store/app-privacy-details/) |
+| App Tracking Transparency | Not required. Nothing links data with other companies' data for advertising or shares it with brokers, and no IDFA is accessed. Confirm by SDK network inspection. If tracking is ever introduced, it requires both ATT and legal consent, and ATT is not GDPR consent. [Apple user privacy and data use](https://developer.apple.com/app-store/user-privacy-and-data-use/) |
+| Privacy manifest | Add `ios.privacyManifests` in `expo.config.shared.cjs` declaring `NSPrivacyCollectedDataTypes` (matching the labels), `NSPrivacyTracking: false`, and required-reason APIs (`NSPrivacyAccessedAPICategoryUserDefaults` CA92.1, file timestamp, system boot time, disk space as reported). Validate with the Xcode **Privacy Report** on the archived EAS build, not just the JS config. [Apple third-party SDK requirements](https://developer.apple.com/support/third-party-SDK-requirements/) |
+| Account deletion (5.1.1(v)) | In-app initiation of full deletion including analytics; no deactivation-only or support-only flow. [Apple account deletion guidance](https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion) |
+| Policy URLs | Privacy policy URL and (optional) privacy choices URL in App Store Connect, both live before submission. |
 
-Review app/app.config.ts, Expo generated native output and SDK versions for PrivacyInfo.xcprivacy, declared collection, required-reason API declarations and applicable SDK signatures. Validate the archived app/Xcode privacy report, not only the JavaScript configuration. [Apple SDK requirements](https://developer.apple.com/support/third-party-SDK-requirements/)
+### Android / Google Play
 
-Verify in-app initiation of complete account deletion, linked analytics removal and understandable retained exceptions; do not substitute deactivation or a support-only flow. [Apple account deletion guidance](https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion)
+| Requirement | Action |
+|---|---|
+| Data safety form | Declare **App activity → App interactions** (analytics, optional), **Device or other IDs** (push token, app functionality), **App info and performance → Crash logs, Diagnostics** (necessary crash reporting plus optional detail), **Personal info → User IDs**. Data is encrypted in transit and users can request deletion. Include SDK collection and check any service-provider exceptions against Google's definitions. [Google Data safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en) |
+| Advertising ID | Add `com.google.android.gms.permission.AD_ID` to `android.blockedPermissions` in `expo.config.shared.cjs` and answer "No" to the advertising ID declaration. Verify the final merged manifest from the EAS build. |
+| User Data policy | Prominent in-app disclosure and consent before optional collection (the consent sheet satisfies this if it appears before any collection). Accurate, accessible policy link in-app and on the store listing. [Google User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311?hl=en) |
+| Account deletion | In-app deletion **plus** a public web URL (`delete-account.html`) entered in Play Console. Disclose retained-data exceptions. [Google account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en) |
 
-### Android/Google Play
-
-Update Data safety for actual app interactions, identifiers and diagnostics, purposes, linkage, collection/sharing classifications, optionality, security and deletion. Include SDK collection and validate any service-provider exceptions under Google's definitions. [Google Data safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en)
-
-Review all SDK permissions and remove unnecessary AD_ID/location permissions from the final merged manifest. Provide prominent in-app disclosure and consent when Google's policy requires it, independently of Android runtime permissions. Keep public privacy policy accurate and accessible. [Google User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311?hl=en)
-
-Verify both in-app deletion and the external web deletion-request route and its Play Console URL. Disclose lawful retention exceptions. [Google account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en)
-
-Store labels, manifests and policy pages are complementary deliverables; none substitutes for actual permission enforcement or rights processing.
+Store labels, manifests, and policy pages complement each other, and none of them replaces real permission enforcement or rights processing.
 
 ## Phase 5: Reporting, ease of analysis and access
 
-Owners: product/backend/frontend leads. Dependencies: privacy/rights gates and validated collection.
+Owners: product/backend/frontend leads. Depends on the privacy/rights gates and validated collection.
 
-- Extend AdminTab with aggregate feature adoption, cost, reliability, platform and trip-phase views. Reuse existing admin APIs/components with bounded, paginated endpoints and server RBAC.
-- Show definition, units, date window/timezone, eligible population, consenting population, numerator/denominator, sampling, freshness and unknowns on every view. Consent-biased samples must not be labeled all users.
-- Version metric calculations and curate query/read models; index frequently used filters. Support CSV with definition/version metadata and suppression consistent with the UI.
-- Use consented eligible-population facts for feature/trip engagement denominators and appropriately justified operational populations for cost. Keep them purpose-separated.
-- Apply least privilege: aggregate product views by default, restricted cost/user investigation, audited access/export, no public behavioral reports or direct database email joins.
-- Do not sum daily unique users for month-level uniques, average p95s, or average rates without denominators. Use bounded histograms/sketches or raw permitted measures for percentiles; validate native and web coverage.
-- Add activation, collaboration, next-trip retention, AI value and monetization views only after the initial reports are trusted.
+- Add an **Analytics** section to `AdminTab` with five aggregate views: feature adoption, cost, reliability, platform mix, trip-phase engagement. Reuse existing admin components and RBAC, with bounded, paginated endpoints under `/api/admin/analytics/*`.
+- Every view shows definition, units, window/timezone, eligible versus consenting population, numerator/denominator, sampling, freshness, and unknowns. Consent-biased samples are never labeled "all users".
+- Metric calculations live in one versioned module (`server/src/analytics/metrics/`) that both the API and the CSV export use, so the two cannot disagree. CSV exports include definition/version metadata and the same suppression as the UI.
+- Least privilege: aggregate product views by default; cost/user investigation restricted and audited in `audit_log`; no public behavioral reports or email joins.
+- Percentiles come from histograms or raw permitted measures, never from averaged p95s. Validate native and web coverage separately.
+- **Ad-hoc analysis path:** a scheduled export of rollups (not raw events) to CSV in GCS, or to BigQuery if Phase 0 approves it. This lets analysts use SQL or spreadsheets without production DB access.
+- Activation, collaboration, retention, AI value, and monetization views come only after the first five are trusted.
 
-Acceptance: fixture reports match independently calculated expected results, explain exclusions and enforce small-cohort/export controls.
+**Acceptance:** fixture reports match independently calculated expected results, explain exclusions, and enforce small-cohort and export controls.
 
-## Performance, cost and maintainability budgets
+## Performance, cost and maintainability
 
-Initial targets below are engineering acceptance budgets, not measured current behavior:
+### Performance budgets (acceptance targets, not current measurements)
 
-- Disabled analytics adds no optional network requests or persistent analytics writes.
-- Foreground instrumentation: p95 below 2 ms per local event on supported reference devices; no synchronous network/storage in render paths.
-- Product mutations: analytics adds at most 5 ms p95 synchronous work under representative load; optional persistence runs outside the response path.
-- Ingest: p95 below 200 ms for the supported batch at forecast peak, tested separately on deployed Postgres/Firebase shapes.
-- Admin reports: p95 below 2 seconds for supported 30-day views; no request scans the complete event collection.
-- Daily jobs: freshness within 24 hours, explicit alerts on missed runs, durable coordination; dashboards state the actual lag.
-- Behavior collection remains unsampled initially at a low event volume. If later sampled, document inclusion/weights and avoid biased funnel/unique-user calculations. Diagnostics starts with explicit low sampling, reviewed against error visibility.
+- Analytics disabled: zero optional network requests and zero persistent analytics writes.
+- Client: p95 < 2 ms per `track()` call on reference devices; no synchronous network or storage in render paths.
+- Product mutations: ≤ 5 ms p95 added synchronous work; persistence runs outside the response path.
+- Ingest: p95 < 200 ms per 20-event batch at forecast peak, tested on both Postgres and Firestore.
+- Admin reports: p95 < 2 s for 30-day views; no request scans the full event store.
+- Daily jobs: freshness within 24 h, alerts on missed runs, dashboards show actual lag.
+- Behavior events are unsampled at first. Diagnostics start at a low explicit sample rate. If behavior events are sampled later, document weights and avoid biased funnels and uniques.
 
-Model monthly overhead from consenting MAU x sessions/user x events/session, batch writes, indexes, rollup reads, retention bytes, vendor event quotas, jobs, export/deletion, logging and egress. Include multiple Firebase writes/index overhead rather than assuming batching makes writes free.
+### Cost model
 
-Set a dollar cap with the operations owner from measured baseline and model sensitivity at 1x/5x/10x expected usage; alert at 80% and 100%. Degrade optional detail/sampling or disable optional collection if approved budgets are exceeded, while preserving privacy choices and required accounting. Do not log every event or copy payloads into exception output.
+Monthly overhead ≈ consenting MAU × sessions/user × events/session, plus batch writes, index writes, rollup reads, retained bytes, job runs, export/deletion, logging, and egress. An illustrative calculation to re-run with Phase 0 numbers and current pricing:
 
-Maintain one registry and calculation layer, shared constants, adapter contract tests and explicit owners. Reject arbitrary auto-capture. Review new event proposals for product question, schema, permission, retention and expected volume. Add new infrastructure only after query/cost evidence establishes a need.
+| Input | Assumption |
+|---|---|
+| Consenting MAU | 1,000 |
+| Sessions per user per month | 8 |
+| Events per session | 25 |
+| **Events per month** | **200,000** (~10,000 batches) |
+
+- **Postgres:** about 0.5 KB per row with indexes, so about 100 MB/month and about 300 MB at 90-day retention. Marginal cost is negligible on the existing instance.
+- **Firestore:** one document per event means 200k writes plus index-entry writes. One document per **batch** means about 10k writes, roughly 20× fewer, so store raw events per batch and compute rollups in the daily job. Disable indexing on the `events` array field, and use TTL deletes (which are free of write charges, but verify current pricing).
+- **Daily job:** one Cloud Run job execution per day reading one day of batches.
+- **Sentry:** user-linked sessions and traces only for consenting users, with explicit sample rates. Monitor quota.
+
+Re-run at 1×, 5×, and 10× expected volume. The operations owner sets a monthly dollar cap with alerts at 80% and 100%. When over budget, reduce optional detail or sampling, or turn off optional collection with the kill switch, while keeping privacy choices and required accounting working. Never log individual events or copy payloads into error output.
+
+### Maintainability
+
+- One registry, one calculation layer, shared constants, adapter contract tests, and named owners per event family.
+- No auto-capture. Each new event is reviewed for the product question it answers, its schema, permission category, retention, expected volume, and any policy/store-label impact (a PR checklist item in the registry file header).
+- CI checks for registry drift between client and server, for generated legal pages drifting from the canonical source, and for any `track()` call using an event name not in the registry.
+- Add infrastructure (warehouse, third-party analytics) only when query or cost evidence shows a need.
 
 ## Test coverage and validation
 
-| Layer | Required meaningful cases |
-|---|---|
-| Pure utilities | Registry validation, session inactivity/foreground caps, timezone/DST/inclusive boundaries, invalid/missing dates, concurrent trips, arithmetic/units and unknown pricing |
-| Client/Jest | Zero collection before permission, equal reject path, reload/account-switch behavior, consent sync errors, stale epoch/regrant, withdrawal during flush, bounded queue/offline expiry, duplicate renders and SDK shutdown |
-| API/Supertest | Auth, user/trip spoofing, invalid schema/oversized batches, deduplication, denied/withdrawn consent, stale revisions, feature flags off/missing, deletion races and abuse limits |
-| Adapter integration | Postgres/Firebase parity, index/query behavior, batch transactions, concurrent ingestion, leases/idempotent jobs, retention purge and nested-data erasure; memory tests alone do not establish Firebase behavior |
-| Cost | Each provider path, retries/failures/cache/shared/system attribution, reservation versus settlement, double-record protection, known/unknown rates, credits and invoice fixtures |
-| Reports | Golden journeys, zero/nonzero denominators, eligibility history, late events, distinct counts, weighted rates, percentile buckets, consent bias, suppressed cohort/differencing and export parity |
-| Rights | Export scope and completeness, partial-provider deletion/retry, rollup rebuild, retained-exception separation, backup restore replay, tombstones, object captures and vendor confirmation |
-| Web/E2E | Fresh browser accept/reject/customize/withdraw, no optional storage/network before permission, public policy aliases, working choices/deletion links, app usability after refusal |
-| Native release | iOS/Android network and local-storage inspection, startup/background/resume/withdrawal, final manifests/SDK privacy report, deletion without reinstall and store disclosure reconciliation |
-| Load and failure | Supported devices and DBs at forecast peak, DB/provider outage, queue limits, timeout/retry backoff, collector failure isolation, replica/restart behavior and measured monthly cost |
+| Layer | Required cases | Suggested files |
+|---|---|---|
+| Pure utilities | Registry validation; session inactivity/foreground caps; trip phase with timezone, DST, inclusive boundaries, missing dates, concurrent trips; cost arithmetic, units, unknown pricing | `server/__tests__/analytics-registry.test.ts`, `trip-phase.test.ts`, `app/tests/analyticsSession.test.ts` |
+| Client (Jest) | Zero collection before permission; equal reject path; reload and account switch; consent sync errors; stale epoch/regrant; withdrawal during flush; bounded queue and offline expiry; duplicate renders; Sentry minimal mode and shutdown | `app/tests/privacyConsent.test.ts`, `analyticsTrack.test.ts`, extend `sentry.test.ts`, `AccountProfileManagement.test.tsx` |
+| API (Supertest) | Auth; user/trip spoofing; invalid schema and oversized batches; deduplication; denied/withdrawn consent; stale revisions; flags off or missing (fail-closed); deletion races; rate limits | `server/__tests__/analytics-ingest.test.ts`, `privacy-preferences.test.ts` |
+| Adapter integration | Postgres/Firebase parity; index and query behavior; batch transactions; concurrent ingestion; leases and idempotent jobs; retention purge; nested-data erasure. Memory-adapter tests alone do not prove Firebase behavior. | `analytics-adapter-parity.test.ts`, run with `DB_PROVIDER=memory` and `firebase` |
+| Cost | Every provider path; retries, failures, cache, shared and system attribution; reservation versus settlement; double-record protection; known/unknown rates; credits; invoice fixtures | extend `openai-usage-accounting.test.ts`, `usage-tracking.test.ts`; new `provider-cost-ledger.test.ts` |
+| Metrics | Histogram retention, label preservation, process identity, Prometheus export | extend `metrics.test.ts` |
+| Reports | Golden journeys; zero/nonzero denominators; eligibility history; late events; distinct counts; weighted rates; percentile buckets; consent bias; small-cohort suppression and differencing; CSV/UI parity | `analytics-reports.test.ts`, extend `firebase-admin-analytics.test.ts` |
+| Rights | Export completeness and scope (no other travelers); partial-provider deletion and retry; rollup rebuild; retained-exception separation; backup-restore replay; tombstones; captures | extend `accountExport.test.ts`, `accountDelete.test.ts`; new `analytics-erasure.test.ts` |
+| Legal pages | Generated pages match canonical; all aliases return 200 (not the SPA shell); required sections present | `server/__tests__/legal-pages.test.ts` |
+| Web E2E (Playwright) | Fresh browser accept/reject/customize/withdraw; no optional storage or network before permission (assert on `page.on('request')` and `localStorage`); GPC header honored; public policy, choices, and deletion links work; app usable after refusal | `app/e2e/privacy-consent.test.ts` |
+| Native release | iOS/Android proxy and storage inspection; startup/background/resume/withdrawal; Xcode privacy report; merged manifest without AD_ID; deletion without reinstall; store disclosure reconciliation | Manual checklist in `docs/app-store-review-packet.md` |
+| Load and failure | Reference devices and both DBs at forecast peak; DB/provider outage; queue limits; timeout/backoff; collector failure isolation; replica/restart behavior; measured monthly cost | Extend `app/e2e/performance.test.ts`; load script in `scripts/` |
 
-Run existing app/server suites and affected Playwright flows for implementation changes. Use current logger, usage-accounting, metrics, Sentry, admin and Firebase analytics tests as regression anchors. Add adversarial cases rather than tests that only restate schemas. CI must detect registry/disclosure drift and mismatched generated policy pages.
+Run the existing app and server suites and the affected Playwright flows for every implementation PR. Use the existing logger, usage-accounting, metrics, Sentry, admin, and Firebase analytics tests as regression anchors. Prefer adversarial cases over tests that only restate schemas.
 
 ## Rollout and completion criteria
 
-1. Merge reviewed schemas and privacy controls with collection flags off.
-2. Deploy synchronized approved pages and verified rights workflows; prepare matching store artifacts before mobile release.
-3. Exercise synthetic consenting staging journeys and privacy-denied journeys; confirm no production-user data is copied into fixtures.
-4. Canary opt-in collection for a small cohort with full coverage indicators. Compare ledger accounting against existing counters without adding spend twice.
-5. Monitor ingestion failures, consent enforcement, report freshness, latency and dollar budgets; expand only after acceptance evidence passes.
+1. Merge reviewed schemas, privacy controls, and the Sentry minimal mode with collection flags **off**.
+2. Deploy the consolidated policy pages, privacy choices, deletion page, and verified rights workflows. Prepare matching App Store and Play disclosures **before** the mobile build that contains the consent UI ships.
+3. Run synthetic consenting and refusing journeys in staging. No production user data is copied into fixtures.
+4. Turn on `analytics_collection_enabled` for an internal/admin canary cohort, then a small percentage, with full coverage indicators. Compare ledger accounting against existing counters without double-counting spend.
+5. Monitor ingest failures, consent enforcement, report freshness, latency, and dollar budgets. Expand only after the acceptance evidence passes.
 
-Kill switch stops optional producers/admission/SDK export. It leaves preference changes, erasure, exports, retention and necessary operational accounting functioning. Rollback must not drop ledger records or recreate withdrawn/deleted subject data.
+The kill switch stops optional producers, admission, and SDK export. Preference changes, erasure, export, retention jobs, and required accounting keep working. Rollback must not drop ledger records or recreate withdrawn or deleted subject data.
 
-Completion requires: five trusted dashboards; tested privacy controls on all platforms; canonical synchronized notices/routes; documented jurisdiction/basis/processor/transfer decisions; working rights/retention jobs; accurate store submissions; adapter parity and regression/load evidence; measured attribution/consent coverage; and owned runbooks for incidents, cost alerts, SDK upgrades and definition changes.
+**Done when:** the five dashboards are trusted; privacy controls are tested on all three platforms; one canonical notice is served on all routes; jurisdiction, basis, processor, and transfer decisions are documented; rights and retention jobs work; store submissions match the built apps; adapter parity, regression, and load evidence exist; attribution and consent coverage are measured; and runbooks exist for incidents, cost alerts, SDK upgrades, and definition changes.
 
-Open decisions for Phase 0: confirmed legal controller/contact/age; launch jurisdictions/representatives; approved retention schedules; shared-cost allocation; trip timezone fallback; reference-device/load baseline; required consent renewal triggers; processor deletion capabilities; and whether any later warehouse is justified. Missing decisions keep optional production collection disabled.
+**Open decisions for Phase 0:** legal controller/operator, contact, and minimum age; launch jurisdictions and representatives; retention schedules; shared-cost allocation; trip timezone fallback; reference devices and load baseline; consent renewal triggers; processor deletion capabilities; BigQuery/warehouse need. While any of these is open, optional production collection stays disabled.

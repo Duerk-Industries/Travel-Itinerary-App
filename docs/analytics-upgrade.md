@@ -1,101 +1,118 @@
 # Analytics Upgrade: Collection, Goals, and Behavior
 
-Status: proposed design; no new collection or policy changes are enabled by this document.
+Status: proposed design. No new collection, SDK, or policy change is enabled by this document.
 Assessment date: October 8, 2026.
-Delivery details: [implementation plan](implementation_plans/analytics-upgrade.md).
+Delivery plan: [Analytics Upgrade Implementation Plan](implementation_plans/analytics-upgrade.md).
+
+This document explains what analytics WanderBunnies collects today, what the upgrade adds, why, how collection behaves on web, iOS, and Android, and which privacy commitments constrain it. The implementation plan covers sequencing, privacy-policy page changes, tests, performance, and cost.
+
+## Summary
+
+- **Goals:** understand feature value, cost per user and per trip, app performance, native versus web use, and whether people use the app during their trips.
+- **Approach:** a small, typed, first-party event pipeline built on the existing server and database. Initially there is no third-party analytics SDK, no advertising identifier, no fingerprinting, no session replay, and no GPS.
+- **Privacy default:** optional product analytics and optional detailed diagnostics are **off until the user opts in**, on every platform and in every region. Refusing changes nothing about the travel features.
+- **Separation:** necessary operational records (security, quotas, billing, cost metering) are kept apart from optional behavioral analytics and are never silently repurposed as optional analytics.
+- **Compliance posture:** designed to support GDPR/UK GDPR, ePrivacy/PECR, US state privacy laws, Apple App Store privacy rules, and Google Play User Data policy. Legal sign-off is still required. This document does not certify compliance.
 
 ## Purpose and scope
 
-Understand which features deliver value, what users cost, how well the app performs, which platforms people use, and whether they use it during their trips. Build on existing accounting and diagnostics, with a small, consistent behavioral event system and explicit privacy choices.
+The current data answers "what did it cost" and "did it crash" in places. It does not answer "which features do people value", "does anyone open the app on the trip", or "is the native app worth its cost compared with web." This upgrade fills those gaps with the fewest new moving parts.
 
-This assessment describes repository implementation, not verified production collection. Before rollout, inventory deployed environment settings, database populations, provider retention, SDK traffic, and actual reporting coverage. Current operational data must not automatically become a historical behavioral dataset merely because it can be queried.
+This assessment describes the repository's implementation, not verified production collection. Before rollout, inventory deployed environment settings, database populations, provider retention, SDK network traffic, and actual reporting coverage. Operational data that already exists must not become a historical behavioral dataset just because it can be queried.
 
 ## Current collection and format
 
 | Collection | Recorded information | Format/storage | Source and constraints |
 |---|---|---|---|
-| HTTP access | Time, method, original URL, status, duration, request ID | JSON lines in production/Cloud Run; text locally; console | [app.ts](../server/src/app.ts). Access entries omit explicit user/platform fields; URLs may include sensitive query values. Polling is not engagement. |
-| Application/error logs | Processing messages, errors/stacks, request context, sometimes authenticated user ID | JSON/text to console and server/logs/api-info.log or api-error.log when writable | [logger.ts](../server/src/logger.ts). Redaction exists for metadata keys, but arbitrary message strings and URLs need review. |
-| Per-user usage | Trip creations, successful itinerary generations, selected AI calls/tokens/estimated costs, weather and import-related operations | usage_events: user, metric key, numeric amount, JSON metadata, timestamp; usage_counters: user/metric/window totals | [entitlementService.ts](../server/src/services/entitlementService.ts), [OpenAI accounting](../server/src/apis/openaiApi.ts), [provider registry](../server/src/ai/registry/aiProviderRegistry.ts). Coverage depends on caller context and accounting settings. |
-| Provider limits/budgets | Provider/caller/window usage; provider/window estimated spend | api_usage_counters; api_cost_counters with integer USD microdollars | [usageLimiter.ts](../server/src/apis/usageLimiter.ts), [providerBudgeting.ts](../server/src/apis/providerBudgeting.ts). Provider totals alone are not a complete user cost ledger. |
-| Itinerary telemetry | User/trip, generation outcome, tokens, cost estimate, stage latency, parse failure, quality, cache/fallback and avoided inference | itinerary_generation_metrics: indexed columns plus JSON payload | [itineraryMetricsService.ts](../server/src/services/itineraryMetricsService.ts). Best-effort writes; capture configurable. User/trip linkage means this is not anonymous. |
-| AI captures/evaluation | Parsing/generation captures, evaluations, experiments, provider/model/prompt and cost rollups | Gzipped JSON locally or Google Cloud Storage; database metrics by period/dimensions/key/value | [captureService.ts](../server/src/ai/capture/captureService.ts), [aggregationJob.ts](../server/src/ai/analytics/aggregationJob.ts). Inspected aggregation reads local captures; production object-storage completeness needs verification. |
-| Ingestion operations | Job/stage outcomes, duplicates, retries, dead letters, quota and related LLM usage | Durable import records and admin JSON reports; queue gauges in memory | [ingestionMetricsService.ts](../server/src/services/ingestionMetricsService.ts), [admin reference](admin.md). Pipeline/configuration dependent. |
-| Trip activity | Selected changes, actor, trip, type, metadata, timestamps | trip_activity records; grouped feed output | [activityFeed.ts](../server/src/services/activityFeed.ts). Contributions are observable; passive reading and abandoned actions are not. |
-| Admin audit | Actor/target, before/after, reason, timestamp | audit_log rows/documents | [admin reference](admin.md). Administrative actions, not customer engagement. |
-| Sentry | Client/server crashes and sampled performance; client auto-session tracking | Sentry events/traces; default trace sampling 10% | [client bootstrap](../app/utils/sentry.ts), [server bootstrap](../server/src/instrument.ts), [Sentry guide](sentry.md). DSN gated; replay disabled. Client initialization currently precedes a user privacy choice. |
-| Server counters/gauges | Cache totals/ratios and queue depths | Per-process maps; admin JSON and /metrics Prometheus text | [metrics.ts](../server/src/metrics.ts), [Prometheus route](../server/src/routes/prometheusRoutes.ts). Restart resets; counters discard caller labels; recordTiming currently retains/exports nothing. Revision-based instance labeling needs verification for multiple instances. |
-| Cost forecasting | Assumed usage, pricing and infrastructure line items | YAML/admin settings and estimate responses | [cost-model.yaml](../server/config/cost-model.yaml), [costEstimatorService.ts](../server/src/services/costEstimatorService.ts). Forecasts are distinct from incurred costs. |
+| HTTP access | Time, method, original URL, status, duration, request ID | JSON lines in production/Cloud Run; text locally; console | [app.ts](../server/src/app.ts). No explicit user/platform fields. URLs may contain sensitive query values. Polling is not engagement. |
+| Application/error logs | Processing messages, errors/stacks, request context, sometimes authenticated user ID | JSON/text to console and `server/logs/api-info.log` / `api-error.log` when writable | [logger.ts](../server/src/logger.ts). Metadata keys are redacted. Free-text messages and URLs still need review. |
+| Per-user usage | Trip creations, successful itinerary generations, selected AI calls/tokens/estimated costs, weather and import operations | `usage_events` (user, metric key, amount, JSON metadata, timestamp); `usage_counters` (user/metric/window totals) | [entitlementService.ts](../server/src/services/entitlementService.ts), [openaiApi.ts](../server/src/apis/openaiApi.ts), [aiProviderRegistry.ts](../server/src/ai/registry/aiProviderRegistry.ts). Coverage depends on caller context and accounting settings. |
+| Provider limits/budgets | Provider/caller/window usage; provider/window estimated spend | `api_usage_counters`; `api_cost_counters` in integer USD microdollars | [usageLimiter.ts](../server/src/apis/usageLimiter.ts), [providerBudgeting.ts](../server/src/apis/providerBudgeting.ts). Provider totals alone are not a per-user cost ledger. |
+| Itinerary telemetry | User/trip, outcome, tokens, cost estimate, stage latency, parse failure, quality, cache/fallback, avoided inference | `itinerary_generation_metrics`: indexed columns plus JSON | [itineraryMetricsService.ts](../server/src/services/itineraryMetricsService.ts). Best-effort writes. User/trip linkage means this data is not anonymous. |
+| AI captures/evaluation | Parsing/generation captures, evaluations, experiments, provider/model/prompt and cost rollups | Gzipped JSON locally or in Google Cloud Storage; DB metrics by period/dimension | [captureService.ts](../server/src/ai/capture/captureService.ts), [aggregationJob.ts](../server/src/ai/analytics/aggregationJob.ts). The aggregation job reads local captures, so production completeness is unverified. |
+| Ingestion operations | Job/stage outcomes, duplicates, retries, dead letters, quota, related LLM usage | Durable import records and admin JSON; in-memory queue gauges | [ingestionMetricsService.ts](../server/src/services/ingestionMetricsService.ts), [admin reference](admin.md). |
+| Trip activity | Selected changes, actor, trip, type, metadata, timestamps | `trip_activity` records; grouped feed | [activityFeed.ts](../server/src/services/activityFeed.ts). Contributions are visible. Reading and abandoned actions are not. |
+| Admin audit | Actor/target, before/after, reason, timestamp | `audit_log` | [admin reference](admin.md). Administrative actions only. |
+| Sentry | Client/server crashes, sampled performance, client auto-session tracking | Sentry events/traces; default trace sampling 10% | [app/utils/sentry.ts](../app/utils/sentry.ts), [instrument.ts](../server/src/instrument.ts), [Sentry guide](sentry.md). DSN-gated; replay disabled. **Client init runs in `AppEntry.js` before any privacy choice exists.** |
+| Push tokens | Expo push token per device (encrypted at rest) | Push-token records | [pushNotifications.ts](../app/utils/pushNotifications.ts), [pushTokenCrypto.ts](../server/src/utils/pushTokenCrypto.ts). A device identifier for app-store disclosure purposes; not an analytics identifier. |
+| Server counters/gauges | Cache totals/ratios, queue depths | Per-process maps; admin JSON and `/metrics` Prometheus text | [metrics.ts](../server/src/metrics.ts). Restart resets values. Counters drop labels. **`recordTiming` calls a no-op `emit`, so no latency is retained.** |
+| Cost forecasting | Assumed usage, pricing, infrastructure line items | YAML/admin settings and estimate responses | [cost-model.yaml](../server/config/cost-model.yaml), [costEstimatorService.ts](../server/src/services/costEstimatorService.ts). Forecasts are not incurred cost. |
 
-Postgres uses SQL rows/JSONB; Firebase uses collections/documents. New storage and queries must work through the [DB facade](../server/src/db.ts) in both adapters, with the memory adapter supporting meaningful tests.
+Postgres stores SQL rows/JSONB and Firebase stores collections/documents. New storage must go through the [DB facade](../server/src/db.ts) in both adapters, with the memory adapter supporting meaningful tests.
 
-Existing admin user-data reports support 7-day, 30-day and all-time usage windows. They include tier, visible trips, trip creations, successful generations, tokens and API summaries. Some summaries use fallback estimates, so an API count must not be presented as a verified provider-call count without coverage metadata.
+Admin user-data reports cover 7-day, 30-day, and all-time windows: tier, visible trips, trip creations, successful generations, tokens, and API summaries. Some summaries use fallback estimates, so an API count must not be shown as a verified provider-call count without coverage metadata.
 
-No general client feature/session event pipeline was found. AppState and browser visibility listeners currently support lifecycle/polling behavior, not a comprehensive analytics session model.
+There is no general client feature/session event pipeline. The `AppState` and browser visibility listeners drive lifecycle and polling behavior, not analytics sessions.
 
 ## Goals and metric definitions
 
 ### 1. Feature adoption and value
 
-Track feature views and meaningful outcomes for overview, itinerary, activities, transfers, lodging, car rentals, expenses/ledger, packing, chat, collaboration, imports and AI assistance.
+Covers overview, itinerary, activities, transfers, lodging, car rentals, expenses/ledger, packing, chat, collaboration, imports, blog, and AI assistance.
 
-| Metric | Definition | Product decision |
+| Metric | Definition | Decision it supports |
 |---|---|---|
-| Feature reach | Unique consenting users with a feature view / consenting active users eligible for that feature in the same window | Discoverability and navigation |
-| Meaningful adoption | Unique consenting users with a completed meaningful action or engaged read / eligible consenting active users | Value beyond opening a tab |
-| Completion | Completed task attempts / started task attempts, deduplicated by operation ID | Workflow friction |
-| Repeat use | First-time feature users who use it again within a stated interval / mature first-use cohort | Sustained usefulness |
-| Time to value | Time from signup or first trip creation to a defined useful outcome | Onboarding improvements |
+| Feature reach | Unique consenting users with a feature view ÷ consenting active users eligible for that feature in the window | Discoverability, navigation |
+| Meaningful adoption | Unique consenting users with a completed meaningful action or engaged read ÷ eligible consenting active users | Value beyond opening a tab |
+| Completion | Completed task attempts ÷ started attempts, deduplicated by operation ID | Workflow friction |
+| Repeat use | First-time feature users who return within a stated interval ÷ mature first-use cohort | Sustained usefulness |
+| Time to value | Time from signup or first trip to a defined useful outcome | Onboarding |
 
-State the eligibility rule, time window, sample size and consent coverage on every chart. Feature flags, tier access, traveler role and platform availability affect denominators. Read-only itinerary/reference use counts as value; record creation alone understates it.
+Every chart states its eligibility rule, window, sample size, and consent coverage. Feature flags, tier access, traveler role, and platform availability all change denominators. Reading an itinerary or reference counts as value, because record creation alone understates it.
 
 ### 2. User and trip economics
 
-Measure direct cost by initiating user, trip, feature, provider/model and month. Record billable failures, retries, asynchronous jobs and background work; separate cache hits and avoided inference from actual spend.
+Measure direct cost by initiating user, trip, feature, provider/model, and month. Include billable failures, retries, async jobs, and background work. Keep cache hits and avoided inference separate from actual spend.
 
-Report direct attributable cost, allocated shared infrastructure cost, and their total separately. Keep allocation rules and versions visible. Allocate shared jobs once; a trip with five travelers does not incur five copies of one provider bill.
+- **Direct attributable cost**, **allocated shared infrastructure cost**, and **total** are reported separately, with the allocation rule and its version visible.
+- A shared job is allocated once. A trip with five travelers does not incur five copies of one provider bill.
+- Direct cost is the sum of priced billable units. An unknown price stays **unknown**, never zero. Show attribution coverage, pricing coverage, and invoice reconciliation variance. Store USD microdollars and label estimates separately from invoiced adjustments.
+- Useful views: median/p95 cost per user, cost by tier/feature/platform, cost per active trip, cost per successful generation/import, expensive-user distribution, contribution margin (with tax, refunds, store/payment fees handled consistently).
 
-Direct cost = sum of priced billable units. Unknown prices remain unknown, never zero. Show attribution coverage, pricing coverage and invoice reconciliation variance. Store USD microdollars for precision and label estimates versus invoiced adjustments.
-
-Useful views: median/p95 user cost, cost by tier/feature/platform, cost per active trip, cost per successful generation/import, expensive-user distribution and contribution margin. Keep tax, refunds, store/payment fees and revenue periods consistent when reporting margin. Operational metering has its own justified purpose; behavioral joins require the appropriate permission.
+Cost metering is necessary operational processing and does not depend on the analytics toggle. Joining cost to optional behavioral data requires the user's analytics permission.
 
 ### 3. Application performance and task effectiveness
 
-Technical measures: startup, trip-ready time, screen-ready latency, save latency, request failures, AI/import turnaround, crashes, hangs and connectivity failures. Report median/p95 and success rate by feature, platform, app version and network category; show sample rates.
-
-Task measures: wizard completion, invitation acceptance, time to add the first useful item, import correction and AI-plan acceptance. Long reading time is not automatically friction. Distinguish intentional cancellation, failure and inactivity abandonment.
+- **Technical:** cold start, trip-ready time, screen-ready latency, save latency, request failure rate, AI/import turnaround, crashes, hangs, connectivity failures. Report median/p95 and success rate by feature, platform, app version, and network category. Show sample rates.
+- **Task:** wizard completion, invitation acceptance, time to first useful item, import corrections, AI-plan acceptance. Long reading time is not automatically friction. Distinguish intentional cancellation, failure, and inactivity abandonment.
 
 ### 4. Native versus web use
 
-Record explicit platform (web/iOS/Android), web device category, browser/OS family, app version/build, and web standalone mode when available. Avoid advertising IDs, hardware identifiers and fingerprinting.
+Record explicit platform (`web` / `ios` / `android`), web device category, browser/OS family, app version/build, and web standalone (installed PWA) mode when available. Never use advertising IDs, hardware identifiers, or fingerprinting.
 
-Report unique users and sessions separately, with native-only, web-only and both-platform cohorts. A mobile browser remains web. Cross-device linkage uses the signed-in account only when permitted; do not infer that an unidentified browser and device are the same person.
+Report unique users and sessions separately, with native-only, web-only, and both-platform cohorts. A mobile browser counts as web. Cross-device linkage uses only the signed-in account, and only with permission. Never infer that an unidentified browser and device are the same person.
 
 ### 5. Use during trips
 
-Classify trip-specific engagement as pre-trip, during-trip, post-trip or unknown from the relevant trip's scheduled dates and defined timezone. Use inclusive trip-local start/end calendar dates, not server-local dates. Preserve phase/date-version context for history; use a defined trip timezone, segment timezone where available, and an explicit fallback/unknown rule.
+Each trip-specific event is classified as `pre_trip`, `during_trip`, `post_trip`, or `unknown`. Classification uses the trip's inclusive start/end calendar dates in the trip's timezone, not the server's. Fallback order: segment timezone → trip timezone → `unknown`. Record the date/timezone version so later date edits do not silently rewrite history.
 
-During-trip engagement rate = consenting eligible account travelers with meaningful engagement on that trip during its dates / consenting eligible account travelers whose scheduled trip occurred in the measurement window. Include non-engagers in the denominator. Exclude canceled trips, unregistered companions and users who lacked access then. Show users missing consent or usable dates as excluded/unknown coverage, not inactive users.
+**During-trip engagement rate** = consenting eligible account travelers with meaningful engagement on that trip during its dates ÷ consenting eligible account travelers whose trip occurred in the window.
 
-Also measure the share of eligible trips with engagement, engaged trip days, itinerary/detail reads, map links, expense entry, packing and chat. Associate events with the selected trip; activity on an unrelated future trip does not count for an ongoing trip. Multiple concurrent trips are classified separately.
+- Non-engagers stay in the denominator.
+- Canceled trips, unregistered companions, and users without access at the time are excluded.
+- Users with missing consent or unusable dates are reported as excluded/unknown coverage, not as inactive.
 
-These metrics establish usage during scheduled travel dates, not physical destination presence. GPS collection is outside this upgrade.
+Also measure the share of trips with any engagement, engaged trip days, itinerary/detail reads, map-link opens, expense entry, packing, and chat. Events attach to the selected trip, so activity on an unrelated future trip does not count for a current one. Concurrent trips are classified separately.
+
+These metrics show use **during scheduled travel dates**, not physical presence at the destination. GPS/location collection is out of scope.
 
 ## Behavioral event contract
 
-Maintain one typed, versioned registry. Every event declares purpose, owner, allowed properties, units, emitting boundary, consent category, retention and sampling. Define shared models in server/src/types.ts; validate client input with strict Zod schemas.
+One typed, versioned registry. Every event declares purpose, owner, allowed properties, units, emitting boundary, consent category, retention, and sampling. Shared models live in `server/src/types.ts`, and client input is validated with strict Zod schemas.
 
-Required envelope: event_id, schema_version, event_name, occurred_at, received_at, source, purpose, session_id where applicable, platform, app_version and environment. Server-derived fields include permitted analytics subject ID, tier/role, authorized trip reference and current consent revision. Event-specific fields include feature, action, outcome, operation_id, trip_phase, date/timezone version and allowlisted properties.
+- **Envelope:** `event_id`, `schema_version`, `event_name`, `occurred_at`, `received_at`, `source`, `purpose`, `session_id` (where applicable), `platform`, `app_version`, `environment`.
+- **Server-derived (clients cannot assert):** analytics subject ID, tier/role, authorized trip reference, consent revision/epoch.
+- **Event-specific:** `feature`, `action`, `outcome`, `operation_id`, `trip_phase`, date/timezone version, allowlisted `properties`.
 
-| Event family | Examples | Boundary |
+| Event family | Examples | Emitted from |
 |---|---|---|
-| Session | session_started, engaged_session_summary | Client foreground/visibility, subject to consent |
-| Views | feature_viewed, trip_reference_viewed | Client after actual visible rendering |
-| Tasks | task_started, task_cancelled, task_failed | Client; correlation ID for the attempt |
-| Confirmed outcomes | trip_created, item_saved, invite_accepted, import_completed | Server after confirmed business outcome, separately consent-filtered |
-| AI value | itinerary_viewed, itinerary_edited, generation_requested | Client/server as appropriate; do not assume viewing means acceptance |
-| Utility | map_link_opened, report_exported, packing_item_checked | Semantic action; omit link contents and item text |
-| Operational ledger | provider_attempt_settled, shared_cost_allocated | Trusted server accounting, separate from optional behavior |
+| Session | `session_started`, `engaged_session_summary` | Client foreground/visibility, consent-gated |
+| Views | `feature_viewed`, `trip_reference_viewed` | Client, after real visible render |
+| Tasks | `task_started`, `task_cancelled`, `task_failed` | Client, with a correlation ID per attempt |
+| Confirmed outcomes | `trip_created`, `item_saved`, `invite_accepted`, `import_completed` | Server after the business outcome commits, consent-filtered |
+| AI value | `itinerary_viewed`, `itinerary_edited`, `generation_requested` | Client/server as appropriate; viewing does not mean acceptance |
+| Utility | `map_link_opened`, `report_exported`, `packing_item_checked` | Semantic action only; no link contents or item text |
+| Operational ledger | `provider_attempt_settled`, `shared_cost_allocated` | Trusted server accounting, separate from optional behavior |
 
 Example optional event (values illustrative):
 
@@ -121,46 +138,76 @@ Example optional event (values illustrative):
 }
 ~~~
 
-The server adds identity/authorization/consent fields; clients cannot assert them. A pseudonym remains personal data when linkage is possible.
+A pseudonym is still personal data under GDPR while linkage is possible, and the docs and policies must say so.
 
-Suggested session rule: a new foreground session after 30 minutes of inactivity. Track bounded active intervals rather than time while hidden; cap intervals after unexpected termination. Do not emit per-second heartbeats or every scroll/tap. Treat repeated renders, polling, prefetch and background workers separately from engagement.
+**Sessions:** a new foreground session starts after 30 minutes of inactivity. Track bounded active intervals, not hidden time, and cap intervals after unexpected termination. No per-second heartbeats and no logging of every scroll or tap. Repeated renders, polling, prefetch, and background workers are not engagement.
 
-Prohibit raw email/name, age/gender, home address, destination text, GPS, booking references, prompts, chat text, uploaded documents, financial transactions, full URLs/query strings and arbitrary exception messages in behavioral properties. Allow feature-only import success/count metadata after a restricted-data policy review; never copy Gmail/Plaid contents or content-derived profiles into general analytics.
+**Never collected in behavioral events:** raw email/name, age, gender, home address, destination or place text, GPS, booking references, prompts, chat text, uploaded documents, financial transactions, full URLs/query strings, arbitrary exception messages. Import events may carry feature-level success/count metadata only after restricted-data review. Gmail and Plaid contents, and anything derived from them, never enter general analytics, as required by the Google API Limited Use policy and Plaid terms.
 
 ## Privacy behavior
 
-Provide Account > Privacy on web/iOS/Android, plus a public privacy-choices entry point. Separate optional product analytics from optional detailed diagnostics. Necessary service/security/billing/quota processing is explained rather than offered as a misleading disable switch.
+### What the user sees
 
-Default optional collection off globally as the simplest conservative product policy. This is a design choice, not a claim that every jurisdiction mandates consent for every server metric. Unknown, unavailable or expired permission blocks optional collection. Privacy denial must not block requested travel features, billing metering or lawful security controls.
+- **Account → Privacy** on web, iOS, and Android, plus a public **Privacy Choices** page on web.
+- Two optional switches, both **off by default**:
+  1. **Product analytics**: feature, session, platform, and trip-phase events described above.
+  2. **Detailed diagnostics**: user-linked crash/performance details and session tracking in Sentry.
+- A plain-language explanation of **necessary processing** (security logs, quotas, billing, cost metering, aggregate error monitoring) that has no misleading "off" switch.
+- Links to export data, delete analytics data, delete the account, the privacy policy, and the cookie notice.
 
-Accept, reject and customize must be equally accessible; no preselected optional switches, bundled terms acceptance or payment/feature penalty. Store minimal versioned consent evidence. Withdrawal immediately stops local collection, deletes queued optional events/identifiers, and rejects stale server submissions. Other devices fetch current settings on foreground; server enforcement remains authoritative while an old device is offline.
+The first consent prompt offers **Accept**, **Reject**, and **Customize** with equal prominence. There are no preselected switches, no bundling with terms acceptance, no repeated nagging after refusal, and no loss of features or price difference for refusing.
 
-Existing frontend Sentry startup must be redesigned to avoid optional SDK initialization before permission, including automatic session/breadcrumb/network collection. Necessary server diagnostics need a documented narrow basis and minimized configuration. Legal consent, operating-system permissions and Apple ATT are independent controls.
+### Consent states and enforcement
 
-Export/delete/restrict/object workflows must cover linked analytics, captures, logs where identifiable, vendor data, and attributable rollups. Removing a user_id while leaving trip linkage or JSON identity is insufficient. Small-group statistics are not automatically anonymous.
+| State | Client behavior | Server behavior |
+|---|---|---|
+| Unknown / not yet asked | No optional SDK init, no event queue | Rejects optional events |
+| Granted (epoch *n*) | Queues and sends events; detailed diagnostics enabled | Admits events stamped with the current epoch |
+| Withdrawn | Stops producers, clears queue and identifiers, shuts down optional SDK features | Rejects new and in-flight events; deletion of history is a separate, explicit action |
+| Notice changed materially | Treated as unknown until re-asked | Rejects until a new grant |
 
-See the [implementation plan's privacy and policy requirements](implementation_plans/analytics-upgrade.md#privacy-policy-and-web-page-deliverables) for the release gates and source references.
+- The account-level choice is authoritative and server-enforced. Other devices pick it up on next foreground.
+- Login, reinstall, or a new device never turns missing local permission into acceptance.
+- Re-granting starts a new epoch. Events queued before withdrawal are never replayed.
+- **Global Privacy Control** (web) and **Do Not Track** are treated as a refusal of optional analytics unless the user explicitly opts in afterwards.
+- Store minimal, versioned consent evidence: choice, notice version, timestamp, platform. No IP address or device fingerprint.
+- Collection flags default **off** when missing or unreadable. The entitlement system's fail-open rule does **not** apply to privacy.
 
-## Additional analytics
+### Platform-specific behavior
+
+| Platform | Behavior |
+|---|---|
+| Web | Analytics storage uses `localStorage` only after consent and is cleared on withdrawal or logout. The cookie notice lists each key, purpose, and duration. Visiting the public privacy pages generates no optional analytics. |
+| iOS | No IDFA and no App Tracking Transparency prompt, because nothing here meets Apple's definition of "tracking". Required-reason API use is declared in a privacy manifest. App Store privacy labels list Product Interaction, User ID, Device ID (push token), and Crash/Performance data, with their real linkage and purposes. Account deletion stays in-app. |
+| Android | No advertising ID. `com.google.android.gms.permission.AD_ID` is removed from the merged manifest. The Play Data safety form lists App interactions, Device or other IDs, and Crash logs/Diagnostics as optional where applicable. In-app deletion plus a public web deletion URL. |
+
+The consent switch, the iOS ATT prompt, and Android runtime permissions are independent controls, and none substitutes for another.
+
+### Rights
+
+Export, deletion, restriction, and objection cover linked analytics events, daily user/trip facts, pseudonym mappings, AI captures, identifiable logs, vendor data (Sentry), and attributable rollups. Removing a `user_id` while leaving trip linkage or JSON identity behind is not deletion. Small-group statistics are not automatically anonymous: cohorts below 10 are suppressed in reports and exports.
+
+The [implementation plan](implementation_plans/analytics-upgrade.md#privacy-policy-and-web-page-deliverables) lists every policy page change, regulatory requirement, and release gate.
+
+## Additional analytics (after the initial five views are trusted)
 
 | Area | Measures |
 |---|---|
-| Activation | Signup, first trip, first useful item, first collaborator; elapsed time/drop-off |
-| Retention | Same-trip return and subsequent-trip planning; mature trip cohorts rather than daily retention alone |
-| Collaboration | Invitation acceptance, contributing members, organizer-only versus shared participation |
-| AI value | Views, edits, regeneration, explicit acceptance where supported, suggestions converted to planned items |
-| Imports | Success, duplicates, user corrections and time to usable result |
-| Monetization | Consented upgrade/checkout funnels, trials and conversion; necessary billing records separate |
-| Notifications | Open and resulting action, where technically measurable; delivery is not engagement |
+| Activation | Signup → first trip → first useful item → first collaborator; elapsed time/drop-off |
+| Retention | Same-trip return and next-trip planning; mature trip cohorts rather than daily retention |
+| Collaboration | Invite acceptance, contributing members, organizer-only versus shared participation |
+| AI value | Views, edits, regeneration, explicit acceptance, suggestions converted to planned items |
+| Imports | Success, duplicates, user corrections, time to usable result |
+| Monetization | Consented upgrade/checkout funnels, trials, conversion; necessary billing records separate |
+| Notifications | Open and resulting action where measurable; delivery is not engagement |
 | Acquisition | Allowlisted campaign/referrer category after permission; no raw referrer queries or cross-site profiles |
-| Data quality | Consent coverage, missing context, deduplication, dropped batches, unknown cost and job freshness |
+| Data quality | Consent coverage, missing context, deduplication, dropped batches, unknown cost, job freshness |
 
 ## Ease of analysis and maintenance
 
-Provide five initial admin views: feature adoption, cost, reliability, platform mix and trip-phase engagement. Each chart exposes definition, window/timezone, units, numerator/denominator, coverage, freshness and schema version. Support bounded date/platform/tier/feature filters and privacy-safe CSV export.
+- **Five initial admin views** in `AdminTab`: feature adoption, cost, reliability, platform mix, trip-phase engagement. Each shows definition, window/timezone, units, numerator/denominator, consent coverage, freshness, and schema version, with bounded date/platform/tier/feature filters and privacy-safe CSV export.
+- **Curated daily facts and additive rollups**, with explicit non-additive distinct-user logic. Never sum daily uniques into monthly uniques, average averages, or derive p95 from averages.
+- **Purpose-separated datasets.** Operational, billing, and behavioral data stay in separate tables. Individual cost drill-down is restricted to authorized finance/operations admins. Routine product analysis uses aggregates with small-cohort suppression. No email lookup in product reports.
+- **Existing infrastructure first.** No new analytics vendor or warehouse until measured volume, query latency, regional controls, or maintenance effort justify one. A daily CSV/BigQuery export is the expected upgrade path when ad-hoc analysis outgrows admin views.
 
-Use curated daily user/trip facts and additive aggregates, with explicit non-additive distinct-user logic. Do not sum daily distinct users to calculate monthly uniques, average averages or calculate p95 from averages. Store eligible-population history, consent state and feature availability as needed for defensible denominators; minimize retained linkage.
-
-Keep operational, billing and behavioral datasets purpose-separated. Restrict individual cost drill-down to authorized finance/operations roles; routine product analysis uses aggregates with small-cohort suppression. Avoid unrestricted email lookup in product reports.
-
-Prefer existing infrastructure for the initial bounded dataset. Do not add a new analytics vendor or warehouse until measured volume, query latency, regional controls or maintenance effort justify it. All defaults, retention periods and performance budgets are proposed in the implementation plan and must be verified before release.
+Defaults, retention periods, and performance budgets are proposals in the implementation plan and must be verified before release.
