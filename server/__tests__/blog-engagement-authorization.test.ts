@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, futureDateStringPlusDays, loginWebUser, registerWebUser } from './helpers';
 import {
   BlogEngagementUnauthorizedError,
   BlogTargetNotFoundError,
@@ -25,6 +25,9 @@ import { blogEngagementRepository } from '../src/blog/engagementRepository';
 // asserting the exact status code. This is the highest-value test in the program; write it before
 // the routes." No route exists yet — every assertion here calls blogEngagementService directly,
 // matching the plan's exit criteria for this phase.
+
+const TRIP_DAY = futureDateString();
+const OTHER_TRIP_DAY = futureDateStringPlusDays(1);
 
 describe('blog engagement authorization matrix (Phase 2 — service layer, no routes)', () => {
   const traveler = { firstName: 'Matrix', lastName: 'Traveler', email: 'blog-matrix-traveler@example.com', password: 'Password123!' };
@@ -71,7 +74,7 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ name: 'Matrix Trip', startDate: '2026-10-05', endDate: '2026-10-05', participants: [] })
+      .send({ name: 'Matrix Trip', startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
 
@@ -84,11 +87,11 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
     // before ever writing anything.
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
 
-    travelersItemId = await createTextItem('2026-10-05', 'travelers', 'Only travelers see this');
-    publicItemId = await createTextItem('2026-10-05', 'public', 'Everyone sees this');
-    followersItemId = await createTextItem('2026-10-05', 'followers', 'Followers and travelers see this');
+    travelersItemId = await createTextItem(TRIP_DAY, 'travelers', 'Only travelers see this');
+    publicItemId = await createTextItem(TRIP_DAY, 'public', 'Everyone sees this');
+    followersItemId = await createTextItem(TRIP_DAY, 'followers', 'Followers and travelers see this');
 
-    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, '2026-10-05']);
+    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, TRIP_DAY]);
     dayId = dayRow.rows[0].id;
   });
 
@@ -204,7 +207,7 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
       const otherTrip = await request(app)
         .post('/api/trips/wizard')
         .set('Authorization', `Bearer ${travelerToken}`)
-        .send({ name: 'Other Trip', startDate: '2026-11-01', endDate: '2026-11-01', participants: [] })
+        .send({ name: 'Other Trip', startDate: OTHER_TRIP_DAY, endDate: OTHER_TRIP_DAY, participants: [] })
         .expect(201);
       const otherTripId = otherTrip.body.trip?.id ?? otherTrip.body.id;
       const comment = await postComment(tripId, travelerId, 'item', publicItemId, 'Belongs to the matrix trip');

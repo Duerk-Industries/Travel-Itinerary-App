@@ -799,11 +799,14 @@ export const searchBlog = async (
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
      LEFT JOIN blog_text_contents t ON t.item_id = i.id
+     LEFT JOIN (
+       SELECT DISTINCT ia.item_id
+       FROM blog_item_assets ia
+       JOIN blog_media_assets a ON a.id = ia.asset_id
+       WHERE a.trip_id = $1 AND a.state <> 'deleted' AND a.tags::text ILIKE $2
+     ) matching_media ON matching_media.item_id = i.id
      WHERE i.trip_id = $1 AND i.deleted_at IS NULL
-       AND (COALESCE(t.body, '') ILIKE $2 OR i.tags::text ILIKE $2 OR EXISTS (
-         SELECT 1 FROM blog_item_assets ia JOIN blog_media_assets a ON a.id = ia.asset_id
-         WHERE ia.item_id = i.id AND a.state <> 'deleted' AND a.tags::text ILIKE $2
-       ))
+       AND (COALESCE(t.body, '') ILIKE $2 OR i.tags::text ILIKE $2 OR matching_media.item_id IS NOT NULL)
        AND i.audience = ANY($3::text[])
        ${cursorFilter}
      ORDER BY d.local_date, i.id LIMIT $${hasCursor ? 6 : 4}`,
