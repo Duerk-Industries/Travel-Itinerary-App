@@ -124,6 +124,38 @@ describe('public blog engagement endpoint', () => {
     expect(JSON.stringify(res.body)).not.toContain('Private note');
   });
 
+  it('lets an anonymous public reader set, change, and clear one day reaction', async () => {
+    const visitorId = randomUUID();
+    const url = `/public/blog/${usernameSlug}/${tripSlug}/engagement/day/${dayDate}/reaction`;
+    const headers = { 'X-Public-Visitor-Id': visitorId };
+    const first = await request(app).put(url).set(headers).send({ emoji: 'heart' }).expect(200);
+    expect(first.body.reactionCounts.heart).toBe(1);
+    expect(first.body.userReaction).toBe('heart');
+    await request(app).put(url).set(headers).send({ emoji: 'heart' }).expect(200);
+    const changed = await request(app).put(url).set(headers).send({ emoji: 'clap' }).expect(200);
+    expect(changed.body.reactionCounts.heart ?? 0).toBe(0);
+    expect(changed.body.reactionCounts.clap).toBe(1);
+    const publicRead = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).expect(200);
+    expect(publicRead.body.days.find((day: any) => day.localDate === dayDate).reactionCounts.clap).toBe(1);
+    expect(JSON.stringify(publicRead.body)).not.toContain(visitorId);
+    const privateRead = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).set(headers).expect(200);
+    expect(privateRead.headers['cache-control']).toBe('private, no-store');
+    expect(privateRead.body.days.find((day: any) => day.localDate === dayDate).userReaction).toBe('clap');
+    const cleared = await request(app).delete(url).set(headers).expect(200);
+    expect(cleared.body.reactionTotal).toBe(0);
+    expect(cleared.body.userReaction).toBeNull();
+    const rows = await queryBlog('SELECT id FROM blog_reactions WHERE visitor_id = $1', [visitorId]);
+    expect(rows.rows).toHaveLength(0);
+  });
+
+  it('rejects invalid public reaction targets and visitor IDs', async () => {
+    const url = `/public/blog/${usernameSlug}/${tripSlug}/engagement/day/${dayDate}/reaction`;
+    await request(app).put(url).send({ emoji: 'heart' }).expect(400);
+    await request(app).put(url).set('X-Public-Visitor-Id', randomUUID()).send({ emoji: 'invalid' }).expect(400);
+    await request(app).put(`/public/blog/${usernameSlug}/${tripSlug}/engagement/day/2030-01-01/reaction`)
+      .set('X-Public-Visitor-Id', randomUUID()).send({ emoji: 'heart' }).expect(404);
+  });
+
   it('returns paginated public comments for a specific day, with no author identity', async () => {
     const publicComment = await request(app)
       .post(`/api/trips/${tripId}/blog/item/${publicItemId}/comments`)

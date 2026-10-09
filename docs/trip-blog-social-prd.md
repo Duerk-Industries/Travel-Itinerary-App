@@ -64,9 +64,9 @@ Ratified. These are settled inputs to the design, not proposals — the same sta
 decisions in `docs/travel-blog-architecture.md`. Reopening any of them requires the stated condition,
 not merely a preference.
 
-- **The public page is read-only for the public.** Reactions and comments are authenticated-only
-  (travelers and followers). Anonymous visitors see counts and public-audience comments but cannot
-  create either. Reopening requires a moderation staffing answer first. Specified as **PR-1**.
+- **Public readers may react to published days without signing in.** A per-blog browser identifier
+  keeps one changeable reaction per visitor, and writes are IP-limited. Public comments remain
+  read-only; opening anonymous comments still requires a moderation staffing answer. **PR-1**.
 - **Comments carry their own audience, inherited from their target at creation time.** Publication
   never retroactively makes an existing private comment public, and revocation hides engagement in
   the same operation as content. Specified as **PR-2** / **PR-4**, mechanism in
@@ -255,7 +255,7 @@ testable.
 - **FR-B8.1** Followers may create reactions and comments. Every authoring, edit, delete, cover and
   publication endpoint remains denied to them.
 - **FR-B11.1** Every comment exposes a report action to every authenticated traveler/follower who can
-  see it, except its author. Anonymous public readers remain read-only under PR-1.
+  see it, except its author. Anonymous public readers cannot comment or report under PR-1.
 - **FR-B11.2** A trip owner may hide any comment on their trip. Hiding is reversible and written to
   `audit_log`.
 - **FR-B11.3** A user hidden three times on a trip cannot comment on that trip again.
@@ -335,11 +335,11 @@ testable.
 
 ### 5.5 Privacy and policy
 
-- **PR-1** **The public page is read-only for the public.** Unauthenticated visitors see reaction
-  counts and comments but cannot create either. This is a deliberate v1 decision: opening comments to
-  anonymous visitors imports a spam and moderation burden this product has no staffing model for, and
-  would place unmoderated third-party text on a page every traveler was required to *unanimously*
-  consent to publish. Re-opening this decision requires a moderation staffing answer first.
+- **PR-1** **Public readers can react to published days; comments remain read-only.** Anonymous
+  reactions use a random identifier stored per blog in the visitor's browser, are limited to one
+  changeable emoji per day, and are rate-limited by IP. Anonymous commenting remains closed: it
+  would place unmoderated third-party text on a page travelers consented to publish. Opening it
+  requires a moderation staffing answer first.
 - **PR-2** Publication consent covers traveler-authored content. Comments are **not** retroactively
   swept into it: a comment carries its own audience, inherited from its target at creation time, and
   only `public`-audience comments ever appear publicly.

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { AppTheme } from '../theme/theme';
+import BlogPublicDefaultToggle from '../components/BlogPublicDefaultToggle';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
@@ -614,6 +615,7 @@ const AccountProfileManagement = ({
       <Text style={styles.helperText}>
         Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
       </Text>
+      <BlogPublicDefaultToggle backendUrl={backendUrl} headers={headers} styles={styles} theme={theme} />
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>

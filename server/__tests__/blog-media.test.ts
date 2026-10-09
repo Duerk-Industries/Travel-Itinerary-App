@@ -3,6 +3,7 @@ import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 import { blogMediaRepository } from '../src/blog/repository';
+import { queryBlog } from '../src/db.postgres';
 
 const TRIP_DAY = futureDateString();
 
@@ -15,6 +16,8 @@ describe('trip blog media quota lifecycle', () => {
     await initDb();
     await setFeatureFlag('trip_blog', true, null);
     await setFeatureFlag('trip_blog_photo_uploads', true, null);
+    await setFeatureFlag('trip_blog_social_layer', true, null);
+    await setFeatureFlag('trip_blog_reactions', true, null);
     await registerWebUser(owner);
     await confirmWebUser(owner.email);
     const login = await loginWebUser(owner);
@@ -108,7 +111,7 @@ describe('trip blog media quota lifecycle', () => {
   });
 
   it('exposes the blog_items id (not the media asset id) via GET /blog, and Remove actually removes it', async () => {
-    const init = await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'photo-remove').send({ dayDate: TRIP_DAY, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024 }).expect(201);
+    const init = await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'photo-remove').send({ dayDate: TRIP_DAY, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024, tags: ['remove-with-photo'] }).expect(201);
     const assetId = init.body.asset.id;
     await request(app).post(`/api/trips/${tripId}/blog/media/${assetId}/complete`).set('Authorization', `Bearer ${token}`).send({ physicalBytes: 1024 }).expect(200);
 
@@ -120,6 +123,10 @@ describe('trip blog media quota lifecycle', () => {
     // id — the client's PATCH/DELETE /blog/items/:itemId calls target blog_items, so shipping the
     // asset id here made every UI action against a photo/video silently fail (wrong row, 404/409).
     expect(mediaItem.id).not.toBe(assetId);
+    await request(app).put(`/api/trips/${tripId}/blog/asset/${assetId}/reactions`)
+      .set('Authorization', `Bearer ${token}`).send({ emoji: 'heart' }).expect(200);
+    await request(app).put(`/api/trips/${tripId}/blog/item/${mediaItem.id}/reactions`)
+      .set('Authorization', `Bearer ${token}`).send({ emoji: 'clap' }).expect(200);
 
     await request(app)
       .delete(`/api/trips/${tripId}/blog/items/${mediaItem.id}`)
@@ -136,5 +143,11 @@ describe('trip blog media quota lifecycle', () => {
 
     const mediaList = await request(app).get(`/api/trips/${tripId}/blog/media`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(mediaList.body.media.some((item: any) => item.id === assetId)).toBe(false);
+    const asset = await queryBlog<{ tags: string[]; state: string }>('SELECT tags, state FROM blog_media_assets WHERE id = $1', [assetId]);
+    expect(asset.rows[0]).toMatchObject({ tags: [], state: 'deleted' });
+    const reactions = await queryBlog('SELECT id FROM blog_reactions WHERE blog_item_id = $1 OR asset_id = $2', [mediaItem.id, assetId]);
+    expect(reactions.rows).toHaveLength(0);
+    const counters = await queryBlog('SELECT target_kind FROM blog_engagement_counters WHERE target_id = $1 OR target_id = $2', [mediaItem.id, assetId]);
+    expect(counters.rows).toHaveLength(0);
   });
 });

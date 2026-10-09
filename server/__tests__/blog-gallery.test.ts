@@ -5,6 +5,7 @@ import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
+import { queryBlog } from '../src/db.postgres';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 
 describe('trip blog photo galleries', () => {
@@ -34,6 +35,8 @@ describe('trip blog photo galleries', () => {
     await setFeatureFlag('trip_blog', true, null);
     await setFeatureFlag('trip_blog_photo_uploads', true, null);
     await setFeatureFlag('trip_blog_galleries', true, null);
+    await setFeatureFlag('trip_blog_social_layer', true, null);
+    await setFeatureFlag('trip_blog_reactions', true, null);
     await registerWebUser(owner);
     await confirmWebUser(owner.email);
     token = (await loginWebUser(owner)).body.token;
@@ -114,22 +117,35 @@ describe('trip blog photo galleries', () => {
     const created = await request(app).post(`/api/trips/${tripId}/blog/items`).set('Authorization', `Bearer ${token}`).send({ kindKey: 'core.gallery', dayDate: day }).expect(201);
     const galleryId = created.body.id;
     const first = await uploadPhoto('remove-photo-1', galleryId);
-    await uploadPhoto('remove-photo-2', galleryId);
+    const second = await uploadPhoto('remove-photo-2', galleryId);
 
     let dayResult = await getDay();
     let galleryItem = dayResult.items.find((item: any) => item.id === galleryId);
     expect(galleryItem.assets).toHaveLength(2);
     const firstAssetId = first.body.asset.id;
+    const secondAssetId = second.body.asset.id;
+    for (const assetId of [firstAssetId, secondAssetId]) {
+      await request(app).put(`/api/trips/${tripId}/blog/asset/${assetId}/reactions`)
+        .set('Authorization', `Bearer ${token}`).send({ emoji: 'heart' }).expect(200);
+    }
+    await request(app).put(`/api/trips/${tripId}/blog/item/${galleryId}/reactions`)
+      .set('Authorization', `Bearer ${token}`).send({ emoji: 'clap' }).expect(200);
 
     await request(app).delete(`/api/trips/${tripId}/blog/media/${firstAssetId}`).set('Authorization', `Bearer ${token}`).expect(204);
     dayResult = await getDay();
     galleryItem = dayResult.items.find((item: any) => item.id === galleryId);
     expect(galleryItem.assets).toHaveLength(1);
+    const afterFirst = await queryBlog<{ asset_id: string }>('SELECT asset_id FROM blog_reactions WHERE asset_id = $1 OR asset_id = $2', [firstAssetId, secondAssetId]);
+    expect(afterFirst.rows.map((row) => row.asset_id)).toEqual([secondAssetId]);
+    const galleryReaction = await queryBlog('SELECT id FROM blog_reactions WHERE blog_item_id = $1', [galleryId]);
+    expect(galleryReaction.rows).toHaveLength(1);
 
     const remainingAssetId = galleryItem.assets[0].assetId;
     await request(app).delete(`/api/trips/${tripId}/blog/media/${remainingAssetId}`).set('Authorization', `Bearer ${token}`).expect(204);
     dayResult = await getDay();
     expect(dayResult.items.find((item: any) => item.id === galleryId)).toBeUndefined();
+    const afterLast = await queryBlog('SELECT id FROM blog_reactions WHERE blog_item_id = $1 OR asset_id = $2', [galleryId, secondAssetId]);
+    expect(afterLast.rows).toHaveLength(0);
   });
 
   it('rejects removing a single asset from a standalone (non-gallery) item', async () => {

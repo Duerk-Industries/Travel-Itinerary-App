@@ -44,6 +44,7 @@ import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCa
 import PhotoFirstComposer from '../components/PhotoFirstComposer';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { isTripActiveToday, localDateString } from '../utils/offlineTripCache';
+import { trimBlogNoteEnd } from '../utils/trimBlogNoteEnd';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -57,6 +58,8 @@ export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTy
 // way it did for the plain TextInput this replaced. Strip tags/entities and
 // check what's left.
 const isRichTextEmpty = (html) => !String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+const isUnavailableVoiceNote = (item) =>
+  (item?.mediaKind === 'audio' || item?.kindKey === 'media.audio') && (item.state !== 'ready' || !item.primaryUrl);
 
 const WRITING_PROMPTS = [
   'What surprised you today?', 'Best thing you ate', 'A moment worth remembering',
@@ -80,6 +83,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [voiceUploadFailures, setVoiceUploadFailures] = useState({});
   const [uploadProgress, setUploadProgress] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [limit, setLimit] = useState(7);
@@ -180,15 +184,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   // also means the private/pending-consent preview cannot accidentally hide content merely because
   // the user is not currently editing.
   const publicPreview = !editMode && blog?.visibilityState === 'public';
-  // B8/Phase 3: authoring (canEdit, unchanged) and engagement (canEngage) are deliberately
-  // different gates. `readOnly` means "this viewer is a follower of this trip" (the
-  // isFollowingMode prop from App.tsx) — historically that blocked everything, but a follower is
-  // allowed to react and comment, only never to author, edit, delete, set covers or publish. The
-  // server's authorization matrix is the real enforcement (a follower reacting to a
-  // travelers-only item still gets 404); this flag only controls whether the reaction controls
-  // render at all — hidden in the public preview, which has no authenticated session's own
-  // reaction to show and no server-side identity to attach one to.
+  // Followers may comment on content they can access. Reactions belong to the reading view,
+  // including the authenticated public preview; the server enforces each target's audience.
   const canEngage = !publicPreview;
+  const canReact = !editMode;
   // The "Blog tools" drawer is entirely traveler-facing (publish/unpublish, the private spend
   // figure, the traveler-only places index, search). A follower has nothing in it — don't show an
   // empty collapsible.
@@ -198,13 +197,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     Boolean(capabilities.trip_blog_places && !readOnly) ||
     Boolean(capabilities.trip_blog_spend_summary && !readOnly);
   const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
-    if (!publicPreview) return day;
-    return {
-      ...day,
-      items: (day.items || []).filter((item) => !item.audience || item.audience === 'public'),
-      activities: [],
-    };
-  }), [blog?.days, publicPreview]);
+    if (editMode) return day;
+    const readableItems = (day.items || []).filter((item) => {
+      if (publicPreview && item.audience && item.audience !== 'public') return false;
+      if (isUnavailableVoiceNote(item)) return false;
+      if (item.kindKey === 'core.gallery') return (item.assets || []).some((asset) => !isUnavailableVoiceNote(asset));
+      return true;
+    }).map((item) => item.kindKey === 'core.gallery'
+      ? { ...item, assets: (item.assets || []).filter((asset) => !isUnavailableVoiceNote(asset)) }
+      : item);
+    return { ...day, items: readableItems, activities: publicPreview ? [] : day.activities };
+  }).filter((day) => editMode || (day.items || []).length > 0), [blog?.days, publicPreview, editMode]);
+
+  useEffect(() => { setVoiceUploadFailures({}); }, [activeTripId]);
   const mediaForDay = (day) => (day.items || []).flatMap((item) => {
     if (item.kindKey === 'core.gallery') return (item.assets || []).map((asset) => ({ ...asset, audience: asset.audience ?? item.audience, isGalleryMember: true }));
     return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
@@ -367,6 +372,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   }, [flights, lodgings, tours, carRentals]);
 
   const load = async (nextCursor = null) => {
+    if (!activeTripId) return;
     setLoading(true);
     try {
       // On a refresh (no cursor — e.g. after any mutation), re-request every day the user has
@@ -376,6 +382,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       const effectiveLimit = nextCursor ? limit : Math.max(limit, loadedCount);
       const params = new URLSearchParams({ limit: String(effectiveLimit) });
       if (nextCursor) params.set('cursor', nextCursor);
+      const reactionEpochAtRequest = engagement.getMutationEpoch();
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog?${params.toString()}`, { headers });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to load the trip blog');
       const data = await response.json();
@@ -387,7 +394,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       // Seeds the normalized engagement store from this response's embedded `engagement` fields
       // (architecture §5.4) — never a second fetch. A no-op object when the reactions flag is
       // off, since the field is simply absent from `data` in that case.
-      engagement.seedFromBlog(data);
+      engagement.seedFromBlog(data, reactionEpochAtRequest);
       const lastDay = days[days.length - 1];
       setCursor(days.length >= effectiveLimit && lastDay ? lastDay.localDate : null);
     } catch (error) {
@@ -604,21 +611,27 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     }
   };
 
-  const revokePublication = async () => {
+  // Public viewing is on by default when every traveler qualifies (16+ with a date of birth, and
+  // none has a private profile default). Any traveler can opt this trip's blog out here; travelers
+  // and followers always keep access. Clearing the opt-out re-publishes it if everyone qualifies.
+  const setPublicOptOut = async (optOut) => {
     if (!activeTripId || !canEdit || publicationBusy) return;
     setPublicationBusy(true);
     setPublicationNotice('');
     try {
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/revoke`, {
-        method: 'POST',
-        headers,
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicOptOut: optOut }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Unable to make this blog private');
-      setPublicationNotice('Your blog is private again.');
+      if (!response.ok) throw new Error(data.error || 'Unable to update public viewing');
+      if (optOut) setPublicationNotice('Public viewing is off. Travelers and followers can still see this blog.');
+      else if (data.visibilityState === 'public') setPublicationNotice('Your blog is public again.');
+      else setPublicationNotice('Public viewing is allowed again. The blog goes public once every traveler is 16+ with a date of birth in their profile and none has chosen private.');
       await refreshBlogAndPublication();
     } catch (error) {
-      setPublicationNotice(error.message || 'Unable to make this blog private');
+      setPublicationNotice(error.message || 'Unable to update public viewing');
     } finally {
       setPublicationBusy(false);
     }
@@ -807,27 +820,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
 
   const handleVoiceNote = async (dayDate) => {
     if (!canEdit || uploading) return;
-    const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    const response = await fetch(asset.uri);
-    const blob = await response.blob();
-    const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
-    if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) {
-      alertMessage('Voice note', 'Choose an MP3, M4A, WAV, or WebM audio file.');
-      return;
-    }
     setUploading(true);
+    setVoiceUploadFailures((current) => ({ ...current, [dayDate]: null }));
     try {
+      const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
+      if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) throw new Error('Choose an MP3, M4A, WAV, or WebM audio file.');
       const uploaded = await uploadBlogFiles(
         { backendUrl, headers, tripId: activeTripId },
         dayDate,
         [{ blob, mimeType, size: asset.size ?? blob.size, name: asset.name }]
       );
-      if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
+      if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : uploaded.errors?.[0] || 'Unable to add the voice note.');
       await load();
     } catch (error) {
-      alertMessage('Voice note', error.message || 'Unable to add the voice note.');
+      setVoiceUploadFailures((current) => ({ ...current, [dayDate]: error.message || 'Unable to add the voice note.' }));
     } finally {
       setUploading(false);
     }
@@ -845,6 +856,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const handleRecordedVoiceNote = async (dayDate, recording) => {
     if (!canEdit || uploading) return;
     setUploading(true);
+    setVoiceUploadFailures((current) => ({ ...current, [dayDate]: null }));
     try {
       const response = await fetch(recording.uri);
       const blob = await response.blob();
@@ -854,7 +866,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         [{ blob, mimeType: recording.mimeType, size: blob.size, name: recording.name }]
       );
       if (!uploaded.succeeded || !uploaded.assets[0]) {
-        throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
+        throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : uploaded.errors?.[0] || 'Unable to add the voice note.');
       }
       await load();
       if (capabilities.trip_blog_audio_transcription) {
@@ -874,7 +886,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         }
       }
     } catch (error) {
-      alertMessage('Voice note', error.message || 'Unable to add the voice note.');
+      setVoiceUploadFailures((current) => ({ ...current, [dayDate]: error.message || 'Unable to add the voice note.' }));
     } finally {
       setUploading(false);
     }
@@ -916,6 +928,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     setRecapNotice(null);
     setCoverProposals({});
     setBlog(null); // switching trips: show the spinner, not the previous trip's blog, until the new one loads
+    // No trip selected: show only the "Select a trip" prompt -- never request /trips/undefined/blog.
+    if (!activeTripId) return;
     void refreshBlogAndPublication();
     void loadCapabilities();
   }, [activeTripId]);
@@ -936,7 +950,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const saveItemBody = async (item, html, version) => {
     const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${item.id}`, {
       method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: html, version }),
+      body: JSON.stringify({ body: trimBlogNoteEnd(html), version }),
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 409) {
@@ -993,7 +1007,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kindKey: 'core.text', dayDate: item.localDate, body: localBody }),
+        body: JSON.stringify({ kindKey: 'core.text', dayDate: item.localDate, body: trimBlogNoteEnd(localBody) }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save your draft as a new note');
       await load();
@@ -1082,7 +1096,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
 
   const createTextItem = async (dayDate) => {
     if (!canEdit) return;
-    const body = newBody;
+    const body = trimBlogNoteEnd(newBody);
     if (isRichTextEmpty(body)) return;
     setCreating(true);
     try {
@@ -1401,6 +1415,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           return (
           <View
             key={day.id}
+            testID={`blog-day-${day.localDate}`}
             style={{
               marginBottom: 20,
               backgroundColor: canEdit ? (theme?.colors?.surfaceMuted ?? '#f3f4f6') : surfaceColor,
@@ -1516,7 +1531,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     disabled={uploading}
                     processingLabel={capabilities.trip_blog_audio_transcription ? 'Transcribing…' : 'Saving…'}
                     onRecorded={(recording) => handleRecordedVoiceNote(day.localDate, recording)}
-                    onError={(message) => alertMessage('Voice note', message)}
+                    onError={(message) => setVoiceUploadFailures((current) => ({ ...current, [day.localDate]: message }))}
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}
                     activeStyle={{ backgroundColor: theme?.colors?.error ?? '#b91c1c' }}
                     textStyle={[styles.buttonText, { fontSize: 12 }]}
@@ -1533,6 +1548,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 )}
               </View>
             </View>
+            {canEdit && voiceUploadFailures[day.localDate] ? (
+              <View testID={`blog-voice-upload-failure-${day.localDate}`} style={{ borderWidth: 1, borderColor: theme?.colors?.error ?? '#b91c1c', borderRadius: 8, padding: 8, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                <Text style={{ color: theme?.colors?.error ?? '#b91c1c', flex: 1 }}>Voice note failed: {voiceUploadFailures[day.localDate]}</Text>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dismiss voice note failure" onPress={() => setVoiceUploadFailures((current) => ({ ...current, [day.localDate]: null }))}>
+                  <Text style={{ color: textColor }}>Dismiss</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
             {/* Phase 0 elastic fact strip (docs/trip-blog-social-prd.md §6.2, FR-C1.1) — chips with
                 no data are absent, not greyed out, so a photos-only day still reads as intentional.
                 Weather moved here from the old header pill; distance/places/media are newly
@@ -1611,21 +1634,24 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     textColor={textColor}
                   />
                 )}
-                {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
-                {item.engagement ? (
-                  <BlogReactionBar
-                    testID={`blog-item-reactions-${item.id}`}
-                    targetKind="item"
-                    targetId={item.id}
-                    summary={engagement.getSummary('item', item.id)}
-                    canEngage={canEngage}
-                    onToggle={engagement.toggle}
-                    onError={handleEngagementError}
-                    textColor={textColor}
-                    mutedColor={mutedColor}
-                    theme={theme}
-                    size="compact"
-                  />
+                {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Note tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
+                {!editMode && item.engagement ? (
+                  <View style={{ marginTop: 6 }}>
+                    <Text style={{ color: mutedColor, fontSize: 11 }}>Note reactions</Text>
+                    <BlogReactionBar
+                      testID={`blog-item-reactions-${item.id}`}
+                      targetKind="item"
+                      targetId={item.id}
+                      summary={engagement.getSummary('item', item.id)}
+                      canEngage={canReact}
+                      onToggle={engagement.toggle}
+                      onError={handleEngagementError}
+                      textColor={textColor}
+                      mutedColor={mutedColor}
+                      theme={theme}
+                      size="compact"
+                    />
+                  </View>
                 ) : null}
                 {canEdit ? (
                   <>
@@ -1735,17 +1761,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   {audioItems.map((item) => (
                     <View key={item.id} testID={`blog-voice-note-${item.id}`} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
                       <Text style={{ color: textColor, fontWeight: '600' }}>🎙 Voice note</Text>
-                      {item.caption ? (
-                        <Text style={{ color: textColor, marginTop: 4 }}>{item.caption}</Text>
-                      ) : item.primaryUrl ? null : (
-                        <Text style={{ color: mutedColor, marginTop: 4, fontStyle: 'italic' }}>Transcribing…</Text>
-                      )}
+                      {item.caption ? <Text style={{ color: textColor, marginTop: 4 }}>{item.caption}</Text> : null}
                       {item.primaryUrl ? (
                         <View style={{ marginTop: 8 }}>
                           <BlogMediaPreview item={item} backgroundColor={inputColor} />
                         </View>
                       ) : (
-                        <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>Uploading…</Text>
+                        <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>
+                          {item.state === 'ready' ? 'Audio unavailable — please add this voice note again.' : 'Upload incomplete — please add this voice note again.'}
+                        </Text>
                       )}
                       {canEdit ? (
                         <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
@@ -1768,13 +1792,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     removing={deleting}
                     onRemove={(item) => removeMediaItem(item)}
                     canEngage={canEngage}
+                    canReact={canReact}
                     getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
                     onToggleReaction={engagement.toggle}
                     onReactionError={handleEngagementError}
                     theme={theme}
                     currentUserId={currentUserId}
                     canModerate={isTripOwnerOrAdmin}
-                    audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
                     getComments={(assetId) => comments.getCommentsForTarget(day.localDate, 'asset', assetId)}
                     onPostComment={(assetId, body, parentCommentId) => comments.postComment(day.localDate, 'asset', assetId, body, parentCommentId)}
                     onEditComment={(commentId, body) => comments.editComment(day.localDate, commentId, body)}
@@ -1795,19 +1819,20 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               <BlogContributorStrip
                 testID={`blog-day-contributors-${day.localDate}`}
                 contributors={day.contributors}
-                reactionTotal={day.engagement?.reactionTotal}
-                spotlightUserId={spotlightForDay(day)}
+                reactionTotal={editMode ? 0 : day.engagement?.reactionTotal}
+                spotlightUserId={editMode ? null : spotlightForDay(day)}
                 mutedColor={mutedColor}
               />
             ) : null}
-            {day.engagement ? (
+            {!editMode && day.engagement && (day.items || []).length > 0 ? (
               <View style={{ marginTop: (!publicPreview && (day.contributors || []).length > 0) ? 6 : 12 }}>
+                <Text style={{ color: mutedColor, fontSize: 11 }}>Day reactions</Text>
                 <BlogReactionBar
                   testID={`blog-day-reactions-${day.localDate}`}
                   targetKind="day"
                   targetId={day.id}
                   summary={engagement.getSummary('day', day.id)}
-                  canEngage={canEngage}
+                  canEngage={canReact}
                   onToggle={engagement.toggle}
                   onError={handleEngagementError}
                   textColor={textColor}
@@ -1817,14 +1842,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 />
               </View>
             ) : null}
-            {!publicPreview && day.engagement ? (
+            {!publicPreview && day.engagement && (day.items || []).length > 0 ? (
               <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
                 <BlogCommentThread
                   testID={`blog-day-comments-${day.localDate}`}
                   comments={comments.getDayState(day.localDate).comments.filter((c) => c.targetKind === 'day' && c.targetId === day.id)}
                   targetKind="day"
                   targetId={day.id}
-                  audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
                   currentUserId={currentUserId}
                   canModerate={isTripOwnerOrAdmin}
                   canEngage={canEngage}
@@ -1988,10 +2012,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 <View style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                     <Text style={{ color: textColor, fontWeight: '700' }}>
-                      Visibility: {publicationState === 'public' ? 'Public' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Private'}
+                      Public viewing: {publicationState === 'public' ? 'On' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Off'}
                     </Text>
                     {publicationState === 'public' ? (
-                      <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={revokePublication}>
+                      <TouchableOpacity testID="blog-make-private" accessibilityRole="button" style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={() => setPublicOptOut(true)}>
                         <Text style={{ color: textColor }}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
                       </TouchableOpacity>
                     ) : hasPendingConsent ? (
@@ -2005,6 +2029,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                       </View>
                     ) : publicationState === 'pending_consent' ? (
                       <Text style={{ color: mutedColor }}>Waiting for other adult travelers</Text>
+                    ) : blog?.publicOptOut ? (
+                      <TouchableOpacity testID="blog-allow-public" accessibilityRole="button" style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={() => setPublicOptOut(false)}>
+                        <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Allow public viewing'}</Text>
+                      </TouchableOpacity>
                     ) : (
                       <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={requestPublication}>
                         <Text style={styles.buttonText}>{publicationBusy ? 'Requesting…' : 'Make public'}</Text>
@@ -2017,7 +2045,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                       Accessibility reminder: {missingAccessibilityCount} public {missingAccessibilityCount === 1 ? 'photo needs' : 'photos need'} alt text or a decorative mark. Your existing public blog remains available while you fix this.
                     </Text>
                   ) : null}
-                  {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
+                  <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>
+                    {publicationState === 'public'
+                      ? 'Anyone can view this blog on the web. Any traveler can make it private.'
+                      : blog?.publicOptOut
+                        ? 'A traveler made this blog private for public viewing.'
+                        : 'Blogs go public automatically when every traveler is 16+ with a date of birth in their profile and none has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
+                    {' '}Travelers and followers can always see this blog.
+                  </Text>
                 </View>
               ) : null}
               <BlogDiscoveryPanel

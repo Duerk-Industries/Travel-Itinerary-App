@@ -9,6 +9,7 @@ import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
 import { markSynced, shouldSkipSync } from './syncCoordination';
 import { normalizeBlogTags } from './tags';
+import { clearPostgresDeletedTarget } from './deletedTargetCleanup';
 
 type BlogRow = {
   id: string;
@@ -21,6 +22,7 @@ type BlogRow = {
   visibility_epoch: string | number;
   photo_location_enabled?: boolean;
   day_photo_reminders_enabled?: boolean;
+  public_opt_out?: boolean;
 };
 
 const formatDate = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -319,6 +321,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     visibilityEpoch: Number(blog?.visibility_epoch ?? 0),
     photoLocationEnabled: Boolean(blog?.photo_location_enabled),
     dayPhotoRemindersEnabled: Boolean(blog?.day_photo_reminders_enabled),
+    publicOptOut: Boolean(blog?.public_opt_out),
     days,
   };
 };
@@ -470,15 +473,37 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
 };
 
 export const deleteBlogItem = async (userId: string, itemId: string, version?: number): Promise<boolean> => {
-  const current = await queryBlog<any>('SELECT id, trip_id, version FROM blog_items WHERE id = $1 AND deleted_at IS NULL', [itemId]);
-  if (!current.rows[0]) return false;
-  const access = await ensureUserInTrip(String(current.rows[0].trip_id), userId);
-  if (!access) throw new Error('Not authorized to edit this trip');
-  const updated = await queryBlog('UPDATE blog_items SET deleted_at = NOW(), version = version + 1, last_editor_user_id = $2, updated_at = NOW() WHERE id = $1 AND ($3::int IS NULL OR version = $3) AND deleted_at IS NULL', [itemId, userId, version ?? null]);
-  if (!updated.rowCount) return false;
-  await queryBlog('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [itemId]);
-  await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [current.rows[0].trip_id]);
-  return true;
+  return withBlogTransaction(async (client) => {
+    const current = await client.query<{ trip_id: string }>('SELECT trip_id FROM blog_items WHERE id = $1 AND deleted_at IS NULL', [itemId]);
+    if (!current.rows[0]) return false;
+    if (!(await ensureUserInTrip(String(current.rows[0].trip_id), userId))) throw new Error('Not authorized to edit this trip');
+    const updated = await client.query(
+      "UPDATE blog_items SET deleted_at = NOW(), tags = '[]'::jsonb, version = version + 1, last_editor_user_id = $2, updated_at = NOW() WHERE id = $1 AND ($3::int IS NULL OR version = $3) AND deleted_at IS NULL",
+      [itemId, userId, version ?? null]
+    );
+    if (!updated.rowCount) return false;
+
+    const assets = await client.query<{ id: string; storage_account_user_id: string; billable_bytes: number; state: string; source_ref: string }>(
+      `SELECT a.id, a.storage_account_user_id, a.billable_bytes, a.state, a.source_ref
+       FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id
+       WHERE ia.item_id = $1`, [itemId]
+    );
+    for (const asset of assets.rows) {
+      if (asset.state !== 'deleted') {
+        const bytesColumn = asset.state === 'ready' ? 'visible_committed_bytes' : asset.state === 'grace_hidden' ? 'grace_hidden_bytes' : 'reserved_bytes';
+        await client.query(`UPDATE blog_storage_accounts SET ${bytesColumn} = GREATEST(0, ${bytesColumn} - $2), updated_at = NOW() WHERE user_id = $1`, [asset.storage_account_user_id, Number(asset.billable_bytes)]);
+        if (asset.state === 'uploading' || asset.state === 'quarantined') {
+          await client.query("UPDATE blog_storage_reservations SET state = 'released' WHERE user_id = $1 AND idempotency_key = $2 AND state = 'reserved'", [asset.storage_account_user_id, asset.source_ref]);
+        }
+      }
+      await client.query("UPDATE blog_media_assets SET state = 'deleted', tags = '[]'::jsonb, updated_at = NOW() WHERE id = $1", [asset.id]);
+      await clearPostgresDeletedTarget(client, 'asset', asset.id);
+    }
+    await clearPostgresDeletedTarget(client, 'item', itemId);
+    await client.query('UPDATE blog_item_source_links SET detached = TRUE, updated_at = NOW() WHERE item_id = $1', [itemId]);
+    await client.query('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [current.rows[0].trip_id]);
+    return true;
+  });
 };
 
 export const setDayCover = async (userId: string, tripId: string, dayDate: string, assetId: string | null): Promise<void> => {
@@ -632,6 +657,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
          introduction = CASE WHEN $6 THEN $7 ELSE introduction END,
          photo_location_enabled = CASE WHEN $8 THEN $9 ELSE photo_location_enabled END,
          day_photo_reminders_enabled = CASE WHEN $10 THEN $11 ELSE day_photo_reminders_enabled END,
+         public_opt_out = CASE WHEN $12 THEN $13 ELSE public_opt_out END,
          updated_at = NOW()
      WHERE trip_id = $1
      RETURNING *`,
@@ -642,6 +668,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
       patch.introduction !== undefined, patch.introduction ?? null,
       patch.photoLocationEnabled !== undefined, patch.photoLocationEnabled ?? false,
       patch.dayPhotoRemindersEnabled !== undefined, patch.dayPhotoRemindersEnabled ?? false,
+      patch.publicOptOut !== undefined, patch.publicOptOut ?? false,
     ]
   );
   const row = updated.rows[0];
@@ -656,6 +683,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
     visibilityEpoch: Number(row.visibility_epoch ?? 0),
     photoLocationEnabled: Boolean(row.photo_location_enabled),
     dayPhotoRemindersEnabled: Boolean(row.day_photo_reminders_enabled),
+    publicOptOut: Boolean(row.public_opt_out),
     days: [],
   };
 };

@@ -32,33 +32,46 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
   // Tracks in-flight mutations per target so a rapid double-tap doesn't race two requests against
   // the same target — the second tap waits rather than firing a second PUT/DELETE.
   const inFlight = useRef<Set<string>>(new Set());
+  const mutationEpoch = useRef(0);
+  const targetMutationEpoch = useRef<Record<string, number>>({});
+  // A saved write can be followed by a blog GET backed by an older cache/replica.
+  // Keep the confirmed summary until a GET actually includes this user's new state.
+  const awaitingReadConfirmation = useRef<Record<string, BlogReactionEmoji | null>>({});
   const tripIdRef = useRef(tripId);
   tripIdRef.current = tripId;
 
   // Called after every load()/refresh — walks the blog document's days/items/assets and populates
   // this store from their embedded `engagement` fields. Never overwrites a target with a pending
   // mutation, so a fetch that lands mid-mutation can't stomp on an optimistic update.
-  const seedFromBlog = useCallback((blog: any) => {
+  const getMutationEpoch = useCallback(() => mutationEpoch.current, []);
+  const seedFromBlog = useCallback((blog: any, requestEpoch = mutationEpoch.current) => {
     if (!blog?.days) return;
     setSummaries((current) => {
       const next = { ...current };
+      const seedTarget = (key: string, summary: BlogEngagementSummary | undefined) => {
+        if (!summary || inFlight.current.has(key) || (targetMutationEpoch.current[key] ?? 0) > requestEpoch) return;
+        const expected = awaitingReadConfirmation.current[key];
+        if (expected !== undefined && (summary.userReaction !== expected || (expected && (summary.reactionCounts?.[expected] ?? 0) < 1))) return;
+        next[key] = summary;
+        delete awaitingReadConfirmation.current[key];
+      };
       for (const day of blog.days) {
         const dayKey = targetKey('day', day.id);
-        if (day.engagement && !inFlight.current.has(dayKey)) next[dayKey] = day.engagement;
+        seedTarget(dayKey, day.engagement);
         for (const item of day.items ?? []) {
           if (item.kindKey === 'core.text' && item.engagement) {
             const key = targetKey('item', item.id);
-            if (!inFlight.current.has(key)) next[key] = item.engagement;
+            seedTarget(key, item.engagement);
           }
           if (item.kindKey && item.kindKey.startsWith('media.') && item.engagement && item.assetId) {
             const key = targetKey('asset', item.assetId);
-            if (!inFlight.current.has(key)) next[key] = item.engagement;
+            seedTarget(key, item.engagement);
           }
           if (item.kindKey === 'core.gallery') {
             for (const asset of item.assets ?? []) {
               if (asset.engagement && asset.assetId) {
                 const key = targetKey('asset', asset.assetId);
-                if (!inFlight.current.has(key)) next[key] = asset.engagement;
+                seedTarget(key, asset.engagement);
               }
             }
           }
@@ -103,6 +116,7 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
     const key = targetKey(targetKind, targetId);
     if (inFlight.current.has(key)) return;
     inFlight.current.add(key);
+    targetMutationEpoch.current[key] = ++mutationEpoch.current;
     const previous = applyOptimistic(targetKind, targetId, emoji);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${tripIdRef.current}/blog/${targetKind}/${targetId}/reactions`, {
@@ -110,7 +124,9 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
         body: JSON.stringify({ emoji }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to react');
-      commit(targetKind, targetId, await response.json());
+      const summary = await response.json() as BlogEngagementSummary;
+      commit(targetKind, targetId, summary);
+      awaitingReadConfirmation.current[key] = summary.userReaction;
     } catch (error) {
       rollback(targetKind, targetId, previous);
       throw error;
@@ -123,13 +139,16 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
     const key = targetKey(targetKind, targetId);
     if (inFlight.current.has(key)) return;
     inFlight.current.add(key);
+    targetMutationEpoch.current[key] = ++mutationEpoch.current;
     const previous = applyOptimistic(targetKind, targetId, null);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${tripIdRef.current}/blog/${targetKind}/${targetId}/reactions`, {
         method: 'DELETE', headers,
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to clear your reaction');
-      commit(targetKind, targetId, await response.json());
+      const summary = await response.json() as BlogEngagementSummary;
+      commit(targetKind, targetId, summary);
+      awaitingReadConfirmation.current[key] = summary.userReaction;
     } catch (error) {
       rollback(targetKind, targetId, previous);
       throw error;
@@ -153,7 +172,10 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
   useEffect(() => {
     setSummaries({});
     inFlight.current.clear();
+    mutationEpoch.current = 0;
+    targetMutationEpoch.current = {};
+    awaitingReadConfirmation.current = {};
   }, [tripId]);
 
-  return { getSummary, seedFromBlog, toggle, react, clear };
+  return { getSummary, getMutationEpoch, seedFromBlog, toggle, react, clear };
 }

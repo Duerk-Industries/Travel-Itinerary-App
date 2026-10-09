@@ -26,12 +26,12 @@ const DOC = {
   ],
 };
 
-type Route = [test: (url: string) => boolean, payload: unknown, ok?: boolean, status?: number];
+type Route = [test: (url: string, options?: RequestInit) => boolean, payload: unknown, ok?: boolean, status?: number];
 
 const installFetch = (routes: Route[]) => {
-  const fn = jest.fn((url: string) => {
+  const fn = jest.fn((url: string, options?: RequestInit) => {
     for (const [test, payload, ok = true, status = 200] of routes) {
-      if (test(String(url))) {
+      if (test(String(url), options)) {
         return Promise.resolve({ ok, status, json: () => Promise.resolve(payload) });
       }
     }
@@ -46,7 +46,7 @@ const isEngagementDay = (u: string) => u.includes('/engagement') && u.includes('
 const isDocument = (u: string) => u.includes('/public/blog/') && !u.includes('/engagement');
 
 describe('PublicTripBlogPage — public engagement', () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => { jest.clearAllMocks(); delete (global as any).window; });
 
   it('shows per-day reaction chips and a comment count from the engagement summary', async () => {
     installFetch([
@@ -99,5 +99,35 @@ describe('PublicTripBlogPage — public engagement', () => {
 
     await waitFor(() => expect(screen.getByText('Looks amazing!')).toBeTruthy());
     expect(screen.getByText(/Follower ·/)).toBeTruthy();
+  });
+
+  it('lets a public reader add and remove a reaction and keeps the selected state for a return visit', async () => {
+    const stored = new Map<string, string>();
+    (global as any).window = {
+      localStorage: {
+        getItem: (key: string) => stored.get(key) ?? null,
+        setItem: (key: string, value: string) => { stored.set(key, value); },
+        removeItem: (key: string) => { stored.delete(key); },
+      },
+      crypto: { getRandomValues: (bytes: Uint8Array) => { bytes.fill(7); return bytes; } },
+    };
+    const mutation = (url: string) => url.includes('/engagement/day/2026-05-14/reaction');
+    const fetchMock = installFetch([
+      [(url, options) => mutation(url) && options?.method === 'DELETE', { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null }],
+      [mutation, { reactionCounts: { heart: 1 }, reactionTotal: 1, commentCount: 0, userReaction: 'heart' }],
+      [isDocument, DOC],
+      [isEngagementList, { days: [{ localDate: '2026-05-14', reactionCounts: {}, reactionTotal: 0, commentCount: 0 }] }],
+    ]);
+    const screen = render(<PublicTripBlogPage username="ada" tripSlug="iceland" />);
+    await waitFor(() => expect(screen.getByLabelText('React with heart')).toBeTruthy());
+    await act(async () => { fireEvent.press(screen.getByLabelText('React with heart')); });
+    await waitFor(() => expect(screen.getByLabelText('Remove heart')).toBeTruthy());
+    expect(screen.getByText('1')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/engagement/day/2026-05-14/reaction'), expect.objectContaining({ method: 'PUT' }));
+    expect(stored.get('wanderbunnies:public-reaction:ada:iceland:selected')).toContain('heart');
+    await act(async () => { fireEvent.press(screen.getByLabelText('Remove heart')); });
+    await waitFor(() => expect(screen.getByLabelText('React with heart')).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/engagement/day/2026-05-14/reaction'), expect.objectContaining({ method: 'DELETE' }));
+    expect(stored.has('wanderbunnies:public-reaction:ada:iceland:id')).toBe(false);
   });
 });

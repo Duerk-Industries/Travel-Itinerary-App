@@ -2677,6 +2677,21 @@ export const hasUserDateOfBirth = async (userId: string): Promise<boolean> => {
   return rows[0]?.dateOfBirth != null;
 };
 
+/** Whether this user's new trip blogs may be published publicly by default (opt-out; defaults to true). */
+export const getUserBlogDefaultPublic = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ value: boolean | null }>(
+    `SELECT blog_default_public AS value FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  return rows[0]?.value !== false;
+};
+
+export const setUserBlogDefaultPublic = async (userId: string, value: boolean): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE users SET blog_default_public = $2 WHERE id = $1`, [userId, value]);
+};
+
 /** Records a declared date of birth once; an already-declared value is never overwritten. */
 export const setUserDateOfBirth = async (userId: string, dateOfBirth: string): Promise<void> => {
   const p = getPool();

@@ -113,6 +113,23 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
     }
   });
 
+  it('changes the blog ETag when a reaction changes without editing blog content', async () => {
+    const endpoint = `/api/trips/${tripId}/blog?date=${TRIP_DAY}`;
+    const before = await request(app).get(endpoint).set('Authorization', `Bearer ${aliceToken}`).expect(200);
+    await request(app).put(`/api/trips/${tripId}/blog/item/${itemId}/reactions`)
+      .set('Authorization', `Bearer ${aliceToken}`).send({ emoji: 'heart' }).expect(200);
+
+    const after = await request(app).get(endpoint)
+      .set('Authorization', `Bearer ${aliceToken}`)
+      .set('If-None-Match', before.headers.etag)
+      .expect(200);
+    expect(after.headers.etag).not.toBe(before.headers.etag);
+    expect(after.body.days[0].items.find((item: any) => item.id === itemId).engagement.userReaction).toBe('heart');
+
+    await request(app).delete(`/api/trips/${tripId}/blog/item/${itemId}/reactions`)
+      .set('Authorization', `Bearer ${aliceToken}`).expect(200);
+  });
+
   it('public projection: reaction counts are present, but no other user\'s identity ever appears in the summary', async () => {
     await request(app).put(`/api/trips/${tripId}/blog/item/${itemId}/reactions`).set('Authorization', `Bearer ${aliceToken}`).send({ emoji: 'heart' }).expect(200);
     await request(app).put(`/api/trips/${tripId}/blog/item/${itemId}/reactions`).set('Authorization', `Bearer ${bobToken}`).send({ emoji: 'heart' }).expect(200);

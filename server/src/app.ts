@@ -142,7 +142,7 @@ const corsOptions: cors.CorsOptions = {
     return callback(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent', 'X-Public-Visitor-Id'],
   exposedHeaders: ['X-Request-Id'],
 };
 
@@ -183,7 +183,9 @@ const webIndexPath = path.join(publicDir, 'index.html');
 const hasWebApp = fs.existsSync(webIndexPath);
 
 app.get('/login', (_req, res) => res.sendFile(loginPath));
-app.get('/privacy', (_req, res) => res.type('html').send(privacyPolicyHtml));
+// Serve both published privacy URLs from the generated notice. The .html URL
+// must also work when the web export has not been copied into server/public.
+app.get(['/privacy', '/privacy.html'], (_req, res) => res.type('html').send(privacyPolicyHtml));
 // Stable extensionless URLs for the public legal pages (store listings, Play Console
 // deletion URL, footers). Registered before the SPA fallback so they never resolve
 // to the app shell.
@@ -207,6 +209,10 @@ if (!hasWebApp) {
 }
 
 app.use(express.static(publicDir));
+// In local server-only runs the Expo export is not copied to server/public yet.
+// Keep the profile's public legal links reachable from their checked-in pages.
+const appPublicDir = path.join(__dirname, '..', '..', 'app', 'public');
+if (fs.existsSync(appPublicDir)) app.use(express.static(appPublicDir));
 
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, createOAuthNonce, decodeOAuthState, authenticate } from './auth';

@@ -154,6 +154,7 @@ export const listReactors = async (
     .get();
   const rows = snap.docs
     .map((doc: any) => doc.data() as any)
+    .filter((data: any) => typeof data.userId === 'string' && !data.userId.startsWith('public-visitor:'))
     .filter((data: any) => !options.cursor || data.createdAt < options.cursor)
     .sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);

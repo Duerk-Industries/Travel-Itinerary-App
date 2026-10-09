@@ -17,6 +17,8 @@ import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/b
 import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 import { logError } from '../logger';
+import { isLocalEnv } from '../env';
+import { autoPublishBlogIfEligible } from './blogPublicationRoutes';
 import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
 import { transcribeAndCleanCaption } from '../services/blogVoiceCaptionService';
 import { normalizeBlogTags } from '../blog/tags';
@@ -106,6 +108,13 @@ router.get('/:tripId/blog', async (req, res) => {
       cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     };
+    // Public by default: when a traveler opens the blog, publish it for public viewing if every
+    // traveler qualifies and nobody opted out. Best effort -- never blocks reading the blog.
+    try {
+      await autoPublishBlogIfEligible(req.params.tripId, userIdOf(req));
+    } catch (error) {
+      logError('[blog] auto-publish check failed', error);
+    }
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     const withUrls = await attachMediaUrls(media);
@@ -219,13 +228,19 @@ router.get('/:tripId/blog', async (req, res) => {
     const publicPath = blog.visibilityState === 'public'
       ? await blogRepository().getPublicPath(req.params.tripId)
       : null;
-    const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
+    // Reactions change independently of contentRevision. Include their summaries so a
+    // conditional GET cannot return 304 with a pre-reaction body from the browser cache.
+    const engagementDigest = createHash('sha256').update(JSON.stringify(blog.days.map((day: any) => [
+      day.engagement,
+      day.items?.map((item: any) => [item.engagement, item.assets?.map((asset: any) => asset.engagement)]),
+    ]))).digest('hex').slice(0, 16);
+    const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}-${engagementDigest}"`;
     res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'private, no-store');
     if (req.headers['if-none-match'] === etag) {
       res.status(304).end();
       return;
     }
-    res.setHeader('Cache-Control', 'private, no-store');
     res.json({ ...blog, publicPath });
   } catch (err) {
     errorResponse(res, err);
@@ -438,6 +453,7 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
   } catch (err) {
     const message = String((err as any)?.message ?? 'Unable to initialize upload');
     if (message === 'QUOTA_EXCEEDED') { res.status(413).json({ error: message, code: message }); return; }
+    if (message === 'VOICE_STORAGE_UNAVAILABLE') { res.status(503).json({ error: isLocalEnv() ? 'Voice-note storage is unavailable on this dev server: it cannot sign upload URLs. Run scripts/setup-local-blog-media.ps1, then restart the server.' : 'Voice-note storage is unavailable. Please try again later.' }); return; }
     errorResponse(res, err);
   }
 });
@@ -449,6 +465,10 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
     const userId = userIdOf(req);
     const pending = await blogMediaRepository().getAssetForProcessing(req.params.assetId);
     const reallyUploaded = pending && pending.uploaderUserId === userId && pending.objectKey ? await objectExists(pending.objectKey) : false;
+    if (pending?.mediaKind === 'audio' && pending.uploaderUserId === userId && !reallyUploaded) {
+      res.status(503).json({ error: 'Voice-note audio is missing from storage. Please upload it again.' });
+      return;
+    }
     // A real object landed in the bucket (the client PUT to the signed URL from upload-init): run
     // the actual normalization/thumbnail pipeline and trust the real processed byte count instead
     // of whatever the client claims. Otherwise (no GCS configured, so upload-init fell back to the

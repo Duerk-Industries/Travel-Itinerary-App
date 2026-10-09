@@ -8,6 +8,7 @@ import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { normalizeBlogTags } from './tags';
+import { clearFirebaseDeletedTarget } from './deletedTargetCleanup';
 import { getDb } from '../db.firebase';
 
 const config = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; } })();
@@ -125,12 +126,15 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     const existingObjectKey = String(existingData.objectKey ?? '');
     const stillUploading = ['uploading', 'quarantined'].includes(String(existingData.state));
     const retryUploadUrl = stillUploading ? await createBlogUploadUrl(existingObjectKey, String(existingData.sourceMimeType ?? '')) : null;
+    if (input.mediaKind === 'audio' && stillUploading && !retryUploadUrl) throw new Error('VOICE_STORAGE_UNAVAILABLE');
     return { asset: map(existingData, doc.id), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
   }
   const assetId = randomUUID();
   const blogItemId = input.galleryItemId ?? randomUUID();
   const dayDate = galleryDayDate ?? input.dayDate;
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
+  const audioUploadUrl = input.mediaKind === 'audio' ? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase()) : null;
+  if (input.mediaKind === 'audio' && !audioUploadUrl) throw new Error('VOICE_STORAGE_UNAVAILABLE');
   const parentKindKey = input.galleryItemId ? 'core.gallery' : `media.${input.mediaKind}`;
   const position = input.galleryItemId ? galleryAssetCount : 0;
   const blogDoc = await db.collection('trip_blogs').doc(input.tripId).get();
@@ -144,7 +148,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   }
   const accountRef = db.collection('blog_storage_accounts').doc(userId);
   await db.runTransaction(async (tx) => { const current = (await tx.get(accountRef)).data() as any; const available = Number(current?.includedBytes ?? 0) + Number(current?.purchasedBytes ?? 0) - Number(current?.visibleCommittedBytes ?? 0) - Number(current?.reservedBytes ?? 0); if (available < input.byteSize) throw new Error('QUOTA_EXCEEDED'); tx.set(accountRef, { reservedBytes: Number(current?.reservedBytes ?? 0) + input.byteSize, updatedAt: nowIso() }, { merge: true }); });
-  const uploadUrl = await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
+  const uploadUrl = audioUploadUrl ?? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
   return { asset: map(data, assetId), uploadUrl, objectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: uploadUrl ? 'gcs' : 'managed' };
 };
 
@@ -233,14 +237,18 @@ export const deleteMediaAsset = async (userId: string, assetId: string): Promise
     const accountSnap = await tx.get(accountRef);
     const account = accountSnap.data() as any;
     tx.set(accountRef, { [bytesField]: Math.max(0, Number(account?.[bytesField] ?? 0) - Number(asset.billableBytes ?? 0)), updatedAt: nowIso() }, { merge: true });
-    tx.set(assetRef, { state: 'deleted', updatedAt: nowIso() }, { merge: true });
+    tx.set(assetRef, { state: 'deleted', tags: [], updatedAt: nowIso() }, { merge: true });
   });
+
+  await clearFirebaseDeletedTarget(db, 'asset', assetId);
 
   const remainingSnap = await db.collection('blog_media_assets').where('blogItemId', '==', asset.blogItemId).get();
   const remaining = remainingSnap.docs.filter((doc) => String((doc.data() as any).state) !== 'deleted').length;
   if (remaining === 0) {
-    await itemRef.set({ deletedAt: nowIso(), version: Number(item.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
+    await itemRef.set({ deletedAt: nowIso(), tags: [], version: Number(item.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
+    await clearFirebaseDeletedTarget(db, 'item', String(asset.blogItemId));
   }
+  await db.collection('trip_blogs').doc(String(asset.tripId)).set({ contentRevision: FieldValue.increment(1), updatedAt: nowIso() }, { merge: true });
   return { deleted: true };
 };
 

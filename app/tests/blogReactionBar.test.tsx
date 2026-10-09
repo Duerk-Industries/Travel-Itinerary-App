@@ -25,6 +25,15 @@ describe('BlogReactionBar', () => {
     expect(queryByTestId('bar-picker')).toBeNull(); // collapsed by default
   });
 
+  it('keeps the caller\'s selected emoji visible while aggregate counts catch up', () => {
+    const { getByTestId } = render(
+      <BlogReactionBar targetKind="item" targetId="item-1"
+        summary={{ reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: 'heart' }}
+        canEngage onToggle={jest.fn()} testID="bar" />
+    );
+    expect(getByTestId('bar-chip-heart').props.accessibilityState.selected).toBe(true);
+  });
+
   it('tapping "+" reveals the full emoji picker; tapping an emoji calls onToggle and collapses it again', async () => {
     const onToggle = jest.fn().mockResolvedValue(undefined);
     const { getByTestId, queryByTestId } = render(

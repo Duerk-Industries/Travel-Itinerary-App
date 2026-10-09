@@ -27,6 +27,7 @@ type DayMediaLightboxProps = {
   // Phase 3 (B1): same engagement plumbing as DayMediaGallery — a small count badge on every
   // grid tile that has reactions, and the full interactive reaction bar once a tile is expanded.
   canEngage?: boolean;
+  canReact?: boolean;
   getEngagementSummary?: (assetId: string) => any;
   onToggleReaction?: (targetKind: 'asset', targetId: string, emoji: string) => Promise<void>;
   onReactionError?: (message: string) => void;
@@ -55,7 +56,7 @@ const WIDE_LAYOUT_MIN_WIDTH = 700;
 const DayMediaLightbox = ({
   visible, items, onClose, dayDate, styles, textColor, mutedColor, borderColor = '#ccd4df', backgroundColor,
   canRemove = false, removing = false, onRemove = () => {},
-  canEngage = false, getEngagementSummary, onToggleReaction, onReactionError, theme,
+  canEngage = false, canReact = canEngage, getEngagementSummary, onToggleReaction, onReactionError, theme,
   currentUserId = null, canModerate = false, audienceLabel = null, getComments,
   onPostComment, onEditComment, onDeleteComment, onReportComment, onHideComment, onUnhideComment,
   onShowEarlierReplies, onCommentError,
@@ -101,14 +102,14 @@ const DayMediaLightbox = ({
             </View>
             <BlogMediaPreview item={expandedItem} backgroundColor={backgroundColor} />
             {expandedItem.caption ? <Text style={{ color: mutedColor, marginTop: 6 }}>{expandedItem.caption}</Text> : null}
-            {getEngagementSummary && onToggleReaction ? (
+            {canReact && getEngagementSummary && onToggleReaction ? (
               <View style={{ marginTop: 6 }}>
                 <BlogReactionBar
                   testID={`lightbox-reactions-${expandedItem.assetId}`}
                   targetKind="asset"
                   targetId={expandedItem.assetId}
                   summary={getEngagementSummary(expandedItem.assetId)}
-                  canEngage={canEngage}
+                  canEngage={canReact}
                   onToggle={onToggleReaction}
                   onError={onReactionError}
                   textColor={textColor}
@@ -183,7 +184,7 @@ const DayMediaLightbox = ({
                     <Text style={{ fontSize: 24 }}>▶️</Text>
                   </View>
                 ) : null}
-                {summary && summary.reactionTotal > 0 ? (
+                {canReact && summary && summary.reactionTotal > 0 ? (
                   <View
                     testID={`day-media-tile-reaction-badge-${item.id}`}
                     style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 2 }}

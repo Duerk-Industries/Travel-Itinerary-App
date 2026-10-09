@@ -119,6 +119,9 @@ export interface BlogDocument {
   photoLocationEnabled: boolean;
   // Off by default; see BlogMastheadPatch.dayPhotoRemindersEnabled.
   dayPhotoRemindersEnabled: boolean;
+  // True once any traveler has made the blog private for public viewing (trip_blogs.public_opt_out).
+  // Travelers and followers always see the blog; this only governs the public web.
+  publicOptOut: boolean;
   days: BlogDay[];
 }
 
@@ -185,4 +188,6 @@ export interface BlogMastheadPatch {
   // opt-in per trip on top of each traveler's own notification preference — both must be on
   // before anyone gets nudged. Off by default (trip_blogs.day_photo_reminders_enabled).
   dayPhotoRemindersEnabled?: boolean;
+  // Any traveler can set this; see BlogDocument.publicOptOut.
+  publicOptOut?: boolean;
 }

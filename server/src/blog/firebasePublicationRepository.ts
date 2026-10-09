@@ -137,6 +137,37 @@ export const revokePublicationFirebase = async (tripId: string, userId: string):
   await setBlogVisibility(tripId, Number(epoch.data.epoch), 'revoked');
 };
 
+/**
+ * Public-by-default publication (opt-out model). Mirrors autoPublishBlogIfEligible in
+ * routes/blogPublicationRoutes.ts: publishes only when every active member is an account holder
+ * with a date of birth showing 16+, no member's profile default is private, nobody has made this
+ * trip's blog private, and no earlier publication decision exists (unless `force`).
+ */
+export const autoPublishFirebase = async (tripId: string, actorUserId: string, options: { force?: boolean; altTextClear: () => Promise<boolean> }): Promise<boolean> => {
+  const db = getDb();
+  const blog = await db.collection('trip_blogs').doc(tripId).get();
+  if ((blog.data() as any)?.publicOptOut === true) return false;
+  const latest = await findEpoch(tripId);
+  if (latest && (!options.force || latest.data.state === 'public' || latest.data.state === 'pending_consent')) return false;
+  const trip = await db.collection('trips').doc(tripId).get();
+  if (!trip.exists) return false;
+  const members = await db.collection('group_members').where('groupId', '==', String((trip.data() as any)?.groupId ?? '')).get();
+  // Guests without an account are ignored; only account holders are age-checked.
+  const active = members.docs.map((doc) => doc.data() as any).filter((member) => member.removedAt == null && member.userId);
+  if (active.length === 0) return false;
+  const eligibility = await eligibleAdults(tripId);
+  if (eligibility.missingBirthDate > 0 || eligibility.adults.length !== active.length) return false;
+  const users = await Promise.all(active.map((member) => db.collection('users').doc(String(member.userId)).get()));
+  if (users.some((user) => (user.data() as any)?.blogDefaultPublic === false)) return false;
+  if (!(await options.altTextClear())) return false;
+  const epoch = Number(latest?.data?.epoch ?? 0) + 1;
+  await db.collection('blog_publication_epochs').doc(randomUUID()).set({ tripId, epoch, state: 'public', requestedBy: actorUserId, expiresAt: null, createdAt: nowIso(), updatedAt: nowIso() });
+  await setBlogVisibility(tripId, epoch, 'public');
+  const actor = await db.collection('users').doc(actorUserId).get();
+  await upsertAlias(tripId, actorUserId, slug((actor.data() as any)?.username ?? actorUserId), slug((trip.data() as any)?.name ?? 'trip'), true);
+  return true;
+};
+
 export const getCanonicalPublicPathFirebase = async (tripId: string): Promise<string | null> => {
   const blog = await getDb().collection('trip_blogs').doc(tripId).get();
   if (!blog.exists || (blog.data() as any)?.visibilityState !== 'public') return null;
@@ -191,7 +222,9 @@ export const getPublicBlogFirebase = async (usernameSlug: string, tripSlug: stri
     const item = doc.data() as any;
     if (item.deletedAt != null || item.audience !== 'public') return;
     const base = { id: doc.id, kindKey: item.kindKey, schemaVersion: Number(item.schemaVersion ?? 1), audience: item.audience, sortKey: item.sortKey };
-    const media = String(item.kindKey ?? '').startsWith('media.') ? mediaByItem.get(doc.id) : null;
+    const isMedia = String(item.kindKey ?? '').startsWith('media.');
+    const media = isMedia ? mediaByItem.get(doc.id) : null;
+    if (isMedia && media?.state !== 'ready') return;
     const output = media ? { ...base, assetId: media.assetId, mediaKind: media.mediaKind, caption: media.caption ?? null, altText: media.altText ?? null, objectKey: media.objectKey ?? null, uploaderUserId: media.uploaderUserId ?? null } : { ...base, body: String(item.body ?? ''), languageTag: item.languageTag ?? null };
     // Text items use the blog day document id; Firebase media items use the day date. These are
     // two different keys into the same map — a day with both kinds of item needs entries under

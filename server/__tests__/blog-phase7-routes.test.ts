@@ -48,13 +48,10 @@ describe('Phase 7 blog discovery and offline replay routes', () => {
     expect(response.body.places).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Pike Place Market', firstDate: '2027-04-02', sourceTypes: ['activities'] })]));
   });
 
-  it('routes voice notes through capped uploader storage instead of the fake modality job', async () => {
+  it('does not create a voice note when object storage is unavailable', async () => {
     const init = await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set(auth()).set('Idempotency-Key', 'voice-1')
-      .send({ dayDate: '2027-04-02', mediaKind: 'audio', mimeType: 'audio/m4a', byteSize: 1024, tags: ['voice-memory-unique'] }).expect(201);
-    expect(init.body.asset.mediaKind).toBe('audio');
-    await request(app).post(`/api/trips/${tripId}/blog/media/${init.body.asset.id}/complete`).set(auth()).send({ physicalBytes: 1024 }).expect(200);
-    const tagged = await request(app).get(`/api/trips/${tripId}/blog/search?q=voice-memory-unique`).set(auth()).expect(200);
-    expect(tagged.body.results.map((result: { id: string }) => result.id)).toContain(init.body.asset.blogItemId);
+      .send({ dayDate: '2027-04-02', mediaKind: 'audio', mimeType: 'audio/m4a', byteSize: 1024, tags: ['voice-memory-unique'] }).expect(503);
+    expect(init.body.error).toMatch(/storage is unavailable/i);
     await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`).set(auth()).set('Idempotency-Key', 'voice-too-large')
       .send({ dayDate: '2027-04-02', mediaKind: 'audio', mimeType: 'audio/m4a', byteSize: 26214401 }).expect(400);
     await request(app).post(`/api/trips/${tripId}/blog/modalities`).set(auth()).send({ dayDate: '2027-04-02', kindKey: 'media.audio', payload: {} }).expect(409);

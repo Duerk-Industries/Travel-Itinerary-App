@@ -19,7 +19,9 @@ const jsonResponse = (body: unknown, status = 200) =>
 const blogBody = {
   id: 'blog-1', tripId, title: 'Blog', subtitle: null, introduction: null, contentRevision: 1,
   visibilityState: 'private', visibilityEpoch: 0, publicPath: null,
-  days: [{ id: 'day-1', tripId, localDate: '2026-09-01', headline: null, summary: null, coverItemId: null, updateVersion: 1, items: [], activities: [] }],
+  days: [{ id: 'day-1', tripId, localDate: '2026-09-01', headline: null, summary: null, coverItemId: null, updateVersion: 1, activities: [],
+    // Days with no posts are hidden outside edit mode, so the fixture day needs one to render.
+    items: [{ id: 'item-1', kindKey: 'core.text', body: 'A day worth reading', audience: 'travelers', updateVersion: 1 }] }],
 };
 
 const mount = (readOnly: boolean, features: Record<string, boolean>) => {
@@ -51,7 +53,7 @@ describe('TripBlogTab — "Blog tools" drawer visibility', () => {
 
   it('is hidden for a follower who has nothing in it', async () => {
     const screen = mount(true, {});
-    await waitFor(() => expect(screen.queryByText('2026-09-01')).toBeTruthy());
+    await waitFor(() => expect(screen.queryByTestId('blog-day-2026-09-01')).toBeTruthy());
     expect(screen.queryByTestId('blog-tools-toggle')).toBeNull();
   });
 

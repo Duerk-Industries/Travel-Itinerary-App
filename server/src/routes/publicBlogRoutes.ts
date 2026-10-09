@@ -6,7 +6,8 @@ import { isFeatureEnabled } from '../services/entitlementService';
 import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow } from '../services/httpRateLimitService';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { blogEngagementRepository } from '../blog/engagementRepository';
-import { BlogComment } from '../blog/engagementTypes';
+import { BlogComment, BlogEngagementTargetKind, BLOG_REACTION_EMOJIS, BlogReactionEmoji } from '../blog/engagementTypes';
+import { clearPublicReaction, getPublicVisitorReactions, setPublicReaction } from '../blog/publicReactionRepository';
 import { createBlogReadUrl, blogRenditionKey } from '../services/blogStorageClient';
 
 const router = Router();
@@ -35,6 +36,9 @@ const attachPublicMediaUrls = async (days: Array<{ items: any[] }>): Promise<voi
     delete item.uploaderUserId;
     delete item.objectKey;
   })));
+  // A legacy audio row may say ready even though no object was ever uploaded or
+  // a read URL cannot be signed. It must not become a public post.
+  for (const day of days) day.items = day.items.filter((item: any) => item.mediaKind !== 'audio' || Boolean(item.primaryUrl));
 };
 
 // Phase 4 of docs/trip-blog-social-implementation-plan.md, architecture §5.1/§14.7 — a route
@@ -57,6 +61,104 @@ const sanitizePublicComment = (comment: BlogComment) => ({
 });
 
 const clientIp = (req: any): string => String(req.ip || req.socket?.remoteAddress || 'unknown');
+
+const publicPostTargets = async (tripId: string, username: string, tripSlug: string): Promise<Array<{ targetKind: 'item' | 'asset'; targetId: string }>> => {
+  if (getCurrentDbProvider() === 'firebase') {
+    const blog = await getPublicBlogFirebase(username, tripSlug);
+    return (blog?.days ?? []).flatMap((day: any) => day.items ?? []).flatMap((item: any) =>
+      item.kindKey === 'core.text' ? [{ targetKind: 'item' as const, targetId: String(item.id) }]
+        : item.assetId && (item.mediaKind === 'photo' || item.mediaKind === 'video')
+          ? [{ targetKind: 'asset' as const, targetId: String(item.assetId) }] : []);
+  }
+  const rows = await queryBlog<{ id: string; kind_key: string; asset_id: string | null }>(
+    `SELECT i.id, i.kind_key, a.id AS asset_id FROM blog_items i
+     LEFT JOIN blog_item_assets ia ON ia.item_id = i.id
+     LEFT JOIN blog_media_assets a ON a.id = ia.asset_id AND a.state = 'ready' AND a.moderation_state <> 'blocked'
+     WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND i.audience = 'public'`, [tripId]
+  );
+  return rows.rows.flatMap<{ targetKind: 'item' | 'asset'; targetId: string }>((row) => row.kind_key === 'core.text'
+    ? [{ targetKind: 'item' as const, targetId: String(row.id) }]
+    : row.asset_id && (row.kind_key === 'media.photo' || row.kind_key === 'media.video')
+      ? [{ targetKind: 'asset' as const, targetId: String(row.asset_id) }] : []);
+};
+
+const publicReactionRequest = async (req: any, res: any, clear: boolean, targetKind: BlogEngagementTargetKind): Promise<void> => {
+  if (!(await isFeatureEnabled('trip_blog_social_layer')) || !(await isFeatureEnabled('trip_blog_reactions')) || !(await isFeatureEnabled('trip_blog_public_engagement'))) {
+    res.status(404).json({ error: 'Public blog not found' });
+    return;
+  }
+  const visitorId = String(req.get('X-Public-Visitor-Id') ?? '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitorId)) {
+    res.status(400).json({ error: 'A browser session is required to react' });
+    return;
+  }
+  const emoji = req.body?.emoji as BlogReactionEmoji;
+  if (!clear && !BLOG_REACTION_EMOJIS.includes(emoji)) {
+    res.status(400).json({ error: 'Invalid reaction' });
+    return;
+  }
+  try {
+    await reserveHttpRateLimitOrThrow({
+      name: 'blog_public_reaction', identity: `ip:${clientIp(req)}`, limit: 30, windowMs: 60_000,
+    });
+    const username = String(req.params.username);
+    const tripSlug = String(req.params.tripSlug);
+    const dayDate = targetKind === 'day' ? String(req.params.dayDate) : null;
+    const resolved = getCurrentDbProvider() === 'firebase'
+      ? await resolvePublicTripIdFirebase(username, tripSlug)
+      : await resolvePublicTripIdPostgres(username, tripSlug);
+    const day = dayDate ? resolved?.days.find((candidate) => candidate.localDate === dayDate) : null;
+    const targetId = targetKind === 'day' ? day?.id : String(req.params.targetId);
+    if (!resolved || !targetId || (targetKind !== 'day' && !/^[0-9a-f-]{36}$/i.test(targetId))) {
+      res.status(404).json({ error: 'Public blog not found' });
+      return;
+    }
+    const visible = targetKind === 'day'
+      ? getCurrentDbProvider() === 'firebase'
+        ? Boolean((await getPublicBlogFirebase(username, tripSlug))?.days.find((candidate: any) => candidate.localDate === dayDate && candidate.items?.length))
+        : Boolean((await queryBlog('SELECT id FROM blog_items WHERE blog_day_id = $1 AND audience = $2 AND deleted_at IS NULL LIMIT 1', [targetId, 'public'])).rows[0])
+      : (await publicPostTargets(resolved.tripId, username, tripSlug)).some((target) => target.targetKind === targetKind && target.targetId === targetId);
+    if (!visible) {
+      res.status(404).json({ error: 'Public blog not found' });
+      return;
+    }
+    if (clear) await clearPublicReaction(resolved.tripId, targetKind, targetId, visitorId);
+    else await setPublicReaction(resolved.tripId, targetKind, targetId, visitorId, emoji);
+    const summaries = await blogEngagementRepository().getEngagementSummaries(null, [{ targetKind, targetId }], ['public']);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ...(summaries[`${targetKind}:${targetId}`] ?? { reactionCounts: {}, reactionTotal: 0, commentCount: 0 }), userReaction: clear ? null : emoji });
+  } catch (error) {
+    if (error instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(error.retryAfterSeconds));
+      res.status(429).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: 'Unable to save reaction' });
+  }
+};
+
+router.put('/:username/:tripSlug/engagement/day/:dayDate/reaction', (req, res) => {
+  void publicReactionRequest(req, res, false, 'day').catch(() => {
+    if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
+  });
+});
+router.delete('/:username/:tripSlug/engagement/day/:dayDate/reaction', (req, res) => {
+  void publicReactionRequest(req, res, true, 'day').catch(() => {
+    if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
+  });
+});
+for (const kind of ['item', 'asset'] as const) {
+  router.put(`/:username/:tripSlug/engagement/${kind}/:targetId/reaction`, (req, res) => {
+    void publicReactionRequest(req, res, false, kind).catch(() => {
+      if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
+    });
+  });
+  router.delete(`/:username/:tripSlug/engagement/${kind}/:targetId/reaction`, (req, res) => {
+    void publicReactionRequest(req, res, true, kind).catch(() => {
+      if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
+    });
+  });
+}
 
 router.get('/:username/:tripSlug/engagement', async (req, res) => {
   if (!(await isFeatureEnabled('trip_blog_social_layer')) || !(await isFeatureEnabled('trip_blog_public_engagement'))) {
@@ -88,16 +190,19 @@ router.get('/:username/:tripSlug/engagement', async (req, res) => {
     : await resolvePublicTripIdPostgres(username, tripSlug);
   if (!resolved) return res.status(404).json({ error: 'Public blog not found' });
 
-  res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=45');
+  const visitorId = String(req.get('X-Public-Visitor-Id') ?? '');
+  const hasVisitor = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitorId);
+  res.setHeader('Cache-Control', hasVisitor ? 'private, no-store' : 'public, max-age=15, stale-while-revalidate=45');
 
   if (!dayDate) {
     const targets = resolved.days.map((day) => ({ targetKind: 'day' as const, targetId: day.id }));
     const summaries = await blogEngagementRepository().getEngagementSummaries(null, targets, ['public']);
+    const own = hasVisitor ? await getPublicVisitorReactions(resolved.tripId, targets, visitorId) : {};
     const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0 };
     return res.json({
       days: resolved.days.map((day) => {
         const s = summaries[`day:${day.id}`] ?? zero;
-        return { localDate: day.localDate, reactionCounts: s.reactionCounts, reactionTotal: s.reactionTotal, commentCount: s.commentCount };
+        return { localDate: day.localDate, reactionCounts: s.reactionCounts, reactionTotal: s.reactionTotal, commentCount: s.commentCount, ...(hasVisitor ? { userReaction: own[`day:${day.id}`] ?? null } : {}) };
       }),
     });
   }
@@ -183,7 +288,7 @@ router.get('/:username/:tripSlug', async (req, res) => {
     const base = { id: item.id, kindKey: item.kind_key, schemaVersion: item.schema_version, audience: item.audience, sortKey: item.sort_key };
     if (item.kind_key === 'core.text') {
       list.push({ ...base, body: item.body ?? '', languageTag: item.language_tag ?? null });
-    } else if (item.kind_key.startsWith('media.')) {
+    } else if (item.kind_key.startsWith('media.') && item.asset_id) {
       list.push({ ...base, assetId: item.asset_id, mediaKind: item.media_kind_key, caption: item.caption, altText: item.alt_text, objectKey: item.object_key, uploaderUserId: item.uploader_user_id });
     }
     byDay.set(String(item.blog_day_id), list);

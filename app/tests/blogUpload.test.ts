@@ -13,6 +13,20 @@ describe('blog media upload finalization', () => {
     global.fetch = originalFetch;
   });
 
+  it('does not finalize a voice note when storage did not provide an upload URL', async () => {
+    const fetchMock = jest.fn().mockResolvedValueOnce(jsonResponse({ asset: { id: 'voice-1' }, uploadUrl: null }, 201));
+    global.fetch = fetchMock as jest.Mock;
+
+    const result = await uploadOneBlogFile(
+      { backendUrl: 'https://example.test', headers: {}, tripId: 'trip-1' },
+      '2026-09-01',
+      { blob: new Blob(['audio']), mimeType: 'audio/m4a', size: 5 }
+    );
+
+    expect(result).toEqual({ outcome: 'error', error: 'Voice-note storage is unavailable. Please try again later.' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('reports quota exhaustion when generated rendition overhead is rejected at completion', async () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce(jsonResponse({ asset: { id: 'asset-1' }, uploadUrl: null }, 201))
