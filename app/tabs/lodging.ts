@@ -16,6 +16,11 @@ export type Lodging = {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
+  upVotes?: number;
+  downVotes?: number;
+  // Account user ids of who voted each way (for voter avatars).
+  upVoterIds?: string[];
+  downVoterIds?: string[];
   netRating?: number;
   userRating?: -1 | 1 | null;
   name: string;
@@ -81,27 +86,33 @@ export const calculateNights = (checkIn: string, checkOut: string): number => {
 };
 
 // Normalize a lodging row from the API.
+// Firebase returns snake_case (plus camelCase); the Postgres/in-memory adapters return camelCase
+// only, so accept both or lodging costs/dates silently read as empty.
 export const normalizeLodgingFromApi = (l: any): Lodging => ({
   id: l.id,
-  userId: l.user_id,
-  tripId: l.trip_id,
+  userId: l.user_id ?? l.userId,
+  tripId: l.trip_id ?? l.tripId,
   status: normalizeItineraryStatus(l.status, LEGACY_ITINERARY_STATUS),
   netVotes: Number(l.netVotes ?? 0) || 0,
   userVote: l.userVote === 1 || l.userVote === -1 ? l.userVote : null,
+  upVotes: Number(l.upVotes ?? 0) || 0,
+  downVotes: Number(l.downVotes ?? 0) || 0,
+  upVoterIds: Array.isArray(l.upVoterIds) ? l.upVoterIds.map(String) : [],
+  downVoterIds: Array.isArray(l.downVoterIds) ? l.downVoterIds.map(String) : [],
   netRating: Number(l.netRating ?? 0) || 0,
   userRating: l.userRating === 1 || l.userRating === -1 ? l.userRating : null,
   name: l.name,
-  checkInDate: normalizeDate(l.check_in_date),
-  checkOutDate: normalizeDate(l.check_out_date),
+  checkInDate: normalizeDate(l.check_in_date ?? l.checkInDate),
+  checkOutDate: normalizeDate(l.check_out_date ?? l.checkOutDate),
   rooms: String(l.rooms ?? '1'),
-  refundBy: normalizeDate(l.refund_by),
-  totalCost: String(l.total_cost ?? ''),
-  costPerNight: String(l.cost_per_night ?? ''),
+  refundBy: normalizeDate(l.refund_by ?? l.refundBy),
+  totalCost: String(l.total_cost ?? l.totalCost ?? ''),
+  costPerNight: String(l.cost_per_night ?? l.costPerNight ?? ''),
   address: l.address ?? '',
   notes: l.notes ?? null,
   features: Array.isArray(l.features) ? l.features : [],
   placeId: l.place_id ?? l.placeId ?? '',
-  paidBy: Array.isArray(l.paid_by) ? l.paid_by : [],
+  paidBy: Array.isArray(l.paid_by) ? l.paid_by : Array.isArray(l.paidBy) ? l.paidBy : [],
   travelerIds: Array.isArray(l.traveler_ids)
     ? l.traveler_ids
     : Array.isArray(l.travelerIds)

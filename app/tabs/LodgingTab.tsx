@@ -2,8 +2,9 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
+import AvatarStack, { type AvatarPerson } from '../components/AvatarStack';
 import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
 import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
@@ -98,6 +99,13 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const [lodgingSort, setLodgingSort] = useState<{ key: string | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
 
   const activeTripId = trip?.id;
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowLayout = viewportWidth < 700;
+  // Voter ids are account user ids; map them to the trip's members for avatar initials.
+  const voterPeople = (userIds?: string[]): AvatarPerson[] => (userIds ?? []).map((userId) => {
+    const member = groupMembers.find((m) => String(m?.userId ?? '') === String(userId));
+    return { id: String(userId), name: member ? formatUserDisplayName(member) : 'Traveler' };
+  });
 
   const openAddDialog = () => {
     if (readOnly) return;
@@ -189,6 +197,66 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     } else {
       Alert.alert(result.error || 'Failed to delete lodging.');
     }
+  };
+
+  // Phone layout: one card per stay with its status, dates, cost and the group's votes
+  // (thumbs up/down counts plus who voted), instead of the 878px-wide table.
+  const renderLodgingCards = () => {
+    if (!sortedLodgings.length) {
+      return <Text style={styles.helperText}>No lodging yet.</Text>;
+    }
+    return (
+      <View style={{ gap: 10 }} testID="lodging-cards">
+        {sortedLodgings.map((lodging) => {
+          const status = normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS);
+          const statusColors = status === 'Booked' || status === 'Completed'
+            ? { bg: '#dcfce7', fg: '#166534' }
+            : status === 'Proposed'
+              ? { bg: '#fef3c7', fg: '#92400e' }
+              : { bg: '#e5e7eb', fg: '#374151' };
+          const upVoters = voterPeople(lodging.upVoterIds);
+          const downVoters = voterPeople(lodging.downVoterIds);
+          const cost = Number(lodging.totalCost) || 0;
+          const canVote = !readOnly && shouldShowVoteButtons(lodging.status, lodging.userVote ?? null);
+          return (
+            <View key={lodging.id} style={[styles.card, { marginBottom: 0, gap: 8 }]} testID={`lodging-card-${lodging.id}`}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <TouchableOpacity style={{ flex: 1, minWidth: 0 }} onPress={() => openDetailsDialog(lodging)}>
+                  <Text style={[styles.cellText, { fontWeight: '700', fontSize: 16 }]}>{lodging.name}</Text>
+                </TouchableOpacity>
+                <View style={{ backgroundColor: statusColors.bg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                  <Text style={{ color: statusColors.fg, fontSize: 12, fontWeight: '700' }}>{status === 'Booked' ? '✓ Booked' : status}</Text>
+                </View>
+              </View>
+              <Text style={styles.helperText}>
+                {formatShortDate(lodging.checkInDate)} → {formatShortDate(lodging.checkOutDate)}
+                {cost > 0 ? ` · $${cost.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : ''}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12 }} testID={`lodging-votes-${lodging.id}`}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.cellText}>👍 {lodging.upVotes ?? 0}</Text>
+                  <AvatarStack people={upVoters} size={20} testID={`lodging-upvoters-${lodging.id}`} />
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.cellText}>👎 {lodging.downVotes ?? 0}</Text>
+                  <AvatarStack people={downVoters} size={20} testID={`lodging-downvoters-${lodging.id}`} />
+                </View>
+              </View>
+              {canVote ? (
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnLodging(lodging.id, 1)}>
+                    <Text style={styles.buttonText}>👍 Vote up</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnLodging(lodging.id, -1)}>
+                    <Text style={styles.dangerButtonText ?? styles.buttonText}>👎 Vote down</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+    );
   };
 
   const voteOnLodging = async (lodgingId: string, value: 1 | -1) => {
@@ -351,7 +419,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           <EditableDataGrid rows={sortedGridRows} columns={gridColumns} disabled={gridSaving} cellErrors={gridErrors} stagedDeleteIds={gridDeleteIds} onCellChange={changeGridCell} onDeleteRow={toggleGridDelete} onUndo={undoGridChange} onRedo={redoGridChange} sortKey={lodgingSort.key} sortDirection={lodgingSort.direction} onSort={sortLodgingTable} styles={styles} theme={theme} />
         </HorizontalTableScroll>
       </> : null}
-      {!tableEditing ? <>
+      {!tableEditing && isNarrowLayout ? renderLodgingCards() : null}
+      {!tableEditing && !isNarrowLayout ? <>
         <HorizontalTableScroll
           style={styles.tableScroll}
           contentContainerStyle={styles.tableScrollContent}

@@ -870,7 +870,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       )}
 
       {otherExpenses.length ? (
-        <View style={{ marginTop: 18 }}>
+        <View style={{ marginTop: 18 }} testID="other-expenses">
           <Text style={styles.sectionTitle}>Other expenses ({otherExpenses.length})</Text>
           <Text style={styles.helperText}>
             Expenses outside the daily grid above — a different category (often mirrored from a flight, lodging, activity or car rental) or a date outside this trip. Select a linked description to edit its itinerary item.

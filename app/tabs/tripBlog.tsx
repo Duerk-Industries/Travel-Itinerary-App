@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import VoiceNoteRecorder from '../components/VoiceNoteRecorder';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { formatDateLong } from '../utils/formatDateLong';
 import TripDayMap from '../components/TripDayMap';
@@ -465,11 +466,23 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     setMetadataBusyAssetId(item.assetId);
     try {
       const formData = new FormData();
-      formData.append('audio', {
-        uri: recording.uri,
-        name: recording.name || 'caption-recording.m4a',
-        type: recording.mimeType || 'audio/m4a',
-      } as any);
+      if (Platform.OS === 'web') {
+        // RN's { uri, name, type } FormData file convention (the else branch below) is native-only
+        // -- on web, FormData.append just serializes that plain object into a string field instead
+        // of attaching real file bytes, so the server's multer middleware never sees a file at all
+        // ("An audio recording is required"). Found via manual testing on web, not previously
+        // exercised there. fetch() the blob: URI to get a real Blob, then append(name, blob,
+        // filename) -- that's what actually attaches bytes to the multipart body in a browser.
+        const audioResponse = await fetch(recording.uri);
+        const audioBlob = await audioResponse.blob();
+        formData.append('audio', audioBlob, recording.name || 'caption-recording.m4a');
+      } else {
+        formData.append('audio', {
+          uri: recording.uri,
+          name: recording.name || 'caption-recording.m4a',
+          type: recording.mimeType || 'audio/m4a',
+        } as any);
+      }
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/media/${item.assetId}/transcribe-caption`, {
         method: 'POST',
         headers,
@@ -792,6 +805,53 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       );
       if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
       await load();
+    } catch (error) {
+      alertMessage('Voice note', error.message || 'Unable to add the voice note.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Records in-app instead of requiring a prerecorded file (handleVoiceNote above stays as the
+  // "choose an existing audio file" path, unchanged). Uploads the clip through the exact same
+  // path as any voice note, then reuses the transcribe-caption pipeline already built for photo
+  // captions (transcribeMediaCaption / saveMediaMetadata above) to turn the recording into the
+  // new item's caption -- no new server route, no new AI cost path, same Premium/Pro tier gate
+  // and quota as dictating a photo caption. Trade-off, stated plainly: that pipeline cleans the
+  // transcript into one short "natural sentence" (it was built for captions), so a long recording
+  // won't come back as a verbatim paragraph -- a real limitation, not a bug, if this is later used
+  // for longer dictated notes.
+  const handleRecordedVoiceNote = async (dayDate, recording) => {
+    if (!canEdit || uploading) return;
+    setUploading(true);
+    try {
+      const response = await fetch(recording.uri);
+      const blob = await response.blob();
+      const uploaded = await uploadBlogFiles(
+        { backendUrl, headers, tripId: activeTripId },
+        dayDate,
+        [{ blob, mimeType: recording.mimeType, size: blob.size, name: recording.name }]
+      );
+      if (!uploaded.succeeded || !uploaded.assets[0]) {
+        throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
+      }
+      await load();
+      if (capabilities.trip_blog_audio_transcription) {
+        try {
+          const result = await transcribeMediaCaption({ assetId: uploaded.assets[0].id }, recording);
+          if (result.caption) {
+            await saveMediaMetadata({ assetId: uploaded.assets[0].id }, { caption: result.caption, altText: '', isDecorative: false });
+            // The upload refresh above happens before transcription. Refresh again after the
+            // caption write so the newly-created voice note immediately renders its transcript
+            // alongside the playback control instead of remaining on the pre-transcription row.
+            await load();
+          }
+        } catch (error) {
+          // The recording itself is already saved at this point -- a failed transcription (no
+          // speech detected, quota reached) shouldn't read as if the whole action failed.
+          alertMessage('Voice note', `Saved, but couldn't transcribe it: ${error.message || 'unknown error'}`);
+        }
+      }
     } catch (error) {
       alertMessage('Voice note', error.message || 'Unable to add the voice note.');
     } finally {
@@ -1395,6 +1455,18 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Voice note</Text>
                   </TouchableOpacity>
                 ) : null}
+                {canEdit && capabilities.trip_blog_audio && capabilities.trip_blog_audio_transcription ? (
+                  <VoiceNoteRecorder
+                    testID={`blog-record-voice-${day.localDate}`}
+                    disabled={uploading}
+                    processingLabel="Transcribing…"
+                    onRecorded={(recording) => handleRecordedVoiceNote(day.localDate, recording)}
+                    onError={(message) => alertMessage('Voice note', message)}
+                    style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}
+                    activeStyle={{ backgroundColor: theme?.colors?.error ?? '#b91c1c' }}
+                    textStyle={[styles.buttonText, { fontSize: 12 }]}
+                  />
+                ) : null}
                 {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#0ea5e9' }]}
@@ -1445,15 +1517,22 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               <View
                 key={item.id}
                 style={{ marginTop: 8 }}
-                {...(Platform.OS === 'web' && canEdit && capabilities.trip_blog_authoring_assist ? {
-                  draggable: true,
-                  onDragStart: (event) => {
+                ref={Platform.OS === 'web' && canEdit && capabilities.trip_blog_authoring_assist ? (node) => {
+                  // react-native-web's View only forwards a fixed prop allowlist onto the
+                  // underlying <div> (modules/forwardedProps) -- draggable/onDragStart/onDragOver/
+                  // onDrop aren't in it, so passing them as JSX props (the old approach here) gets
+                  // silently stripped before the DOM ever sees them, and drag-and-drop never fires.
+                  // `ref` IS forwarded straight to that div, so set the native DOM properties
+                  // directly instead of going through RN's synthetic prop system.
+                  if (!node) return;
+                  node.draggable = true;
+                  node.ondragstart = (event) => {
                     draggedItemId.current = item.id;
                     event?.dataTransfer?.setData?.('text/plain', item.id);
-                  },
-                  onDragOver: (event) => event?.preventDefault?.(),
-                  onDrop: (event) => { event?.preventDefault?.(); void dropItem(day, item); },
-                } : {})}
+                  };
+                  node.ondragover = (event) => event?.preventDefault?.();
+                  node.ondrop = (event) => { event?.preventDefault?.(); void dropItem(day, item); };
+                } : undefined}
               >
                 {canEdit && capabilities.trip_blog_authoring_assist ? <Text style={{ color: mutedColor, fontSize: 11, marginBottom: 3 }}>⠿ Drag to reorder</Text> : null}
                 {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
@@ -1539,8 +1618,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 }
                 return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
               });
-              const readyMedia = allMedia.filter((item) => item.thumbnailUrl || item.primaryUrl);
-              const processingMedia = allMedia.filter((item) => !(item.thumbnailUrl || item.primaryUrl));
+              // Voice notes are pulled out of the photo/video set entirely, not just filtered by
+              // readiness -- DayMediaGallery's mosaic forces every tile into a fixed-height cropped
+              // frame built for images, which mangles an <audio> player (or squishes the native
+              // "Play voice note" button) even once it has a real primaryUrl. A voice note reads
+              // as its own note (transcript first, playback control below), same idea as a plain
+              // text note, never as a mosaic tile.
+              const isAudioMediaItem = (item) => item.mediaKind === 'audio' || item.kindKey === 'media.audio';
+              const audioItems = allMedia.filter(isAudioMediaItem);
+              const visualMedia = allMedia.filter((item) => !isAudioMediaItem(item));
+              const readyMedia = visualMedia.filter((item) => item.thumbnailUrl || item.primaryUrl);
+              const processingMedia = visualMedia.filter((item) => !(item.thumbnailUrl || item.primaryUrl));
               return (
                 <>
                   {readyMedia.length ? (
@@ -1566,10 +1654,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                         borderColor={borderColor}
                         backgroundColor={inputColor}
                         styles={styles}
-                        canEngage={canEngage}
-                        getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
-                        onToggleReaction={engagement.toggle}
-                        onReactionError={handleEngagementError}
                         theme={theme}
                         canEditMetadata={canEdit && capabilities.trip_blog_alt_text}
                         canSuggestMetadata={canEdit && capabilities.trip_blog_caption_ai}
@@ -1584,8 +1668,30 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   ) : null}
                   {processingMedia.map((item) => (
                     <View key={item.id} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
-                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : item.kindKey === 'media.audio' ? '🎙 Voice note' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
+                      <Text style={{ color: textColor, fontWeight: '600' }}>{item.kindKey === 'media.video' ? '🎬 Video' : '📷 Photo'} — {item.state === 'ready' ? 'processed, no preview available' : (item.state || 'processing')}</Text>
                       {item.caption ? <Text style={{ color: mutedColor, marginTop: 4 }}>{item.caption}</Text> : null}
+                      {canEdit ? (
+                        <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
+                          <Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  ))}
+                  {audioItems.map((item) => (
+                    <View key={item.id} testID={`blog-voice-note-${item.id}`} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
+                      <Text style={{ color: textColor, fontWeight: '600' }}>🎙 Voice note</Text>
+                      {item.caption ? (
+                        <Text style={{ color: textColor, marginTop: 4 }}>{item.caption}</Text>
+                      ) : item.primaryUrl ? null : (
+                        <Text style={{ color: mutedColor, marginTop: 4, fontStyle: 'italic' }}>Transcribing…</Text>
+                      )}
+                      {item.primaryUrl ? (
+                        <View style={{ marginTop: 8 }}>
+                          <BlogMediaPreview item={item} backgroundColor={inputColor} />
+                        </View>
+                      ) : (
+                        <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>Uploading…</Text>
+                      )}
                       {canEdit ? (
                         <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
                           <Text style={styles.buttonText}>{deleting ? 'Removing…' : 'Remove'}</Text>

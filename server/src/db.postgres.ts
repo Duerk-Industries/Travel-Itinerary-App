@@ -5236,42 +5236,61 @@ export const castItemVote = async (
   );
 };
 
+export type ItemVoteSummary = {
+  netVotes: number;
+  userVote: -1 | 1 | null;
+  upVotes: number;
+  downVotes: number;
+  // Who voted each way, so clients can show voter avatars next to the counts.
+  upVoterIds: string[];
+  downVoterIds: string[];
+};
+
+const emptyVoteSummary = (): ItemVoteSummary => ({ netVotes: 0, userVote: null, upVotes: 0, downVotes: 0, upVoterIds: [], downVoterIds: [] });
+
 export const getItemVoteSummaries = async (
   userId: string,
   tripId: string,
   itemType: VoteItemType,
   itemIds: string[],
   kind: ReactionKind = 'vote'
-): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null }>> => {
+): Promise<Record<string, ItemVoteSummary>> => {
   const normalizedIds = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
   if (!normalizedIds.length) return {};
   const p = getPool();
   const itemTypeKey = reactionItemTypeKey(itemType, kind);
+  // One row per vote, totalled below — keeps voter ids available without array_agg/FILTER.
   const { rows } = await p.query(
     `
       SELECT item_id::text as "itemId",
-             COALESCE(SUM(value), 0)::int as "netVotes",
-             MAX(CASE WHEN user_id = $1 THEN value ELSE NULL END)::int as "userVote"
+             user_id::text as "userId",
+             value::int as "value"
       FROM item_votes
-      WHERE trip_id = $2
-        AND item_type = $3
-        AND item_id = ANY($4::uuid[])
-      GROUP BY item_id
+      WHERE trip_id = $1
+        AND item_type = $2
+        AND item_id = ANY($3::uuid[])
     `,
-    [userId, tripId, itemTypeKey, normalizedIds]
+    [tripId, itemTypeKey, normalizedIds]
   );
-  const result: Record<string, { netVotes: number; userVote: -1 | 1 | null }> = {};
+  const result: Record<string, ItemVoteSummary> = {};
   normalizedIds.forEach((id) => {
-    result[id] = { netVotes: 0, userVote: null };
+    result[id] = emptyVoteSummary();
   });
   const requestedIdByKey = new Map(normalizedIds.map((id) => [id.toLowerCase(), id]));
   rows.forEach((row: any) => {
     const itemId = String(row.itemId);
     const resultKey = requestedIdByKey.get(itemId.toLowerCase()) ?? itemId;
-    result[resultKey] = {
-      netVotes: Number(row.netVotes) || 0,
-      userVote: row.userVote === 1 || row.userVote === -1 ? row.userVote : null,
-    };
+    const summary = result[resultKey] ?? (result[resultKey] = emptyVoteSummary());
+    const value = Number(row.value) === -1 ? -1 : 1;
+    summary.netVotes += value;
+    if (value === 1) {
+      summary.upVotes += 1;
+      summary.upVoterIds.push(String(row.userId));
+    } else {
+      summary.downVotes += 1;
+      summary.downVoterIds.push(String(row.userId));
+    }
+    if (String(row.userId) === String(userId)) summary.userVote = value;
   });
   return result;
 };

@@ -20,6 +20,7 @@ import {
 // display name formatting, since there is no shared package between app/ and server/ to reuse the
 // client's formatMemberDisplayName (app/utils/memberDisplay.ts). Same precedence: name, then
 // email, then a generic fallback — never a bare empty string.
+// Email sign-ups keep their name on web_users, so queries COALESCE users/web_users names first.
 export const displayNameFromRow = (row: { first_name: string | null; last_name: string | null; email: string | null }): string => {
   const combined = `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim();
   if (combined) return combined;
@@ -319,9 +320,10 @@ export const listReactors = async (
   // filter on both so the query can't be fooled by an id that happens to collide across kinds.
   if (options.cursor) params.push(options.cursor);
   const result = await queryBlog<{ user_id: string; first_name: string | null; last_name: string | null; email: string | null; emoji: string; created_at: Date }>(
-    `SELECT r.user_id, u.first_name, u.last_name, u.email, r.emoji, r.created_at
+    `SELECT r.user_id, COALESCE(u.first_name, wu.first_name) AS first_name, COALESCE(u.last_name, wu.last_name) AS last_name, u.email, r.emoji, r.created_at
      FROM blog_reactions r
      JOIN users u ON u.id = r.user_id
+     LEFT JOIN web_users wu ON wu.id = u.id
      WHERE r.${column} = $1 AND r.target_kind = $2 ${cursorClause}
      ORDER BY r.created_at DESC
      LIMIT ${limit}`,
@@ -567,8 +569,9 @@ export const listTopLevelCommentsForDay = async (
   const params: unknown[] = [tripId, dayId, ...visibleAudiences];
   if (options.cursor) params.push(options.cursor);
   const result = await queryBlog<CommentRowWithAuthor>(
-    `SELECT c.*, u.first_name, u.last_name, u.email FROM blog_comments c
+    `SELECT c.*, COALESCE(u.first_name, wu.first_name) AS first_name, COALESCE(u.last_name, wu.last_name) AS last_name, u.email FROM blog_comments c
      LEFT JOIN users u ON u.id = c.author_user_id
+     LEFT JOIN web_users wu ON wu.id = u.id
      WHERE c.trip_id = $1
        AND (c.blog_day_id = $2 OR c.blog_item_id IN (SELECT id FROM blog_items WHERE blog_day_id = $2) OR c.asset_id IN (SELECT a.id FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id WHERE i.blog_day_id = $2))
        AND c.parent_comment_id IS NULL
@@ -587,8 +590,9 @@ export const listReplies = async (parentCommentId: string, visibleAudiences: Blo
   const limit = Math.min(50, Math.max(1, options.limit ?? 20));
   const audiencePlaceholders = visibleAudiences.map((_, i) => `$${i + 2}`).join(',');
   const result = await queryBlog<CommentRowWithAuthor>(
-    `SELECT c.*, u.first_name, u.last_name, u.email FROM blog_comments c
+    `SELECT c.*, COALESCE(u.first_name, wu.first_name) AS first_name, COALESCE(u.last_name, wu.last_name) AS last_name, u.email FROM blog_comments c
      LEFT JOIN users u ON u.id = c.author_user_id
+     LEFT JOIN web_users wu ON wu.id = u.id
      WHERE c.parent_comment_id = $1 AND c.audience IN (${audiencePlaceholders}) AND c.hidden_at IS NULL
      ORDER BY c.created_at ASC, c.id ASC
      LIMIT ${limit}`,

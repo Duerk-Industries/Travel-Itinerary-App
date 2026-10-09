@@ -13,6 +13,7 @@ import {
   toCents,
   type PaymentRecord,
 } from '../utils/settlement';
+import type { UnifiedExpense } from '../utils/costs';
 
 type Trip = {
   id: string;
@@ -58,6 +59,8 @@ type LedgerTabProps = {
   payerName: (id: string) => string;
   saveCoveredBy: () => Promise<void>;
   readOnly?: boolean;
+  // Costs that came in from bookings (flights, lodgings, activities, car rentals).
+  bookingExpenses?: UnifiedExpense[];
   payments: TripPayment[];
   currentUserMemberId: string | null;
   onAddPayment: (draft: {
@@ -224,6 +227,14 @@ const renderLedgerCards = ({
   );
 };
 
+// "2026-11-02" → "Nov 2" for the compact phone payment rows. Parsed as a local date so it
+// doesn't roll back a day west of UTC.
+const formatShortPaymentDate = (value: string): string => {
+  const [y, m, d] = String(value ?? '').slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return value;
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 const LedgerTab: React.FC<LedgerTabProps> = ({
   trip,
   groupMembers,
@@ -241,6 +252,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   payerName,
   saveCoveredBy,
   readOnly,
+  bookingExpenses = [],
   payments,
   currentUserMemberId,
   onAddPayment,
@@ -481,6 +493,40 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
     );
   };
 
+  // Phone layout: the matrix is ~760px wide, so narrow screens get one card per transfer
+  // ("Sam pays Maya $442.78") read straight from the same minimal-transfer matrix.
+  const renderSettlementList = () => {
+    if (!sortedParticipants.length) {
+      return <Text style={styles.helperText}>No travelers available.</Text>;
+    }
+    const transfers = sortedParticipants.flatMap((from) =>
+      sortedParticipants
+        .filter((to) => to.id !== from.id && (matrix.matrixCents[from.id]?.[to.id] ?? 0) > 0)
+        .map((to) => ({ fromId: from.id, toId: to.id, cents: matrix.matrixCents[from.id][to.id] }))
+    );
+    if (!transfers.length) {
+      return <Text style={styles.helperText} testID="settlement-settled">Everyone is settled up.</Text>;
+    }
+    return (
+      <View testID="settlement-list">
+        {transfers.map(({ fromId, toId, cents }) => (
+          <View
+            key={`settle-${fromId}-${toId}`}
+            style={[styles.card, { marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }]}
+            testID={`settlement-transfer-${fromId}-${toId}`}
+          >
+            <Text style={[styles.cellText, { flex: 1, minWidth: 0 }]}>
+              <Text style={{ fontWeight: '600' }}>{memberNameMap.get(fromId) ?? 'Traveler'}</Text>
+              {' pays '}
+              <Text style={{ fontWeight: '600' }}>{memberNameMap.get(toId) ?? 'Traveler'}</Text>
+            </Text>
+            <Text style={[styles.cellText, { fontWeight: '700' }]}>{formatCents(cents, tripCurrency)}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const eligiblePaymentParticipants = useMemo(
     () => activeMembers.filter((m) => !coveredBy[m.id]),
     [activeMembers, coveredBy]
@@ -516,11 +562,11 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
               testID={`payment-row-${payment.id}`}
             >
               {isNarrowLayout ? (
-                <View style={{ width: '100%', minWidth: 0 }}>
-                  <Text style={[styles.cellText, { width: '100%', flexShrink: 1 }]}>
-                    {payment.paymentDate} — {paymentDescription}
+                <View style={{ width: '100%', minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Text style={[styles.cellText, { flex: 1, minWidth: 0 }]}>
+                    {formatShortPaymentDate(payment.paymentDate)} · {paymentDescription}
                   </Text>
-                  <Text style={[styles.cellText, { width: '100%', flexShrink: 1 }]}>{paymentAmount}</Text>
+                  <Text style={[styles.cellText, { fontWeight: '700' }]}>{paymentAmount}</Text>
                 </View>
               ) : (
                 <Text style={[styles.cellText, { flex: 1, minWidth: 0, flexShrink: 1 }]}>
@@ -545,7 +591,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
 
   return (
     <View style={{ gap: 12 }}>
-      <View style={styles.card}>
+      <View style={styles.card} testID="ledger-summary">
         <View style={styles.row}>
           <Text style={styles.sectionTitle}>Ledger</Text>
           <TouchableOpacity
@@ -587,12 +633,41 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
             })}
       </View>
 
-      <View style={styles.card}>
+      {bookingExpenses.length ? (
+        <View style={styles.card} testID="ledger-bookings">
+          <Text style={styles.sectionTitle}>From your bookings</Text>
+          <Text style={styles.helperText}>Flights, stays, activities and rentals land on the group tab automatically.</Text>
+          <View style={{ gap: 8, marginTop: 4 }}>
+            {bookingExpenses.map((booking) => (
+              <View
+                key={booking.id}
+                style={[styles.card, { marginBottom: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }]}
+                testID={`ledger-booking-${booking.id}`}
+              >
+                <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                  <Text style={[styles.cellText, { fontWeight: '600' }]}>
+                    {booking.description || booking.category}
+                    <Text style={[styles.helperText, { fontWeight: '400' }]}> (from {booking.category})</Text>
+                  </Text>
+                  <View style={{ alignSelf: 'flex-start', backgroundColor: '#dcfce7', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                    <Text style={{ color: '#166534', fontSize: 11, fontWeight: '700' }}>✓ Added to group tab</Text>
+                  </View>
+                </View>
+                <Text style={[styles.cellText, { fontWeight: '700' }]}>{formatMoney(booking.amount)}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      <View style={styles.card} testID="ledger-settlement">
         <Text style={styles.sectionTitle}>Settlement</Text>
         <Text style={styles.helperText}>
-          Each row shows what that traveler owes to every column traveler, after accounting for recorded payments.
+          {isNarrowLayout
+            ? 'Who pays whom to settle up, after accounting for recorded payments.'
+            : 'Each row shows what that traveler owes to every column traveler, after accounting for recorded payments.'}
         </Text>
-        {renderSettlementMatrix()}
+        {isNarrowLayout ? renderSettlementList() : renderSettlementMatrix()}
         {!balanceCheckOk ? (
           <Text style={styles.warningText ?? { color: '#b45309' }}>
             Warning: row total sum minus column total sum is {balanceCheckDelta.toFixed(2)} (expected within $0.01).
@@ -600,7 +675,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
         ) : null}
       </View>
 
-      <View style={styles.card}>
+      <View style={styles.card} testID="ledger-payments">
         <View style={styles.row}>
           <Text style={styles.sectionTitle}>Payments</Text>
           {!readOnly ? (

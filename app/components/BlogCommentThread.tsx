@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import BlogCommentComposer from './BlogCommentComposer';
+import { colorForUser, initialsForName } from '../../packages/messaging/src/colors';
 import type { BlogComment, BlogCommentTargetKind } from '../utils/useBlogComments';
 
 const REPORT_REASONS: Array<{ value: 'spam' | 'harassment' | 'private_info' | 'other'; label: string }> = [
@@ -89,11 +90,18 @@ const CommentRow: React.FC<CommonProps & { comment: BlogComment; isReply: boolea
         <View
           testID={testID ? `${testID}-avatar` : undefined}
           style={{
-            width: 22, height: 22, borderRadius: 11, backgroundColor: mutedColor,
+            width: 22, height: 22, borderRadius: 11,
+            // Same colored initials as the day's contributor strip, so a commenter is recognizable.
+            backgroundColor: comment.authorUserId ? colorForUser(comment.authorUserId) : mutedColor,
+            justifyContent: 'center', alignItems: 'center',
             borderWidth: isFollower ? 2 : 0, borderColor: isFollower ? (theme?.colors?.info ?? '#0369a1') : 'transparent',
             marginTop: 2,
           }}
-        />
+        >
+          {comment.authorUserId ? (
+            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{initialsForName(displayName)}</Text>
+          ) : null}
+        </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text style={{ color: textColor, fontWeight: '700' }}>{displayName}</Text>
