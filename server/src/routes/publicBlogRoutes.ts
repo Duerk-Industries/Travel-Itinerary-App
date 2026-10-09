@@ -76,7 +76,7 @@ const publicPostTargets = async (tripId: string, username: string, tripSlug: str
      LEFT JOIN blog_media_assets a ON a.id = ia.asset_id AND a.state = 'ready' AND a.moderation_state <> 'blocked'
      WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND i.audience = 'public'`, [tripId]
   );
-  return rows.rows.flatMap((row) => row.kind_key === 'core.text'
+  return rows.rows.flatMap<{ targetKind: 'item' | 'asset'; targetId: string }>((row) => row.kind_key === 'core.text'
     ? [{ targetKind: 'item' as const, targetId: String(row.id) }]
     : row.asset_id && (row.kind_key === 'media.photo' || row.kind_key === 'media.video')
       ? [{ targetKind: 'asset' as const, targetId: String(row.asset_id) }] : []);
@@ -197,12 +197,12 @@ router.get('/:username/:tripSlug/engagement', async (req, res) => {
   if (!dayDate) {
     const targets = resolved.days.map((day) => ({ targetKind: 'day' as const, targetId: day.id }));
     const summaries = await blogEngagementRepository().getEngagementSummaries(null, targets, ['public']);
-    const own = hasVisitor ? await getPublicDayReactions(resolved.tripId, resolved.days.map((day) => day.id), visitorId) : {};
+    const own = hasVisitor ? await getPublicVisitorReactions(resolved.tripId, targets, visitorId) : {};
     const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0 };
     return res.json({
       days: resolved.days.map((day) => {
         const s = summaries[`day:${day.id}`] ?? zero;
-        return { localDate: day.localDate, reactionCounts: s.reactionCounts, reactionTotal: s.reactionTotal, commentCount: s.commentCount, ...(hasVisitor ? { userReaction: own[day.id] ?? null } : {}) };
+        return { localDate: day.localDate, reactionCounts: s.reactionCounts, reactionTotal: s.reactionTotal, commentCount: s.commentCount, ...(hasVisitor ? { userReaction: own[`day:${day.id}`] ?? null } : {}) };
       }),
     });
   }
