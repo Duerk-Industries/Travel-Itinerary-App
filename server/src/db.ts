@@ -27,7 +27,19 @@ const adapter = () => getDbAdapter();
 
 export { getProvider as getCurrentDbProvider, resetDbAdapter, type DbProvider };
 
-export const closePool = async (): Promise<void> => adapter().closePool();
+// Work that must finish while the database is still open (e.g. the analytics queue flushing
+// events it already accepted). Modules register here instead of db.ts importing them, which
+// would create an import cycle.
+const beforeCloseHooks: Array<() => Promise<void>> = [];
+export const registerBeforeClosePool = (hook: () => Promise<void>): void => {
+  beforeCloseHooks.push(hook);
+};
+export const closePool = async (): Promise<void> => {
+  for (const hook of beforeCloseHooks) {
+    await hook().catch(() => undefined);
+  }
+  return adapter().closePool();
+};
 export const initDb = async (): Promise<void> => adapter().initDb();
 export const getPrivacyPreferences = async (...args: Parameters<ReturnType<typeof adapter>['getPrivacyPreferences']>) =>
   adapter().getPrivacyPreferences(...args);
