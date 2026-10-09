@@ -21,6 +21,8 @@ export const guessMimeTypeFromName = (name?: string | null): string | null => {
   const lower = String(name ?? '').toLowerCase();
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.heic')) return 'image/heic';
+  if (lower.endsWith('.heif')) return 'image/heif';
   if (lower.endsWith('.mp4')) return 'video/mp4';
   if (lower.endsWith('.mov')) return 'video/quicktime';
   if (lower.endsWith('.webm')) return 'video/webm';

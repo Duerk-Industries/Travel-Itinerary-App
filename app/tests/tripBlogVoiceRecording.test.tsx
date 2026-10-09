@@ -36,8 +36,9 @@ const blogBody = {
 
 describe('TripBlogTab in-app voice note recording', () => {
   let fetchMock: jest.Mock;
+  let transcriptionEnabled = true;
   const originalOS = Platform.OS;
-  afterEach(() => { Platform.OS = originalOS; });
+  afterEach(() => { Platform.OS = originalOS; transcriptionEnabled = true; });
 
   beforeEach(() => {
     (useAudioRecorder as jest.Mock).mockReturnValue({
@@ -52,7 +53,7 @@ describe('TripBlogTab in-app voice note recording', () => {
       if (url.startsWith('file:///')) return { ok: true, blob: async () => new Blob(['audio']) } as any;
       if (url.includes('/blog/publication/status')) return jsonResponse({}, 404);
       if (url.includes('/blog/capabilities')) {
-        return jsonResponse({ features: { trip_blog_audio: true, trip_blog_audio_transcription: true }, limits: {} });
+        return jsonResponse({ features: { trip_blog_audio: true, trip_blog_audio_transcription: transcriptionEnabled }, limits: {} });
       }
       if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(blogBody);
       if (method === 'POST' && url.includes('/blog/media/upload-init')) {
@@ -98,6 +99,24 @@ describe('TripBlogTab in-app voice note recording', () => {
         body: JSON.stringify({ caption: 'A quiet walk along the harbor.', altText: '', isDecorative: false }),
       }),
     ));
+  });
+
+  it('still offers Record when transcription is off, saving the audio without a transcript', async () => {
+    transcriptionEnabled = false;
+    const { findByText, getByTestId, getByLabelText } = renderTab();
+    fireEvent.press(await findByText('Edit blog'));
+
+    const recordButton = await waitFor(() => getByTestId('blog-record-voice-2026-09-01'));
+    fireEvent.press(recordButton);
+    await waitFor(() => expect(getByLabelText('Stop recording')).toBeTruthy());
+    fireEvent.press(recordButton);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      `${backendUrl}/api/trips/${tripId}/blog/media/asset-new/complete`,
+      expect.objectContaining({ method: 'POST' }),
+    ));
+    const transcribeCalls = fetchMock.mock.calls.filter(([reqUrl]: [string]) => String(reqUrl).includes('transcribe-caption'));
+    expect(transcribeCalls).toHaveLength(0);
   });
 
   // Regression test: manual testing on web (localhost:8081) surfaced "Saved, but couldn't

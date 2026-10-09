@@ -12,6 +12,7 @@ import Constants from 'expo-constants';
 import { useFonts, Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import { resolveBackendUrl } from '../utils/backendUrl';
 import { formatDateLong } from '../utils/formatDateLong';
+import { buildDaySegments, formatGapLabel } from '../utils/blogDaySegments';
 
 type PublicBlogItem = {
   id: string;
@@ -388,7 +389,73 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   }
 
   const blog = state.blog;
-  const daysWithContent = blog.days.filter((day) => day.headline || day.summary || day.items.length > 0);
+  const dayHasContent = (day: PublicBlogDay) => Boolean(day.headline || day.summary || day.items.length > 0);
+  const daysWithContent = blog.days.filter(dayHasContent);
+  const daySegments = buildDaySegments(blog.days, dayHasContent);
+  const renderDay = (day: PublicBlogDay) => (
+    <View key={day.localDate} style={{ marginTop: 40, paddingTop: 40, borderTopWidth: 1, borderTopColor: '#E1E8EC' }}>
+      <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: '#2E96A6', marginBottom: 6 }}>
+        {formatDateLong(day.localDate)}
+      </Text>
+      {day.headline ? (
+        <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#152944', marginBottom: day.summary ? 6 : 16 }}>{day.headline}</Text>
+      ) : null}
+      {day.summary ? (
+        <Text style={{ color: '#6B7280', fontSize: 15, marginBottom: 16 }}>{day.summary}</Text>
+      ) : null}
+      {day.items.map((item) => {
+        if (item.kindKey === 'core.text') {
+          const text = stripHtml(item.body || '');
+          if (!text) return null;
+          return (
+            <Text key={item.id} style={{ fontSize: 17, lineHeight: 28, color: '#111827', marginBottom: 16 }}>{text}</Text>
+          );
+        }
+        if (item.mediaKind === 'photo' && item.primaryUrl) {
+          return (
+            <View key={item.id} style={{ marginBottom: 20 }}>
+              <Image
+                source={{ uri: item.primaryUrl }}
+                accessibilityLabel={item.altText || item.caption || 'Trip photo'}
+                style={{ width: '100%', aspectRatio: 3 / 2, borderRadius: 10, backgroundColor: '#F2F5F7' }}
+                resizeMode="cover"
+              />
+              {item.caption ? (
+                <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
+              ) : null}
+            </View>
+          );
+        }
+        if (item.mediaKind === 'video' && item.primaryUrl && Platform.OS === 'web') {
+          return (
+            <View key={item.id} style={{ marginBottom: 20 }}>
+              {React.createElement('video', {
+                src: item.primaryUrl,
+                controls: true,
+                style: { width: '100%', borderRadius: 10, display: 'block', backgroundColor: '#000' },
+              })}
+              {item.caption ? (
+                <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
+              ) : null}
+            </View>
+          );
+        }
+        return null;
+      })}
+      <DayEngagementFooter
+        data={engagementAvailable ? (engagement[day.localDate] ?? { reactionCounts: {}, reactionTotal: 0, commentCount: 0 }) : undefined}
+        bodyFont={bodyDisplayFont}
+        backendUrl={backendUrl}
+        username={username}
+        tripSlug={tripSlug}
+        localDate={day.localDate}
+        selectedReaction={selectedReactions[day.localDate] ?? null}
+        onReact={(emoji) => reactToDay(day.localDate, emoji)}
+        reacting={reactingDay === day.localDate}
+        reactionError={reactionError[day.localDate] ?? null}
+      />
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FAFCFD' }}>
@@ -408,70 +475,14 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
           <Text style={{ fontFamily: bodyDisplayFont, fontSize: 18, lineHeight: 30, color: '#111827', marginBottom: 40 }}>{blog.introduction}</Text>
         ) : null}
 
-        {daysWithContent.map((day) => (
-          <View key={day.localDate} style={{ marginTop: 40, paddingTop: 40, borderTopWidth: 1, borderTopColor: '#E1E8EC' }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: '#2E96A6', marginBottom: 6 }}>
-              {formatDateLong(day.localDate)}
-            </Text>
-            {day.headline ? (
-              <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#152944', marginBottom: day.summary ? 6 : 16 }}>{day.headline}</Text>
-            ) : null}
-            {day.summary ? (
-              <Text style={{ color: '#6B7280', fontSize: 15, marginBottom: 16 }}>{day.summary}</Text>
-            ) : null}
-            {day.items.map((item) => {
-              if (item.kindKey === 'core.text') {
-                const text = stripHtml(item.body || '');
-                if (!text) return null;
-                return (
-                  <Text key={item.id} style={{ fontSize: 17, lineHeight: 28, color: '#111827', marginBottom: 16 }}>{text}</Text>
-                );
-              }
-              if (item.mediaKind === 'photo' && item.primaryUrl) {
-                return (
-                  <View key={item.id} style={{ marginBottom: 20 }}>
-                    <Image
-                      source={{ uri: item.primaryUrl }}
-                      accessibilityLabel={item.altText || item.caption || 'Trip photo'}
-                      style={{ width: '100%', aspectRatio: 3 / 2, borderRadius: 10, backgroundColor: '#F2F5F7' }}
-                      resizeMode="cover"
-                    />
-                    {item.caption ? (
-                      <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
-                    ) : null}
-                  </View>
-                );
-              }
-              if (item.mediaKind === 'video' && item.primaryUrl && Platform.OS === 'web') {
-                return (
-                  <View key={item.id} style={{ marginBottom: 20 }}>
-                    {React.createElement('video', {
-                      src: item.primaryUrl,
-                      controls: true,
-                      style: { width: '100%', borderRadius: 10, display: 'block', backgroundColor: '#000' },
-                    })}
-                    {item.caption ? (
-                      <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 6, fontStyle: 'italic' }}>{item.caption}</Text>
-                    ) : null}
-                  </View>
-                );
-              }
-              return null;
-            })}
-            <DayEngagementFooter
-              data={engagementAvailable ? (engagement[day.localDate] ?? { reactionCounts: {}, reactionTotal: 0, commentCount: 0 }) : undefined}
-              bodyFont={bodyDisplayFont}
-              backendUrl={backendUrl}
-              username={username}
-              tripSlug={tripSlug}
-              localDate={day.localDate}
-              selectedReaction={selectedReactions[day.localDate] ?? null}
-              onReact={(emoji) => reactToDay(day.localDate, emoji)}
-              reacting={reactingDay === day.localDate}
-              reactionError={reactionError[day.localDate] ?? null}
-            />
+        {daySegments.map((segment) => segment.kind === 'gap' ? (
+          // Marks days with nothing posted, so the dates don't appear to jump.
+          <View key={`gap-${segment.fromDate}`} testID={`public-blog-gap-${segment.fromDate}`} style={{ marginTop: 40, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: '#E1E8EC' }} />
+            <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 0.5, color: '#9CA3AF' }}>{formatGapLabel(segment)}</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: '#E1E8EC' }} />
           </View>
-        ))}
+        ) : renderDay(segment.day))}
 
         {!daysWithContent.length ? (
           <Text style={{ color: '#6B7280', fontSize: 15, marginTop: 20 }}>This trip's story hasn't been shared publicly yet.</Text>

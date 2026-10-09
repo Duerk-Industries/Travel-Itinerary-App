@@ -6,6 +6,7 @@
 // app/components/IncomingShareModal.tsx (which owns the actual hook call / UI).
 import { useShareIntent } from 'expo-share-intent';
 import { guessMimeTypeFromName, isVideoMimeType, type PickedMediaFile } from './blogUpload';
+import { convertImageToJpeg, isHeicMimeType, toJpegName } from './heicToJpeg';
 
 export { useShareIntent };
 
@@ -40,11 +41,23 @@ export type ShareIntentFileLike = {
 // batch — the caller reports how many files it started with vs. how many were actually usable.
 export const normalizeShareIntentFiles = async (files: ShareIntentFileLike[]): Promise<PickedMediaFile[]> => {
   const results = await Promise.all(files.map(async (file): Promise<PickedMediaFile | null> => {
-    const mimeType = file.mimeType || guessMimeTypeFromName(file.fileName);
+    let mimeType = file.mimeType || guessMimeTypeFromName(file.fileName);
+    let path = file.path;
+    let name = file.fileName ?? null;
     try {
-      const response = await fetch(file.path);
+      // Photos shared from the iPhone Photos app arrive as HEIC; convert to JPEG so they upload.
+      if (isHeicMimeType(mimeType, name)) {
+        const jpegUri = await convertImageToJpeg(path).catch(() => null);
+        if (jpegUri) {
+          path = jpegUri;
+          mimeType = 'image/jpeg';
+          name = toJpegName(name);
+        }
+      }
+      const response = await fetch(path);
       const blob = await response.blob();
-      return { blob, mimeType, size: file.size ?? blob.size, name: file.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo') };
+      const converted = path !== file.path;
+      return { blob, mimeType, size: converted ? blob.size : (file.size ?? blob.size), name: name ?? (isVideoMimeType(mimeType) ? 'video' : 'photo') };
     } catch {
       return null;
     }

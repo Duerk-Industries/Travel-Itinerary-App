@@ -8,6 +8,7 @@ import {
   getTripById,
   insertAnalyticsEvents,
   isInternalCanaryAccount,
+  registerBeforeClosePool,
 } from '../db';
 import { getAuthSecret } from '../authConfig';
 import { logError } from '../logger';
@@ -372,3 +373,7 @@ export const flushServerEventsForTesting = async (): Promise<void> => {
     else await drain();
   }
 };
+
+// Store already-queued events before the database closes (graceful shutdown, and test teardown,
+// where a drain left running after closePool() used to fail the Jest run).
+registerBeforeClosePool(flushServerEventsForTesting);

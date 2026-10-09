@@ -38,7 +38,9 @@ describe('trip blog mixed photo/video upload classification', () => {
     expect(guessMimeTypeFromName('clip.mp4')).toBe('video/mp4');
     expect(guessMimeTypeFromName('screen.webm')).toBe('video/webm');
     expect(guessMimeTypeFromName('sunset.jpg')).toBe('image/jpeg');
-    expect(guessMimeTypeFromName('unknown.heic')).toBeNull();
+    // Recognized so it can be converted to JPEG on-device (heicToJpeg.ts); still not uploadable as-is.
+    expect(guessMimeTypeFromName('IMG_0042.heic')).toBe('image/heic');
+    expect(guessMimeTypeFromName('unknown.xyz')).toBeNull();
   });
 
   it('keeps voice-note formats in their separately flagged picker path', () => {
