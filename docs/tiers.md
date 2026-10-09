@@ -9,7 +9,7 @@ Tiers are entitlement controls, not deployment toggles. Runtime truth lives in t
 | Tier | Key | Rank | Max active trips | Max travelers/trip | AI generations/month | Notes |
 |---|---|---:|---:|---:|---:|---|
 | Free | `free` | 1 | 3 | 6 | 5 | Can share trips and follow trips |
-| Premium | `premium` | 2 | 250 | 200 | unlimited | |
+| Premium | `premium` | 2 | 250 | 200 | unlimited | Includes receipt scanning |
 | Pro | `pro` | 3 | 250 | 200 | unlimited | Inherits Premium and Free |
 
 `rank` defines inheritance. Higher tiers inherit lower-tier capabilities unless they override them explicitly.
@@ -33,6 +33,7 @@ Tiers are entitlement controls, not deployment toggles. Runtime truth lives in t
 | `car_rentals` | allowed | inherited | inherited |
 | `csv_export` | allowed | inherited | inherited |
 | `cost_tracking` | allowed | allowed | allowed |
+| `receipt_scanning` | denied | allowed | allowed |
 
 ## Ingestion quotas
 

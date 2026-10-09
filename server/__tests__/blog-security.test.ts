@@ -4,7 +4,10 @@ import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
 import { randomUUID } from 'crypto';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, futureDateStringPlusDays, loginWebUser, registerWebUser } from './helpers';
+
+const TRIP_DAY = futureDateString();
+const OTHER_TRIP_DAY = futureDateStringPlusDays(1);
 
 describe('trip blog security boundaries', () => {
   const owner = { firstName: 'Sec', lastName: 'Owner', email: 'blog-sec-owner@example.com', password: 'Password123!' };
@@ -38,7 +41,7 @@ describe('trip blog security boundaries', () => {
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ name: 'Security Trip', startDate: '2030-10-01', endDate: '2030-10-01', participants: [] })
+      .send({ name: 'Security Trip', startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
 
@@ -59,7 +62,7 @@ describe('trip blog security boundaries', () => {
     await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${outsiderToken}`)
-      .send({ dayDate: '2030-10-01', body: 'Should not be allowed' })
+      .send({ dayDate: TRIP_DAY, body: 'Should not be allowed' })
       .expect(403);
   });
 
@@ -67,7 +70,7 @@ describe('trip blog security boundaries', () => {
     const created = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ dayDate: '2030-10-01', body: 'Owner entry' })
+      .send({ dayDate: TRIP_DAY, body: 'Owner entry' })
       .expect(201);
 
     // Regression: listMedia previously used the member-only check (ensureUserInTrip), which
@@ -78,7 +81,7 @@ describe('trip blog security boundaries', () => {
     await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${followerToken}`)
-      .send({ dayDate: '2030-10-01', body: 'Follower should not be able to write' })
+      .send({ dayDate: TRIP_DAY, body: 'Follower should not be able to write' })
       .expect(403);
     await request(app)
       .delete(`/api/trips/${tripId}/blog/items/${created.body.id}`)
@@ -91,7 +94,7 @@ describe('trip blog security boundaries', () => {
     const created = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ dayDate: '2030-10-01', body: 'Flag-gate regression item' })
+      .send({ dayDate: TRIP_DAY, body: 'Flag-gate regression item' })
       .expect(201);
 
     await setFeatureFlag('trip_blog', false, null);
@@ -119,7 +122,7 @@ describe('trip blog security boundaries', () => {
       .post(`/api/trips/${tripId}/blog/media/upload-init`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .set('Idempotency-Key', key)
-      .send({ dayDate: '2030-10-01', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 2048 })
+      .send({ dayDate: TRIP_DAY, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 2048 })
       .expect(201);
 
     // A second, unrelated trip/user reusing the exact same idempotency key must get their own
@@ -127,7 +130,7 @@ describe('trip blog security boundaries', () => {
     const secondTrip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${outsiderToken}`)
-      .send({ name: 'Outsider Trip', startDate: '2030-10-05', endDate: '2030-10-05', participants: [] })
+      .send({ name: 'Outsider Trip', startDate: OTHER_TRIP_DAY, endDate: OTHER_TRIP_DAY, participants: [] })
       .expect(201);
     const outsiderTripId = secondTrip.body.trip?.id ?? secondTrip.body.id;
 
@@ -135,7 +138,7 @@ describe('trip blog security boundaries', () => {
       .post(`/api/trips/${outsiderTripId}/blog/media/upload-init`)
       .set('Authorization', `Bearer ${outsiderToken}`)
       .set('Idempotency-Key', key)
-      .send({ dayDate: '2030-10-05', mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 4096 })
+      .send({ dayDate: OTHER_TRIP_DAY, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 4096 })
       .expect(201);
 
     expect(outsiderUpload.body.asset.id).not.toBe(ownerUpload.body.asset.id);
@@ -146,12 +149,12 @@ describe('trip blog security boundaries', () => {
     const privateItem = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ dayDate: '2030-10-01', body: 'This must stay private to travelers only', audience: 'travelers' })
+      .send({ dayDate: TRIP_DAY, body: 'This must stay private to travelers only', audience: 'travelers' })
       .expect(201);
     const publicItem = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ dayDate: '2030-10-01', body: 'This is fine to publish' })
+      .send({ dayDate: TRIP_DAY, body: 'This is fine to publish' })
       .expect(201);
 
     // Owner is the trip's only account-holding member here (follower/outsider are not

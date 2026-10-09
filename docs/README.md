@@ -41,6 +41,17 @@ This is the main documentation index for the WanderBunnies Travel Itinerary App.
 - [Ingestion Rollout](ingestion-rollout.md)
 - [Security / Key Management](security/key-management.md)
 
+## Privacy, Analytics, and Compliance
+
+- [Analytics Upgrade: Collection, Goals, and Behavior](analytics-upgrade.md) — comprehensive overview of analytics collection, privacy goals, default-off opt-in architecture, GDPR/UK GDPR compliance, iOS ATT/Privacy Manifests, and Android Data Safety policies.
+- [Analytics Upgrade Implementation Plan](implementation-plans/analytics-upgrade.md) — 5-phase engineering and compliance delivery plan, privacy policy page deliverables, test coverage matrix, performance budgets, and cost model.
+- [Analytics Phase 0 Baseline and Review](analytics-phase-0.md)
+- [Analytics Manual Follow-ups](analytics-manual-followups.md) — sign-offs, vendor settings, store submissions and deployment checks still to do
+- [Analytics and Privacy Runbook](analytics-runbook.md) — kill switches, rollout ladder, monitoring and incident procedures
+- [Analytics Sign-off Packet](legal/analytics-signoff-packet.md) — signature blocks, operations evidence tables, and drafts of the user notice and App Review note
+- [Analytics DPIA (draft for sign-off)](legal/analytics-dpia.md)
+- [EU/UK Representative Assessment (draft for counsel)](legal/eu-uk-representative-assessment.md)
+
 ## Authentication and Account Rollout
 
 - [Auth Docs Index](auth/README.md)

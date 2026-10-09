@@ -3,9 +3,11 @@ import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 
 // Phase 3 — the batched `engagement`/`contributors` block on GET /:tripId/blog (architecture §5.4).
+const TRIP_DAY = futureDateString();
+
 describe('GET /:tripId/blog — batched engagement and contributors block', () => {
   const alice = { firstName: 'Alice', lastName: 'Traveler', email: 'blog-get-engagement-alice@example.com', password: 'Password123!' };
   const bob = { firstName: 'Bob', lastName: 'Traveler', email: 'blog-get-engagement-bob@example.com', password: 'Password123!' };
@@ -38,7 +40,7 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${aliceToken}`)
-      .send({ name: 'GET Engagement Trip', startDate: '2026-10-08', endDate: '2026-10-08', participants: [] })
+      .send({ name: 'GET Engagement Trip', startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
@@ -49,18 +51,18 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${aliceToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2026-10-08', body: 'A note', audience: 'public' })
+      .send({ kindKey: 'core.text', dayDate: TRIP_DAY, body: 'A note', audience: 'public' })
       .expect(201);
     itemId = item.body.id;
 
-    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, '2026-10-08']);
+    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, TRIP_DAY]);
     dayId = dayRow.rows[0].id;
   });
 
   afterAll(async () => { await cleanupTestUsersByEmail([alice.email, bob.email]); });
 
   it('reports zeroed engagement and no contributors when nothing has happened yet', async () => {
-    const res = await request(app).get(`/api/trips/${tripId}/blog?date=2026-10-08`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
+    const res = await request(app).get(`/api/trips/${tripId}/blog?date=${TRIP_DAY}`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
     const day = res.body.days[0];
     expect(day.engagement).toEqual({ reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null });
     // One contributor already: alice authored the note above.
@@ -98,7 +100,7 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
       expectedTotal += 1;
     }
 
-    const res = await request(app).get(`/api/trips/${tripId}/blog?date=2026-10-08`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
+    const res = await request(app).get(`/api/trips/${tripId}/blog?date=${TRIP_DAY}`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
     const textItem = res.body.days[0].items.find((i: any) => i.id === itemId);
     expect(textItem.engagement.reactionTotal).toBe(expectedTotal);
     expect(textItem.engagement.reactionCounts).toEqual(expectedCounts);
@@ -115,7 +117,7 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
     await request(app).put(`/api/trips/${tripId}/blog/item/${itemId}/reactions`).set('Authorization', `Bearer ${aliceToken}`).send({ emoji: 'heart' }).expect(200);
     await request(app).put(`/api/trips/${tripId}/blog/item/${itemId}/reactions`).set('Authorization', `Bearer ${bobToken}`).send({ emoji: 'heart' }).expect(200);
 
-    const res = await request(app).get(`/api/trips/${tripId}/blog?date=2026-10-08`).set('Authorization', `Bearer ${bobToken}`).expect(200);
+    const res = await request(app).get(`/api/trips/${tripId}/blog?date=${TRIP_DAY}`).set('Authorization', `Bearer ${bobToken}`).expect(200);
     const textItem = res.body.days[0].items.find((i: any) => i.id === itemId);
     const serialized = JSON.stringify(textItem.engagement);
     // The summary carries counts and the caller's own reaction only — never alice's user id,
@@ -137,15 +139,15 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
     const travelersOnly = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${aliceToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2026-10-08', body: 'Travelers only note', audience: 'travelers' })
+      .send({ kindKey: 'core.text', dayDate: TRIP_DAY, body: 'Travelers only note', audience: 'travelers' })
       .expect(201);
     await request(app).put(`/api/trips/${tripId}/blog/item/${travelersOnly.body.id}/reactions`).set('Authorization', `Bearer ${aliceToken}`).send({ emoji: 'heart' }).expect(200);
 
-    const aliceView = await request(app).get(`/api/trips/${tripId}/blog?date=2026-10-08`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
+    const aliceView = await request(app).get(`/api/trips/${tripId}/blog?date=${TRIP_DAY}`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
     const aliceItem = aliceView.body.days[0].items.find((i: any) => i.id === travelersOnly.body.id);
     expect(aliceItem.engagement.reactionTotal).toBe(1);
 
-    const bobView = await request(app).get(`/api/trips/${tripId}/blog?date=2026-10-08`).set('Authorization', `Bearer ${bobToken}`).expect(200);
+    const bobView = await request(app).get(`/api/trips/${tripId}/blog?date=${TRIP_DAY}`).set('Authorization', `Bearer ${bobToken}`).expect(200);
     const bobItem = bobView.body.days[0].items.find((i: any) => i.id === travelersOnly.body.id);
     expect(bobItem.engagement.reactionTotal).toBe(0);
     expect(bobItem.engagement.userReaction).toBeNull();
@@ -156,7 +158,7 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
   it('contributors are ordered by total contribution count', async () => {
     // alice already has 2 items on this day (1 from setup + 1 travelers-only from the prior test);
     // add a second traveler with fewer contributions to check ordering.
-    const res = await request(app).get(`/api/trips/${tripId}/blog?date=2026-10-08`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
+    const res = await request(app).get(`/api/trips/${tripId}/blog?date=${TRIP_DAY}`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
     const contributors = res.body.days[0].contributors;
     expect(contributors[0].userId).toBe(aliceId);
     expect(contributors[0].itemCount).toBeGreaterThanOrEqual(2);
@@ -166,7 +168,7 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
     await setFeatureFlag('trip_blog_reactions', false, null);
     const { clearFeatureFlagCacheForTesting } = require('../src/services/entitlementService');
     clearFeatureFlagCacheForTesting();
-    const res = await request(app).get(`/api/trips/${tripId}/blog?date=2026-10-08`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
+    const res = await request(app).get(`/api/trips/${tripId}/blog?date=${TRIP_DAY}`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
     expect('engagement' in res.body.days[0]).toBe(false);
     expect('contributors' in res.body.days[0]).toBe(false);
     await setFeatureFlag('trip_blog_reactions', true, null);

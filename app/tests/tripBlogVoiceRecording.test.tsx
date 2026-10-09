@@ -36,8 +36,9 @@ const blogBody = {
 
 describe('TripBlogTab in-app voice note recording', () => {
   let fetchMock: jest.Mock;
+  let transcriptionEnabled = true;
   const originalOS = Platform.OS;
-  afterEach(() => { Platform.OS = originalOS; });
+  afterEach(() => { Platform.OS = originalOS; transcriptionEnabled = true; });
 
   beforeEach(() => {
     (useAudioRecorder as jest.Mock).mockReturnValue({
@@ -52,7 +53,7 @@ describe('TripBlogTab in-app voice note recording', () => {
       if (url.startsWith('file:///')) return { ok: true, blob: async () => new Blob(['audio']) } as any;
       if (url.includes('/blog/publication/status')) return jsonResponse({}, 404);
       if (url.includes('/blog/capabilities')) {
-        return jsonResponse({ features: { trip_blog_audio: true, trip_blog_audio_transcription: true }, limits: {} });
+        return jsonResponse({ features: { trip_blog_audio: true, trip_blog_audio_transcription: transcriptionEnabled }, limits: {} });
       }
       if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(blogBody);
       if (method === 'POST' && url.includes('/blog/media/upload-init')) {
@@ -73,12 +74,12 @@ describe('TripBlogTab in-app voice note recording', () => {
   );
 
   it('records a voice note, uploads it, and saves the transcript as its caption -- no prerecorded file required', async () => {
-    const { findByText, getByTestId } = renderTab();
+    const { findByText, getByTestId, getByLabelText } = renderTab();
     fireEvent.press(await findByText('Edit blog'));
 
     const recordButton = await waitFor(() => getByTestId('blog-record-voice-2026-09-01'));
     fireEvent.press(recordButton);
-    await waitFor(() => expect(getByTestId('blog-record-voice-2026-09-01')).toBeTruthy());
+    await waitFor(() => expect(getByLabelText('Stop recording')).toBeTruthy());
 
     fireEvent.press(recordButton);
 
@@ -99,6 +100,24 @@ describe('TripBlogTab in-app voice note recording', () => {
     ));
   });
 
+  it('still offers Record when transcription is off, saving the audio without a transcript', async () => {
+    transcriptionEnabled = false;
+    const { findByText, getByTestId, getByLabelText } = renderTab();
+    fireEvent.press(await findByText('Edit blog'));
+
+    const recordButton = await waitFor(() => getByTestId('blog-record-voice-2026-09-01'));
+    fireEvent.press(recordButton);
+    await waitFor(() => expect(getByLabelText('Stop recording')).toBeTruthy());
+    fireEvent.press(recordButton);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      `${backendUrl}/api/trips/${tripId}/blog/media/asset-new/complete`,
+      expect.objectContaining({ method: 'POST' }),
+    ));
+    const transcribeCalls = fetchMock.mock.calls.filter(([reqUrl]: [string]) => String(reqUrl).includes('transcribe-caption'));
+    expect(transcribeCalls).toHaveLength(0);
+  });
+
   // Regression test: manual testing on web (localhost:8081) surfaced "Saved, but couldn't
   // transcribe it: An audio recording is required" -- transcribeMediaCaption (tripBlog.tsx) was
   // reusing React Native's { uri, name, type } FormData file convention on every platform, but a
@@ -109,12 +128,12 @@ describe('TripBlogTab in-app voice note recording', () => {
   // build a real Blob for the transcribe request.
   it('fetches the recording a second time to build a real Blob for the transcribe request on web', async () => {
     Platform.OS = 'web';
-    const { findByText, getByTestId } = renderTab();
+    const { findByText, getByTestId, getByLabelText } = renderTab();
     fireEvent.press(await findByText('Edit blog'));
 
     const recordButton = await waitFor(() => getByTestId('blog-record-voice-2026-09-01'));
     fireEvent.press(recordButton);
-    await waitFor(() => expect(getByTestId('blog-record-voice-2026-09-01')).toBeTruthy());
+    await waitFor(() => expect(getByLabelText('Stop recording')).toBeTruthy());
     fireEvent.press(recordButton);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
@@ -127,12 +146,12 @@ describe('TripBlogTab in-app voice note recording', () => {
 
   it('does not re-fetch the recording on native -- the { uri, name, type } FormData convention is used as before', async () => {
     Platform.OS = 'ios';
-    const { findByText, getByTestId } = renderTab();
+    const { findByText, getByTestId, getByLabelText } = renderTab();
     fireEvent.press(await findByText('Edit blog'));
 
     const recordButton = await waitFor(() => getByTestId('blog-record-voice-2026-09-01'));
     fireEvent.press(recordButton);
-    await waitFor(() => expect(getByTestId('blog-record-voice-2026-09-01')).toBeTruthy());
+    await waitFor(() => expect(getByLabelText('Stop recording')).toBeTruthy());
     fireEvent.press(recordButton);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(

@@ -12,6 +12,9 @@ import { runAiDailyAggregation } from '../../src/ai/analytics/aggregationJob';
 
 jest.mock('../../src/db', () => ({
   getAdminSetting: jest.fn(),
+  tryAcquireJobLease: jest.fn(async (name: string, holder: string) => ({ name, holder, expiresAt: '2999-01-01T00:00:00.000Z', cursor: null })),
+  setJobLeaseCursor: jest.fn(async () => true),
+  releaseJobLease: jest.fn(async () => undefined),
   listAiRecommendations: jest.fn(async () => []),
   updateAiRecommendationStatus: jest.fn(),
   listAiExperiments: jest.fn(async () => []),
@@ -116,5 +119,50 @@ describe('scheduled AI analytics aggregation', () => {
       '[ai-analytics] scheduled aggregation failed',
       expect.any(Error)
     );
+  });
+});
+
+describe('scheduled AI analytics aggregation: lease and cursor', () => {
+  const db = require('../../src/db') as { tryAcquireJobLease: jest.Mock; setJobLeaseCursor: jest.Mock; releaseJobLease: jest.Mock };
+  const { daysToAggregate, MAX_CATCH_UP_DAYS } = require('../../src/ai/analytics/scheduledAggregation') as typeof import('../../src/ai/analytics/scheduledAggregation');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedRunAiDailyAggregation.mockImplementation(async (params: any) => ({ ...params, recordsProcessed: 0, metrics: [] }));
+  });
+
+  it('computes catch-up days from the cursor, oldest first and bounded', () => {
+    expect(daysToAggregate(null, '2026-07-05')).toEqual(['2026-07-05']);
+    expect(daysToAggregate('2026-07-05', '2026-07-05')).toEqual([]);
+    expect(daysToAggregate('2026-07-02', '2026-07-05')).toEqual(['2026-07-03', '2026-07-04', '2026-07-05']);
+    expect(daysToAggregate('2026-06-28', '2026-07-02')).toEqual(['2026-06-29', '2026-06-30', '2026-07-01', '2026-07-02']);
+    expect(daysToAggregate('2026-01-01', '2026-07-05')).toHaveLength(MAX_CATCH_UP_DAYS);
+    expect(daysToAggregate('garbage', '2026-07-05')).toEqual(['2026-07-05']);
+  });
+
+  it('catches up missed days and advances the cursor after each one', async () => {
+    db.tryAcquireJobLease.mockResolvedValueOnce({ name: 'ai_daily_aggregation', holder: 'me', expiresAt: '2999-01-01T00:00:00.000Z', cursor: '2026-07-02' });
+    const result = await runScheduledAggregationTick({ now: new Date('2026-07-06T03:00:00.000Z') });
+    expect(mockedRunAiDailyAggregation.mock.calls.map(([p]: any[]) => p.day)).toEqual(['2026-07-03', '2026-07-04', '2026-07-05']);
+    expect(db.setJobLeaseCursor.mock.calls.map((c: any[]) => c[2])).toEqual(['2026-07-03', '2026-07-04', '2026-07-05']);
+    expect(result).toMatchObject({ day: '2026-07-05', daysProcessed: ['2026-07-03', '2026-07-04', '2026-07-05'] });
+    expect(db.releaseJobLease).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops at a failed day without advancing the cursor past it', async () => {
+    db.tryAcquireJobLease.mockResolvedValueOnce({ name: 'ai_daily_aggregation', holder: 'me', expiresAt: '2999-01-01T00:00:00.000Z', cursor: '2026-07-03' });
+    mockedRunAiDailyAggregation
+      .mockResolvedValueOnce({ day: '2026-07-04', jobId: 'x', recordsProcessed: 0, metrics: [], error: 'capture_read_failed' } as any);
+    await runScheduledAggregationTick({ now: new Date('2026-07-06T03:00:00.000Z') });
+    expect(mockedRunAiDailyAggregation).toHaveBeenCalledTimes(1);
+    expect(db.setJobLeaseCursor).not.toHaveBeenCalled();
+  });
+
+  it('skips the run when another replica holds the lease', async () => {
+    db.tryAcquireJobLease.mockResolvedValueOnce(null);
+    const result = await runScheduledAggregationTick({ now: new Date('2026-07-06T03:00:00.000Z') });
+    expect(result).toMatchObject({ skipped: 'lease_held' });
+    expect(mockedRunAiDailyAggregation).not.toHaveBeenCalled();
+    expect(db.releaseJobLease).not.toHaveBeenCalled();
   });
 });

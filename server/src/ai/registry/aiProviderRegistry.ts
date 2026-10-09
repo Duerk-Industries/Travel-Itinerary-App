@@ -12,7 +12,7 @@ import {
 } from '../../services/aiInvocationGuard';
 import { getActiveAiProvider } from '../../services/aiProviderConfigService';
 import { getProviderLimitKey } from '../../services/aiInvocationGuard';
-import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from '../../apis/providerBudgeting';
+import { getApiBudgetWindowKey, settleProviderAttempt } from '../../apis/providerBudgeting';
 import { recordUsage } from '../../services/entitlementService';
 import { logError } from '../../logger';
 import { withAiSpan } from '../tracing';
@@ -121,23 +121,23 @@ const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: Ex
       // again here would double-count. Every other provider has no such
       // internal accounting, so this is the one place their budgeting.yaml
       // pricing blocks actually get used instead of being decorative.
+      // Settled even without a usage block, so missing usage shows up in the
+      // ledger as an unknown/zero-unit attempt instead of disappearing.
       let estimatedCostMicros: number | null = null;
-      if (provider.id !== 'openai' && response.usage) {
+      if (provider.id !== 'openai') {
         try {
-          const providerKey = getProviderLimitKey(provider.id);
-          estimatedCostMicros = estimateAiCostMicros({
-            provider: providerKey,
+          const settlement = await settleProviderAttempt({
+            provider: getProviderLimitKey(provider.id),
+            attemptId: response.id ?? null,
+            unitType: 'tokens',
             model: req.model,
-            promptTokens: response.usage.prompt_tokens ?? 0,
-            completionTokens: response.usage.completion_tokens ?? 0,
+            promptTokens: response.usage?.prompt_tokens ?? 0,
+            completionTokens: response.usage?.completion_tokens ?? 0,
+            caller: ctx.callerId,
+            featureKey: ctx.featureKey,
+            userId: ctx.userId,
           });
-          if ((estimatedCostMicros ?? 0) > 0) {
-            await recordApiCost({
-              provider: providerKey,
-              windowKey: getApiBudgetWindowKey(),
-              amountMicros: estimatedCostMicros ?? 0,
-            });
-          }
+          estimatedCostMicros = settlement.estimatedCostMicros;
         } catch (err) {
           logError(`[aiProviderRegistry] failed to record cost for provider=${provider.id}`, err);
         }
@@ -164,6 +164,20 @@ const wrapWithRegistryGuards = (provider: AiChatProvider, experimentContext?: Ex
       if (experimentContext) await recordTrafficSplitOutcome(experimentContext, true);
       return response;
     } catch (err) {
+      // A failed call that got past authorization was attempted against the
+      // provider; settle it as a non-billable attempt for coverage. OpenAI
+      // failures are settled inside postOpenAiChatCompletion.
+      if (authorization && provider.id !== 'openai') {
+        await settleProviderAttempt({
+          provider: getProviderLimitKey(provider.id),
+          unitType: 'tokens',
+          model: req.model,
+          outcome: 'failed',
+          caller: ctx.callerId,
+          featureKey: ctx.featureKey,
+          userId: ctx.userId,
+        }).catch(() => undefined);
+      }
       await failAiCallAuthorization(ctx, authorization, err);
       if (experimentContext) await recordTrafficSplitOutcome(experimentContext, false);
       throw err;

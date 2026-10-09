@@ -40,6 +40,7 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
       onClose={onCancel}
       testID={testID || 'confirm-dialog'}
       accessibilityRole="alert"
+      scrollable
       useNativeModal={useNativeModal}
     >
       <View style={styles.row}>

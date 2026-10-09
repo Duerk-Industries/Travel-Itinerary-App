@@ -7,6 +7,7 @@ import { getUserTierKey } from '../services/entitlementService';
 import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
+import { normalizeBlogTags } from './tags';
 
 const tierConfig = (() => {
   try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; }
@@ -52,12 +53,12 @@ export const setIncludedStorage = async (userId: string, includedBytes: number):
   );
 };
 
-const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, capturedLat: row.captured_lat == null ? null : Number(row.captured_lat), capturedLng: row.captured_lng == null ? null : Number(row.captured_lng), caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative), createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
+const mapAsset = (row: any): BlogMediaAsset => ({ id: String(row.id), tripId: String(row.trip_id), blogItemId: String(row.blog_item_id ?? ''), dayDate: dateString(row.local_date), uploaderUserId: String(row.uploader_user_id), mediaKind: row.media_kind_key, state: String(row.state), sourceMimeType: String(row.source_mime_type ?? ''), physicalBytes: Number(row.physical_bytes ?? 0), billableBytes: Number(row.billable_bytes ?? 0), capturedAt: row.captured_at ? new Date(row.captured_at).toISOString() : null, capturedLat: row.captured_lat == null ? null : Number(row.captured_lat), capturedLng: row.captured_lng == null ? null : Number(row.captured_lng), caption: row.caption ?? null, tags: normalizeBlogTags(row.tags ?? []), altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative), createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined, isHighlight: Boolean(row.is_highlight), parentKindKey: row.kind_key ? String(row.kind_key) : undefined, position: row.position != null ? Number(row.position) : undefined });
 
 export const getMediaAuthoringContext = async (userId: string, tripId: string, assetId: string): Promise<BlogMediaAuthoringContext | null> => {
   if (!(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to edit this trip');
   const result = await queryBlog<any>(
-    `SELECT a.id, a.trip_id, d.local_date, d.headline, a.caption, a.alt_text, a.is_decorative
+    `SELECT a.id, a.trip_id, d.local_date, d.headline, a.caption, a.tags, a.alt_text, a.is_decorative
        FROM blog_media_assets a
        JOIN blog_item_assets ia ON ia.asset_id = a.id
        JOIN blog_items i ON i.id = ia.item_id
@@ -66,7 +67,7 @@ export const getMediaAuthoringContext = async (userId: string, tripId: string, a
     [assetId, tripId]
   );
   const row = result.rows[0];
-  return row ? { id: String(row.id), tripId, dayDate: dateString(row.local_date), dayHeadline: row.headline ?? null, caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
+  return row ? { id: String(row.id), tripId, dayDate: dateString(row.local_date), dayHeadline: row.headline ?? null, caption: row.caption ?? null, tags: normalizeBlogTags(row.tags ?? []), altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
 };
 
 export const updateMediaMetadata = async (userId: string, tripId: string, assetId: string, patch: BlogMediaMetadataPatch): Promise<BlogMediaAuthoringContext | null> => {
@@ -80,13 +81,14 @@ export const updateMediaMetadata = async (userId: string, tripId: string, assetI
        caption = CASE WHEN $3 THEN $4 ELSE caption END,
        alt_text = CASE WHEN $5 THEN $6 ELSE alt_text END,
        is_decorative = CASE WHEN $7 THEN $8 ELSE is_decorative END,
+       tags = CASE WHEN $9 THEN $10::jsonb ELSE tags END,
        updated_at = NOW()
      WHERE id = $1 AND trip_id = $2 RETURNING *`,
-    [assetId, tripId, patch.caption !== undefined, patch.caption ?? null, patch.altText !== undefined, patch.altText ?? null, patch.isDecorative !== undefined, patch.isDecorative ?? false]
+    [assetId, tripId, patch.caption !== undefined, patch.caption ?? null, patch.altText !== undefined, patch.altText ?? null, patch.isDecorative !== undefined, patch.isDecorative ?? false, patch.tags !== undefined, JSON.stringify(normalizeBlogTags(patch.tags ?? []))]
   );
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
   const row = result.rows[0];
-  return row ? { ...current, caption: row.caption ?? null, altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
+  return row ? { ...current, caption: row.caption ?? null, tags: normalizeBlogTags(row.tags ?? []), altText: row.alt_text ?? null, isDecorative: Boolean(row.is_decorative) } : null;
 };
 
 export const listPublicationAccessibilityIssues = async (userId: string, tripId: string): Promise<Array<{ assetId: string; dayDate: string }>> => {
@@ -199,9 +201,9 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     );
   }
   await queryBlog(
-    `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, physical_bytes, billable_bytes, source_mime_type, captured_at, captured_lat, captured_lng, caption, alt_text, source_ref, object_key, created_at, updated_at)
-     VALUES ($1, $2, $3, $3, $4, 'uploading', $5, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())`,
-    [assetId, input.tripId, userId, input.mediaKind, input.byteSize, input.mimeType.toLowerCase(), input.capturedAt ?? null, capturedLat, capturedLng, input.caption ?? null, input.altText ?? null, input.idempotencyKey, objectKey]
+    `INSERT INTO blog_media_assets (id, trip_id, uploader_user_id, storage_account_user_id, media_kind_key, state, physical_bytes, billable_bytes, source_mime_type, captured_at, captured_lat, captured_lng, caption, tags, alt_text, source_ref, object_key, created_at, updated_at)
+     VALUES ($1, $2, $3, $3, $4, 'uploading', $5, $5, $6, $7, $8, $9, $10, $11::jsonb, $12, $13, $14, NOW(), NOW())`,
+    [assetId, input.tripId, userId, input.mediaKind, input.byteSize, input.mimeType.toLowerCase(), input.capturedAt ?? null, capturedLat, capturedLng, input.caption ?? null, JSON.stringify(normalizeBlogTags(input.tags ?? [])), input.altText ?? null, input.idempotencyKey, objectKey]
   );
   const position = input.galleryItemId ? galleryAssetCount : 0;
   const role = input.galleryItemId ? 'gallery_member' : 'primary';

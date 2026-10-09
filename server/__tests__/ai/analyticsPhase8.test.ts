@@ -5,11 +5,11 @@ import { runAiDailyAggregation } from '../../src/ai/analytics/aggregationJob';
 import * as regressionDetectorModule from '../../src/ai/analytics/regressionDetector';
 import { detectAiMetricRegressions } from '../../src/ai/analytics/regressionDetector';
 import { listAiAnalyticsMetrics, upsertAiAbTestMetric, upsertAiAnalyticsMetric } from '../../src/db';
-import { readLocalAiCaptureRecordsForDay } from '../../src/ai/analytics/captureBrowser';
+import { readAiCaptureRecordsForDay } from '../../src/ai/analytics/captureBrowser';
 import type { AiAnalyticsMetric } from '../../src/types';
 
 jest.mock('../../src/ai/analytics/captureBrowser', () => ({
-  readLocalAiCaptureRecordsForDay: jest.fn(),
+  readAiCaptureRecordsForDay: jest.fn(),
 }));
 
 jest.mock('../../src/db', () => ({
@@ -25,7 +25,7 @@ jest.mock('../../src/logger', () => ({
 
 const mockedLogger = require('../../src/logger') as { logError: jest.Mock; logInfo: jest.Mock };
 
-const mockedReadCaptures = readLocalAiCaptureRecordsForDay as jest.MockedFunction<typeof readLocalAiCaptureRecordsForDay>;
+const mockedReadCaptures = readAiCaptureRecordsForDay as jest.MockedFunction<typeof readAiCaptureRecordsForDay>;
 const mockedUpsert = upsertAiAnalyticsMetric as jest.MockedFunction<typeof upsertAiAnalyticsMetric>;
 const mockedUpsertAbMetric = upsertAiAbTestMetric as jest.MockedFunction<typeof upsertAiAbTestMetric>;
 const mockedListMetrics = listAiAnalyticsMetrics as jest.MockedFunction<typeof listAiAnalyticsMetrics>;

@@ -3,7 +3,7 @@ import { logError, logInfo } from '../../logger';
 import type { AiAnalyticsMetric, AiAnalyticsPeriodType } from '../../types';
 import { getApiBudgetProviderConfig } from '../../config/apiLimits';
 import type { CaptureRecord } from '../types/captureRecord';
-import { readLocalAiCaptureRecordsForDay } from './captureBrowser';
+import { readAiCaptureRecordsForDay } from './captureBrowser';
 import { detectAiMetricRegressions } from './regressionDetector';
 
 // Reuse the same alertThresholdPercent config surface api-limits.yaml already
@@ -102,7 +102,7 @@ export const runAiDailyAggregation = async (params: { day?: string; jobId?: stri
   const jobId = params.jobId ?? `ai-analytics-${day}`;
   let records: CaptureRecord[] = [];
   try {
-    records = await readLocalAiCaptureRecordsForDay(day);
+    records = await readAiCaptureRecordsForDay(day);
   } catch (err) {
     logError('[ai-analytics] capture read failed', { jobId, day, error: err instanceof Error ? err.message : String(err) });
     return { jobId, day, recordsProcessed: 0, metrics: [], error: 'capture_read_failed' };

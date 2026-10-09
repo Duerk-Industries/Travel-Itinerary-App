@@ -5,7 +5,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 import pLimit from 'p-limit';
 import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
-import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost, recordProviderRequestCost } from '../apis/providerBudgeting';
+import { recordProviderRequestCost, settleProviderAttempt } from '../apis/providerBudgeting';
 
 const LEGACY_DOCUMENT_PARSE_CALLER = 'LEGACY_DOCUMENT_PARSE';
 const DOCUMENT_CONVERSION_CALLER = 'DOCUMENT_CONVERSION';
@@ -62,19 +62,15 @@ async function parseChunk(chunk: string, openai: OpenAI): Promise<TravelData | n
     });
 
     try {
-      const amountMicros = estimateAiCostMicros({
+      await settleProviderAttempt({
         provider: 'OPENAI',
+        attemptId: response.id,
+        unitType: 'tokens',
         model: 'gpt-4o-mini',
         promptTokens: response.usage?.prompt_tokens ?? 0,
         completionTokens: response.usage?.completion_tokens ?? 0,
+        caller: LEGACY_DOCUMENT_PARSE_CALLER,
       });
-      if ((amountMicros ?? 0) > 0) {
-        await recordApiCost({
-          provider: 'OPENAI',
-          windowKey: getApiBudgetWindowKey(),
-          amountMicros: amountMicros ?? 0,
-        });
-      }
     } catch (accountingError) {
       console.error('Failed to account for legacy OpenAI parsing:', accountingError);
     }

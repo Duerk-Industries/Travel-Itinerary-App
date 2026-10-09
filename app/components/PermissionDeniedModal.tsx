@@ -23,6 +23,7 @@ const PermissionDeniedModalComponent: React.FC<PermissionDeniedModalProps> = ({ 
       onClose={dismiss}
       testID="permission-denied-dialog"
       accessibilityRole="alert"
+      scrollable
       useNativeModal
     >
       <TouchableOpacity

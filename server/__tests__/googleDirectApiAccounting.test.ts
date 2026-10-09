@@ -7,9 +7,7 @@ jest.mock('../src/apis/usageLimiter', () => ({
 
 jest.mock('../src/apis/providerBudgeting', () => ({
   recordProviderRequestCost: jest.fn(async () => undefined),
-  estimateAiCostMicros: jest.fn(() => 12_345),
-  getApiBudgetWindowKey: jest.fn(() => '2026-07'),
-  recordApiCost: jest.fn(async () => 12_345),
+  settleProviderAttempt: jest.fn(async () => ({ attemptId: 'x', duplicate: false, costStatus: 'estimated', estimatedCostMicros: 12_345 })),
 }));
 
 const mockOpenAiCreate = jest.fn();
@@ -19,7 +17,7 @@ jest.mock('openai', () => ({
 
 const mockedReserve = jest.requireMock('../src/apis/usageLimiter').reserveApiUsageOrThrow as jest.Mock;
 const mockedRecordRequestCost = jest.requireMock('../src/apis/providerBudgeting').recordProviderRequestCost as jest.Mock;
-const mockedRecordApiCost = jest.requireMock('../src/apis/providerBudgeting').recordApiCost as jest.Mock;
+const mockedSettle = jest.requireMock('../src/apis/providerBudgeting').settleProviderAttempt as jest.Mock;
 
 const response = (body: unknown): Response =>
   ({ ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body) } as Response);
@@ -71,16 +69,21 @@ describe('direct Google API accounting', () => {
 
     expect(result.primary.flightNumber).toBe('DL123');
     expect(mockedReserve).toHaveBeenCalledWith({ provider: 'GEMINI', caller: 'PARSE_FLIGHT_TEXT' });
-    expect(mockedRecordApiCost).toHaveBeenCalledWith({
+    expect(mockedSettle).toHaveBeenCalledWith({
       provider: 'GEMINI',
-      windowKey: '2026-07',
-      amountMicros: 12_345,
+      attemptId: null,
+      unitType: 'tokens',
+      model: 'gemini-2.5-flash',
+      promptTokens: 40,
+      completionTokens: 12,
+      caller: 'PARSE_FLIGHT_TEXT',
     });
   });
 
   it('reserves direct OpenAI flight parsing and records token-based cost', async () => {
     const { OpenAIFlightParser } = require('../src/services/flightParserLLM/openai') as typeof import('../src/services/flightParserLLM/openai');
     mockOpenAiCreate.mockResolvedValue({
+      id: 'chatcmpl-flight-1',
       choices: [{ message: { content: '{"primary":{"flightNumber":"UA456"},"bulk":[]}' } }],
       usage: { prompt_tokens: 25, completion_tokens: 8 },
     });
@@ -89,10 +92,14 @@ describe('direct Google API accounting', () => {
 
     expect(result.primary.flightNumber).toBe('UA456');
     expect(mockedReserve).toHaveBeenCalledWith({ provider: 'OPENAI', caller: 'PARSE_FLIGHT_TEXT' });
-    expect(mockedRecordApiCost).toHaveBeenCalledWith({
+    expect(mockedSettle).toHaveBeenCalledWith({
       provider: 'OPENAI',
-      windowKey: '2026-07',
-      amountMicros: 12_345,
+      attemptId: 'chatcmpl-flight-1',
+      unitType: 'tokens',
+      model: 'gpt-4o-mini',
+      promptTokens: 25,
+      completionTokens: 8,
+      caller: 'PARSE_FLIGHT_TEXT',
     });
   });
 });

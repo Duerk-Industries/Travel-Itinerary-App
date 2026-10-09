@@ -3,7 +3,9 @@ import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
-import { confirmWebUser, loginWebUser, cleanupTestUsersByEmail } from './helpers';
+import { confirmWebUser, loginWebUser, cleanupTestUsersByEmail, futureDateString } from './helpers';
+
+const TRIP_DAY = futureDateString();
 
 const registerWithDob = async (user: { firstName: string; lastName: string; email: string; password: string }, dateOfBirth: string | null) => {
   return request(app)
@@ -32,7 +34,7 @@ describe('trip blog publication consent', () => {
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ name: ownerName, startDate: '2026-11-01', endDate: '2026-11-01', participants: [] })
+      .send({ name: ownerName, startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     const tripId = trip.body.trip?.id ?? trip.body.id;
     const group = await queryBlog<{ group_id: string }>('SELECT group_id FROM trips WHERE id = $1', [tripId]);
@@ -47,7 +49,7 @@ describe('trip blog publication consent', () => {
     await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ dayDate: '2026-11-01', body: 'Day one recap' })
+      .send({ dayDate: TRIP_DAY, body: 'Day one recap' })
       .expect(201);
   };
 

@@ -34,9 +34,8 @@ jest.mock('../../src/services/aiInvocationGuard', () => {
 });
 
 jest.mock('../../src/apis/providerBudgeting', () => ({
-  estimateAiCostMicros: jest.fn(() => 45_000),
   getApiBudgetWindowKey: jest.fn(() => '2026-07'),
-  recordApiCost: jest.fn(async () => 0),
+  settleProviderAttempt: jest.fn(),
 }));
 
 jest.mock('../../src/ai/experiments/experimentConfigService', () => ({
@@ -61,8 +60,24 @@ import { recordUsage } from '../../src/services/entitlementService';
 import { getOrCreateAiExperimentAssignment } from '../../src/db';
 import type { AiExperiment } from '../../src/types';
 
-const mockedRecordApiCost = providerBudgeting.recordApiCost as jest.MockedFunction<typeof providerBudgeting.recordApiCost>;
-const mockedEstimate = providerBudgeting.estimateAiCostMicros as jest.MockedFunction<typeof providerBudgeting.estimateAiCostMicros>;
+const mockedSettle = providerBudgeting.settleProviderAttempt as jest.MockedFunction<typeof providerBudgeting.settleProviderAttempt>;
+const settledAt = (estimatedCostMicros: number | null) => ({
+  attemptId: 'FAKE_ANTHROPIC:attempt',
+  duplicate: false,
+  costStatus: estimatedCostMicros == null ? 'unknown' as const : 'estimated' as const,
+  estimatedCostMicros,
+});
+const expectedSettlement = {
+  provider: 'FAKE_ANTHROPIC',
+  attemptId: null,
+  unitType: 'tokens',
+  model: 'fake-model',
+  promptTokens: 10,
+  completionTokens: 5,
+  caller: 'INGESTION_LLM_EXTRACT',
+  featureKey: 'mail_parsing',
+  userId: 'user-1',
+};
 const mockedGetActiveAiProvider = aiProviderConfigService.getActiveAiProvider as jest.MockedFunction<
   typeof aiProviderConfigService.getActiveAiProvider
 >;
@@ -101,7 +116,7 @@ const fakeResponse: AiChatResponse = {
 describe('aiProviderRegistry cost recording', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedEstimate.mockReturnValue(45_000);
+    mockedSettle.mockResolvedValue(settledAt(45_000));
   });
 
   it('records cost for a non-openai provider using its provider-limit key', async () => {
@@ -116,17 +131,7 @@ describe('aiProviderRegistry cost recording', () => {
     const response = await provider.chatCompletion(request, context);
 
     expect(response).toBe(fakeResponse);
-    expect(mockedEstimate).toHaveBeenCalledWith({
-      provider: 'FAKE_ANTHROPIC',
-      model: 'fake-model',
-      promptTokens: 10,
-      completionTokens: 5,
-    });
-    expect(mockedRecordApiCost).toHaveBeenCalledWith({
-      provider: 'FAKE_ANTHROPIC',
-      windowKey: '2026-07',
-      amountMicros: 45_000,
-    });
+    expect(mockedSettle).toHaveBeenCalledWith(expectedSettlement);
   });
 
   it('records per-user usage for a non-openai provider when usage accounting is enabled', async () => {
@@ -185,12 +190,12 @@ describe('aiProviderRegistry cost recording', () => {
     const provider = await resolveProvider('mail_parsing', 'INGESTION_LLM_EXTRACT');
     await provider.chatCompletion(request, { ...context, provider: 'openai' });
 
-    expect(mockedRecordApiCost).not.toHaveBeenCalled();
+    expect(mockedSettle).not.toHaveBeenCalled();
     expect(mockedRecordUsage).not.toHaveBeenCalled();
   });
 
-  it('does not record cost when estimateAiCostMicros has no pricing for the model', async () => {
-    mockedEstimate.mockReturnValueOnce(null);
+  it('settles an unknown-priced attempt and records no cost usage for it', async () => {
+    mockedSettle.mockResolvedValueOnce(settledAt(null));
     const fakeProvider: AiChatProvider = {
       id: 'fake-anthropic',
       supportedModels: ['fake-model'],
@@ -199,9 +204,29 @@ describe('aiProviderRegistry cost recording', () => {
     registerAiProviderForTesting(fakeProvider);
 
     const provider = await resolveProvider('mail_parsing', 'INGESTION_LLM_EXTRACT');
-    await provider.chatCompletion(request, context);
+    await provider.chatCompletion(request, { ...context, usageAccountingEnabled: true } as AiCallContext & { usageAccountingEnabled: boolean });
 
-    expect(mockedRecordApiCost).not.toHaveBeenCalled();
+    expect(mockedSettle).toHaveBeenCalledWith(expectedSettlement);
+    expect(mockedRecordUsage).not.toHaveBeenCalledWith('user-1', 'fake_anthropic_estimated_cost_micros_usd', expect.anything(), expect.anything());
+  });
+
+  it('settles a failed provider call as a non-billable attempt', async () => {
+    const fakeProvider: AiChatProvider = {
+      id: 'fake-anthropic',
+      supportedModels: ['fake-model'],
+      chatCompletion: jest.fn(async () => { throw new Error('provider down'); }),
+    };
+    registerAiProviderForTesting(fakeProvider);
+
+    const provider = await resolveProvider('mail_parsing', 'INGESTION_LLM_EXTRACT');
+    await expect(provider.chatCompletion(request, context)).rejects.toThrow('provider down');
+
+    expect(mockedSettle).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'FAKE_ANTHROPIC',
+      outcome: 'failed',
+      userId: 'user-1',
+      featureKey: 'mail_parsing',
+    }));
   });
 });
 
@@ -222,7 +247,7 @@ describe('aiProviderRegistry traffic_split experiments', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedEstimate.mockReturnValue(45_000);
+    mockedSettle.mockResolvedValue(settledAt(45_000));
     const fakeProvider: AiChatProvider = {
       id: 'fake-anthropic',
       supportedModels: ['fake-model'],
@@ -246,11 +271,7 @@ describe('aiProviderRegistry traffic_split experiments', () => {
     expect(response).toBe(fakeResponse);
     // Same tracking every other provider call gets — a traffic_split
     // resolution must never bypass rate-limiting/cost-recording.
-    expect(mockedRecordApiCost).toHaveBeenCalledWith({
-      provider: 'FAKE_ANTHROPIC',
-      windowKey: '2026-07',
-      amountMicros: 45_000,
-    });
+    expect(mockedSettle).toHaveBeenCalledWith(expectedSettlement);
     // And the circuit breaker actually gets fed an outcome — this is what
     // makes trip detection possible for traffic_split in the first place.
     expect(mockedRecordOutcome).toHaveBeenCalledWith({

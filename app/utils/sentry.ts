@@ -4,12 +4,11 @@
  * Designed to be safe to import unconditionally:
  *  - `initSentry()` is a no-op when EXPO_PUBLIC_SENTRY_DSN is missing, so a
  *    fresh checkout / unconfigured CI never errors out.
- *  - `wrapApp()` returns the bare component when Sentry isn't initialized,
- *    so the ErrorBoundary path doesn't change just because reporting is off.
+ *  - `wrapApp()` installs the error boundary without initializing collection.
  *
  * Wiring:
- *  - AppEntry.js calls initSentry() before any other app code so that
- *    startup-time crashes still get captured.
+ *  - Privacy consent bootstrap calls initSentry() only after the server
+ *    confirms a current diagnostics grant and collection flag.
  *  - The Metro side (`metro.shared.cjs` → `withSentryConfig`) handles
  *    Debug ID injection and stack-frame collapsing.
  *  - EAS native builds upload source maps automatically when
@@ -27,13 +26,36 @@ type InitOptions = {
   environment?: string;
   /** Override for tests; defaults to 0.1 (10% of transactions traced). */
   tracesSampleRate?: number;
+  pseudonym?: string;
 };
 
 type InitResult =
   | { initialized: true; reason: 'configured' }
-  | { initialized: false; reason: 'missing-dsn' | 'module-load-failed' | 'already-initialized' };
+  | { initialized: false; reason: 'missing-dsn' | 'missing-consent' | 'module-load-failed' | 'already-initialized' };
 
 let initState: InitResult | null = null;
+let closePromise: Promise<void> | null = null;
+
+const scrubDiagnosticEvent = (event: any): any => {
+  const pseudonym = event.user?.id;
+  delete event.request;
+  delete event.breadcrumbs;
+  delete event.extra;
+  delete event.tags;
+  delete event.contexts;
+  delete event.spans;
+  delete event.message;
+  delete event.transaction;
+  event.user = pseudonym ? { id: pseudonym } : undefined;
+  for (const exception of event.exception?.values ?? []) {
+    delete exception.value;
+    for (const frame of exception.stacktrace?.frames ?? []) {
+      if (frame.filename) frame.filename = frame.filename.split('?')[0];
+      delete frame.vars;
+    }
+  }
+  return event;
+};
 
 const resolveDsn = (override?: string | null): string | null => {
   if (override !== undefined) return override?.trim() || null;
@@ -70,6 +92,10 @@ export const initSentry = (options: InitOptions = {}): InitResult => {
     initState = { initialized: false, reason: 'missing-dsn' };
     return initState;
   }
+  if (!options.pseudonym) {
+    initState = { initialized: false, reason: 'missing-consent' };
+    return initState;
+  }
   const Sentry = safeRequireSentry();
   if (!Sentry) {
     initState = { initialized: false, reason: 'module-load-failed' };
@@ -81,14 +107,33 @@ export const initSentry = (options: InitOptions = {}): InitResult => {
     // Tracing: low sample rate to keep quota costs manageable. Bump per
     // route / per user via Sentry.startSpan in hot paths if needed.
     tracesSampleRate: options.tracesSampleRate ?? 0.1,
+    sendDefaultPii: false,
+    beforeSend: scrubDiagnosticEvent,
+    beforeSendTransaction: scrubDiagnosticEvent,
+    beforeBreadcrumb: () => null,
     // Don't ship session replay — kept disabled in Metro config too.
     enableAutoSessionTracking: true,
   });
+  Sentry.setUser({ id: options.pseudonym });
   initState = { initialized: true, reason: 'configured' };
   return initState;
 };
 
 export const getInitState = (): InitResult | null => initState;
+
+export const closeSentry = async (): Promise<void> => {
+  if (closePromise) return closePromise;
+  if (!initState?.initialized) return;
+  const Sentry = safeRequireSentry();
+  initState = null;
+  if (Sentry) {
+    Sentry.setUser(null);
+    // A zero timeout prevents a withdrawal from intentionally flushing queued
+    // optional envelopes. Device tests must confirm native transport behavior.
+    closePromise = Sentry.close().then(() => undefined).finally(() => { closePromise = null; });
+    await closePromise;
+  }
+};
 
 /**
  * Returns the input component wrapped with Sentry's error boundary +
@@ -96,7 +141,7 @@ export const getInitState = (): InitResult | null => initState;
  * Keep this synchronous so JSX trees stay simple.
  */
 export const wrapApp = <P extends Record<string, unknown>>(App: ComponentType<P>): ComponentType<P> => {
-  if (!initState?.initialized) return App;
+  if (!resolveDsn()) return App;
   const Sentry = safeRequireSentry();
   if (!Sentry || typeof Sentry.wrap !== 'function') return App;
   return Sentry.wrap(App) as ComponentType<P>;
@@ -105,4 +150,5 @@ export const wrapApp = <P extends Record<string, unknown>>(App: ComponentType<P>
 /** Test-only reset. */
 export const __resetSentryStateForTests = () => {
   initState = null;
+  closePromise = null;
 };

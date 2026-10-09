@@ -24,6 +24,7 @@ type Props = {
   // When the composer is opened from a specific day's "+ Photo/Video" button, photos the server
   // can't place by capture date default to that day instead of blocking commit.
   defaultDayDate?: string;
+  defaultTags?: string[];
   onClose: () => void;
   onCommitted: (summary: { succeeded: number; failed: number; quotaBlocked: boolean }) => void;
   styles: any;
@@ -39,7 +40,7 @@ const MB = 1024 * 1024;
 const mb = (bytes: number): string => `${(bytes / MB).toFixed(1)} MB`;
 
 const PhotoFirstComposer: React.FC<Props> = ({
-  visible, files, dayDates, context, defaultDayDate, onClose, onCommitted,
+  visible, files, dayDates, context, defaultDayDate, defaultTags = [], onClose, onCommitted,
   styles, theme, textColor = '#111827', mutedColor = '#6b7280', borderColor = '#ccd4df',
   backgroundColor = '#ffffff', testID = 'photo-composer',
 }) => {
@@ -146,6 +147,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
     const errors: string[] = [];
     for (const [dayDate, group] of byDay) {
       const result = await uploadBlogFiles(context, dayDate, group, {
+        tags: defaultTags,
         onProgress: (current) => setProgress({ current: done + current, total: included.length }),
       });
       succeeded += result.succeeded;
@@ -182,7 +184,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
               borderRadius: 14, paddingVertical: 4, paddingHorizontal: 9, marginRight: 6,
             }}
           >
-            <Text style={{ color: active ? '#fff' : textColor, fontSize: 12 }}>{formatDateLong(dayDate)}</Text>
+            <Text style={{ color: active ? '#0B1726' : textColor, fontSize: 12 }}>{formatDateLong(dayDate)}</Text>
           </TouchableOpacity>
         );
       })}
@@ -207,7 +209,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
           </TouchableOpacity>
         </View>
         {oor ? (
-          <Text style={{ color: '#b45309', fontSize: 11, marginTop: 2 }}>
+          <Text style={{ color: theme?.mode === 'dark' ? '#FBBF24' : '#92400E', fontSize: 11, marginTop: 2 }}>
             Taken {formatDateLong(oor)} — outside this trip's dates. Pick a day or remove it.
           </Text>
         ) : file.capturedAt ? (
@@ -247,7 +249,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
             </View>
           ) : (
             <>
-              <Text testID={`${testID}-headroom`} style={{ color: overQuota ? '#b91c1c' : mutedColor, fontSize: 12, marginBottom: 8 }}>
+              <Text testID={`${testID}-headroom`} style={{ color: overQuota ? (theme?.mode === 'dark' ? '#FFB4AB' : '#B91C1C') : mutedColor, fontSize: 12, marginBottom: 8 }}>
                 {headroom
                   ? overQuota
                     ? (headroom.entitlementActive
@@ -256,10 +258,11 @@ const PhotoFirstComposer: React.FC<Props> = ({
                     : `Using ${mb(neededBytes)} of ${mb(headroom.availableBytes)} available`
                   : `This batch is about ${mb(neededBytes)}`}
               </Text>
+              {defaultTags.length ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 8 }}>Tagged: {defaultTags.map((tag) => `#${tag}`).join(' ')}</Text> : null}
 
               <ScrollView style={{ flexGrow: 0 }}>
                 {unplaced.length > 0 ? (
-                  <Text testID={`${testID}-unplaced-count`} style={{ color: '#b45309', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>
+                  <Text testID={`${testID}-unplaced-count`} style={{ color: theme?.mode === 'dark' ? '#FBBF24' : '#92400E', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>
                     {unplaced.length} photo{unplaced.length === 1 ? '' : 's'} still need a day
                   </Text>
                 ) : null}
@@ -276,7 +279,7 @@ const PhotoFirstComposer: React.FC<Props> = ({
               </ScrollView>
 
               {message ? (
-                <Text testID={`${testID}-error`} style={{ color: '#b91c1c', fontSize: 12, marginTop: 10 }}>{message}</Text>
+                <Text testID={`${testID}-error`} style={{ color: theme?.mode === 'dark' ? '#FFB4AB' : '#B91C1C', fontSize: 12, marginTop: 10 }}>{message}</Text>
               ) : null}
 
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>

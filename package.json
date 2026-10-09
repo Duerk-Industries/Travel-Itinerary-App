@@ -8,6 +8,13 @@
       "exclude": [
         "@react-native-community/datetimepicker"
       ]
+    },
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "expo-age-range"
+        ]
+      }
     }
   },
   "workspaces": [
@@ -15,6 +22,7 @@
     "app",
     "packages/messaging",
     "packages/domain",
+    "packages/analytics",
     "packages/plaid-transactions",
     "packages/image-size-safe"
   ],
@@ -23,12 +31,19 @@
     "dev": "npm --prefix server run dev",
     "build": "npm --prefix server run build",
     "migrate": "npm --prefix server run migrate",
+    "build:legal": "node scripts/build-legal-pages.mjs",
+    "check:legal": "node scripts/build-legal-pages.mjs --check",
+    "sync:analytics-registry": "node scripts/sync-analytics-registry.mjs",
+    "check:analytics-registry": "node scripts/sync-analytics-registry.mjs --check",
+    "check:analytics-release": "node scripts/analytics-release-gate.mjs",
+    "smoke:analytics": "node scripts/analytics-smoke.mjs",
     "lint": "npm run lint:app && npm run lint:server && npm run lint:messaging && npm run lint:domain",
     "test": "npm run test:app && npm run test:server",
-    "typecheck": "npm run typecheck:app && npm run typecheck:server && npm run typecheck:messaging && npm run typecheck:domain",
+    "typecheck": "npm run typecheck:app && npm run typecheck:server && npm run typecheck:messaging && npm run typecheck:domain && npm run typecheck:analytics",
     "typecheck:app": "npm --prefix app run typecheck",
     "typecheck:server": "npm --prefix server run typecheck",
     "typecheck:messaging": "npm --prefix packages/messaging run typecheck",
+    "typecheck:analytics": "npm --prefix packages/analytics run typecheck",
     "typecheck:domain": "npm --prefix packages/domain run typecheck",
     "lint:app": "npm --prefix app run lint",
     "lint:server": "npm --prefix server run lint",
@@ -76,6 +91,7 @@
     "e2e:maestro:all": "maestro test .maestro"
   },
   "overrides": {
+    "@grpc/grpc-js": "^1.14.6",
     "glob": "13.0.5",
     "minimatch": "10.2.4",
     "@tootallnate/once": "3.0.1",
@@ -117,6 +133,7 @@
     "@playwright/test": "^1.58.1",
     "@types/react-test-renderer": "^19.1.0",
     "jest": "~29.7.0",
+    "marked": "^14.1.4",
     "patch-package": "^8.0.1",
     "react-native-dotenv": "^3.4.11",
     "react-refresh": "^0.18.0",
@@ -146,6 +163,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-web": "^0.21.0",
+    "upgrade": "^1.1.0",
     "zod": "^4.3.6"
   }
 }

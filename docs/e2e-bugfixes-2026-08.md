@@ -169,13 +169,10 @@ avoid tripping the race in the test suite.
 
 ## Legitimate product behavior, not a bug — tests skipped with reason
 
-- **Daily Expenses is gated behind the `cost_tracking` tier entitlement**
-  (`server/src/routes/accountRoutes.ts`). A freshly-registered free-tier
-  test user (what `loginAsNewUser` creates) is correctly blocked from
-  saving expenses. There's no e2e fixture yet to grant a test user premium
-  tier, so the two Daily Expenses CRUD tests in `trip-editing.test.ts` are
-  `test.skip()`'d with a comment explaining why, rather than left as an
-  unexplained red failure.
+- **Daily Expenses e2e coverage needs current split fields.** The two CRUD
+  tests in `trip-editing.test.ts` remain `test.skip()`'d until their fixture
+  supplies the required payer and traveler IDs. Expense tracking is available
+  to Free users; only receipt scanning requires Premium or Pro.
 
 ## Not fixed / flagged for awareness
 

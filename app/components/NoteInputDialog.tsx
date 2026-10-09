@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 
 export type NoteSubmit = {
@@ -57,6 +57,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
           accessibilityLabel="Add a note"
           testID="note-dialog"
         >
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }} showsVerticalScrollIndicator>
           <Text style={[styles.title, colors && { color: colors.text }]}>Add a note</Text>
           <Text style={[styles.label, colors && { color: colors.textMuted }]}>Title</Text>
           <TextInput
@@ -79,7 +80,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
             multiline
             numberOfLines={5}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, theme?.mode === 'dark' && { color: '#FFB4AB' }]}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable testID="note-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
               <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
@@ -88,6 +89,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
               <Text style={styles.btnPrimaryText}>Add note</Text>
             </Pressable>
           </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -96,7 +98,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  dialog: { width: '100%', maxWidth: 460, backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 8 },
+  dialog: { width: '100%', maxWidth: 460, maxHeight: '100%', backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 8 },
   title: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 4 },
   label: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 4 },
   input: {
@@ -106,9 +108,9 @@ const styles = StyleSheet.create({
   textarea: { minHeight: 110, textAlignVertical: 'top' },
   error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-  btnGhost: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
 });
 

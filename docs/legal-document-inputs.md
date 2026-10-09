@@ -10,7 +10,7 @@ Enter a final, verified answer under each **Your input** prompt. Do not publish 
 
 ### `[LEGAL ENTITY NAME]`
 
-**Your input:** Bryan Duerk
+**Your input:** Tristan Duerk
 
 **What it represents:** The full registered legal name of the person, company, or other entity that operates WanderBunnies and enters into contracts with users. Do not enter only the product name unless that is also the registered legal name.
 
@@ -33,7 +33,7 @@ Enter a final, verified answer under each **Your input** prompt. Do not publish 
 
 ### `[SUPPORT CONTACT]`
 
-**Your input:** bryan.duerk@gmail.com
+**Your input:** support@wander-bunnies.com
 
 **What it represents:** An additional customer-support contact method, such as a support URL, telephone number, or mailing address. If `support@wander-bunnies.com` is the only support contact, confirm that this placeholder should be removed rather than leaving an empty alternative.
 
@@ -41,7 +41,7 @@ Enter a final, verified answer under each **Your input** prompt. Do not publish 
 
 ### `[PRIVACY EMAIL]`
 
-**Your input:** bryan.duerk@gmail.com
+**Your input:** support@wander-bunnies.com (operator for privacy purposes: Tristan Duerk; decided 2026-10-08)
 
 **What it represents:** The monitored email address for privacy questions and data-subject requests. It may be `support@wander-bunnies.com` if that mailbox is trained and monitored for privacy requests; otherwise provide a dedicated address.
 
@@ -49,7 +49,7 @@ Enter a final, verified answer under each **Your input** prompt. Do not publish 
 
 ### `[ACCESSIBILITY CONTACT]`
 
-**Your input:** bryan.duerk@gmail.com
+**Your input:** support@wander-bunnies.com
 
 **What it represents:** The monitored email address, telephone number, or accessible web form for reporting accessibility barriers and requesting assistance. If the general support email is used, confirm that it is equipped to route accessibility requests.
 
@@ -135,7 +135,7 @@ Enter a final, verified answer under each **Your input** prompt. Do not publish 
 
 ### `[INSERT]`
 
-**Your input:** Bryan Duerk, 4 Dickinson Cir. Shrewsbury, MA 01545
+**Your input:** Tristan Duerk, 4 Dickinson Cir. Shrewsbury, MA 01545
 
 **What it represents:** The operator's complete legal name and service address for notices and complaints. This should normally repeat `[LEGAL ENTITY NAME]` and `[FULL ADDRESS]`; replace the generic marker with those verified values.
 
@@ -213,7 +213,7 @@ These were found by reading the live documents against actual application behavi
 
 ### Business structure (not a document-text fix)
 
-**Note, not a worksheet item:** The controller is "Bryan Duerk, an individual" — a sole proprietorship, not an LLC or corporation. This is real personal-liability exposure for the operator, independent of anything fixable in the legal documents themselves. Flagging since it surfaced during this review; worth a conversation with counsel or an accountant about entity structure, separate from the documents.
+**Note, not a worksheet item:** The controller is "Tristan Duerk, an individual" — a sole proprietorship, not an LLC or corporation. This is real personal-liability exposure for the operator, independent of anything fixable in the legal documents themselves. Flagging since it surfaced during this review; worth a conversation with counsel or an accountant about entity structure, separate from the documents.
 
 ### Arbitration clause vs. EU consumers — flagged for priority counsel review
 

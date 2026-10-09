@@ -204,6 +204,9 @@ const AuthForm: React.FC<AuthFormProps> = ({
           <Text style={[styles.linkText, { fontSize: 12, fontWeight: '600' }]}>Privacy Policy</Text>
         </TouchableOpacity>
       </View>
+      <TouchableOpacity onPress={() => openLegal('privacy-choices.html')} style={{ marginTop: 4 }} testID="auth-privacy-choices-link">
+        <Text style={[styles.linkText, { fontSize: 12, fontWeight: '600' }]}>Your Privacy Choices</Text>
+      </TouchableOpacity>
     </View>
   </View>
 );

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
@@ -38,6 +38,8 @@ import {
   guessMimeTypeFromName,
   uploadBlogFiles,
 } from '../utils/blogUpload';
+import { convertImageToJpeg, isHeicMimeType, toJpegName } from '../utils/heicToJpeg';
+import { defaultTemperatureUnitForRegion, formatWeatherFactValue, type TemperatureUnit } from '../utils/temperatureUnit';
 import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCapture';
 import PhotoFirstComposer from '../components/PhotoFirstComposer';
 import DropdownOptionButton from '../components/DropdownOptionButton';
@@ -65,7 +67,9 @@ const promptsForDay = (dayDate) => {
   return [0, 1, 2].map((offset) => WRITING_PROMPTS[(start + offset) % WRITING_PROMPTS.length]);
 };
 
-const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {} }) => {
+const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], styles, theme, readOnly = false, currentUserId = null, isTripOwnerOrAdmin = false, allExpenses = [] as any[], tripCurrency = 'USD', flights = [] as any[], lodgings = [] as any[], tours = [] as any[], carRentals = [] as any[], autoOpenAddPhotos = false, onAutoOpenHandled = () => {}, autoOpenActivityCapture = null as { date: string; tags: string[] } | null, onAutoOpenActivityCaptureHandled = () => {}, temperatureUnit = defaultTemperatureUnitForRegion() as TemperatureUnit, onChangeTemperatureUnit = null as ((unit: TemperatureUnit) => void) | null }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const compactMasthead = viewportWidth < 600;
   // Phase 1 typography (redesign proposal §5) — Fraunces for the masthead title and day
   // headlines, everything else stays on the system font. Loaded here rather than at the app
   // root so this stays scoped to the trip blog; while it loads, headings just render in the
@@ -85,6 +89,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const [addingDay, setAddingDay] = useState(null);
   const [composerFiles, setComposerFiles] = useState(null); // photo-first composer (A2): picked files awaiting day assignment
   const [composerDefaultDay, setComposerDefaultDay] = useState(null); // set when opened from a specific day's button
+  const [composerDefaultTags, setComposerDefaultTags] = useState([]);
   // Destination trip for the "+ Add photos to this trip" flow — defaults to whichever trip is
   // active today, falling back to the app's currently-selected trip, but never overrides an
   // explicit choice the traveler already made from the dropdown this session.
@@ -102,6 +107,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   );
   const uploadTrip = uploadTripsSorted.find((trip) => trip.id === uploadTripId) ?? trips.find((trip) => trip.id === uploadTripId);
   const [newBody, setNewBody] = useState('');
+  const [newTags, setNewTags] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [publication, setPublication] = useState(null);
@@ -237,6 +243,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   // resolve membership against there), and a failure (flag off, rate-limited, etc.) just leaves
   // that day's strip empty rather than surfacing an error — facts are enrichment, never blocking.
   const [dayFacts, setDayFacts] = useState({});
+  // The °F/°C switch only shows when there's weather to convert.
+  const hasWeatherFacts = useMemo(() => Object.values(dayFacts || {}).some((facts: any) => Array.isArray(facts) && facts.some((fact) => fact.key === 'weather')), [dayFacts]);
   const loadedFactDays = useRef(new Set());
   useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); }, [activeTripId]);
   useEffect(() => {
@@ -671,20 +679,37 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       allowsMultipleSelection: true,
       quality: 1,
       exif: true, // capture time/location for the photo-first composer (A2)
+      // iPhone camera-roll photos are HEIC, which the blog can't store or show in browsers. The
+      // picker's default ("current") hands over that original file; "compatible" has iOS
+      // transcode it to JPEG (and HEVC video to H.264) as it's picked. iOS 14+; ignored elsewhere.
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
     if (result.canceled || !result.assets?.length) return [];
     return Promise.all(result.assets.map(async (asset) => {
-      const mimeType = asset.mimeType || guessMimeTypeFromName(asset.fileName);
-      const response = await fetch(asset.uri);
+      let mimeType = asset.mimeType || guessMimeTypeFromName(asset.fileName);
+      let uri = asset.uri;
+      let name = asset.fileName ?? null;
+      // Fallback for anything still HEIC/HEIF (e.g. Android, or iOS older than 14): convert here.
+      // EXIF was already read from the picker result, so capture time/location survive.
+      if (isHeicMimeType(mimeType, name)) {
+        const jpegUri = await convertImageToJpeg(uri).catch(() => null);
+        if (jpegUri) {
+          uri = jpegUri;
+          mimeType = 'image/jpeg';
+          name = toJpegName(name);
+        }
+      }
+      const response = await fetch(uri);
       const blob = await response.blob();
       const capture = readNativeExifCapture(asset.exif);
-      return { blob, mimeType, size: asset.fileSize ?? blob.size, name: asset.fileName ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), previewUri: asset.uri ?? null, ...capture };
+      const converted = uri !== asset.uri;
+      return { blob, mimeType, size: converted ? blob.size : (asset.fileSize ?? blob.size), name: name ?? (isVideoMimeType(mimeType) ? 'video' : 'photo'), previewUri: uri ?? null, ...capture };
     }));
   };
 
   // Photo-first composer (A2): pick once, sort by day, commit as a batch. The per-day
   // "+ Photo/Video" button (handleUpload) stays for adding to one specific day.
-  const openPhotoComposer = async (defaultDayDate = null) => {
+  const openPhotoComposer = async (defaultDayDate = null, defaultTags = []) => {
     // Guard: a bare onPress={openPhotoComposer} would hand us the press event here.
     const forDay = typeof defaultDayDate === 'string' ? defaultDayDate : null;
     if (!canEdit) return;
@@ -696,9 +721,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       return;
     }
     setComposerDefaultDay(forDay);
+    setComposerDefaultTags(Array.isArray(defaultTags) ? defaultTags.map((tag) => String(tag).trim()).filter(Boolean) : []);
     setComposerFiles(supported);
   };
-  const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); };
+  const closePhotoComposer = () => { setComposerFiles(null); setComposerDefaultDay(null); setComposerDefaultTags([]); };
 
   // Deep-link target for the evening trip reminder notification (see tripReminderNotifications.ts
   // / App.tsx's notification response listener) — opens the same picker the "+ Add photos" button
@@ -710,6 +736,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     openPhotoComposer(localDateString());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenAddPhotos, canEdit, capabilities.trip_blog_photo_composer, visibleDays.length, composerFiles]);
+
+  // The activity recap prompt routes here after the traveler chooses photos/videos. It uses the
+  // same photo-first composer as every other blog upload, with the activity name stamped as a
+  // searchable association tag.
+  useEffect(() => {
+    if (!autoOpenActivityCapture?.date) return;
+    if (!canEdit || !capabilities.trip_blog_photo_composer || visibleDays.length === 0 || composerFiles) return;
+    onAutoOpenActivityCaptureHandled();
+    openPhotoComposer(autoOpenActivityCapture.date, autoOpenActivityCapture.tags ?? []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenActivityCapture, canEdit, capabilities.trip_blog_photo_composer, visibleDays.length, composerFiles]);
 
   const handleComposerCommitted = async ({ succeeded, failed, quotaBlocked }) => {
     closePhotoComposer();
@@ -1057,15 +1094,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         );
         setOfflineQueueCount(queued.length);
         setNewBody('');
+        setNewTags('');
         setAddingDay(null);
         return;
       }
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kindKey: 'core.text', dayDate, body }),
+        body: JSON.stringify({ kindKey: 'core.text', dayDate, body, tags: newTags.split(',').map((tag) => tag.trim()).filter(Boolean) }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to add blog item');
       setNewBody('');
+      setNewTags('');
       setAddingDay(null);
       await load();
     } catch (error) { alertMessage('Trip blog', error.message || 'Unable to add blog item'); }
@@ -1180,9 +1219,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       >
         <View style={{ width: '100%', maxWidth: 1200, alignSelf: 'center', gap: 20 }}>
       <View style={{ backgroundColor: surfaceColor, borderRadius: 16, padding: 18 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <View testID="blog-masthead-layout" style={{ flexDirection: compactMasthead ? 'column' : 'row', alignItems: compactMasthead ? 'stretch' : 'center', justifyContent: 'space-between', gap: 12 }}>
           {canEdit ? (
-            <View style={{ flex: 1, minWidth: 140 }}>
+            <View style={{ flex: compactMasthead ? undefined : 1, minWidth: compactMasthead ? undefined : 200 }}>
               <TextInput
                 testID="blog-masthead-title-input"
                 value={mastheadDraft?.title ?? (blog?.title ?? '')}
@@ -1202,35 +1241,37 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               {saveStateLabel('masthead') ? <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>{saveStateLabel('masthead')}</Text> : null}
             </View>
           ) : (
-            <View style={{ flex: 1, minWidth: 140 }}>
+            <View style={{ flex: compactMasthead ? undefined : 1, minWidth: compactMasthead ? undefined : 200 }}>
               <Text style={[styles.sectionTitle, { fontFamily: displayFont, fontSize: 26 }]}>{blog?.title || 'Trip Blog'}</Text>
               {blog?.subtitle ? <Text style={{ color: mutedColor, fontSize: 14, marginTop: 2, fontFamily: displayFontItalic }}>{blog.subtitle}</Text> : null}
             </View>
           )}
-          {!readOnly ? (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={toggleEditMode}
-              style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : undefined }]}
-            >
-              <Text style={editMode ? { color: textColor } : styles.buttonText}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
-            </TouchableOpacity>
-          ) : null}
-          {publicPageUrl ? (
-            <TouchableOpacity
-              accessibilityRole="link"
-              onPress={() => { void Linking.openURL(publicPageUrl).catch(() => {}); }}
-              style={{ paddingVertical: 6, paddingHorizontal: 8 }}
-            >
-              <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>View public page ↗</Text>
-            </TouchableOpacity>
-          ) : null}
-          {canEdit && ((Platform.OS === 'ios' && capabilities.trip_blog_mobile_share_ios) || (Platform.OS === 'android' && capabilities.trip_blog_mobile_share_android)) ? (
-            <TouchableOpacity testID="blog-quick-capture" accessibilityRole="button" onPress={() => { const today = new Date().toISOString().slice(0, 10); const day = visibleDays.find((candidate) => candidate.localDate === today)?.localDate ?? visibleDays[0]?.localDate; if (day) { setAddingDay(day); setNewBody(''); } }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
-              <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
-            </TouchableOpacity>
-          ) : null}
-          {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+          <View testID="blog-masthead-actions" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: compactMasthead ? 'flex-start' : 'flex-end', gap: 8, maxWidth: compactMasthead ? '100%' : '60%' }}>
+            {!readOnly ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={toggleEditMode}
+                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : undefined }]}
+              >
+                <Text style={editMode ? { color: textColor } : styles.buttonText}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {publicPageUrl ? (
+              <TouchableOpacity
+                accessibilityRole="link"
+                onPress={() => { void Linking.openURL(publicPageUrl).catch(() => {}); }}
+                style={{ paddingVertical: 6, paddingHorizontal: 8 }}
+              >
+                <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>View public page ↗</Text>
+              </TouchableOpacity>
+            ) : null}
+            {canEdit && ((Platform.OS === 'ios' && capabilities.trip_blog_mobile_share_ios) || (Platform.OS === 'android' && capabilities.trip_blog_mobile_share_android)) ? (
+              <TouchableOpacity testID="blog-quick-capture" accessibilityRole="button" onPress={() => { const today = new Date().toISOString().slice(0, 10); const day = visibleDays.find((candidate) => candidate.localDate === today)?.localDate ?? visibleDays[0]?.localDate; if (day) { setAddingDay(day); setNewBody(''); } }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+                <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
+              </TouchableOpacity>
+            ) : null}
+            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+          </View>
         </View>
         {/* Phase 1 masthead stat row (redesign proposal §1) — the "trip at a glance" strip. */}
         <View testID="blog-trip-stats" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 6, marginBottom: 10 }}>
@@ -1256,6 +1297,26 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
             <Text style={{ color: mutedColor, fontSize: 13 }}>
               approx. <Text style={{ fontWeight: '700', color: textColor }}>{tripStats.distanceKm}</Text> km
             </Text>
+          ) : null}
+          {onChangeTemperatureUnit && hasWeatherFacts ? (
+            <View testID="blog-temperature-unit" accessibilityRole="radiogroup" accessibilityLabel="Temperature unit" style={{ flexDirection: 'row', borderWidth: 1, borderColor, borderRadius: 10, overflow: 'hidden', marginLeft: 'auto' }}>
+              {(['fahrenheit', 'celsius'] as TemperatureUnit[]).map((unit) => {
+                const selected = temperatureUnit === unit;
+                return (
+                  <TouchableOpacity
+                    key={unit}
+                    testID={`blog-temperature-unit-${unit}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={unit === 'fahrenheit' ? 'Fahrenheit' : 'Celsius'}
+                    onPress={() => { if (!selected) onChangeTemperatureUnit(unit); }}
+                    style={{ paddingHorizontal: 9, paddingVertical: 2, backgroundColor: selected ? (theme?.colors?.link ?? '#0ea5e9') : 'transparent' }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: selected ? '#fff' : mutedColor }}>{unit === 'fahrenheit' ? '°F' : '°C'}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           ) : null}
         </View>
         {tripMapPoints.length ? (
@@ -1360,7 +1421,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   style={{ minHeight: 160, justifyContent: 'flex-end', padding: 16, borderRadius: 12 }}
                 >
                   <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600', letterSpacing: 0.3 }}>
-                    {formatDateLong(day.localDate)}{dayWeatherFact ? `  ·  ${dayWeatherFact.value}` : ''}
+                    {formatDateLong(day.localDate)}{dayWeatherFact ? `  ·  ${formatWeatherFactValue(dayWeatherFact, temperatureUnit)}` : ''}
                   </Text>
                   <Text style={{ color: '#fff', fontSize: 24, fontFamily: displayFont, marginTop: 2 }}>
                     {day.headline || formatDateLong(day.localDate)}
@@ -1371,14 +1432,26 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 </LinearGradient>
               </ImageBackground>
             ) : null}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: canEdit ? 'flex-start' : 'center', marginBottom: 8, display: showHeroHeader && !canEdit ? 'none' as const : 'flex' as const }}>
+            {/* On phones the edit buttons don't fit beside the headline: stack them under it and
+                let them wrap, instead of pushing off-screen and squeezing the headline column. */}
+            <View
+              testID={`blog-day-header-${day.localDate}`}
+              style={{
+                flexDirection: compactMasthead && canEdit ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: canEdit ? (compactMasthead ? 'stretch' : 'flex-start') : 'center',
+                gap: compactMasthead && canEdit ? 10 : 0,
+                marginBottom: 8,
+                display: showHeroHeader && !canEdit ? 'none' as const : 'flex' as const,
+              }}
+            >
               {canEdit ? (
-                <View style={{ flex: 1, marginRight: 8 }}>
+                <View style={{ flex: compactMasthead ? undefined : 1, marginRight: compactMasthead ? 0 : 8 }}>
                   <TextInput
                     testID={`blog-day-headline-input-${day.localDate}`}
                     value={dayHeadline}
                     onChangeText={(text) => scheduleDayMetaSave(day, { headline: text.slice(0, 120) })}
-                    placeholder={day.localDate}
+                    placeholder="Add a headline for this day…"
                     placeholderTextColor={mutedColor}
                     style={[styles.sectionTitle, { color: textColor, padding: 0 }]}
                   />
@@ -1414,7 +1487,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   {day.summary ? <Text style={{ color: mutedColor, fontSize: 13, marginTop: 2 }}>{day.summary}</Text> : null}
                 </View>
               )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View testID={`blog-day-actions-${day.localDate}`} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, flexShrink: 1 }}>
                 {canEdit && (
                   <TouchableOpacity
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8 }]}
@@ -1435,11 +1508,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     <Text style={[styles.buttonText, { fontSize: 12 }]}>+ Voice note</Text>
                   </TouchableOpacity>
                 ) : null}
-                {canEdit && capabilities.trip_blog_audio && capabilities.trip_blog_audio_transcription ? (
+                {/* Recording only needs voice notes on; handleRecordedVoiceNote skips the transcript when
+                    transcription is off, so the audio is still saved. */}
+                {canEdit && capabilities.trip_blog_audio ? (
                   <VoiceNoteRecorder
                     testID={`blog-record-voice-${day.localDate}`}
                     disabled={uploading}
-                    processingLabel="Transcribing…"
+                    processingLabel={capabilities.trip_blog_audio_transcription ? 'Transcribing…' : 'Saving…'}
                     onRecorded={(recording) => handleRecordedVoiceNote(day.localDate, recording)}
                     onError={(message) => alertMessage('Voice note', message)}
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}
@@ -1474,7 +1549,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme?.colors?.surfaceMuted ?? '#f0f9ff', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 }}
                   >
                     <Text style={{ fontSize: 12.5, fontWeight: '600', color: theme?.colors?.link ?? '#0369a1' }}>
-                      {fact.key === 'weather' ? fact.value : `${fact.label}: ${fact.value}`}
+                      {fact.key === 'weather' ? formatWeatherFactValue(fact, temperatureUnit) : `${fact.label}: ${fact.value}`}
                     </Text>
                   </View>
                 ))}
@@ -1536,6 +1611,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     textColor={textColor}
                   />
                 )}
+                {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
                 {item.engagement ? (
                   <BlogReactionBar
                     testID={`blog-item-reactions-${item.id}`}
@@ -1801,9 +1877,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   backgroundColor={inputColor}
                   textColor={textColor}
                 />
+                <TextInput
+                  testID={`blog-new-note-tags-${day.localDate}`}
+                  value={newTags}
+                  onChangeText={setNewTags}
+                  placeholder="Tags (optional, comma-separated)"
+                  placeholderTextColor={mutedColor}
+                  style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
+                />
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                   <TouchableOpacity style={styles.button} disabled={creating || isRichTextEmpty(newBody)} onPress={() => createTextItem(day.localDate)}><Text style={styles.buttonText}>{creating ? 'Adding…' : 'Add to blog'}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => setAddingDay(null)}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} onPress={() => { setAddingDay(null); setNewTags(''); }}><Text style={{ color: textColor }}>Cancel</Text></TouchableOpacity>
                 </View>
               </View>
             ) : null}
@@ -1965,6 +2049,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         files={composerFiles || []}
         dayDates={visibleDays.map((day) => day.localDate)}
         defaultDayDate={composerDefaultDay}
+        defaultTags={composerDefaultTags}
         context={{ backendUrl, headers, tripId: uploadTripId || activeTripId }}
         onClose={closePhotoComposer}
         onCommitted={handleComposerCommitted}
@@ -1986,7 +2071,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 style={[styles.button, { marginBottom: 10, backgroundColor: '#0284c7' }]}
                 onPress={() => purchaseStorage(plan.planKey)}
               >
-                <Text style={styles.buttonText}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
+                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity

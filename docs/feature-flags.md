@@ -32,6 +32,8 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 | `trip_sharing` | Trip sharing |
 | `trip_following` | Trip following |
 | `cost_tracking` | Expense tracking |
+| `receipt_scanning` | Receipt scanning to prefill an expense |
+| `activity_recap` | Completed-activity recap prompt, completion notification, and tagged blog capture flow |
 | `multiple_groups` | Multi-group support |
 | `trip_creation` | Trip creation |
 | `feature_ingest_manual_upload` | Phase 1 manual upload, parse, review, assign/delete |
@@ -49,6 +51,7 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 | `expense_import_plaid_assignment` | Allow explicit assignment of a candidate to a WanderBunnies expense |
 | `expense_import_plaid_webhooks` | Process normal Plaid sync webhooks; revocation/deletion handling remains mandatory |
 | `expense_import_plaid_auto_category` | Show Plaid category suggestions for user confirmation |
+| `age_gate_enforcement` | Server-side 403 `AGE_VERIFICATION_REQUIRED` for accounts without a declared 16+ date of birth. Default off and fail-closed; enable only after app builds with the date-of-birth prompt are the supported minimum. The prompt itself ships regardless. |
 
 ## Ingestion note
 

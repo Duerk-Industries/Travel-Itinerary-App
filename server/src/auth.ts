@@ -1,15 +1,15 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { findOrCreateUser, findOrCreateGoogleUser, getUserRole, ensureCurrentUserTier, isInternalCanaryAccount } from './db';
+import { findOrCreateGoogleUser, isInternalCanaryAccount } from './db';
 import { isPasswordSetupRequired } from './db';
 import { User, UserRole } from './types';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
-import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { getEnvValue } from './env';
 import { getAuthAudience, getAuthIssuer, getAuthSecret } from './authConfig';
 import { setRequestContextUserId } from './requestContext';
+import { isAgeGateEnforced, isAgeVerificationRequired } from './services/ageVerificationService';
 
 export const initPassport = () => {
     const googleClientId = getEnvValue('GOOGLE_CLIENT_ID');
@@ -108,6 +108,23 @@ const isPasswordSetupAllowlistedRequest = (req: Request): boolean => {
   return false;
 };
 
+// An account without a declared date of birth may only declare one, finish
+// password setup, export its data, or delete itself.
+const isAgeVerificationAllowlistedRequest = (req: Request): boolean => {
+  const method = req.method.toUpperCase();
+  if (method === 'OPTIONS') return true;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  if (path === '/api/account/age-verification' && (method === 'GET' || method === 'POST')) return true;
+  if (method === 'POST' && path === '/api/account/age-verification/apple') return true;
+  if (method === 'PATCH' && path === '/api/account/password') return true;
+  if (method === 'GET' && path === '/api/account/export') return true;
+  if (path === '/api/account/privacy-preferences' && (method === 'GET' || method === 'PATCH')) return true;
+  if (method === 'DELETE' && path === '/api/account') return true;
+  if (method === 'DELETE' && path === '/api/account/analytics-data') return true;
+  if (method === 'GET' && path.startsWith('/api/account/erasure-requests')) return true;
+  return false;
+};
+
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -122,6 +139,14 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       res.status(403).json({ error: 'Password setup required before accessing this endpoint.' });
       return;
     }
+    if (
+      !isAgeVerificationAllowlistedRequest(req) &&
+      (await isAgeGateEnforced()) &&
+      (await isAgeVerificationRequired(decoded.userId))
+    ) {
+      res.status(403).json({ error: 'Date of birth required before accessing this endpoint.', code: 'AGE_VERIFICATION_REQUIRED' });
+      return;
+    }
     (req as Request & { user?: TokenPayload }).user = decoded;
     setRequestContextUserId(decoded.userId);
     // Canary status isn't embedded in the JWT (it can be toggled without a
@@ -134,14 +159,4 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const handleLogin = async (
-  email: string,
-  provider: User['provider']
-): Promise<{ token: string; user: User }> => {
-  const user = await findOrCreateUser(email, provider);
-  await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
-  await ensureAdminBootstrap(user.id, user.email);
-  const role = await getUserRole(user.id);
-  const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
-  return { token, user };
-};
+

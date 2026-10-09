@@ -38,6 +38,12 @@ export async function createDemoTrip(page: Page, tripName = 'Lisbon Long Weekend
     tokens[t] = String(login.token);
     userIds[t] = userIdFromToken(tokens[t]);
     emails[t] = creds.email;
+    // Adult date of birth, so the age-verification prompt doesn't block the app.
+    const dob = await page.request.post(`${API_BASE}/api/account/age-verification`, {
+      headers: { Authorization: `Bearer ${tokens[t]}` },
+      data: { dateOfBirth: '1992-05-14' },
+    });
+    expect(dob.ok(), await dob.text()).toBeTruthy();
   }
   const authOf = (t: Traveler) => ({ Authorization: `Bearer ${tokens[t]}` });
   const auth = authOf('Maya');

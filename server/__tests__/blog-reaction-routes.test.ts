@@ -3,12 +3,14 @@ import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 
 // Phase 3 of docs/trip-blog-social-implementation-plan.md — the three reaction endpoints, live
 // over HTTP. Extends the Phase 2 service-layer matrix test (blog-engagement-authorization.test.ts)
 // to the actual routes, per that phase's "Tests" row.
+const TRIP_DAY = futureDateString();
+
 describe('blog reaction routes (PUT/DELETE/GET .../reactions)', () => {
   const traveler = { firstName: 'Route', lastName: 'Traveler', email: 'blog-reaction-route-traveler@example.com', password: 'Password123!' };
   const follower = { firstName: 'Route', lastName: 'Follower', email: 'blog-reaction-route-follower@example.com', password: 'Password123!' };
@@ -45,7 +47,7 @@ describe('blog reaction routes (PUT/DELETE/GET .../reactions)', () => {
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ name: 'Reaction Route Trip', startDate: '2030-10-07', endDate: '2030-10-07', participants: [] })
+      .send({ name: 'Reaction Route Trip', startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
@@ -54,14 +56,14 @@ describe('blog reaction routes (PUT/DELETE/GET .../reactions)', () => {
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2030-10-07', body: 'React to this', audience: 'public' })
+      .send({ kindKey: 'core.text', dayDate: TRIP_DAY, body: 'React to this', audience: 'public' })
       .expect(201);
     itemId = item.body.id;
 
     const travelersOnly = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2030-10-07', body: 'Travelers only', audience: 'travelers' })
+      .send({ kindKey: 'core.text', dayDate: TRIP_DAY, body: 'Travelers only', audience: 'travelers' })
       .expect(201);
     travelersOnlyItemId = travelersOnly.body.id;
   });

@@ -37,6 +37,7 @@ export interface BlogTextItem {
   lastEditorUserId: string;
   version: number;
   body: string;
+  tags: string[];
   languageTag: string | null;
   createdAt: string;
   updatedAt: string;
@@ -138,6 +139,7 @@ export interface BlogTextInput {
   body: string;
   languageTag?: string | null;
   audience?: BlogAudience;
+  tags?: string[];
   // Phase 5 (A1) — stamped 'day_starter' when this item was accepted from the Day Starter
   // suggestion, so its acceptance rate is measurable (architecture §8's stage-2 rollout gate
   // depends on this existing). Unset for every other authoring path.
@@ -149,6 +151,7 @@ export interface BlogTextPatch {
   body?: string;
   languageTag?: string | null;
   audience?: BlogAudience;
+  tags?: string[];
   version: number;
 }
 

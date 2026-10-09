@@ -17,6 +17,8 @@ import lodgingRoutes from './routes/lodgingRoutes';
 import activityRoutes from './routes/activityRoutes';
 import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
+import { trackItemSaved } from './analytics/itemSavedTracker';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import paymentRoutes from './routes/ledgerPaymentRoutes';
@@ -182,6 +184,18 @@ const hasWebApp = fs.existsSync(webIndexPath);
 
 app.get('/login', (_req, res) => res.sendFile(loginPath));
 app.get('/privacy', (_req, res) => res.type('html').send(privacyPolicyHtml));
+// Stable extensionless URLs for the public legal pages (store listings, Play Console
+// deletion URL, footers). Registered before the SPA fallback so they never resolve
+// to the app shell.
+const LEGAL_PAGE_ALIASES: Record<string, string> = {
+  '/privacy-choices': '/privacy-choices.html',
+  '/delete-account': '/delete-account.html',
+  '/cookies': '/cookies.html',
+  '/terms': '/terms.html',
+};
+for (const [alias, target] of Object.entries(LEGAL_PAGE_ALIASES)) {
+  app.get(alias, (_req, res) => res.redirect(301, target));
+}
 app.get('/api/diagnostics/google-client-id', (_req, res) => {
   const clientId = getEnvValue('GOOGLE_CLIENT_ID') || '';
   res.json({ configured: Boolean(clientId), last6: clientId.trim().slice(-6) || null });
@@ -416,9 +430,9 @@ app.post('/api/auth/apple/callback', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', webAuthRoutes);
 app.use('/api/web-auth', webAuthRoutes);
-app.use('/api/transfers', transferRoutes);
+app.use('/api/transfers', trackItemSaved('transfer'), transferRoutes);
 // Backward-compatible alias for older clients/tests still calling flights endpoints — do not remove.
-app.use('/api/flights', transferRoutes);
+app.use('/api/flights', trackItemSaved('transfer'), transferRoutes);
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/trips', blogRoutes);
@@ -436,16 +450,17 @@ app.use('/', blogSitemapRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
-app.use('/api/lodgings', lodgingRoutes);
+app.use('/api/lodgings', trackItemSaved('lodging'), lodgingRoutes);
 app.use('/api/places', placeRoutes);
 app.use('/api/maps', staticMapRoutes);
 app.use('/api/affiliate', getYourGuideRoutes);
-app.use('/api/activities', activityRoutes);
-app.use('/api/car-rentals', carRentalRoutes);
+app.use('/api/activities', trackItemSaved('activity'), activityRoutes);
+app.use('/api/car-rentals', trackItemSaved('car_rental'), carRentalRoutes);
 app.use('/api/account', accountRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/account', blogStorageRoutes);
 app.use('/api/plaid', plaidIntegrationRoutes);
-app.use('/api/expenses', expenseRoutes);
+app.use('/api/expenses', trackItemSaved('expense'), expenseRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);

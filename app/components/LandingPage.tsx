@@ -46,6 +46,7 @@ const FEATURES: string[] = [
 const PUBLIC_PRIVACY_URL = 'https://wander-bunnies.com/privacy.html';
 const PUBLIC_TERMS_URL = 'https://wander-bunnies.com/terms.html';
 const PUBLIC_COOKIES_URL = 'https://wander-bunnies.com/cookies.html';
+const PUBLIC_PRIVACY_CHOICES_URL = 'https://wander-bunnies.com/privacy-choices.html';
 
 type PublicLinkProps = {
   href: string;
@@ -389,6 +390,15 @@ const LandingPage: React.FC<LandingPageProps> = ({
             style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
           >
             Cookie Policy
+          </PublicLink>
+          <Text style={{ fontSize: typography.small, color: colors.textMuted }}>·</Text>
+          <PublicLink
+            href={PUBLIC_PRIVACY_CHOICES_URL}
+            onPress={() => openLegal('privacy-choices.html')}
+            testID="landing-privacy-choices-link"
+            style={{ fontSize: typography.small, color: colors.link, fontWeight: typography.weightSemibold, textDecorationLine: 'underline' }}
+          >
+            Your Privacy Choices
           </PublicLink>
         </View>
 

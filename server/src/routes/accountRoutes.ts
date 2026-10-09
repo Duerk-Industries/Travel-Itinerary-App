@@ -1,4 +1,6 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
+import { recordServerEvent } from '../analytics/ingestService';
+import { z } from 'zod';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
 import { getUserRole, writeAuditLog, getUserPackingListV2, getUserPackingPreferencesV2, listPackingPresetsV2, replaceUserPackingPreferencesV2, reconcileUserPackingListsV2 } from '../db';
@@ -49,13 +51,78 @@ import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
 import { buildUserDataExport } from '../services/userDataExport';
+import { getErasureJobForUser, listErasureJobsForUser, requestErasure } from '../services/privacyRightsService';
+import type { PrivacyErasureJob } from '../types';
 import { cancelAllSubscriptionsForUser, syncEmailToStripeCustomer } from '../billing/accountBillingLifecycle';
 import { accountPasswordRateLimit } from '../services/httpRateLimitService';
+import { declareDateOfBirth, isAgeGateEnforced, isAgeVerificationRequired, recordAppleAgeRange } from '../services/ageVerificationService';
+import { MINIMUM_ACCOUNT_AGE_YEARS } from '../services/registrationAgeGate';
+import { getPrivacyStatus, savePrivacyChoice } from '../services/privacyConsentService';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
+
+const privacyChoiceSchema = z.object({
+  revision: z.number().int().nonnegative(),
+  productAnalytics: z.boolean().optional(),
+  optionalDiagnostics: z.boolean().optional(),
+  platform: z.enum(['web', 'ios', 'android']),
+}).strict().refine((value) => value.productAnalytics !== undefined || value.optionalDiagnostics !== undefined);
+
+const hasPrivacySignal = (req: Request): boolean =>
+  req.get('Sec-GPC') === '1' || req.get('DNT') === '1';
+
+/** Rollout context: role from the token, device zone from the client's X-Device-Timezone header (Phase 6). */
+const collectionContext = (req: Request) => {
+  const zone = req.get('X-Device-Timezone');
+  return {
+    role: (req as any).user?.role as string | undefined,
+    deviceTimezone: zone && /^[A-Za-z0-9_+\-/]{1,64}$/.test(zone) ? zone : null,
+  };
+};
+
+router.get('/privacy-preferences', async (req, res) => {
+  try {
+    res.json(await getPrivacyStatus((req as any).user.userId, hasPrivacySignal(req), collectionContext(req)));
+  } catch (error) {
+    logError('[privacy] preference read failed', error);
+    res.status(503).json({ error: 'Privacy preferences unavailable', code: 'PRIVACY_UNAVAILABLE' });
+  }
+});
+
+router.patch('/privacy-preferences', async (req, res) => {
+  const parsed = privacyChoiceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid privacy choice', code: 'INVALID_PRIVACY_CHOICE' });
+    return;
+  }
+  try {
+    res.json(await savePrivacyChoice((req as any).user.userId, parsed.data, hasPrivacySignal(req), collectionContext(req)));
+  } catch (error) {
+    const code = (error as Error & { code?: string }).code;
+    if (code === 'PRIVACY_REVISION_CONFLICT') {
+      res.status(409).json({ error: (error as Error).message, code });
+    } else if (code === 'PRIVACY_PURPOSE_UNAVAILABLE') {
+      res.status(403).json({ error: (error as Error).message, code });
+    } else {
+      logError('[privacy] preference update failed', error);
+      res.status(503).json({ error: 'Privacy preferences unavailable', code: 'PRIVACY_UNAVAILABLE' });
+    }
+  }
+});
+
+/** Erasure job as shown to its subject: no internal hashes or raw IDs. */
+const publicErasureJob = (job: PrivacyErasureJob) => ({
+  id: job.id,
+  scope: job.scope,
+  status: job.status,
+  requestedAt: job.requestedAt,
+  dueAt: job.dueAt,
+  completedAt: job.completedAt,
+  steps: job.steps,
+});
 
 const ensureUserInGroup = async (groupId: string, userId: string): Promise<boolean> => {
   const groups = await listGroupsForUser(userId);
@@ -131,14 +198,15 @@ router.get('/', async (req, res) => {
   // tierKey drives client-side upsell/entry-point gating (e.g. showing the Home
   // page Ingest tile only to Premium/Pro) — it's not itself an authorization
   // check. Every ingestion endpoint re-checks tier server-side independently.
-  const [costTracking, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions, tierKey] = await Promise.all([
+  const [costTracking, receiptScanning, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions, tierKey] = await Promise.all([
     canUseFeature(userId, 'cost_tracking', role),
+    canUseFeature(userId, 'receipt_scanning', role),
     canUseFeature(userId, 'ai_itinerary_generation', role),
     canUseFeature(userId, 'ai_assistant_guide', role),
     canUseFeature(userId, 'ai_assistant_actions', role),
     getUserTierKey(userId),
   ]);
-  res.json({ ...profile, entitlements: { costTracking, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions }, tierKey });
+  res.json({ ...profile, entitlements: { costTracking, receiptScanning, aiItineraryGeneration, aiAssistantGuide, aiAssistantActions }, tierKey });
 });
 
 router.get('/packing-list', async (req, res) => {
@@ -257,6 +325,47 @@ router.delete('/packing-list/:itemId', async (req, res) => {
   }
 });
 
+// "Delete my analytics data" (analytics Phase 4): erases analytics and
+// diagnostics linked to the account without deleting the account. Separate from
+// withdrawing consent, which only stops future collection.
+router.delete('/analytics-data', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const job = await requestErasure(userId, 'analytics', 'user');
+    await writeAuditLog({
+      actorUserId: userId,
+      targetUserId: userId,
+      action: 'PRIVACY_ERASURE_REQUESTED',
+      afterState: { jobId: job.id, scope: job.scope, status: job.status },
+      reason: 'User requested deletion of analytics data',
+    }).catch(() => undefined);
+    res.status(job.status === 'completed' ? 200 : 202).json(publicErasureJob(job));
+  } catch (err) {
+    logError('[account] analytics data erasure failed', err);
+    res.status(500).json({ error: 'Failed to delete analytics data.' });
+  }
+});
+
+router.get('/erasure-requests', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    res.json({ requests: (await listErasureJobsForUser(userId)).map(publicErasureJob) });
+  } catch (err) {
+    logError('[account] erasure request list failed', err);
+    res.status(500).json({ error: 'Failed to load deletion requests.' });
+  }
+});
+
+router.get('/erasure-requests/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const job = await getErasureJobForUser(userId, String(req.params.id)).catch(() => null);
+  if (!job) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  res.json(publicErasureJob(job));
+});
+
 router.get('/export', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const profile = await getWebUserProfile(userId);
@@ -274,6 +383,55 @@ router.get('/export', async (req, res) => {
   } catch (err) {
     logError('[account] export failed', err);
     res.status(500).json({ error: 'Failed to generate export.' });
+  }
+});
+
+router.get('/age-verification', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const [required, enforced] = await Promise.all([isAgeVerificationRequired(userId), isAgeGateEnforced()]);
+    res.json({ required, enforced, minimumAge: MINIMUM_ACCOUNT_AGE_YEARS });
+  } catch (err) {
+    logError('[account] age verification status failed', err);
+    res.status(500).json({ error: 'Failed to load age verification status.' });
+  }
+});
+
+router.post('/age-verification', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const result = await declareDateOfBirth(userId, req.body?.dateOfBirth);
+    if (result.ok) {
+      res.json({ required: false });
+      return;
+    }
+    if (result.code === 'UNDER_MINIMUM_AGE') {
+      res.status(403).json({
+        error: `You must be at least ${MINIMUM_ACCOUNT_AGE_YEARS} years old to use WanderBunnies.`,
+        code: result.code,
+      });
+      return;
+    }
+    res.status(400).json({ error: 'dateOfBirth must be a valid YYYY-MM-DD date', code: result.code });
+  } catch (err) {
+    logError('[account] age verification failed', err);
+    res.status(500).json({ error: 'Failed to save date of birth.' });
+  }
+});
+
+// iOS shortcut: the client sends Apple's Declared Age Range lower bound. Only a
+// confirmed 16+ is accepted; anything else tells the client to show the prompt.
+router.post('/age-verification/apple', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    if (await recordAppleAgeRange(userId, req.body?.lowerBound)) {
+      res.json({ required: false });
+      return;
+    }
+    res.status(400).json({ error: 'Age range does not confirm the minimum age; use the date-of-birth prompt.', code: 'AGE_RANGE_NOT_CONFIRMED' });
+  } catch (err) {
+    logError('[account] Apple age range verification failed', err);
+    res.status(500).json({ error: 'Failed to record age verification.' });
   }
 });
 
@@ -624,6 +782,11 @@ router.delete('/', async (req, res) => {
     // Cancel active Stripe subscriptions before wiping local records.
     await cancelAllSubscriptionsForUser(userId);
     await deleteUserIngestionData(userId).catch(() => undefined);
+    // Durable erasure job (analytics Phase 4): archives consent evidence before
+    // the cascade below removes it, unlinks telemetry and the cost ledger, and
+    // tombstones the subject so late writers cannot re-link data. A failed step
+    // is retried by the retention tick; it never blocks the deletion itself.
+    await requestErasure(userId, 'account', 'user').catch((err) => logError('[account] erasure job failed to start', err));
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();
       try {
@@ -793,6 +956,7 @@ groupsRouter.post('/invites/:id/accept', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
   try {
     await acceptGroupInvite(req.params.id, user.userId, user.email);
+    recordServerEvent({ userId: user.userId, eventName: 'invite_accepted', properties: { invite_type: 'group' } });
     res.status(204).send();
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });

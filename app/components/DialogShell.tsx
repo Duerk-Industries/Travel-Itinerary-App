@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Modal, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
 import { useEscapeToClose } from '../hooks/useEscapeToClose';
 
 type DialogShellProps = {
@@ -15,6 +15,8 @@ type DialogShellProps = {
   cardStyle?: any;
   accessibilityRole?: 'alert' | 'none';
   showTitle?: boolean;
+  /** Wrap children in a ScrollView and cap the card to the viewport so tall content never clips. */
+  scrollable?: boolean;
 };
 
 const DialogShellComponent: React.FC<DialogShellProps> = ({
@@ -30,6 +32,7 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
   cardStyle,
   accessibilityRole = 'none',
   showTitle = true,
+  scrollable = false,
 }) => {
   useEscapeToClose(visible, onClose);
   if (!visible) return null;
@@ -44,14 +47,18 @@ const DialogShellComponent: React.FC<DialogShellProps> = ({
       accessibilityLabel={title}
       accessibilityHint={message}
     >
-      <View style={[styles.confirmModal, cardStyle]}>
+      <View style={scrollable ? [styles.confirmModal, { maxHeight: '100%' }, cardStyle] : [styles.confirmModal, cardStyle]}>
         {showTitle ? (
           <Text style={styles.sectionTitle} accessibilityRole="header">
             {title}
           </Text>
         ) : null}
         {message ? <Text style={styles.helperText}>{message}</Text> : null}
-        {children}
+        {scrollable ? (
+          <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator>
+            {children}
+          </ScrollView>
+        ) : children}
       </View>
     </View>
   );

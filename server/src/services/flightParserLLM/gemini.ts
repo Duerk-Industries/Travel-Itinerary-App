@@ -3,7 +3,7 @@ import { logError } from '../../logger';
 import { ParsedFlight } from './types';
 import { getEnvValue } from '../../env';
 import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
-import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from '../../apis/providerBudgeting';
+import { settleProviderAttempt } from '../../apis/providerBudgeting';
 
 export const GEMINI_FLIGHT_PARSER_CALLER = 'PARSE_FLIGHT_TEXT';
 
@@ -73,19 +73,15 @@ ${text.substring(0, 10000)}
       const promptTokens = Number(data?.usageMetadata?.promptTokenCount ?? 0);
       const completionTokens = Number(data?.usageMetadata?.candidatesTokenCount ?? 0);
       try {
-        const amountMicros = estimateAiCostMicros({
+        await settleProviderAttempt({
           provider: 'GEMINI',
+          attemptId: typeof data?.responseId === 'string' ? data.responseId : null,
+          unitType: 'tokens',
           model: 'gemini-2.5-flash',
           promptTokens: Number.isFinite(promptTokens) ? promptTokens : 0,
           completionTokens: Number.isFinite(completionTokens) ? completionTokens : 0,
+          caller: GEMINI_FLIGHT_PARSER_CALLER,
         });
-        if ((amountMicros ?? 0) > 0) {
-          await recordApiCost({
-            provider: 'GEMINI',
-            windowKey: getApiBudgetWindowKey(),
-            amountMicros: amountMicros ?? 0,
-          });
-        }
       } catch (accountingError) {
         // Accounting must never turn a successful provider response into a
         // failed flight parse; the limiter reservation already happened.

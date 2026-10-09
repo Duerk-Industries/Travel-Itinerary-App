@@ -146,3 +146,9 @@ export const pruneNotifications = async (retentionDays: number, maxPerRow: numbe
   await queryBlog('DELETE FROM notifications WHERE created_at < NOW() - $1 * INTERVAL \'1 day\'', [retentionDays]);
   // Additional row-based pruning can be added here if needed.
 };
+
+/** Erasure: hard-deletes the user's devices, including encrypted push tokens (deleteDevice only disables). */
+export const purgeDevicesForUser = async (userId: string): Promise<number> => {
+  const result = await queryBlog('DELETE FROM notification_devices WHERE user_id = $1', [userId]);
+  return result.rowCount ?? 0;
+};

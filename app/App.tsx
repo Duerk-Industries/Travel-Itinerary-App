@@ -31,6 +31,7 @@ import {
 import { formatDateLong } from './utils/formatDateLong';
 import { createIdempotencyKey } from './utils/idempotencyKey';
 import { normalizeDateString } from './utils/normalizeDateString';
+import { defaultTemperatureUnitForRegion, normalizeTemperatureUnit, type TemperatureUnit } from './utils/temperatureUnit';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
 import { dedupeMembersByIdentity, formatMemberDisplayName } from './utils/memberDisplay';
@@ -51,6 +52,8 @@ import ShareTripModal from './components/ShareTripModal';
 import IncomingShareModal from './components/IncomingShareModal';
 import { clearOfflineBlogAccount } from './utils/blogOfflineQueue';
 import AccountTab, { fetchAccountProfile, type AccountPage } from './tabs/account';
+import { usePrivacyConsent } from './hooks/usePrivacyConsent';
+import { PrivacyChoiceDialog } from './components/PrivacySettings';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -99,6 +102,10 @@ import ConfirmDialog from './components/ConfirmDialog';
 import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
+import AgeVerificationDialog, { fetchAgeVerificationStatus, verifyAgeWithAppleIfAvailable } from './components/AgeVerificationDialog';
+import { markLoginStarted, markTripReady, useScreenReadyMark } from './utils/readinessMarks';
+import { configureAnalytics, startItemSaveTask, taskFailure, track, useTrackView } from './utils/analytics/track';
+import { analyticsViewForPage } from './utils/analytics/features';
 import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
@@ -140,6 +147,7 @@ import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
 import TripBlogTab from './tabs/tripBlog';
+import ActivityRecapDialog, { type ActivityRecapTarget } from './components/ActivityRecapDialog';
 import PublicTripBlogPage from './components/PublicTripBlogPage';
 const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
@@ -552,6 +560,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     applySession,
     clearSessionState,
   } = useAuthSession();
+  const privacy = usePrivacyConsent(backendUrl, userToken);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -567,6 +576,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
   const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
   const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
+  const [ageVerificationRequired, setAgeVerificationRequired] = useState(false);
+  const [ageVerifiedReloadKey, setAgeVerifiedReloadKey] = useState(0);
   const {
     deferFirstLoginRedirect,
     showResendConfirmation,
@@ -604,6 +615,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // Set when the traveler taps the evening trip reminder notification — tells TripBlogTab to open
   // the add-photos flow once it's mounted and ready. See tripReminderNotifications.ts.
   const [autoOpenAddPhotos, setAutoOpenAddPhotos] = useState(false);
+  const [autoOpenActivityCapture, setAutoOpenActivityCapture] = useState<{ date: string; tags: string[] } | null>(null);
+  const [activityRecapTarget, setActivityRecapTarget] = useState<ActivityRecapTarget | null>(null);
+  const [pendingActivityRecap, setPendingActivityRecap] = useState<{ tripId: string; activityId: string } | null>(null);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineItineraries, setOfflineItineraries] = useState<Record<string, OfflineItinerarySnapshot | null>>({});
   const [pendingOfflineUnlock, setPendingOfflineUnlock] = useState<PendingOfflineUnlock | null>(null);
@@ -654,6 +668,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearTraitsState,
   } = useTraits({ backendUrl, userToken });
   const [activePage, setActivePage] = useState<Page>('home');
+  // Consent-gated (Detailed Diagnostics) page-paint timing; see utils/readinessMarks.ts.
+  useScreenReadyMark(activePage);
+  // Optional product analytics: inert unless the server reports productAnalyticsAllowed.
+  useEffect(() => {
+    configureAnalytics({ backendUrl, token: userToken, enabled: privacy.status?.productAnalyticsAllowed === true });
+  }, [userToken, privacy.status?.productAnalyticsAllowed]);
+  const analyticsView = analyticsViewForPage(activePage, activeTripId);
+  useTrackView(analyticsView.feature, analyticsView.tripId);
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
@@ -690,6 +712,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [featureExpenseImportPlaid, setFeatureExpenseImportPlaid] = useState(false);
   const [featureActivityLodgingCsvImport, setFeatureActivityLodgingCsvImport] = useState(false);
   const [featureActivityLodgingCsvExport, setFeatureActivityLodgingCsvExport] = useState(false);
+  const [featureActivityRecap, setFeatureActivityRecap] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch(`${backendUrl}/api/auth/features`)
@@ -709,6 +732,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setFeatureExpenseImportPlaid(Boolean(data.featureExpenseImportPlaid));
           setFeatureActivityLodgingCsvImport(Boolean(data.featureActivityLodgingCsvImport));
           setFeatureActivityLodgingCsvExport(Boolean(data.featureActivityLodgingCsvExport));
+          setFeatureActivityRecap(Boolean(data.featureActivityRecap));
         }
       })
       .catch(() => undefined);
@@ -728,6 +752,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearAccountProfile,
   } = useAccountProfile();
   const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
+  const receiptScanningAllowed = accountProfile.entitlements?.receiptScanning === true;
   const aiItineraryGenerationAllowed = accountProfile.entitlements?.aiItineraryGeneration === true;
   const aiAssistantGuideAllowed = accountProfile.entitlements?.aiAssistantGuide === true;
   const aiAssistantActionsAllowed = accountProfile.entitlements?.aiAssistantActions === true;
@@ -1236,6 +1261,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const openMaps = useCallback((address: string) => {
     const url = buildMapUrl(address, mapApp);
     if (!url) return;
+    track('map_link_opened', { provider: mapApp, feature: analyticsView.feature ?? 'overview' }, { tripId: analyticsView.tripId });
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
@@ -1243,7 +1269,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       // surface the error to the user instead of crashing with an unhandled rejection.
       Linking.openURL(url).catch((err) => Alert.alert('Could not open map', err?.message ?? String(err)));
     }
-  }, [mapApp]);
+  }, [mapApp, analyticsView.feature, analyticsView.tripId]);
 
   const openFlightInFlightsTab = useCallback((flightId: string) => {
     setExternalFlightEditId(flightId);
@@ -1284,7 +1310,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       ...result.rental,
       cost: Number(result.rental.cost) || 0,
     };
-    const res = await fetch(rentalId ? `${backendUrl}/api/car-rentals/${rentalId}` : `${backendUrl}/api/car-rentals`, {
+    const saveTask = startItemSaveTask('car_rentals', Boolean(rentalId), activeTripId);
+    const res = await saveTask.request(rentalId ? `${backendUrl}/api/car-rentals/${rentalId}` : `${backendUrl}/api/car-rentals`, {
       method: rentalId ? 'PATCH' : 'POST',
       headers: jsonHeaders,
       body: JSON.stringify(rentalId ? payload : { ...payload, tripId: activeTripId }),
@@ -1325,7 +1352,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       Alert.alert('Select an active trip before adding a car rental.');
       return;
     }
-    const res = await fetch(`${backendUrl}/api/car-rentals`, {
+    const res = await startItemSaveTask('car_rentals', false, activeTripId).request(`${backendUrl}/api/car-rentals`, {
       method: 'POST',
       headers: jsonHeaders,
       body: JSON.stringify({
@@ -1628,6 +1655,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setRequirePasswordSetup(false);
     setPasswordSetupLoading(false);
     setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
+    setAgeVerificationRequired(false);
     setPageForwardHistory([]);
     setActivePage('home');
     setPageHistory([]);
@@ -1642,6 +1670,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.
+
+  // Quick °F/°C switch from the trip blog: update right away, then save to the same account
+  // setting that Account settings and the itinerary Overview use.
+  const changeTemperatureUnit = useCallback(async (unit: TemperatureUnit) => {
+    setAccountProfile((prev) => ({ ...prev, temperatureUnit: unit }));
+    if (!userToken) return;
+    try {
+      await fetch(`${backendUrl}/api/account/profile`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ temperatureUnit: unit }),
+      });
+    } catch {
+      // Keep the local choice; it'll be re-sent the next time the profile is saved.
+    }
+  }, [backendUrl, setAccountProfile, userToken]);
 
   const loadAccountProfile = useCallback(
     (token?: string) =>
@@ -1745,6 +1789,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const handleAuthSuccess = useCallback(
     (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
+    markLoginStarted();
     const decoded = decodeTokenClaims(token);
     const name =
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
@@ -1771,7 +1816,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       homeAddress: '',
       preferredAirport: '',
       appearancePreference: 'auto',
-      temperatureUnit: 'fahrenheit',
+      temperatureUnit: defaultTemperatureUnitForRegion(),
     });
     const restoredTripId =
       loadLastActiveTripId(decoded?.email ?? null) ??
@@ -2102,6 +2147,42 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const data = await fetchActivitiesForTrip({ backendUrl, activeTripId, token: token ?? userToken });
     setTours(data);
   }, [activeTripId, backendUrl, offlineReadOnly, userToken]);
+
+  useEffect(() => {
+    if (!pendingActivityRecap || pendingActivityRecap.tripId !== activeTripId) return;
+    const activity = tours.find((tour) => tour.id === pendingActivityRecap.activityId);
+    if (!activity) return;
+    setActivityRecapTarget(activity);
+    setPendingActivityRecap(null);
+  }, [activeTripId, pendingActivityRecap, tours]);
+
+  const saveActivityRecap = useCallback(async ({ rating, note, tags }: { rating: -1 | 1 | null; note: string; tags: string[] }) => {
+    const activity = activityRecapTarget;
+    if (!activity || !activeTripId) throw new Error('Choose an activity first.');
+    if (rating != null) {
+      const response = await fetch(`${backendUrl}/api/activities/${activity.id}/rating`, {
+        method: 'POST', headers: jsonHeaders, body: JSON.stringify({ value: rating }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save your rating.');
+    }
+    if (note) {
+      const escaped = note.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
+        method: 'POST', headers: { ...jsonHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kindKey: 'core.text', dayDate: activity.date, body: `<p>${escaped}</p>`, tags }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to add the blog note.');
+    }
+    if (rating != null) await fetchTours();
+  }, [activeTripId, activityRecapTarget, backendUrl, fetchTours, jsonHeaders]);
+
+  const addActivityRecapMedia = useCallback(async ({ tags }: { tags: string[] }) => {
+    const activity = activityRecapTarget;
+    if (!activity) throw new Error('Choose an activity first.');
+    setActivityRecapTarget(null);
+    setAutoOpenActivityCapture({ date: activity.date, tags });
+    setActivePage('blog');
+  }, [activityRecapTarget]);
 
   const fetchCarRentals = useCallback(async (token?: string) => {
     if (offlineReadOnly) return;
@@ -2536,11 +2617,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         const Notifications = await import('expo-notifications');
         if (cancelled) return;
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-          const data = response.notification.request.content.data as { type?: string; tripId?: string } | undefined;
-          if (data?.type !== 'evening_trip_reminder' || !data.tripId) return;
-          setActiveTripId(data.tripId);
-          setActivePage('blog');
-          setAutoOpenAddPhotos(true);
+          const data = response.notification.request.content.data as { type?: string; tripId?: string; deepLink?: string | null } | undefined;
+          if (data?.type === 'evening_trip_reminder' && data.tripId) {
+            setActiveTripId(data.tripId);
+            setActivePage('blog');
+            setAutoOpenAddPhotos(true);
+            return;
+          }
+          // Server-delivered Expo notifications include their durable deep link in `data`.
+          // Parse only this app-owned route; other links remain inert rather than becoming an
+          // accidental navigation surface.
+          const match = String(data?.deepLink ?? '').match(/^wanderbunnies:\/\/activity-recap\?([^#]+)$/i);
+          if (!match) return;
+          const params = new URLSearchParams(match[1]);
+          const tripId = params.get('tripId');
+          const activityId = params.get('activityId');
+          if (!tripId || !activityId) return;
+          setActiveTripId(tripId);
+          setActivePage('tours');
+          setPendingActivityRecap({ tripId, activityId });
         });
       } catch {
         // Best effort — see pushNotifications.ts's file-level note for the same rationale.
@@ -2612,13 +2707,38 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [offlineReadOnly, userToken]);
 
   useEffect(() => {
-    if (userToken && !requirePasswordSetup && !offlineReadOnly) {
-      fetchTrips();
+    // Accounts without a declared date of birth (including every Google/Apple
+    // sign-up) must confirm 16+ before continuing; see AgeVerificationDialog.
+    if (!userToken || requirePasswordSetup || offlineReadOnly) return;
+    let cancelled = false;
+    void (async () => {
+      const status = await fetchAgeVerificationStatus(backendUrl, userToken);
+      if (cancelled || !status) return;
+      if (!status.required) {
+        setAgeVerificationRequired(false);
+        return;
+      }
+      // iOS 26+: let Apple confirm 16+ first; otherwise show the date-of-birth prompt.
+      const verifiedByApple = await verifyAgeWithAppleIfAvailable(backendUrl, userToken, status.minimumAge);
+      if (cancelled) return;
+      setAgeVerificationRequired(!verifiedByApple);
+      // Data requests made while the check ran were rejected under enforcement;
+      // the prompt path reloads when ageVerificationRequired flips, this one must ask.
+      if (verifiedByApple && status.enforced) setAgeVerifiedReloadKey((n) => n + 1);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userToken, requirePasswordSetup, offlineReadOnly]);
+
+  useEffect(() => {
+    if (userToken && !requirePasswordSetup && !ageVerificationRequired && !offlineReadOnly) {
+      void fetchTrips().then((loaded) => markTripReady({ hasTrips: loaded.length > 0 }));
       fetchGroups();
       fetchInvites();
       fetchPendingTripShareInvites();
     }
-  }, [userToken, requirePasswordSetup, offlineReadOnly, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
+  }, [userToken, requirePasswordSetup, ageVerificationRequired, ageVerifiedReloadKey, offlineReadOnly, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
 
   useEffect(() => {
     // Best-effort, native-only (see pushNotifications.ts) — never awaited/blocking, and safe to
@@ -2784,13 +2904,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!userToken) return;
     const email = groupAddEmail[groupId] ?? '';
     const relationshipId = groupAddRelationship[groupId] ?? '';
+    const inviteTask = { task: 'invite', feature: 'collaboration' } as const;
+    track('task_started', inviteTask);
 
     if (type === 'user' && !email.trim()) {
       Alert.alert('Enter an email to add a user');
+      track('task_failed', { ...inviteTask, failure: 'validation' });
       return;
     }
     if (type === 'relationship' && !relationshipId) {
       Alert.alert('Select a relationship');
+      track('task_failed', { ...inviteTask, failure: 'validation' });
       return;
     }
 
@@ -2805,6 +2929,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const rel = familyRelationships.find((r) => r.id === relationshipId);
       if (!rel) {
         Alert.alert('Select a relationship');
+        track('task_failed', { ...inviteTask, failure: 'validation' });
         return;
       }
       const relEmail = rel.relative?.email?.trim();
@@ -2817,6 +2942,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const result = await addGroupMemberRequest(groupId, payload);
     if (!result.ok) {
       Alert.alert(result.error || 'Unable to add member');
+      track('task_failed', { ...inviteTask, failure: taskFailure(result.status) });
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
@@ -3355,6 +3481,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   carRentals={carRentals}
                   autoOpenAddPhotos={autoOpenAddPhotos}
                   onAutoOpenHandled={() => setAutoOpenAddPhotos(false)}
+                  autoOpenActivityCapture={autoOpenActivityCapture}
+                  onAutoOpenActivityCaptureHandled={() => setAutoOpenActivityCapture(null)}
+                  temperatureUnit={normalizeTemperatureUnit(accountProfile.temperatureUnit)}
+                  onChangeTemperatureUnit={changeTemperatureUnit}
                 />
               )
             : null}
@@ -3389,6 +3519,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   externalEditTourId={externalActivityEditId}
                   onExternalEditHandled={handleExternalActivityEditHandled}
                   featureTapToEditTables={featureTapToEditTables}
+                  featureActivityRecap={featureActivityRecap}
+                  onOpenActivityRecap={setActivityRecapTarget}
                 />
               )
             : null}
@@ -3414,6 +3546,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onExternalEditHandled={handleExternalActivityEditHandled}
               showList={false}
               readOnly={isFollowingMode || offlineReadOnly}
+              featureActivityRecap={featureActivityRecap}
+              onOpenActivityRecap={setActivityRecapTarget}
             />
           ) : null}
 
@@ -3433,6 +3567,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   itineraryExpenseDescriptions={itineraryExpenseDescriptions}
                   onEditItineraryItem={openItineraryExpenseEditor}
                   costTrackingAllowed={costTrackingAllowed}
+                  receiptScanningAllowed={receiptScanningAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
                 />
               )
@@ -3517,6 +3652,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       const csv = convertExpensesToCsv('paid');
                       const fileName = `paid-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
+                      track('report_exported', { report: 'cost_csv' }, { tripId: activeTripId });
                     }}
                   >
                     <Text style={styles.buttonText}>Export Paid CSV</Text>
@@ -3527,6 +3663,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       const csv = convertExpensesToCsv('incurred');
                       const fileName = `incurred-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
+                      track('report_exported', { report: 'cost_csv' }, { tripId: activeTripId });
                     }}
                   >
                     <Text style={styles.buttonText}>Export Incurred CSV</Text>
@@ -3557,6 +3694,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ? renderSharedPageScroll(
                 <AccountTab
                   backendUrl={backendUrl}
+                  privacy={privacy}
                   userToken={userToken}
                   activePage={activePage}
                   onNavigate={(page) => requestPageChange(page)}
@@ -4098,8 +4236,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      {userToken && !requirePasswordSetup && ageVerificationRequired ? (
+        <AgeVerificationDialog
+          visible
+          styles={styles}
+          theme={theme}
+          backendUrl={backendUrl}
+          token={userToken}
+          onVerified={() => setAgeVerificationRequired(false)}
+          onSignOut={logout}
+        />
+      ) : null}
+      {userToken && !requirePasswordSetup && ageVerificationRequired === false ? (
+        <PrivacyChoiceDialog privacy={privacy} backendUrl={backendUrl} theme={theme} />
+      ) : null}
       <PremiumTrialWelcomeDialog
-        visible={Boolean(userToken && premiumTrialWelcomeVisible && arePremiumTrialsEnabled())}
+        visible={Boolean(userToken && premiumTrialWelcomeVisible && !ageVerificationRequired && arePremiumTrialsEnabled())}
         styles={styles}
         onViewPlans={openPremiumPlansFromWelcome}
         onDismiss={dismissPremiumTrialWelcome}
@@ -4147,6 +4299,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           theme={theme}
         />
       ) : null}
+      <ActivityRecapDialog
+        visible={Boolean(activityRecapTarget)}
+        activity={activityRecapTarget}
+        styles={styles}
+        theme={theme}
+        onClose={() => setActivityRecapTarget(null)}
+        onSave={saveActivityRecap}
+        onAddMedia={addActivityRecapMedia}
+      />
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
           <View style={styles.wizardModal}>
@@ -4765,9 +4926,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexShrink: 1,
   },
   homeModalClose: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4813,7 +4974,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     fontSize: 13,
   },
   homeModalActiveBadge: {
-    color: '#047857',
+    color: theme.mode === 'dark' ? '#6EE7B7' : '#047857',
     fontSize: 12,
     fontWeight: '700',
   },

@@ -278,6 +278,7 @@ router.get('/features', async (_req, res) => {
     activityLodgingImport,
     activityLodgingExport,
     csvExport,
+    activityRecap,
   ] = await Promise.all([
     getFeatureFlag('feature_grid_editing'),
     getFeatureFlag('feature_grid_editing_clipboard'),
@@ -293,6 +294,7 @@ router.get('/features', async (_req, res) => {
     isFeatureEnabled('activity_lodging_csv_import'),
     isFeatureEnabled('activity_lodging_csv_export'),
     isFeatureEnabled('csv_export'),
+    isFeatureEnabled('activity_recap'),
   ]);
   res.json({
     usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
@@ -311,6 +313,7 @@ router.get('/features', async (_req, res) => {
     featureExpenseImportPlaid: plaidMaster === true && plaidLink === true,
     featureActivityLodgingCsvImport: activityLodgingImport === true,
     featureActivityLodgingCsvExport: activityLodgingExport === true && csvExport === true,
+    featureActivityRecap: activityRecap === true,
   });
 });
 

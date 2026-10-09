@@ -16,6 +16,7 @@ import { toWebStyle } from '../utils/webStyle';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { fixedTableColumn } from '../utils/tableColumns';
+import { startItemSaveTask } from '../utils/analytics/track';
 
 type Trip = {
   id: string;
@@ -81,6 +82,7 @@ type DailyExpensesTabProps = {
   /** Opens the linked itinerary item's standard editor. */
   onEditItineraryItem?: (sourceType: string, sourceId: string) => void;
   costTrackingAllowed?: boolean;
+  receiptScanningAllowed?: boolean;
   readOnly?: boolean;
 };
 
@@ -170,6 +172,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   itineraryExpenseDescriptions = {},
   onEditItineraryItem,
   costTrackingAllowed,
+  receiptScanningAllowed,
   readOnly = false,
 }) => {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
@@ -335,6 +338,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const handleReceiptPickerPress = () => {
+    if (!receiptScanningAllowed) {
+      alertMessage('Receipt scanning is available with Premium.');
+      return;
+    }
     setReceiptError(null);
     if (Platform.OS === 'web') {
       receiptFileInputRef.current?.click?.();
@@ -369,8 +376,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const handleReceiptFile = async (file: File | null | undefined) => {
-    if (!costTrackingAllowed) {
-      alertMessage('Expense tracking is a premium feature');
+    if (!receiptScanningAllowed) {
+      alertMessage('Receipt scanning is available with Premium.');
       return;
     }
     if (!trip?.id || !file) return;
@@ -467,8 +474,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       forIds: draftForIds,
       vendor: draftVendor || undefined,
     };
+    const saveTask = startItemSaveTask('expenses', Boolean(editingExpenseId), trip.id);
     try {
-      const res = await fetch(editingExpenseId ? `${backendUrl}/api/expenses/${editingExpenseId}` : `${backendUrl}/api/expenses`, {
+      const res = await saveTask.request(editingExpenseId ? `${backendUrl}/api/expenses/${editingExpenseId}` : `${backendUrl}/api/expenses`, {
         method: editingExpenseId ? 'PUT' : 'POST',
         headers: jsonHeaders,
         body: JSON.stringify(payload),
@@ -586,14 +594,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
-          onPress={handleReceiptPickerPress}
-          disabled={receiptParsing || readOnly}
-          testID="expense-scan-receipt-button"
-        >
-          <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
-        </TouchableOpacity>
+        {receiptScanningAllowed ? (
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
+            onPress={handleReceiptPickerPress}
+            disabled={receiptParsing || readOnly}
+            testID="expense-scan-receipt-button"
+          >
+            <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity
           style={[styles.button, styles.smallButton]}
           onPress={() => setImportExpensesVisible(true)}
@@ -603,7 +613,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           <Text style={styles.buttonText}>Import</Text>
         </TouchableOpacity>
       </View>
-      {Platform.OS === 'web' ? (
+      {receiptScanningAllowed && Platform.OS === 'web' ? (
         <input
           ref={receiptFileInputRef}
           type="file"

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { recordServerEvent } from '../analytics/ingestService';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
@@ -115,6 +116,7 @@ router.post('/follow', async (req, res) => {
   try {
     await assertCanUseFeature(userId, 'trip_following', role);
     const result = await followTripByCode(userId, dto.inviteCode);
+    if (!result.alreadyFollowing) recordServerEvent({ userId, role, eventName: 'invite_accepted', properties: { invite_type: 'follow' } });
     res.status(result.alreadyFollowing ? 200 : 201).json({
       trip: result.trip,
       inviterName: result.inviterName,
@@ -155,6 +157,7 @@ router.post('/share/invites/:inviteId/accept', async (req, res) => {
   }
   try {
     const accepted = await acceptTripShareInviteById(userId, email, req.params.inviteId);
+    recordServerEvent({ userId, eventName: 'invite_accepted', properties: { invite_type: 'trip_share' } });
     res.status(200).json(accepted);
   } catch (err) {
     const message = (err as Error).message;
@@ -200,6 +203,7 @@ router.post('/share/invites/:token/accept', async (req, res) => {
   }
   try {
     const accepted = await acceptTripShareInvite(userId, email, token);
+    recordServerEvent({ userId, eventName: 'invite_accepted', properties: { invite_type: 'trip_share' } });
     res.status(200).json(accepted);
   } catch (err) {
     const message = (err as Error).message;
@@ -667,6 +671,8 @@ router.post('/', async (req, res) => {
       currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
     });
     await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: trip.id });
+    // Optional product analytics: consent-checked and stored asynchronously; never blocks the response.
+    recordServerEvent({ userId, role, eventName: 'trip_created', tripId: trip.id, properties: { via_wizard: false } });
     res.status(201).json(trip);
   } catch (err) {
     if (err instanceof EntitlementError) {
@@ -771,6 +777,7 @@ router.post('/wizard', async (req, res) => {
       )
     );
 
+    recordServerEvent({ userId, role: ((req as any).user as TokenPayload)?.role, eventName: 'trip_created', tripId: result.trip.id, properties: { via_wizard: true } });
     res.status(201).json({ trip: result.trip, groupId: result.groupId, invites: result.invites });
   } catch (err) {
     if (err instanceof EntitlementError) {

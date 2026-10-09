@@ -12,6 +12,7 @@ describe('Expenses API', () => {
   let tripId: string;
   let groupId: string;
   let memberId: string;
+  let userId: string;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
@@ -20,7 +21,7 @@ describe('Expenses API', () => {
 
     const login = await registerAndLoginWebUser(user);
     token = login.token;
-    await setUserTierInDb(login.userId, 'premium');
+    userId = login.userId;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;
@@ -42,7 +43,16 @@ describe('Expenses API', () => {
     await closePool();
   });
 
-  it('creates, updates, lists, and deletes manual expenses', async () => {
+  it('lets Free users create, update, list, and delete manual expenses', async () => {
+    const account = await request(app)
+      .get('/api/account')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(account.body.entitlements).toEqual(expect.objectContaining({
+      costTracking: true,
+      receiptScanning: false,
+    }));
+
     const created = await request(app)
       .post('/api/expenses')
       .set('Authorization', `Bearer ${token}`)
@@ -144,7 +154,22 @@ describe('Expenses API', () => {
     });
   });
 
-  it('rejects unsupported receipt upload types before parsing', async () => {
+  it('reserves receipt scanning for Premium and Pro users', async () => {
+    const res = await request(app)
+      .post('/api/expenses/receipt/parse')
+      .set('Authorization', `Bearer ${token}`)
+      .field('tripId', tripId)
+      .attach('image', Buffer.from('not an image'), {
+        filename: 'receipt.png',
+        contentType: 'image/png',
+      })
+      .expect(402);
+
+    expect(res.body).toEqual(expect.objectContaining({ code: 'FEATURE_NOT_ENTITLED' }));
+  });
+
+  it('allows Premium users to reach receipt validation', async () => {
+    await setUserTierInDb(userId, 'premium');
     const res = await request(app)
       .post('/api/expenses/receipt/parse')
       .set('Authorization', `Bearer ${token}`)

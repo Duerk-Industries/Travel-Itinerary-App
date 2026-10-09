@@ -69,6 +69,22 @@ import {
   ItineraryComparison,
 } from './types';
 import type { AccountEmail, AppleProfile } from './db.postgres';
+import type {
+  AnalyticsEventRecord,
+  ErasureScope,
+  ErasureTombstone,
+  JobLease,
+  PrivacyChoiceEventRecord,
+  PrivacyErasureJob,
+  PrivacyPreferences,
+  PrivacyPreferenceUpdate,
+  PrivacyRightsRequest,
+  ProviderCostLedgerEntry,
+  ProviderInvoiceRecord,
+  UserAgeVerificationRecord,
+  UserItineraryMetricSummary,
+} from './types';
+import { scrubIdentity } from './utils/scrubIdentity';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
@@ -839,6 +855,7 @@ export const initDb = async (): Promise<void> => {
     { key: 'trip_sharing',            description: 'Share trips with other users' },
     { key: 'trip_following',          description: 'Follow trips as read-only observer' },
     { key: 'cost_tracking',           description: 'Expense and cost tracking' },
+    { key: 'receipt_scanning',        description: 'Scan receipt images into expenses' },
     { key: 'multiple_groups',         description: 'Create more than one group' },
     { key: 'trip_creation',           description: 'Create new trips' },
     { key: 'itinerary_document_import', description: 'Import itinerary documents' },
@@ -859,13 +876,16 @@ export const initDb = async (): Promise<void> => {
     { tierKey: 'free', featureKey: 'trip_sharing', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_following', isAllowed: true },
     { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'free', featureKey: 'receipt_scanning', isAllowed: false },
     { tierKey: 'free', featureKey: 'multiple_groups', isAllowed: true },
     { tierKey: 'free', featureKey: 'trip_creation', isAllowed: true },
     { tierKey: 'free', featureKey: 'itinerary_document_import', isAllowed: false },
     { tierKey: 'premium', featureKey: 'itinerary_document_import', isAllowed: true },
     { tierKey: 'pro', featureKey: 'itinerary_document_import', isAllowed: true },
     { tierKey: 'premium', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'premium', featureKey: 'receipt_scanning', isAllowed: true },
     { tierKey: 'pro', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'pro', featureKey: 'receipt_scanning', isAllowed: true },
   ];
   for (const { tierKey, featureKey, isAllowed } of tierEntitlementSeeds) {
     const docId = `${tierKey}_${featureKey}`;
@@ -1748,6 +1768,11 @@ export const removeUserEmail = async (userId: string, email: string): Promise<Ac
 
 export const deleteUserRecord = async (userId: string): Promise<void> => {
   const db = getDb();
+  const choiceEvents = await db.collection('privacy_choice_events').where('userId', '==', userId).get();
+  await deleteDocRefsInBatches([
+    db.collection('privacy_preferences').doc(userId),
+    ...choiceEvents.docs.map((doc) => doc.ref),
+  ]);
   await db.collection('web_users').doc(userId).delete();
   await db.collection('users').doc(userId).delete();
 };
@@ -1890,6 +1915,40 @@ export const isPasswordSetupRequired = async (userId: string): Promise<boolean> 
   return Boolean(data.passwordSetupRequired);
 };
 
+export const hasUserDateOfBirth = async (userId: string): Promise<boolean> => {
+  const db = getDb();
+  const doc = await db.collection('users').doc(userId).get();
+  if (!doc.exists) return false;
+  return Boolean((doc.data() as any)?.dateOfBirth);
+};
+
+/** Records a declared date of birth once; an already-declared value is never overwritten. */
+export const setUserDateOfBirth = async (userId: string, dateOfBirth: string): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('users').doc(userId);
+  const doc = await ref.get();
+  if (!doc.exists || (doc.data() as any)?.dateOfBirth) return;
+  await ref.update({ dateOfBirth });
+};
+
+/** True when the account has confirmed 16+ by any method (declared date of birth or Apple age range). */
+export const isUserAgeVerified = async (userId: string): Promise<boolean> => {
+  const db = getDb();
+  const doc = await db.collection('users').doc(userId).get();
+  if (!doc.exists) return false;
+  const data = doc.data() as any;
+  return Boolean(data?.dateOfBirth) || Boolean(data?.ageVerificationSource);
+};
+
+/** Records how 16+ was first confirmed; a later confirmation never overwrites the original. */
+export const recordUserAgeVerification = async (userId: string, source: string): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('users').doc(userId);
+  const doc = await ref.get();
+  if (!doc.exists || (doc.data() as any)?.ageVerificationSource) return;
+  await ref.update({ ageVerificationSource: source, ageVerifiedAt: new Date().toISOString() });
+};
+
 // Phase 4 of docs/trip-blog-social-implementation-plan.md — mirrors the scrub-then-recompute logic
 // added to db.postgres.ts's deleteWebUserAndCleanup. Firebase has no FK cascade, so both the
 // reaction deletion and the comment-body scrub are explicit here rather than falling out of a
@@ -1932,6 +1991,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     tripRemovals,
     userEmails,
     billingSubscriptions,
+    privacyChoiceEvents,
   ] = await Promise.all([
     db.collection('group_members').where('userId', '==', userId).get(),
     db.collection('group_invites').where('inviteeUserId', '==', userId).get(),
@@ -1941,6 +2001,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('trip_removals').where('userId', '==', userId).get(),
     db.collection('user_emails').where('userId', '==', userId).get(),
     db.collection('billing_subscriptions').where('userId', '==', userId).get(),
+    db.collection('privacy_choice_events').where('userId', '==', userId).get(),
   ]);
   await scrubBlogEngagementForDeletedUser(userId);
   const refs = [
@@ -1954,6 +2015,8 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     ...tripRemovals.docs.map((doc) => doc.ref),
     ...userEmails.docs.map((doc) => doc.ref),
     db.collection('billing_customers').doc(userId),
+    db.collection('privacy_preferences').doc(userId),
+    ...privacyChoiceEvents.docs.map((doc) => doc.ref),
     ...billingSubscriptions.docs.map((doc) => doc.ref),
   ];
   await deleteDocRefsInBatches(refs);
@@ -6766,6 +6829,79 @@ export const upsertFeature = async (key: string, description: string, defaultEna
   }
 };
 
+const emptyPrivacyPreferences = (userId: string): PrivacyPreferences => ({
+  userId, productAnalytics: null, optionalDiagnostics: null, productEpoch: 0,
+  diagnosticsEpoch: 0, diagnosticPseudonym: null, revision: 0,
+  noticeVersion: null, updatedAt: null,
+  productNoticeVersion: null, diagnosticsNoticeVersion: null,
+});
+
+const mapPrivacyPreferences = (userId: string, data?: FirebaseFirestore.DocumentData): PrivacyPreferences => data ? ({
+  userId,
+  productAnalytics: data.productAnalytics ?? null,
+  optionalDiagnostics: data.optionalDiagnostics ?? null,
+  productEpoch: Number(data.productEpoch ?? 0),
+  diagnosticsEpoch: Number(data.diagnosticsEpoch ?? 0),
+  diagnosticPseudonym: data.diagnosticPseudonym ?? null,
+  revision: Number(data.revision ?? 0),
+  noticeVersion: data.noticeVersion ?? null,
+  productNoticeVersion: data.productNoticeVersion ?? null,
+  diagnosticsNoticeVersion: data.diagnosticsNoticeVersion ?? null,
+  updatedAt: data.updatedAt ?? null,
+}) : emptyPrivacyPreferences(userId);
+
+export const getPrivacyPreferences = async (userId: string): Promise<PrivacyPreferences> => {
+  const doc = await getDb().collection('privacy_preferences').doc(userId).get();
+  return mapPrivacyPreferences(userId, doc.exists ? doc.data() : undefined);
+};
+
+/** The preference and every evidence record are committed atomically. */
+export const updatePrivacyPreferences = async (userId: string, update: PrivacyPreferenceUpdate): Promise<PrivacyPreferences> => {
+  const db = getDb();
+  const ref = db.collection('privacy_preferences').doc(userId);
+  return db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(ref);
+    const current = mapPrivacyPreferences(userId, snap.exists ? snap.data() : undefined);
+    if (current.revision !== update.revision) {
+      const error = new Error('Privacy preferences changed; refresh and try again');
+      (error as Error & { code?: string }).code = 'PRIVACY_REVISION_CONFLICT';
+      throw error;
+    }
+    const productAnalytics = update.productAnalytics ?? current.productAnalytics;
+    const optionalDiagnostics = update.optionalDiagnostics ?? current.optionalDiagnostics;
+    const productChanged = update.productAnalytics !== undefined &&
+      (productAnalytics !== current.productAnalytics || (productAnalytics && update.productNoticeVersion !== current.productNoticeVersion));
+    const diagnosticsChanged = update.optionalDiagnostics !== undefined &&
+      (optionalDiagnostics !== current.optionalDiagnostics || (optionalDiagnostics && update.diagnosticsNoticeVersion !== current.diagnosticsNoticeVersion));
+    if (!productChanged && !diagnosticsChanged) return current;
+    const next: PrivacyPreferences = {
+      userId, productAnalytics, optionalDiagnostics,
+      productEpoch: current.productEpoch + Number(productChanged),
+      diagnosticsEpoch: current.diagnosticsEpoch + Number(diagnosticsChanged),
+      diagnosticPseudonym: diagnosticsChanged ? (optionalDiagnostics ? randomUUID() : null) : current.diagnosticPseudonym,
+      revision: current.revision + 1,
+      noticeVersion: productChanged ? update.productNoticeVersion : update.diagnosticsNoticeVersion,
+      productNoticeVersion: productChanged ? update.productNoticeVersion : current.productNoticeVersion,
+      diagnosticsNoticeVersion: diagnosticsChanged ? update.diagnosticsNoticeVersion : current.diagnosticsNoticeVersion,
+      updatedAt: nowIso(),
+    };
+    transaction.set(ref, next);
+    for (const [purpose, changed, granted, epoch] of [
+      ['product_analytics', productChanged, productAnalytics, next.productEpoch],
+      ['optional_diagnostics', diagnosticsChanged, optionalDiagnostics, next.diagnosticsEpoch],
+    ] as const) {
+      if (!changed) continue;
+      const eventRef = db.collection('privacy_choice_events').doc(randomUUID());
+      transaction.create(eventRef, {
+        userId, purpose, granted, epoch, revision: next.revision,
+        noticeVersion: purpose === 'product_analytics' ? update.productNoticeVersion : update.diagnosticsNoticeVersion,
+        platform: update.platform, occurredAt: next.updatedAt,
+      });
+    }
+    return next;
+  });
+};
+
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
   const db = getDb();
   const doc = await db.collection('feature_flags').doc(key).get();
@@ -9085,4 +9221,409 @@ export const upsertLodgingLocation = async (location: any): Promise<void> => {
     longitude: location.longitude || null,
     updatedAt: nowIso(),
   }, { merge: true });
+};
+
+// ── Provider cost ledger, invoice reconciliation and job leases (analytics Phase 3) ──
+// Mirrors db.postgres.ts. Ledger queries filter on one field and sort in memory
+// so no composite index is required.
+
+const COST_LEDGER = 'provider_cost_ledger';
+const INVOICE_RECORDS = 'provider_invoice_records';
+const JOB_LEASES = 'job_leases';
+// Firestore document IDs cannot contain '/'; attempt IDs come from provider response IDs.
+const ledgerDocId = (attemptId: string): string => encodeURIComponent(attemptId);
+
+const runBatchedUpdates = async (
+  refs: FirebaseFirestore.DocumentReference[],
+  data: Record<string, unknown>,
+): Promise<number> => {
+  const db = getDb();
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = db.batch();
+    refs.slice(i, i + 400).forEach((ref) => batch.update(ref, data));
+    await batch.commit();
+  }
+  return refs.length;
+};
+
+export const insertProviderCostLedgerEntry = async (entry: ProviderCostLedgerEntry): Promise<boolean> => {
+  const db = getDb();
+  const ref = db.collection(COST_LEDGER).doc(ledgerDocId(entry.attemptId));
+  return db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (existing.exists) return false;
+    tx.set(ref, { ...entry });
+    return true;
+  });
+};
+
+export const listProviderCostLedgerEntries = async (windowKey: string, limit = 50_000): Promise<ProviderCostLedgerEntry[]> => {
+  const snap = await getDb().collection(COST_LEDGER).where('windowKey', '==', windowKey).limit(limit).get();
+  return snap.docs
+    .map((doc) => doc.data() as ProviderCostLedgerEntry)
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+};
+
+export const delinkProviderCostLedgerUser = async (userId: string): Promise<number> => {
+  const snap = await getDb().collection(COST_LEDGER).where('userId', '==', userId).get();
+  return runBatchedUpdates(snap.docs.map((doc) => doc.ref), { userId: null, tripId: null });
+};
+
+export const delinkProviderCostLedgerBefore = async (beforeWindowKey: string): Promise<number> => {
+  const snap = await getDb().collection(COST_LEDGER).where('windowKey', '<', beforeWindowKey).get();
+  const linked = snap.docs.filter((doc) => {
+    const data = doc.data();
+    return data.userId != null || data.tripId != null;
+  });
+  return runBatchedUpdates(linked.map((doc) => doc.ref), { userId: null, tripId: null });
+};
+
+export const upsertProviderInvoiceRecord = async (record: ProviderInvoiceRecord): Promise<ProviderInvoiceRecord> => {
+  await getDb().collection(INVOICE_RECORDS).doc(`${record.provider}_${record.windowKey}`).set({ ...record });
+  return record;
+};
+
+export const listProviderInvoiceRecords = async (windowKey: string): Promise<ProviderInvoiceRecord[]> => {
+  const snap = await getDb().collection(INVOICE_RECORDS).where('windowKey', '==', windowKey).get();
+  return snap.docs
+    .map((doc) => doc.data() as ProviderInvoiceRecord)
+    .sort((a, b) => a.provider.localeCompare(b.provider));
+};
+
+export const tryAcquireJobLease = async (name: string, holder: string, ttlMs: number): Promise<JobLease | null> => {
+  const db = getDb();
+  const ref = db.collection(JOB_LEASES).doc(name);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const current = doc.exists ? (doc.data() as JobLease) : null;
+    const now = Date.now();
+    if (current && current.holder !== holder && new Date(current.expiresAt).getTime() >= now) return null;
+    const lease: JobLease = {
+      name,
+      holder,
+      expiresAt: new Date(now + ttlMs).toISOString(),
+      cursor: current?.cursor ?? null,
+    };
+    tx.set(ref, lease);
+    return lease;
+  });
+};
+
+export const releaseJobLease = async (name: string, holder: string): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection(JOB_LEASES).doc(name);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (doc.exists && (doc.data() as JobLease).holder === holder) tx.update(ref, { expiresAt: nowIso() });
+  });
+};
+
+export const setJobLeaseCursor = async (name: string, holder: string, cursor: string): Promise<boolean> => {
+  const db = getDb();
+  const ref = db.collection(JOB_LEASES).doc(name);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists || (doc.data() as JobLease).holder !== holder) return false;
+    tx.update(ref, { cursor });
+    return true;
+  });
+};
+
+export const getJobLease = async (name: string): Promise<JobLease | null> => {
+  const doc = await getDb().collection(JOB_LEASES).doc(name).get();
+  return doc.exists ? (doc.data() as JobLease) : null;
+};
+
+// ── Privacy rights and retention (analytics Phase 4) ─────────────────────────
+// Mirrors db.postgres.ts. Queries use one equality/range filter each and sort in
+// memory, so no composite index is required.
+
+const ERASURE_TOMBSTONES = 'erasure_tombstones';
+const ERASURE_JOBS = 'privacy_erasure_jobs';
+const RIGHTS_REQUESTS = 'privacy_rights_requests';
+const CONSENT_ARCHIVE = 'privacy_consent_evidence_archive';
+
+export const listPrivacyChoiceEvents = async (userId: string): Promise<PrivacyChoiceEventRecord[]> => {
+  const snap = await getDb().collection('privacy_choice_events').where('userId', '==', userId).get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        purpose: data.purpose,
+        granted: Boolean(data.granted),
+        epoch: Number(data.epoch ?? 0),
+        revision: Number(data.revision ?? 0),
+        noticeVersion: data.noticeVersion,
+        platform: data.platform,
+        occurredAt: data.occurredAt,
+      };
+    })
+    .sort((a, b) => String(a.occurredAt).localeCompare(String(b.occurredAt)));
+};
+
+export const archivePrivacyChoiceEvidence = async (userId: string, subjectHash: string): Promise<number> => {
+  const db = getDb();
+  const snap = await db.collection('privacy_choice_events').where('userId', '==', userId).get();
+  const archivedAt = nowIso();
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    for (const doc of snap.docs.slice(i, i + 400)) {
+      const data = doc.data() as any;
+      // Same document ID as the source event, so a retried archive overwrites instead of duplicating.
+      batch.set(db.collection(CONSENT_ARCHIVE).doc(doc.id), {
+        subjectHash,
+        purpose: data.purpose,
+        granted: Boolean(data.granted),
+        epoch: Number(data.epoch ?? 0),
+        noticeVersion: data.noticeVersion,
+        platform: data.platform,
+        occurredAt: data.occurredAt,
+        archivedAt,
+      });
+    }
+    await batch.commit();
+  }
+  return snap.docs.length;
+};
+
+export const purgeConsentEvidenceArchivedBefore = async (beforeIso: string): Promise<number> => {
+  const snap = await getDb().collection(CONSENT_ARCHIVE).where('archivedAt', '<', beforeIso).get();
+  await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
+  return snap.docs.length;
+};
+
+export const rotateDiagnosticPseudonym = async (userId: string): Promise<number> => {
+  const db = getDb();
+  const ref = db.collection('privacy_preferences').doc(userId);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists || !(doc.data() as any)?.diagnosticPseudonym) return 0;
+    tx.update(ref, { diagnosticPseudonym: randomUUID() });
+    return 1;
+  });
+};
+
+const delinkMetricDocs = async (docs: FirebaseFirestore.QueryDocumentSnapshot[]): Promise<number> => {
+  const db = getDb();
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = db.batch();
+    for (const doc of docs.slice(i, i + 400)) {
+      const data = doc.data() as any;
+      let metrics: unknown = {};
+      try {
+        metrics = typeof data.metrics === 'string' ? JSON.parse(data.metrics) : data.metrics ?? {};
+      } catch {
+        metrics = {};
+      }
+      batch.update(doc.ref, { userId: null, tripId: null, metrics: JSON.stringify(scrubIdentity(metrics)) });
+    }
+    await batch.commit();
+  }
+  return docs.length;
+};
+
+export const delinkItineraryGenerationMetricsForUser = async (userId: string): Promise<number> => {
+  const snap = await getDb().collection('itinerary_generation_metrics').where('userId', '==', userId).get();
+  return delinkMetricDocs(snap.docs);
+};
+
+export const delinkItineraryGenerationMetricsBefore = async (beforeIso: string): Promise<number> => {
+  const snap = await getDb().collection('itinerary_generation_metrics').where('createdAt', '<', beforeIso).get();
+  return delinkMetricDocs(snap.docs.filter((doc) => {
+    const data = doc.data() as any;
+    return data.userId != null || data.tripId != null;
+  }));
+};
+
+export const listItineraryGenerationMetricsForUser = async (userId: string, limit = 500): Promise<UserItineraryMetricSummary[]> => {
+  const snap = await getDb().collection('itinerary_generation_metrics').where('userId', '==', userId).get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        generationId: data.generationId,
+        tripId: data.tripId ?? null,
+        provider: data.provider,
+        model: data.model,
+        outcome: data.outcome,
+        createdAt: data.createdAt,
+      };
+    })
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, limit);
+};
+
+export const listProviderCostLedgerEntriesForUser = async (userId: string, limit = 5_000): Promise<ProviderCostLedgerEntry[]> => {
+  const snap = await getDb().collection(COST_LEDGER).where('userId', '==', userId).get();
+  return snap.docs
+    .map((doc) => doc.data() as ProviderCostLedgerEntry)
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+    .slice(0, limit);
+};
+
+export const getUserAgeVerificationRecord = async (userId: string): Promise<UserAgeVerificationRecord> => {
+  const doc = await getDb().collection('users').doc(userId).get();
+  const data = (doc.exists ? doc.data() : {}) as any;
+  return {
+    dateOfBirth: data?.dateOfBirth ?? null,
+    source: data?.ageVerificationSource ?? null,
+    verifiedAt: data?.ageVerifiedAt ?? null,
+  };
+};
+
+const tombstoneId = (subjectHash: string, scope: ErasureScope): string => `${scope}_${subjectHash}`;
+
+export const upsertErasureTombstone = async (tombstone: ErasureTombstone): Promise<void> => {
+  await getDb().collection(ERASURE_TOMBSTONES).doc(tombstoneId(tombstone.subjectHash, tombstone.scope)).set({ ...tombstone });
+};
+
+export const getErasureTombstone = async (subjectHash: string, scope: ErasureScope): Promise<ErasureTombstone | null> => {
+  const doc = await getDb().collection(ERASURE_TOMBSTONES).doc(tombstoneId(subjectHash, scope)).get();
+  return doc.exists ? (doc.data() as ErasureTombstone) : null;
+};
+
+export const saveErasureJob = async (job: PrivacyErasureJob): Promise<PrivacyErasureJob> => {
+  await getDb().collection(ERASURE_JOBS).doc(job.id).set({ ...job });
+  return job;
+};
+
+export const getErasureJob = async (id: string): Promise<PrivacyErasureJob | null> => {
+  const doc = await getDb().collection(ERASURE_JOBS).doc(id).get();
+  return doc.exists ? (doc.data() as PrivacyErasureJob) : null;
+};
+
+export const listErasureJobs = async (opts: { status?: string; subjectHash?: string; limit?: number } = {}): Promise<PrivacyErasureJob[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection(ERASURE_JOBS);
+  if (opts.subjectHash) query = query.where('subjectHash', '==', opts.subjectHash);
+  else if (opts.status) query = query.where('status', '==', opts.status);
+  const snap = await query.get();
+  return snap.docs
+    .map((doc) => doc.data() as PrivacyErasureJob)
+    .filter((job) => !opts.status || job.status === opts.status)
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
+    .slice(0, Math.min(Math.max(opts.limit ?? 100, 1), 500));
+};
+
+export const savePrivacyRightsRequest = async (request: PrivacyRightsRequest): Promise<PrivacyRightsRequest> => {
+  await getDb().collection(RIGHTS_REQUESTS).doc(request.id).set({ ...request });
+  return request;
+};
+
+export const getPrivacyRightsRequest = async (id: string): Promise<PrivacyRightsRequest | null> => {
+  const doc = await getDb().collection(RIGHTS_REQUESTS).doc(id).get();
+  return doc.exists ? (doc.data() as PrivacyRightsRequest) : null;
+};
+
+export const listPrivacyRightsRequests = async (opts: { status?: string; limit?: number } = {}): Promise<PrivacyRightsRequest[]> => {
+  let query: FirebaseFirestore.Query = getDb().collection(RIGHTS_REQUESTS);
+  if (opts.status) query = query.where('status', '==', opts.status);
+  const snap = await query.get();
+  return snap.docs
+    .map((doc) => doc.data() as PrivacyRightsRequest)
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+    .slice(0, Math.min(Math.max(opts.limit ?? 200, 1), 1000));
+};
+
+// ── Product analytics store (analytics Phase 2) ─────────────────────────────
+// One document per event (doc ID = record id), so retries are idempotent and
+// subject erasure is a simple query. `expiresAt` is a Firestore TTL candidate field.
+
+const ANALYTICS_SUBJECTS = 'analytics_subjects';
+const ANALYTICS_EVENTS = 'analytics_events';
+const analyticsDocId = (id: string): string => encodeURIComponent(id);
+
+export const getOrCreateAnalyticsSubject = async (userId: string, productEpoch: number): Promise<string> => {
+  const db = getDb();
+  // Deterministic doc ID makes creation race-safe inside a transaction.
+  const ref = db.collection(ANALYTICS_SUBJECTS).doc(`${userId}_${productEpoch}`);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (doc.exists) return (doc.data() as any).subjectId as string;
+    const subjectId = randomUUID();
+    tx.set(ref, { subjectId, userId, productEpoch, createdAt: nowIso() });
+    return subjectId;
+  });
+};
+
+export const listAnalyticsSubjectsForUser = async (userId: string): Promise<string[]> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('userId', '==', userId).get();
+  return snap.docs.map((doc) => (doc.data() as any).subjectId as string);
+};
+
+export const deleteAnalyticsSubjectsForUser = async (userId: string): Promise<number> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('userId', '==', userId).get();
+  await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
+  return snap.docs.length;
+};
+
+export const insertAnalyticsEvents = async (events: AnalyticsEventRecord[]): Promise<string[]> => {
+  if (!events.length) return [];
+  const db = getDb();
+  const refs = events.map((e) => db.collection(ANALYTICS_EVENTS).doc(analyticsDocId(e.id)));
+  return db.runTransaction(async (tx) => {
+    const existing = await tx.getAll(...refs);
+    const inserted: string[] = [];
+    events.forEach((e, i) => {
+      if (existing[i].exists) return;
+      tx.set(refs[i], { ...e });
+      inserted.push(e.id);
+    });
+    return inserted;
+  });
+};
+
+const subjectChunks = (ids: string[]): string[][] => {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10)); // Firestore 'in' limit
+  return chunks;
+};
+
+export const listAnalyticsEventsForSubjects = async (subjectIds: string[], limit = 5_000): Promise<AnalyticsEventRecord[]> => {
+  const all: AnalyticsEventRecord[] = [];
+  for (const chunk of subjectChunks(subjectIds)) {
+    const snap = await getDb().collection(ANALYTICS_EVENTS).where('subjectId', 'in', chunk).get();
+    snap.docs.forEach((doc) => all.push(doc.data() as AnalyticsEventRecord));
+  }
+  return all.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)).slice(0, limit);
+};
+
+export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Promise<number> => {
+  let deleted = 0;
+  for (const chunk of subjectChunks(subjectIds)) {
+    const snap = await getDb().collection(ANALYTICS_EVENTS).where('subjectId', 'in', chunk).get();
+    await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
+    deleted += snap.docs.length;
+  }
+  return deleted;
+};
+
+export const deleteExpiredAnalyticsEvents = async (nowIsoValue: string): Promise<number> => {
+  const snap = await getDb().collection(ANALYTICS_EVENTS).where('expiresAt', '<', nowIsoValue).limit(5_000).get();
+  await deleteDocRefsInBatches(snap.docs.map((doc) => doc.ref));
+  return snap.docs.length;
+};
+
+export const listAnalyticsEventsBetween = async (fromIso: string, toIsoValue: string, limit = 50_000): Promise<AnalyticsEventRecord[]> => {
+  const snap = await getDb().collection(ANALYTICS_EVENTS)
+    .where('occurredAt', '>=', fromIso).where('occurredAt', '<', toIsoValue).limit(limit).get();
+  return snap.docs.map((doc) => doc.data() as AnalyticsEventRecord).sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+};
+
+export const getAnalyticsSubjectTimezone = async (subjectId: string): Promise<string | null> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('subjectId', '==', subjectId).limit(1).get();
+  return snap.empty ? null : ((snap.docs[0].data() as any).lastDeviceTimezone ?? null);
+};
+
+export const setAnalyticsSubjectTimezone = async (subjectId: string, timezone: string): Promise<void> => {
+  const snap = await getDb().collection(ANALYTICS_SUBJECTS).where('subjectId', '==', subjectId).limit(1).get();
+  if (!snap.empty) await snap.docs[0].ref.update({ lastDeviceTimezone: timezone });
+};
+
+export const getTripTimezone = async (tripId: string): Promise<string | null> => {
+  const doc = await getDb().collection('trips').doc(tripId).get();
+  return doc.exists ? ((doc.data() as any).timezone ?? null) : null;
+};
+
+export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
+  await getDb().collection('trips').doc(tripId).set({ timezone }, { merge: true });
 };

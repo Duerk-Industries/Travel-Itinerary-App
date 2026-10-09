@@ -24,6 +24,8 @@ export interface NotificationRepository {
   claimOutboxBatch(leaseOwner: string, batchSize: number, leaseSeconds: number): Promise<any[]>;
   updateOutboxState(id: string, state: string, options?: { attemptCount?: number; nextAttemptAt?: Date; lastErrorCode?: string | null }): Promise<void>;
   pruneNotifications(retentionDays: number, maxPerRow: number): Promise<void>;
+  /** Erasure: hard-deletes every device row (including the encrypted push token) for the user. */
+  purgeDevicesForUser(userId: string): Promise<number>;
 }
 
 export const notificationRepository = (): NotificationRepository =>

@@ -19,6 +19,7 @@ import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepos
 import { logError } from '../logger';
 import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
 import { transcribeAndCleanCaption } from '../services/blogVoiceCaptionService';
+import { normalizeBlogTags } from '../blog/tags';
 
 const router = Router();
 router.use(authenticate);
@@ -70,7 +71,7 @@ const errorResponse = (res: any, err: any): void => {
   const message = String(err?.message ?? 'Unable to process blog request');
   if (err instanceof ApiLimitExceededError) { res.status(429).json({ error: 'Trip blog is at capacity right now — please try again shortly' }); return; }
   if (/not authorized/i.test(message)) res.status(403).json({ error: message });
-  else if (/outside|too large|must be|required|unsupported|exceeds|decorative|alt text|bytes do not match/i.test(message)) res.status(400).json({ error: message });
+  else if (/outside|too large|must be|required|unsupported|exceeds|decorative|alt text|bytes do not match|tags?/i.test(message)) res.status(400).json({ error: message });
   else { logError('[blog] request failed', err); res.status(500).json({ error: message }); }
 };
 
@@ -83,7 +84,7 @@ router.get('/:tripId/blog/capabilities', async (req, res) => {
     const kinds = await Promise.all(descriptors.map(async (descriptor) => ({ ...descriptor, enabled: master && await isFeatureEnabled(descriptor.featureFlag) })));
     const limits = tripBlogLimits();
     const writable = Boolean(await ensureUserInTrip(req.params.tripId, userIdOf(req)));
-    const featureKeys = ['trip_blog_authoring_assist', 'trip_blog_day_starter', 'trip_blog_photo_composer', 'trip_blog_ai_highlights', 'trip_blog_reactions', 'trip_blog_spend_summary', 'trip_blog_recap', 'trip_blog_alt_text', 'trip_blog_caption_ai', 'trip_blog_audio', 'trip_blog_audio_transcription', 'trip_blog_search', 'trip_blog_places', 'trip_blog_offline_queue', 'trip_blog_trip_awards', 'trip_blog_keepsake_export', 'trip_blog_mobile_share_ios', 'trip_blog_mobile_share_android'] as const;
+    const featureKeys = ['trip_blog_authoring_assist', 'trip_blog_day_starter', 'trip_blog_photo_composer', 'trip_blog_ai_highlights', 'trip_blog_reactions', 'trip_blog_spend_summary', 'trip_blog_recap', 'trip_blog_alt_text', 'trip_blog_caption_ai', 'trip_blog_audio', 'trip_blog_audio_transcription', 'trip_blog_search', 'trip_blog_places', 'trip_blog_offline_queue', 'trip_blog_trip_awards', 'trip_blog_keepsake_export', 'trip_blog_mobile_share_ios', 'trip_blog_mobile_share_android', 'activity_recap'] as const;
     const featureValues = await Promise.all(featureKeys.map((key) => isFeatureEnabled(key)));
     const features = Object.fromEntries(featureKeys.map((key, index) => [key, master && featureValues[index]]));
     res.json({ enabled: master, writable, kinds, features, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300), maxAssetsPerGallery: Number(limits.maxAssetsPerGallery ?? 30), offlineQueueMaxEntries: Number(limits.offlineQueueMaxEntries ?? 25), offlineQueueRetentionDays: Number(limits.offlineQueueRetentionDays ?? 7), audioMaxBytes: Number(limits.audioMaxBytes ?? 26214400) } });
@@ -275,7 +276,7 @@ router.post('/:tripId/blog/items', async (req, res) => {
     await reserveCapacityOrThrow({ provider: 'TRIP_BLOG_SOCIAL_CAPACITY', caller: 'TEXT_RETAINED_KIB', units: 128, idempotencyKey: retainedReservationId });
     let item;
     try {
-      item = await blogRepository().createBlogTextItem(userIdOf(req), req.params.tripId, { dayDate, body, languageTag: req.body?.languageTag ?? null, audience, idempotencyKey: effectiveIdempotencyKey });
+      item = await blogRepository().createBlogTextItem(userIdOf(req), req.params.tripId, { dayDate, body, languageTag: req.body?.languageTag ?? null, audience, tags: normalizeBlogTags(req.body?.tags), idempotencyKey: effectiveIdempotencyKey });
       await commitCapacityReservation(retainedReservationId, Math.max(1, Math.ceil(Buffer.byteLength(String(item.body ?? ''), 'utf8') / 1024) + 4));
     } catch (err) {
       await releaseCapacityReservation(retainedReservationId).catch(() => undefined);
@@ -298,7 +299,7 @@ router.patch('/:tripId/blog/items/:itemId', async (req, res) => {
       res.status(428).json({ error: 'version or If-Match is required' });
       return;
     }
-    const patch = { version, body: req.body?.body === undefined ? undefined : String(req.body.body), languageTag: req.body?.languageTag, audience: validAudience(req.body?.audience) ? req.body.audience : undefined };
+    const patch = { version, body: req.body?.body === undefined ? undefined : String(req.body.body), languageTag: req.body?.languageTag, audience: validAudience(req.body?.audience) ? req.body.audience : undefined, tags: req.body?.tags === undefined ? undefined : normalizeBlogTags(req.body.tags) };
     const result = await blogRepository().updateBlogTextItem(userIdOf(req), req.params.itemId, patch);
     if (!result) {
       // Item not found or already deleted — distinct from a version conflict, but the client's
@@ -428,6 +429,7 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
       capturedLat: typeof req.body?.capturedLat === 'number' ? req.body.capturedLat : null,
       capturedLng: typeof req.body?.capturedLng === 'number' ? req.body.capturedLng : null,
       caption: req.body?.caption ?? null,
+      tags: normalizeBlogTags(req.body?.tags),
       altText: req.body?.altText ?? null,
       idempotencyKey,
       galleryItemId: req.body?.galleryItemId ? String(req.body.galleryItemId) : null,
@@ -478,15 +480,16 @@ router.patch('/:tripId/blog/media/:assetId/metadata', async (req, res) => {
     }
     const caption = req.body?.caption === undefined ? undefined : req.body.caption === null ? null : String(req.body.caption).trim();
     const altText = req.body?.altText === undefined ? undefined : req.body.altText === null ? null : String(req.body.altText).trim();
+    const tags = req.body?.tags === undefined ? undefined : normalizeBlogTags(req.body.tags);
     const isDecorative = req.body?.isDecorative === undefined ? undefined : req.body.isDecorative;
     if (caption !== undefined && caption !== null && caption.length > 500) return res.status(400).json({ error: 'Caption must be 500 characters or fewer' });
     if (altText !== undefined && altText !== null && altText.length > 1000) return res.status(400).json({ error: 'Alt text must be 1000 characters or fewer' });
     if (isDecorative !== undefined && typeof isDecorative !== 'boolean') return res.status(400).json({ error: 'isDecorative must be a boolean' });
     if (isDecorative === true && altText) return res.status(400).json({ error: 'Decorative photos cannot also have alt text' });
-    if (caption === undefined && altText === undefined && isDecorative === undefined) return res.status(400).json({ error: 'At least one media field is required' });
+    if (caption === undefined && altText === undefined && isDecorative === undefined && tags === undefined) return res.status(400).json({ error: 'At least one media field is required' });
     await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_AUTHORING_WRITE', requireConfiguredLimit: true });
     await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_WRITE_UNIT', requireConfiguredLimit: true });
-    const updated = await blogMediaRepository().updateMediaMetadata(userIdOf(req), req.params.tripId, req.params.assetId, { caption, altText: isDecorative === true ? null : altText, isDecorative });
+    const updated = await blogMediaRepository().updateMediaMetadata(userIdOf(req), req.params.tripId, req.params.assetId, { caption, tags, altText: isDecorative === true ? null : altText, isDecorative });
     if (!updated) return res.status(404).json({ error: 'Photo not found' });
     res.json(updated);
   } catch (err) {

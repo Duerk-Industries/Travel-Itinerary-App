@@ -4,7 +4,7 @@ import { OpenAI } from 'openai';
 import { ParsedFlight } from './types';
 import { getEnvValue } from '../../env';
 import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
-import { estimateAiCostMicros, getApiBudgetWindowKey, recordApiCost } from '../../apis/providerBudgeting';
+import { settleProviderAttempt } from '../../apis/providerBudgeting';
 
 export const OPENAI_FLIGHT_PARSER_CALLER = 'PARSE_FLIGHT_TEXT';
 
@@ -58,19 +58,15 @@ Return a JSON object with two top-level keys:
       });
 
       try {
-        const amountMicros = estimateAiCostMicros({
+        await settleProviderAttempt({
           provider: 'OPENAI',
+          attemptId: response.id,
+          unitType: 'tokens',
           model: 'gpt-4o-mini',
           promptTokens: response.usage?.prompt_tokens ?? 0,
           completionTokens: response.usage?.completion_tokens ?? 0,
+          caller: OPENAI_FLIGHT_PARSER_CALLER,
         });
-        if ((amountMicros ?? 0) > 0) {
-          await recordApiCost({
-            provider: 'OPENAI',
-            windowKey: getApiBudgetWindowKey(),
-            amountMicros: amountMicros ?? 0,
-          });
-        }
       } catch (accountingError) {
         logError('[FlightParser] OpenAI cost accounting failed', accountingError);
       }

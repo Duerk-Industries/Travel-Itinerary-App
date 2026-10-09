@@ -10,9 +10,7 @@ jest.mock('../src/apis/usageLimiter', () => ({
 
 jest.mock('../src/apis/providerBudgeting', () => ({
   recordProviderRequestCost: jest.fn(async () => undefined),
-  estimateAiCostMicros: jest.fn(() => 9_000),
-  getApiBudgetWindowKey: jest.fn(() => '2026-07'),
-  recordApiCost: jest.fn(async () => 9_000),
+  settleProviderAttempt: jest.fn(async () => ({ attemptId: 'OPENAI:resp-1', duplicate: false, costStatus: 'estimated', estimatedCostMicros: 9_000 })),
 }));
 
 jest.mock('docling-sdk', () => ({
@@ -30,6 +28,7 @@ describe('legacy document parser accounting', () => {
     mockConvertFile.mockResolvedValue({ document: { md_content: 'travel markdown' } });
     mockParse.mockResolvedValue({
       choices: [{ message: { parsed: { hotels: [], flights: [], tours: [] } } }],
+      id: 'resp-1',
       usage: { prompt_tokens: 30, completion_tokens: 10 },
     });
   });
@@ -43,13 +42,21 @@ describe('legacy document parser accounting', () => {
 
     const { parseTravelDocument } = require('../src/utils/parser') as typeof import('../src/utils/parser');
     const { reserveApiUsageOrThrow } = require('../src/apis/usageLimiter') as typeof import('../src/apis/usageLimiter');
-    const { recordProviderRequestCost, recordApiCost } = require('../src/apis/providerBudgeting') as typeof import('../src/apis/providerBudgeting');
+    const { recordProviderRequestCost, settleProviderAttempt } = require('../src/apis/providerBudgeting') as typeof import('../src/apis/providerBudgeting');
 
     await expect(parseTravelDocument(filePath)).resolves.toEqual({ hotels: [], flights: [], tours: [] });
 
     expect(reserveApiUsageOrThrow).toHaveBeenCalledWith({ provider: 'DOCLING', caller: 'DOCUMENT_CONVERSION' });
     expect(reserveApiUsageOrThrow).toHaveBeenCalledWith({ provider: 'OPENAI', caller: 'LEGACY_DOCUMENT_PARSE' });
     expect(recordProviderRequestCost).toHaveBeenCalledWith({ provider: 'DOCLING' });
-    expect(recordApiCost).toHaveBeenCalledWith({ provider: 'OPENAI', windowKey: '2026-07', amountMicros: 9_000 });
+    expect(settleProviderAttempt).toHaveBeenCalledWith({
+      provider: 'OPENAI',
+      attemptId: 'resp-1',
+      unitType: 'tokens',
+      model: 'gpt-4o-mini',
+      promptTokens: 30,
+      completionTokens: 10,
+      caller: 'LEGACY_DOCUMENT_PARSE',
+    });
   });
 });

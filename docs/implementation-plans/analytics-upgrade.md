@@ -1,0 +1,788 @@
+# Analytics Upgrade Implementation Plan
+
+Status: Phase 1 code implemented with collection flags off; release validation and later phases remain open.
+Created and reviewed: October 8, 2026.
+Revision: 7 (records Phase 1 implementation and remaining release checks). Canonical path: `docs/implementation-plans/analytics-upgrade.md`; the former underscore-directory path is a forwarding document.
+Design and collection inventory: [Analytics Upgrade: Collection, Goals, and Behavior](../analytics-upgrade.md).
+Phase 0 evidence and review state: [Analytics Phase 0](../analytics-phase-0.md).
+Proposed approvals and decision order: [Phase 0 recommendations](../analytics-phase-0.md#recommendations-for-the-open-decisions).
+
+## Outcome and Delivery Rules
+
+Deliver reliable reporting for feature use, cost per user/trip, technical and task performance, native versus web use, and engagement during scheduled trips. Privacy controls, rights handling, and matching public disclosures (policy pages, cookies notice, privacy choices, account deletion web page, and app-store safety labels) must ship **before** any optional collection starts.
+
+This plan provides compliance capabilities and release evidence; it does not certify GDPR or app-store compliance. The privacy owner resolves jurisdiction, controller, lawful-basis, processor-contract, and retention questions against the actual deployment. Recheck official rules before release, as regulatory guidance and platform policies change over time.
+
+Repository rules that apply throughout:
+
+- Strict TypeScript, shared types in `server/src/types.ts`, Zod validation of all client input.
+- All storage goes through the `server/src/db.ts` facade, implemented in `db.postgres.ts` **and** `db.firebase.ts` together, with `db.memory.ts` supporting unit and integration tests. Postgres migrations go in `server/migrations/` with matching `.rollback.sql` files.
+- Env access only via `getEnvValue` / `getEnvFlag`; logging only via `logInfo` / `logError`.
+- Preserve existing quota accounting, entitlement behavior, and the `/api/flights` alias.
+- No vendor selection, service provisioning, store submission, or new paid SDK is authorized by this document. Initial delivery uses existing infrastructure.
+
+---
+
+## Findings That Affect Implementation
+
+1. `usage_events` and AI accounting cover selected user actions and costs, but not every provider attempt or a general feature/session journey. Avoid counting the same AI operation in both existing accounting and a new ledger.
+2. `recordTiming` in `server/src/metrics.ts` calls a no-op emitter, so that helper retains no latency. Access logs, itinerary captures and configured Sentry tracing provide other limited timing sources. Counters drop labels and revision-based instance identity may be shared by replicas; fix these before relying on aggregate percentiles or per-instance reporting.
+3. AI capture storage supports Cloud Storage, but `aggregationJob.ts` reads local files. A "successful" production aggregation run may miss captures.
+4. Frontend Sentry is initialized in `app/AppEntry.js` before account preferences are known, with `enableAutoSessionTracking: true` and 10% trace sampling. A settings switch added later cannot control data that was already collected at startup.
+5. `server/src/services/userDataExport.ts` (`EXPORT_SCHEMA_VERSION = 1`) exports account, trip, authored-item, and billing data but has no analytics, consent, or diagnostics section. The account deletion route (`DELETE /api/account` in `accountRoutes.ts`) cascades DB rows and cancels Stripe, but it does not prove removal of captures, nested JSON identities, logs, or Sentry data.
+6. **Three conflicting privacy notices exist:**
+   - `/privacy` → `server/src/legal/privacyPolicyHtml.ts`. Last updated July 21, 2026; operator/contact Tristan Duerk (`tristan.duerk@gmail.com`); "not directed at children under 13".
+   - `/privacy.html` → `app/public/privacy.html`, linked from `app/tabs/account.tsx`. Last updated July 17, 2026; GDPR-style controller section; contact `bryan.duerk@gmail.com`; "under 16 may not hold an account".
+   - `docs/legal/privacy-policy.md` matches the older `/privacy` text.
+
+   The code sets a 16-year age threshold and includes a post-sign-in verification path, but server enforcement is feature-flagged. Controller/contact choice remains unverified against the conflicting public notices. See the [Phase 0 audit](../analytics-phase-0.md#recorded-decisions-and-sign-off-state). The older under-13 statement must be reconciled before publishing a new policy.
+7. The older notices claim "we do not access camera, photo library…". The Expo config registers image/video share intents and the blog supports media upload, so verify the wording against actual native permissions before republishing.
+8. `app/public/cookies.html` promises consent before optional diagnostics/analytics. Sentry's current startup behavior does not yet meet that promise.
+9. The iOS config in `expo.config.shared.cjs` has **no `ios.privacyManifests`** entry, and the Android config has **no `blockedPermissions`** entry, so `AD_ID` may be merged in by a dependency. The required-reason APIs used by React Native, Expo modules, and the Sentry SDK (e.g. `UserDefaults`, file timestamps, system boot time) need verification in the archived build's privacy report.
+10. Expo push tokens (`app/utils/pushNotifications.ts`) are device identifiers that must appear in store disclosures, even though they are not used for analytics.
+
+---
+
+## Architecture and Storage
+
+Three processing paths, kept separate in code, storage, access, and policy text:
+
+| Path | Purpose | Reliability and Privacy Rule |
+|---|---|---|
+| **Optional Behavioral Events** | Views, tasks, engagement, funnels | Fail **closed** on unknown consent; collection failure never breaks a travel action |
+| **Operational / Accounting Records** | Service delivery, quotas, security, cost metering | Preserve existing accounting; documented basis; never repurposed as behavioral tracking |
+| **Optional Detailed Diagnostics** | User-linked client crash/performance/session details | Permission-aware SDK initialization and scrubbing; necessary aggregate reliability stays narrowly scoped |
+
+Proposed tables/collections (Postgres table name = Firestore collection name):
+
+| Store | Contents | Notes |
+|---|---|---|
+| `privacy_preferences` | One row per user: independent `product_analytics` and `optional_diagnostics` choices, purpose-specific epochs/notice versions, optimistic revision and timestamps | Changes to one purpose do not grant or revoke the other; necessary processing is described separately |
+| `privacy_choice_events` | Append-only consent/withdrawal evidence: choice, notice version, platform, timestamp | No behavioral payload, IP address, or device identifier |
+| `analytics_subjects` | Random per-account pseudonym ↔ user mapping, epoch | Restricted access. Never an email hash. Rotated on withdrawal/regrant. |
+| `analytics_events` | Validated envelopes and allowlisted properties; unique `(subject, purpose_epoch, event_id)` | Initially one row/document per event in both adapters. This simplifies retry deduplication, subject export and erasure; batching requests does not change event storage semantics. |
+| `analytics_eligible_daily` | Minimal consented eligible user/trip/feature facts used as denominators | Personal data; deletable |
+| `provider_cost_ledger` | Unique provider attempt, units, price version, user/trip/feature attribution, outcome, reconciliation state | Necessary operational data; restricted access |
+| `analytics_daily_facts` / `analytics_rollups` | Bounded query shapes, definition and aggregation version | User/trip facts are personal. Only assessed anonymous aggregates get longer retention. |
+| `analytics_job_runs` | Durable cursor, lease, version, freshness, counts, errors | No raw payloads |
+
+Design rules:
+
+- Use named columns for frequent dimensions (`event_name`, `feature`, `platform`, `trip_phase`, `occurred_at`) and bounded JSONB/maps for rare properties. Design Postgres indexes and Firestore composite indexes from the **same supported admin queries**.
+- Interactive Firebase reports never scan raw events; they read precomputed rollups.
+- Never use per-user or per-operation identifiers as metric labels.
+- Daily jobs use durable leases/cursors and idempotent upserts so they are safe with multiple Cloud Run replicas. Retries replace a period rather than adding to it. Late events use a documented watermark (proposed: 48 h) with bounded recomputation. Expose partial coverage when data has expired.
+- Keep production query correctness first; use focused adapter contract tests and a Firebase emulator/disposable test project. Document actual pg-mem incompatibilities when encountered rather than prescribing unverified SQL restrictions.
+
+---
+
+## Phase 0: Inventory, Definitions, Legal Analysis, and Privacy Decisions
+
+**Owners:** Product Lead, Backend Lead, Privacy Owner.
+
+- Use the [Phase 0 verified deployment and retention inventory](../analytics-phase-0.md#deployment-and-retention-inventory) as the baseline. Complete its remaining SDK, vendor-contract, data-volume and policy-retention checks before the release gate closes; record facts without copying secrets.
+- Review and sign the [provider and cost coverage map](../analytics-phase-0.md#provider-and-cost-coverage-map); test attribution, pricing and billable failures on each active path before claiming complete user cost.
+- Product owner reviews and signs the [initial event and metric dictionary](../analytics-phase-0.md#initial-event-and-metric-dictionary), including eligibility, consent population, session/phase/outcome semantics and allowed dimensions.
+- Use the [draft processing register and DPIA screening](../analytics-phase-0.md#processing-register-draft-ropa) to complete a signed ROPA, purpose-specific lawful-basis review and full DPIA before optional collection.
+- Document necessary metering/security purposes and any legitimate-interests assessment. Broad feature tracking is not "necessary" just because it helps the business.
+- Treat the [recorded product decisions](#phase-0-decisions-recorded-october-8-2026) as proposals subject to the [Phase 0 review gates](../analytics-phase-0.md#recorded-decisions-and-sign-off-state). The controller/contact, EU/UK representative and DPO assessment, provider agreements and retention require independent verification before publication.
+- Put the [recommended default and approval evidence for each open decision](../analytics-phase-0.md#recommendations-for-the-open-decisions) before the operator, privacy, product and finance owners. Record accepted choices and exceptions with names/dates; do not infer approval from the recommendations.
+- Approve global default-off for optional analytics and diagnostics with separate controls.
+
+**Acceptance:** The engineering inventory, load baseline, coverage map, draft processing register, DPIA screening, dictionary and policy gap list are documented in the Phase 0 record. Product, legal/privacy and finance sign-offs listed there remain open; optional collection stays off until those gates and later implementation gates close.
+
+---
+
+## Phase 1: Privacy Settings, Controls, and Enforcement
+
+**Owners:** Frontend Lead, Backend Lead, Privacy Owner. Depends on Phase 0.
+
+### Server Implementation
+- `GET` / `PATCH /api/account/privacy-preferences` in `accountRoutes.ts`: Authenticated owner only, optimistic `revision` check, server timestamps, append to `privacy_choice_events`. No admin can grant consent on a user's behalf.
+- `server/src/services/privacyConsentService.ts`: Purpose-specific admission checks and optimistic preference updates. Serialize preference/epoch validation with event admission using a DB transaction or equivalent consistency boundary in each adapter. Do not use cached grants for admission.
+- Feature flags in `server/config/feature-flags.yaml`: `analytics_collection_enabled` (kill switch) and `diagnostics_user_linked_enabled`, both **default disabled and fail-closed**. These must not inherit entitlement fail-open behavior. When disabled, consent updates, export, and deletion must still work.
+- Review `server/src/instrument.ts`: `sendDefaultPii: false`; strip `user.ip_address`, cookies, auth headers, request bodies, and query strings in `beforeSend`/`beforeSendTransaction`. Server-side Sentry stays on as necessary processing (legitimate interest in service security and reliability) and does not depend on the user's optional choice. Set its event retention to the approved 30 days.
+
+### Client Implementation
+- New `app/utils/privacyConsent.ts` (state machine: unknown/off, granted, withdrawn, obsolete-notice) and `app/hooks/usePrivacyConsent.ts`. Fetch on bootstrap and on foreground. Server stays authoritative.
+- First-run consent sheet with equal-weight **Accept** / **Reject** / **Customize**. Show it once after login, not before the user can use the app. No nagging after refusal.
+- **Account → Privacy** section in `app/tabs/account.tsx` / `AccountProfileManagement.tsx`: Two switches, a necessary-processing explanation, and links to export, delete analytics data, delete account, privacy policy, cookie notice, and privacy choices.
+- Web: Handle `Sec-GPC: 1` at the server and `navigator.globalPrivacyControl` in the browser. Active GPC or DNT keeps product analytics off.
+- **Sentry Redesign** (`app/utils/sentry.ts`, `app/AppEntry.js`): Move `initSentry()` out of `AppEntry.js` startup into the consent bootstrap, and call it only when `optional_diagnostics` is granted and its collection flag is enabled. Keep `wrapApp()`'s error boundary around the app when a DSN is configured. Before permission, no SDK init occurs. On grant, init with `sendDefaultPii: false`, scrub request/context payloads, and set the Sentry user to a rotating diagnostic pseudonym, never the raw user ID or email. On withdrawal or account switch, close Sentry and verify on devices that queued/native envelopes cannot leave afterward. The installed Android Sentry manifest sets `io.sentry.auto-init=false`; `autoInitializeNativeSdk` is a **runtime SDK option**, not an Expo-plugin switch, and setting it false on grant would also disable native initialization then. Verify iOS startup and both native transports in a release build. Publish a 30-day expiry claim only after checking the Sentry project setting. Accepted trade-off: no client crash reports from non-consenting users.
+
+### Independent Purpose & Revocation Matrix
+
+| Product Analytics | Detailed Diagnostics | Expected Optional Collection |
+|---|---|---|
+| Off | Off | None |
+| On | Off | Product events only; no optional Sentry activity |
+| Off | On | Approved diagnostic payloads only; no feature/session product events |
+| On | On | Both, independently gated and revocable |
+
+**Acceptance:** Network and storage evidence shows zero optional data before permission and after withdrawal, including error paths and account switches. Core trip, quota, and billing regression suites pass.
+
+**Phase 1 implementation state (October 8, 2026):** The two default-off/fail-closed flags, authenticated revisioned preferences, atomic choice evidence in Postgres/Firestore, GPC/DNT handling, first-run sheet, Account privacy controls, and consent-gated Sentry initialization are implemented. The account links include public choice/deletion request pages and an authenticated export; analytics-data deletion currently routes to support because the Phase 2 event store and Phase 4 self-service erasure endpoint do not exist yet. No product events are collected in Phase 1. Grant requests are refused while their flag is off; refusal and withdrawal still work. Targeted API tests passed in the in-memory Postgres adapter and the Firestore emulator. A Playwright pre-login check of an exported web build with a fake configured Sentry DSN showed no Sentry request; its backend was intentionally absent, so this does not prove signed-in choice or withdrawal behavior. Remaining acceptance evidence: signed-in web/iOS/Android network traces (including Sentry queue behavior and startup), actual Sentry project retention/processor terms, updated canonical legal pages and store disclosures, and full release/regression checks. Keep both flags off until these gates close.
+
+---
+
+## Phase 2: Event Pipeline, Schema Registry, and Instrumentation
+
+**Owners:** Frontend Lead, Backend Lead. Development depends on Phase 1.
+
+- **Registry:** New workspace package `packages/analytics` (`@wanderbunnies/analytics`), modeled on `packages/domain` and `packages/messaging`. It exports event names, strict Zod schemas, and metadata (purpose, owner, consent category, retention, sampling), and both `app/` and `server/` import it directly. No code generation, no mirrored copies. Persisted record types that the DB adapters return go in `server/src/types.ts`.
+- **Client Utility:** `app/utils/analytics/track.ts` plus `useTrackView(feature)`.
+- **Instrumentation:** Routing/trip selection in `app/App.tsx`, then overview, itinerary, activities, lodging, transfers, expenses, packing, imports, blog, and collaboration. Guard against duplicate render events in React 19 Strict Mode.
+- **Ingest Route:** `POST /api/analytics/events` in `analyticsRoutes.ts`, authenticated users only.
+- **Validation & Limits:** 20 events per batch, 32 KiB payload, 30-second foreground flush plus a flush on background/`visibilitychange` (`fetch` with `keepalive` on web, so the auth header is still sent), max 100 queued events and 24-hour expiry. Enforce max event age (24h) and future skew (5m). Store receipt time and reject invalid clocks. Freeze batches/IDs for retries and deduplicate per subject/purpose epoch.
+- **Queue:** In-memory only initially. A durable offline queue requires encrypted storage, expiry, withdrawal purge, and a storage notice update.
+- **Server Outcomes:** After the business transaction commits, pass consent-filtered events to a bounded asynchronous writer.
+- **Trip Phase:** `server/src/utils/tripPhase.ts` (pure function with date/timezone version). Adds an optional IANA `timezone` on trips, filled from cached Places details, with fallback segment → trip → event device timezone → `unknown` (decision 5).
+- **Exclusions:** Sessions use bounded foreground intervals, never API polls. Admins, E2E/automation users, prefetch, and background workers are marked for exclusion.
+
+**Acceptance:** Golden fixture journeys produce expected deduplicated events and phase classifications with no prohibited properties. Consent-denied journeys produce no optional events.
+
+### Phase 2 implementation record (October 8, 2026; not yet deployed, collection flag still off)
+
+**Registry**
+- **Canonical copy.** `packages/analytics/src/registry.ts` (`@wanderbunnies/analytics`, a new npm workspace) defines:
+  - the 11 events, each with family, purpose, client or server `source`, `tripScoped`, owner, product question and retention;
+  - stable feature names;
+  - ingest limits;
+  - the client envelope type.
+- **Properties are bounded by construction.** They can only be enums, booleans or bounded integers, so the registry cannot express free text, IDs, URLs or content. The registry is plain data, so the app imports it (by relative path, like `messaging`) without a validator.
+- **Server mirror.** The server deploy uploads `server/` alone, so the plan's "no mirrored copies" wasn't possible. `server/src/analytics/registry.ts` is a byte-identical mirror written by `npm run sync:analytics-registry`. `npm run check:analytics-registry`, also run in `analytics-ingest.test.ts`, fails on drift. This follows the existing `server/src/socket/messaging.ts` convention.
+
+**Store**
+- **Tables.** Migration `20261010_add_analytics_events.sql` adds two tables, mirrored as Firestore collections:
+  - `analytics_subjects`: a random pseudonym per account and consent epoch, so regranting after a withdrawal starts a new pseudonym;
+  - `analytics_events`: one row per event.
+- **Idempotency.** The row ID is `subject:epoch:event_id`, so retried batches are idempotent.
+- **What a row holds.** Each row has a 90-day `expiresAt`, also usable as a Firestore TTL field. It contains no account ID and no raw trip ID: the trip is stored as an HMAC (`tripRef`).
+- **Adapters.** Implemented in both `db.postgres.ts` and `db.firebase.ts`.
+
+**Ingest (`POST /api/analytics/events`, `server/src/analytics/ingestService.ts`).** Admission runs in this order:
+1. Authentication.
+2. Payload limit (32 KiB) and per-account rate limit (30 batches per minute).
+3. The `analytics_collection_enabled` flag (403 `ANALYTICS_COLLECTION_DISABLED`).
+4. A fresh server-side consent check, including GPC/DNT (403 `ANALYTICS_CONSENT_REQUIRED`). The client stops instead of retrying.
+5. Account erasure tombstone.
+6. Batch shape (1–20 events).
+7. Strict per-event Zod validation built from the registry. Unknown fields are rejected, including any client-supplied identity.
+8. Client-only events.
+9. Clock bounds (24 h old, 5 min ahead).
+10. The analytics-erasure tombstone: events queued before "Delete analytics data" are refused.
+11. Trip access, checked with `ensureUserInTrip`.
+
+The server then derives the subject, epoch, trip reference and trip phase.
+
+The response reports accepted, duplicate and rejected-with-reason counts. Admin and internal-canary traffic is stored with `excludedReason` so reports can leave it out.
+
+**Server outcome events.** `recordServerEvent()` is a bounded (1,000), fire-and-forget queue with the same consent check per event, so it can never slow or fail the business action. It is wired to:
+- `trip_created`, from both the plain and wizard create routes;
+- `invite_accepted`, when a group invite is accepted.
+
+**Trip phase (`server/src/utils/tripPhase.ts`).**
+- Uses inclusive trip-local dates, with the zone fallback segment → trip → device → `unknown`.
+- Records `timezoneSource` and a `dateVersion` fingerprint.
+- Handles Postgres `DATE` values that arrive as JS `Date` objects at local or UTC midnight.
+- Today only the device zone is available. A trip `timezone` column, filled from Places, is still to do.
+
+**Phase 4 hooks now live**
+- The erasure step `product_analytics_events` deletes events, then pseudonyms.
+- The retention step `analyticsEventsExpired` purges past-expiry events.
+- Export v2's `analytics.productAnalytics` lists the user's own events, without pseudonyms or trip references.
+
+**Client (`app/utils/analytics/track.ts`)**
+- **Inert until consent.** `configureAnalytics` follows the server's `productAnalyticsAllowed`. Disabling, signing out or switching accounts purges the queue.
+- **Memory-only queue.** At most 100 events, each dropped after 24 h.
+- **Batching.** Frozen batches of 20 with stable IDs. Flushes every 30 s, at a full batch, and on background or `visibilitychange` (`keepalive`).
+- **Errors.** Backoff on network, 5xx and 429 errors; stop on 401 or 403.
+- **Sessions.** A new session after 30 minutes idle, with `session_started` carrying `resumed`.
+- **Views.** `useTrackView` records one `feature_viewed` per feature, trip and session, which is Strict-Mode safe.
+- **Wiring.** `App.tsx` maps pages to features through `app/utils/analytics/features.ts`; admin is never tracked, and only trip pages attach the trip.
+
+**Tests:**
+- `server/__tests__/analytics-ingest.test.ts` (12): registry parity, no consent or flag off, GPC/DNT, withdrawal, idempotent retry with server-derived identity, validation and spoofing, size/batch/clock limits, trip access and scoping, erasure tombstone, exclusion, server events with and without consent, erase/export/retention.
+- `server/__tests__/trip-phase.test.ts` (7): trip-local boundaries, the date line, DST, the fallback chain, invalid dates, `dateVersion`, `Date` inputs.
+- `app/tests/analyticsTrack.test.tsx` (12).
+
+**Not done yet**
+- **More instrumentation:**
+  - `task_*`, `map_link_opened` and `report_exported` call sites in the tabs;
+  - `item_saved` in the item routes;
+  - `engaged_session_summary`;
+  - trip-share and follow `invite_accepted`.
+- **Trip `timezone` column** filled from Places details.
+- **The registry → store-disclosure drift check** (Phase 4 §4).
+- **Firestore emulator and load tests** at 10× peak.
+- **Consent check and write aren't serialized** in one transaction. A batch admitted just before a withdrawal can still be stored. Erasure and the tombstone cover that case.
+
+---
+
+## Phase 3: Cost Metering, Performance Monitoring, and `metrics.ts` Fixes
+
+**Owners:** Backend Lead, Finance/Operations Owner. Depends on Phase 0.
+**Status:** Implemented October 8, 2026 (not yet deployed). Remaining gaps are listed at the end of this section.
+
+### Cost ledger and settlement
+
+- **One settlement path.** `settleProviderAttempt()` in `server/src/apis/providerBudgeting.ts` writes one `provider_cost_ledger` row per attempt, then increments the monthly `api_cost_counters` budget row by the same amount. Each row records attempt ID, provider/model/caller, feature, initiating user, trip, token/request units, cache status, outcome, cost status and price version, with cost in integer USD microdollars. `recordProviderRequestCost()` now delegates to it. `recordApiCost()` is kept as the counter-only primitive for the synthetic `SHADOW_PARSE` budget, whose spend is already in the ledger under the real provider.
+- **No double counting.** The attempt ID is the provider's response ID where one exists (`OPENAI:chatcmpl-…`), so a replayed or duplicated settlement is ignored (`cost_ledger.duplicate_attempt` metric) and the budget counter is not incremented again. The registry still skips OpenAI because `postOpenAiChatCompletion` settles it; the unique attempt ID now protects that rule as well.
+- **Callers routed through settlement:** `postOpenAiChatCompletion` (success and failed attempts), the AI provider registry (non-OpenAI providers, success and failure), the legacy document parser, both flight parsers, and every `recordProviderRequestCost` caller.
+- **Unknown is never $0.** Token attempts without model pricing, and request providers missing from `requestPricing`, are recorded with `costStatus: 'unknown'` and a null cost, and do not touch the budget counter. Providers explicitly priced at `0` are skipped entirely, so free APIs add no writes. A failed call with no reported usage is `not_billable`.
+- **Attribution.** Uses the explicit user/feature/trip when the caller has them (AI call context, `attribution` on `postOpenAiChatCompletion`), otherwise the request-context user. `system`, `anonymous` and empty IDs are recorded as `attribution: 'system'` with no user.
+- **Settlement failure.** If the ledger write fails, the budget counter is still incremented and `cost_ledger.settlement_failed` is counted, so spend is never silently understated.
+- **Privacy.** Account deletion unlinks the user's ledger rows (spend kept, user/trip removed) via `delinkProviderCostLedgerUser`. `delinkProviderCostLedgerBefore(windowKey)` implements the 13-month linkage limit for the Phase 4 retention job.
+- **Storage.** Migration `20261008_add_provider_cost_ledger.sql` (`provider_cost_ledger`, `provider_invoice_records`, `job_leases`). Firestore uses the same collection names and single-field queries only (no composite index needed).
+
+### Reporting, allocation and reconciliation
+
+- `GET /api/admin/costs/ledger?month=YYYY-MM[&sharedCostUsd=N][&activeAccounts=N]` returns an aggregate-only report:
+  - totals and breakdowns by provider and by feature;
+  - attribution coverage (share of estimated spend tied to an account) and pricing coverage (share of attempts with a known price);
+  - median/p95/max direct cost per user (nearest-rank over users, never averaged percentiles);
+  - the `allocation_v1` section: equal split across active accounts, plus a request-volume split for comparison;
+  - invoice reconciliation.
+
+  No user IDs are returned.
+- `PUT /api/admin/costs/invoices/:provider/:month` records a provider invoice: amount, credits, currency, FX rate to USD, and notes. A reason is required, and the change is written to `audit_log` as `PROVIDER_INVOICE_RECORDED`. Reconciliation reports invoiced net (in USD) minus the ledger estimate, and flags anything outside ±5%. Ledger estimates, allocated shared cost and invoiced cost are always reported separately.
+- When `activeAccounts` is not supplied, it defaults to the number of distinct ledger-attributed users and is labeled as such (an undercount).
+
+### `metrics.ts` and `/metrics`
+
+- **Labeled series.** Counters keep per-label-set series; `/metrics` emits one line per series and the admin snapshot adds `counterSeries`. Each metric is capped at 50 label sets, and further sets fold into one `{overflow="true"}` series.
+- **High-cardinality labels removed** at the call sites:
+  - the destination text on `itinerary_generation_success` (also a privacy leak on the unauthenticated scrape);
+  - the numeric count on `billing.reconcile.batch_processed`, now a separate `billing.reconcile.subscriptions_processed` amount;
+  - the three numeric labels on the GetYourGuide enrichment metrics, now counter amounts.
+- **Timing histograms.** `recordTiming` / `timedAsync` now keep fixed-bucket histograms (5 ms … 120 s). They are exported as Prometheus `_bucket` / `_sum` / `_count`, and the admin snapshot adds `timings` with bucket-interpolated p50/p95.
+- **Instance identity.** `INSTANCE_ID` is now `K_REVISION` plus a random per-process suffix, so replicas of one revision no longer share a series. `counters_started_timestamp_seconds` already exposed counter resets.
+
+### AI aggregation job
+
+- The daily rollup reads captures from the configured backend: local disk in local/test, Cloud Storage in production. In GCS it selects one day by glob (`*/{day}/*.json.gz`), skips evaluation sidecars, reads at most 5,000 objects with 8 in parallel, and handles both gzipped and already-decompressed objects.
+- A durable lease (`job_leases`, name `ai_daily_aggregation`) ensures only one replica runs a tick. Its cursor records the last aggregated day, so missed days are caught up oldest-first (at most 7 per tick). A failed day stops the run without advancing the cursor.
+
+### Client readiness timing
+
+- `app/utils/readinessMarks.ts` records two Sentry spans: `app.trip_ready` (cold start or login until the trip list loads) and `ui.screen_ready` (page change until the next frame after commit). Attributes are limited to `platform`, `page`, `trigger` and `hasTrips`.
+- Spans are recorded only when Sentry is initialized, i.e. only with Detailed Diagnostics consent (Phase 1). Measurements made before consent is known are dropped, not queued.
+
+### Tests
+
+| Area | Suite |
+|---|---|
+| Settlement, idempotency, unknown pricing, attribution, free/unlisted request providers, write-failure fallback, de-linking, OpenAI response-ID keying and failed attempts, report math, allocation, FX reconciliation, admin auth/validation/audit | `server/__tests__/provider-cost-ledger.test.ts` (14) |
+| Labeled series, cardinality cap, histograms/quantiles, Prometheus histogram output, instance suffix | `server/__tests__/metrics-histograms.test.ts` (8) |
+| Lease exclusivity, renewal, expiry takeover, cursor ownership; GCS day reader | `server/__tests__/job-leases-and-gcs-captures.test.ts` (3) |
+| Catch-up days, cursor advance, stop on failure, lease-held skip | `server/__tests__/ai/scheduledAggregation.test.ts` |
+| Consent gating, cold-start/login trip-ready, bounded attributes, page-change mark | `app/tests/readinessMarks.test.tsx` (5) |
+
+Existing suites updated for the new settlement API: `aiProviderRegistry`, `googleDirectApiAccounting`, `legacyDocumentParserAccounting`, `analyticsPhase8`.
+
+### Remaining gaps
+
+- **Whisper transcription** (`postOpenAiAudioTranscription`) is still not costed. It is priced per audio minute, which needs the duration from the upload.
+- **Invoices are entered by hand.** A GCP billing-export import could automate the Google rows.
+- **No scheduled retention job yet.** `delinkProviderCostLedgerBefore` exists but isn't scheduled; that belongs to the Phase 4 job.
+- **Reports are API-only.** The admin UI for the cost report is Phase 5.
+- **Pre-Phase 3 history is absent.** Months before this ships have budget counters but no ledger rows, and the report says so.
+- **Real Postgres and Firestore are untested.** The ledger and lease logic is tested on the in-memory adapter only. Run the Firebase emulator suite before relying on the Firestore transactions.
+- **Some cold starts aren't measured.** Client readiness spans need diagnostics consent to be known by the time trips load.
+
+**Acceptance:** synthetic calls reconcile exactly (covered by the report test), and the report distinguishes unknown, estimated, allocated and invoiced costs. Timings are retained as bounded histograms with their buckets visible.
+
+---
+
+## Phase 4: Rights, Retention, and Policy & Web Page Deliverables
+
+**Owners:** Backend Lead, Privacy Owner. Depends on Phase 1 & 2.
+**Status:** Implemented October 8, 2026 for every store that exists today (not yet deployed). Phase 2's stores (raw events, pseudonym map, daily facts) aren't built yet; they plug in through the registries below without changes to this phase's code.
+
+### Implementation record
+
+**Erasure (`server/src/services/privacyRightsService.ts`)**
+- **Durable jobs.** Each erasure request becomes a durable `privacy_erasure_jobs` row that records a result per step (`done`, `not_applicable` with a reason, or `failed` with the error). The job keeps the raw user ID only until it completes. The daily retention tick retries failed steps, up to 5 attempts.
+- **Tombstones.** A tombstone in `erasure_tombstones` is keyed by an HMAC of the account ID, never the raw ID. Late writers check it: cost settlement attributes an erased account's spend to `system`, and Phase 2 ingest must reject events older than the analytics tombstone.
+- **Steps registered today:**
+
+  | Step | Scope | What it does |
+  |---|---|---|
+  | `consent_evidence_archive` | account | Copies `privacy_choice_events` to `privacy_consent_evidence_archive` under the subject hash *before* the account cascade deletes them. Previously, account deletion destroyed the consent evidence the retention schedule requires. |
+  | `itinerary_generation_metrics` | analytics, account | Removes user and trip IDs, including those nested in the metrics JSON. Previously Postgres only nulled `user_id`, and Firebase kept everything. |
+  | `diagnostic_pseudonym` | analytics | Rotates the Sentry pseudonym. |
+  | `cost_ledger` | account | Unlinks the account's cost-ledger rows. |
+  | `push_tokens` | account | Hard-deletes device rows. Previously Firestore never deleted them, and `deleteDevice` only disabled them, so encrypted push tokens outlived accounts. |
+  | `ai_captures` | analytics, account | `not_applicable`: captures carry only a salted hash and are removed by the 30-day lifecycle rule. |
+  | `product_analytics_events` | analytics, account | `not_applicable` until Phase 2. |
+
+  Phase 2 adds its stores with `registerErasureStep`.
+- **Account deletion.** `DELETE /api/account` runs the account-scope job before the cascade. Starting the job never blocks the deletion.
+
+**User endpoints**
+- `DELETE /api/account/analytics-data` ("Delete my analytics data") deletes analytics data without deleting the account, and is audited as `PRIVACY_ERASURE_REQUESTED`.
+- `GET /api/account/erasure-requests[/:id]` lets users follow their requests; another user's job returns 404.
+- These routes are allowlisted under the age gate, so a not-yet-verified account can still use them.
+- **Account → Privacy → Delete analytics data** now confirms in the app and calls the endpoint, instead of opening an email to support.
+
+**Export v2.** `EXPORT_SCHEMA_VERSION` 2 adds:
+- `privacy`: preferences, choice history and erasure requests (the diagnostics pseudonym is omitted);
+- `ageVerification`;
+- `costLedger`: the user's own rows, with cost in USD;
+- `diagnostics.itineraryGenerations`;
+- `analytics`: `not_collected` until Phase 2 registers sections via `registerExportSection`.
+
+**Rights-request tracker (admin).** `GET`/`POST`/`PATCH /api/admin/privacy/rights-requests` and `GET /api/admin/privacy/erasure-jobs`:
+- Deadlines: GDPR and UK GDPR, one calendar month (end-of-month clamped), extendable once to three months; CCPA and US states, 45 days (+45); otherwise 30 days (+30).
+- Each request has an overdue flag and is audited (`PRIVACY_RIGHTS_REQUEST_CREATED` / `_UPDATED`).
+- A known account is stored only as its subject hash.
+
+**Retention (`server/src/services/privacyRetentionService.ts`).** Runs inside the existing daily retention tick, guarded by a `job_leases` lease so one replica runs it:
+- unlink cost-ledger rows older than 13 months;
+- unlink itinerary telemetry older than 13 months;
+- purge archived consent evidence 3 years after deletion;
+- retry erasure jobs.
+
+The results are added to the `RETENTION_TICK_RUN` audit entry. Phase 2 adds its 90-day and 13-month purges with `registerRetentionStep`.
+
+**Policy pages**
+- **One source.** `docs/legal/privacy-policy.md` (version 3.0) is the canonical notice. `scripts/build-legal-pages.mjs` (run with `npm run build:legal`) generates both `app/public/privacy.html` and `server/src/legal/privacyPolicyHtml.ts`, so `/privacy` and `/privacy.html` are now identical.
+- **Drift guard.** `npm run check:legal`, also run by `server/__tests__/legal-pages.test.ts`, fails the build if either output is edited by hand.
+- **Step 3 content changes, all applied:**
+  - Sentry is no longer described as always on;
+  - first-party opt-in analytics is described;
+  - photos are limited to items the user picks or shares (no camera or location);
+  - the minimum age is 16;
+  - the legal-basis table is explicit;
+  - necessary and optional technical data are split, and push tokens are listed;
+  - the retention schedule, rights with response times, recipients and transfers, "what we don't do", and change handling are added;
+  - the Google Limited Use and Plaid sections are kept word for word.
+- **EU/UK representative.** The line now reads "none appointed at this time" instead of "Not applicable", per the draft Art. 27 assessment.
+- **Other pages:**
+  - `cookies.html`: consent stored server-side (no cookie), memory-only analytics, opt-in Sentry, and a "Manage preferences" link;
+  - `privacy-choices.html`: rewritten with both switches, GPC/DNT, analytics deletion and export, and "we do not sell or share";
+  - `delete-account.html`: rewritten with how to delete, what is deleted, what is kept and why, verification, and timing.
+- **Links and URLs.** Extensionless `/privacy-choices`, `/delete-account`, `/cookies` and `/terms` redirect (301) before the SPA fallback. "Your Privacy Choices" links were added to the landing page footer and the sign-in form.
+
+**Mobile store configuration**
+- `expo.config.shared.cjs` now declares `ios.privacyManifests`:
+  - `NSPrivacyTracking: false` and no tracking domains;
+  - 12 linked collected data types, matching the policy;
+  - required-reason APIs: UserDefaults CA92.1, FileTimestamp C617.1, SystemBootTime 35F9.1, DiskSpace E174.1.
+- It also sets `android.blockedPermissions: ['com.google.android.gms.permission.AD_ID']`.
+- Store form answers are recorded in `docs/app-store-review-packet.md` §8, and `app/tests/storePrivacyConfig.test.ts` guards the configuration.
+
+**Test-infrastructure fix.** The pg-mem `uuid_generate_v4` is now registered as `impure`. Without that, pg-mem could reuse one UUID for every default-ID insert, which the new telemetry tests exposed.
+
+**Tests:**
+- `server/__tests__/privacy-rights.test.ts` (8): analytics erasure, cross-user isolation, account-deletion archive/unlink/tombstone and late-settlement blocking, failed-step retry, export v2, deadline rules, the admin tracker and its audit, and retention.
+- `server/__tests__/legal-pages.test.ts` (8).
+- `app/tests/PrivacySettings.test.tsx` (+2) and `app/tests/storePrivacyConfig.test.ts` (4).
+- `accountExport.test.ts` updated to schema v2.
+
+**Remaining (needs people or later phases):**
+- **Before deploying the policy:**
+  - set Sentry project retention to 30 days, since the notice now says diagnostics "expire within 30 days";
+  - confirm the operator address for Tristan;
+  - publish and notify users of version 3.0.
+- **Store forms** must be updated in App Store Connect and Play Console with the first build containing these changes. Then verify the Xcode Privacy Report and the merged Android manifest.
+- **Phase 2 work:**
+  - register erasure, retention and export steps for raw events, the pseudonym map and daily facts;
+  - make ingest check the analytics tombstone;
+  - add the registry-to-store disclosure drift check (section 4).
+- **Not built:**
+  - backup-restore tombstone replay;
+  - a deletion-confirmation request to Sentry (decision 8 relies on 30-day expiry instead).
+- **Untested on real Firestore.** Firestore behavior is untested here (in-memory adapter only); run the emulator suite.
+
+### 1. Rights Handling
+- Bump `EXPORT_SCHEMA_VERSION` to 2 in `userDataExport.ts` and add `privacy` (preferences/history), `analytics` (events, daily facts, pseudonym), `costs` (attributed ledger rows), and `diagnostics` (capture metadata). Use machine-readable JSON.
+- New `DELETE /api/account/analytics-data` ("Delete my analytics data"), separate from withdrawal.
+- Extend account deletion (`DELETE /api/account`) to pseudonym mappings, trip-linked analytics, raw events, user/trip facts, captures, nested JSON identities, logs, and external diagnostics.
+- Suppress or rebuild attributable rollups after erasure. Cohorts below 10 are suppressed in reports and exports.
+- Durable deletion jobs with retries, tombstones, and provider confirmation.
+- Track rights deadlines by jurisdiction (GDPR 1 month, CCPA 45 days).
+
+### 2. Data Retention Schedule
+
+| Data Category | Retention Limit | Enforcement Mechanism |
+|---|---|---|
+| **Client Optional Queue** | 24 hours, or withdrawal / logout | Client-side expiry and immediate purge |
+| **Raw Behavioral Events** | 90 days | Exclude expired records from queries immediately; batched deletion + Firestore TTL |
+| **Linked Daily User/Trip Facts** | 13 months | Scheduled daily purge job + subject erasure cascade |
+| **Consent Choice Evidence** | Account lifetime + 3 years | Minimal restricted evidence in `privacy_choice_events`; purge job keyed on account deletion date |
+| **Minimized Diagnostic Logs/Traces** | 30 days | Cloud Logging bucket retention, Sentry project retention |
+| **AI Captures** | ≤ 30 days for diagnostics | GCS object lifecycle rule + subject deletion cascade |
+| **Assessed Anonymous Aggregates** | 25 months, then review/purge | Aggregate lifecycle job and disclosure review |
+| **Cost Ledger** | User/trip linkage 13 months; feature/provider totals retained | Scheduled de-linking job; kept separate from behavioral analytics |
+| **Billing Records** | 7 years (tax/accounting) | Existing Stripe/billing tables; documented legal hold |
+
+### Privacy Policy and Web Page Deliverables
+
+**Step 1: Consolidate Canonical Source**
+Make `docs/legal/privacy-policy.md` the single canonical source. Add `scripts/build-legal-pages.mjs` to compile it into `app/public/privacy.html` and `server/src/legal/privacyPolicyHtml.ts`. CI fails if outputs drift.
+
+**Step 2: Per-Surface Changes**
+
+| Surface | Required Deliverable |
+|---|---|
+| `docs/legal/privacy-policy.md` (canonical) | Operator Tristan Duerk (company name once registered). Single contact **`support@wander-bunnies.com`** (already published), replacing both personal addresses. Minimum age **16 everywhere**, matching `registrationAgeGate.ts`. Do not claim an EU/UK representative. Apply every change in Step 3. Add version number, effective date, and a change summary at the top. |
+| `app/public/privacy.html` | Compiled from canonical source. Serves web policy page. |
+| `server/src/legal/privacyPolicyHtml.ts` → `/privacy` | Compiled from canonical source or 301 redirect to `/privacy.html`. |
+| `app/public/cookies.html` | Inventory storage keys, purpose, operator, and duration. Interactive "Manage Preferences" button. |
+| `app/public/privacy-choices.html` (new) | Public explanation of dual opt-in controls, GPC signal handling, and rights links ("Your Privacy Choices"). |
+| `app/public/delete-account.html` (new) | Public account deletion request page for Google Play policy compliance. |
+| `app/tabs/account.tsx`, `AccountProfileManagement.tsx` | Account → Privacy UI with 2 switches, necessary processing text, and legal links. |
+| `server/src/app.ts` | Serve `/privacy`, `/privacy.html`, `/cookies.html`, `/privacy-choices`, `/delete-account` with stable aliases. Static pages matched before SPA fallback. |
+| Web Footer / Login Screen | Add "Privacy Choices" link next to Privacy and Terms links. |
+| App Store & Google Play Packets | Updated App Privacy labels, ATT verification, Privacy Manifests (`ios.privacyManifests`), Data Safety declarations, `AD_ID` removal, and Delete account URL. See section 4 below. |
+| `docs/sentry.md`, `docs/feature-flags.md`, `docs/admin.md` | Consent-gated client init, server scrubbing and retention, the two new flags, metric definitions, and the kill-switch runbook. |
+
+**Step 3: Required notice content changes**
+
+Changes to the current text (found in the July 2026 notices):
+
+| Current statement | Where | Required change |
+|---|---|---|
+| "We use Sentry to automatically collect crash reports and performance diagnostics" | `/privacy`, `privacy-policy.md` | Server error monitoring is necessary processing (scrubbed, 30 days). App crash/performance diagnostics are collected **only if you turn on Detailed Diagnostics**. |
+| "We do not use third-party advertising or marketing-analytics SDKs" | `/privacy`, `privacy-policy.md` | Keep the no-advertising promise, and add that WanderBunnies runs **first-party** product analytics, only with opt-in consent. |
+| "We do not access your device's … camera, photo library" | `/privacy`, `privacy-policy.md` | Verify against the share-intent and blog-media permissions (Finding 7) and rewrite to describe actual access ("only photos/videos you choose to share or upload"). |
+| "not directed at children under 13" | `/privacy`, `privacy-policy.md` | Accounts require age 16+. Travelers under 16 can be listed by an adult but are never analytics subjects. |
+| Legal-basis row "Use optional analytics, advertising, or non-essential cookies — Consent, where required" | `privacy.html` | Replace with explicit rows: product analytics (consent), detailed diagnostics (consent), cost metering and quotas (contract/legitimate interests), security logs and server error monitoring (legitimate interests), billing records (legal obligation). |
+| "Device, usage, and security data … diagnostic telemetry" | `privacy.html` | Split into necessary technical data and optional analytics/diagnostics, and add push notification tokens (purpose, encryption, deleted on logout/account deletion). |
+| Retention section (criteria only) | All | Add the approved schedule (raw events 90 days, daily facts 13 months, diagnostics 30 days, aggregates 25 months), published only once configured and tested. |
+
+New sections to add:
+
+1. **Product analytics**: what is collected (feature views, task outcomes, session timing, platform/app version/browser family, trip phase derived from trip dates, never location), the pseudonymous account linkage (still personal data), and that it is off unless you opt in.
+2. **Your privacy choices**: the two switches, where to find them (Account → Privacy, `/privacy-choices`), withdrawal at any time, GPC/DNT honored as refusal, and no loss of features or price difference for refusing.
+3. **Rights**: access/export, correction, deletion (account and analytics-only), restriction, objection (including to legitimate-interest processing), portability, complaint to a supervisory authority, the US-state appeal process, response times (1 month GDPR / 45 days CCPA), and how to submit (in-app, web page, email).
+4. **Recipients and transfers**: Google Cloud/Firebase, Sentry, AI providers, email providers. Transfer mechanism per provider (adequacy, EU–US Data Privacy Framework, or SCCs) and a link to the subprocessor list.
+5. **What we don't do**: no sale/sharing for cross-context advertising, no advertising IDs, no fingerprinting, no session replay, no GPS, no use of Gmail or Plaid content for analytics (keep the existing Google Limited Use and Plaid sections word-for-word unless reviewed).
+6. **Changes to this notice**: a material change to analytics purposes bumps the notice version and asks for consent again; an unchanged choice is never assumed.
+
+`app/public/cookies.html` gets one row per storage key, each with name, purpose, necessary/optional, duration, and operator:
+- consent record (necessary, until changed)
+- analytics session ID (optional, 30 minutes of inactivity)
+- in-memory queue (no persistent storage)
+- Sentry SDK storage (optional, cleared on withdrawal)
+
+It also gets a "Manage preferences" control that opens the same choices as `/privacy-choices`.
+
+`app/public/privacy-choices.html` and `app/public/delete-account.html` must:
+- name the app and the operator
+- work while signed out
+- generate no optional analytics
+- link back to the canonical policy
+
+`delete-account.html` also states what is deleted, what is retained and why (billing/legal, consent evidence), identity verification, and timing.
+
+### 4. Mobile Store Compliance Tasks
+
+| Task | Change | Verification |
+|---|---|---|
+| iOS privacy manifest | Add `ios.privacyManifests` to `expo.config.shared.cjs`: `NSPrivacyTracking: false`; `NSPrivacyCollectedDataTypes` for product interaction, user ID, device ID, crash and performance data (linked, not tracking, with purposes); `NSPrivacyAccessedAPITypes` for the reasons the build actually reports. | Xcode **Privacy Report** from the archived EAS production build; reconcile against the SDK manifests from React Native, Expo, and Sentry. |
+| iOS App Privacy labels | Update App Store Connect to match the manifest and the policy. Optional collection is still declared. | Reviewer notes in `docs/app-store-review-packet.md` with screenshots of the consent sheet and Account → Privacy. |
+| ATT | No prompt and no `NSUserTrackingUsageDescription`. | Proxy capture of a release build shows no IDFA access and no third-party tracking domains. |
+| Android AD_ID | Add `android.blockedPermissions: ['com.google.android.gms.permission.AD_ID']`. | Inspect the merged `AndroidManifest.xml` from the EAS build. Play Console advertising-ID declaration: No. |
+| Play Data safety | Update data types, purposes, optionality, encryption in transit, and deletion. Add the `/delete-account.html` URL. | Form answers stored in the review packet and diffed against the analytics registry metadata at each release. |
+| Disclosure drift check | CI test that every registry event's consent category maps to a declared store data type. | Fails the build when a new event category is added without a disclosure update. |
+
+---
+
+## Phase 5: Reporting, Admin Dashboards, and Analysis
+
+**Owners:** Product Lead, Backend Lead, Frontend Lead. Depends on Phase 1–4.
+
+- Add **Analytics** section to `AdminTab` with 5 aggregate views: Feature Adoption, Cost, Reliability, Platform Mix, Trip-Phase Engagement.
+- Reuse admin components and RBAC; endpoints under `/api/admin/analytics/*`.
+- Metric calculations in `server/src/analytics/metrics/` shared by API and CSV export.
+- Cohort suppression (<10 users) on all views and exports.
+- Scheduled export of suppressed aggregate rollups to CSV in Cloud Storage for ad-hoc analysis. No BigQuery for now (decision 9).
+
+### Phase 5 implementation record (October 8, 2026; not yet deployed)
+
+**Metric definitions (`server/src/analytics/metrics/index.ts`, `METRIC_VERSION = 'v1'`).** Pure functions over stored events, shared by the API and the CSV export so the two cannot disagree. They produce:
+- **feature adoption:** reach, meaningful adoption (confirmed server outcomes), repeat use (views on two or more days), and per-task failure and cancel rates;
+- **platform mix:** web-only, native-only and both-platform cohorts, accounts and sessions per platform, and app versions;
+- **trip-phase engagement:** accounts and events per phase, during-trip engagement over traveler–trip pairs, and how often each time-zone fallback level was used.
+
+The rules that apply to every view:
+- **Population:** consenting active accounts. Admin and internal-canary traffic is excluded. Each report states that it covers consenting users only.
+- **Suppression:** every distinct-account count under 10 is returned as `null`, and any rate built on a suppressed count is `null` too. Zero is shown, because it reveals no one.
+- **No differencing filters:** only fixed 7, 30 or 90-day windows are offered.
+- **Correct aggregation:** distinct counts are computed directly over the window and rates from their own numerators and denominators. Daily uniques are never summed and averages are never averaged.
+
+**Reports (`server/src/analytics/reportService.ts`).** Computed on demand from the 90-day raw store (at most 50,000 events per report) and cached for 10 minutes.
+- **Deviation from the plan's precomputed rollups,** made deliberately at canary volume: there's no rollup store to erase or expire, and no extra job.
+- **Metadata on every report:** definitions, window, UTC timezone, events scanned, `truncated`, freshest event, metric version, minimum cohort, and notes.
+- **When to move to daily rollups:** when `truncated` appears, or when report time exceeds the 2 s budget.
+
+**Endpoints (admin RBAC):**
+- `GET /api/admin/analytics/report?days=7|30|90`;
+- `GET /api/admin/analytics/reliability?days=…`: server latency histograms (this instance), provider attempt failure rates from the cost ledger, and client task failure rates. Client readiness timings stay in Sentry.
+- `GET /api/admin/analytics/export.csv?days=…&view=adoption|platform|trip_phase`: CSV with a commented metadata header and blank suppressed cells, audited as `ANALYTICS_REPORT_EXPORTED`.
+- The **Cost** view reuses `GET /api/admin/costs/ledger`.
+
+**Scheduled export.** The daily `analyticsCsvExport` step in the lease-guarded retention tick writes the 30-day suppressed CSVs to `gs://$ANALYTICS_EXPORT_BUCKET/analytics-exports/YYYY-MM-DD/`. It does nothing until that environment variable is set.
+
+**UI.** Admin → **Analytics** (`app/components/admin/AnalyticsSection.tsx`) has the five views (Feature adoption, Cost, Reliability, Platform mix, Trip phase) and the 7/30/90-day windows. It shows definitions, population, freshness and truncation on every view, renders suppressed values as "—", and offers CSV download.
+
+**Tests:**
+- `server/__tests__/analytics-reports.test.ts` (8): suppression boundary and propagation, adoption/repeat/exclusion math, task cohorts, platform cohorts, during-trip pairs, CSV format, admin-only access and fixed windows, report/reliability/CSV with audit.
+- `app/tests/adminAnalyticsSection.test.tsx` (3).
+
+**Not done yet**
+- **Eligibility-aware denominators.** These would cover feature flags, tier access and traveler role; adoption currently uses all consenting active accounts.
+- **Expected-trip denominator for during-trip engagement.** The rate currently counts only trips with some activity. A version counting every scheduled trip whose travelers consented needs a trips join.
+- **Daily rollups** once volume requires them.
+- **Activation, collaboration, retention, AI value and monetization views.** Add these after the first five are trusted.
+
+---
+
+## Phase 6: Rollout Readiness
+
+**Owners:** Backend Lead, Frontend Lead, Operations. Depends on Phases 0–5.
+**Status:** Implemented October 8, 2026 (not yet deployed).
+
+**Canary targeting (`server/src/analytics/rolloutService.ts`).** A per-purpose rollout for product analytics and detailed diagnostics, stored in admin settings `ANALYTICS_ROLLOUT_PRODUCT` / `ANALYTICS_ROLLOUT_DIAGNOSTICS`.
+- **Modes:** `off`, `internal` (admins and internal canary accounts; the default when unset), `percentage` (stable SHA-256 bucket of the account and purpose, so increasing the percentage only adds people), or `all`.
+- **The feature flags remain the global kill switches.** A purpose is offered only when its flag, rollout membership and, if set, the region rule all allow it.
+- **Choices follow the rollout.** `productCollectionEnabled` / `diagnosticsCollectionEnabled` in the privacy status reflect it, so out-of-cohort users aren't offered the switch, and an opt-in through the API is refused (`PRIVACY_PURPOSE_UNAVAILABLE`).
+- **`excludeEurope`** (on by default) keeps collection off for devices whose time zone is in Europe (`Europe/*`, plus the EU/EEA Atlantic and Cyprus zones and legacy aliases) or unknown, until counsel resolves the Art. 27 question.
+  - Privacy-status requests carry `X-Device-Timezone`, and each event carries `device_timezone` (rejected as `region_excluded`).
+  - Server outcome events have no device zone, so they use the pseudonym's last-seen zone (new column `analytics_subjects.last_device_timezone`, migration `20261011`). If none is known, the event is dropped.
+  - A time zone is a deliberately conservative proxy for location, not a geolocation.
+- **Admin:**
+  - `GET /api/admin/analytics/rollout` shows both purposes and their flags.
+  - `PUT /api/admin/analytics/rollout/:purpose` requires a reason and is audited as `ADMIN_SETTING_UPDATED`.
+  - Admin → Analytics → **Rollout** tab.
+
+**Release gate.** `npm run check:analytics-release` (`scripts/analytics-release-gate.mjs`) checks:
+- legal page drift and analytics registry drift;
+- that the analytics, diagnostics and age-gate flags seed off and are fail-closed;
+- the iOS privacy manifest and Android `AD_ID` block;
+- that the privacy migrations are present;
+- the privacy notice's required phrases;
+- that the unauthenticated login routes are removed.
+
+It also lists the open manual items from the follow-ups §0–4. `--strict` fails while any remain. All automated checks now pass, including the unauthenticated-route check, since those routes were removed (Phase 7 addendum).
+
+**Staging smoke test.** `npm run smoke:analytics -- --confirm` (`scripts/analytics-smoke.mjs`) runs rollout read → offered → opt-in → ingest → report/reliability → delete analytics data → export, against a deployed environment with a dedicated test account.
+
+**Runbook.** [docs/analytics-runbook.md](../analytics-runbook.md) covers:
+- controls and how fast each takes effect;
+- pre-step checks and the rollout ladder (internal → 5% → 25% → all, with Europe excluded until counsel signs off);
+- the signals to watch;
+- incident procedures: wrong collection with the 72-hour breach assessment, consent not respected, failed deletions, cost overrun, and rollback;
+- the routine cadence.
+
+**Tests:**
+- `server/__tests__/analytics-rollout.test.ts` (9): config validation, bucket stability and uniformity, the region rule, internal/percentage/off/kill-switch behavior, Europe exclusion across status, opt-in, ingest and server events, the admin API and audit, and the **end-to-end journey**: 10 consenting travelers → client and server events → admin report → one withdraws (403) → erases (subject gone, report drops) → retention purges the rest.
+- `app/tests/adminAnalyticsSection.test.tsx` (+1, the Rollout tab).
+- Existing consent and ingest suites now put test users in the cohort explicitly.
+
+---
+
+## Phase 7: Closing the Phase 2–5 Leftovers
+
+**Status:** Implemented October 8, 2026 (not yet deployed).
+
+**Instrumentation**
+- **`item_saved`:** `server/src/analytics/itemSavedTracker.ts` is mounted on the transfers/flights, lodgings, activities, car-rentals and expenses routers. After a 2xx create (`POST /`) or update (`PUT|PATCH /:id`), it queues `item_saved` with the item type, whether it was created, and the request's trip. No handler code changed. Failed requests and deeper paths record nothing.
+- **`invite_accepted`:** now also recorded for trip-share invites (both accept routes) and follow codes (first follow only).
+- **Client events:**
+  - `map_link_opened` from the trip map links and the creation wizard;
+  - `report_exported` for the paid and incurred cost-report CSVs;
+  - `task_started` / `task_failed` (validation, network or server) for trip creation in the wizard;
+  - `engaged_session_summary` once per session on background or hidden, with the foreground duration bucket and the number of features viewed.
+
+**Trip time zone (decision 5)**
+- **Lookup.** `server/src/services/tripTimezoneService.ts` resolves a trip's IANA zone **offline**, using `@photostructure/tz-lookup` (CC0, no network or cost). The source is the arrival airport coordinates of the trip's earliest transfer. The result is stored in the new `trips.timezone` column (migration `20261012`) and cached.
+- **Use in classification.** Ingest and server events now classify phase as trip zone → device zone. Server events use the pseudonym's last-seen device zone as the fallback.
+- **Placeholder fixed.** `ensureLodgingLocation` used to write `ianaTimezone: 'UTC'` and 0,0 coordinates for every lodging, which looked valid but was wrong. It now writes null, so lodgings aren't used as a source until a real Places integration provides coordinates.
+
+**Disclosure drift check.** `app/tests/storePrivacyConfig.test.ts` maps every registry consent purpose to the App Store data types it requires. It fails unless the iOS manifest declares them (linked, not tracking, with the Analytics purpose) and the review packet lists them. It also enforces that every registry property is an enum, boolean or bounded integer.
+
+**Eligibility in reports.** Features gated by a global flag are marked `available: false` in reports when the flag is off: `car_rentals`, `cost_tracking` (expenses, ledger, cost report), `trip_following`, `trip_sharing`, `trip_creation`, `feature_ingest_manual_upload` and `trip_blog`. Their rates are withheld instead of reported as low adoption, and the admin UI shows "flag off".
+
+**Tests:**
+- `server/__tests__/trip-timezone.test.ts` (4).
+- `analytics-ingest.test.ts` (+2): `item_saved` only on success, and trip-zone classification.
+- `analytics-reports.test.ts` (+1): availability.
+- `app/tests/analyticsTrack.test.tsx` (+1): session summary.
+- `app/tests/storePrivacyConfig.test.ts` (+2): drift check and bounded properties.
+
+**Still not modelled**
+- **Tier and role eligibility** in denominators. That needs a pseudonym → account → tier join; only flags are covered.
+- **Per-segment time zones**, from each transfer's own arrival.
+- **Lodging coordinates.** These need a real Places details integration.
+- **Abandoned item forms.** Item tasks start on submit (see the addendum), so closing an item form without saving isn't counted.
+
+### Phase 7 addendum (October 8, 2026; not yet deployed)
+
+**Unauthenticated login routes removed (security).**
+- `POST /api/auth/email` and `POST /api/auth/oauth` issued a signed 30-day token for any email address, without a password or any OAuth proof. That included admin tokens for the bootstrap admin emails. Both routes and `handleLogin` (`server/src/auth.ts`) are gone. No client called them; Google and Apple use the verified OAuth callbacks.
+- `admin-bootstrap.test.ts` now gets the admin JWT through password login and asserts that all four paths (`/api/auth/*` and the `/api/web-auth/*` aliases) return 404 with no token.
+- **Production keeps the hole until the next deploy.**
+
+**Task instrumentation for imports, invites and edits.** Every event carries only the task, the feature and, on failure, a coarse category. Email addresses, file contents and error text never leave the device.
+- **Helpers in `app/utils/analytics/track.ts`:**
+  - `taskFailure(status)` maps HTTP status to `validation` / `permission` / `quota` / `server` / `network` / `other`.
+  - `startItemSaveTask(feature, editing, tripId)` emits `task_started` (`add_item` or `edit_item`) and returns `failed()` and a `request()` fetch wrapper that reports non-2xx responses and thrown requests.
+- **Imports (`task: import`):**
+  - CSV import for activities and lodging (`CsvTransferControls`): start, cancel (dismissed picker, mapping dialog or review modal), validation failure (parse or mapping) and commit failure.
+  - Document import (`ItineraryDocumentImport`): starts on preview, or on a direct import without one; fails on validation, HTTP status, or a failed or timed-out job.
+  - The Imports tab (file upload and Gmail import), with no trip, because items are assigned to a trip later in review.
+- **Invites (`task: invite`, feature `collaboration`):**
+  - Trip-share invites (`ShareTripModal`).
+  - Group member adds (`App.tsx` `addMemberToGroup`, now with the HTTP status on `MutationResult`).
+  - Outcomes stay server-side as `invite_accepted`.
+- **Item add/edit:**
+  - Transfers: the form, quick add, grid row edits and overview edits.
+  - Activities: the form, the shared `createActivityForTrip`, grid bulk saves (one task per save with updates) and overview edits.
+  - Lodging: once, in the shared `saveLodgingApi`, which covers the form, grid and overview.
+  - Car rentals: the form and overview adds.
+  - Expenses.
+  - Item tasks start **on submit**, so `task_started − task_failed` ≈ attempted saves; `item_saved` stays the authoritative outcome. Wizard-local items aren't item tasks, because they belong to trip creation.
+- **Trip creation:** `task_started` now fires once when the wizard opens, `task_cancelled` on Cancel or the exit confirmation, and `task_failed` on each failed submit, so abandonment is measurable.
+
+**Admin → Privacy Requests** (`app/components/admin/PrivacyRequestsSection.tsx`), over the existing Phase 4 admin API:
+- **Requests tab:**
+  - Lists active requests overdue-first, with a banner.
+  - Filters by status.
+  - Records a new request: type, jurisdiction, channel, date received, an optional account ID (stored only as its hash), notes and a required reason.
+  - Edits status and notes, and applies the one-time statutory extension, with a required reason. Everything is audited server-side.
+- **Erasure jobs tab:** status filter, step progress, failed steps with their errors, and an overdue flag. No raw user IDs are shown.
+- **Not built:** admin-initiated erasure, which is in the follow-ups §7.
+
+**Sign-off preparation.** [docs/legal/analytics-signoff-packet.md](../legal/analytics-signoff-packet.md) contains:
+- the operator confirmation statement, the address confirmation and the EU/UK representative decision options;
+- pointers to the DPIA signature tables;
+- the dictionary sign-off;
+- an operations evidence table (C1–C10) and a per-processor DPA/transfer table (C11);
+- drafts of the version 3.0 user email, the in-app notice and the App Review note for the date-of-birth prompt;
+- the go/no-go checklist for the first canary.
+
+The runbook gained a privacy-rights-request procedure.
+
+**Tests:**
+- `app/tests/analyticsTaskTracking.test.tsx` (7): the failure mapping; the item-save helper including no-consent; invite validation and server failures with no email in the queue; CSV cancel and validation.
+- `app/tests/adminPrivacyRequestsSection.test.tsx` (6): due labels; overdue ordering and the banner; the status filter; create with a required reason and the hashed account; status update with extension; erasure jobs.
+- `server/__tests__/admin-bootstrap.test.ts` (+1, and the oauth test replaced).
+
+---
+
+## Performance Budgets, Cost Model, Maintainability, and Test Coverage
+
+### 1. Performance Budgets
+
+- **Disabled State:** 0 optional requests, 0 analytics writes.
+- **Client `track()`:** p95 < 2 ms; non-blocking in-memory queue.
+- **Server Ingest:** p95 < 200 ms per 20-event batch.
+- **Admin Reports:** p95 < 2 s for 30-day queries reading `analytics_rollups`.
+
+### 2. Cost Model (1,000 Consenting MAU Example)
+
+- **Volume Assumption:** 1,000 MAU × 8 sessions/month × 25 events/session = 200,000 events/month (~10,000 batches).
+- **Postgres Storage:** ~195 MiB/month raw payload (~586 MiB for 90 days retention).
+- **Firestore Operations:** 200,000 document writes/month, precomputed rollup reads, TTL purge deletes.
+- **Sentry:** Only consenting users generate client events, so quota grows with the opt-in rate rather than with MAU. Set explicit `tracesSampleRate` and per-project quotas.
+- **Sensitivity:** Re-run the model at 1×, 5×, and 10× volume with current Postgres, Firestore, Cloud Run job, and Sentry pricing before Phase 2 ships. If Firestore write cost becomes material, the first optimization is storing one document per ingest batch, with rollups computed by the daily job. This trades simpler per-event erasure for about 20× fewer writes.
+- **Cost Cap & Kill Switch:** Approved monthly budget recorded in `cost-model.yaml`. Alerts at 80% and 100% come from a Google Cloud Billing budget plus the Sentry quota alert. Response: reduce sampling first, then turn off the `analytics_collection_enabled` kill switch. Consent changes, rights requests, and required accounting keep working.
+
+### 3. Maintainability
+- Single event registry, Zod schemas, CI drift checks between client, server, and legal pages.
+- Each new event requires a product justification, schema, permission category, retention rule, and PR checklist approval.
+
+### 4. Comprehensive Test Coverage Matrix
+
+| Layer | Required Test Cases | Test File Location |
+|---|---|---|
+| **Pure Utilities** | Registry validation, session caps, trip phase timezone/DST/boundary logic, cost arithmetic, units | `server/__tests__/analytics-registry.test.ts`<br>`trip-phase.test.ts`<br>`app/tests/analyticsSession.test.ts` |
+| **Client (Jest)** | Zero collection before permission, equal reject path, reload/account switch, GPC/DNT handling, Sentry gating, queue overflow, offline expiry | `app/tests/privacyConsent.test.ts`<br>`analyticsTrack.test.ts`<br>`sentry.test.ts`<br>`AccountProfileManagement.test.tsx` |
+| **API (Supertest)** | Auth, spoofing protection, Zod validation, batch caps, deduplication, denied/withdrawn consent, replica synchronization, fail-closed flags, rate limits | `server/__tests__/analytics-ingest.test.ts`<br>`privacy-preferences.test.ts` |
+| **Adapter Parity** | Postgres and Firebase adapter parity, index behavior, transaction safety, lease locking, retention purge, deletion cascades | `analytics-adapter-parity.test.ts` (run in memory + isolated DBs) |
+| **Cost Metering** | `settleProviderAttempt()`, retry/failure pricing, USD microdollar precision, double-record prevention, invoice reconciliation | `openai-usage-accounting.test.ts`<br>`provider-cost-ledger.test.ts` |
+| **Metrics & Telemetry** | Histogram retention, label preservation, process ID generation, `/metrics` export | `metrics.test.ts` |
+| **Reports & Dashboards** | Golden journeys, denominator calculations, late event handling, cohort suppression (<10 users), CSV/UI parity | `analytics-reports.test.ts`<br>`firebase-admin-analytics.test.ts` |
+| **Data Subject Rights** | Export schema v2 completeness, analytics deletion endpoint, full account deletion cascade, tombstone integrity, GCS capture purging | `accountExport.test.ts`<br>`accountDelete.test.ts`<br>`analytics-erasure.test.ts` |
+| **Legal Pages** | Generated HTML matches canonical Markdown, stable alias routing, 200 status verification | `server/__tests__/legal-pages.test.ts` |
+| **Web E2E (Playwright)** | Consent sheet Accept/Reject/Customize, GPC/DNT signal response, zero network calls when rejected, public choices & deletion links | `app/e2e/privacy-consent.test.ts` |
+| **Native Release** | iOS Privacy Manifest, App Store Nutrition Labels, ATT verification, Android Data Safety, `AD_ID` removal, in-app deletion; proxy capture showing zero optional traffic before consent and after withdrawal; startup/background/resume behavior | `docs/app-store-review-packet.md` checklist |
+| **Store Disclosure Drift** | Every registry consent category maps to a declared App Privacy / Data safety type | `server/__tests__/analytics-disclosures.test.ts` |
+| **Load & Failure** | 20-event batches at forecast peak on Postgres and Firestore (emulator plus a staging run); DB/provider outage isolation (travel actions still succeed); queue caps and backoff; replica restart with daily-job leases; client `track()` p95 on reference devices | `app/e2e/performance.test.ts` (extend), `scripts/analytics-load.mjs` |
+
+---
+
+## Rollout and Completion Criteria
+
+1. Merge schemas, privacy controls, and permission-aware Sentry init with collection flags **off**.
+2. Deploy consolidated policy pages (`docs/legal/privacy-policy.md`, `privacy.html`, `privacyPolicyHtml.ts`, `cookies.html`, `privacy-choices.html`, `delete-account.html`).
+3. Update App Store and Google Play disclosures (privacy manifest, App Privacy labels, Data safety, Delete account URL) with the first mobile build that **contains** the collection code, even though collection is still flagged off server-side. Store disclosures cover what a build can collect, not just what a flag currently enables.
+4. Enable `analytics_collection_enabled` for a consenting canary cohort, then scale gradually.
+5. Monitor ingest failure rates, consent enforcement, report freshness, and cost budgets.
+
+The kill switch stops optional producers, ingest admission, and client SDK export. Preference changes, erasure, export, retention jobs, and required accounting keep working. Rollback never drops ledger records or recreates withdrawn or deleted data.
+
+**Done When:** All 5 dashboards are live and trusted; privacy controls are verified across web, iOS, and Android; canonical privacy notices are published across all endpoints; rights and retention jobs are operational; store submission requirements are fulfilled; and test coverage and performance budget evidence is verified.
+
+---
+
+## Phase 0 Decisions (Recorded October 8, 2026)
+
+Ten product choices have been recorded for implementation planning. They are provisional where legal identity, jurisdiction, consent, vendor terms, retention or budget require evidence. The [Phase 0 audit](../analytics-phase-0.md#recorded-decisions-and-sign-off-state) distinguishes verified facts from pending approvals. No recorded choice alone authorizes optional production collection.
+
+| # | Decision | Choice | Rationale | Follow-up |
+|---|---|---|---|---|
+| 1 | Controller/operator and privacy contact | Operator **Tristan Duerk** until Duerk Industries is formally registered, then the company. Single contact **`support@wander-bunnies.com`**, the role address already published on the support, terms and DSA pages (confirmed 2026-10-08; no separate privacy@ mailbox). | A role address survives changes in ownership and staffing, and reusing the published one avoids a second mailbox. | Send/receive test. Replace both personal addresses on every policy page and store listing. Six public pages name Bryan as operator; the Terms change alters the contracting party and needs review before publishing (see the [Phase 0 gates](../analytics-phase-0.md#recorded-decisions-and-sign-off-state)). |
+| 2 | Jurisdictions, representatives, DPO | **EU/EEA and UK are treated as targeted markets for planning.** Representative and DPO applicability remain open legal findings. | The existing notice already targets EU users (GDPR sections, withdrawal form, DSA page). Analytics is designed as first-party opt-in; the scale and core-activity/DPO conclusions require documented legal review. | Art. 27 requires a representative for a non-EU/UK controller targeting those markets unless processing is occasional and low-risk. Record the exemption reasoning in the ROPA. **Complete the Article 27 and UK representative analysis before launch; 1,000 accounts is not a statutory safe harbor.** The privacy policy must not claim a representative exists. |
+| 3 | Retention | Proposed schedule pending purpose-by-purpose approval. **Consent evidence:** account lifetime + 3 years as a review candidate. **Billing records:** 7 years (tax/accounting). **Cost ledger:** user/trip linkage removed after 13 months, keeping feature/provider totals. | Consent records only need to prove past consent, and the user link in cost data is only needed while per-user analysis is useful. | Implement in the Phase 4 purge jobs; publish only after the jobs are tested. **Done 2026-10-08:** 30-day lifecycle rule on the production AI capture bucket. |
+| 4 | Shared-cost allocation | Direct costs → initiating user and trip. Shared infrastructure → **equal split across accounts active that month**, with a **request-volume split** shown alongside for comparison. | Simple, explainable, hard to game. Add complexity only if the two views diverge materially. | Version the rule as `allocation_v1` in `provider_cost_ledger` reports. |
+| 5 | Trip timezone fallback | Add an optional `timezone` (IANA) field to trips, filled automatically from the destination/first lodging via cached Google Places details. Fallback order: segment timezone → trip timezone → **device timezone reported on the event** → `unknown`. | Trips have no timezone today. A traveler's device usually switches to local time, so it is a reasonable proxy. | Schema change in both adapters plus migration; classification in `server/src/utils/tripPhase.ts`. Reports show the share of events classified by each fallback level. |
+| 6 | Reference devices and load baseline | Devices: **mid-range Android** (Pixel 6a or Galaxy A-series), **iPhone 12**, **mobile Safari**, **desktop Chrome**. Load: busiest hour of the last 30 days from Cloud Run request logs, tested at **10×** with modeled analytics batches added. | Flagship phones hide main-thread costs, and the real peak grounds the targets. | Phase 0 Cloud Monitoring baseline: 4,061 requests in the busiest UTC hour of the 30-day interval ending October 8, 2026; target 40,610/hour plus modeled analytics traffic. See the [load baseline](../analytics-phase-0.md#load-baseline). |
+| 7 | Consent re-prompt triggers | Re-ask **only on a material change**: a new purpose, a new data category, or a new recipient category (e.g. adding a third-party analytics vendor). Wording edits never re-prompt. A refusal is **never re-asked** unless such a change occurs. No periodic re-prompt. | Repeated prompts after refusal are a common enforcement finding. | `notice_version` bumps only for material changes, with a changelog entry stating why. |
+| 8 | Processor deletion | **Sentry proposal:** send only a diagnostic pseudonym (never user ID or email) and configure 30-day retention. Publish an expiry claim only after vendor settings and deletion capabilities are verified. **AI providers:** confirm API retention terms, use zero-retention options where eligible, and never put user identifiers in prompts. | The provider deletion capability and data linkage need verification. Short retention and pseudonyms reduce risk but do not automatically satisfy an erasure request. | Set the Sentry project retention, and verify scrubbing in a staging event. Record each AI provider's retention term in the subprocessor list. |
+| 9 | BigQuery | **Not now.** Start with the five admin views plus a scheduled CSV export of suppressed aggregate rollups to Cloud Storage. | Avoids another data store, transfer path, and permission surface. | Revisit when analysts need custom SQL more than about weekly, or admin queries miss the 2 s p95 budget. |
+| 10 | Age gate on all sign-in paths | **Implemented** (see below). | Accounts created through Google/Apple sign-in, and any registration without a date of birth, had no age check, which contradicted the 16+ policy. | Enable `age_gate_enforcement` once app builds with the prompt are the supported minimum. |
+
+### Decision 10 implementation: account age verification
+
+Finding: `validateRegistrationAge` accepted a missing date of birth as "pending", **no client ever sent one**, and the Google (`findOrCreateGoogleUser`) and Apple (`findOrCreateAppleUser`) sign-in paths never called it. So in practice **no sign-up path verified 16+**.
+
+What was built:
+
+| Layer | Change |
+|---|---|
+| DB | `hasUserDateOfBirth` and `setUserDateOfBirth` in `db.postgres.ts` and `db.firebase.ts` (memory adapter inherits), exposed through `db.ts`. A declared date is written once and never overwritten. |
+| Service | `server/src/services/ageVerificationService.ts`: `isAgeVerificationRequired` (positive results cached in-process, bounded at 50k users, so verified users cost no extra queries), `declareDateOfBirth` (an under-16 declaration is **not stored**, for data minimization), and `isAgeGateEnforced`. |
+| API | `GET /api/account/age-verification` → `{ required, enforced, minimumAge }`. `POST /api/account/age-verification` `{ dateOfBirth }` → 200, 400 `INVALID_DATE_OF_BIRTH`, or 403 `UNDER_MINIMUM_AGE`. |
+| Enforcement | `authenticate` in `server/src/auth.ts` returns 403 `AGE_VERIFICATION_REQUIRED` for unverified accounts when the **`age_gate_enforcement`** flag is on. Allowlisted: age-verification status/declaration, password setup, data export, and account deletion. The flag is **default off and fail-closed**, so app builds from before the prompt are not locked out. |
+| Client | `app/components/AgeVerificationDialog.tsx`, shown after sign-in (web, iOS, Android) for any account not yet verified, unless the iOS shortcut below verifies it first. It is a neutral age screen that doesn't reveal the threshold before entry and can't be dismissed. An under-16 result offers **Delete my account** or **Sign out**. Trip data loads only after verification. |
+| iOS shortcut (Apple Declared Age Range) | On iOS 26+, before showing the prompt, `app/utils/appleAgeRange.ts` asks Apple, through `expo-age-range` with a single age gate at 16, whether the Apple Account is 16+. If Apple confirms, the client calls `POST /api/account/age-verification/apple` `{ lowerBound }`. The server stores only `age_verification_source = 'apple_declared_age_range'` plus `age_verified_at`, with **no birthdate**, and the prompt is skipped. A decline, under 16, "not available", older iOS, Android, web, a build without the entitlement, or any error falls back to the date-of-birth prompt. A lower bound under 16, missing, or not an integer gets 400 `AGE_RANGE_NOT_CONFIRMED`, which also falls back. |
+| Verification record | New `users.age_verification_source` (`self_declared_dob` or `apple_declared_age_range`) and `age_verified_at` columns (migration `20261008_add_age_verification_source.sql`; Firebase fields `ageVerificationSource` / `ageVerifiedAt`). The first verification is never overwritten. The gate treats either a date of birth or a source as verified. |
+| Tests | `server/__tests__/age-verification.test.ts` (17 cases: status, invalid/future dates, 16th-birthday boundary, under-age not stored, Apple bounds 16/18/21 accepted without a birthdate, under-16/missing/non-integer/string rejected, enforcement on/off, allowlist, self-deletion), `app/tests/AgeVerificationDialog.test.tsx`, and `app/tests/appleAgeRange.test.ts` (never calls Apple on web, Android, iOS < 26, or without the entitlement flag; decline, below-minimum, and unavailable fall back; server rejection falls back). |
+
+**Apple shortcut setup and caveats:**
+- **Enable per build:**
+  1. Turn on the **Declared Age Range** capability on the App ID in the Apple Developer portal. Capability auto-sync is disabled for this app (`EXPO_NO_CAPABILITY_SYNC`), so this is manual.
+  2. Set `APPLE_DECLARED_AGE_RANGE_ENABLED=1` for the EAS build. That adds the `com.apple.developer.declared-age-range` entitlement and `extra.appleDeclaredAgeRangeEnabled`.
+
+  Without both, the app always uses the prompt.
+- **Xcode 26:** `expo-age-range` imports Apple's `DeclaredAgeRange` framework, so iOS builds must use an Xcode 26+ EAS image. Confirm the image before the next iOS build.
+- **Alpha package:** `expo-age-range` 0.2.x is marked alpha by Expo. Re-check its API on each Expo SDK upgrade, and test on a physical device signed in to an Apple Account (simulators are unreliable).
+- **iOS < 26 must stay guarded:** on iOS < 26 and web, `expo-age-range` returns `lowerBound: 18` without asking anyone. The wrapper's iOS 26+ check prevents that from verifying users, and a test covers it.
+- **Android excluded:** the package is excluded from Android autolinking (`expo.autolinking.android.exclude` in both `package.json` files), so Google Play Age Signals is not bundled. Android uses the prompt.
+- **Same trust level as the prompt:** Apple provides no server-verifiable attestation for the range, so this is a client assertion, like a typed date of birth. The difference is that the age comes from the Apple Account (self- or guardian-declared, and sometimes confirmed by Apple).
+- **Disclosures:** the privacy policy should say that on iOS, age may be confirmed through Apple's age-range feature, and that only the fact "16+ confirmed via Apple" is stored. The App Privacy answers are unchanged, since no birthdate or range is collected.
+
+Rollout:
+1. Ship the server and the client prompt with the flag off. Existing and new users are prompted on their next sign-in.
+2. Once the minimum supported native build includes the prompt, turn on `age_gate_enforcement`.
+3. Then tighten registration to require `dateOfBirth`, adding the field to the registration form.
+
+Known limits:
+- Self-declared age gates can be circumvented by entering a false date. This matches common practice and the policy's "we do not knowingly" standard.
+- Under-age accounts that neither delete nor sign out stay blocked once enforcement is on. A scheduled purge of accounts that stay unverified (e.g. 30 days after enforcement) is a follow-up.
+
+Apple's guidelines forbid *forcing* extra account-creation steps after Sign in with Apple (this exact issue caused a past rejection over password setup). Collecting a date of birth for a legal age requirement is a different case, but explain it in the App Review notes.

@@ -1,4 +1,5 @@
 import { formatDateLong } from '../utils/formatDateLong';
+import { startItemSaveTask } from '../utils/analytics/track';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -208,7 +209,9 @@ export const saveLodgingApi = async (
 ): Promise<{ ok: boolean; error?: string }> => {
   const url = lodgingId ? `${backendUrl}/api/lodgings/${lodgingId}` : `${backendUrl}/api/lodgings`;
   const method = lodgingId ? 'PUT' : 'POST';
-  const res = await fetch(url, {
+  // Shared by the lodging form, the grid's inline edits and the overview, so tracked once here.
+  const saveTask = startItemSaveTask('lodging', Boolean(lodgingId), payload?.tripId ?? null);
+  const res = await saveTask.request(url, {
     method,
     headers: jsonHeaders,
     body: JSON.stringify(payload),

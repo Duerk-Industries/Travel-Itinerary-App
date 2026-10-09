@@ -48,7 +48,7 @@ describe('GET /api/account/export', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(res.body.schemaVersion).toBe(1);
+    expect(res.body.schemaVersion).toBe(2);
     expect(typeof res.body.exportedAt).toBe('string');
     expect(res.body.user.id).toBe(userId);
     expect(res.body.user.profile?.email).toBe(EMAIL);

@@ -262,6 +262,11 @@ export type AuditAction =
   | 'BILLING_CONFIG_UPDATED'
   | 'BILLING_PRICE_PUBLISHED'
   | 'BILLING_RECONCILIATION_RUN'
+  | 'PROVIDER_INVOICE_RECORDED'
+  | 'PRIVACY_RIGHTS_REQUEST_CREATED'
+  | 'PRIVACY_RIGHTS_REQUEST_UPDATED'
+  | 'PRIVACY_ERASURE_REQUESTED'
+  | 'ANALYTICS_REPORT_EXPORTED'
   | 'RETENTION_TICK_RUN'
   | 'ITINERARY_CACHE_PREPOPULATE_RUN'
   | 'DEPLOY_CUTOVER'
@@ -1144,4 +1149,185 @@ export interface BillingPriceHistory {
   createdBy: string | null;
   createdAt: string;
   retiredAt: string | null;
+}
+/** Server-owned, per-account choices. Null means the purpose has never been answered. */
+export interface PrivacyPreferences {
+  userId: string;
+  productAnalytics: boolean | null;
+  optionalDiagnostics: boolean | null;
+  productEpoch: number;
+  diagnosticsEpoch: number;
+  diagnosticPseudonym: string | null;
+  revision: number;
+  noticeVersion: string | null;
+  productNoticeVersion: string | null;
+  diagnosticsNoticeVersion: string | null;
+  updatedAt: string | null;
+}
+
+export interface PrivacyPreferenceUpdate {
+  revision: number;
+  productAnalytics?: boolean;
+  optionalDiagnostics?: boolean;
+  platform: 'web' | 'ios' | 'android';
+  productNoticeVersion: string;
+  diagnosticsNoticeVersion: string;
+}
+
+/**
+ * One settled outbound provider attempt (docs/implementation-plans/analytics-upgrade.md Phase 3).
+ * Written once per attempt ID; a replayed settlement is ignored so spend is never counted twice.
+ * `estimatedCostMicros` null means the price was unknown at settlement time — never treat it as $0.
+ */
+export interface ProviderCostLedgerEntry {
+  attemptId: string;
+  occurredAt: string;
+  windowKey: string;
+  provider: string;
+  model: string | null;
+  caller: string | null;
+  featureKey: string | null;
+  userId: string | null;
+  tripId: string | null;
+  attribution: 'user' | 'system';
+  unitType: 'tokens' | 'request';
+  promptTokens: number;
+  completionTokens: number;
+  requestUnits: number;
+  cacheStatus: 'none' | 'hit' | 'miss';
+  outcome: 'success' | 'failed';
+  costStatus: 'estimated' | 'unknown' | 'not_billable';
+  estimatedCostMicros: number | null;
+  priceVersion: string | null;
+}
+
+/** Monthly provider invoice figures entered by an admin for reconciliation against the ledger. */
+export interface ProviderInvoiceRecord {
+  provider: string;
+  windowKey: string;
+  invoicedMicros: number;
+  creditsMicros: number;
+  currency: string;
+  /** USD per unit of `currency`; 1 for USD. Applied to both amounts when reconciling. */
+  fxRateToUsd: number;
+  notes: string | null;
+  recordedBy: string | null;
+  recordedAt: string;
+}
+
+/** Durable single-holder lease plus cursor for scheduled jobs running on several replicas. */
+export interface JobLease {
+  name: string;
+  holder: string;
+  expiresAt: string;
+  cursor: string | null;
+}
+
+// ── Privacy rights and retention (analytics Phase 4) ─────────────────────────
+
+export type ErasureScope = 'analytics' | 'account';
+
+export interface ErasureTombstone {
+  subjectHash: string;
+  scope: ErasureScope;
+  erasedAt: string;
+}
+
+export type ErasureStepState = {
+  status: 'pending' | 'done' | 'failed' | 'not_applicable';
+  affected?: number | null;
+  note?: string;
+  error?: string;
+};
+
+export interface PrivacyErasureJob {
+  id: string;
+  subjectHash: string;
+  /** Present until the job completes, so retries can act on the account's rows. */
+  userId: string | null;
+  scope: ErasureScope;
+  status: 'pending' | 'completed' | 'failed';
+  steps: Record<string, ErasureStepState>;
+  attempts: number;
+  lastError: string | null;
+  requestedBy: 'user' | 'admin' | 'system';
+  requestedAt: string;
+  dueAt: string;
+  completedAt: string | null;
+}
+
+export type PrivacyRightsRequestType =
+  | 'access' | 'rectification' | 'erasure' | 'restriction' | 'objection' | 'portability' | 'opt_out' | 'appeal';
+export type PrivacyJurisdiction = 'GDPR' | 'UK_GDPR' | 'CCPA' | 'US_STATE' | 'OTHER';
+
+export interface PrivacyRightsRequest {
+  id: string;
+  requestType: PrivacyRightsRequestType;
+  jurisdiction: PrivacyJurisdiction;
+  channel: 'email' | 'web' | 'in_app' | 'other';
+  status: 'open' | 'verifying' | 'in_progress' | 'completed' | 'rejected';
+  receivedAt: string;
+  dueAt: string;
+  extended: boolean;
+  /** HMAC of the account ID when the requester is a known account; never the raw ID or email. */
+  subjectHash: string | null;
+  notes: string | null;
+  createdBy: string | null;
+  updatedAt: string;
+  closedAt: string | null;
+}
+
+export interface PrivacyChoiceEventRecord {
+  purpose: string;
+  granted: boolean;
+  epoch: number;
+  revision: number;
+  noticeVersion: string;
+  platform: string;
+  occurredAt: string;
+}
+
+export interface UserAgeVerificationRecord {
+  dateOfBirth: string | null;
+  source: string | null;
+  verifiedAt: string | null;
+}
+
+/** Export view of user-linked itinerary generation telemetry (no stage payloads). */
+export interface UserItineraryMetricSummary {
+  generationId: string;
+  tripId: string | null;
+  provider: string;
+  model: string;
+  outcome: string;
+  createdAt: string;
+}
+
+// ── Product analytics store (analytics Phase 2) ─────────────────────────────
+
+/** One accepted, server-enriched product analytics event. Never contains account IDs or raw trip IDs. */
+export interface AnalyticsEventRecord {
+  id: string;
+  eventId: string;
+  subjectId: string;
+  purposeEpoch: number;
+  eventName: string;
+  family: string;
+  source: 'client' | 'server';
+  feature: string | null;
+  platform: string;
+  appVersion: string;
+  sessionId: string | null;
+  /** Keyed hash of the trip ID; restricted personal data, never the raw ID. */
+  tripRef: string | null;
+  tripPhase: string;
+  timezoneSource: string;
+  dateVersion: string | null;
+  properties: Record<string, string | number | boolean>;
+  schemaVersion: number;
+  /** Set for admins and internal canary accounts; such events are kept out of product reports. */
+  excludedReason: string | null;
+  occurredAt: string;
+  receivedAt: string;
+  expiresAt: string;
 }

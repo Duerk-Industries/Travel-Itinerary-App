@@ -1,4 +1,20 @@
 // server/src/db.ts
+import type {
+  AnalyticsEventRecord,
+  ErasureScope,
+  ErasureTombstone,
+  JobLease,
+  PrivacyChoiceEventRecord,
+  PrivacyErasureJob,
+  PrivacyPreferences,
+  PrivacyPreferenceUpdate,
+  PrivacyRightsRequest,
+  ProviderCostLedgerEntry,
+  ProviderInvoiceRecord,
+  UserAgeVerificationRecord,
+  UserItineraryMetricSummary,
+} from './types';
+import { scrubIdentity } from './utils/scrubIdentity';
 import { Pool, PoolClient } from 'pg';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
@@ -281,7 +297,8 @@ function getPool(): Pool {
           return value.split(find).join(replaceWith);
         },
       });
-      db.public.registerFunction({ name: 'uuid_generate_v4', args: [], returns: DataType.uuid, implementation: () => randomUUID() });
+      // impure: without it pg-mem may evaluate the call once and reuse the same UUID for every row.
+      db.public.registerFunction({ name: 'uuid_generate_v4', args: [], returns: DataType.uuid, implementation: () => randomUUID(), impure: true });
       PoolFactory = pgMem.Pool;
     }
 
@@ -479,6 +496,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_internal_canary BOOLEAN NOT NULL DEFAULT FALSE;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_verification_source TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_verified_at TIMESTAMPTZ;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_normalized ON users(username_normalized);`);
 
 
@@ -1561,6 +1580,7 @@ export const initDb = async (): Promise<void> => {
     ['trip_sharing',            'Share trips with other users',       true],
     ['trip_following',          'Follow trips as read-only observer', true],
     ['cost_tracking',           'Expense and cost tracking',          true],
+    ['receipt_scanning',        'Scan receipt images into expenses',  true],
     ['multiple_groups',         'Create more than one group',         true],
     ['trip_creation',           'Create new trips',                   true],
     ['itinerary_document_import', 'Import itinerary documents',       true],
@@ -1588,13 +1608,16 @@ export const initDb = async (): Promise<void> => {
     ['free', 'trip_sharing', true],
     ['free', 'trip_following', true],
     ['free', 'cost_tracking', true],
+    ['free', 'receipt_scanning', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['free', 'itinerary_document_import', false],
     ['premium', 'itinerary_document_import', true],
     ['pro', 'itinerary_document_import', true],
     ['premium', 'cost_tracking', true],
+    ['premium', 'receipt_scanning', true],
     ['pro', 'cost_tracking', true],
+    ['pro', 'receipt_scanning', true],
   ];
   for (const [tierKey, featureKey, isAllowed] of tierEntitlementSeeds) {
     if (!tierIdCache[tierKey]) {
@@ -1638,7 +1661,7 @@ export const initDb = async (): Promise<void> => {
   }
 
   // Seed feature flags
-  for (const key of ['ai_itinerary_generation', 'csv_export', 'car_rentals', 'trip_sharing', 'trip_following', 'cost_tracking', 'multiple_groups', 'trip_creation']) {
+  for (const key of ['ai_itinerary_generation', 'csv_export', 'car_rentals', 'trip_sharing', 'trip_following', 'cost_tracking', 'receipt_scanning', 'multiple_groups', 'trip_creation']) {
     await p.query(
       `INSERT INTO feature_flags (id, key, enabled) VALUES ($1, $2, true) ON CONFLICT (key) DO NOTHING`,
       [randomUUID(), key]
@@ -2643,6 +2666,46 @@ export const isPasswordSetupRequired = async (userId: string): Promise<boolean> 
     [userId]
   );
   return Boolean(rows[0]?.passwordSetupRequired);
+};
+
+export const hasUserDateOfBirth = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ dateOfBirth: unknown }>(
+    `SELECT date_of_birth as "dateOfBirth" FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  return rows[0]?.dateOfBirth != null;
+};
+
+/** Records a declared date of birth once; an already-declared value is never overwritten. */
+export const setUserDateOfBirth = async (userId: string, dateOfBirth: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE users SET date_of_birth = COALESCE(date_of_birth, $2::date) WHERE id = $1`,
+    [userId, dateOfBirth]
+  );
+};
+
+/** True when the account has confirmed 16+ by any method (declared date of birth or Apple age range). */
+export const isUserAgeVerified = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ dateOfBirth: unknown; source: string | null }>(
+    `SELECT date_of_birth as "dateOfBirth", age_verification_source as "source" FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  return rows[0]?.dateOfBirth != null || Boolean(rows[0]?.source);
+};
+
+/** Records how 16+ was first confirmed; a later confirmation never overwrites the original. */
+export const recordUserAgeVerification = async (userId: string, source: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE users
+        SET age_verification_source = COALESCE(age_verification_source, $2),
+            age_verified_at = COALESCE(age_verified_at, NOW())
+      WHERE id = $1`,
+    [userId, source]
+  );
 };
 
 export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
@@ -10203,6 +10266,105 @@ export const upsertFeature = async (key: string, description: string, defaultEna
   );
 };
 
+const emptyPrivacyPreferences = (userId: string): PrivacyPreferences => ({
+  userId, productAnalytics: null, optionalDiagnostics: null, productEpoch: 0,
+  diagnosticsEpoch: 0, diagnosticPseudonym: null, revision: 0,
+  noticeVersion: null, productNoticeVersion: null, diagnosticsNoticeVersion: null, updatedAt: null,
+});
+
+const mapPrivacyPreferences = (userId: string, row?: Record<string, any>): PrivacyPreferences => row ? ({
+  userId,
+  productAnalytics: row.product_analytics,
+  optionalDiagnostics: row.optional_diagnostics,
+  productEpoch: Number(row.product_epoch),
+  diagnosticsEpoch: Number(row.diagnostics_epoch),
+  diagnosticPseudonym: row.diagnostic_pseudonym,
+  revision: Number(row.revision),
+  noticeVersion: row.notice_version,
+  productNoticeVersion: row.product_notice_version,
+  diagnosticsNoticeVersion: row.diagnostics_notice_version,
+  updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+}) : emptyPrivacyPreferences(userId);
+
+export const getPrivacyPreferences = async (userId: string): Promise<PrivacyPreferences> => {
+  const { rows } = await getPool().query(`SELECT * FROM privacy_preferences WHERE user_id = $1`, [userId]);
+  return mapPrivacyPreferences(userId, rows[0]);
+};
+
+/** Compare-and-swap and the matching evidence rows commit in one transaction. */
+export const updatePrivacyPreferences = async (userId: string, update: PrivacyPreferenceUpdate): Promise<PrivacyPreferences> => {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO privacy_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+      [userId],
+    );
+    const { rows } = await client.query(`SELECT * FROM privacy_preferences WHERE user_id = $1`, [userId]);
+    const current = mapPrivacyPreferences(userId, rows[0]);
+    if (current.revision !== update.revision) {
+      const error = new Error('Privacy preferences changed; refresh and try again');
+      (error as Error & { code?: string }).code = 'PRIVACY_REVISION_CONFLICT';
+      throw error;
+    }
+    const productAnalytics = update.productAnalytics ?? current.productAnalytics;
+    const optionalDiagnostics = update.optionalDiagnostics ?? current.optionalDiagnostics;
+    const productChanged = update.productAnalytics !== undefined &&
+      (productAnalytics !== current.productAnalytics || (productAnalytics && update.productNoticeVersion !== current.productNoticeVersion));
+    const diagnosticsChanged = update.optionalDiagnostics !== undefined &&
+      (optionalDiagnostics !== current.optionalDiagnostics || (optionalDiagnostics && update.diagnosticsNoticeVersion !== current.diagnosticsNoticeVersion));
+    if (!productChanged && !diagnosticsChanged) {
+      await client.query('COMMIT');
+      return current;
+    }
+    const productEpoch = current.productEpoch + Number(productChanged);
+    const diagnosticsEpoch = current.diagnosticsEpoch + Number(diagnosticsChanged);
+    const diagnosticPseudonym = diagnosticsChanged
+      ? (optionalDiagnostics ? randomUUID() : null)
+      : current.diagnosticPseudonym;
+    const result = await client.query(
+      `UPDATE privacy_preferences
+       SET product_analytics = $3, optional_diagnostics = $4,
+           product_epoch = $5, diagnostics_epoch = $6, diagnostic_pseudonym = $7,
+           revision = revision + 1, notice_version = $8,
+           product_notice_version = $9, diagnostics_notice_version = $10,
+           updated_at = NOW()
+       WHERE user_id = $1 AND revision = $2 RETURNING *`,
+      [userId, update.revision, productAnalytics, optionalDiagnostics, productEpoch,
+        diagnosticsEpoch, diagnosticPseudonym,
+        productChanged ? update.productNoticeVersion : (diagnosticsChanged ? update.diagnosticsNoticeVersion : current.noticeVersion),
+        productChanged ? update.productNoticeVersion : current.productNoticeVersion,
+        diagnosticsChanged ? update.diagnosticsNoticeVersion : current.diagnosticsNoticeVersion],
+    );
+    if (!result.rows.length) {
+      const error = new Error('Privacy preferences changed; refresh and try again');
+      (error as Error & { code?: string }).code = 'PRIVACY_REVISION_CONFLICT';
+      throw error;
+    }
+    const next = mapPrivacyPreferences(userId, result.rows[0]);
+    for (const [purpose, changed, granted, epoch] of [
+      ['product_analytics', productChanged, productAnalytics, productEpoch],
+      ['optional_diagnostics', diagnosticsChanged, optionalDiagnostics, diagnosticsEpoch],
+    ] as const) {
+      if (!changed) continue;
+      await client.query(
+        `INSERT INTO privacy_choice_events
+          (id, user_id, purpose, granted, epoch, revision, notice_version, platform)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [randomUUID(), userId, purpose, granted, epoch, next.revision,
+          purpose === 'product_analytics' ? update.productNoticeVersion : update.diagnosticsNoticeVersion, update.platform],
+      );
+    }
+    await client.query('COMMIT');
+    return next;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
   const p = getPool();
   const { rows } = await p.query<{
@@ -12909,4 +13071,592 @@ export const upsertLodgingLocation = async (location: any): Promise<void> => {
        updated_at = NOW()`,
     [location.placeId, location.name, location.address, location.phoneNumber, location.ianaTimezone, location.latitude, location.longitude]
   );
+};
+
+// ── Provider cost ledger, invoice reconciliation and job leases (analytics Phase 3) ──
+
+const toIso = (value: unknown): string =>
+  value instanceof Date ? value.toISOString() : new Date(String(value)).toISOString();
+
+const rowToProviderCostLedgerEntry = (row: Record<string, any>): ProviderCostLedgerEntry => ({
+  attemptId: row.attempt_id,
+  occurredAt: toIso(row.occurred_at),
+  windowKey: row.window_key,
+  provider: row.provider,
+  model: row.model ?? null,
+  caller: row.caller ?? null,
+  featureKey: row.feature_key ?? null,
+  userId: row.user_id ?? null,
+  tripId: row.trip_id ?? null,
+  attribution: row.attribution,
+  unitType: row.unit_type,
+  promptTokens: Number(row.prompt_tokens ?? 0),
+  completionTokens: Number(row.completion_tokens ?? 0),
+  requestUnits: Number(row.request_units ?? 0),
+  cacheStatus: row.cache_status,
+  outcome: row.outcome,
+  costStatus: row.cost_status,
+  estimatedCostMicros: row.estimated_cost_micros == null ? null : Number(row.estimated_cost_micros),
+  priceVersion: row.price_version ?? null,
+});
+
+/** Inserts one attempt; returns false (and changes nothing) when the attempt ID was already settled. */
+export const insertProviderCostLedgerEntry = async (entry: ProviderCostLedgerEntry): Promise<boolean> => {
+  // Plain INSERT + primary-key violation rather than ON CONFLICT DO NOTHING RETURNING:
+  // pg-mem returns the row even on conflict, which would hide replays in tests.
+  try {
+    await getPool().query(
+    `INSERT INTO provider_cost_ledger (
+       attempt_id, occurred_at, window_key, provider, model, caller, feature_key, user_id, trip_id,
+       attribution, unit_type, prompt_tokens, completion_tokens, request_units, cache_status, outcome,
+       cost_status, estimated_cost_micros, price_version)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+    [
+      entry.attemptId, entry.occurredAt, entry.windowKey, entry.provider, entry.model, entry.caller,
+      entry.featureKey, entry.userId, entry.tripId, entry.attribution, entry.unitType, entry.promptTokens,
+      entry.completionTokens, entry.requestUnits, entry.cacheStatus, entry.outcome, entry.costStatus,
+      entry.estimatedCostMicros, entry.priceVersion,
+    ],
+    );
+    return true;
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === '23505' || /duplicate key|unique constraint/i.test(String((err as Error).message))) return false;
+    throw err;
+  }
+};
+
+export const listProviderCostLedgerEntries = async (windowKey: string, limit = 50_000): Promise<ProviderCostLedgerEntry[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM provider_cost_ledger WHERE window_key = $1 ORDER BY occurred_at ASC LIMIT $2`,
+    [windowKey, limit],
+  );
+  return rows.map(rowToProviderCostLedgerEntry);
+};
+
+/** Account deletion: keep the spend (needed for budgets/invoices) but drop the link to the person. */
+export const delinkProviderCostLedgerUser = async (userId: string): Promise<number> => {
+  const result = await getPool().query(
+    `UPDATE provider_cost_ledger SET user_id = NULL, trip_id = NULL WHERE user_id = $1`,
+    [userId],
+  );
+  return result.rowCount ?? 0;
+};
+
+/** Retention: remove user/trip linkage from windows older than `beforeWindowKey` (YYYY-MM, exclusive). */
+export const delinkProviderCostLedgerBefore = async (beforeWindowKey: string): Promise<number> => {
+  const result = await getPool().query(
+    `UPDATE provider_cost_ledger SET user_id = NULL, trip_id = NULL
+      WHERE window_key < $1 AND (user_id IS NOT NULL OR trip_id IS NOT NULL)`,
+    [beforeWindowKey],
+  );
+  return result.rowCount ?? 0;
+};
+
+const rowToProviderInvoiceRecord = (row: Record<string, any>): ProviderInvoiceRecord => ({
+  provider: row.provider,
+  windowKey: row.window_key,
+  invoicedMicros: Number(row.invoiced_micros),
+  creditsMicros: Number(row.credits_micros),
+  currency: row.currency,
+  fxRateToUsd: Number(row.fx_rate_to_usd),
+  notes: row.notes ?? null,
+  recordedBy: row.recorded_by ?? null,
+  recordedAt: toIso(row.recorded_at),
+});
+
+export const upsertProviderInvoiceRecord = async (record: ProviderInvoiceRecord): Promise<ProviderInvoiceRecord> => {
+  const { rows } = await getPool().query(
+    `INSERT INTO provider_invoice_records
+       (provider, window_key, invoiced_micros, credits_micros, currency, fx_rate_to_usd, notes, recorded_by, recorded_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     ON CONFLICT (provider, window_key) DO UPDATE SET
+       invoiced_micros = $3, credits_micros = $4, currency = $5, fx_rate_to_usd = $6,
+       notes = $7, recorded_by = $8, recorded_at = $9
+     RETURNING *`,
+    [
+      record.provider, record.windowKey, record.invoicedMicros, record.creditsMicros, record.currency,
+      record.fxRateToUsd, record.notes, record.recordedBy, record.recordedAt,
+    ],
+  );
+  return rowToProviderInvoiceRecord(rows[0]);
+};
+
+export const listProviderInvoiceRecords = async (windowKey: string): Promise<ProviderInvoiceRecord[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM provider_invoice_records WHERE window_key = $1 ORDER BY provider ASC`,
+    [windowKey],
+  );
+  return rows.map(rowToProviderInvoiceRecord);
+};
+
+const rowToJobLease = (row: Record<string, any>): JobLease => ({
+  name: row.name,
+  holder: row.holder,
+  expiresAt: toIso(row.expires_at),
+  cursor: row.cursor ?? null,
+});
+
+/**
+ * Takes the named lease when it is free or expired (or already held by `holder`).
+ * Race-safe: the conditional UPDATE serializes on the row, and a concurrent
+ * first INSERT loses on the primary key.
+ */
+export const tryAcquireJobLease = async (name: string, holder: string, ttlMs: number): Promise<JobLease | null> => {
+  const p = getPool();
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const updated = await p.query(
+    `UPDATE job_leases SET holder = $2, expires_at = $3
+      WHERE name = $1 AND (expires_at < NOW() OR holder = $2)
+      RETURNING *`,
+    [name, holder, expiresAt],
+  );
+  if (updated.rows.length) return rowToJobLease(updated.rows[0]);
+  try {
+    const inserted = await p.query(
+      `INSERT INTO job_leases (name, holder, expires_at, cursor) VALUES ($1, $2, $3, NULL) RETURNING *`,
+      [name, holder, expiresAt],
+    );
+    return rowToJobLease(inserted.rows[0]);
+  } catch {
+    return null; // another holder owns a live lease
+  }
+};
+
+export const releaseJobLease = async (name: string, holder: string): Promise<void> => {
+  await getPool().query(
+    `UPDATE job_leases SET expires_at = NOW() WHERE name = $1 AND holder = $2`,
+    [name, holder],
+  );
+};
+
+/** Advances the durable cursor; only the current holder may write it. */
+export const setJobLeaseCursor = async (name: string, holder: string, cursor: string): Promise<boolean> => {
+  const result = await getPool().query(
+    `UPDATE job_leases SET cursor = $3 WHERE name = $1 AND holder = $2 RETURNING name`,
+    [name, holder, cursor],
+  );
+  return result.rows.length > 0;
+};
+
+export const getJobLease = async (name: string): Promise<JobLease | null> => {
+  const { rows } = await getPool().query(`SELECT * FROM job_leases WHERE name = $1`, [name]);
+  return rows[0] ? rowToJobLease(rows[0]) : null;
+};
+
+// ── Privacy rights and retention (analytics Phase 4) ─────────────────────────
+
+const isUniqueViolation = (err: unknown): boolean =>
+  (err as { code?: string }).code === '23505' || /duplicate key|unique constraint/i.test(String((err as Error)?.message));
+
+const parseJsonColumn = (value: unknown): any => {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return null; }
+  }
+  return value;
+};
+
+export const listPrivacyChoiceEvents = async (userId: string): Promise<PrivacyChoiceEventRecord[]> => {
+  const { rows } = await getPool().query(
+    `SELECT purpose, granted, epoch, revision, notice_version, platform, occurred_at
+       FROM privacy_choice_events WHERE user_id = $1 ORDER BY occurred_at ASC`,
+    [userId],
+  );
+  return rows.map((row: any) => ({
+    purpose: row.purpose,
+    granted: Boolean(row.granted),
+    epoch: Number(row.epoch),
+    revision: Number(row.revision),
+    noticeVersion: row.notice_version,
+    platform: row.platform,
+    occurredAt: toIso(row.occurred_at),
+  }));
+};
+
+/** Copies the account's consent evidence into the pseudonymous archive (retry-safe). */
+export const archivePrivacyChoiceEvidence = async (userId: string, subjectHash: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, purpose, granted, epoch, notice_version, platform, occurred_at FROM privacy_choice_events WHERE user_id = $1`,
+    [userId],
+  );
+  const archivedAt = new Date().toISOString();
+  let archived = 0;
+  for (const row of rows as any[]) {
+    try {
+      await p.query(
+        `INSERT INTO privacy_consent_evidence_archive
+           (id, subject_hash, purpose, granted, epoch, notice_version, platform, occurred_at, archived_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [String(row.id), subjectHash, row.purpose, row.granted, row.epoch, row.notice_version, row.platform, row.occurred_at, archivedAt],
+      );
+      archived += 1;
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+    }
+  }
+  return archived;
+};
+
+export const purgeConsentEvidenceArchivedBefore = async (beforeIso: string): Promise<number> => {
+  const result = await getPool().query(`DELETE FROM privacy_consent_evidence_archive WHERE archived_at < $1`, [beforeIso]);
+  return result.rowCount ?? 0;
+};
+
+/** New random diagnostics pseudonym, so later Sentry data cannot be joined to earlier data. */
+export const rotateDiagnosticPseudonym = async (userId: string): Promise<number> => {
+  const result = await getPool().query(
+    `UPDATE privacy_preferences SET diagnostic_pseudonym = $2 WHERE user_id = $1 AND diagnostic_pseudonym IS NOT NULL`,
+    [userId, randomUUID()],
+  );
+  return result.rowCount ?? 0;
+};
+
+const delinkMetricRows = async (rows: Array<{ id: string; metrics: unknown }>): Promise<number> => {
+  const p = getPool();
+  for (const row of rows) {
+    const scrubbed = scrubIdentity(parseJsonColumn(row.metrics) ?? {});
+    await p.query(
+      `UPDATE itinerary_generation_metrics SET user_id = NULL, trip_id = NULL, metrics = $2 WHERE id = $1`,
+      [row.id, JSON.stringify(scrubbed)],
+    );
+  }
+  return rows.length;
+};
+
+export const delinkItineraryGenerationMetricsForUser = async (userId: string): Promise<number> => {
+  const { rows } = await getPool().query(`SELECT id, metrics FROM itinerary_generation_metrics WHERE user_id = $1`, [userId]);
+  return delinkMetricRows(rows as any[]);
+};
+
+export const delinkItineraryGenerationMetricsBefore = async (beforeIso: string): Promise<number> => {
+  const { rows } = await getPool().query(
+    `SELECT id, metrics, user_id, trip_id FROM itinerary_generation_metrics WHERE created_at < $1`,
+    [beforeIso],
+  );
+  return delinkMetricRows((rows as any[]).filter((row) => row.user_id != null || row.trip_id != null));
+};
+
+export const listItineraryGenerationMetricsForUser = async (userId: string, limit = 500): Promise<UserItineraryMetricSummary[]> => {
+  const { rows } = await getPool().query(
+    `SELECT generation_id, trip_id, provider, model, outcome, created_at
+       FROM itinerary_generation_metrics WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit],
+  );
+  return (rows as any[]).map((row) => ({
+    generationId: row.generation_id,
+    tripId: row.trip_id ?? null,
+    provider: row.provider,
+    model: row.model,
+    outcome: row.outcome,
+    createdAt: toIso(row.created_at),
+  }));
+};
+
+export const listProviderCostLedgerEntriesForUser = async (userId: string, limit = 5_000): Promise<ProviderCostLedgerEntry[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM provider_cost_ledger WHERE user_id = $1 ORDER BY occurred_at ASC LIMIT $2`,
+    [userId, limit],
+  );
+  return rows.map(rowToProviderCostLedgerEntry);
+};
+
+export const getUserAgeVerificationRecord = async (userId: string): Promise<UserAgeVerificationRecord> => {
+  const { rows } = await getPool().query(
+    `SELECT date_of_birth, age_verification_source, age_verified_at FROM users WHERE id = $1`,
+    [userId],
+  );
+  const row = rows[0] as any;
+  const dob = row?.date_of_birth;
+  return {
+    dateOfBirth: dob == null ? null : dob instanceof Date ? dob.toISOString().slice(0, 10) : String(dob).slice(0, 10),
+    source: row?.age_verification_source ?? null,
+    verifiedAt: row?.age_verified_at ? toIso(row.age_verified_at) : null,
+  };
+};
+
+export const upsertErasureTombstone = async (tombstone: ErasureTombstone): Promise<void> => {
+  const p = getPool();
+  const updated = await p.query(
+    `UPDATE erasure_tombstones SET erased_at = $3 WHERE subject_hash = $1 AND scope = $2 RETURNING subject_hash`,
+    [tombstone.subjectHash, tombstone.scope, tombstone.erasedAt],
+  );
+  if (updated.rows.length) return;
+  try {
+    await p.query(
+      `INSERT INTO erasure_tombstones (subject_hash, scope, erased_at) VALUES ($1, $2, $3)`,
+      [tombstone.subjectHash, tombstone.scope, tombstone.erasedAt],
+    );
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+  }
+};
+
+export const getErasureTombstone = async (subjectHash: string, scope: ErasureScope): Promise<ErasureTombstone | null> => {
+  const { rows } = await getPool().query(
+    `SELECT subject_hash, scope, erased_at FROM erasure_tombstones WHERE subject_hash = $1 AND scope = $2`,
+    [subjectHash, scope],
+  );
+  const row = rows[0] as any;
+  return row ? { subjectHash: row.subject_hash, scope: row.scope, erasedAt: toIso(row.erased_at) } : null;
+};
+
+const rowToErasureJob = (row: any): PrivacyErasureJob => ({
+  id: row.id,
+  subjectHash: row.subject_hash,
+  userId: row.user_id ?? null,
+  scope: row.scope,
+  status: row.status,
+  steps: parseJsonColumn(row.steps) ?? {},
+  attempts: Number(row.attempts ?? 0),
+  lastError: row.last_error ?? null,
+  requestedBy: row.requested_by,
+  requestedAt: toIso(row.requested_at),
+  dueAt: toIso(row.due_at),
+  completedAt: row.completed_at ? toIso(row.completed_at) : null,
+});
+
+export const saveErasureJob = async (job: PrivacyErasureJob): Promise<PrivacyErasureJob> => {
+  const p = getPool();
+  const values = [
+    job.id, job.subjectHash, job.userId, job.scope, job.status, JSON.stringify(job.steps), job.attempts,
+    job.lastError, job.requestedBy, job.requestedAt, job.dueAt, job.completedAt,
+  ];
+  const updated = await p.query(
+    `UPDATE privacy_erasure_jobs SET subject_hash = $2, user_id = $3, scope = $4, status = $5, steps = $6, attempts = $7,
+        last_error = $8, requested_by = $9, requested_at = $10, due_at = $11, completed_at = $12
+      WHERE id = $1 RETURNING id`,
+    values,
+  );
+  if (!updated.rows.length) {
+    await p.query(
+      `INSERT INTO privacy_erasure_jobs (id, subject_hash, user_id, scope, status, steps, attempts, last_error,
+         requested_by, requested_at, due_at, completed_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      values,
+    );
+  }
+  return job;
+};
+
+export const getErasureJob = async (id: string): Promise<PrivacyErasureJob | null> => {
+  const { rows } = await getPool().query(`SELECT * FROM privacy_erasure_jobs WHERE id = $1`, [id]);
+  return rows[0] ? rowToErasureJob(rows[0]) : null;
+};
+
+export const listErasureJobs = async (opts: { status?: string; subjectHash?: string; limit?: number } = {}): Promise<PrivacyErasureJob[]> => {
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (opts.status) {
+    params.push(opts.status);
+    where.push('status = $' + params.length);
+  }
+  if (opts.subjectHash) {
+    params.push(opts.subjectHash);
+    where.push('subject_hash = $' + params.length);
+  }
+  params.push(Math.min(Math.max(opts.limit ?? 100, 1), 500));
+  const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  const { rows } = await getPool().query(
+    'SELECT * FROM privacy_erasure_jobs ' + whereSql + ' ORDER BY requested_at DESC LIMIT $' + params.length,
+    params,
+  );
+  return rows.map(rowToErasureJob);
+};
+
+const rowToRightsRequest = (row: any): PrivacyRightsRequest => ({
+  id: row.id,
+  requestType: row.request_type,
+  jurisdiction: row.jurisdiction,
+  channel: row.channel,
+  status: row.status,
+  receivedAt: toIso(row.received_at),
+  dueAt: toIso(row.due_at),
+  extended: Boolean(row.extended),
+  subjectHash: row.subject_hash ?? null,
+  notes: row.notes ?? null,
+  createdBy: row.created_by ?? null,
+  updatedAt: toIso(row.updated_at),
+  closedAt: row.closed_at ? toIso(row.closed_at) : null,
+});
+
+export const savePrivacyRightsRequest = async (request: PrivacyRightsRequest): Promise<PrivacyRightsRequest> => {
+  const p = getPool();
+  const values = [
+    request.id, request.requestType, request.jurisdiction, request.channel, request.status, request.receivedAt,
+    request.dueAt, request.extended, request.subjectHash, request.notes, request.createdBy, request.updatedAt, request.closedAt,
+  ];
+  const updated = await p.query(
+    `UPDATE privacy_rights_requests SET request_type = $2, jurisdiction = $3, channel = $4, status = $5, received_at = $6,
+        due_at = $7, extended = $8, subject_hash = $9, notes = $10, created_by = $11, updated_at = $12, closed_at = $13
+      WHERE id = $1 RETURNING id`,
+    values,
+  );
+  if (!updated.rows.length) {
+    await p.query(
+      `INSERT INTO privacy_rights_requests (id, request_type, jurisdiction, channel, status, received_at, due_at, extended,
+         subject_hash, notes, created_by, updated_at, closed_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      values,
+    );
+  }
+  return request;
+};
+
+export const getPrivacyRightsRequest = async (id: string): Promise<PrivacyRightsRequest | null> => {
+  const { rows } = await getPool().query(`SELECT * FROM privacy_rights_requests WHERE id = $1`, [id]);
+  return rows[0] ? rowToRightsRequest(rows[0]) : null;
+};
+
+export const listPrivacyRightsRequests = async (opts: { status?: string; limit?: number } = {}): Promise<PrivacyRightsRequest[]> => {
+  const params: unknown[] = [];
+  let whereSql = '';
+  if (opts.status) {
+    params.push(opts.status);
+    whereSql = 'WHERE status = $1';
+  }
+  params.push(Math.min(Math.max(opts.limit ?? 200, 1), 1000));
+  const { rows } = await getPool().query(
+    'SELECT * FROM privacy_rights_requests ' + whereSql + ' ORDER BY due_at ASC LIMIT $' + params.length,
+    params,
+  );
+  return rows.map(rowToRightsRequest);
+};
+
+// ── Product analytics store (analytics Phase 2) ─────────────────────────────
+
+/** Pseudonym for (account, consent epoch); created on first use. Race-safe via the unique key. */
+export const getOrCreateAnalyticsSubject = async (userId: string, productEpoch: number): Promise<string> => {
+  const p = getPool();
+  const find = async () => {
+    const { rows } = await p.query(
+      `SELECT subject_id FROM analytics_subjects WHERE user_id = $1 AND product_epoch = $2`,
+      [userId, productEpoch],
+    );
+    return (rows[0] as any)?.subject_id as string | undefined;
+  };
+  const existing = await find();
+  if (existing) return existing;
+  const subjectId = randomUUID();
+  try {
+    await p.query(
+      `INSERT INTO analytics_subjects (subject_id, user_id, product_epoch, created_at) VALUES ($1, $2, $3, $4)`,
+      [subjectId, userId, productEpoch, new Date().toISOString()],
+    );
+    return subjectId;
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    const raced = await find();
+    if (!raced) throw err;
+    return raced;
+  }
+};
+
+export const listAnalyticsSubjectsForUser = async (userId: string): Promise<string[]> => {
+  const { rows } = await getPool().query(`SELECT subject_id FROM analytics_subjects WHERE user_id = $1`, [userId]);
+  return (rows as any[]).map((row) => row.subject_id);
+};
+
+export const deleteAnalyticsSubjectsForUser = async (userId: string): Promise<number> => {
+  const result = await getPool().query(`DELETE FROM analytics_subjects WHERE user_id = $1`, [userId]);
+  return result.rowCount ?? 0;
+};
+
+/** Inserts events; returns the IDs actually inserted (already-stored IDs are skipped). */
+export const insertAnalyticsEvents = async (events: AnalyticsEventRecord[]): Promise<string[]> => {
+  const p = getPool();
+  const inserted: string[] = [];
+  for (const e of events) {
+    try {
+      await p.query(
+        `INSERT INTO analytics_events (id, event_id, subject_id, purpose_epoch, event_name, family, source, feature, platform,
+           app_version, session_id, trip_ref, trip_phase, timezone_source, date_version, properties, schema_version,
+           excluded_reason, occurred_at, received_at, expires_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+        [
+          e.id, e.eventId, e.subjectId, e.purposeEpoch, e.eventName, e.family, e.source, e.feature, e.platform,
+          e.appVersion, e.sessionId, e.tripRef, e.tripPhase, e.timezoneSource, e.dateVersion, JSON.stringify(e.properties),
+          e.schemaVersion, e.excludedReason, e.occurredAt, e.receivedAt, e.expiresAt,
+        ],
+      );
+      inserted.push(e.id);
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+    }
+  }
+  return inserted;
+};
+
+const rowToAnalyticsEvent = (row: any): AnalyticsEventRecord => ({
+  id: row.id,
+  eventId: row.event_id,
+  subjectId: row.subject_id,
+  purposeEpoch: Number(row.purpose_epoch),
+  eventName: row.event_name,
+  family: row.family,
+  source: row.source,
+  feature: row.feature ?? null,
+  platform: row.platform,
+  appVersion: row.app_version,
+  sessionId: row.session_id ?? null,
+  tripRef: row.trip_ref ?? null,
+  tripPhase: row.trip_phase,
+  timezoneSource: row.timezone_source,
+  dateVersion: row.date_version ?? null,
+  properties: parseJsonColumn(row.properties) ?? {},
+  schemaVersion: Number(row.schema_version),
+  excludedReason: row.excluded_reason ?? null,
+  occurredAt: toIso(row.occurred_at),
+  receivedAt: toIso(row.received_at),
+  expiresAt: toIso(row.expires_at),
+});
+
+export const listAnalyticsEventsForSubjects = async (subjectIds: string[], limit = 5_000): Promise<AnalyticsEventRecord[]> => {
+  if (!subjectIds.length) return [];
+  const placeholders = subjectIds.map((_, i) => '$' + (i + 1)).join(', ');
+  const { rows } = await getPool().query(
+    'SELECT * FROM analytics_events WHERE subject_id IN (' + placeholders + ') ORDER BY occurred_at ASC LIMIT $' + (subjectIds.length + 1),
+    [...subjectIds, limit],
+  );
+  return rows.map(rowToAnalyticsEvent);
+};
+
+export const deleteAnalyticsEventsForSubjects = async (subjectIds: string[]): Promise<number> => {
+  if (!subjectIds.length) return 0;
+  const placeholders = subjectIds.map((_, i) => '$' + (i + 1)).join(', ');
+  const result = await getPool().query('DELETE FROM analytics_events WHERE subject_id IN (' + placeholders + ')', subjectIds);
+  return result.rowCount ?? 0;
+};
+
+/** Retention: delete events whose expiry has passed. */
+export const deleteExpiredAnalyticsEvents = async (nowIso: string): Promise<number> => {
+  const result = await getPool().query(`DELETE FROM analytics_events WHERE expires_at < $1`, [nowIso]);
+  return result.rowCount ?? 0;
+};
+
+export const listAnalyticsEventsBetween = async (fromIso: string, toIso_: string, limit = 50_000): Promise<AnalyticsEventRecord[]> => {
+  const { rows } = await getPool().query(
+    `SELECT * FROM analytics_events WHERE occurred_at >= $1 AND occurred_at < $2 ORDER BY occurred_at ASC LIMIT $3`,
+    [fromIso, toIso_, limit],
+  );
+  return rows.map(rowToAnalyticsEvent);
+};
+
+export const getAnalyticsSubjectTimezone = async (subjectId: string): Promise<string | null> => {
+  const { rows } = await getPool().query(`SELECT last_device_timezone FROM analytics_subjects WHERE subject_id = $1`, [subjectId]);
+  return (rows[0] as any)?.last_device_timezone ?? null;
+};
+
+export const setAnalyticsSubjectTimezone = async (subjectId: string, timezone: string): Promise<void> => {
+  await getPool().query(`UPDATE analytics_subjects SET last_device_timezone = $2 WHERE subject_id = $1`, [subjectId, timezone]);
+};
+
+export const getTripTimezone = async (tripId: string): Promise<string | null> => {
+  const { rows } = await getPool().query(`SELECT timezone FROM trips WHERE id = $1`, [tripId]);
+  return (rows[0] as any)?.timezone ?? null;
+};
+
+export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
+  await getPool().query(`UPDATE trips SET timezone = $2 WHERE id = $1`, [tripId, timezone]);
 };

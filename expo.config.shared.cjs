@@ -53,6 +53,45 @@ const loadEnv = (appDir) => {
   }
 };
 
+// App-level iOS privacy manifest (PrivacyInfo.xcprivacy), Phase 4 of
+// docs/implementation-plans/analytics-upgrade.md. Must match the App Store Connect
+// App Privacy answers and the privacy notice. No tracking: nothing is combined with
+// other companies' data for advertising. Collected types are "linked" because even the
+// optional analytics/diagnostics use a pseudonym we can map back to the account.
+// Required-reason APIs are the ones React Native/Expo use; reconcile them with the
+// Xcode Privacy Report of the archived EAS build before each submission.
+const purposes = (...names) => names.map((name) => `NSPrivacyCollectedDataTypePurpose${name}`);
+const collected = (type, purposeNames) => ({
+  NSPrivacyCollectedDataType: `NSPrivacyCollectedDataType${type}`,
+  NSPrivacyCollectedDataTypeLinked: true,
+  NSPrivacyCollectedDataTypeTracking: false,
+  NSPrivacyCollectedDataTypePurposes: purposes(...purposeNames),
+});
+const IOS_PRIVACY_MANIFEST = {
+  NSPrivacyTracking: false,
+  NSPrivacyTrackingDomains: [],
+  NSPrivacyCollectedDataTypes: [
+    collected('Name', ['AppFunctionality']),
+    collected('EmailAddress', ['AppFunctionality']),
+    collected('UserID', ['AppFunctionality', 'Analytics']),
+    collected('DeviceID', ['AppFunctionality']), // push notification token
+    collected('PhotosorVideos', ['AppFunctionality']), // only items the user picks or shares
+    collected('EmailsOrTextMessages', ['AppFunctionality']), // optional Gmail import
+    collected('OtherUserContent', ['AppFunctionality']), // trips, notes, chat
+    collected('PurchaseHistory', ['AppFunctionality']), // subscriptions
+    collected('OtherFinancialInfo', ['AppFunctionality']), // optional bank-transaction import
+    collected('ProductInteraction', ['Analytics']), // optional, opt-in only
+    collected('CrashData', ['AppFunctionality', 'Analytics']), // optional detailed diagnostics
+    collected('PerformanceData', ['AppFunctionality', 'Analytics']), // optional detailed diagnostics
+  ],
+  NSPrivacyAccessedAPITypes: [
+    { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults', NSPrivacyAccessedAPITypeReasons: ['CA92.1'] },
+    { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp', NSPrivacyAccessedAPITypeReasons: ['C617.1'] },
+    { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime', NSPrivacyAccessedAPITypeReasons: ['35F9.1'] },
+    { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace', NSPrivacyAccessedAPITypeReasons: ['E174.1'] },
+  ],
+};
+
 const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
   // Apple capability auto-sync is intentionally disabled for this existing
   // App ID. EAS can batch a spurious APPLE_ID_AUTH=OFF update with another
@@ -68,6 +107,12 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
   // EAS sets EAS_BUILD=true. A built artifact runs on a real device/simulator,
   // so it must never fall back to a localhost backend.
   const isEasBuild = process.env.EAS_BUILD === 'true' || process.env.EAS_BUILD === '1';
+  // Apple Declared Age Range (iOS 26+) lets Apple confirm a user is 16+ so the
+  // date-of-birth prompt can be skipped. Opt-in per build: capability sync is
+  // disabled above, so the "Declared Age Range" capability must first be enabled
+  // on the App ID by hand, or signing fails. Without this flag the app always
+  // uses the date-of-birth prompt. See app/utils/appleAgeRange.ts.
+  const appleDeclaredAgeRangeEnabled = process.env.APPLE_DECLARED_AGE_RANGE_ENABLED === '1';
   const sentryExpoPlugin =
     assetPrefix === './app/'
       ? resolvePluginFromApp('@sentry/react-native/expo', appDir)
@@ -76,7 +121,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
   return {
     name: 'WanderBunnies',
     slug: 'travel-itinerary-planner',
-    version: '1.0.0',
+    version: '1.0.1',
     scheme: 'travelitineraryplanner',
     owner: 'duerk-industries',
     icon: prefixAsset('./assets/wanderbunnies-app-icon.png', assetPrefix),
@@ -106,6 +151,10 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
         // use it and tries to turn APPLE_ID_AUTH OFF on an app record that
         // already depends on it, which Apple's API rejects.
         usesAppleSignIn: true,
+        privacyManifests: IOS_PRIVACY_MANIFEST,
+        ...(appleDeclaredAgeRangeEnabled
+          ? { entitlements: { 'com.apple.developer.declared-age-range': true } }
+          : {}),
         infoPlist: {
           ITSAppUsesNonExemptEncryption: false,
           NSAppTransportSecurity: {
@@ -123,6 +172,9 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
     android: {
       package: 'com.duerkindustries.travelitineraryplanner',
       versionCode: 1,
+      // No advertising ID: a dependency must not merge AD_ID into the manifest. Matches the
+      // Play Console "Advertising ID: No" declaration (analytics plan, Phase 4).
+      blockedPermissions: ['com.google.android.gms.permission.AD_ID'],
       edgeToEdgeEnabled: true,
       softwareKeyboardLayoutMode: 'pan',
       adaptiveIcon: {
@@ -176,7 +228,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
         // ephemeral (never persisted as a blog media asset), so no background-recording mode.
         'expo-audio',
         {
-          microphonePermission: 'WanderBunnies needs access to your microphone to record a spoken caption.',
+          microphonePermission: 'WanderBunnies needs access to your microphone to record voice notes and spoken captions for your trip blog.',
         },
       ],
       // Real push delivery (server/src/apis/expoPushApi.ts, notificationOutboxWorker.ts) needs a
@@ -221,6 +273,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
       sessionCacheTimeoutMinutes: 43200,
       premiumTrialsEnabled: String(process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED ?? 'true').toLowerCase() !== 'false',
+      appleDeclaredAgeRangeEnabled,
       eas: {
         projectId: '06966c0b-d878-4346-850c-090c762f1916',
       },

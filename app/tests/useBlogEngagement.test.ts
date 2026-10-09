@@ -104,7 +104,7 @@ describe('useBlogEngagement', () => {
   });
 
   it('clears all state on trip switch', () => {
-    const { result, rerender } = renderHook(({ tripId }) => useBlogEngagement(backendUrl, headers, tripId), { initialProps: { tripId: 'trip-1' } });
+    const { result, rerender } = renderHook(({ tripId }: { tripId: string }) => useBlogEngagement(backendUrl, headers, tripId), { initialProps: { tripId: 'trip-1' } });
     act(() => {
       result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: { reactionCounts: { heart: 1 }, reactionTotal: 1, commentCount: 0, userReaction: 'heart' } }] });
     });

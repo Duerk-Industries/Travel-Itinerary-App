@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
+import { startItemSaveTask } from '../utils/analytics/track';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
@@ -209,7 +210,7 @@ export const createActivityForTrip = async (params: {
   if (!activeTripId) return { ok: false, error: 'Select an active trip before saving an activity.' };
   const { payload, error } = buildActivityPayload(draft, defaultPayerId);
   if (error || !payload) return { ok: false, error };
-  const res = await fetch(`${backendUrl}/api/activities`, {
+  const res = await startItemSaveTask('activities', false, activeTripId).request(`${backendUrl}/api/activities`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({
@@ -336,6 +337,8 @@ type TourTabProps = {
   // Kill switch for row-tap-to-edit + sticky identity/actions columns
   // (implementation-plan-ux-remediation.md, Initiative A). Defaults to `true`.
   featureTapToEditTables?: boolean;
+  featureActivityRecap?: boolean;
+  onOpenActivityRecap?: (activity: Tour) => void;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -369,6 +372,8 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   onExternalEditHandled,
   showList = true,
   featureTapToEditTables = true,
+  featureActivityRecap = false,
+  onOpenActivityRecap,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -481,9 +486,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     // Close the editor immediately on Save — the request below runs in the
     // background so the dialog never appears to hang while it's in flight.
     closeTourEditor();
+    const saveTask = startItemSaveTask('activities', Boolean(editingTourId), activeTripId);
     (async () => {
       try {
-        const res = await fetch(url, {
+        const res = await saveTask.request(url, {
           method,
           headers: jsonHeaders,
           body: JSON.stringify({
@@ -808,20 +814,21 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       return;
     }
     setGridSaving(true);
+    // One edit task per grid save (deletes alone are not edits).
+    const gridTask = operations.some((operation) => operation.kind === 'update') ? startItemSaveTask('activities', true, activeTripId) : null;
     const succeededUpdateIds = new Set<string>();
     const succeededDeleteIds = new Set<string>();
     const failures: GridCellError[] = [];
     for (let index = 0; index < operations.length; index += 50) {
       const chunk = operations.slice(index, index + 50);
-      const response = await fetch(`${backendUrl}/api/activities/bulk`, {
-        method: 'PATCH',
-        headers: jsonHeaders,
-        body: JSON.stringify({
+      const bulkRequest = { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({
           tripId: activeTripId,
           updates: chunk.filter((operation) => operation.kind === 'update').map((operation) => ({ id: operation.id, fields: operation.fields })),
           deletes: chunk.filter((operation) => operation.kind === 'delete').map((operation) => operation.id),
         }),
-      });
+      };
+      const bulkUrl = `${backendUrl}/api/activities/bulk`;
+      const response = gridTask ? await gridTask.request(bulkUrl, bulkRequest) : await fetch(bulkUrl, bulkRequest);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         setGridMessage(payload.error || 'Unable to save activity changes.');
@@ -895,7 +902,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.buttonText}>Edit table</Text>
               </TouchableOpacity>
             ) : null}
-            {!tableEditing ? <CsvTransferControls entity="activities" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={defaultActivityDate} tripEnd={tripEndDate} rows={tours} styles={styles} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onDataChanged ?? fetchTours} /> : null}
+            {!tableEditing ? <CsvTransferControls entity="activities" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={defaultActivityDate} tripEnd={tripEndDate} rows={tours} styles={styles} theme={theme} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onDataChanged ?? fetchTours} /> : null}
             {tableEditing ? (
               <>
                 <TouchableOpacity
@@ -1008,6 +1015,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); setSelectedTourId(t.id); }} testID={`activity-details-${t.id}`}>
                   <Text numberOfLines={1} style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
                 </TouchableOpacity>
+                {!readOnly && featureActivityRecap && normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                  <TouchableOpacity onPress={(event: any) => { event?.stopPropagation?.(); onOpenActivityRecap?.(t); }} testID={`activity-recap-${t.id}`} style={{ alignSelf: 'flex-start', marginTop: 3 }}>
+                    <Text style={[styles.linkText, { fontSize: 12 }]}>Recap</Text>
+                  </TouchableOpacity>
+                ) : null}
                 {mode !== 'wizard' ? (
                   <GetYourGuideCta
                     backendUrl={backendUrl}
@@ -1113,6 +1125,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 )}
                 <Text style={styles.modalLabel}>Actions</Text>
                 <View style={styles.actionCell}>
+                  {!readOnly && featureActivityRecap && normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => { onOpenActivityRecap?.(selectedTour); setSelectedTourId(null); }} testID={`activity-recap-${selectedTour.id}`}>
+                      <Text style={styles.buttonText}>Recap</Text>
+                    </TouchableOpacity>
+                  ) : null}
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setSelectedTourId(null)}>
                     <Text style={styles.buttonText}>Close</Text>
                   </TouchableOpacity>
@@ -1174,6 +1191,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           onClose={() => setSelectedTourId(null)}
           onEdit={() => { openTourEditor(selectedTour); setSelectedTourId(null); }}
           onDelete={() => setTourToDelete(selectedTour)}
+          secondaryAction={!readOnly && featureActivityRecap && normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed'
+            ? { label: 'Recap', testID: `activity-recap-${selectedTour.id}`, onPress: () => { onOpenActivityRecap?.(selectedTour); setSelectedTourId(null); } }
+            : null}
           testID="activity-details-modal"
         />
       ) : null}
@@ -1202,4 +1222,3 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     </View>
   );
 };
-

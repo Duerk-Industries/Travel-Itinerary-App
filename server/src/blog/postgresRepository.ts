@@ -8,6 +8,7 @@ import { displayNameFromRow } from './postgresEngagementRepository';
 import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
 import { markSynced, shouldSkipSync } from './syncCoordination';
+import { normalizeBlogTags } from './tags';
 
 type BlogRow = {
   id: string;
@@ -92,6 +93,7 @@ const mapItem = (row: any): BlogTextItem => ({
   lastEditorUserId: String(row.last_editor_user_id),
   version: Number(row.version ?? 1),
   body: String(row.body ?? ''),
+  tags: normalizeBlogTags(row.tags ?? []),
   languageTag: row.language_tag == null ? null : String(row.language_tag),
   createdAt: new Date(row.created_at).toISOString(),
   updatedAt: new Date(row.updated_at).toISOString(),
@@ -352,9 +354,9 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   }
   const sortKey = `${Date.now().toString().padStart(16, '0')}-${id}`;
   await queryBlog(
-    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, origin_source_type)
-     VALUES ($1, $2, $3, 'core.text', 1, $4, $5, $6, $6, $7)`,
-    [id, tripId, dayId, input.audience ?? 'public', sortKey, userId, input.sourceType ?? null]
+    `INSERT INTO blog_items (id, trip_id, blog_day_id, kind_key, schema_version, audience, sort_key, author_user_id, last_editor_user_id, origin_source_type, tags)
+     VALUES ($1, $2, $3, 'core.text', 1, $4, $5, $6, $6, $7, $8::jsonb)`,
+    [id, tripId, dayId, input.audience ?? 'public', sortKey, userId, input.sourceType ?? null, JSON.stringify(normalizeBlogTags(input.tags ?? []))]
   );
   await queryBlog(
     `INSERT INTO blog_text_contents (item_id, body, language_tag) VALUES ($1, $2, $3)`,
@@ -363,7 +365,7 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
   await queryBlog(
     `INSERT INTO blog_item_versions (id, item_id, version, editor_user_id, change_kind, content_snapshot)
      VALUES ($1, $2, 1, $3, 'create', $4::jsonb)`,
-    [randomUUID(), id, userId, JSON.stringify({ body, languageTag: input.languageTag ?? null })]
+    [randomUUID(), id, userId, JSON.stringify({ body, languageTag: input.languageTag ?? null, tags: normalizeBlogTags(input.tags ?? []) })]
   );
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [tripId]);
   const item = await queryBlog<any>(
@@ -430,12 +432,13 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
   if (!access) throw new Error('Not authorized to edit this trip');
   const row = current.rows[0];
   const body = patch.body === undefined ? String(row.body ?? '') : String(patch.body);
+  const tags = patch.tags === undefined ? normalizeBlogTags(row.tags ?? []) : normalizeBlogTags(patch.tags);
   if (body.length > 100_000) throw new Error('Text block is too large');
   const nextVersion = Number(row.version) + 1;
   const updated = await queryBlog<any>(
-    `UPDATE blog_items SET audience = COALESCE($3, audience), last_editor_user_id = $4, version = $2, updated_at = NOW()
+    `UPDATE blog_items SET audience = COALESCE($3, audience), tags = $6::jsonb, last_editor_user_id = $4, version = $2, updated_at = NOW()
      WHERE id = $1 AND version = $5 AND deleted_at IS NULL RETURNING *`,
-    [itemId, nextVersion, patch.audience ?? null, userId, patch.version]
+    [itemId, nextVersion, patch.audience ?? null, userId, patch.version, JSON.stringify(tags)]
   );
   if (!updated.rows[0]) {
     // Version mismatch, not a missing item (already ruled out above). Architecture §5.5's
@@ -456,7 +459,7 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
   await queryBlog(
     `INSERT INTO blog_item_versions (id, item_id, version, editor_user_id, change_kind, content_snapshot)
      VALUES ($1, $2, $3, $4, 'update', $5::jsonb)`,
-    [randomUUID(), itemId, nextVersion, userId, JSON.stringify({ body, languageTag: patch.languageTag ?? row.language_tag ?? null })]
+    [randomUUID(), itemId, nextVersion, userId, JSON.stringify({ body, languageTag: patch.languageTag ?? row.language_tag ?? null, tags })]
   );
   await queryBlog('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [row.trip_id]);
   const result = await queryBlog<any>(
@@ -792,11 +795,18 @@ export const searchBlog = async (
   const cursorFilter = hasCursor ? 'AND (d.local_date, i.id) > ($4::date, $5::uuid)' : '';
   const params = hasCursor ? [tripId, q, audiences, cursorDate, cursorId, limit + 1] : [tripId, q, audiences, limit + 1];
   const result = await queryBlog<any>(
-    `SELECT i.id, to_char(d.local_date, 'YYYY-MM-DD') AS local_date, t.body
+    `SELECT i.id, to_char(d.local_date, 'YYYY-MM-DD') AS local_date, COALESCE(t.body, '') AS body
      FROM blog_items i
      JOIN blog_days d ON d.id = i.blog_day_id
-     JOIN blog_text_contents t ON t.item_id = i.id
-     WHERE i.trip_id = $1 AND i.deleted_at IS NULL AND t.body ILIKE $2
+     LEFT JOIN blog_text_contents t ON t.item_id = i.id
+     LEFT JOIN (
+       SELECT DISTINCT ia.item_id
+       FROM blog_item_assets ia
+       JOIN blog_media_assets a ON a.id = ia.asset_id
+       WHERE a.trip_id = $1 AND a.state <> 'deleted' AND a.tags::text ILIKE $2
+     ) matching_media ON matching_media.item_id = i.id
+     WHERE i.trip_id = $1 AND i.deleted_at IS NULL
+       AND (COALESCE(t.body, '') ILIKE $2 OR i.tags::text ILIKE $2 OR matching_media.item_id IS NOT NULL)
        AND i.audience = ANY($3::text[])
        ${cursorFilter}
      ORDER BY d.local_date, i.id LIMIT $${hasCursor ? 6 : 4}`,

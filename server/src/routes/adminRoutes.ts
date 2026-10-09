@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import {
@@ -27,6 +28,21 @@ import {
   countItineraryCacheBlocksByLocation,
   getItineraryGenerationMetrics,
 } from '../db';
+import {
+  getPrivacyRightsRequest,
+  listErasureJobs,
+  listPrivacyRightsRequests,
+  listProviderInvoiceRecords,
+  savePrivacyRightsRequest,
+  upsertProviderInvoiceRecord,
+} from '../db';
+import { computeRightsDueDate, subjectHash as privacySubjectHash } from '../services/privacyRightsService';
+import type { PrivacyJurisdiction, PrivacyRightsRequest, PrivacyRightsRequestType } from '../types';
+import { buildCostLedgerReport } from '../services/costLedgerReportService';
+import { CSV_VIEWS, getAnalyticsReport, getReliabilityReport, isReportWindow, renderReportCsv } from '../analytics/reportService';
+import type { ReportWindowDays } from '../analytics/metrics';
+import { getRolloutConfig, parseRolloutConfig, saveRolloutConfig, type RolloutPurpose } from '../analytics/rolloutService';
+import { isFeatureEnabled } from '../services/entitlementService';
 import { ITINERARY_QUALITY_BASELINE_SETTING_KEY } from '../services/itineraryQualityGateService';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -2001,6 +2017,342 @@ router.get('/metrics', (_req, res) => {
   // Per-instance best-effort aggregation — if the deployment has multiple
   // instances each returns its own counters. Client should label accordingly.
   res.json(getMetricCounterSnapshot());
+});
+
+// ---------------------------------------------------------------------------
+// Cost ledger (analytics Phase 3): monthly report and invoice reconciliation
+// ---------------------------------------------------------------------------
+
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+const usdToMicros = (value: unknown): number | null => {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 1_000_000) : null;
+};
+
+router.get('/costs/ledger', async (req, res) => {
+  const month = typeof req.query.month === 'string' ? req.query.month : '';
+  if (!MONTH_PATTERN.test(month)) {
+    res.status(400).json({ error: 'month (YYYY-MM) is required' });
+    return;
+  }
+  const sharedCostMicros = req.query.sharedCostUsd === undefined ? null : usdToMicros(req.query.sharedCostUsd);
+  if (req.query.sharedCostUsd !== undefined && sharedCostMicros == null) {
+    res.status(400).json({ error: 'sharedCostUsd must be a non-negative number' });
+    return;
+  }
+  const activeAccounts = req.query.activeAccounts === undefined ? null : Number(req.query.activeAccounts);
+  if (activeAccounts != null && (!Number.isInteger(activeAccounts) || activeAccounts <= 0)) {
+    res.status(400).json({ error: 'activeAccounts must be a positive integer' });
+    return;
+  }
+  try {
+    res.json(await buildCostLedgerReport({ windowKey: month, sharedCostMicros, activeAccounts }));
+  } catch (err) {
+    logError('[admin] cost ledger report failed', err);
+    res.status(500).json({ error: 'Failed to build cost ledger report' });
+  }
+});
+
+router.put('/costs/invoices/:provider/:month', async (req, res) => {
+  const provider = normalizeApiLimitKeyPart(String(req.params.provider ?? ''));
+  const month = String(req.params.month ?? '');
+  if (!provider || !MONTH_PATTERN.test(month)) {
+    res.status(400).json({ error: 'provider and month (YYYY-MM) are required' });
+    return;
+  }
+  const reasonStr = requireReason(req.body?.reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  const invoicedMicros = usdToMicros(req.body?.invoicedAmount);
+  const creditsMicros = req.body?.creditsAmount === undefined ? 0 : usdToMicros(req.body.creditsAmount);
+  const fxRateToUsd = req.body?.fxRateToUsd === undefined ? 1 : Number(req.body.fxRateToUsd);
+  const currency = typeof req.body?.currency === 'string' && /^[A-Z]{3}$/.test(req.body.currency) ? req.body.currency : 'USD';
+  if (invoicedMicros == null || creditsMicros == null || !Number.isFinite(fxRateToUsd) || fxRateToUsd <= 0) {
+    res.status(400).json({ error: 'invoicedAmount and creditsAmount must be non-negative numbers; fxRateToUsd must be positive' });
+    return;
+  }
+  if (currency === 'USD' && fxRateToUsd !== 1) {
+    res.status(400).json({ error: 'fxRateToUsd must be 1 for USD invoices' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const [before] = (await listProviderInvoiceRecords(month)).filter((r) => r.provider === provider);
+    const record = await upsertProviderInvoiceRecord({
+      provider,
+      windowKey: month,
+      invoicedMicros,
+      creditsMicros,
+      currency,
+      fxRateToUsd,
+      notes: typeof req.body?.notes === 'string' ? req.body.notes.slice(0, 500) : null,
+      recordedBy: actorId,
+      recordedAt: new Date().toISOString(),
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'PROVIDER_INVOICE_RECORDED',
+      beforeState: before ? { ...before } : null,
+      afterState: { ...record },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json(record);
+  } catch (err) {
+    logError('[admin] invoice record failed', err);
+    res.status(500).json({ error: 'Failed to record invoice' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Privacy rights (analytics Phase 4): manually received requests with
+// statutory deadlines, and visibility into erasure jobs.
+// ---------------------------------------------------------------------------
+
+const RIGHTS_REQUEST_TYPES: PrivacyRightsRequestType[] = ['access', 'rectification', 'erasure', 'restriction', 'objection', 'portability', 'opt_out', 'appeal'];
+const RIGHTS_JURISDICTIONS: PrivacyJurisdiction[] = ['GDPR', 'UK_GDPR', 'CCPA', 'US_STATE', 'OTHER'];
+const RIGHTS_CHANNELS: PrivacyRightsRequest['channel'][] = ['email', 'web', 'in_app', 'other'];
+const RIGHTS_STATUSES: PrivacyRightsRequest['status'][] = ['open', 'verifying', 'in_progress', 'completed', 'rejected'];
+const CLOSED_RIGHTS_STATUSES = new Set<PrivacyRightsRequest['status']>(['completed', 'rejected']);
+
+const withOverdue = (request: PrivacyRightsRequest, now = Date.now()) => ({
+  ...request,
+  overdue: !CLOSED_RIGHTS_STATUSES.has(request.status) && new Date(request.dueAt).getTime() < now,
+});
+
+router.get('/privacy/rights-requests', async (req, res) => {
+  const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+  if (status && !RIGHTS_STATUSES.includes(status as PrivacyRightsRequest['status'])) {
+    res.status(400).json({ error: `status must be one of ${RIGHTS_STATUSES.join(', ')}` });
+    return;
+  }
+  try {
+    const requests = (await listPrivacyRightsRequests({ status })).map((r) => withOverdue(r));
+    res.json({ requests, overdueCount: requests.filter((r) => r.overdue).length });
+  } catch (err) {
+    logError('[admin] rights request list failed', err);
+    res.status(500).json({ error: 'Failed to list rights requests' });
+  }
+});
+
+router.post('/privacy/rights-requests', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  const requestType = req.body?.requestType as PrivacyRightsRequestType;
+  const jurisdiction = req.body?.jurisdiction as PrivacyJurisdiction;
+  const channel = (req.body?.channel ?? 'email') as PrivacyRightsRequest['channel'];
+  const receivedAt = req.body?.receivedAt ? new Date(String(req.body.receivedAt)) : new Date();
+  if (!reasonStr || !RIGHTS_REQUEST_TYPES.includes(requestType) || !RIGHTS_JURISDICTIONS.includes(jurisdiction)
+    || !RIGHTS_CHANNELS.includes(channel) || Number.isNaN(receivedAt.getTime()) || receivedAt.getTime() > Date.now() + 60_000) {
+    res.status(400).json({
+      error: `requestType (${RIGHTS_REQUEST_TYPES.join('|')}), jurisdiction (${RIGHTS_JURISDICTIONS.join('|')}), a past receivedAt, and reason (min 3 chars) are required`,
+    });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const now = new Date().toISOString();
+    const receivedIso = receivedAt.toISOString();
+    // A known account is recorded only as its pseudonymous subject hash.
+    const accountUserId = typeof req.body?.accountUserId === 'string' && req.body.accountUserId.trim() ? req.body.accountUserId.trim() : null;
+    const record = await savePrivacyRightsRequest({
+      id: randomUUID(),
+      requestType,
+      jurisdiction,
+      channel,
+      status: 'open',
+      receivedAt: receivedIso,
+      dueAt: computeRightsDueDate(jurisdiction, receivedIso, false),
+      extended: false,
+      subjectHash: accountUserId ? privacySubjectHash(accountUserId) : null,
+      notes: typeof req.body?.notes === 'string' ? req.body.notes.slice(0, 1000) : null,
+      createdBy: actorId,
+      updatedAt: now,
+      closedAt: null,
+    });
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'PRIVACY_RIGHTS_REQUEST_CREATED',
+      afterState: { ...record },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.status(201).json(withOverdue(record));
+  } catch (err) {
+    logError('[admin] rights request create failed', err);
+    res.status(500).json({ error: 'Failed to record rights request' });
+  }
+});
+
+router.patch('/privacy/rights-requests/:id', async (req, res) => {
+  const reasonStr = requireReason(req.body?.reason);
+  const status = req.body?.status as PrivacyRightsRequest['status'] | undefined;
+  if (!reasonStr || (status !== undefined && !RIGHTS_STATUSES.includes(status))) {
+    res.status(400).json({ error: `reason (min 3 chars) is required; status must be one of ${RIGHTS_STATUSES.join(', ')}` });
+    return;
+  }
+  try {
+    const before = await getPrivacyRightsRequest(String(req.params.id));
+    if (!before) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    // The statutory extension can be applied once and must be notified to the requester.
+    const extend = req.body?.extend === true && !before.extended;
+    const nextStatus = status ?? before.status;
+    const now = new Date().toISOString();
+    const after: PrivacyRightsRequest = {
+      ...before,
+      status: nextStatus,
+      extended: before.extended || extend,
+      dueAt: extend ? computeRightsDueDate(before.jurisdiction, before.receivedAt, true) : before.dueAt,
+      notes: typeof req.body?.notes === 'string' ? req.body.notes.slice(0, 1000) : before.notes,
+      updatedAt: now,
+      closedAt: CLOSED_RIGHTS_STATUSES.has(nextStatus) ? before.closedAt ?? now : null,
+    };
+    await savePrivacyRightsRequest(after);
+    const actorId = getActorId(req);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'PRIVACY_RIGHTS_REQUEST_UPDATED',
+      beforeState: { ...before },
+      afterState: { ...after },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json(withOverdue(after));
+  } catch (err) {
+    logError('[admin] rights request update failed', err);
+    res.status(500).json({ error: 'Failed to update rights request' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Product analytics reports (analytics Phase 5). Aggregate-only, cohorts < 10
+// suppressed, fixed windows only (7/30/90 days) to limit differencing.
+// ---------------------------------------------------------------------------
+
+const parseWindow = (raw: unknown): ReportWindowDays | null => {
+  const days = raw === undefined ? 30 : Number(raw);
+  return isReportWindow(days) ? days : null;
+};
+
+router.get('/analytics/report', async (req, res) => {
+  const days = parseWindow(req.query.days);
+  if (days === null) {
+    res.status(400).json({ error: 'days must be 7, 30 or 90' });
+    return;
+  }
+  try {
+    res.json(await getAnalyticsReport(days));
+  } catch (err) {
+    logError('[admin] analytics report failed', err);
+    res.status(500).json({ error: 'Failed to build analytics report' });
+  }
+});
+
+router.get('/analytics/reliability', async (req, res) => {
+  const days = parseWindow(req.query.days);
+  if (days === null) {
+    res.status(400).json({ error: 'days must be 7, 30 or 90' });
+    return;
+  }
+  try {
+    res.json(await getReliabilityReport(days));
+  } catch (err) {
+    logError('[admin] reliability report failed', err);
+    res.status(500).json({ error: 'Failed to build reliability report' });
+  }
+});
+
+// Canary rollout (Phase 6): who is offered each optional purpose while its flag is on.
+const ROLLOUT_PURPOSES: RolloutPurpose[] = ['product_analytics', 'optional_diagnostics'];
+
+router.get('/analytics/rollout', async (_req, res) => {
+  try {
+    const [product, diagnostics, productFlag, diagnosticsFlag] = await Promise.all([
+      getRolloutConfig('product_analytics'),
+      getRolloutConfig('optional_diagnostics'),
+      isFeatureEnabled('analytics_collection_enabled'),
+      isFeatureEnabled('diagnostics_user_linked_enabled'),
+    ]);
+    res.json({
+      product_analytics: { flagEnabled: productFlag, ...product },
+      optional_diagnostics: { flagEnabled: diagnosticsFlag, ...diagnostics },
+    });
+  } catch (err) {
+    logError('[admin] rollout read failed', err);
+    res.status(500).json({ error: 'Failed to read rollout' });
+  }
+});
+
+router.put('/analytics/rollout/:purpose', async (req, res) => {
+  const purpose = String(req.params.purpose) as RolloutPurpose;
+  const reasonStr = requireReason(req.body?.reason);
+  const config = parseRolloutConfig({ mode: req.body?.mode, percent: req.body?.percent ?? 0, excludeEurope: req.body?.excludeEurope });
+  if (!ROLLOUT_PURPOSES.includes(purpose) || !config || !reasonStr) {
+    res.status(400).json({ error: 'purpose (product_analytics|optional_diagnostics), mode (off|internal|percentage|all), percent (0-100), excludeEurope (boolean) and reason are required' });
+    return;
+  }
+  try {
+    const actorId = getActorId(req);
+    const { before, after } = await saveRolloutConfig(purpose, config, actorId);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'ADMIN_SETTING_UPDATED',
+      beforeState: { purpose, ...before },
+      afterState: { purpose, ...after },
+      reason: reasonStr,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.json({ purpose, ...after });
+  } catch (err) {
+    logError('[admin] rollout update failed', err);
+    res.status(500).json({ error: 'Failed to update rollout' });
+  }
+});
+
+router.get('/analytics/export.csv', async (req, res) => {
+  const days = parseWindow(req.query.days);
+  const view = String(req.query.view ?? '');
+  if (days === null || !(CSV_VIEWS as readonly string[]).includes(view)) {
+    res.status(400).json({ error: `days must be 7, 30 or 90; view must be one of ${CSV_VIEWS.join(', ')}` });
+    return;
+  }
+  try {
+    const csv = renderReportCsv(view as (typeof CSV_VIEWS)[number], await getAnalyticsReport(days));
+    await writeAuditLog({
+      actorUserId: getActorId(req),
+      action: 'ANALYTICS_REPORT_EXPORTED',
+      afterState: { view, windowDays: days },
+      reason: null,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="wanderbunnies-${view}-${days}d.csv"`);
+    res.send(csv);
+  } catch (err) {
+    logError('[admin] analytics export failed', err);
+    res.status(500).json({ error: 'Failed to export analytics report' });
+  }
+});
+
+router.get('/privacy/erasure-jobs', async (req, res) => {
+  const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+  try {
+    const jobs = await listErasureJobs({ status, limit: 200 });
+    // Raw user IDs never leave the server; pending jobs still hold one for retries.
+    res.json({ jobs: jobs.map(({ userId: _userId, ...job }) => job) });
+  } catch (err) {
+    logError('[admin] erasure job list failed', err);
+    res.status(500).json({ error: 'Failed to list erasure jobs' });
+  }
 });
 
 // ---------------------------------------------------------------------------

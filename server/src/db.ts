@@ -27,8 +27,24 @@ const adapter = () => getDbAdapter();
 
 export { getProvider as getCurrentDbProvider, resetDbAdapter, type DbProvider };
 
-export const closePool = async (): Promise<void> => adapter().closePool();
+// Work that must finish while the database is still open (e.g. the analytics queue flushing
+// events it already accepted). Modules register here instead of db.ts importing them, which
+// would create an import cycle.
+const beforeCloseHooks: Array<() => Promise<void>> = [];
+export const registerBeforeClosePool = (hook: () => Promise<void>): void => {
+  beforeCloseHooks.push(hook);
+};
+export const closePool = async (): Promise<void> => {
+  for (const hook of beforeCloseHooks) {
+    await hook().catch(() => undefined);
+  }
+  return adapter().closePool();
+};
 export const initDb = async (): Promise<void> => adapter().initDb();
+export const getPrivacyPreferences = async (...args: Parameters<ReturnType<typeof adapter>['getPrivacyPreferences']>) =>
+  adapter().getPrivacyPreferences(...args);
+export const updatePrivacyPreferences = async (...args: Parameters<ReturnType<typeof adapter>['updatePrivacyPreferences']>) =>
+  adapter().updatePrivacyPreferences(...args);
 export const findOrCreateUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateUser']>) =>
   adapter().findOrCreateUser(...args);
 export const findOrCreateGoogleUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateGoogleUser']>) =>
@@ -96,6 +112,14 @@ export const setInitialWebUserPassword = async (...args: Parameters<ReturnType<t
   adapter().setInitialWebUserPassword(...args);
 export const isPasswordSetupRequired = async (...args: Parameters<ReturnType<typeof adapter>['isPasswordSetupRequired']>) =>
   adapter().isPasswordSetupRequired(...args);
+export const hasUserDateOfBirth = async (...args: Parameters<ReturnType<typeof adapter>['hasUserDateOfBirth']>) =>
+  adapter().hasUserDateOfBirth(...args);
+export const setUserDateOfBirth = async (...args: Parameters<ReturnType<typeof adapter>['setUserDateOfBirth']>) =>
+  adapter().setUserDateOfBirth(...args);
+export const isUserAgeVerified = async (...args: Parameters<ReturnType<typeof adapter>['isUserAgeVerified']>) =>
+  adapter().isUserAgeVerified(...args);
+export const recordUserAgeVerification = async (...args: Parameters<ReturnType<typeof adapter>['recordUserAgeVerification']>) =>
+  adapter().recordUserAgeVerification(...args);
 export const deleteWebUserAndCleanup = async (...args: Parameters<ReturnType<typeof adapter>['deleteWebUserAndCleanup']>) =>
   adapter().deleteWebUserAndCleanup(...args);
 export const deleteAllUsers = async (...args: Parameters<ReturnType<typeof adapter>['deleteAllUsers']>) =>
@@ -707,3 +731,87 @@ export const insertBillingPriceHistory = async (...args: Parameters<ReturnType<t
   adapter().insertBillingPriceHistory(...args);
 export const deactivateOldPricesForPlan = async (...args: Parameters<ReturnType<typeof adapter>['deactivateOldPricesForPlan']>) =>
   adapter().deactivateOldPricesForPlan(...args);
+
+// Analytics Phase 3: provider cost ledger, invoice reconciliation, job leases.
+export const insertProviderCostLedgerEntry = async (...args: Parameters<ReturnType<typeof adapter>['insertProviderCostLedgerEntry']>) =>
+  adapter().insertProviderCostLedgerEntry(...args);
+export const listProviderCostLedgerEntries = async (...args: Parameters<ReturnType<typeof adapter>['listProviderCostLedgerEntries']>) =>
+  adapter().listProviderCostLedgerEntries(...args);
+export const delinkProviderCostLedgerUser = async (...args: Parameters<ReturnType<typeof adapter>['delinkProviderCostLedgerUser']>) =>
+  adapter().delinkProviderCostLedgerUser(...args);
+export const delinkProviderCostLedgerBefore = async (...args: Parameters<ReturnType<typeof adapter>['delinkProviderCostLedgerBefore']>) =>
+  adapter().delinkProviderCostLedgerBefore(...args);
+export const upsertProviderInvoiceRecord = async (...args: Parameters<ReturnType<typeof adapter>['upsertProviderInvoiceRecord']>) =>
+  adapter().upsertProviderInvoiceRecord(...args);
+export const listProviderInvoiceRecords = async (...args: Parameters<ReturnType<typeof adapter>['listProviderInvoiceRecords']>) =>
+  adapter().listProviderInvoiceRecords(...args);
+export const tryAcquireJobLease = async (...args: Parameters<ReturnType<typeof adapter>['tryAcquireJobLease']>) =>
+  adapter().tryAcquireJobLease(...args);
+export const releaseJobLease = async (...args: Parameters<ReturnType<typeof adapter>['releaseJobLease']>) =>
+  adapter().releaseJobLease(...args);
+export const setJobLeaseCursor = async (...args: Parameters<ReturnType<typeof adapter>['setJobLeaseCursor']>) =>
+  adapter().setJobLeaseCursor(...args);
+export const getJobLease = async (...args: Parameters<ReturnType<typeof adapter>['getJobLease']>) =>
+  adapter().getJobLease(...args);
+
+// Analytics Phase 4: privacy rights and retention.
+export const listPrivacyChoiceEvents = async (...args: Parameters<ReturnType<typeof adapter>['listPrivacyChoiceEvents']>) =>
+  adapter().listPrivacyChoiceEvents(...args);
+export const archivePrivacyChoiceEvidence = async (...args: Parameters<ReturnType<typeof adapter>['archivePrivacyChoiceEvidence']>) =>
+  adapter().archivePrivacyChoiceEvidence(...args);
+export const purgeConsentEvidenceArchivedBefore = async (...args: Parameters<ReturnType<typeof adapter>['purgeConsentEvidenceArchivedBefore']>) =>
+  adapter().purgeConsentEvidenceArchivedBefore(...args);
+export const rotateDiagnosticPseudonym = async (...args: Parameters<ReturnType<typeof adapter>['rotateDiagnosticPseudonym']>) =>
+  adapter().rotateDiagnosticPseudonym(...args);
+export const delinkItineraryGenerationMetricsForUser = async (...args: Parameters<ReturnType<typeof adapter>['delinkItineraryGenerationMetricsForUser']>) =>
+  adapter().delinkItineraryGenerationMetricsForUser(...args);
+export const delinkItineraryGenerationMetricsBefore = async (...args: Parameters<ReturnType<typeof adapter>['delinkItineraryGenerationMetricsBefore']>) =>
+  adapter().delinkItineraryGenerationMetricsBefore(...args);
+export const listItineraryGenerationMetricsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listItineraryGenerationMetricsForUser']>) =>
+  adapter().listItineraryGenerationMetricsForUser(...args);
+export const listProviderCostLedgerEntriesForUser = async (...args: Parameters<ReturnType<typeof adapter>['listProviderCostLedgerEntriesForUser']>) =>
+  adapter().listProviderCostLedgerEntriesForUser(...args);
+export const getUserAgeVerificationRecord = async (...args: Parameters<ReturnType<typeof adapter>['getUserAgeVerificationRecord']>) =>
+  adapter().getUserAgeVerificationRecord(...args);
+export const upsertErasureTombstone = async (...args: Parameters<ReturnType<typeof adapter>['upsertErasureTombstone']>) =>
+  adapter().upsertErasureTombstone(...args);
+export const getErasureTombstone = async (...args: Parameters<ReturnType<typeof adapter>['getErasureTombstone']>) =>
+  adapter().getErasureTombstone(...args);
+export const saveErasureJob = async (...args: Parameters<ReturnType<typeof adapter>['saveErasureJob']>) =>
+  adapter().saveErasureJob(...args);
+export const getErasureJob = async (...args: Parameters<ReturnType<typeof adapter>['getErasureJob']>) =>
+  adapter().getErasureJob(...args);
+export const listErasureJobs = async (...args: Parameters<ReturnType<typeof adapter>['listErasureJobs']>) =>
+  adapter().listErasureJobs(...args);
+export const savePrivacyRightsRequest = async (...args: Parameters<ReturnType<typeof adapter>['savePrivacyRightsRequest']>) =>
+  adapter().savePrivacyRightsRequest(...args);
+export const getPrivacyRightsRequest = async (...args: Parameters<ReturnType<typeof adapter>['getPrivacyRightsRequest']>) =>
+  adapter().getPrivacyRightsRequest(...args);
+export const listPrivacyRightsRequests = async (...args: Parameters<ReturnType<typeof adapter>['listPrivacyRightsRequests']>) =>
+  adapter().listPrivacyRightsRequests(...args);
+
+// Analytics Phase 2: product analytics store.
+export const getOrCreateAnalyticsSubject = async (...args: Parameters<ReturnType<typeof adapter>['getOrCreateAnalyticsSubject']>) =>
+  adapter().getOrCreateAnalyticsSubject(...args);
+export const listAnalyticsSubjectsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsSubjectsForUser']>) =>
+  adapter().listAnalyticsSubjectsForUser(...args);
+export const deleteAnalyticsSubjectsForUser = async (...args: Parameters<ReturnType<typeof adapter>['deleteAnalyticsSubjectsForUser']>) =>
+  adapter().deleteAnalyticsSubjectsForUser(...args);
+export const insertAnalyticsEvents = async (...args: Parameters<ReturnType<typeof adapter>['insertAnalyticsEvents']>) =>
+  adapter().insertAnalyticsEvents(...args);
+export const listAnalyticsEventsForSubjects = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsEventsForSubjects']>) =>
+  adapter().listAnalyticsEventsForSubjects(...args);
+export const deleteAnalyticsEventsForSubjects = async (...args: Parameters<ReturnType<typeof adapter>['deleteAnalyticsEventsForSubjects']>) =>
+  adapter().deleteAnalyticsEventsForSubjects(...args);
+export const deleteExpiredAnalyticsEvents = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpiredAnalyticsEvents']>) =>
+  adapter().deleteExpiredAnalyticsEvents(...args);
+export const listAnalyticsEventsBetween = async (...args: Parameters<ReturnType<typeof adapter>['listAnalyticsEventsBetween']>) =>
+  adapter().listAnalyticsEventsBetween(...args);
+export const getAnalyticsSubjectTimezone = async (...args: Parameters<ReturnType<typeof adapter>['getAnalyticsSubjectTimezone']>) =>
+  adapter().getAnalyticsSubjectTimezone(...args);
+export const setAnalyticsSubjectTimezone = async (...args: Parameters<ReturnType<typeof adapter>['setAnalyticsSubjectTimezone']>) =>
+  adapter().setAnalyticsSubjectTimezone(...args);
+export const getTripTimezone = async (...args: Parameters<ReturnType<typeof adapter>['getTripTimezone']>) =>
+  adapter().getTripTimezone(...args);
+export const setTripTimezone = async (...args: Parameters<ReturnType<typeof adapter>['setTripTimezone']>) =>
+  adapter().setTripTimezone(...args);

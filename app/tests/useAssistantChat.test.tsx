@@ -301,7 +301,7 @@ describe('useAssistantChat', () => {
         JSON.stringify([{ id: 'u-1', role: 'user', content: 'earlier question' }])
       );
 
-      const { result, rerender } = renderHook(({ userId }) => useAssistantChat({ userId }), {
+      const { result, rerender } = renderHook(({ userId }: { userId: string | null }) => useAssistantChat({ userId }), {
         initialProps: { userId: null as string | null },
       });
       expect(result.current.messages).toEqual([]);

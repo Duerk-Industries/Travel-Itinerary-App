@@ -7,6 +7,7 @@ import { getCanonicalPublicPathFirebase } from './firebasePublicationRepository'
 import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
 import { markSynced, shouldSkipSync } from './syncCoordination';
+import { normalizeBlogTags } from './tags';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -54,7 +55,7 @@ const ensureDays = async (tripId: string): Promise<void> => {
 
 const mapItem = (doc: any): BlogTextItem => {
   const data = doc.data ? doc.data() : doc;
-  return { id: String(doc.id ?? data.id), tripId: String(data.tripId), blogDayId: String(data.blogDayId), localDate: String(data.localDate), kindKey: 'core.text', schemaVersion: Number(data.schemaVersion ?? 1), audience: data.audience ?? 'public', sortKey: String(data.sortKey), authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), body: String(data.body ?? ''), languageTag: data.languageTag ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt), sourceType: data.sourceType ?? null, sourceId: data.sourceId ?? null, sourceDetached: Boolean(data.sourceDetached) };
+  return { id: String(doc.id ?? data.id), tripId: String(data.tripId), blogDayId: String(data.blogDayId), localDate: String(data.localDate), kindKey: 'core.text', schemaVersion: Number(data.schemaVersion ?? 1), audience: data.audience ?? 'public', sortKey: String(data.sortKey), authorUserId: String(data.authorUserId), lastEditorUserId: String(data.lastEditorUserId), version: Number(data.version ?? 1), body: String(data.body ?? ''), tags: normalizeBlogTags(data.tags ?? []), languageTag: data.languageTag ?? null, createdAt: String(data.createdAt), updatedAt: String(data.updatedAt), sourceType: data.sourceType ?? null, sourceId: data.sourceId ?? null, sourceDetached: Boolean(data.sourceDetached) };
 };
 
 const linkedSourceBody = (data: any): string => buildNarrativeBlogBody({
@@ -288,7 +289,7 @@ export const createBlogTextItem = async (userId: string, tripId: string, input: 
       return mapItem(replay);
     }
   }
-  const data = { id, tripId, blogDayId: day.id, localDate: day.localDate, kindKey: 'core.text', schemaVersion: 1, audience: input.audience ?? 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${id}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body: String(input.body ?? ''), languageTag: input.languageTag ?? null, sourceType: input.sourceType ?? null, createdAt: nowIso(), updatedAt: nowIso(), deletedAt: null };
+  const data = { id, tripId, blogDayId: day.id, localDate: day.localDate, kindKey: 'core.text', schemaVersion: 1, audience: input.audience ?? 'public', sortKey: `${Date.now().toString().padStart(16, '0')}-${id}`, authorUserId: userId, lastEditorUserId: userId, version: 1, body: String(input.body ?? ''), tags: normalizeBlogTags(input.tags ?? []), languageTag: input.languageTag ?? null, sourceType: input.sourceType ?? null, createdAt: nowIso(), updatedAt: nowIso(), deletedAt: null };
   await getDb().collection('blog_items').doc(id).set(data);
   await getDb().collection('trip_blogs').doc(tripId).set({ contentRevision: (await ensureBlog(tripId)).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
   return mapItem({ id, data: () => data });
@@ -331,7 +332,7 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
     // authorized state on a conflict, not a bare rejection.
     return { conflict: true, latest: mapItem({ id: itemId, data: () => row }) };
   }
-  const update = { body: patch.body === undefined ? row.body : String(patch.body), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() };
+  const update = { body: patch.body === undefined ? row.body : String(patch.body), tags: patch.tags === undefined ? normalizeBlogTags(row.tags ?? []) : normalizeBlogTags(patch.tags), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() };
   await ref.set(update, { merge: true });
   await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
   await getDb().collection('trip_blogs').doc(String(row.tripId)).set({ contentRevision: (await ensureBlog(String(row.tripId))).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
@@ -617,14 +618,26 @@ export const searchBlog = async (
   const limit = Math.min(50, Math.max(1, Number(options.limit ?? 20)));
   const cursor = String(options.cursor ?? '');
   const scanLimit = Math.min(2000, Math.max(limit + 1, Number(options.scanLimit ?? 500)));
-  const snapshots = await getDb().collection('blog_items').where('tripId', '==', tripId).limit(scanLimit).get();
+  const [snapshots, mediaSnapshots] = await Promise.all([
+    getDb().collection('blog_items').where('tripId', '==', tripId).limit(scanLimit).get(),
+    getDb().collection('blog_media_assets').where('tripId', '==', tripId).limit(scanLimit).get(),
+  ]);
+  const mediaTagsByItem = new Map<string, string[]>();
+  mediaSnapshots.docs.forEach((doc) => {
+    const media = doc.data() as any;
+    if (String(media.state) === 'deleted') return;
+    const itemId = String(media.blogItemId ?? '');
+    if (itemId) mediaTagsByItem.set(itemId, [...(mediaTagsByItem.get(itemId) ?? []), ...normalizeBlogTags(media.tags ?? [])]);
+  });
   // Firestore has no contains/full-text operator. This bounded fallback preserves adapter parity
   // for today's trip-size ceiling; a managed search index can replace it when that ceiling grows.
   return snapshots.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
     .filter((item) => {
-      if (item.deletedAt != null || item.kindKey !== 'core.text' || !audiences.includes(String(item.audience))) return false;
-      return String(item.body ?? '').toLowerCase().includes(q);
+      if (item.deletedAt != null || !audiences.includes(String(item.audience))) return false;
+      return String(item.body ?? '').toLowerCase().includes(q)
+        || normalizeBlogTags(item.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+        || (mediaTagsByItem.get(String(item.id)) ?? []).some((tag) => tag.toLowerCase().includes(q));
     })
     .sort((a, b) => `${a.localDate}|${a.id}`.localeCompare(`${b.localDate}|${b.id}`))
     .filter((item) => !cursor || `${item.localDate}|${item.id}` > cursor)

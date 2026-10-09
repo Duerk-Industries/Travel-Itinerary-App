@@ -1,10 +1,9 @@
 # Sentry error reporting & source maps
 
 WanderBunnies wires `@sentry/react-native` into the Expo app **and**
-`@sentry/node` into the Express backend so that production crashes (native,
-web, and server) report to Sentry with symbolicated stack traces. Everything
-is gated on environment variables, so the codebase ships safely whether or not
-a Sentry project is provisioned.
+`@sentry/node` into the Express backend. Backend reporting requires a server
+DSN. Client reporting additionally requires an enabled diagnostics flag and a
+current user choice; source maps can then symbolicate captured crashes.
 
 The frontend and backend both report to the same Sentry project
 (`duerk-industries / wanderbunnies-app`). Events are separated by SDK/platform
@@ -12,14 +11,19 @@ inside Sentry, so a single DSN is sufficient.
 
 ## What gets reported
 
-- **Runtime errors** (uncaught exceptions, unhandled promise rejections)
-  via `Sentry.init()` in `app/utils/sentry.ts`, called from
-  `app/AppEntry.js` before any other app code runs.
+- **Client runtime errors** (uncaught exceptions, unhandled promise rejections)
+  via `Sentry.init()` in `app/utils/sentry.ts`, called only after the
+  server confirms the user's detailed-diagnostics choice and the release flag.
 - **React render errors** via `Sentry.wrap(Root)` around the entry
   component — that adds a Sentry-aware error boundary in front of the
   existing `EntryErrorBoundary`.
 - **Light performance tracing** at a 10 % sample rate. Bump per-route
   via `Sentry.startSpan` in hot paths if needed.
+- **Readiness spans** (`app/utils/readinessMarks.ts`): `app.trip_ready` (cold
+  start or login until trips load) and `ui.screen_ready` (page change until the
+  next frame), with only `platform`/`page`/`trigger`/`hasTrips` attributes.
+  Like everything else here they exist only after detailed-diagnostics consent;
+  measurements taken before Sentry is initialized are dropped, not queued.
 
 Disabled on purpose:
 
@@ -32,7 +36,7 @@ Disabled on purpose:
 
 | Variable                       | Where to set it                          | Effect                                                                                       |
 | ------------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `EXPO_PUBLIC_SENTRY_DSN`       | `app/.env`, EAS Build secrets, web build | Enables `Sentry.init`. **Without this, the entire integration is a no-op at runtime.**       |
+| `EXPO_PUBLIC_SENTRY_DSN`       | `app/.env`, EAS Build secrets, web build | Allows client initialization after permission and the server flag. Without it, client reporting is off. |
 | `EXPO_PUBLIC_SENTRY_ENV`       | optional                                 | Overrides the `environment` tag (e.g. `"preview"` for staging). Falls back to `NODE_ENV`.    |
 | `SENTRY_AUTH_TOKEN`            | EAS Build secret + local export shell    | Authenticates the source-map upload. Without it, no maps upload; runtime reporting still works. |
 | `SENTRY_ORG`                   | EAS Build secret + local export shell    | Sentry organization slug.                                                                    |
@@ -91,8 +95,9 @@ If you need to test the integration end-to-end locally:
 EXPO_PUBLIC_SENTRY_DSN=https://… npm --prefix app run web
 ```
 
-…and trigger an error in the UI. It should appear in the configured
-project within a few seconds.
+Enable the diagnostics flag in an isolated test environment, opt in through
+Account → Privacy, then trigger an error. A DSN alone no longer starts the
+client SDK. Capture the pre-choice, granted and withdrawn network states.
 
 ## Backend (server)
 
@@ -127,8 +132,8 @@ Read these through the standard server config: locally they live in
 ## Files
 
 - `app/utils/sentry.ts` — runtime init helper. Safe to import always.
-- `app/AppEntry.js` — calls `initSentry()` early, wraps `Root` with
-  `wrapApp()`.
+- `app/AppEntry.js` — wraps `Root` with `wrapApp()`; it does not initialize Sentry.
+- `app/hooks/usePrivacyConsent.ts` — initializes or closes client reporting as permission and account state change.
 - `metro.shared.cjs` — wraps the Metro config with `withSentryConfig`
   so Debug IDs end up in every bundle.
 - `app/app.config.ts` — registers the Expo config plugin

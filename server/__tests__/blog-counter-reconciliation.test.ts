@@ -3,12 +3,14 @@ import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
-import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
+import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 import { reactToTarget } from '../src/services/blogEngagementService';
 import { reconcileBlogCounters } from '../src/services/blogCounterReconciliationService';
 import { claimJobLease } from '../src/services/scheduledJobLease';
 
 // Phase 2 — counter reconciliation and the DB-backed lease primitive it's built on.
+const TRIP_DAY = futureDateString();
+
 describe('blog counter reconciliation', () => {
   const traveler = { firstName: 'Recon', lastName: 'Traveler', email: 'blog-recon-traveler@example.com', password: 'Password123!' };
   let travelerToken = '';
@@ -28,7 +30,7 @@ describe('blog counter reconciliation', () => {
     const trip = await request(app)
       .post('/api/trips/wizard')
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ name: 'Reconciliation Trip', startDate: '2030-10-06', endDate: '2030-10-06', participants: [] })
+      .send({ name: 'Reconciliation Trip', startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
@@ -36,7 +38,7 @@ describe('blog counter reconciliation', () => {
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
       .set('Authorization', `Bearer ${travelerToken}`)
-      .send({ kindKey: 'core.text', dayDate: '2030-10-06', body: 'Reconciliation target', audience: 'public' })
+      .send({ kindKey: 'core.text', dayDate: TRIP_DAY, body: 'Reconciliation target', audience: 'public' })
       .expect(201);
     itemId = item.body.id;
   });

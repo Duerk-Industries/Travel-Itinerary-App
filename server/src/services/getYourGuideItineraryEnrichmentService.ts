@@ -257,15 +257,12 @@ export const scheduleGetYourGuideDescriptorEnrichment = (candidates: GetYourGuid
   }).then((result) => {
     if (!result) return;
     const [descriptors, partner] = result;
-    incrementMetric('getyourguide_affiliate_enrichment', {
-      selected: descriptors.candidates.length,
-      issued: Object.keys(descriptors.descriptors).length,
-      products: Object.keys(partner.productsByCandidateId).length,
-    });
-    recordTiming('getyourguide_affiliate_enrichment_ms', Date.now() - startedAt, {
-      selected: descriptors.candidates.length,
-      issued: Object.keys(descriptors.descriptors).length,
-      products: Object.keys(partner.productsByCandidateId).length,
-    });
+    // Counts are amounts, not labels: numeric label values create a new
+    // series per distinct number.
+    incrementMetric('getyourguide_affiliate_enrichment');
+    incrementMetric('getyourguide_affiliate_candidates_selected', undefined, descriptors.candidates.length);
+    incrementMetric('getyourguide_affiliate_descriptors_issued', undefined, Object.keys(descriptors.descriptors).length);
+    incrementMetric('getyourguide_affiliate_products_matched', undefined, Object.keys(partner.productsByCandidateId).length);
+    recordTiming('getyourguide_affiliate_enrichment_ms', Date.now() - startedAt);
   }).catch(() => undefined);
 };

@@ -133,7 +133,7 @@ describe('tier and trip enforcement', () => {
       .expect(201);
   });
 
-  it('enforces premium-only cost tracking server-side', async () => {
+  it('allows cost tracking for free and premium users server-side', async () => {
     const freeUser = await registerAndLoginWebUser({
       firstName: 'Free',
       lastName: 'Expense',
@@ -148,17 +148,19 @@ describe('tier and trip enforcement', () => {
       .expect(201);
     const tripId = tripResponse.body.id ?? tripResponse.body.trip?.id;
 
-    await request(app)
-      .get(`/api/expenses?tripId=${tripId}`)
-      .set('Authorization', `Bearer ${freeUser.token}`)
-      .expect(402);
-
-    await setUserTierInDb(freeUser.userId, 'premium');
-
-    await request(app)
+    const freeExpenses = await request(app)
       .get(`/api/expenses?tripId=${tripId}`)
       .set('Authorization', `Bearer ${freeUser.token}`)
       .expect(200);
+    expect(freeExpenses.body).toEqual([]);
+
+    await setUserTierInDb(freeUser.userId, 'premium');
+
+    const premiumExpenses = await request(app)
+      .get(`/api/expenses?tripId=${tripId}`)
+      .set('Authorization', `Bearer ${freeUser.token}`)
+      .expect(200);
+    expect(premiumExpenses.body).toEqual([]);
   });
 
   it('inherits lower-tier feature entitlements for higher tiers', async () => {

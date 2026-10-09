@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
-import { handleLogin, createToken } from '../auth';
+import { createToken } from '../auth';
 import {
   claimInvitesForUser,
   createEmailVerification,
@@ -106,25 +106,11 @@ router.post('/resend-confirmation', async (req, res) => {
   }
 });
 
-router.post('/email', async (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    res.status(400).json({ error: 'email is required' });
-    return;
-  }
-  const result = await handleLogin(email, 'email');
-  res.json(result);
-});
-
-router.post('/oauth', async (req, res) => {
-  const { email, provider } = req.body;
-  if (!email || !provider || !['google', 'apple'].includes(provider)) {
-    res.status(400).json({ error: 'email and provider (google|apple) are required' });
-    return;
-  }
-  const result = await handleLogin(email, provider as 'google' | 'apple');
-  res.json(result);
-});
+// POST /email and POST /oauth were removed (October 2026): they issued a signed 30-day
+// session token for any email address without a password, OAuth proof or verification,
+// including admin tokens for the bootstrap admin emails. Google and Apple sign-in go
+// through the verified OAuth callbacks in app.ts; email accounts use /register + /login.
+// server/__tests__/admin-bootstrap.test.ts asserts both paths stay gone.
 
 router.post('/login', authLoginRateLimit, async (req, res) => {
   const { identifier, email, password } = req.body ?? {};
