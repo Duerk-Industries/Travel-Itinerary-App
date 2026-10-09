@@ -17,8 +17,29 @@ describe('legal pages (analytics Phase 4)', () => {
     expect(() => execFileSync(process.execPath, [path.join(repoRoot, 'scripts/build-legal-pages.mjs'), '--check'], { stdio: 'pipe' })).not.toThrow();
   });
 
-  it('/privacy and /privacy.html serve the same canonical notice', () => {
+  it('the generated privacy page matches the canonical notice', () => {
     expect(read('app/public/privacy.html')).toBe(privacyPolicyHtml.replace(/\r\n/g, '\n'));
+  });
+
+  it('serves the same notice at /privacy and /privacy.html without copied web assets', async () => {
+    const [extensionless, html] = await Promise.all([
+      request(app).get('/privacy').expect(200),
+      request(app).get('/privacy.html').expect(200),
+    ]);
+    expect(html.headers['content-type']).toMatch(/text\/html/);
+    expect(html.text).toBe(extensionless.text);
+    expect(html.text).toBe(privacyPolicyHtml);
+  });
+
+  it.each([
+    ['/terms.html', 'Consumer Terms'],
+    ['/cookies.html', 'Cookie Notice'],
+    ['/privacy-choices.html', 'Your Privacy Choices'],
+    ['/delete-account.html', 'Delete your account'],
+  ])('serves the profile link %s', async (url, title) => {
+    const res = await request(app).get(url).expect(200);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    expect(res.text).toContain(title);
   });
 
   it('serves /privacy from the canonical notice with the required disclosures', async () => {

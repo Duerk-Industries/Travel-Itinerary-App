@@ -98,6 +98,26 @@ describe('AccountPrivacySettings: delete analytics data', () => {
   });
 });
 
+describe('AccountPrivacySettings public links', () => {
+  it('opens each legal page from the profile privacy section', () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    try {
+      const view = render(<AccountPrivacySettings privacy={controller({ showPrompt: false })} backendUrl="http://api.test" token="token-1" theme={theme} />);
+      for (const label of ['Privacy notice', 'Cookie notice', 'Your choices', 'Delete account']) {
+        fireEvent.press(view.getByText(label));
+      }
+      expect(open.mock.calls.map(([url]) => url)).toEqual([
+        'http://api.test/privacy.html',
+        'http://api.test/cookies.html',
+        'http://api.test/privacy-choices.html',
+        'http://api.test/delete-account.html',
+      ]);
+    } finally {
+      open.mockRestore();
+    }
+  });
+});
+
 describe('privacy surfaces across platforms and appearances', () => {
   const originalOS = Platform.OS;
   afterEach(() => { Platform.OS = originalOS; });

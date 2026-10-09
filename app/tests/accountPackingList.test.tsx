@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
-import { View } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
 import AccountTab from '../tabs/account';
 
 jest.mock('../tabs/AccountProfileManagement', () => (props: any) => <View testID="account-profile-management" {...props} />);
@@ -82,5 +82,20 @@ describe('Account profile links', () => {
     expect(onNavigate).toHaveBeenNthCalledWith(1, 'account-fellow-travelers');
     expect(onNavigate).toHaveBeenNthCalledWith(2, 'account-packing-list');
     expect(onNavigate).toHaveBeenNthCalledWith(3, 'account-travel-profile');
+  });
+
+  test('opens the public privacy and terms pages from the profile footer', () => {
+    const originalOS = Platform.OS;
+    Platform.OS = 'ios';
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    try {
+      const { getByText } = render(<AccountTab {...defaultProps} onNavigate={jest.fn()} />);
+      fireEvent.press(getByText('Privacy Policy'));
+      fireEvent.press(getByText('Terms of Service'));
+      expect(open).toHaveBeenNthCalledWith(1, 'http://localhost/privacy.html');
+      expect(open).toHaveBeenNthCalledWith(2, 'http://localhost/terms.html');
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 });
