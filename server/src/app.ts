@@ -142,7 +142,7 @@ const corsOptions: cors.CorsOptions = {
     return callback(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent', 'X-Public-Visitor-Id'],
   exposedHeaders: ['X-Request-Id'],
 };
 

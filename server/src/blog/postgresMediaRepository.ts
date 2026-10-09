@@ -8,6 +8,7 @@ import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { normalizeBlogTags } from './tags';
+import { clearPostgresDeletedTarget } from './deletedTargetCleanup';
 
 const tierConfig = (() => {
   try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; }
@@ -305,32 +306,32 @@ export const listMedia = async (userId: string, tripId: string): Promise<BlogMed
 // are removed whole via DELETE /blog/items/:itemId). If it was the last asset in its gallery, the
 // now-empty gallery item is soft-deleted too so it doesn't linger as an invisible post.
 export const deleteMediaAsset = async (userId: string, assetId: string): Promise<{ deleted: boolean }> => {
-  const current = await queryBlog<any>(
-    `SELECT a.id, a.trip_id, a.storage_account_user_id, a.billable_bytes, a.state, ia.item_id, i.kind_key
-     FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id
-     WHERE a.id = $1 AND a.state <> 'deleted' AND i.deleted_at IS NULL`,
-    [assetId]
-  );
-  const asset = current.rows[0];
-  if (!asset) return { deleted: false };
-  if (asset.kind_key !== 'core.gallery') throw new Error('This asset must be part of a gallery to remove individually; use DELETE /blog/items/:itemId for standalone photos or videos instead');
-  const access = await ensureUserInTrip(String(asset.trip_id), userId);
-  if (!access) throw new Error('Not authorized to edit this trip');
-  const bytesColumn = asset.state === 'ready' ? 'visible_committed_bytes' : asset.state === 'grace_hidden' ? 'grace_hidden_bytes' : 'reserved_bytes';
-  await queryBlog(
-    `UPDATE blog_storage_accounts SET ${bytesColumn} = GREATEST(0, ${bytesColumn} - $2), updated_at = NOW() WHERE user_id = $1`,
-    [asset.storage_account_user_id, Number(asset.billable_bytes)]
-  );
-  await queryBlog(`UPDATE blog_media_assets SET state = 'deleted', updated_at = NOW() WHERE id = $1`, [assetId]);
-  await queryBlog('DELETE FROM blog_item_assets WHERE asset_id = $1', [assetId]);
-  const remaining = await queryBlog<{ count: string }>('SELECT COUNT(*)::int AS count FROM blog_item_assets WHERE item_id = $1', [asset.item_id]);
-  if (Number(remaining.rows[0].count) === 0) {
-    await queryBlog(
-      `UPDATE blog_items SET deleted_at = NOW(), version = version + 1, last_editor_user_id = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
-      [asset.item_id, userId]
+  return withBlogTransaction(async (client) => {
+    const current = await client.query<any>(
+      `SELECT a.id, a.trip_id, a.storage_account_user_id, a.billable_bytes, a.state, a.source_ref, ia.item_id, i.kind_key
+       FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id
+       WHERE a.id = $1 AND a.state <> 'deleted' AND i.deleted_at IS NULL`, [assetId]
     );
-  }
-  return { deleted: true };
+    const asset = current.rows[0];
+    if (!asset) return { deleted: false };
+    if (asset.kind_key !== 'core.gallery') throw new Error('This asset must be part of a gallery to remove individually; use DELETE /blog/items/:itemId for standalone photos or videos instead');
+    if (!(await ensureUserInTrip(String(asset.trip_id), userId))) throw new Error('Not authorized to edit this trip');
+    const bytesColumn = asset.state === 'ready' ? 'visible_committed_bytes' : asset.state === 'grace_hidden' ? 'grace_hidden_bytes' : 'reserved_bytes';
+    await client.query(`UPDATE blog_storage_accounts SET ${bytesColumn} = GREATEST(0, ${bytesColumn} - $2), updated_at = NOW() WHERE user_id = $1`, [asset.storage_account_user_id, Number(asset.billable_bytes)]);
+    if (asset.state === 'uploading' || asset.state === 'quarantined') {
+      await client.query("UPDATE blog_storage_reservations SET state = 'released' WHERE user_id = $1 AND idempotency_key = $2 AND state = 'reserved'", [asset.storage_account_user_id, asset.source_ref]);
+    }
+    await client.query("UPDATE blog_media_assets SET state = 'deleted', tags = '[]'::jsonb, updated_at = NOW() WHERE id = $1", [assetId]);
+    await clearPostgresDeletedTarget(client, 'asset', assetId);
+    await client.query('DELETE FROM blog_item_assets WHERE asset_id = $1', [assetId]);
+    const remaining = await client.query<{ count: string }>('SELECT COUNT(*)::int AS count FROM blog_item_assets WHERE item_id = $1', [asset.item_id]);
+    if (Number(remaining.rows[0].count) === 0) {
+      await client.query("UPDATE blog_items SET deleted_at = NOW(), tags = '[]'::jsonb, version = version + 1, last_editor_user_id = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL", [asset.item_id, userId]);
+      await clearPostgresDeletedTarget(client, 'item', asset.item_id);
+    }
+    await client.query('UPDATE trip_blogs SET content_revision = content_revision + 1, updated_at = NOW() WHERE trip_id = $1', [asset.trip_id]);
+    return { deleted: true };
+  });
 };
 
 export const setHighlight = async (userId: string, itemId: string, highlighted: boolean): Promise<void> => {

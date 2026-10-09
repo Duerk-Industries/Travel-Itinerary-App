@@ -227,13 +227,19 @@ router.get('/:tripId/blog', async (req, res) => {
     const publicPath = blog.visibilityState === 'public'
       ? await blogRepository().getPublicPath(req.params.tripId)
       : null;
-    const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}"`;
+    // Reactions change independently of contentRevision. Include their summaries so a
+    // conditional GET cannot return 304 with a pre-reaction body from the browser cache.
+    const engagementDigest = createHash('sha256').update(JSON.stringify(blog.days.map((day: any) => [
+      day.engagement,
+      day.items?.map((item: any) => [item.engagement, item.assets?.map((asset: any) => asset.engagement)]),
+    ]))).digest('hex').slice(0, 16);
+    const etag = `W/"blog-${blog.contentRevision}-${blog.visibilityEpoch}-${engagementDigest}"`;
     res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'private, no-store');
     if (req.headers['if-none-match'] === etag) {
       res.status(304).end();
       return;
     }
-    res.setHeader('Cache-Control', 'private, no-store');
     res.json({ ...blog, publicPath });
   } catch (err) {
     errorResponse(res, err);

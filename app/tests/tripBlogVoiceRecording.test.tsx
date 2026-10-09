@@ -143,6 +143,29 @@ describe('TripBlogTab in-app voice note recording', () => {
     const recordingUriFetches = fetchMock.mock.calls.filter(([reqUrl]: [string]) => String(reqUrl) === 'file:///recorded-voice-note.m4a');
     expect(recordingUriFetches).toHaveLength(1);
   });
+
+  it('shows the actual upload failure only in edit mode when storage cannot sign an upload', async () => {
+    const baseFetch = fetchMock;
+    fetchMock = jest.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      String(input).includes('/blog/media/upload-init')
+        ? jsonResponse({ error: 'Voice-note storage is unavailable. Please try again later.' }, 503)
+        : baseFetch(input, init));
+    (global as any).fetch = fetchMock;
+
+    const view = renderTab();
+    fireEvent.press(await view.findByText('Edit blog'));
+    const recordButton = await view.findByTestId('blog-record-voice-2026-09-01');
+    fireEvent.press(recordButton);
+    await waitFor(() => expect(view.getByLabelText('Stop recording')).toBeTruthy());
+    fireEvent.press(recordButton);
+
+    const failure = await view.findByTestId('blog-voice-upload-failure-2026-09-01');
+    expect(failure).toBeTruthy();
+    expect(view.getByText(/Voice note failed: Voice-note storage is unavailable/)).toBeTruthy();
+    expect(view.queryByTestId('blog-voice-note-item-1')).toBeNull();
+    fireEvent.press(view.getByText('Done editing'));
+    expect(view.queryByTestId('blog-voice-upload-failure-2026-09-01')).toBeNull();
+  });
 });
 
 describe('TripBlogTab voice note rendering', () => {
@@ -191,18 +214,26 @@ describe('TripBlogTab voice note rendering', () => {
     expect(queryByText(/no preview available/i)).toBeNull();
   });
 
-  it('explains when a completed voice note has no playable audio instead of claiming it is still uploading', async () => {
-    const { findByTestId, getByText, queryByText } = renderWithAudioItem({ primaryUrl: null, caption: null });
+  it('hides an unplayable completed voice note from reading, but shows its failure in edit mode', async () => {
+    const view = renderWithAudioItem({ primaryUrl: null, caption: null });
 
-    expect(await findByTestId('blog-voice-note-item-1')).toBeTruthy();
-    expect(getByText('Audio unavailable — please add this voice note again.')).toBeTruthy();
-    expect(queryByText('Uploading…')).toBeNull();
-    expect(queryByText(/no preview available/i)).toBeNull();
+    expect(await view.findByText('Edit blog')).toBeTruthy();
+    expect(view.queryByTestId('blog-day-2026-09-01')).toBeNull();
+    expect(view.queryByTestId('blog-voice-note-item-1')).toBeNull();
+
+    fireEvent.press(view.getByText('Edit blog'));
+    expect(view.getByTestId('blog-voice-note-item-1')).toBeTruthy();
+    expect(view.getByText('Audio unavailable — please add this voice note again.')).toBeTruthy();
+    expect(view.queryByText('Uploading…')).toBeNull();
   });
 
-  it('distinguishes an unfinished upload from a ready item with missing audio', async () => {
-    const { findByTestId, getByText } = renderWithAudioItem({ state: 'uploading', primaryUrl: null, caption: null });
-    expect(await findByTestId('blog-voice-note-item-1')).toBeTruthy();
-    expect(getByText('Upload incomplete — please add this voice note again.')).toBeTruthy();
+  it('hides an unfinished upload from reading, but lets the editor remove it', async () => {
+    const view = renderWithAudioItem({ state: 'uploading', primaryUrl: null, caption: null });
+    expect(await view.findByText('Edit blog')).toBeTruthy();
+    expect(view.queryByTestId('blog-day-2026-09-01')).toBeNull();
+    fireEvent.press(view.getByText('Edit blog'));
+    expect(view.getByTestId('blog-voice-note-item-1')).toBeTruthy();
+    expect(view.getByText('Upload incomplete — please add this voice note again.')).toBeTruthy();
+    expect(view.getByText('Remove')).toBeTruthy();
   });
 });

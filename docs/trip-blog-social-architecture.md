@@ -498,12 +498,14 @@ bodies are capped by both 2,000 Unicode characters and 8 KiB UTF-8, and report d
 non-deleted top-level comment on the same trip and target. Client limits are usability hints; server
 limits are the trust boundary.
 
-Public engagement is not appended to the existing public blog document. A separate read-only route
-under `publicBlogRoutes.ts` serves public-audience counters and paginated comments:
+Public engagement is not appended to the existing public blog document. Separate routes under
+`publicBlogRoutes.ts` serve public-audience counters and paginated comments, and let visitors react
+to published days:
 
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/public/blog/:username/:tripSlug/engagement` | `?dayDate=&cursor=&limit=`. Public-audience rows only; no reactor identity, coordinates, spend, email or private source metadata. Independently cached and IP-limited. |
+| `PUT` / `DELETE` | `/api/public/blog/:username/:tripSlug/engagement/day/:dayDate/reaction` | Sets or clears one emoji per browser identifier on a published day with a public post. Requires `X-Public-Visitor-Id`; IP-limited. |
 
 Its ETag/cache key is `(tripId, visibilityEpoch, engagementRevision, dayDate, cursor)`. The public blog
 document stays keyed on `contentRevision`; engagement changes therefore expire only the small social

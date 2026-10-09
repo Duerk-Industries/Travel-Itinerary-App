@@ -1,15 +1,15 @@
 ---
 title: Privacy Notice
-version: 3.0
-effective: October 8, 2026
-changes: Operator and contact updated (Tristan Duerk; support@wander-bunnies.com). Minimum account age 16 everywhere. Added optional product analytics and detailed diagnostics (both off unless you opt in), push notification tokens, cost metering, a published retention schedule, self-service deletion of analytics data, and clearer rights, recipients and transfers. Removed the earlier statement that crash reporting is always on.
+version: 3.1
+effective: October 9, 2026
+changes: Public blog visitors can react without an account. A random identifier stored for each blog in the browser links one changeable reaction to that browser; reactions and request security data are described below.
 ---
 
 # Privacy Notice
 
-**WanderBunnies** — Version 3.0, effective October 8, 2026.
+**WanderBunnies** — Version 3.1, effective October 9, 2026.
 
-> **What changed in this version:** operator and contact details are updated; accounts require age 16 or older everywhere; optional product analytics and optional detailed diagnostics are described (both are **off unless you turn them on**); we added push notification tokens, cost metering, a retention schedule, and a way to delete your analytics data yourself.
+> **What changed in this version:** visitors with a public blog link can react without an account. We explain the browser identifier used to change or remove those reactions.
 
 This Privacy Notice explains how **Tristan Duerk**, an individual trading as WanderBunnies ("WanderBunnies," "we," "us," or "our"), processes personal data when you use our web, mobile, and related services (the "Service").
 
@@ -33,6 +33,7 @@ For privacy requests, please identify yourself, describe the request, and provid
 | Account and authentication | Name, email address, username, password credentials, sign-in provider, account role, email-verification status, date of birth or an age confirmation, authentication and session identifiers. | Registration, login, Google, Apple or other enabled sign-in providers, and account management. |
 | Profile and preference data | First and last name, home address, preferred airport, optional age and gender, travel preferences (such as pace, comfort level and interests), temperature, appearance and map preferences, family or fellow-traveler relationships, and related contact details. | Information you enter or authorize another group member to share. All optional profile fields are optional. |
 | Trip and collaboration data | Destinations, dates, flights, lodging, activities, transportation, itineraries, notes, packing lists, expenses, payments recorded in a shared ledger, comments, chat, reactions, presence, invitations, and follow codes. | Information you create, upload, receive through collaboration, or import. |
+| Public blog reactions | The emoji you choose, the public blog day, a random identifier stored in your browser for that blog, and the time of the reaction. Your IP address is used to rate-limit reaction requests. The identifier is not an account or advertising identifier. | Only when you react on a public blog. It lets you change or remove that browser's reaction on a return visit. |
 | Imported and uploaded content | Documents, PDFs, images and videos you choose to upload or share into the app, emails, email headers and bodies, attachments, extracted travel details, filenames, source metadata, and review history. | Manual uploads, the photo picker, sharing from another app, forwarded email, and optional Gmail import. We only access photos or videos you select or share; we do not use your camera or browse your photo library. |
 | Gmail and Google data | Read-only inbox messages and attachments within the authorized scope, the connected Google account address, OAuth tokens, token status, and import history. | Only after you authorize Gmail access and while the connection remains enabled. |
 | Billing and transaction data | Stripe customer, subscription, invoice, tax, payment status, plan, entitlement, and webhook identifiers. Payment-card details are handled by Stripe rather than stored by WanderBunnies. | Subscription checkout, billing management, and payment events. |
@@ -54,6 +55,7 @@ Do not upload passports, government identification, payment-card numbers, health
 | Process subscriptions, taxes, invoices, refunds, fraud checks, and payment disputes; keep billing records. | Performance of a contract and compliance with legal obligations. |
 | Enforce plan limits and quotas, and meter the cost of paid services per account and trip. | Performance of a contract (plan limits) and legitimate interests (managing service costs). |
 | Operate, maintain, secure, debug, prevent abuse, and keep server-side error reports and security logs. | Legitimate interests, balanced against your rights and expectations; legal obligation where applicable. |
+| Save a public blog reaction and let the same browser change or remove it. | Legitimate interests in providing the interaction you request and preventing abuse, balanced against the small amount of data used and your ability to remove the reaction. |
 | Send service, security, billing, and account notices. | Performance of a contract or legitimate interests. Marketing messages require consent where required. |
 | Generate AI-assisted itineraries, extraction results, summaries, and recommendations. | Performance of a contract or your request for the feature; consent where a separate optional processing activity requires it. |
 | Optional product analytics: understand which features are valuable and improve them. | Consent. Off unless you opt in; you can withdraw at any time. |
@@ -129,6 +131,7 @@ We keep information only as long as necessary for the purposes above, to provide
 |---|---|
 | Account and profile data | While the account is active and until deletion is completed, except for information required for legal, security, fraud-prevention, or dispute purposes. |
 | Trip and shared content | Until you or an authorized group member deletes it, the account is deleted, or retention is necessary for a legal or shared-collaboration purpose. Shared content may be retained in de-identified or group-scoped form where needed to preserve another member's trip. |
+| Public blog reactions | Until you remove the reaction from the same browser or the associated blog day or trip is deleted. Clearing browser storage removes your ability to identify and remove that reaction from the page; contact us for help with a privacy request. |
 | Uploads, imported documents, parsed items, and Gmail data | Until the item is deleted, Gmail is disconnected, the account is deleted, or a shorter feature-specific period ends, subject to legal and security exceptions. |
 | OAuth tokens | Until disconnect, expiry, account deletion, or revocation, whichever occurs first. |
 | Optional product analytics events | 90 days, then deleted. Summaries linked to your account: up to 13 months. Only collected if you opt in. |

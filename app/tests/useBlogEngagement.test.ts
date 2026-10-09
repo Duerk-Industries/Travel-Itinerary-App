@@ -129,4 +129,31 @@ describe('useBlogEngagement', () => {
     act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: { ...saved, reactionCounts: { heart: 2 }, reactionTotal: 2 } }] }, result.current.getMutationEpoch()));
     expect(result.current.getSummary('day', 'day-1').reactionTotal).toBe(2);
   });
+
+  it('keeps a saved reaction visible while later blog reads still contain an older summary', async () => {
+    const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
+    const saved = { reactionCounts: { heart: 1 }, reactionTotal: 1, commentCount: 0, userReaction: 'heart' };
+    (global as any).fetch = jest.fn(async () => jsonResponse(saved));
+    const { result } = renderHook(() => useBlogEngagement(backendUrl, headers, 'trip-1'));
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: zero }] }));
+
+    await act(async () => { await result.current.react('day', 'day-1', 'heart'); });
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: zero }] }, result.current.getMutationEpoch()));
+    expect(result.current.getSummary('day', 'day-1')).toEqual(saved);
+
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: { ...saved, reactionCounts: { heart: 2 }, reactionTotal: 2 } }] }, result.current.getMutationEpoch()));
+    expect(result.current.getSummary('day', 'day-1').reactionTotal).toBe(2);
+  });
+
+  it('keeps a cleared reaction cleared while a later blog read still shows it', async () => {
+    const saved = { reactionCounts: { heart: 1 }, reactionTotal: 1, commentCount: 0, userReaction: 'heart' };
+    const cleared = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
+    (global as any).fetch = jest.fn(async () => jsonResponse(cleared));
+    const { result } = renderHook(() => useBlogEngagement(backendUrl, headers, 'trip-1'));
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: saved }] }));
+
+    await act(async () => { await result.current.clear('day', 'day-1'); });
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: saved }] }, result.current.getMutationEpoch()));
+    expect(result.current.getSummary('day', 'day-1')).toEqual(cleared);
+  });
 });

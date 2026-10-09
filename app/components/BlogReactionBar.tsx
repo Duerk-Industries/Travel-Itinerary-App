@@ -42,7 +42,10 @@ const BlogReactionBar: React.FC<Props> = ({
   const activeChipBg = theme?.colors?.surfaceMuted ?? '#e5e7eb';
   const compact = size === 'compact';
 
-  const presentEmojis = BLOG_REACTION_EMOJIS.filter((emoji) => (summary.reactionCounts[emoji] ?? 0) > 0);
+  // The caller's saved choice should remain visible even if an eventually consistent
+  // counter is briefly behind the individual reaction record.
+  const presentEmojis = BLOG_REACTION_EMOJIS.filter((emoji) => (summary.reactionCounts[emoji] ?? 0) > 0 || summary.userReaction === emoji);
+  const visibleCount = (emoji: BlogReactionEmoji) => Math.max(summary.userReaction === emoji ? 1 : 0, summary.reactionCounts[emoji] ?? 0);
 
   const handlePress = async (emoji: BlogReactionEmoji) => {
     if (!canEngage || pending) return;
@@ -77,7 +80,7 @@ const BlogReactionBar: React.FC<Props> = ({
           key={emoji}
           testID={testID ? `${testID}-chip-${emoji}` : undefined}
           accessibilityRole="button"
-          accessibilityLabel={`${summary.userReaction === emoji ? 'Remove' : 'React with'} ${emoji}, ${summary.reactionCounts[emoji]} ${summary.reactionCounts[emoji] === 1 ? 'reaction' : 'reactions'}`}
+          accessibilityLabel={`${summary.userReaction === emoji ? 'Remove' : 'React with'} ${emoji}, ${visibleCount(emoji)} ${visibleCount(emoji) === 1 ? 'reaction' : 'reactions'}`}
           accessibilityState={{ disabled: !canEngage || pending, selected: summary.userReaction === emoji }}
           disabled={!canEngage || pending}
           hitSlop={8}
@@ -86,7 +89,7 @@ const BlogReactionBar: React.FC<Props> = ({
         >
           <Text style={{ fontSize: compact ? 13 : 15 }}>{EMOJI_GLYPH[emoji]}</Text>
           <Text style={{ fontSize: 12, fontWeight: '600', color: summary.userReaction === emoji ? textColor : mutedColor }}>
-            {summary.reactionCounts[emoji]}
+            {visibleCount(emoji)}
           </Text>
         </Pressable>
       ))}

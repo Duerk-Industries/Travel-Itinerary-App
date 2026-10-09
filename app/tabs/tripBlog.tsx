@@ -56,6 +56,8 @@ export { BlogMediaPreview, resolveMediaAspectRatio, isVideoMimeType, guessMimeTy
 // way it did for the plain TextInput this replaced. Strip tags/entities and
 // check what's left.
 const isRichTextEmpty = (html) => !String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+const isUnavailableVoiceNote = (item) =>
+  (item?.mediaKind === 'audio' || item?.kindKey === 'media.audio') && (item.state !== 'ready' || !item.primaryUrl);
 
 const WRITING_PROMPTS = [
   'What surprised you today?', 'Best thing you ate', 'A moment worth remembering',
@@ -79,6 +81,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [voiceUploadFailures, setVoiceUploadFailures] = useState({});
   const [uploadProgress, setUploadProgress] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [limit, setLimit] = useState(7);
@@ -192,13 +195,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     Boolean(capabilities.trip_blog_places && !readOnly) ||
     Boolean(capabilities.trip_blog_spend_summary && !readOnly);
   const visibleDays = useMemo(() => (blog?.days || []).map((day) => {
-    if (!publicPreview) return day;
-    return {
-      ...day,
-      items: (day.items || []).filter((item) => !item.audience || item.audience === 'public'),
-      activities: [],
-    };
+    if (editMode) return day;
+    const readableItems = (day.items || []).filter((item) => {
+      if (publicPreview && item.audience && item.audience !== 'public') return false;
+      if (isUnavailableVoiceNote(item)) return false;
+      if (item.kindKey === 'core.gallery') return (item.assets || []).some((asset) => !isUnavailableVoiceNote(asset));
+      return true;
+    }).map((item) => item.kindKey === 'core.gallery'
+      ? { ...item, assets: (item.assets || []).filter((asset) => !isUnavailableVoiceNote(asset)) }
+      : item);
+    return { ...day, items: readableItems, activities: publicPreview ? [] : day.activities };
   }).filter((day) => editMode || (day.items || []).length > 0), [blog?.days, publicPreview, editMode]);
+
+  useEffect(() => { setVoiceUploadFailures({}); }, [activeTripId]);
   const mediaForDay = (day) => (day.items || []).flatMap((item) => {
     if (item.kindKey === 'core.gallery') return (item.assets || []).map((asset) => ({ ...asset, audience: asset.audience ?? item.audience, isGalleryMember: true }));
     return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
@@ -790,27 +799,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
 
   const handleVoiceNote = async (dayDate) => {
     if (!canEdit || uploading) return;
-    const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    const response = await fetch(asset.uri);
-    const blob = await response.blob();
-    const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
-    if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) {
-      alertMessage('Voice note', 'Choose an MP3, M4A, WAV, or WebM audio file.');
-      return;
-    }
     setUploading(true);
+    setVoiceUploadFailures((current) => ({ ...current, [dayDate]: null }));
     try {
+      const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
+      if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) throw new Error('Choose an MP3, M4A, WAV, or WebM audio file.');
       const uploaded = await uploadBlogFiles(
         { backendUrl, headers, tripId: activeTripId },
         dayDate,
         [{ blob, mimeType, size: asset.size ?? blob.size, name: asset.name }]
       );
-      if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
+      if (!uploaded.succeeded) throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : uploaded.errors?.[0] || 'Unable to add the voice note.');
       await load();
     } catch (error) {
-      alertMessage('Voice note', error.message || 'Unable to add the voice note.');
+      setVoiceUploadFailures((current) => ({ ...current, [dayDate]: error.message || 'Unable to add the voice note.' }));
     } finally {
       setUploading(false);
     }
@@ -828,6 +835,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const handleRecordedVoiceNote = async (dayDate, recording) => {
     if (!canEdit || uploading) return;
     setUploading(true);
+    setVoiceUploadFailures((current) => ({ ...current, [dayDate]: null }));
     try {
       const response = await fetch(recording.uri);
       const blob = await response.blob();
@@ -837,7 +845,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         [{ blob, mimeType: recording.mimeType, size: blob.size, name: recording.name }]
       );
       if (!uploaded.succeeded || !uploaded.assets[0]) {
-        throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : 'Unable to add the voice note.');
+        throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : uploaded.errors?.[0] || 'Unable to add the voice note.');
       }
       await load();
       if (capabilities.trip_blog_audio_transcription) {
@@ -857,7 +865,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         }
       }
     } catch (error) {
-      alertMessage('Voice note', error.message || 'Unable to add the voice note.');
+      setVoiceUploadFailures((current) => ({ ...current, [dayDate]: error.message || 'Unable to add the voice note.' }));
     } finally {
       setUploading(false);
     }
@@ -1468,7 +1476,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     disabled={uploading}
                     processingLabel="Transcribing…"
                     onRecorded={(recording) => handleRecordedVoiceNote(day.localDate, recording)}
-                    onError={(message) => alertMessage('Voice note', message)}
+                    onError={(message) => setVoiceUploadFailures((current) => ({ ...current, [day.localDate]: message }))}
                     style={[styles.button, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: theme?.colors?.link ?? '#7c3aed' }]}
                     activeStyle={{ backgroundColor: theme?.colors?.error ?? '#b91c1c' }}
                     textStyle={[styles.buttonText, { fontSize: 12 }]}
@@ -1485,6 +1493,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 )}
               </View>
             </View>
+            {canEdit && voiceUploadFailures[day.localDate] ? (
+              <View testID={`blog-voice-upload-failure-${day.localDate}`} style={{ borderWidth: 1, borderColor: theme?.colors?.error ?? '#b91c1c', borderRadius: 8, padding: 8, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                <Text style={{ color: theme?.colors?.error ?? '#b91c1c', flex: 1 }}>Voice note failed: {voiceUploadFailures[day.localDate]}</Text>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dismiss voice note failure" onPress={() => setVoiceUploadFailures((current) => ({ ...current, [day.localDate]: null }))}>
+                  <Text style={{ color: textColor }}>Dismiss</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
             {/* Phase 0 elastic fact strip (docs/trip-blog-social-prd.md §6.2, FR-C1.1) — chips with
                 no data are absent, not greyed out, so a photos-only day still reads as intentional.
                 Weather moved here from the old header pill; distance/places/media are newly
@@ -1563,21 +1579,24 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     textColor={textColor}
                   />
                 )}
-                {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
+                {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Note tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
                 {!editMode && item.engagement ? (
-                  <BlogReactionBar
-                    testID={`blog-item-reactions-${item.id}`}
-                    targetKind="item"
-                    targetId={item.id}
-                    summary={engagement.getSummary('item', item.id)}
-                    canEngage={canReact}
-                    onToggle={engagement.toggle}
-                    onError={handleEngagementError}
-                    textColor={textColor}
-                    mutedColor={mutedColor}
-                    theme={theme}
-                    size="compact"
-                  />
+                  <View style={{ marginTop: 6 }}>
+                    <Text style={{ color: mutedColor, fontSize: 11 }}>Note reactions</Text>
+                    <BlogReactionBar
+                      testID={`blog-item-reactions-${item.id}`}
+                      targetKind="item"
+                      targetId={item.id}
+                      summary={engagement.getSummary('item', item.id)}
+                      canEngage={canReact}
+                      onToggle={engagement.toggle}
+                      onError={handleEngagementError}
+                      textColor={textColor}
+                      mutedColor={mutedColor}
+                      theme={theme}
+                      size="compact"
+                    />
+                  </View>
                 ) : null}
                 {canEdit ? (
                   <>
@@ -1752,6 +1771,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
             ) : null}
             {!editMode && day.engagement && (day.items || []).length > 0 ? (
               <View style={{ marginTop: (!publicPreview && (day.contributors || []).length > 0) ? 6 : 12 }}>
+                <Text style={{ color: mutedColor, fontSize: 11 }}>Day reactions</Text>
                 <BlogReactionBar
                   testID={`blog-day-reactions-${day.localDate}`}
                   targetKind="day"

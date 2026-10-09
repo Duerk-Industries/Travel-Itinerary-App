@@ -222,7 +222,9 @@ export const getPublicBlogFirebase = async (usernameSlug: string, tripSlug: stri
     const item = doc.data() as any;
     if (item.deletedAt != null || item.audience !== 'public') return;
     const base = { id: doc.id, kindKey: item.kindKey, schemaVersion: Number(item.schemaVersion ?? 1), audience: item.audience, sortKey: item.sortKey };
-    const media = String(item.kindKey ?? '').startsWith('media.') ? mediaByItem.get(doc.id) : null;
+    const isMedia = String(item.kindKey ?? '').startsWith('media.');
+    const media = isMedia ? mediaByItem.get(doc.id) : null;
+    if (isMedia && media?.state !== 'ready') return;
     const output = media ? { ...base, assetId: media.assetId, mediaKind: media.mediaKind, caption: media.caption ?? null, altText: media.altText ?? null, objectKey: media.objectKey ?? null, uploaderUserId: media.uploaderUserId ?? null } : { ...base, body: String(item.body ?? ''), languageTag: item.languageTag ?? null };
     // Text items use the blog day document id; Firebase media items use the day date. These are
     // two different keys into the same map — a day with both kinds of item needs entries under

@@ -53,6 +53,7 @@ type DayEngagement = {
   reactionCounts: Record<string, number>;
   reactionTotal: number;
   commentCount: number;
+  userReaction?: string | null;
 };
 
 type PublicComment = {
@@ -83,10 +84,7 @@ const COMMENT_PAGE = 20;
 const engagementQuery = (params: Record<string, string>): string =>
   Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 
-// A quiet, read-only tally under each day — reaction counts, and a comment count that expands the
-// day's public-audience thread on tap. No compose box and no reaction buttons: a stranger with the
-// link sees how the trip's travelers and followers responded but cannot join in here (architecture
-// PR-1: no anonymous public commenting).
+// Public readers may react to a day, while comments remain read-only.
 const DayEngagementFooter: React.FC<{
   data?: DayEngagement;
   bodyFont?: string;
@@ -94,7 +92,11 @@ const DayEngagementFooter: React.FC<{
   username: string;
   tripSlug: string;
   localDate: string;
-}> = ({ data, bodyFont, backendUrl, username, tripSlug, localDate }) => {
+  selectedReaction: string | null;
+  onReact: (emoji: string) => void;
+  reacting: boolean;
+  reactionError: string | null;
+}> = ({ data, bodyFont, backendUrl, username, tripSlug, localDate, selectedReaction, onReact, reacting, reactionError }) => {
   const [expanded, setExpanded] = useState(false);
   const [comments, setComments] = useState<PublicComment[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -120,9 +122,8 @@ const DayEngagementFooter: React.FC<{
     }
   };
 
-  const chips = REACTION_ORDER.filter((emoji) => (data?.reactionCounts[emoji] ?? 0) > 0);
   const commentCount = data?.commentCount ?? 0;
-  if (!data || (!chips.length && !commentCount)) return null;
+  if (!data) return null;
 
   const toggle = () => {
     const next = !expanded;
@@ -133,11 +134,15 @@ const DayEngagementFooter: React.FC<{
   return (
     <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#EEF2F4' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-        {chips.map((emoji) => (
-          <View key={emoji} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 14, marginBottom: 4 }}>
-            <Text style={{ fontSize: 14 }}>{REACTION_GLYPH[emoji]}</Text>
-            <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#6B7280', marginLeft: 4 }}>{data.reactionCounts[emoji]}</Text>
-          </View>
+        {REACTION_ORDER.map((emoji) => (
+          <Pressable key={emoji} onPress={() => onReact(emoji)} disabled={reacting}
+            accessibilityRole="button"
+            accessibilityLabel={`${selectedReaction === emoji ? 'Remove' : 'React with'} ${emoji}`}
+            accessibilityState={{ selected: selectedReaction === emoji, disabled: reacting }}
+            style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 16, borderWidth: 1, borderColor: selectedReaction === emoji ? '#2E96A6' : '#D7E1E5', backgroundColor: selectedReaction === emoji ? '#E6F6F8' : '#FFFFFF' }}>
+            <Text style={{ fontSize: 16 }}>{REACTION_GLYPH[emoji]}</Text>
+            {(data.reactionCounts[emoji] ?? 0) > 0 ? <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#38505D', marginLeft: 4 }}>{data.reactionCounts[emoji]}</Text> : null}
+          </Pressable>
         ))}
         {commentCount ? (
           <Pressable
@@ -152,6 +157,7 @@ const DayEngagementFooter: React.FC<{
           </Pressable>
         ) : null}
       </View>
+      {reactionError ? <Text style={{ fontFamily: bodyFont, fontSize: 13, color: '#B42318' }}>{reactionError}</Text> : null}
 
       {expanded && commentCount ? (
         <View style={{ marginTop: 14 }}>
@@ -240,29 +246,103 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   // by localDate (the document endpoint doesn't expose day ids; this endpoint is keyed by date).
   // A 404 here means trip_blog_public_engagement is off — render the page exactly as before.
   const [engagement, setEngagement] = useState<Record<string, DayEngagement>>({});
+  const [engagementAvailable, setEngagementAvailable] = useState(false);
+  const [selectedReactions, setSelectedReactions] = useState<Record<string, string>>({});
+  const [reactingDay, setReactingDay] = useState<string | null>(null);
+  const [reactionError, setReactionError] = useState<Record<string, string>>({});
+  const visitorKey = `wanderbunnies:public-reaction:${username}:${tripSlug}`;
+  const getVisitorId = (): string | null => {
+    if (typeof window === 'undefined' || !window.localStorage || !window.crypto?.getRandomValues) return null;
+    try {
+      let id = window.localStorage.getItem(`${visitorKey}:id`);
+      if (id) return id;
+      const bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+      id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      window.localStorage.setItem(`${visitorKey}:id`, id);
+      return id;
+    } catch { return null; }
+  };
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(`${visitorKey}:selected`);
+      if (stored) setSelectedReactions(JSON.parse(stored));
+    } catch { /* Browsers may block session storage. */ }
+  }, [visitorKey]);
+  const reactToDay = async (dayDate: string, emoji: string) => {
+    const visitorId = getVisitorId();
+    if (!visitorId) {
+      setReactionError((current) => ({ ...current, [dayDate]: 'Reactions are unavailable in this browser.' }));
+      return;
+    }
+    const clear = selectedReactions[dayDate] === emoji;
+    setReactingDay(dayDate);
+    setReactionError((current) => ({ ...current, [dayDate]: '' }));
+    try {
+      const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/engagement/day/${encodeURIComponent(dayDate)}/reaction`, {
+        method: clear ? 'DELETE' : 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Public-Visitor-Id': visitorId },
+        ...(clear ? {} : { body: JSON.stringify({ emoji }) }),
+      });
+      if (!response.ok) throw new Error(response.status === 429 ? 'Please wait a moment before reacting again.' : 'Could not save your reaction. Please try again.');
+      const summary = await response.json();
+      setEngagement((current) => ({ ...current, [dayDate]: summary }));
+      const next = { ...selectedReactions };
+      if (clear) delete next[dayDate];
+      else next[dayDate] = emoji;
+      setSelectedReactions(next);
+      try {
+        if (Object.keys(next).length) window.localStorage.setItem(`${visitorKey}:selected`, JSON.stringify(next));
+        else {
+          window.localStorage.removeItem(`${visitorKey}:selected`);
+          window.localStorage.removeItem(`${visitorKey}:id`);
+        }
+      } catch { /* The reaction is still saved. */ }
+    } catch (error) {
+      setReactionError((current) => ({ ...current, [dayDate]: error instanceof Error ? error.message : 'Could not save your reaction.' }));
+    } finally {
+      setReactingDay(null);
+    }
+  };
   useEffect(() => {
     if (state.status !== 'ready') return;
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/engagement`);
+        let existingVisitorId: string | null = null;
+        try { existingVisitorId = window.localStorage.getItem(`${visitorKey}:id`); } catch { /* Public counts still work. */ }
+        const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/engagement`,
+          existingVisitorId ? { headers: { 'X-Public-Visitor-Id': existingVisitorId }, cache: 'no-store' } : undefined);
         if (cancelled || !response.ok) return;
         const data = await response.json();
         const map: Record<string, DayEngagement> = {};
+        const own: Record<string, string> = {};
         for (const day of data.days ?? []) {
           map[day.localDate] = {
             reactionCounts: day.reactionCounts ?? {},
             reactionTotal: day.reactionTotal ?? 0,
             commentCount: day.commentCount ?? 0,
+            userReaction: day.userReaction ?? null,
           };
+          if (day.userReaction) own[day.localDate] = day.userReaction;
         }
-        if (!cancelled) setEngagement(map);
+        if (!cancelled) {
+          setEngagement(map);
+          setEngagementAvailable(true);
+          if (existingVisitorId) {
+            setSelectedReactions(own);
+            try { window.localStorage.setItem(`${visitorKey}:selected`, JSON.stringify(own)); } catch { /* Server state is still authoritative. */ }
+          }
+        }
       } catch {
         // Non-fatal: the page reads fine without engagement.
       }
     })();
     return () => { cancelled = true; };
-  }, [backendUrl, username, tripSlug, state.status]);
+  }, [backendUrl, username, tripSlug, state.status, visitorKey]);
 
   // The trip's own most-loved photo isn't in this payload (no engagement data on the public
   // document endpoint) — the first available photo, in day order, is a reasonable stand-in for a
@@ -379,12 +459,16 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
               return null;
             })}
             <DayEngagementFooter
-              data={engagement[day.localDate]}
+              data={engagementAvailable ? (engagement[day.localDate] ?? { reactionCounts: {}, reactionTotal: 0, commentCount: 0 }) : undefined}
               bodyFont={bodyDisplayFont}
               backendUrl={backendUrl}
               username={username}
               tripSlug={tripSlug}
               localDate={day.localDate}
+              selectedReaction={selectedReactions[day.localDate] ?? null}
+              onReact={(emoji) => reactToDay(day.localDate, emoji)}
+              reacting={reactingDay === day.localDate}
+              reactionError={reactionError[day.localDate] ?? null}
             />
           </View>
         ))}

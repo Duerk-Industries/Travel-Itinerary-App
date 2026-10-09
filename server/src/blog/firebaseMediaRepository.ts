@@ -8,6 +8,7 @@ import { createBlogUploadUrl } from '../services/blogStorageClient';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { BlogMediaAsset, BlogMediaAuthoringContext, BlogMediaMetadataPatch, BlogStorageSummary, BlogUploadInitInput, BlogUploadInitResult } from './mediaTypes';
 import { normalizeBlogTags } from './tags';
+import { clearFirebaseDeletedTarget } from './deletedTargetCleanup';
 import { getDb } from '../db.firebase';
 
 const config = (() => { try { return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../config/blog-storage-tiers.json'), 'utf8')); } catch { return { tiers: { free: { includedBytes: 2 * 1024 ** 3 } } }; } })();
@@ -236,14 +237,18 @@ export const deleteMediaAsset = async (userId: string, assetId: string): Promise
     const accountSnap = await tx.get(accountRef);
     const account = accountSnap.data() as any;
     tx.set(accountRef, { [bytesField]: Math.max(0, Number(account?.[bytesField] ?? 0) - Number(asset.billableBytes ?? 0)), updatedAt: nowIso() }, { merge: true });
-    tx.set(assetRef, { state: 'deleted', updatedAt: nowIso() }, { merge: true });
+    tx.set(assetRef, { state: 'deleted', tags: [], updatedAt: nowIso() }, { merge: true });
   });
+
+  await clearFirebaseDeletedTarget(db, 'asset', assetId);
 
   const remainingSnap = await db.collection('blog_media_assets').where('blogItemId', '==', asset.blogItemId).get();
   const remaining = remainingSnap.docs.filter((doc) => String((doc.data() as any).state) !== 'deleted').length;
   if (remaining === 0) {
-    await itemRef.set({ deletedAt: nowIso(), version: Number(item.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
+    await itemRef.set({ deletedAt: nowIso(), tags: [], version: Number(item.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
+    await clearFirebaseDeletedTarget(db, 'item', String(asset.blogItemId));
   }
+  await db.collection('trip_blogs').doc(String(asset.tripId)).set({ contentRevision: FieldValue.increment(1), updatedAt: nowIso() }, { merge: true });
   return { deleted: true };
 };
 

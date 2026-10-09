@@ -8,6 +8,7 @@ import { buildNarrativeBlogBody } from './narrative';
 import { logError } from '../logger';
 import { markSynced, shouldSkipSync } from './syncCoordination';
 import { normalizeBlogTags } from './tags';
+import { clearFirebaseDeletedTarget } from './deletedTargetCleanup';
 
 const nowIso = () => new Date().toISOString();
 const dateString = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -340,16 +341,41 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
 };
 
 export const deleteBlogItem = async (userId: string, itemId: string, version?: number): Promise<boolean> => {
-  const ref = getDb().collection('blog_items').doc(itemId);
+  const db = getDb();
+  const ref = db.collection('blog_items').doc(itemId);
   const snapshot = await ref.get();
   if (!snapshot.exists) return false;
   const row = snapshot.data() as any;
   const access = await ensureUserInTrip(String(row.tripId), userId);
   if (!access) throw new Error('Not authorized to edit this trip');
-  if (version !== undefined && Number(row.version ?? 1) !== version) return false;
-  await ref.set({ deletedAt: nowIso(), version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
-  await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
-  return true;
+  const alreadyDeleted = row.deletedAt != null;
+  if (!alreadyDeleted && version !== undefined && Number(row.version ?? 1) !== version) return false;
+  if (!alreadyDeleted) {
+    await ref.set({ deletedAt: nowIso(), tags: [], version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() }, { merge: true });
+  } else {
+    await ref.set({ tags: [] }, { merge: true });
+  }
+
+  const assets = await db.collection('blog_media_assets').where('blogItemId', '==', itemId).get();
+  for (const doc of assets.docs) {
+    const asset = doc.data() as any;
+    if (asset.state !== 'deleted') {
+      const accountRef = db.collection('blog_storage_accounts').doc(String(asset.storageAccountUserId));
+      const bytesField = asset.state === 'ready' ? 'visibleCommittedBytes' : asset.state === 'grace_hidden' ? 'graceHiddenBytes' : 'reservedBytes';
+      await db.runTransaction(async (tx) => {
+        const account = (await tx.get(accountRef)).data() as any;
+        tx.set(accountRef, { [bytesField]: Math.max(0, Number(account?.[bytesField] ?? 0) - Number(asset.billableBytes ?? 0)), updatedAt: nowIso() }, { merge: true });
+        tx.set(doc.ref, { state: 'deleted', tags: [], updatedAt: nowIso() }, { merge: true });
+      });
+    } else if (Array.isArray(asset.tags) && asset.tags.length) {
+      await doc.ref.set({ tags: [] }, { merge: true });
+    }
+    await clearFirebaseDeletedTarget(db, 'asset', doc.id);
+  }
+  await clearFirebaseDeletedTarget(db, 'item', itemId);
+  await db.collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
+  if (!alreadyDeleted) await db.collection('trip_blogs').doc(String(row.tripId)).set({ contentRevision: (await ensureBlog(String(row.tripId))).contentRevision + 1, updatedAt: nowIso() }, { merge: true });
+  return !alreadyDeleted;
 };
 
 export const setDayCover = async (userId: string, tripId: string, dayDate: string, assetId: string | null): Promise<void> => {
