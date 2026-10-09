@@ -17,6 +17,7 @@ import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/b
 import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 import { logError } from '../logger';
+import { isLocalEnv } from '../env';
 import { autoPublishBlogIfEligible } from './blogPublicationRoutes';
 import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
 import { transcribeAndCleanCaption } from '../services/blogVoiceCaptionService';
@@ -452,7 +453,7 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
   } catch (err) {
     const message = String((err as any)?.message ?? 'Unable to initialize upload');
     if (message === 'QUOTA_EXCEEDED') { res.status(413).json({ error: message, code: message }); return; }
-    if (message === 'VOICE_STORAGE_UNAVAILABLE') { res.status(503).json({ error: 'Voice-note storage is unavailable. Please try again later.' }); return; }
+    if (message === 'VOICE_STORAGE_UNAVAILABLE') { res.status(503).json({ error: isLocalEnv() ? 'Voice-note storage is unavailable on this dev server: it cannot sign upload URLs. Run scripts/setup-local-blog-media.ps1, then restart the server.' : 'Voice-note storage is unavailable. Please try again later.' }); return; }
     errorResponse(res, err);
   }
 });
