@@ -91,6 +91,7 @@
     "e2e:maestro:all": "maestro test .maestro"
   },
   "overrides": {
+    "@grpc/grpc-js": "^1.14.6",
     "glob": "13.0.5",
     "minimatch": "10.2.4",
     "@tootallnate/once": "3.0.1",

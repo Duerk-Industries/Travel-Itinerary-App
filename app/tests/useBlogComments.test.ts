@@ -132,7 +132,7 @@ describe('useBlogComments', () => {
 
   it('resets its cache when the trip changes', async () => {
     (global as any).fetch = jest.fn(() => jsonResponse({ comments: [{ id: 'c1', targetKind: 'day', targetId: 'day-1', replies: [] }] }));
-    const { result, rerender } = renderHook(({ tripId }) => useBlogComments(backendUrl, headers, tripId), { initialProps: { tripId: 'trip-1' } });
+    const { result, rerender } = renderHook(({ tripId }: { tripId: string }) => useBlogComments(backendUrl, headers, tripId), { initialProps: { tripId: 'trip-1' } });
     await act(async () => { await result.current.loadDay('2026-05-01'); });
     expect(result.current.getDayState('2026-05-01').comments).toHaveLength(1);
     rerender({ tripId: 'trip-2' });

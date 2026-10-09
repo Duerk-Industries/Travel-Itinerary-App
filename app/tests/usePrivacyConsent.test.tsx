@@ -41,7 +41,7 @@ describe('usePrivacyConsent account isolation', () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce(response('subject-a'))
       .mockImplementationOnce(() => new Promise<Response>((resolve) => { releaseSecond = resolve; })) as unknown as typeof fetch;
-    const view = renderHook(({ token }) => usePrivacyConsent('http://api.test', token), {
+    const view = renderHook(({ token }: { token: string }) => usePrivacyConsent('http://api.test', token), {
       initialProps: { token: 'token-a' },
     });
     await waitFor(() => expect(initSentry).toHaveBeenCalledWith({ pseudonym: 'subject-a' }));
