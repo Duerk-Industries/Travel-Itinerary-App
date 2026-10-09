@@ -7,6 +7,7 @@ import { getDayStarter, acceptDayStarter, dismissDayStarter } from '../services/
 import { groupMediaByDay } from '../services/blogMediaGroupingService';
 import { BlogTargetNotFoundError } from '../services/blogEngagementErrors';
 import { logError } from '../logger';
+import { autoPublishBlogIfEligible, revokePublicBlog } from './blogPublicationRoutes';
 
 // Phase 1 of docs/trip-blog-social-implementation-plan.md (A3/A4): editing UI for
 // blog_days.headline/summary and trip_blogs.title/subtitle/introduction, both of which have
@@ -81,7 +82,16 @@ router.patch('/:tripId/blog', async (req, res) => {
     // Trip-level opt-in for the end-of-day photo reminder (blogBackgroundWorker.ts's
     // runDayPhotoReminderJob) — off by default; see BlogMastheadPatch.dayPhotoRemindersEnabled.
     const dayPhotoRemindersEnabled = req.body?.dayPhotoRemindersEnabled === undefined ? undefined : Boolean(req.body.dayPhotoRemindersEnabled);
-    const blog = await blogRepository().updateBlogMeta(userIdOf(req), req.params.tripId, { title, subtitle, introduction, photoLocationEnabled, dayPhotoRemindersEnabled });
+    // "Make private": any traveler can take the blog off the public web (travelers and followers
+    // keep access). Clearing it lets the blog be published again if every traveler still qualifies.
+    const publicOptOut = req.body?.publicOptOut === undefined ? undefined : Boolean(req.body.publicOptOut);
+    const blog = await blogRepository().updateBlogMeta(userIdOf(req), req.params.tripId, { title, subtitle, introduction, photoLocationEnabled, dayPhotoRemindersEnabled, publicOptOut });
+    if (publicOptOut === true) {
+      await revokePublicBlog(req.params.tripId, userIdOf(req));
+      blog.visibilityState = 'private';
+    } else if (publicOptOut === false) {
+      if (await autoPublishBlogIfEligible(req.params.tripId, userIdOf(req), { force: true })) blog.visibilityState = 'public';
+    }
     res.json(blog);
   } catch (err) {
     errorResponse(res, err);

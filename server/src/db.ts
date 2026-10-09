@@ -100,6 +100,10 @@ export const setInitialWebUserPassword = async (...args: Parameters<ReturnType<t
   adapter().setInitialWebUserPassword(...args);
 export const isPasswordSetupRequired = async (...args: Parameters<ReturnType<typeof adapter>['isPasswordSetupRequired']>) =>
   adapter().isPasswordSetupRequired(...args);
+export const getUserBlogDefaultPublic = async (...args: Parameters<ReturnType<typeof adapter>['getUserBlogDefaultPublic']>) =>
+  adapter().getUserBlogDefaultPublic(...args);
+export const setUserBlogDefaultPublic = async (...args: Parameters<ReturnType<typeof adapter>['setUserBlogDefaultPublic']>) =>
+  adapter().setUserBlogDefaultPublic(...args);
 export const hasUserDateOfBirth = async (...args: Parameters<ReturnType<typeof adapter>['hasUserDateOfBirth']>) =>
   adapter().hasUserDateOfBirth(...args);
 export const setUserDateOfBirth = async (...args: Parameters<ReturnType<typeof adapter>['setUserDateOfBirth']>) =>

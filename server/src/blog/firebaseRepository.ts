@@ -259,7 +259,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     };
   }).sort((a, b) => a.localDate.localeCompare(b.localDate));
 
-  return { id: blog.id, tripId, title: blog.title ?? '', subtitle: blog.subtitle ?? null, introduction: blog.introduction ?? null, contentRevision: Number(blog.contentRevision ?? 0), visibilityState: blog.visibilityState ?? 'private', visibilityEpoch: Number(blog.visibilityEpoch ?? 0), photoLocationEnabled: Boolean(blog.photoLocationEnabled), dayPhotoRemindersEnabled: Boolean(blog.dayPhotoRemindersEnabled), days };
+  return { id: blog.id, tripId, title: blog.title ?? '', subtitle: blog.subtitle ?? null, introduction: blog.introduction ?? null, contentRevision: Number(blog.contentRevision ?? 0), visibilityState: blog.visibilityState ?? 'private', visibilityEpoch: Number(blog.visibilityEpoch ?? 0), photoLocationEnabled: Boolean(blog.photoLocationEnabled), dayPhotoRemindersEnabled: Boolean(blog.dayPhotoRemindersEnabled), publicOptOut: Boolean(blog.publicOptOut), days };
 };
 
 export const getBlogCapabilities = async (userId: string, tripId: string, capabilities: BlogCapabilities): Promise<BlogCapabilities> => {
@@ -464,7 +464,7 @@ const MAX_BLOG_INTRODUCTION_LENGTH = 5000;
 export const updateBlogMeta = async (
   userId: string,
   tripId: string,
-  patch: { title?: string; subtitle?: string | null; introduction?: string | null; photoLocationEnabled?: boolean; dayPhotoRemindersEnabled?: boolean }
+  patch: { title?: string; subtitle?: string | null; introduction?: string | null; photoLocationEnabled?: boolean; dayPhotoRemindersEnabled?: boolean; publicOptOut?: boolean }
 ): Promise<BlogDocument> => {
   const access = await ensureUserInTrip(tripId, userId);
   if (!access) throw new Error('Not authorized to edit this trip');
@@ -484,6 +484,7 @@ export const updateBlogMeta = async (
   if (patch.introduction !== undefined) update.introduction = patch.introduction ?? null;
   if (patch.photoLocationEnabled !== undefined) update.photoLocationEnabled = Boolean(patch.photoLocationEnabled);
   if (patch.dayPhotoRemindersEnabled !== undefined) update.dayPhotoRemindersEnabled = Boolean(patch.dayPhotoRemindersEnabled);
+  if (patch.publicOptOut !== undefined) update.publicOptOut = Boolean(patch.publicOptOut);
   await getDb().collection('trip_blogs').doc(tripId).set(update, { merge: true });
   return {
     id: blog.id,
@@ -496,6 +497,7 @@ export const updateBlogMeta = async (
     visibilityEpoch: Number(blog.visibilityEpoch ?? 0),
     photoLocationEnabled: Boolean(update.photoLocationEnabled !== undefined ? update.photoLocationEnabled : (blog as any).photoLocationEnabled),
     dayPhotoRemindersEnabled: Boolean(update.dayPhotoRemindersEnabled !== undefined ? update.dayPhotoRemindersEnabled : (blog as any).dayPhotoRemindersEnabled),
+    publicOptOut: Boolean(update.publicOptOut !== undefined ? update.publicOptOut : (blog as any).publicOptOut),
     days: [],
   };
 };

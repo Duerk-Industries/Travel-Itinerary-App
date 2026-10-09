@@ -17,6 +17,7 @@ import { objectExists, createBlogReadUrl, blogRenditionKey } from '../services/b
 import { queryBlog } from '../db.postgres';
 import { getCanonicalPublicPathFirebase } from '../blog/firebasePublicationRepository';
 import { logError } from '../logger';
+import { autoPublishBlogIfEligible } from './blogPublicationRoutes';
 import { suggestBlogMediaCaption } from '../services/blogCaptionSuggestionService';
 import { transcribeAndCleanCaption } from '../services/blogVoiceCaptionService';
 import { normalizeBlogTags } from '../blog/tags';
@@ -106,6 +107,13 @@ router.get('/:tripId/blog', async (req, res) => {
       cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     };
+    // Public by default: when a traveler opens the blog, publish it for public viewing if every
+    // traveler qualifies and nobody opted out. Best effort -- never blocks reading the blog.
+    try {
+      await autoPublishBlogIfEligible(req.params.tripId, userIdOf(req));
+    } catch (error) {
+      logError('[blog] auto-publish check failed', error);
+    }
     const blog = await blogRepository().getBlog(userIdOf(req), req.params.tripId, options);
     const media = await blogMediaRepository().listMedia(userIdOf(req), req.params.tripId);
     const withUrls = await attachMediaUrls(media);

@@ -21,6 +21,7 @@ type BlogRow = {
   visibility_epoch: string | number;
   photo_location_enabled?: boolean;
   day_photo_reminders_enabled?: boolean;
+  public_opt_out?: boolean;
 };
 
 const formatDate = (value: unknown): string => new Date(String(value)).toISOString().slice(0, 10);
@@ -319,6 +320,7 @@ export const getBlog = async (userId: string, tripId: string, options: { date?: 
     visibilityEpoch: Number(blog?.visibility_epoch ?? 0),
     photoLocationEnabled: Boolean(blog?.photo_location_enabled),
     dayPhotoRemindersEnabled: Boolean(blog?.day_photo_reminders_enabled),
+    publicOptOut: Boolean(blog?.public_opt_out),
     days,
   };
 };
@@ -632,6 +634,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
          introduction = CASE WHEN $6 THEN $7 ELSE introduction END,
          photo_location_enabled = CASE WHEN $8 THEN $9 ELSE photo_location_enabled END,
          day_photo_reminders_enabled = CASE WHEN $10 THEN $11 ELSE day_photo_reminders_enabled END,
+         public_opt_out = CASE WHEN $12 THEN $13 ELSE public_opt_out END,
          updated_at = NOW()
      WHERE trip_id = $1
      RETURNING *`,
@@ -642,6 +645,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
       patch.introduction !== undefined, patch.introduction ?? null,
       patch.photoLocationEnabled !== undefined, patch.photoLocationEnabled ?? false,
       patch.dayPhotoRemindersEnabled !== undefined, patch.dayPhotoRemindersEnabled ?? false,
+      patch.publicOptOut !== undefined, patch.publicOptOut ?? false,
     ]
   );
   const row = updated.rows[0];
@@ -656,6 +660,7 @@ export const updateBlogMeta = async (userId: string, tripId: string, patch: Blog
     visibilityEpoch: Number(row.visibility_epoch ?? 0),
     photoLocationEnabled: Boolean(row.photo_location_enabled),
     dayPhotoRemindersEnabled: Boolean(row.day_photo_reminders_enabled),
+    publicOptOut: Boolean(row.public_opt_out),
     days: [],
   };
 };

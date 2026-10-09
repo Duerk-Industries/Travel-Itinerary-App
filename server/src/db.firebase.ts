@@ -1922,6 +1922,16 @@ export const hasUserDateOfBirth = async (userId: string): Promise<boolean> => {
   return Boolean((doc.data() as any)?.dateOfBirth);
 };
 
+/** Whether this user's new trip blogs may be published publicly by default (opt-out; defaults to true). */
+export const getUserBlogDefaultPublic = async (userId: string): Promise<boolean> => {
+  const doc = await getDb().collection('users').doc(userId).get();
+  return (doc.data() as any)?.blogDefaultPublic !== false;
+};
+
+export const setUserBlogDefaultPublic = async (userId: string, value: boolean): Promise<void> => {
+  await getDb().collection('users').doc(userId).set({ blogDefaultPublic: value }, { merge: true });
+};
+
 /** Records a declared date of birth once; an already-declared value is never overwritten. */
 export const setUserDateOfBirth = async (userId: string, dateOfBirth: string): Promise<void> => {
   const db = getDb();

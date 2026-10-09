@@ -3,7 +3,7 @@ import { recordServerEvent } from '../analytics/ingestService';
 import { z } from 'zod';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
-import { getUserRole, writeAuditLog, getUserPackingListV2, getUserPackingPreferencesV2, listPackingPresetsV2, replaceUserPackingPreferencesV2, reconcileUserPackingListsV2 } from '../db';
+import { getUserBlogDefaultPublic, setUserBlogDefaultPublic, getUserRole, writeAuditLog, getUserPackingListV2, getUserPackingPreferencesV2, listPackingPresetsV2, replaceUserPackingPreferencesV2, reconcileUserPackingListsV2 } from '../db';
 import { isFeatureEnabled } from '../services/entitlementService';
 import {
   deleteWebUserAndCleanup,
@@ -82,6 +82,31 @@ const collectionContext = (req: Request) => {
     deviceTimezone: zone && /^[A-Za-z0-9_+\-/]{1,64}$/.test(zone) ? zone : null,
   };
 };
+
+// Profile default for public trip blogs (opt-out; on by default). A blog is published publicly
+// only when every traveler's default is on. Travelers and followers always see the blog.
+router.get('/blog-defaults', async (req, res) => {
+  try {
+    res.json({ publicByDefault: await getUserBlogDefaultPublic((req as any).user.userId) });
+  } catch (error) {
+    logError('[blog] default read failed', error);
+    res.status(500).json({ error: 'Unable to read blog defaults' });
+  }
+});
+
+router.patch('/blog-defaults', async (req, res) => {
+  if (typeof req.body?.publicByDefault !== 'boolean') {
+    res.status(400).json({ error: 'publicByDefault must be true or false' });
+    return;
+  }
+  try {
+    await setUserBlogDefaultPublic((req as any).user.userId, req.body.publicByDefault);
+    res.json({ publicByDefault: req.body.publicByDefault });
+  } catch (error) {
+    logError('[blog] default update failed', error);
+    res.status(500).json({ error: 'Unable to save blog defaults' });
+  }
+});
 
 router.get('/privacy-preferences', async (req, res) => {
   try {

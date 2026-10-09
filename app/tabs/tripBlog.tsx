@@ -363,6 +363,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   }, [flights, lodgings, tours, carRentals]);
 
   const load = async (nextCursor = null) => {
+    if (!activeTripId) return;
     setLoading(true);
     try {
       // On a refresh (no cursor — e.g. after any mutation), re-request every day the user has
@@ -600,21 +601,27 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     }
   };
 
-  const revokePublication = async () => {
+  // Public viewing is on by default when every traveler qualifies (16+ with a date of birth, and
+  // none has a private profile default). Any traveler can opt this trip's blog out here; travelers
+  // and followers always keep access. Clearing the opt-out re-publishes it if everyone qualifies.
+  const setPublicOptOut = async (optOut) => {
     if (!activeTripId || !canEdit || publicationBusy) return;
     setPublicationBusy(true);
     setPublicationNotice('');
     try {
-      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/publication/revoke`, {
-        method: 'POST',
-        headers,
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicOptOut: optOut }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Unable to make this blog private');
-      setPublicationNotice('Your blog is private again.');
+      if (!response.ok) throw new Error(data.error || 'Unable to update public viewing');
+      if (optOut) setPublicationNotice('Public viewing is off. Travelers and followers can still see this blog.');
+      else if (data.visibilityState === 'public') setPublicationNotice('Your blog is public again.');
+      else setPublicationNotice('Public viewing is allowed again. The blog goes public once every traveler is 16+ with a date of birth in their profile and none has chosen private.');
       await refreshBlogAndPublication();
     } catch (error) {
-      setPublicationNotice(error.message || 'Unable to make this blog private');
+      setPublicationNotice(error.message || 'Unable to update public viewing');
     } finally {
       setPublicationBusy(false);
     }
@@ -895,6 +902,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     setRecapNotice(null);
     setCoverProposals({});
     setBlog(null); // switching trips: show the spinner, not the previous trip's blog, until the new one loads
+    // No trip selected: show only the "Select a trip" prompt -- never request /trips/undefined/blog.
+    if (!activeTripId) return;
     void refreshBlogAndPublication();
     void loadCapabilities();
   }, [activeTripId]);
@@ -1719,7 +1728,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     theme={theme}
                     currentUserId={currentUserId}
                     canModerate={isTripOwnerOrAdmin}
-                    audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
                     getComments={(assetId) => comments.getCommentsForTarget(day.localDate, 'asset', assetId)}
                     onPostComment={(assetId, body, parentCommentId) => comments.postComment(day.localDate, 'asset', assetId, body, parentCommentId)}
                     onEditComment={(commentId, body) => comments.editComment(day.localDate, commentId, body)}
@@ -1745,7 +1753,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 mutedColor={mutedColor}
               />
             ) : null}
-            {day.engagement ? (
+            {day.engagement && (day.items || []).length > 0 ? (
               <View style={{ marginTop: (!publicPreview && (day.contributors || []).length > 0) ? 6 : 12 }}>
                 <BlogReactionBar
                   testID={`blog-day-reactions-${day.localDate}`}
@@ -1762,14 +1770,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 />
               </View>
             ) : null}
-            {!publicPreview && day.engagement ? (
+            {!publicPreview && day.engagement && (day.items || []).length > 0 ? (
               <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
                 <BlogCommentThread
                   testID={`blog-day-comments-${day.localDate}`}
                   comments={comments.getDayState(day.localDate).comments.filter((c) => c.targetKind === 'day' && c.targetId === day.id)}
                   targetKind="day"
                   targetId={day.id}
-                  audienceLabel={blog?.visibilityState === 'public' ? 'Visible publicly' : (readOnly ? 'Visible to followers' : 'Visible to travelers')}
                   currentUserId={currentUserId}
                   canModerate={isTripOwnerOrAdmin}
                   canEngage={canEngage}
@@ -1933,10 +1940,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 <View style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                     <Text style={{ color: textColor, fontWeight: '700' }}>
-                      Visibility: {publicationState === 'public' ? 'Public' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Private'}
+                      Public viewing: {publicationState === 'public' ? 'On' : publicationState === 'pending_consent' ? 'Awaiting consent' : 'Off'}
                     </Text>
                     {publicationState === 'public' ? (
-                      <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={revokePublication}>
+                      <TouchableOpacity testID="blog-make-private" accessibilityRole="button" style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]} disabled={publicationBusy} onPress={() => setPublicOptOut(true)}>
                         <Text style={{ color: textColor }}>{publicationBusy ? 'Updating…' : 'Make private'}</Text>
                       </TouchableOpacity>
                     ) : hasPendingConsent ? (
@@ -1950,6 +1957,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                       </View>
                     ) : publicationState === 'pending_consent' ? (
                       <Text style={{ color: mutedColor }}>Waiting for other adult travelers</Text>
+                    ) : blog?.publicOptOut ? (
+                      <TouchableOpacity testID="blog-allow-public" accessibilityRole="button" style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={() => setPublicOptOut(false)}>
+                        <Text style={styles.buttonText}>{publicationBusy ? 'Updating…' : 'Allow public viewing'}</Text>
+                      </TouchableOpacity>
                     ) : (
                       <TouchableOpacity style={[styles.button, { paddingVertical: 5, paddingHorizontal: 10 }]} disabled={publicationBusy} onPress={requestPublication}>
                         <Text style={styles.buttonText}>{publicationBusy ? 'Requesting…' : 'Make public'}</Text>
@@ -1962,7 +1973,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                       Accessibility reminder: {missingAccessibilityCount} public {missingAccessibilityCount === 1 ? 'photo needs' : 'photos need'} alt text or a decorative mark. Your existing public blog remains available while you fix this.
                     </Text>
                   ) : null}
-                  {publicationState === 'private' ? <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>Making a blog public requires consent from all adult account travelers.</Text> : null}
+                  <Text style={{ color: mutedColor, marginTop: 6, fontSize: 12 }}>
+                    {publicationState === 'public'
+                      ? 'Anyone can view this blog on the web. Any traveler can make it private.'
+                      : blog?.publicOptOut
+                        ? 'A traveler made this blog private for public viewing.'
+                        : 'Blogs go public automatically when every traveler is 16+ with a date of birth in their profile and none has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
+                    {' '}Travelers and followers can always see this blog.
+                  </Text>
                 </View>
               ) : null}
               <BlogDiscoveryPanel

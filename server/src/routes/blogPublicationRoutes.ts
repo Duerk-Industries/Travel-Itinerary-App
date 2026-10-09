@@ -4,7 +4,7 @@ import { isFeatureEnabled } from '../services/entitlementService';
 import { ensureUserInTrip, getCurrentDbProvider } from '../db';
 import { queryBlog } from '../db.postgres';
 import { randomUUID } from 'crypto';
-import { consentPublicationFirebase, getPublicationStatusFirebase, requestPublicationFirebase, revokePublicationFirebase } from '../blog/firebasePublicationRepository';
+import { autoPublishFirebase, consentPublicationFirebase, getPublicationStatusFirebase, requestPublicationFirebase, revokePublicationFirebase } from '../blog/firebasePublicationRepository';
 import { blogMediaRepository } from '../blog/repository';
 import { ApiLimitExceededError, reserveApiUsageOrThrow } from '../apis/usageLimiter';
 
@@ -72,6 +72,65 @@ const eligibleAdults = async (tripId: string): Promise<{ adults: string[]; missi
   const result = await queryBlog<{ user_id: string }>(`SELECT DISTINCT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NOT NULL AND u.date_of_birth <= CURRENT_DATE - INTERVAL '16 years'`, [tripId]);
   const missing = await queryBlog<{ count: string }>(`SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NULL`, [tripId]);
   return { adults: result.rows.map((r) => String(r.user_id)), missingBirthDate: Number(missing.rows[0]?.count ?? 0) };
+};
+
+// Public-by-default (opt-out) publication. A blog is published for public viewing only when ALL of:
+//   - public sharing is enabled and the caller is a traveler on the trip;
+//   - nobody has made this trip's blog private (trip_blogs.public_opt_out);
+//   - no publication decision exists yet (a manual request/revoke is never overridden), unless
+//     `force` -- used when a traveler clears the opt-out;
+//   - every account-holding group member has a date of birth showing 16+ (guests and invitees
+//     without an account are ignored);
+//   - no member's profile default (users.blog_default_public) is private;
+//   - public photos have alt text (same gate as a manual publication request).
+// Travelers and followers can always read the blog; this only governs public web viewing.
+const altTextGateClear = async (userId: string, tripId: string): Promise<boolean> => {
+  if (!(await isFeatureEnabled('trip_blog_alt_text'))) return true;
+  try {
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_PUBLICATION_READINESS_READ', requireConfiguredLimit: true });
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_STORAGE', caller: 'DATABASE_READ_UNIT', requireConfiguredLimit: true });
+    return (await blogMediaRepository().listPublicationAccessibilityIssues(userId, tripId)).length === 0;
+  } catch {
+    return false; // fail closed: never auto-publish when the readiness check can't run
+  }
+};
+
+export const autoPublishBlogIfEligible = async (tripId: string, actorUserId: string, options: { force?: boolean } = {}): Promise<boolean> => {
+  if (!(await isFeatureEnabled('trip_blog_public_sharing'))) return false;
+  if (!(await ensureUserInTrip(tripId, actorUserId))) return false;
+  const altTextClear = () => altTextGateClear(actorUserId, tripId);
+  if (getCurrentDbProvider() === 'firebase') return autoPublishFirebase(tripId, actorUserId, { force: options.force, altTextClear });
+  const blog = await queryBlog<{ public_opt_out: boolean }>('SELECT public_opt_out FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
+  if (blog.rows[0]?.public_opt_out) return false;
+  const latest = await queryBlog<{ epoch: number; state: string }>('SELECT epoch, state FROM blog_publication_epochs WHERE trip_id = $1 ORDER BY epoch DESC LIMIT 1', [tripId]);
+  const prior = latest.rows[0];
+  if (prior && (!options.force || prior.state === 'public' || prior.state === 'pending_consent')) return false;
+  const members = await queryBlog<{ user_id: string | null }>('SELECT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id WHERE t.id = $1 AND gm.removed_at IS NULL', [tripId]);
+  const memberIds = new Set(members.rows.filter((row) => row.user_id).map((row) => String(row.user_id)));
+  if (memberIds.size === 0) return false;
+  const eligibility = await eligibleAdults(tripId);
+  if (eligibility.missingBirthDate > 0 || eligibility.adults.length !== memberIds.size) return false;
+  const optedOut = await queryBlog<{ count: string }>('SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND u.blog_default_public = FALSE', [tripId]);
+  if (Number(optedOut.rows[0]?.count ?? 0) > 0) return false;
+  if (!(await altTextClear())) return false;
+  const epoch = Number(prior?.epoch ?? 0) + 1;
+  await queryBlog(`INSERT INTO blog_publication_epochs (id, trip_id, epoch, state, requested_by) VALUES ($1, $2, $3, 'public', $4)`, [randomUUID(), tripId, epoch, actorUserId]);
+  await syncBlogVisibility(tripId, epoch, 'public');
+  const identity = await queryBlog<{ username: string; trip_name: string }>('SELECT u.username, t.name AS trip_name FROM users u JOIN trips t ON t.id = $2 WHERE u.id = $1', [actorUserId, tripId]);
+  if (identity.rows[0]) await upsertPublicAlias(tripId, actorUserId, slug(identity.rows[0].username), slug(identity.rows[0].trip_name), true, 'force');
+  return true;
+};
+
+// Takes the blog off the public web (used when a traveler makes it private). Travelers and
+// followers keep access. Returns whether a public epoch was revoked.
+export const revokePublicBlog = async (tripId: string, userId: string): Promise<boolean> => {
+  if (getCurrentDbProvider() === 'firebase') {
+    await revokePublicationFirebase(tripId, userId);
+    return true;
+  }
+  const revoked = await queryBlog<{ epoch: number }>(`UPDATE blog_publication_epochs SET state = 'revoked', revoked_by = $2, updated_at = NOW() WHERE trip_id = $1 AND state = 'public' RETURNING epoch`, [tripId, userId]);
+  if (revoked.rows[0]) await syncBlogVisibility(tripId, Number(revoked.rows[0].epoch), 'revoked');
+  return Boolean(revoked.rows[0]);
 };
 
 router.get('/:tripId/blog/publication/status', authenticate, async (req: any, res) => {

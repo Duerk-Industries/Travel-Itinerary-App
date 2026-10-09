@@ -16,7 +16,7 @@ const PasswordField: React.FC<PasswordFieldProps> = ({ label, styles, testID, st
         <TextInput
           {...inputProps}
           testID={testID}
-          style={[style, { paddingRight: 52 }]}
+          style={[style ?? styles.input, { paddingRight: 52 }]}
           secureTextEntry={!visible}
         />
         <TouchableOpacity
