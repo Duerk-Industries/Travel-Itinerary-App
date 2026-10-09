@@ -72,6 +72,15 @@ const TENTAP_WEB_ALIASES = {
 };
 
 /**
+ * @mlc-ai/web-llm runs the on-device assistant in the browser (WebGPU) and its bundle does
+ * `require('url')` for Node. Metro resolves dynamic `import()`s at bundle time, so without this
+ * the iOS/Android bundle step ("expo export:embed") fails with "Unable to resolve module url"
+ * even though utils/assistantLocalModel.ts only loads it lazily and only on web. Native builds
+ * get an empty module instead; web is untouched.
+ */
+const WEB_ONLY_PACKAGES = ['@mlc-ai/web-llm'];
+
+/**
  * @param {object} opts
  * @param {string} opts.projectRoot         Where Metro is rooted.
  * @param {string} opts.primaryNodeModules  First node_modules directory to consult.
@@ -114,6 +123,9 @@ const createSharedMetroConfig = ({
       context.originModulePath.includes('engine.io-client')
     ) {
       return context.resolveRequest(context, ENGINE_IO_NODE_STUBS[moduleName], platform);
+    }
+    if (platform !== 'web' && WEB_ONLY_PACKAGES.includes(moduleName)) {
+      return { type: 'empty' };
     }
     if (platform === 'web' && TENTAP_WEB_ALIASES[moduleName]) {
       return {
@@ -169,5 +181,6 @@ const createSharedMetroConfig = ({
 module.exports = {
   createSharedMetroConfig,
   ENGINE_IO_NODE_STUBS,
+  WEB_ONLY_PACKAGES,
   shouldUseSentryMetro,
 };
