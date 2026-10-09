@@ -121,7 +121,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
   return {
     name: 'WanderBunnies',
     slug: 'travel-itinerary-planner',
-    version: '1.0.0',
+    version: '1.0.1',
     scheme: 'travelitineraryplanner',
     owner: 'duerk-industries',
     icon: prefixAsset('./assets/wanderbunnies-app-icon.png', assetPrefix),
@@ -228,7 +228,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
         // ephemeral (never persisted as a blog media asset), so no background-recording mode.
         'expo-audio',
         {
-          microphonePermission: 'WanderBunnies needs access to your microphone to record a spoken caption.',
+          microphonePermission: 'WanderBunnies needs access to your microphone to record voice notes and spoken captions for your trip blog.',
         },
       ],
       // Real push delivery (server/src/apis/expoPushApi.ts, notificationOutboxWorker.ts) needs a

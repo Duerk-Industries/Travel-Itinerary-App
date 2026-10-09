@@ -31,6 +31,7 @@ import {
 import { formatDateLong } from './utils/formatDateLong';
 import { createIdempotencyKey } from './utils/idempotencyKey';
 import { normalizeDateString } from './utils/normalizeDateString';
+import { defaultTemperatureUnitForRegion, normalizeTemperatureUnit, type TemperatureUnit } from './utils/temperatureUnit';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
 import { dedupeMembersByIdentity, formatMemberDisplayName } from './utils/memberDisplay';
@@ -1670,6 +1671,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   // handleFollowTripByCode is now provided by useFollowedTrips.
 
+  // Quick °F/°C switch from the trip blog: update right away, then save to the same account
+  // setting that Account settings and the itinerary Overview use.
+  const changeTemperatureUnit = useCallback(async (unit: TemperatureUnit) => {
+    setAccountProfile((prev) => ({ ...prev, temperatureUnit: unit }));
+    if (!userToken) return;
+    try {
+      await fetch(`${backendUrl}/api/account/profile`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ temperatureUnit: unit }),
+      });
+    } catch {
+      // Keep the local choice; it'll be re-sent the next time the profile is saved.
+    }
+  }, [backendUrl, setAccountProfile, userToken]);
+
   const loadAccountProfile = useCallback(
     (token?: string) =>
       fetchAccountProfile({
@@ -1799,7 +1816,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       homeAddress: '',
       preferredAirport: '',
       appearancePreference: 'auto',
-      temperatureUnit: 'fahrenheit',
+      temperatureUnit: defaultTemperatureUnitForRegion(),
     });
     const restoredTripId =
       loadLastActiveTripId(decoded?.email ?? null) ??
@@ -3466,6 +3483,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onAutoOpenHandled={() => setAutoOpenAddPhotos(false)}
                   autoOpenActivityCapture={autoOpenActivityCapture}
                   onAutoOpenActivityCaptureHandled={() => setAutoOpenActivityCapture(null)}
+                  temperatureUnit={normalizeTemperatureUnit(accountProfile.temperatureUnit)}
+                  onChangeTemperatureUnit={changeTemperatureUnit}
                 />
               )
             : null}

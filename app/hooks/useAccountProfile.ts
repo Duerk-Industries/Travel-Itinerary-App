@@ -9,7 +9,7 @@ import {
   loadStoredMapPreference,
   persistMapPreference,
 } from '../utils/mapLinks';
-import { type TemperatureUnit } from '../utils/temperatureUnit';
+import { defaultTemperatureUnitForRegion, type TemperatureUnit } from '../utils/temperatureUnit';
 
 export type AccountProfile = {
   firstName: string;
@@ -37,7 +37,7 @@ const EMPTY_PROFILE: AccountProfile = {
   homeAddress: '',
   preferredAirport: '',
   appearancePreference: 'auto',
-  temperatureUnit: 'fahrenheit',
+  temperatureUnit: defaultTemperatureUnitForRegion(),
 };
 
 /**

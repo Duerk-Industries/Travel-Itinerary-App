@@ -26,6 +26,9 @@ export interface BlogDayFact {
   key: 'weather' | 'distance' | 'places' | 'media' | 'plannedVsActual' | 'dayMap';
   label: string;
   value: string;
+  // Weather only: the raw values behind `value`, so clients can render the reader's °F/°C.
+  icon?: string | null;
+  temperatureHighC?: number | null;
   sourceTypes: string[];
   confidence: FactConfidence;
   asOf: string;
@@ -126,6 +129,9 @@ const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: str
       key: 'weather',
       label: 'Weather',
       value: `${dayWeather.icon ?? ''} ${dayWeather.temperatureHighC != null ? `${dayWeather.temperatureHighC}°C` : ''}`.trim(),
+      // Raw values so clients can show the reader's °F/°C preference instead of the °C text.
+      icon: dayWeather.icon ?? null,
+      temperatureHighC: dayWeather.temperatureHighC ?? null,
       sourceTypes: ['weather'],
       confidence: 'high',
       asOf,

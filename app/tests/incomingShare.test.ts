@@ -2,6 +2,12 @@
 
 import { planShareUpload, normalizeShareIntentFiles } from '../utils/incomingShare';
 
+const mockSaveAsync = jest.fn(async () => ({ uri: 'file:///tmp/converted.jpg' }));
+jest.mock('expo-image-manipulator', () => ({
+  ImageManipulator: { manipulate: jest.fn(() => ({ renderAsync: async () => ({ saveAsync: mockSaveAsync }) })) },
+  SaveFormat: { JPEG: 'jpeg' },
+}), { virtual: true });
+
 describe('planShareUpload', () => {
   it('turns a single shared item + message into that item\'s caption', () => {
     expect(planShareUpload(1, 'Sunset at the beach')).toEqual({
@@ -74,5 +80,29 @@ describe('normalizeShareIntentFiles', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('good.jpg');
+  });
+
+  it('converts an iPhone HEIC photo to JPEG before upload', async () => {
+    const fetched: string[] = [];
+    (global as any).fetch = jest.fn(async (path: string) => { fetched.push(path); return { blob: async () => ({ size: 2048 }) }; });
+
+    const result = await normalizeShareIntentFiles([
+      { path: 'file:///tmp/IMG_0042.HEIC', mimeType: 'image/heic', fileName: 'IMG_0042.HEIC', size: 4096 },
+    ]);
+
+    expect(mockSaveAsync).toHaveBeenCalledWith({ format: 'jpeg', compress: 0.9 });
+    expect(fetched).toEqual(['file:///tmp/converted.jpg']);
+    expect(result).toEqual([{ blob: { size: 2048 }, mimeType: 'image/jpeg', size: 2048, name: 'IMG_0042.jpg' }]);
+  });
+
+  it('keeps the original file if HEIC conversion fails, so it is reported as unsupported instead of vanishing', async () => {
+    mockSaveAsync.mockRejectedValueOnce(new Error('decode failed'));
+    (global as any).fetch = jest.fn(async () => ({ blob: async () => ({ size: 10 }) }));
+
+    const result = await normalizeShareIntentFiles([
+      { path: 'file:///tmp/broken.heic', fileName: 'broken.heic', size: 10 },
+    ]);
+
+    expect(result).toEqual([{ blob: { size: 10 }, mimeType: 'image/heic', size: 10, name: 'broken.heic' }]);
   });
 });
