@@ -56,8 +56,9 @@ describe('TripBlogTab in-app voice note recording', () => {
       }
       if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(blogBody);
       if (method === 'POST' && url.includes('/blog/media/upload-init')) {
-        return jsonResponse({ asset: { id: 'asset-new' } });
+        return jsonResponse({ asset: { id: 'asset-new' }, uploadUrl: 'https://storage.test/upload' });
       }
+      if (method === 'PUT' && url === 'https://storage.test/upload') return jsonResponse({});
       if (method === 'POST' && url.includes('/blog/media/asset-new/complete')) return jsonResponse({ ok: true });
       if (method === 'POST' && url.includes('/blog/media/asset-new/transcribe-caption')) {
         return jsonResponse({ caption: 'A quiet walk along the harbor.' });
@@ -190,11 +191,18 @@ describe('TripBlogTab voice note rendering', () => {
     expect(queryByText(/no preview available/i)).toBeNull();
   });
 
-  it('shows an "Uploading…" state, not "no preview available", before the recording has a real URL yet', async () => {
+  it('explains when a completed voice note has no playable audio instead of claiming it is still uploading', async () => {
     const { findByTestId, getByText, queryByText } = renderWithAudioItem({ primaryUrl: null, caption: null });
 
     expect(await findByTestId('blog-voice-note-item-1')).toBeTruthy();
-    expect(getByText('Uploading…')).toBeTruthy();
+    expect(getByText('Audio unavailable — please add this voice note again.')).toBeTruthy();
+    expect(queryByText('Uploading…')).toBeNull();
     expect(queryByText(/no preview available/i)).toBeNull();
+  });
+
+  it('distinguishes an unfinished upload from a ready item with missing audio', async () => {
+    const { findByTestId, getByText } = renderWithAudioItem({ state: 'uploading', primaryUrl: null, caption: null });
+    expect(await findByTestId('blog-voice-note-item-1')).toBeTruthy();
+    expect(getByText('Upload incomplete — please add this voice note again.')).toBeTruthy();
   });
 });

@@ -125,12 +125,15 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     const existingObjectKey = String(existingData.objectKey ?? '');
     const stillUploading = ['uploading', 'quarantined'].includes(String(existingData.state));
     const retryUploadUrl = stillUploading ? await createBlogUploadUrl(existingObjectKey, String(existingData.sourceMimeType ?? '')) : null;
+    if (input.mediaKind === 'audio' && stillUploading && !retryUploadUrl) throw new Error('VOICE_STORAGE_UNAVAILABLE');
     return { asset: map(existingData, doc.id), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
   }
   const assetId = randomUUID();
   const blogItemId = input.galleryItemId ?? randomUUID();
   const dayDate = galleryDayDate ?? input.dayDate;
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
+  const audioUploadUrl = input.mediaKind === 'audio' ? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase()) : null;
+  if (input.mediaKind === 'audio' && !audioUploadUrl) throw new Error('VOICE_STORAGE_UNAVAILABLE');
   const parentKindKey = input.galleryItemId ? 'core.gallery' : `media.${input.mediaKind}`;
   const position = input.galleryItemId ? galleryAssetCount : 0;
   const blogDoc = await db.collection('trip_blogs').doc(input.tripId).get();
@@ -144,7 +147,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
   }
   const accountRef = db.collection('blog_storage_accounts').doc(userId);
   await db.runTransaction(async (tx) => { const current = (await tx.get(accountRef)).data() as any; const available = Number(current?.includedBytes ?? 0) + Number(current?.purchasedBytes ?? 0) - Number(current?.visibleCommittedBytes ?? 0) - Number(current?.reservedBytes ?? 0); if (available < input.byteSize) throw new Error('QUOTA_EXCEEDED'); tx.set(accountRef, { reservedBytes: Number(current?.reservedBytes ?? 0) + input.byteSize, updatedAt: nowIso() }, { merge: true }); });
-  const uploadUrl = await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
+  const uploadUrl = audioUploadUrl ?? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
   return { asset: map(data, assetId), uploadUrl, objectKey, expiresAt: new Date(Date.now() + 900_000).toISOString(), storageMode: uploadUrl ? 'gcs' : 'managed' };
 };
 

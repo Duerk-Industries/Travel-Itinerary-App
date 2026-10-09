@@ -32,33 +32,36 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
   // Tracks in-flight mutations per target so a rapid double-tap doesn't race two requests against
   // the same target — the second tap waits rather than firing a second PUT/DELETE.
   const inFlight = useRef<Set<string>>(new Set());
+  const mutationEpoch = useRef(0);
+  const targetMutationEpoch = useRef<Record<string, number>>({});
   const tripIdRef = useRef(tripId);
   tripIdRef.current = tripId;
 
   // Called after every load()/refresh — walks the blog document's days/items/assets and populates
   // this store from their embedded `engagement` fields. Never overwrites a target with a pending
   // mutation, so a fetch that lands mid-mutation can't stomp on an optimistic update.
-  const seedFromBlog = useCallback((blog: any) => {
+  const getMutationEpoch = useCallback(() => mutationEpoch.current, []);
+  const seedFromBlog = useCallback((blog: any, requestEpoch = mutationEpoch.current) => {
     if (!blog?.days) return;
     setSummaries((current) => {
       const next = { ...current };
       for (const day of blog.days) {
         const dayKey = targetKey('day', day.id);
-        if (day.engagement && !inFlight.current.has(dayKey)) next[dayKey] = day.engagement;
+        if (day.engagement && !inFlight.current.has(dayKey) && (targetMutationEpoch.current[dayKey] ?? 0) <= requestEpoch) next[dayKey] = day.engagement;
         for (const item of day.items ?? []) {
           if (item.kindKey === 'core.text' && item.engagement) {
             const key = targetKey('item', item.id);
-            if (!inFlight.current.has(key)) next[key] = item.engagement;
+            if (!inFlight.current.has(key) && (targetMutationEpoch.current[key] ?? 0) <= requestEpoch) next[key] = item.engagement;
           }
           if (item.kindKey && item.kindKey.startsWith('media.') && item.engagement && item.assetId) {
             const key = targetKey('asset', item.assetId);
-            if (!inFlight.current.has(key)) next[key] = item.engagement;
+            if (!inFlight.current.has(key) && (targetMutationEpoch.current[key] ?? 0) <= requestEpoch) next[key] = item.engagement;
           }
           if (item.kindKey === 'core.gallery') {
             for (const asset of item.assets ?? []) {
               if (asset.engagement && asset.assetId) {
                 const key = targetKey('asset', asset.assetId);
-                if (!inFlight.current.has(key)) next[key] = asset.engagement;
+                if (!inFlight.current.has(key) && (targetMutationEpoch.current[key] ?? 0) <= requestEpoch) next[key] = asset.engagement;
               }
             }
           }
@@ -103,6 +106,7 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
     const key = targetKey(targetKind, targetId);
     if (inFlight.current.has(key)) return;
     inFlight.current.add(key);
+    targetMutationEpoch.current[key] = ++mutationEpoch.current;
     const previous = applyOptimistic(targetKind, targetId, emoji);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${tripIdRef.current}/blog/${targetKind}/${targetId}/reactions`, {
@@ -123,6 +127,7 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
     const key = targetKey(targetKind, targetId);
     if (inFlight.current.has(key)) return;
     inFlight.current.add(key);
+    targetMutationEpoch.current[key] = ++mutationEpoch.current;
     const previous = applyOptimistic(targetKind, targetId, null);
     try {
       const response = await fetch(`${backendUrl}/api/trips/${tripIdRef.current}/blog/${targetKind}/${targetId}/reactions`, {
@@ -153,7 +158,9 @@ export function useBlogEngagement(backendUrl: string, headers: Record<string, st
   useEffect(() => {
     setSummaries({});
     inFlight.current.clear();
+    mutationEpoch.current = 0;
+    targetMutationEpoch.current = {};
   }, [tripId]);
 
-  return { getSummary, seedFromBlog, toggle, react, clear };
+  return { getSummary, getMutationEpoch, seedFromBlog, toggle, react, clear };
 }

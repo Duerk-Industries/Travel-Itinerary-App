@@ -446,6 +446,7 @@ router.post('/:tripId/blog/media/upload-init', async (req, res) => {
   } catch (err) {
     const message = String((err as any)?.message ?? 'Unable to initialize upload');
     if (message === 'QUOTA_EXCEEDED') { res.status(413).json({ error: message, code: message }); return; }
+    if (message === 'VOICE_STORAGE_UNAVAILABLE') { res.status(503).json({ error: 'Voice-note storage is unavailable. Please try again later.' }); return; }
     errorResponse(res, err);
   }
 });
@@ -457,6 +458,10 @@ router.post('/:tripId/blog/media/:assetId/complete', async (req, res) => {
     const userId = userIdOf(req);
     const pending = await blogMediaRepository().getAssetForProcessing(req.params.assetId);
     const reallyUploaded = pending && pending.uploaderUserId === userId && pending.objectKey ? await objectExists(pending.objectKey) : false;
+    if (pending?.mediaKind === 'audio' && pending.uploaderUserId === userId && !reallyUploaded) {
+      res.status(503).json({ error: 'Voice-note audio is missing from storage. Please upload it again.' });
+      return;
+    }
     // A real object landed in the bucket (the client PUT to the signed URL from upload-init): run
     // the actual normalization/thumbnail pipeline and trust the real processed byte count instead
     // of whatever the client claims. Otherwise (no GCS configured, so upload-init fell back to the

@@ -42,6 +42,7 @@ import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCa
 import PhotoFirstComposer from '../components/PhotoFirstComposer';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { isTripActiveToday, localDateString } from '../utils/offlineTripCache';
+import { trimBlogNoteEnd } from '../utils/trimBlogNoteEnd';
 
 // Re-exported for backward compatibility — app/tests/tripBlogMedia.test.ts and any other existing
 // consumer imports these names from this file; the actual implementations now live in
@@ -178,15 +179,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   // also means the private/pending-consent preview cannot accidentally hide content merely because
   // the user is not currently editing.
   const publicPreview = !editMode && blog?.visibilityState === 'public';
-  // B8/Phase 3: authoring (canEdit, unchanged) and engagement (canEngage) are deliberately
-  // different gates. `readOnly` means "this viewer is a follower of this trip" (the
-  // isFollowingMode prop from App.tsx) — historically that blocked everything, but a follower is
-  // allowed to react and comment, only never to author, edit, delete, set covers or publish. The
-  // server's authorization matrix is the real enforcement (a follower reacting to a
-  // travelers-only item still gets 404); this flag only controls whether the reaction controls
-  // render at all — hidden in the public preview, which has no authenticated session's own
-  // reaction to show and no server-side identity to attach one to.
+  // Followers may comment on content they can access. Reactions belong to the reading view,
+  // including the authenticated public preview; the server enforces each target's audience.
   const canEngage = !publicPreview;
+  const canReact = !editMode;
   // The "Blog tools" drawer is entirely traveler-facing (publish/unpublish, the private spend
   // figure, the traveler-only places index, search). A follower has nothing in it — don't show an
   // empty collapsible.
@@ -202,7 +198,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       items: (day.items || []).filter((item) => !item.audience || item.audience === 'public'),
       activities: [],
     };
-  }), [blog?.days, publicPreview]);
+  }).filter((day) => editMode || (day.items || []).length > 0), [blog?.days, publicPreview, editMode]);
   const mediaForDay = (day) => (day.items || []).flatMap((item) => {
     if (item.kindKey === 'core.gallery') return (item.assets || []).map((asset) => ({ ...asset, audience: asset.audience ?? item.audience, isGalleryMember: true }));
     return item.kindKey && item.kindKey.startsWith('media.') ? [item] : [];
@@ -373,6 +369,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       const effectiveLimit = nextCursor ? limit : Math.max(limit, loadedCount);
       const params = new URLSearchParams({ limit: String(effectiveLimit) });
       if (nextCursor) params.set('cursor', nextCursor);
+      const reactionEpochAtRequest = engagement.getMutationEpoch();
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog?${params.toString()}`, { headers });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to load the trip blog');
       const data = await response.json();
@@ -384,7 +381,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       // Seeds the normalized engagement store from this response's embedded `engagement` fields
       // (architecture §5.4) — never a second fetch. A no-op object when the reactions flag is
       // off, since the field is simply absent from `data` in that case.
-      engagement.seedFromBlog(data);
+      engagement.seedFromBlog(data, reactionEpochAtRequest);
       const lastDay = days[days.length - 1];
       setCursor(days.length >= effectiveLimit && lastDay ? lastDay.localDate : null);
     } catch (error) {
@@ -924,7 +921,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const saveItemBody = async (item, html, version) => {
     const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items/${item.id}`, {
       method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: html, version }),
+      body: JSON.stringify({ body: trimBlogNoteEnd(html), version }),
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 409) {
@@ -981,7 +978,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     try {
       const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/items`, {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kindKey: 'core.text', dayDate: item.localDate, body: localBody }),
+        body: JSON.stringify({ kindKey: 'core.text', dayDate: item.localDate, body: trimBlogNoteEnd(localBody) }),
       });
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Unable to save your draft as a new note');
       await load();
@@ -1070,7 +1067,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
 
   const createTextItem = async (dayDate) => {
     if (!canEdit) return;
-    const body = newBody;
+    const body = trimBlogNoteEnd(newBody);
     if (isRichTextEmpty(body)) return;
     setCreating(true);
     try {
@@ -1369,6 +1366,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           return (
           <View
             key={day.id}
+            testID={`blog-day-${day.localDate}`}
             style={{
               marginBottom: 20,
               backgroundColor: canEdit ? (theme?.colors?.surfaceMuted ?? '#f3f4f6') : surfaceColor,
@@ -1566,13 +1564,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   />
                 )}
                 {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
-                {item.engagement ? (
+                {!editMode && item.engagement ? (
                   <BlogReactionBar
                     testID={`blog-item-reactions-${item.id}`}
                     targetKind="item"
                     targetId={item.id}
                     summary={engagement.getSummary('item', item.id)}
-                    canEngage={canEngage}
+                    canEngage={canReact}
                     onToggle={engagement.toggle}
                     onError={handleEngagementError}
                     textColor={textColor}
@@ -1689,17 +1687,15 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   {audioItems.map((item) => (
                     <View key={item.id} testID={`blog-voice-note-${item.id}`} style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor, marginTop: 8 }}>
                       <Text style={{ color: textColor, fontWeight: '600' }}>🎙 Voice note</Text>
-                      {item.caption ? (
-                        <Text style={{ color: textColor, marginTop: 4 }}>{item.caption}</Text>
-                      ) : item.primaryUrl ? null : (
-                        <Text style={{ color: mutedColor, marginTop: 4, fontStyle: 'italic' }}>Transcribing…</Text>
-                      )}
+                      {item.caption ? <Text style={{ color: textColor, marginTop: 4 }}>{item.caption}</Text> : null}
                       {item.primaryUrl ? (
                         <View style={{ marginTop: 8 }}>
                           <BlogMediaPreview item={item} backgroundColor={inputColor} />
                         </View>
                       ) : (
-                        <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>Uploading…</Text>
+                        <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>
+                          {item.state === 'ready' ? 'Audio unavailable — please add this voice note again.' : 'Upload incomplete — please add this voice note again.'}
+                        </Text>
                       )}
                       {canEdit ? (
                         <TouchableOpacity style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, backgroundColor: theme?.colors?.error ?? '#b91c1c' }]} disabled={deleting} onPress={() => removeMediaItem(item)}>
@@ -1722,6 +1718,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     removing={deleting}
                     onRemove={(item) => removeMediaItem(item)}
                     canEngage={canEngage}
+                    canReact={canReact}
                     getEngagementSummary={(assetId) => engagement.getSummary('asset', assetId)}
                     onToggleReaction={engagement.toggle}
                     onReactionError={handleEngagementError}
@@ -1748,19 +1745,19 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               <BlogContributorStrip
                 testID={`blog-day-contributors-${day.localDate}`}
                 contributors={day.contributors}
-                reactionTotal={day.engagement?.reactionTotal}
-                spotlightUserId={spotlightForDay(day)}
+                reactionTotal={editMode ? 0 : day.engagement?.reactionTotal}
+                spotlightUserId={editMode ? null : spotlightForDay(day)}
                 mutedColor={mutedColor}
               />
             ) : null}
-            {day.engagement && (day.items || []).length > 0 ? (
+            {!editMode && day.engagement && (day.items || []).length > 0 ? (
               <View style={{ marginTop: (!publicPreview && (day.contributors || []).length > 0) ? 6 : 12 }}>
                 <BlogReactionBar
                   testID={`blog-day-reactions-${day.localDate}`}
                   targetKind="day"
                   targetId={day.id}
                   summary={engagement.getSummary('day', day.id)}
-                  canEngage={canEngage}
+                  canEngage={canReact}
                   onToggle={engagement.toggle}
                   onError={handleEngagementError}
                   textColor={textColor}

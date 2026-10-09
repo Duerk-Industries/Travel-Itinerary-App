@@ -112,4 +112,21 @@ describe('useBlogEngagement', () => {
     rerender({ tripId: 'trip-2' });
     expect(result.current.getSummary('day', 'day-1').reactionTotal).toBe(0);
   });
+
+  it('does not let a refresh started before a saved reaction erase it', async () => {
+    const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
+    const saved = { reactionCounts: { heart: 1 }, reactionTotal: 1, commentCount: 0, userReaction: 'heart' };
+    (global as any).fetch = jest.fn(async () => jsonResponse(saved));
+    const { result } = renderHook(() => useBlogEngagement(backendUrl, headers, 'trip-1'));
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: zero }] }));
+    const staleRequestEpoch = result.current.getMutationEpoch();
+
+    await act(async () => { await result.current.react('day', 'day-1', 'heart'); });
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: zero }] }, staleRequestEpoch));
+    expect(result.current.getSummary('day', 'day-1')).toEqual(saved);
+
+    // A request made after the mutation can still reconcile with newer server data.
+    act(() => result.current.seedFromBlog({ days: [{ id: 'day-1', engagement: { ...saved, reactionCounts: { heart: 2 }, reactionTotal: 2 } }] }, result.current.getMutationEpoch()));
+    expect(result.current.getSummary('day', 'day-1').reactionTotal).toBe(2);
+  });
 });

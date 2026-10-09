@@ -107,6 +107,12 @@ export const uploadOneBlogFile = async (
   }
   const { asset, uploadUrl } = await initRes.json();
 
+  // A voice note without a signed upload URL has nowhere to send its audio bytes.
+  // Finalizing it would create a "ready" record with no playable file.
+  if (mediaKind === 'audio' && !uploadUrl) {
+    return { outcome: 'error', error: 'Voice-note storage is unavailable. Please try again later.' };
+  }
+
   if (uploadUrl) {
     // Real signed URL: upload the actual selected file's bytes directly to storage.
     try {

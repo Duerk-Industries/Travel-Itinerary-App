@@ -132,6 +132,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     const existingObjectKey = String(existing.rows[0].object_key ?? '');
     const stillUploading = ['uploading', 'quarantined'].includes(String(existing.rows[0].state));
     const retryUploadUrl = stillUploading ? await createBlogUploadUrl(existingObjectKey, String(existing.rows[0].source_mime_type ?? '')) : null;
+    if (input.mediaKind === 'audio' && stillUploading && !retryUploadUrl) throw new Error('VOICE_STORAGE_UNAVAILABLE');
     return { asset: mapAsset(existing.rows[0]), uploadUrl: retryUploadUrl, objectKey: existingObjectKey, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), storageMode: retryUploadUrl ? 'gcs' : 'managed' };
   }
   const allowedMime = input.mediaKind === 'photo'
@@ -177,6 +178,10 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
     if (!day) throw new Error('The selected day is outside the trip range');
   }
   const objectKey = `trip-blog/${userId}/${assetId}/source`;
+  // Audio cannot use the simulated path: that would reserve storage and create a
+  // note without ever receiving the recording. Sign before writing any rows.
+  const audioUploadUrl = input.mediaKind === 'audio' ? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase()) : null;
+  if (input.mediaKind === 'audio' && !audioUploadUrl) throw new Error('VOICE_STORAGE_UNAVAILABLE');
   const locationToggle = await queryBlog<{ photo_location_enabled: boolean }>('SELECT photo_location_enabled FROM trip_blogs WHERE trip_id = $1', [input.tripId]);
   const locationEnabled = Boolean(locationToggle.rows[0]?.photo_location_enabled);
   const capturedLat = locationEnabled && isFiniteLat(input.capturedLat) ? input.capturedLat : null;
@@ -213,7 +218,7 @@ export const initUpload = async (userId: string, input: BlogUploadInitInput): Pr
      FROM blog_media_assets a JOIN blog_item_assets ia ON ia.asset_id = a.id JOIN blog_items i ON i.id = ia.item_id JOIN blog_days d ON d.id = i.blog_day_id WHERE a.id = $1`,
     [assetId]
   );
-  const uploadUrl = await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
+  const uploadUrl = audioUploadUrl ?? await createBlogUploadUrl(objectKey, input.mimeType.toLowerCase());
   return {
     asset: mapAsset(row.rows[0]),
     uploadUrl,
