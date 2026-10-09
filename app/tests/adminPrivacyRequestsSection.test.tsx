@@ -4,6 +4,7 @@
 /// <reference types="jest" />
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { PrivacyRequestsSection, dueLabel } from '../components/admin/PrivacyRequestsSection';
 import { getAppTheme } from '../theme/theme';
 
@@ -59,6 +60,9 @@ describe('dueLabel', () => {
 });
 
 describe('PrivacyRequestsSection', () => {
+  const originalOS = Platform.OS;
+  afterEach(() => { Platform.OS = originalOS; });
+
   it('lists active requests overdue-first with an overdue banner, hiding closed ones', async () => {
     const screen = renderSection();
     await waitFor(() => expect(screen.getByTestId('admin-privacy-request-r-late')).toBeTruthy());
@@ -77,12 +81,13 @@ describe('PrivacyRequestsSection', () => {
   });
 
   it('records a new request only with a reason, and never asks for the requester identity', async () => {
+    Platform.OS = 'web';
     const screen = renderSection();
     await waitFor(() => expect(screen.getByTestId('admin-privacy-request-r-due')).toBeTruthy());
     fireEvent.press(screen.getByTestId('admin-privacy-new-toggle'));
     fireEvent.press(screen.getByTestId('admin-privacy-new-type-erasure'));
     fireEvent.press(screen.getByTestId('admin-privacy-new-jurisdiction-UK_GDPR'));
-    fireEvent.changeText(screen.getByLabelText('Date received (YYYY-MM-DD)'), '2026-10-01');
+    fireEvent(screen.getByTestId('admin-privacy-new-received'), 'change', { target: { value: '2026-10-01' } });
     fireEvent.press(screen.getByTestId('admin-privacy-new-save'));
     expect(writeCall('POST')).toBeUndefined(); // no reason yet
 

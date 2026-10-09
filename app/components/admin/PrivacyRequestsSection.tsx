@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { AppTheme } from '../../theme/theme';
+import DateField from '../DateField';
 
 /**
  * Admin → Privacy requests (docs/analytics-runbook.md "Privacy rights requests"): the register
@@ -96,6 +97,7 @@ const NewRequestForm: React.FC<{ onSubmit: (body: Record<string, unknown>) => Pr
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(receivedAt) && !Number.isNaN(Date.parse(receivedAt));
+  const dateFieldStyles = { input: [styles.input, { borderColor: validDate ? c.border : c.error, color: c.text, backgroundColor: c.surface }], cellText: { color: c.text } };
   const canSave = reason.trim().length >= 3 && validDate;
   const submit = async () => {
     if (!canSave) return;
@@ -120,8 +122,15 @@ const NewRequestForm: React.FC<{ onSubmit: (body: Record<string, unknown>) => Pr
       <Pills options={JURISDICTIONS} value={jurisdiction} onChange={setJurisdiction} testIDPrefix="admin-privacy-new-jurisdiction" theme={theme} />
       <Text style={[styles.label, { color: c.text }]}>Channel</Text>
       <Pills options={CHANNELS} value={channel} onChange={setChannel} testIDPrefix="admin-privacy-new-channel" theme={theme} />
-      <TextInput accessibilityLabel="Date received (YYYY-MM-DD)" placeholder="Date received (YYYY-MM-DD)" value={receivedAt}
-        onChangeText={setReceivedAt} style={[styles.input, { borderColor: validDate ? c.border : c.error, color: c.text }]} />
+      <DateField
+        value={receivedAt}
+        onChange={setReceivedAt}
+        styles={dateFieldStyles}
+        theme={theme}
+        accessibilityLabel="Date received (YYYY-MM-DD)"
+        placeholder="Date received (YYYY-MM-DD)"
+        testID="admin-privacy-new-received"
+      />
       <TextInput accessibilityLabel="Account user ID (optional)" placeholder="Account user ID (optional)" value={accountUserId}
         onChangeText={setAccountUserId} autoCapitalize="none" style={[styles.input, { borderColor: c.border, color: c.text }]} />
       <TextInput accessibilityLabel="Notes (optional)" placeholder="Notes: actions taken, no personal details" value={notes}

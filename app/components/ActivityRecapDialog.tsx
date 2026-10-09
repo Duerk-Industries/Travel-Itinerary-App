@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export type ActivityRecapTarget = {
   id: string;
@@ -66,7 +66,8 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay} testID="activity-recap-dialog">
         <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={busy ? undefined : onClose} />
-        <View style={[styles.modalCard, { marginTop: 0, backgroundColor: surface }]}>
+        <View style={[styles.modalCard, { marginTop: 0, backgroundColor: surface, maxHeight: '100%' }]}>
+<ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
           <Text style={[styles.sectionTitle, { color: textColor }]}>Recap activity</Text>
           <Text style={{ color: textColor, fontWeight: '700', marginTop: 6 }}>{activity?.name || 'Activity'}</Text>
           <Text style={{ color: mutedColor, marginTop: 2 }}>Rate it, then add a note or photos/videos to the trip blog.</Text>
@@ -112,6 +113,7 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
               <Text style={{ color: textColor }}>Cancel</Text>
             </TouchableOpacity>
           </View>
+</ScrollView>
         </View>
       </View>
     </Modal>

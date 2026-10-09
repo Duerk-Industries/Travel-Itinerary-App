@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 
 export type AddItemKind = 'activity' | 'place' | 'note' | 'checklist';
@@ -42,6 +42,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
         accessibilityRole="menu"
         testID="add-item-popover"
       >
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
         <Text style={[styles.title, colors && { color: colors.text }]}>Add to itinerary</Text>
         {visibleOptions.map((opt) => (
           <Pressable
@@ -66,6 +67,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
         >
           <Text style={[styles.cancelText, colors && { color: colors.textMuted }]}>Cancel</Text>
         </Pressable>
+        </ScrollView>
       </Pressable>
     </Pressable>
   </Modal>
@@ -83,6 +85,7 @@ const styles = StyleSheet.create({
   menu: {
     width: '100%',
     maxWidth: 360,
+    maxHeight: '100%',
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 12,

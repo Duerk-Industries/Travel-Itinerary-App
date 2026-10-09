@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Linking, Modal, Pressable, Share, StyleSheet, Switch, Text, View, Platform } from 'react-native';
+import { Alert, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View, Platform } from 'react-native';
 import type { PrivacyController } from '../hooks/usePrivacyConsent';
 import type { PrivacyChoice } from '../utils/privacyConsent';
 import type { AppTheme } from '../theme/theme';
@@ -15,7 +15,8 @@ const styles = StyleSheet.create({
   buttonText: { fontWeight: '600' },
   disabled: { opacity: 0.5 },
   overlay: { flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 16 },
-  dialog: { borderRadius: 12, padding: 20, gap: 12, maxWidth: 520, width: '100%', alignSelf: 'center' },
+  dialog: { borderRadius: 12, maxWidth: 520, width: '100%', alignSelf: 'center', maxHeight: '100%' },
+  dialogContent: { padding: 20, gap: 12 },
 });
 
 const paletteFor = (theme: AppTheme) => ({
@@ -76,6 +77,7 @@ export const PrivacyChoiceDialog = ({ privacy, backendUrl, theme }: { privacy: P
   return (
     <Modal visible={privacy.showPrompt} transparent animationType="fade" onRequestClose={() => undefined}>
       <View style={styles.overlay}><View testID="privacy-choice-panel" style={[styles.dialog, palette.dialog]}>
+        <ScrollView contentContainerStyle={styles.dialogContent} showsVerticalScrollIndicator>
         <Text style={[styles.title, palette.title]}>Your privacy choices</Text>
         <Text style={[styles.text, palette.text]}>You can use WanderBunnies without optional analytics or detailed diagnostics. Choose separately below, and change either choice in Account at any time.</Text>
         {status.privacySignalActive ? <Text style={[styles.text, palette.text]}>Your browser privacy signal keeps product analytics off.</Text> : null}
@@ -92,6 +94,7 @@ export const PrivacyChoiceDialog = ({ privacy, backendUrl, theme }: { privacy: P
         </View>
         {privacy.error ? <Text style={palette.error}>{privacy.error}</Text> : null}
         <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(`${backendUrl}/privacy.html`); }}><Text style={[styles.buttonText, palette.buttonText]}>Read the privacy notice</Text></Pressable>
+        </ScrollView>
       </View></View>
     </Modal>
   );

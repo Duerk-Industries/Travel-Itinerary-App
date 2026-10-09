@@ -29,6 +29,7 @@ const PremiumTrialWelcomeDialog: React.FC<PremiumTrialWelcomeDialogProps> = ({
     onClose={onDismiss}
     testID="premium-trial-welcome-dialog"
     accessibilityRole="alert"
+    scrollable
   >
     <View style={styles.premiumTrialFeatureList}>
       {PREMIUM_FEATURES.map((feature) => (

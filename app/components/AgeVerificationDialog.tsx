@@ -149,6 +149,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
         onClose={noop}
         testID="age-verification-under-age"
         accessibilityRole="alert"
+        scrollable
       >
         {message ? <Text style={styles.helperText}>{message}</Text> : null}
         <View style={styles.row}>
@@ -185,6 +186,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
       onClose={noop}
       testID="age-verification-dialog"
       accessibilityRole="alert"
+      scrollable
     >
       <DateField
         value={dateOfBirth}
