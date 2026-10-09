@@ -4207,6 +4207,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         <AgeVerificationDialog
           visible
           styles={styles}
+          theme={theme}
           backendUrl={backendUrl}
           token={userToken}
           onVerified={() => setAgeVerificationRequired(false)}
@@ -4214,7 +4215,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         />
       ) : null}
       {userToken && !requirePasswordSetup && ageVerificationRequired === false ? (
-        <PrivacyChoiceDialog privacy={privacy} backendUrl={backendUrl} />
+        <PrivacyChoiceDialog privacy={privacy} backendUrl={backendUrl} theme={theme} />
       ) : null}
       <PremiumTrialWelcomeDialog
         visible={Boolean(userToken && premiumTrialWelcomeVisible && !ageVerificationRequired && arePremiumTrialsEnabled())}
@@ -4892,9 +4893,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexShrink: 1,
   },
   homeModalClose: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4940,7 +4941,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     fontSize: 13,
   },
   homeModalActiveBadge: {
-    color: '#047857',
+    color: theme.mode === 'dark' ? '#6EE7B7' : '#047857',
     fontSize: 12,
     fontWeight: '700',
   },

@@ -344,7 +344,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         logout={logout}
         styles={styles}
       /> : null}
-      {!isSubPage && privacy ? <AccountPrivacySettings privacy={privacy} backendUrl={backendUrl} token={userToken} /> : null}
+      {!isSubPage && privacy ? <AccountPrivacySettings privacy={privacy} backendUrl={backendUrl} token={userToken} theme={theme} /> : null}
       {!isSubPage ? <PremiumSubscriptionPanel
         backendUrl={backendUrl}
         token={userToken}

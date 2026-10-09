@@ -361,7 +361,7 @@ const buildDetailStyles = (theme?: AppTheme) => StyleSheet.create({
     backgroundColor: theme?.mode === 'dark' ? 'rgba(52,211,153,0.15)' : '#ecfdf5',
   },
   statusText: {
-    color: '#047857',
+    color: theme?.mode === 'dark' ? '#6EE7B7' : '#047857',
     fontWeight: '600',
   },
   summaryCard: {

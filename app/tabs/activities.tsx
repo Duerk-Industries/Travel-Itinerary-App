@@ -902,7 +902,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.buttonText}>Edit table</Text>
               </TouchableOpacity>
             ) : null}
-            {!tableEditing ? <CsvTransferControls entity="activities" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={defaultActivityDate} tripEnd={tripEndDate} rows={tours} styles={styles} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onDataChanged ?? fetchTours} /> : null}
+            {!tableEditing ? <CsvTransferControls entity="activities" backendUrl={backendUrl} headers={jsonHeaders} tripId={activeTripId} tripStart={defaultActivityDate} tripEnd={tripEndDate} rows={tours} styles={styles} theme={theme} enabledImport={featureActivityLodgingCsvImport} enabledExport={featureActivityLodgingCsvExport} readOnly={readOnly} onImported={onDataChanged ?? fetchTours} /> : null}
             {tableEditing ? (
               <>
                 <TouchableOpacity
@@ -1222,4 +1222,3 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     </View>
   );
 };
-

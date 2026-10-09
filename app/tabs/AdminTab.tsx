@@ -1421,7 +1421,7 @@ const TiersSection: React.FC<{
                   disabled={saving}
                   onPress={() => saveLimit(editingLimit.tierKey, editingLimit.limitKey)}
                 >
-                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
+                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#0B1726' }]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1492,7 +1492,7 @@ const TiersSection: React.FC<{
                     saveEntitlement(editingEntitlement.tierKey, editingEntitlement.featureKey, !currentValue);
                   }}
                 >
-                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
+                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#0B1726' }]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>

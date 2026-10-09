@@ -1910,7 +1910,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 style={[styles.button, { marginBottom: 10, backgroundColor: '#0284c7' }]}
                 onPress={() => purchaseStorage(plan.planKey)}
               >
-                <Text style={styles.buttonText}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
+                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Add {plan.planKey.split('_')[1].toUpperCase()} Storage</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity

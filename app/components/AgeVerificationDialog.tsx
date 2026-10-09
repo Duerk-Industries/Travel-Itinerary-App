@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import DialogShell from './DialogShell';
+import DateField from './DateField';
 import { requestAppleAgeConfirmation } from '../utils/appleAgeRange';
+import { localTodayDateOnly } from '../utils/dateOnly';
+import type { AppTheme } from '../theme/theme';
 
 /**
  * Post-sign-in date-of-birth prompt (docs/implementation-plans/analytics-upgrade.md,
@@ -86,6 +89,7 @@ const deleteOwnAccount = async (backendUrl: string, token: string): Promise<bool
 type AgeVerificationDialogProps = {
   visible: boolean;
   styles: Record<string, any>;
+  theme?: AppTheme;
   backendUrl: string;
   token: string;
   onVerified: () => void;
@@ -97,6 +101,7 @@ const noop = () => undefined;
 const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
   visible,
   styles,
+  theme,
   backendUrl,
   token,
   onVerified,
@@ -117,7 +122,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
     } else if (result === 'under_minimum_age') {
       setUnderAge(true);
     } else if (result === 'invalid') {
-      setMessage('Enter a valid date as YYYY-MM-DD.');
+      setMessage('Choose a valid date of birth.');
     } else {
       setMessage('Could not save your date of birth. Try again.');
     }
@@ -148,7 +153,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
         {message ? <Text style={styles.helperText}>{message}</Text> : null}
         <View style={styles.row}>
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, busy && styles.buttonDisabled]}
+            style={[styles.button, styles.smallButton, { minHeight: 44, justifyContent: 'center' }, busy && styles.buttonDisabled]}
             onPress={deleteAccount}
             disabled={busy}
             testID="age-verification-delete-account"
@@ -158,7 +163,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
             <Text style={styles.buttonText}>{busy ? 'Deleting...' : 'Delete my account'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.smallButton, styles.secondaryButton]}
+            style={[styles.button, styles.smallButton, styles.secondaryButton, { minHeight: 44, justifyContent: 'center' }]}
             onPress={onSignOut}
             testID="age-verification-sign-out"
             accessibilityRole="button"
@@ -175,28 +180,26 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
     <DialogShell
       visible={visible}
       title="Confirm your date of birth"
-      message="Enter your date of birth to continue. We use it only to confirm you're old enough to have an account."
+      message="Select your date of birth to continue. We use it only to confirm you're old enough to have an account."
       styles={styles}
       onClose={noop}
       testID="age-verification-dialog"
       accessibilityRole="alert"
     >
-      <TextInput
-        style={styles.input}
+      <DateField
         value={dateOfBirth}
-        onChangeText={setDateOfBirth}
-        placeholder="YYYY-MM-DD"
-        keyboardType="numbers-and-punctuation"
-        autoComplete="birthdate-full"
-        textContentType="none"
-        maxLength={10}
+        onChange={setDateOfBirth}
+        styles={styles}
+        theme={theme}
+        maxDate={localTodayDateOnly()}
+        pickerInitialDate={`${new Date().getFullYear() - 25}-01-01`}
         testID="age-verification-date-input"
-        accessibilityLabel="Date of birth, year month day"
+        accessibilityLabel="Date of birth"
       />
       {message ? <Text style={styles.helperText}>{message}</Text> : null}
       <View style={styles.row}>
         <TouchableOpacity
-          style={[styles.button, styles.smallButton, (busy || !dateOfBirth.trim()) && styles.buttonDisabled]}
+          style={[styles.button, styles.smallButton, { minHeight: 44, justifyContent: 'center' }, (busy || !dateOfBirth.trim()) && styles.buttonDisabled]}
           onPress={submit}
           disabled={busy || !dateOfBirth.trim()}
           testID="age-verification-submit"
@@ -206,7 +209,7 @@ const AgeVerificationDialog: React.FC<AgeVerificationDialogProps> = ({
           <Text style={styles.buttonText}>{busy ? 'Saving...' : 'Continue'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.button, styles.smallButton, styles.secondaryButton]}
+          style={[styles.button, styles.smallButton, styles.secondaryButton, { minHeight: 44, justifyContent: 'center' }]}
           onPress={onSignOut}
           testID="age-verification-sign-out"
           accessibilityRole="button"

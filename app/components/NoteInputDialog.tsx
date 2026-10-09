@@ -79,7 +79,7 @@ const NoteInputDialog: React.FC<NoteInputDialogProps> = ({ visible, defaultDay, 
             multiline
             numberOfLines={5}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, theme?.mode === 'dark' && { color: '#FFB4AB' }]}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable testID="note-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
               <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
@@ -106,9 +106,9 @@ const styles = StyleSheet.create({
   textarea: { minHeight: 110, textAlignVertical: 'top' },
   error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-  btnGhost: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
 });
 

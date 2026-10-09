@@ -104,7 +104,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
                   accessibilityLabel={`Remove item ${idx + 1}`}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.removeBtnText}>−</Text>
+                  <Text style={[styles.removeBtnText, theme?.mode === 'dark' && { color: '#FFB4AB' }]}>−</Text>
                 </Pressable>
               </View>
             ))}
@@ -112,11 +112,11 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
           <Pressable
             testID="checklist-dialog-add-item"
             onPress={addItem}
-            style={({ pressed }: { pressed: boolean }) => [styles.addBtn, pressed && styles.addBtnPressed]}
+            style={({ pressed }: { pressed: boolean }) => [styles.addBtn, pressed && { backgroundColor: colors?.surfaceMuted ?? '#f3f4f6' }]}
           >
-            <Text style={styles.addBtnText}>+ Add another item</Text>
+            <Text style={[styles.addBtnText, colors && { color: theme?.mode === 'dark' ? colors.link : colors.primary }]}>+ Add another item</Text>
           </Pressable>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, theme?.mode === 'dark' && { color: '#FFB4AB' }]}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable testID="checklist-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
               <Text style={[styles.btnGhostText, colors && { color: colors.textMuted }]}>Cancel</Text>
@@ -143,18 +143,18 @@ const styles = StyleSheet.create({
   itemsScroll: { maxHeight: 220 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   removeBtn: {
-    width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
+    width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center',
     backgroundColor: 'rgba(220, 38, 38, 0.1)', borderWidth: 1, borderColor: 'rgba(220, 38, 38, 0.4)',
   },
   removeBtnText: { fontSize: 18, fontWeight: '700', color: '#dc2626', lineHeight: 18 },
-  addBtn: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 6, alignSelf: 'flex-start' },
+  addBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 6, alignSelf: 'flex-start' },
   addBtnPressed: { backgroundColor: 'rgba(0,0,0,0.06)' },
   addBtnText: { color: '#2563eb', fontWeight: '600' },
   error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-  btnGhost: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  btnGhost: { paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnGhostText: { color: '#374151', fontWeight: '600' },
-  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  btnPrimary: { backgroundColor: '#2563eb', paddingHorizontal: 14, minHeight: 44, justifyContent: 'center', borderRadius: 6 },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
 });
 

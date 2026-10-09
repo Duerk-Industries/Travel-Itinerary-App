@@ -3,6 +3,7 @@ import { Alert, FlatList, Modal, Platform, Text, TouchableOpacity, View } from '
 import { mapColumns, ACTIVITY_HEADER_ALIASES, LODGING_HEADER_ALIASES, parseCsv, toActivityReviewRows, toCsv, toLodgingReviewRows, type ImportReviewRow } from '../utils/dataTransfer';
 import { pickCsvFile, shareCsvFile } from '../utils/dataTransferPlatform';
 import { taskFailure, track, type TaskFailure } from '../utils/analytics/track';
+import { getAppTheme, type AppTheme } from '../theme/theme';
 
 type Props = {
   entity: 'activities' | 'lodgings';
@@ -13,6 +14,7 @@ type Props = {
   tripEnd?: string | null;
   rows: any[];
   styles: Record<string, any>;
+  theme?: AppTheme;
   enabledImport?: boolean;
   enabledExport?: boolean;
   readOnly?: boolean;
@@ -30,7 +32,8 @@ const createImportId = (): string => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
-const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tripId, tripStart, tripEnd, rows, styles, enabledImport = false, enabledExport = false, readOnly = false, onImported }) => {
+const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tripId, tripStart, tripEnd, rows, styles, theme, enabledImport = false, enabledExport = false, readOnly = false, onImported }) => {
+  const colors = (theme ?? getAppTheme('light', 'light')).colors;
   const [reviewRows, setReviewRows] = useState<Array<ImportReviewRow<Record<string, unknown>>>>([]);
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [modalVisible, setModalVisible] = useState(false);
@@ -139,9 +142,9 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
       {enabledExport ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Export ${entity} CSV`} style={styles.outlineButton ?? styles.button} onPress={exportCsv} testID={`${entity}-export`}><Text style={styles.buttonText}>Export CSV</Text></TouchableOpacity> : null}
     </View>
     <Modal visible={modalVisible} animationType="slide" onRequestClose={cancelReview}>
-      <View style={{ flex: 1, padding: 16, paddingTop: Platform.OS === 'web' ? 16 : 48, backgroundColor: '#fff' }}>
-        <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 8 }}>Review {entity}</Text>
-        <Text style={{ marginBottom: 12 }}>{visibleRows.length} rows selected; {reviewRows.length - visibleRows.length} skipped.{blockingRows.length ? ` ${blockingRows.length} rows need correction or skipping.` : ''}</Text>
+      <View style={{ flex: 1, padding: 16, paddingTop: Platform.OS === 'web' ? 16 : 48, backgroundColor: colors.surface }}>
+        <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 8, color: colors.text }}>Review {entity}</Text>
+        <Text style={{ marginBottom: 12, color: colors.textMuted }}>{visibleRows.length} rows selected; {reviewRows.length - visibleRows.length} skipped.{blockingRows.length ? ` ${blockingRows.length} rows need correction or skipping.` : ''}</Text>
         <FlatList
           style={{ flex: 1 }}
           data={reviewRows}
@@ -149,9 +152,9 @@ const CsvTransferControls: React.FC<Props> = ({ entity, backendUrl, headers, tri
           initialNumToRender={24}
           windowSize={8}
           removeClippedSubviews={Platform.OS !== 'web'}
-          renderItem={({ item: row }) => <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ddd', opacity: excluded.has(row.sourceRow) ? 0.5 : 1 }}><Text style={{ fontWeight: '600' }}>Source row {row.sourceRow}: {String(row.fields.name ?? '')}</Text><Text>{row.errors.length ? row.errors.map((issue) => issue.message).join(' ') : row.warnings.map((issue) => issue.message).join(' ') || 'Ready to import'}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`${excluded.has(row.sourceRow) ? 'Include' : 'Skip'} source row ${row.sourceRow}`} onPress={() => setExcluded((current) => { const next = new Set(current); if (next.has(row.sourceRow)) next.delete(row.sourceRow); else next.add(row.sourceRow); return next; })}><Text style={{ color: '#1769aa', marginTop: 6 }}>{excluded.has(row.sourceRow) ? 'Include row' : 'Skip row'}</Text></TouchableOpacity></View>}
+          renderItem={({ item: row }) => <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: excluded.has(row.sourceRow) ? colors.surfaceMuted : colors.surface }}><Text style={{ fontWeight: '600', color: colors.text }}>Source row {row.sourceRow}: {String(row.fields.name ?? '')}</Text><Text style={{ color: colors.textMuted }}>{row.errors.length ? row.errors.map((issue) => issue.message).join(' ') : row.warnings.map((issue) => issue.message).join(' ') || 'Ready to import'}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={`${excluded.has(row.sourceRow) ? 'Include' : 'Skip'} source row ${row.sourceRow}`} onPress={() => setExcluded((current) => { const next = new Set(current); if (next.has(row.sourceRow)) next.delete(row.sourceRow); else next.add(row.sourceRow); return next; })}><Text style={{ color: theme?.mode === 'dark' ? colors.link : colors.primary, marginTop: 6 }}>{excluded.has(row.sourceRow) ? 'Include row' : 'Skip row'}</Text></TouchableOpacity></View>}
         />
-        <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12 }}><TouchableOpacity style={styles.outlineButton ?? styles.button} onPress={cancelReview} disabled={busy}><Text style={styles.buttonText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={styles.button} onPress={commit} disabled={busy || !visibleRows.length || blockingRows.length > 0}><Text style={styles.buttonText}>{busy ? 'Importing…' : 'Import selected'}</Text></TouchableOpacity></View>
+        <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12 }}><TouchableOpacity style={[styles.outlineButton ?? styles.button, { minHeight: 44, justifyContent: 'center' }]} onPress={cancelReview} disabled={busy}><Text style={[styles.buttonText, { color: styles.outlineButton ? colors.text : '#0B1726' }]}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[styles.button, { minHeight: 44, justifyContent: 'center' }]} onPress={commit} disabled={busy || !visibleRows.length || blockingRows.length > 0}><Text style={styles.buttonText}>{busy ? 'Importing…' : 'Import selected'}</Text></TouchableOpacity></View>
       </View>
     </Modal>
   </>;

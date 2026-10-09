@@ -50,7 +50,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
             accessibilityRole="menuitem"
             accessibilityLabel={opt.label}
             onPress={() => onSelect(opt.kind)}
-            style={({ pressed }: { pressed: boolean }) => [styles.option, pressed && styles.optionPressed]}
+            style={({ pressed }: { pressed: boolean }) => [styles.option, pressed && { backgroundColor: colors?.surfaceMuted ?? '#f3f4f6' }]}
           >
             <Text style={styles.optionIcon}>{opt.icon}</Text>
             <View style={styles.optionTextWrap}>
@@ -61,7 +61,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
         ))}
         <Pressable
           testID="add-item-option-cancel"
-          style={({ pressed }: { pressed: boolean }) => [styles.cancel, pressed && styles.cancelPressed]}
+          style={({ pressed }: { pressed: boolean }) => [styles.cancel, pressed && { backgroundColor: colors?.surfaceMuted ?? '#f3f4f6' }]}
           onPress={onClose}
         >
           <Text style={[styles.cancelText, colors && { color: colors.textMuted }]}>Cancel</Text>
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderRadius: 8,
@@ -131,6 +132,8 @@ const styles = StyleSheet.create({
   cancel: {
     marginTop: 6,
     alignSelf: 'flex-end',
+    minHeight: 44,
+    justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,

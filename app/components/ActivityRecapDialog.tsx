@@ -77,7 +77,7 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
                 <Text style={styles.buttonText}>👍 Loved it</Text>
               </TouchableOpacity>
               <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: rating === -1 }} onPress={() => setRating(-1)} style={[styles.button, rating === -1 && { backgroundColor: '#b91c1c' }]}>
-                <Text style={styles.buttonText}>👎 Not for me</Text>
+                <Text style={[styles.buttonText, rating === -1 && { color: '#FFFFFF' }]}>👎 Not for me</Text>
               </TouchableOpacity>
             </View>
           ) : <Text style={{ color: mutedColor, marginTop: 14 }}>You already rated this activity.</Text>}
@@ -100,7 +100,7 @@ const ActivityRecapDialog: React.FC<Props> = ({ visible, activity, styles, theme
             placeholderTextColor={mutedColor}
             style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, marginTop: 6 }}
           />
-          {error ? <Text style={{ color: '#b91c1c', marginTop: 8 }}>{error}</Text> : null}
+          {error ? <Text style={{ color: theme?.mode === 'dark' ? '#FFB4AB' : '#B91C1C', marginTop: 8 }}>{error}</Text> : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
             <TouchableOpacity testID="activity-recap-save" disabled={busy} onPress={() => save(false)} style={[styles.button, busy && { opacity: 0.6 }]}>
               <Text style={styles.buttonText}>{busy ? 'Saving…' : 'Save recap'}</Text>

@@ -37,6 +37,8 @@ export type DateFieldProps = {
   placeholder?: string;
   minDate?: string;
   maxDate?: string;
+  /** Native picker starting date when value is empty; leaves the web field blank. */
+  pickerInitialDate?: string;
   testID?: string;
   accessibilityLabel?: string;
   style?: any;
@@ -67,10 +69,10 @@ const formatTimeValue = (date: Date): string =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 const DateField: React.FC<DateFieldProps> = ({
-  value, onChange, styles, theme, mode = 'date', placeholder, minDate, maxDate, testID, accessibilityLabel, style, disabled = false, onOpen,
+  value, onChange, styles, theme, mode = 'date', placeholder, minDate, maxDate, pickerInitialDate, testID, accessibilityLabel, style, disabled = false, onOpen,
 }) => {
   const isTime = mode === 'time';
-  const parseValue = (raw: string) => (isTime ? parseTimeValue(raw) : parseLocalDateOnly(raw));
+  const parseValue = (raw: string) => (isTime ? parseTimeValue(raw) : parseLocalDateOnly(raw, pickerInitialDate ? parseLocalDateOnly(pickerInitialDate) : new Date()));
   const formatValue = (date: Date) => (isTime ? formatTimeValue(date) : formatLocalDateOnly(date));
   const resolvedPlaceholder = placeholder ?? (isTime ? 'HH:MM' : 'YYYY-MM-DD');
 
