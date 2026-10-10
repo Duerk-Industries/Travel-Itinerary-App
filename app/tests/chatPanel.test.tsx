@@ -11,6 +11,13 @@ import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/event
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
+let mockViewportWidth = 1200;
+let mockInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => mockInsets,
+}));
+
 jest.mock('react-native', () => {
   const React = require('react');
   const make = (name: string) => ({ children, ...props }: any) => React.createElement(name, props, children);
@@ -44,6 +51,7 @@ jest.mock('react-native', () => {
     StyleSheet: { create: (styles: any) => styles },
     Platform: { OS: 'web' },
     Dimensions: { get: () => ({ width: 1200, height: 800 }) },
+    useWindowDimensions: () => ({ width: mockViewportWidth, height: 800, scale: 1, fontScale: 1 }),
   };
 });
 
@@ -94,6 +102,9 @@ describe('ChatPanel', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
+    mockViewportWidth = 1200;
+    mockInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+    require('react-native').Platform.OS = 'web';
     const originalWarn = console.warn.bind(console);
     consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((message?: unknown, ...args: unknown[]) => {
       if (message !== '[chat] connect_error') {
@@ -106,6 +117,37 @@ describe('ChatPanel', () => {
     consoleWarnSpy.mockRestore();
     jest.useRealTimers();
     jest.clearAllMocks();
+  });
+
+  test.each([
+    ['ios', 59, 34],
+    ['android', 24, 24],
+  ])('keeps the %s Back button below system bars and closes chat', (platform, top, bottom) => {
+    require('react-native').Platform.OS = platform;
+    mockViewportWidth = 390;
+    mockInsets = { top, right: 0, bottom, left: 0 };
+    const onClose = jest.fn();
+    let tree: any;
+    act(() => { tree = renderer.create(<ChatPanel socket={createSocketMock()} {...baseProps} onClose={onClose} />); });
+    const panel = tree.root.findByProps({ testID: 'chat-panel' });
+    expect(panel.props.style[1][1]).toMatchObject({ top, bottom });
+    const back = tree.root.findByProps({ testID: 'chat-back' });
+    expect(back.props.style).toMatchObject({ minHeight: 44, minWidth: 44 });
+    act(() => { back.props.onPress(); });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test('uses a safe-area-aware full-screen panel with Back on phone-sized web', () => {
+    mockViewportWidth = 390;
+    let tree: any;
+    act(() => { tree = renderer.create(<ChatPanel socket={createSocketMock()} {...baseProps} />); });
+    const panel = tree.root.findByProps({ testID: 'chat-panel' });
+    expect(panel.props.style[1][1]).toMatchObject({
+      top: 'env(safe-area-inset-top, 0px)',
+      bottom: 'env(safe-area-inset-bottom, 0px)',
+    });
+    expect(tree.root.findByProps({ testID: 'chat-back' })).toBeTruthy();
+    expect(tree.root.findAllByProps({ testID: 'chat-close' })).toHaveLength(0);
   });
 
   test('shows empty state when message history is empty', () => {
