@@ -500,12 +500,13 @@ limits are the trust boundary.
 
 Public engagement is not appended to the existing public blog document. Separate routes under
 `publicBlogRoutes.ts` serve public-audience counters and paginated comments, and let visitors react
-to published days:
+to published days, notes, photos, and videos:
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/public/blog/:username/:tripSlug/engagement` | `?dayDate=&cursor=&limit=`. Public-audience rows only; no reactor identity, coordinates, spend, email or private source metadata. Independently cached and IP-limited. |
-| `PUT` / `DELETE` | `/api/public/blog/:username/:tripSlug/engagement/day/:dayDate/reaction` | Sets or clears one emoji per browser identifier on a published day with a public post. Requires `X-Public-Visitor-Id`; IP-limited. |
+| `GET` | `/public/blog/:username/:tripSlug/engagement` | `?dayDate=&cursor=&limit=`. Public-audience rows only; no reactor identity, coordinates, spend, email or private source metadata. Independently cached and IP-limited. |
+| `POST` | `/public/blog/:username/:tripSlug/engagement/:kind/:targetId/reaction` | Sets or clears one emoji per browser identifier on a published day (`kind=day`, `targetId=dayDate`), note (`kind=item`), or ready photo/video (`kind=asset`). Uses a form body with `visitorId`, `action=set|clear`, and `emoji`, avoiding a browser CORS preflight. IP-limited. |
+| `PUT` / `DELETE` | `/public/blog/:username/:tripSlug/engagement/:kind/:targetId/reaction` | Legacy equivalent for existing callers; uses `X-Public-Visitor-Id`. |
 
 Its ETag/cache key is `(tripId, visibilityEpoch, engagementRevision, dayDate, cursor)`. The public blog
 document stays keyed on `contentRevision`; engagement changes therefore expire only the small social

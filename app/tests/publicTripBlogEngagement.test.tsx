@@ -51,7 +51,7 @@ describe('PublicTripBlogPage — public engagement', () => {
   it('shows per-day reaction chips and a comment count from the engagement summary', async () => {
     installFetch([
       [isDocument, DOC],
-      [isEngagementList, { days: [{ localDate: '2026-05-14', reactionCounts: { heart: 3, fire: 1 }, reactionTotal: 4, commentCount: 2 }] }],
+      [isEngagementList, { reactionsEnabled: true, days: [{ localDate: '2026-05-14', reactionCounts: { heart: 3, fire: 1 }, reactionTotal: 4, commentCount: 2 }] }],
     ]);
 
     const screen = render(<PublicTripBlogPage username="ada" tripSlug="iceland" />);
@@ -78,7 +78,7 @@ describe('PublicTripBlogPage — public engagement', () => {
   it('expands the day thread on tap, showing sanitized comments with a role label but no identity', async () => {
     installFetch([
       [isDocument, DOC],
-      [isEngagementList, { days: [{ localDate: '2026-05-14', reactionCounts: {}, reactionTotal: 0, commentCount: 1 }] }],
+      [isEngagementList, { reactionsEnabled: true, days: [{ localDate: '2026-05-14', reactionCounts: {}, reactionTotal: 0, commentCount: 1 }] }],
       [isEngagementDay, {
         localDate: '2026-05-14',
         reactionCounts: {},
@@ -112,22 +112,28 @@ describe('PublicTripBlogPage — public engagement', () => {
       crypto: { getRandomValues: (bytes: Uint8Array) => { bytes.fill(7); return bytes; } },
     };
     const mutation = (url: string) => url.includes('/engagement/day/2026-05-14/reaction');
+    const noteMutation = (url: string) => url.includes('/engagement/item/i1/reaction');
     const fetchMock = installFetch([
-      [(url, options) => mutation(url) && options?.method === 'DELETE', { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null }],
+      [noteMutation, { reactionCounts: { heart: 1 }, reactionTotal: 1, userReaction: 'heart' }],
+      [(url, options) => mutation(url) && String(options?.body).includes('action=clear'), { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null }],
       [mutation, { reactionCounts: { heart: 1 }, reactionTotal: 1, commentCount: 0, userReaction: 'heart' }],
       [isDocument, DOC],
-      [isEngagementList, { days: [{ localDate: '2026-05-14', reactionCounts: {}, reactionTotal: 0, commentCount: 0 }] }],
+      [isEngagementList, { reactionsEnabled: true, days: [{ localDate: '2026-05-14', reactionCounts: {}, reactionTotal: 0, commentCount: 0 }], posts: [{ targetKind: 'item', targetId: 'i1', reactionCounts: {}, reactionTotal: 0 }] }],
     ]);
     const screen = render(<PublicTripBlogPage username="ada" tripSlug="iceland" />);
     await waitFor(() => expect(screen.getByLabelText('React with heart')).toBeTruthy());
+    expect(screen.getByLabelText('React with heart on note')).toBeTruthy();
     await act(async () => { fireEvent.press(screen.getByLabelText('React with heart')); });
     await waitFor(() => expect(screen.getByLabelText('Remove heart')).toBeTruthy());
     expect(screen.getByText('1')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/engagement/day/2026-05-14/reaction'), expect.objectContaining({ method: 'PUT' }));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/engagement/day/2026-05-14/reaction'), expect.objectContaining({ method: 'POST', body: expect.stringContaining('action=set') }));
     expect(stored.get('wanderbunnies:public-reaction:ada:iceland:selected')).toContain('heart');
     await act(async () => { fireEvent.press(screen.getByLabelText('Remove heart')); });
     await waitFor(() => expect(screen.getByLabelText('React with heart')).toBeTruthy());
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/engagement/day/2026-05-14/reaction'), expect.objectContaining({ method: 'DELETE' }));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/engagement/day/2026-05-14/reaction'), expect.objectContaining({ method: 'POST', body: expect.stringContaining('action=clear') }));
     expect(stored.has('wanderbunnies:public-reaction:ada:iceland:id')).toBe(false);
+    await act(async () => { fireEvent.press(screen.getByLabelText('React with heart on note')); });
+    await waitFor(() => expect(screen.getByLabelText('Remove heart on note')).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/engagement/item/i1/reaction'), expect.objectContaining({ method: 'POST', body: expect.stringContaining('action=set') }));
   });
 });

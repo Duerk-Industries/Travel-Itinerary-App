@@ -1263,11 +1263,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           <View testID="blog-masthead-actions" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: compactMasthead ? 'flex-start' : 'flex-end', gap: 8, maxWidth: compactMasthead ? '100%' : '60%' }}>
             {!readOnly ? (
               <TouchableOpacity
+                testID="blog-edit-toggle"
                 accessibilityRole="button"
                 onPress={toggleEditMode}
-                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : undefined }]}
+                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : (theme?.colors?.cta ?? '#F59E0B') }]}
               >
-                <Text style={editMode ? { color: textColor } : styles.buttonText}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+                <Text style={[styles.buttonText, { color: editMode ? textColor : '#0B1726' }]}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
               </TouchableOpacity>
             ) : null}
             {publicPageUrl ? (
@@ -1563,9 +1564,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 Phase 2: `dayMap`'s value is a signed image URL (the background render job's
                 static map artifact), not display text — it gets its own thumbnail rather than
                 being stringified into a text chip like every other fact. */}
-            {dayFacts[day.localDate]?.length ? (
+            {dayFacts[day.localDate]?.some((fact) => fact.key !== 'media' && (canEdit || (fact.key !== 'places' && fact.key !== 'plannedVsActual'))) ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4, marginBottom: 4 }}>
-                {dayFacts[day.localDate].filter((fact) => fact.key !== 'dayMap').map((fact) => (
+                {dayFacts[day.localDate].filter((fact) => fact.key !== 'dayMap' && fact.key !== 'media' && (canEdit || (fact.key !== 'places' && fact.key !== 'plannedVsActual'))).map((fact) => (
                   <View
                     key={fact.key}
                     testID={`blog-day-fact-${day.localDate}-${fact.key}`}
