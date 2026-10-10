@@ -61,3 +61,4 @@ app/-DryRun/frontend/
 /app/ios
 .artifacts
 tmp
+server/public
