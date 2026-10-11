@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
@@ -371,9 +372,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     return points;
   }, [flights, lodgings, tours, carRentals]);
 
-  const load = async (nextCursor = null) => {
+  const load = async (nextCursor = null, silent = false) => {
     if (!activeTripId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       // On a refresh (no cursor — e.g. after any mutation), re-request every day the user has
       // already paged in, so a small edit doesn't collapse the list back to the first page and
@@ -398,11 +399,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       const lastDay = days[days.length - 1];
       setCursor(days.length >= effectiveLimit && lastDay ? lastDay.localDate : null);
     } catch (error) {
-      alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
+      if (!silent) alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useBlogMediaUrlRefresh(blog, () => load(null, true));
 
   const loadCapabilities = async () => {
     if (!activeTripId) return;

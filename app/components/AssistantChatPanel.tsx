@@ -78,7 +78,8 @@ const getResponsivePanelWidth = (): number => {
 const CAPABILITY_REASON_TEXT: Record<string, string> = {
   'no-webgpu':
     'This assistant needs a browser with WebGPU support, like a recent version of Chrome or Edge on desktop.',
-  'not-web': 'This assistant is only available in the web app for now.',
+  'not-web': 'This assistant is only available on desktop web browsers for now.',
+  phone: 'This assistant is only available on desktop web browsers for now.',
   unknown: "This assistant isn't available on this browser or device right now.",
 };
 

@@ -13,6 +13,7 @@ import { useFonts, Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold
 import { resolveBackendUrl } from '../utils/backendUrl';
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildDaySegments, formatGapLabel } from '../utils/blogDaySegments';
+import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
 
 type PublicBlogItem = {
   id: string;
@@ -223,6 +224,8 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'not-found' | 'error'; blog: PublicBlogPayload | null; message: string | null }>({
     status: 'loading', blog: null, message: null,
   });
+  const [documentRefreshVersion, setDocumentRefreshVersion] = useState(0);
+  useBlogMediaUrlRefresh(state.blog, () => setDocumentRefreshVersion((version) => version + 1));
 
   const backendUrl = useMemo(() => resolveBackendUrl({
     appConfigured: Constants.expoConfig?.extra?.backendUrl,
@@ -236,7 +239,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}`);
+        const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}`, { cache: 'no-store' });
         if (cancelled) return;
         if (response.status === 404) {
           setState({ status: 'not-found', blog: null, message: null });
@@ -244,17 +247,17 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
         }
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          setState({ status: 'error', blog: null, message: data.error || 'Unable to load this trip blog right now.' });
+          setState((current) => current.status === 'ready' ? current : { status: 'error', blog: null, message: data.error || 'Unable to load this trip blog right now.' });
           return;
         }
         const data = await response.json();
         setState({ status: 'ready', blog: data, message: null });
       } catch {
-        if (!cancelled) setState({ status: 'error', blog: null, message: 'Unable to load this trip blog right now.' });
+        if (!cancelled) setState((current) => current.status === 'ready' ? current : { status: 'error', blog: null, message: 'Unable to load this trip blog right now.' });
       }
     })();
     return () => { cancelled = true; };
-  }, [backendUrl, username, tripSlug]);
+  }, [backendUrl, username, tripSlug, documentRefreshVersion]);
 
   // Read-only public engagement — public-audience reaction counts and comment counts per day, on
   // its own endpoint/flag/cache (architecture §5.1/§14.7). A separate request from the document

@@ -14,9 +14,24 @@ import type { MLCEngine } from '@mlc-ai/web-llm';
 export const DEFAULT_MODEL_ID = 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC';
 export const HIGH_QUALITY_MODEL_ID = 'Qwen2.5-3B-Instruct-q4f16_1-MLC';
 
+/**
+ * Phone-class device in a browser (including a home-screen web app): iPhone/iPod, Android phones,
+ * or any browser that reports itself as mobile. The assistant is desktop-only for now -- phone
+ * browsers cap a tab's GPU memory well below what the models need -- so these devices are told so
+ * instead of being offered a download that would fail or crash the tab. Devices that report 4 GB
+ * of RAM or less (Chrome's `deviceMemory`) are treated the same way.
+ */
+export const isPhoneClassDevice = (): boolean => {
+  if (typeof navigator === 'undefined') return false;
+  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean }; deviceMemory?: number };
+  if (nav.userAgentData?.mobile === true) return true;
+  if (/iPhone|iPod|Android.+Mobile|Mobile.+Firefox|Windows Phone/i.test(nav.userAgent || '')) return true;
+  return typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4;
+};
+
 export type AssistantModelCapability = {
   supported: boolean;
-  reason?: 'no-webgpu' | 'not-web' | 'unknown';
+  reason?: 'no-webgpu' | 'not-web' | 'phone' | 'unknown';
 };
 
 /**
@@ -27,6 +42,9 @@ export type AssistantModelCapability = {
 export const detectAssistantModelCapability = (): AssistantModelCapability => {
   if (typeof navigator === 'undefined' || typeof window === 'undefined') {
     return { supported: false, reason: 'not-web' };
+  }
+  if (isPhoneClassDevice()) {
+    return { supported: false, reason: 'phone' };
   }
   const gpu = (navigator as Navigator & { gpu?: unknown }).gpu;
   if (!gpu) {

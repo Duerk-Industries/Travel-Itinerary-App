@@ -26,6 +26,13 @@ const loadEnv = (appDir) => {
   dotenv.config({ path: path.join(workspaceRoot, 'server', '.local_env'), override: true });
   dotenv.config({ path: path.join(appDir, '.env'), override: true });
 
+  // `npm run export:web` (app/scripts/export-web.js) pins the backend URL for a deployable web
+  // build. The .env files above load with override:true, so without this a developer's local
+  // app/.env (e.g. a test domain) silently wins and gets baked into the production bundle.
+  if (process.env.WANDERBUNNIES_EXPORT_BACKEND_URL) {
+    process.env.EXPO_PUBLIC_BACKEND_URL = process.env.WANDERBUNNIES_EXPORT_BACKEND_URL;
+  }
+
   if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
     // Avoid `process.env.X = undefined`, which Node coerces to the string
     // "undefined".

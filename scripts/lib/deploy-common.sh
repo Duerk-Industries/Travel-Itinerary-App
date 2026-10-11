@@ -182,7 +182,7 @@ if (!host) {
 const csp = [
   `default-src 'self' https://${host} https://www.google.com`,
   `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://www.google.com`,
-  `connect-src 'self' https://www.gstatic.com https://www.google.com https://${host} wss://${host} https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com https://storage.googleapis.com`,
+  `connect-src 'self' https://www.gstatic.com https://www.google.com https://${host} wss://${host} https://firebaseappcheck.googleapis.com https://content-firebaseappcheck.googleapis.com https://storage.googleapis.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com`,
   `img-src 'self' https://${host} https://images.unsplash.com data: blob: https://www.gstatic.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com https://storage.googleapis.com https://places.googleapis.com`,
   `media-src 'self' https://${host} https://storage.googleapis.com blob:`,
   `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
