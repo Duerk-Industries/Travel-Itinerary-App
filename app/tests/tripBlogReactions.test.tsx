@@ -9,7 +9,8 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import TripBlogTab from '../tabs/tripBlog';
 
 // Phase 3 — end-to-end wiring of BlogReactionBar/useBlogEngagement through the real TripBlogTab
-// component tree: day-level reactions, item-level reactions, and the gallery reaction badge.
+// component tree: item-level reactions and the gallery reaction badge. Days themselves have no
+// reaction control (only notes and photos do -- see tripBlog.tsx).
 const styles: Record<string, any> = { card: {}, sectionTitle: {}, button: {}, buttonText: {} };
 const backendUrl = 'https://wanderbunnies.test';
 const headers = { Authorization: 'Bearer test-token' };
@@ -50,32 +51,6 @@ describe('TripBlogTab — reaction wiring (day, item, gallery)', () => {
   const renderTab = () => render(
     <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} styles={styles} theme={{ colors: {} }} readOnly={false} />
   );
-
-  it('reacting to a day sends a PUT and reflects the server summary optimistically then authoritatively', async () => {
-    const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
-    let patchedEmoji: string | null = null;
-    (global as any).fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? 'GET';
-      if (url.includes('/blog/publication/status')) return jsonResponse({}, 404);
-      if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(blogBody(zero, zero));
-      if (method === 'PUT' && url.endsWith('/blog/day/day-1/reactions')) {
-        patchedEmoji = JSON.parse(String(init?.body)).emoji;
-        return jsonResponse({ reactionCounts: { heart: 1 }, reactionTotal: 1, commentCount: 0, userReaction: 'heart' });
-      }
-      throw new Error(`Unhandled fetch: ${method} ${url}`);
-    });
-
-    const { findByTestId } = renderTab();
-    const addButton = await findByTestId('blog-day-reactions-2026-09-01-add');
-    await act(async () => { fireEvent.press(addButton); });
-    const heartPick = await findByTestId('blog-day-reactions-2026-09-01-pick-heart');
-    await act(async () => { fireEvent.press(heartPick); });
-
-    await waitFor(() => expect(patchedEmoji).toBe('heart'));
-    const chip = await findByTestId('blog-day-reactions-2026-09-01-chip-heart');
-    expect(chip).toBeTruthy();
-  });
 
   it('reacting to a text item sends a PUT scoped to the item target', async () => {
     const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0, userReaction: null };
@@ -145,16 +120,15 @@ describe('TripBlogTab — reaction wiring (day, item, gallery)', () => {
     const view = renderTab();
     await view.findByTestId('blog-day-2026-09-01');
     expect(view.queryByTestId('blog-day-2026-09-02')).toBeNull();
-    expect(view.getByTestId('blog-day-reactions-2026-09-01-add')).toBeTruthy();
+    expect(view.getByTestId('blog-item-reactions-item-1-add')).toBeTruthy();
 
     fireEvent.press(view.getByText('Edit blog'));
     expect(view.getByTestId('blog-day-2026-09-02')).toBeTruthy();
-    expect(view.queryByTestId('blog-day-reactions-2026-09-01')).toBeNull();
     expect(view.queryByTestId('blog-item-reactions-item-1')).toBeNull();
 
     fireEvent.press(view.getByText('Done editing'));
     expect(view.queryByTestId('blog-day-2026-09-02')).toBeNull();
-    expect(view.getByTestId('blog-day-reactions-2026-09-01-add')).toBeTruthy();
+    expect(view.getByTestId('blog-item-reactions-item-1-add')).toBeTruthy();
   });
 
   it('shows reactions on a public reading preview but hides days with no public posts', async () => {
@@ -163,7 +137,7 @@ describe('TripBlogTab — reaction wiring (day, item, gallery)', () => {
     (global as any).fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes('/blog/publication/status')) return jsonResponse({}, 404);
-      if (init?.method === 'PUT' && url.endsWith('/blog/day/day-1/reactions')) return jsonResponse(saved);
+      if (init?.method === 'PUT' && url.endsWith('/blog/item/item-1/reactions')) return jsonResponse(saved);
       if ((init?.method ?? 'GET') === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) {
         const body = blogBody(zero, zero);
         body.visibilityState = 'public';
@@ -176,11 +150,10 @@ describe('TripBlogTab — reaction wiring (day, item, gallery)', () => {
     const view = renderTab();
     await view.findByTestId('blog-day-2026-09-01');
     expect(view.queryByTestId('blog-day-2026-09-02')).toBeNull();
-    expect(view.getByTestId('blog-day-reactions-2026-09-01-add')).toBeTruthy();
     expect(view.getByTestId('blog-item-reactions-item-1-add')).toBeTruthy();
-    fireEvent.press(view.getByTestId('blog-day-reactions-2026-09-01-add'));
-    await act(async () => { fireEvent.press(view.getByTestId('blog-day-reactions-2026-09-01-pick-heart')); });
-    expect(view.getByTestId('blog-day-reactions-2026-09-01-chip-heart')).toBeTruthy();
+    fireEvent.press(view.getByTestId('blog-item-reactions-item-1-add'));
+    await act(async () => { fireEvent.press(view.getByTestId('blog-item-reactions-item-1-pick-heart')); });
+    expect(view.getByTestId('blog-item-reactions-item-1-chip-heart')).toBeTruthy();
   });
 
   it('does not show photo reactions in the edit-mode lightbox', async () => {

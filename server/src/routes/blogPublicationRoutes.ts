@@ -69,8 +69,10 @@ const upsertPublicAlias = async (tripId: string, userId: string, usernameSlug: s
   }
 };
 const eligibleAdults = async (tripId: string): Promise<{ adults: string[]; missingBirthDate: number }> => {
-  const result = await queryBlog<{ user_id: string }>(`SELECT DISTINCT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NOT NULL AND u.date_of_birth <= CURRENT_DATE - INTERVAL '16 years'`, [tripId]);
-  const missing = await queryBlog<{ count: string }>(`SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NULL`, [tripId]);
+  const [result, missing] = await Promise.all([
+    queryBlog<{ user_id: string }>(`SELECT DISTINCT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NOT NULL AND u.date_of_birth <= CURRENT_DATE - INTERVAL '16 years'`, [tripId]),
+    queryBlog<{ count: string }>(`SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND gm.user_id IS NOT NULL AND u.date_of_birth IS NULL`, [tripId]),
+  ]);
   return { adults: result.rows.map((r) => String(r.user_id)), missingBirthDate: Number(missing.rows[0]?.count ?? 0) };
 };
 
@@ -100,17 +102,25 @@ export const autoPublishBlogIfEligible = async (tripId: string, actorUserId: str
   if (!(await ensureUserInTrip(tripId, actorUserId))) return false;
   const altTextClear = () => altTextGateClear(actorUserId, tripId);
   if (getCurrentDbProvider() === 'firebase') return autoPublishFirebase(tripId, actorUserId, { force: options.force, altTextClear });
-  const blog = await queryBlog<{ public_opt_out: boolean }>('SELECT public_opt_out FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]);
+  // The two cheap, independent reads that gate everything else: run them together rather than
+  // one after another, since GET /blog calls this on every load and the extra round trip adds up.
+  const [blog, latest] = await Promise.all([
+    queryBlog<{ public_opt_out: boolean }>('SELECT public_opt_out FROM trip_blogs WHERE trip_id = $1 LIMIT 1', [tripId]),
+    queryBlog<{ epoch: number; state: string }>('SELECT epoch, state FROM blog_publication_epochs WHERE trip_id = $1 ORDER BY epoch DESC LIMIT 1', [tripId]),
+  ]);
   if (blog.rows[0]?.public_opt_out) return false;
-  const latest = await queryBlog<{ epoch: number; state: string }>('SELECT epoch, state FROM blog_publication_epochs WHERE trip_id = $1 ORDER BY epoch DESC LIMIT 1', [tripId]);
   const prior = latest.rows[0];
   if (prior && (!options.force || prior.state === 'public' || prior.state === 'pending_consent')) return false;
-  const members = await queryBlog<{ user_id: string | null }>('SELECT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id WHERE t.id = $1 AND gm.removed_at IS NULL', [tripId]);
+  // Same reasoning: these three don't depend on each other, so fan them out together instead of
+  // paying for three sequential round trips.
+  const [members, eligibility, optedOut] = await Promise.all([
+    queryBlog<{ user_id: string | null }>('SELECT gm.user_id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id WHERE t.id = $1 AND gm.removed_at IS NULL', [tripId]),
+    eligibleAdults(tripId),
+    queryBlog<{ count: string }>('SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND u.blog_default_public = FALSE', [tripId]),
+  ]);
   const memberIds = new Set(members.rows.filter((row) => row.user_id).map((row) => String(row.user_id)));
   if (memberIds.size === 0) return false;
-  const eligibility = await eligibleAdults(tripId);
   if (eligibility.missingBirthDate > 0 || eligibility.adults.length !== memberIds.size) return false;
-  const optedOut = await queryBlog<{ count: string }>('SELECT COUNT(*) AS count FROM trips t JOIN group_members gm ON gm.group_id = t.group_id JOIN users u ON u.id = gm.user_id WHERE t.id = $1 AND gm.removed_at IS NULL AND u.blog_default_public = FALSE', [tripId]);
   if (Number(optedOut.rows[0]?.count ?? 0) > 0) return false;
   if (!(await altTextClear())) return false;
   const epoch = Number(prior?.epoch ?? 0) + 1;

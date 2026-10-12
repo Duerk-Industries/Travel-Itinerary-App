@@ -275,9 +275,6 @@ const BlogCommentThread: React.FC<ThreadProps> = ({
 
   return (
     <View testID={testID}>
-      {comments.length === 0 ? (
-        <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 8 }}>No comments yet.</Text>
-      ) : null}
       {comments.map((comment) => {
         const previewReplies = comment.replies ?? [];
         const hasMoreReplies = comment.replyCount > previewReplies.length;

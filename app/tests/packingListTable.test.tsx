@@ -238,6 +238,54 @@ describe('PackingListTable', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith('http://localhost/api/trips/trip-1/packing-list/sources', expect.objectContaining({ method: 'PATCH' })));
   });
 
+  // Regression: a traveler's name was rendering as a bare, checkable packing-list ITEM (stacked
+  // above the real categories) instead of only ever appearing as their matrix COLUMN header. This
+  // happens when a traveler's personal contribution's sole item has no category of its own: it
+  // then gets grouped under a category named after the traveler (the fallback used so a personal
+  // item that genuinely has no category is still shown somewhere sensible), and if that item's
+  // own label is identical to the traveler's name (e.g. a seeded/legacy placeholder, or simply
+  // the first thing someone adds to "My packing list" with the default/no category), the filter
+  // that strips a group's own self-titled heading item used to only apply to preset groups.
+  test('never shows a traveler\'s own name as a packing item -- only as their matrix column header', async () => {
+    jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        groups: [
+          { id: 'general', key: 'general', label: 'General', kind: 'preset', items: [
+            { id: 'heading-artifact', label: 'General', category: 'General', position: 0, packedBy: [] },
+            { id: 'item-shoes', label: 'Comfortable walking shoes', category: 'Clothing', position: 1, packedBy: [] },
+          ] },
+          { id: 'personal-bryan', key: 'personal:bryan', label: 'Bryan', kind: 'personal', ownerMemberId: 'bryan', items: [
+            { id: 'item-bryan-heading', label: 'Bryan', category: '', position: 0, packedBy: [] },
+          ] },
+          { id: 'personal-linda', key: 'personal:linda', label: 'Linda', kind: 'personal', ownerMemberId: 'linda', items: [
+            { id: 'item-linda-heading', label: 'Linda', category: '', position: 0, packedBy: [] },
+          ] },
+        ],
+        travelers: [{ id: 'bryan', name: 'Bryan' }, { id: 'linda', name: 'Linda' }],
+        presets: [],
+        tripPresetKeys: [],
+      }),
+    } as any);
+
+    const { findByTestId, queryAllByText } = render(
+      <PackingListTable backendUrl="http://localhost" headers={{ Authorization: 'Bearer token' }} tripId="trip-1" variant="trip" />
+    );
+
+    // The real item renders.
+    await findByTestId('packing-matrix-web-corner');
+    expect(queryAllByText('Comfortable walking shoes')).toHaveLength(1);
+
+    // Both travelers get their column header...
+    expect(await findByTestId('packing-matrix-web-header-bryan')).toBeTruthy();
+    expect(await findByTestId('packing-matrix-web-header-linda')).toBeTruthy();
+    // ...and neither name appears a second time, as a bare item row or category heading.
+    expect(queryAllByText('Bryan')).toHaveLength(1);
+    expect(queryAllByText('Linda')).toHaveLength(1);
+    // The preset's own self-titled heading artifact is still stripped too.
+    expect(queryAllByText('General')).toHaveLength(0);
+  });
+
   test('materializes a user preset into the editable custom list without waiting for the save request', async () => {
     let resolveMaterialize: (value: any) => void = () => {};
     const materializeResponse = new Promise((resolve) => {

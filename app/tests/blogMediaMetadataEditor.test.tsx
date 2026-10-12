@@ -6,9 +6,13 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import BlogMediaMetadataEditor from '../components/BlogMediaMetadataEditor';
-import { useAudioRecorder, requestRecordingPermissionsAsync } from 'expo-audio';
+import { useAudioRecorder, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 
 describe('BlogMediaMetadataEditor', () => {
+  beforeEach(() => {
+    (setAudioModeAsync as jest.Mock).mockClear().mockResolvedValue(undefined);
+  });
+
   it('requires accessible text or an explicit decorative choice before saving', async () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
     const view = render(<BlogMediaMetadataEditor item={{ assetId: 'asset-1' }} onSave={onSave} styles={{ button: {}, buttonText: {} }} />);
@@ -64,15 +68,19 @@ describe('BlogMediaMetadataEditor', () => {
 
     fireEvent.press(view.getByTestId('blog-media-record-caption'));
     await waitFor(() => expect(record).toHaveBeenCalled());
+    // The native recorder refuses to record at all until the app's audio session is switched
+    // into a recording-capable mode first (iOS throws RecordingDisabledException otherwise).
+    expect(setAudioModeAsync).toHaveBeenNthCalledWith(1, { allowsRecording: true, playsInSilentMode: true });
 
     fireEvent.press(view.getByTestId('blog-media-record-caption'));
     await waitFor(() => expect(stop).toHaveBeenCalled());
     await waitFor(() => expect(onTranscribe).toHaveBeenCalledWith({ uri: 'file:///dictated-caption.m4a', mimeType: 'audio/m4a', name: 'caption-recording.m4a' }));
     await waitFor(() => expect(view.getByTestId('blog-media-caption-input').props.value).toBe('A quiet morning by the lake'));
+    await waitFor(() => expect(setAudioModeAsync).toHaveBeenNthCalledWith(2, { allowsRecording: false }));
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it('shows a notice instead of recording when microphone permission is denied', async () => {
+  it('shows a notice instead of recording when microphone permission is denied, and never touches the audio session', async () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
     (requestRecordingPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: false, status: 'denied' });
     const onTranscribe = jest.fn();
@@ -82,6 +90,28 @@ describe('BlogMediaMetadataEditor', () => {
 
     fireEvent.press(view.getByTestId('blog-media-record-caption'));
     await waitFor(() => expect(view.getByText('Microphone access is needed to record a caption.')).toBeTruthy());
+    expect(onTranscribe).not.toHaveBeenCalled();
+    expect(setAudioModeAsync).not.toHaveBeenCalled();
+  });
+
+  it('shows a notice instead of crashing when the device refuses to enable recording', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    (setAudioModeAsync as jest.Mock).mockRejectedValueOnce(new Error('Recording not allowed on iOS.'));
+    const record = jest.fn();
+    (useAudioRecorder as jest.Mock).mockReturnValue({
+      prepareToRecordAsync: jest.fn().mockResolvedValue(undefined),
+      record,
+      stop: jest.fn().mockResolvedValue(undefined),
+      uri: 'file:///dictated-caption.m4a',
+    });
+    const onTranscribe = jest.fn();
+    const view = render(
+      <BlogMediaMetadataEditor item={{ assetId: 'asset-6' }} canRecord onSave={onSave} onTranscribe={onTranscribe} styles={{ button: {}, buttonText: {} }} />
+    );
+
+    fireEvent.press(view.getByTestId('blog-media-record-caption'));
+    await waitFor(() => expect(view.getByText('Recording not allowed on iOS.')).toBeTruthy());
+    expect(record).not.toHaveBeenCalled();
     expect(onTranscribe).not.toHaveBeenCalled();
   });
 });

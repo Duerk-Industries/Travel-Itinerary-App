@@ -54,9 +54,19 @@ export const buildPackingListDisplayGroups = (inputGroups: PackingDisplayInputGr
   const categoryGroups = new Map<string, PackingDisplayGroup>();
   for (const group of groups) {
     const remaining: PackingDisplayItem[] = [];
+    const normalizedGroupLabel = normalizePackingLabel(group.label);
     for (const item of group.items) {
       const normalizedLabel = item.normalizedLabel || normalizePackingLabel(item.label);
       if (!normalizedLabel || seen.has(normalizedLabel)) continue;
+      // A group's own self-titled "heading" item -- a preset catalog entry that repeats the
+      // preset's own name (e.g. "General" inside the General preset), or a personal contribution
+      // whose sole item is seeded with the traveler's own name -- is a template/label artifact,
+      // never something to pack. Applies to every group kind: this used to be filtered only for
+      // presets, client-side, which let a personal contribution's self-titled item (one most
+      // often created when the trip includes a traveler with no categorized personal items)
+      // surface as a bare, unlabeled "packable" row matching that traveler's own name instead of
+      // only appearing as their column header.
+      if (normalizedGroupLabel && normalizedLabel === normalizedGroupLabel) continue;
       seen.add(normalizedLabel);
       const identityItem = { ...item, normalizedLabel };
       if (group.kind === 'personal' && (personalOwners.get(normalizedLabel)?.size ?? 0) >= 2) shared.items.push(identityItem);

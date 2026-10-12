@@ -77,13 +77,24 @@ describe('TripBlogTab gallery rendering', () => {
     expect(await findByTestId('day-media-grid-tile-asset-3')).toBeTruthy();
   });
 
-  it('shows linked activities in the authenticated traveler/follower read-only view', async () => {
-    const { findByText } = render(
+  it('never shows linked activities to a reader, only to the editor while actively editing', async () => {
+    // Planned activities are an authoring aid (a reminder of what was scheduled, while writing
+    // that day's story) -- not something that belongs in the read view, for anyone.
+    const readOnlyView = render(
       <TripBlogTab backendUrl={backendUrl} headers={headers} activeTripId={tripId} styles={styles} theme={{ colors: {} }} readOnly />
     );
+    expect(await readOnlyView.findByText('Traveler/follower view — all shared trip blog content is shown.')).toBeTruthy();
+    expect(readOnlyView.queryByText('Rainier hike')).toBeNull();
+    expect(readOnlyView.queryByText('Planned activities')).toBeNull();
 
-    expect(await findByText('Rainier hike')).toBeTruthy();
-    expect(await findByText('Traveler/follower view — all shared trip blog content is shown.')).toBeTruthy();
+    const ownerView = renderTab();
+    await ownerView.findByTestId('day-media-grid-tile-asset-1');
+    expect(ownerView.queryByText('Rainier hike')).toBeNull();
+    expect(ownerView.queryByText('Planned activities')).toBeNull();
+
+    fireEvent.press(ownerView.getByText('Edit blog'));
+    expect(await ownerView.findByText('Planned activities')).toBeTruthy();
+    expect(ownerView.getByText('Rainier hike')).toBeTruthy();
   });
 
   it('hides linked activities from a fully public read-only preview', async () => {

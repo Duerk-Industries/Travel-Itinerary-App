@@ -10,7 +10,7 @@
  */
 import React, { useState } from 'react';
 import { Text, TouchableOpacity } from 'react-native';
-import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
+import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 
 export type RecordedVoiceNote = { uri: string; mimeType: string; name: string };
 
@@ -49,6 +49,10 @@ const VoiceNoteRecorder: React.FC<Props> = ({
           onError?.('Microphone access is needed to record a voice note.');
           return;
         }
+        // iOS (and Android) refuse to record at all until the app's audio session is explicitly
+        // switched into a recording-capable mode -- recorder.record() otherwise throws
+        // RecordingDisabledException: "Recording not allowed on iOS."
+        await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
         await recorder.prepareToRecordAsync();
         recorder.record();
         setState('recording');
@@ -66,6 +70,9 @@ const VoiceNoteRecorder: React.FC<Props> = ({
     } catch (error: any) {
       onError?.(error?.message || 'Unable to process the recording');
     } finally {
+      // Hand the audio session back so playback elsewhere (voice note playback, videos) isn't
+      // left routed through the recording session.
+      try { await setAudioModeAsync({ allowsRecording: false }); } catch { /* best effort */ }
       setState('idle');
     }
   };
