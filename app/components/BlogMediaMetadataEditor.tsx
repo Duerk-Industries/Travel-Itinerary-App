@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AutoGrowTextInput from './AutoGrowTextInput';
-import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
+import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 
 export type BlogMediaMetadataPatch = { caption: string; altText: string; isDecorative: boolean; tags: string[] };
 
@@ -69,6 +69,10 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
           setNotice('Microphone access is needed to record a caption.');
           return;
         }
+        // iOS (and Android) refuse to record at all until the app's audio session is explicitly
+        // switched into a recording-capable mode -- recorder.record() otherwise throws
+        // RecordingDisabledException: "Recording not allowed on iOS."
+        await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
         await recorder.prepareToRecordAsync();
         recorder.record();
         setRecordingState('recording');
@@ -91,6 +95,9 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
       } catch (error: any) {
         setNotice(error?.message || 'Unable to transcribe the recording');
       } finally {
+        // Hand the audio session back so playback elsewhere isn't left routed through the
+        // recording session.
+        try { await setAudioModeAsync({ allowsRecording: false }); } catch { /* best effort */ }
         setRecordingState('idle');
       }
     }
