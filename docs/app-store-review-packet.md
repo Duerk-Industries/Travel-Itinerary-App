@@ -88,7 +88,7 @@ The app gives a group a shared source of truth before and during travel. It redu
 2. **Overview:** Review the combined trip timeline and edit trip details.
 3. **Transfers, Lodging, Activities, and Car Rentals:** Add, edit, vote on, and remove records.
 4. **AI itinerary:** Submit an itinerary request and review the generated days and activities.
-5. **Daily Expenses / Ledger / Cost Report:** Add an expense, choose its payer and covered travelers, review balances, record a settlement, and export CSV if entitled.
+5. **Daily Expenses / Balances / Cost Report:** Add an expense, choose its payer and covered travelers, review balances, record a settlement, and export CSV if entitled.
 6. **Import:** Upload a supported travel file or use an enabled email/Gmail import, review proposed items, and confirm what is added to the trip.
 7. **Trip Blog:** Add text and select a photo. On a fresh install, photo selection displays the iOS Photos permission request.
 8. **Collaboration:** Invite a second user or use the supplied shared trip to demonstrate membership, following, voting, and shared updates.

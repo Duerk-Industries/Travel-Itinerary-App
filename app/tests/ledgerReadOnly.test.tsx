@@ -72,6 +72,6 @@ describe('LedgerTab read-only mode', () => {
     );
 
     expect(queryByText('Expense Covering')).toBeNull();
-    expect(queryByText('Ledger')).toBeTruthy();
+    expect(queryByText('Balances')).toBeTruthy();
   });
 });

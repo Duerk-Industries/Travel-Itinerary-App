@@ -161,9 +161,9 @@ describe('LedgerTab responsive layout', () => {
     expect(queryByTestId('settlement-list')).toBeNull();
   });
 
-  it('lists booking costs with an "Added to group tab" tag and short phone payment rows', async () => {
+  it('has no bookings list (that detail lives on Daily Expenses) and shows short phone payment rows', async () => {
     mockWindowWidth = 480;
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <LedgerTab
         trip={trip}
         groupMembers={groupMembers}
@@ -179,25 +179,16 @@ describe('LedgerTab responsive layout', () => {
         formatMemberName={(m: any) => `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim()}
         payerName={(id: string) => id}
         saveCoveredBy={async () => {}}
-        bookingExpenses={[
-          { id: 'lodging-l1', date: '2026-10-29', category: 'Lodging', description: 'Alfama apartment', amount: 1180, currency: 'USD', payerIds: ['m1'], forIds: ['m1', 'm2'] },
-        ]}
         payments={[{ id: 'p1', tripId: 't1', payerId: 'm2', receiverId: 'm1', paymentDate: '2026-11-02', amountCents: 15000 }]}
         currentUserMemberId={null}
         onAddPayment={async () => {}}
         onDeletePayment={async () => {}}
       />,
     );
-    expect(await waitFor(() => getByTestId('ledger-booking-lodging-l1'))).toBeTruthy();
-    expect(getByText('✓ Added to group tab')).toBeTruthy();
-    expect(getByText(/Nov 2 · Blair Lee paid Alex Rider/)).toBeTruthy();
-  });
-
-  it('omits the bookings card when no costs came from bookings', async () => {
-    mockWindowWidth = 480;
-    const { getByTestId, queryByTestId } = renderLedger();
     expect(await waitFor(() => getByTestId('ledger-summary'))).toBeTruthy();
     expect(queryByTestId('ledger-bookings')).toBeNull();
+    expect(queryByText('From your bookings')).toBeNull();
+    expect(getByText(/Nov 2 · Blair Lee paid Alex Rider/)).toBeTruthy();
   });
 
   it('shows empty state card when there are no travelers', async () => {

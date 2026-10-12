@@ -82,6 +82,8 @@ type DailyExpensesTabProps = {
   itineraryExpenseDescriptions?: Readonly<Record<string, string>>;
   /** Opens the linked itinerary item's standard editor. */
   onEditItineraryItem?: (sourceType: string, sourceId: string) => void;
+  /** Opens the Balances page (who owes whom). Omitted when the viewer can't open it. */
+  onOpenBalances?: () => void;
   costTrackingAllowed?: boolean;
   receiptScanningAllowed?: boolean;
   readOnly?: boolean;
@@ -172,6 +174,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   styles,
   itineraryExpenseDescriptions = {},
   onEditItineraryItem,
+  onOpenBalances,
   costTrackingAllowed,
   receiptScanningAllowed,
   readOnly = false,
@@ -609,6 +612,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         >
           <Text style={styles.buttonText}>Import</Text>
         </TouchableOpacity>
+        {onOpenBalances ? (
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton]}
+            onPress={onOpenBalances}
+            accessibilityRole="button"
+            accessibilityLabel="Settle Up: open balances"
+            testID="expense-balances-button"
+          >
+            <Text style={styles.buttonText}>Settle Up</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       {receiptScanningAllowed && Platform.OS === 'web' ? (
         <input

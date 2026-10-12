@@ -121,6 +121,22 @@ describe('DailyExpensesTab', () => {
     expect(getByText('Cafe Nero')).toBeTruthy();
   });
 
+  it('has a Settle Up button that opens the Balances page, and omits it when the viewer cannot open it', () => {
+    const common = {
+      backendUrl: 'http://example.test', theme, headers: {}, jsonHeaders: {}, trip, groupMembers, expenses,
+      setExpenses: () => {}, defaultPayerId: 'm1', styles, costTrackingAllowed: true,
+    };
+    const onOpenBalances = jest.fn();
+    const withButton = render(<DailyExpensesTab {...common} onOpenBalances={onOpenBalances} />);
+    fireEvent.press(withButton.getByTestId('expense-balances-button'));
+    expect(onOpenBalances).toHaveBeenCalledTimes(1);
+    expect(withButton.getByText('Settle Up')).toBeTruthy();
+    withButton.unmount();
+
+    const withoutButton = render(<DailyExpensesTab {...common} />);
+    expect(withoutButton.queryByTestId('expense-balances-button')).toBeNull();
+  });
+
   it('hides receipt scanning when the user is not entitled', () => {
     const screen = render(
       <DailyExpensesTab

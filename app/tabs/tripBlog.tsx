@@ -2077,7 +2077,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               {capabilities.trip_blog_spend_summary && !readOnly ? (
                 <View testID="trip-blog-spend-summary" style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
                   <Text style={{ color: textColor, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
-                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip expense ledger.</Text>
+                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip's expenses.</Text>
                 </View>
               ) : null}
             </View>

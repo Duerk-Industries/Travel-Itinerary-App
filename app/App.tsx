@@ -1517,13 +1517,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
-  // Costs that came from bookings (flights, lodgings, activities, car rentals) rather than
-  // hand-entered expenses; the ledger lists them so the group can see they're already counted.
-  const bookingExpenses = useMemo(
-    () => allExpenses.filter((e) => !e.id.startsWith('expense-') && e.amount > 0),
-    [allExpenses]
-  );
-
   const costReportRows = useMemo(() => {
     const categories = [...new Set(allExpenses.map(e => e.category))].sort();
     return categories.map(category => {
@@ -3521,6 +3514,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   styles={styles}
                   itineraryExpenseDescriptions={itineraryExpenseDescriptions}
                   onEditItineraryItem={openItineraryExpenseEditor}
+                  onOpenBalances={isFollowingMode ? undefined : () => requestPageChange('ledger')}
                   costTrackingAllowed={costTrackingAllowed}
                   receiptScanningAllowed={receiptScanningAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
@@ -3547,7 +3541,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   payerName={payerName}
                   saveCoveredBy={saveCoveredBy}
                   readOnly={isFollowingMode || offlineReadOnly}
-                  bookingExpenses={bookingExpenses}
                   payments={tripPayments}
                   currentUserMemberId={currentUserMemberId}
                   onAddPayment={addTripPayment}
@@ -3628,7 +3621,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       style={[styles.button, styles.smallButton]}
                       onPress={() => requestPageChange('ledger')}
                     >
-                      <Text style={styles.buttonText}>📒 Ledger</Text>
+                      <Text style={styles.buttonText}>Settle Up</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
