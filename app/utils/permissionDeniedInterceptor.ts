@@ -1,4 +1,5 @@
 import { notifyPermissionDenied } from './permissionDenied';
+import { isAgeVerificationRequiredBody, notifyAgeVerificationRequired } from './ageVerificationRequired';
 
 // Auth endpoints have their own dedicated 403 handling (email confirmation,
 // password setup) — surfacing the generic permission modal for those would
@@ -27,6 +28,11 @@ export const installPermissionDeniedInterceptor = (): void => {
       if (!isExcludedUrl(url)) {
         try {
           const data = await response.clone().json();
+          // No date of birth on file yet: show that prompt, not "Permission Denied".
+          if (isAgeVerificationRequiredBody(data)) {
+            notifyAgeVerificationRequired();
+            return response;
+          }
           const message = data && typeof data.error === 'string' ? data.error : undefined;
           notifyPermissionDenied(message);
         } catch {

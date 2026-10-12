@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, TouchableOpacity, View, useColor
 import { type MapApp, isMapApp } from '../utils/mapLinks';
 import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
 import { type TemperatureUnit, normalizeTemperatureUnit } from '../utils/temperatureUnit';
+import { isAgeVerificationRequiredBody } from '../utils/ageVerificationRequired';
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
@@ -59,6 +60,8 @@ interface FetchAccountProfileParams {
 export type FetchAccountProfileResult = {
   ok: boolean;
   entitlements?: AccountProfile['entitlements'];
+  // The account has no date of birth yet; the session is still valid.
+  ageVerificationRequired?: boolean;
 };
 
 export const fetchAccountProfile = async ({
@@ -76,6 +79,12 @@ export const fetchAccountProfile = async ({
     const res = await fetch(`${backendUrl}/api/account`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (res.status === 403) {
+      // A missing date of birth is answered with 403 too, but the session is fine: the
+      // date-of-birth prompt handles it. Signing out here bounced users back to login.
+      const body = await res.clone().json().catch(() => null);
+      if (isAgeVerificationRequiredBody(body)) return { ok: false, ageVerificationRequired: true };
+    }
     if (res.status === 401 || res.status === 403 || res.status === 404) {
       logout();
       return { ok: false };

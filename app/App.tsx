@@ -103,6 +103,7 @@ import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
 import AgeVerificationDialog, { fetchAgeVerificationStatus, verifyAgeWithAppleIfAvailable } from './components/AgeVerificationDialog';
+import { subscribeAgeVerificationRequired } from './utils/ageVerificationRequired';
 import { markLoginStarted, markTripReady, useScreenReadyMark } from './utils/readinessMarks';
 import { configureAnalytics, startItemSaveTask, taskFailure, track, useTrackView } from './utils/analytics/track';
 import { analyticsViewForPage } from './utils/analytics/features';
@@ -2706,6 +2707,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [offlineReadOnly, userToken]);
 
+  useEffect(
+    // Any request the server refuses for a missing date of birth opens the prompt right away,
+    // even if it lands before the status check below has answered.
+    () => subscribeAgeVerificationRequired(() => setAgeVerificationRequired(true)),
+    [],
+  );
+
   useEffect(() => {
     // Accounts without a declared date of birth (including every Google/Apple
     // sign-up) must confirm 16+ before continuing; see AgeVerificationDialog.
@@ -4243,7 +4251,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           theme={theme}
           backendUrl={backendUrl}
           token={userToken}
-          onVerified={() => setAgeVerificationRequired(false)}
+          onVerified={() => {
+            setAgeVerificationRequired(false);
+            // The profile request was refused before the date of birth was saved; load it now.
+            void loadAccountProfile();
+          }}
           onSignOut={logout}
         />
       ) : null}
