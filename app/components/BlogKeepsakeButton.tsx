@@ -1,41 +1,150 @@
 import React, { useState } from 'react';
-import { Alert, Platform, Share, Text, TouchableOpacity } from 'react-native';
-
-const plain = (value: unknown): string => String(value ?? '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-const escapeHtml = (value: unknown): string => plain(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
+import { Alert, Modal, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import {
+  KEEPSAKE_THEMES,
+  buildKeepsakeHtml,
+  getKeepsakeTheme,
+  paragraphsFromRichText,
+  type KeepsakeThemeKey,
+} from '../utils/keepsake';
 
 type Props = { backendUrl: string; headers: Record<string, string>; tripId: string; textColor?: string };
 
+const THEME_STORAGE_KEY = 'wb.keepsakeTheme';
+
+const readSavedTheme = (): KeepsakeThemeKey => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) return getKeepsakeTheme(window.localStorage.getItem(THEME_STORAGE_KEY)).key;
+  } catch {
+    // Storage unavailable (private window etc.): fall back to the default.
+  }
+  return getKeepsakeTheme(null).key;
+};
+
+const saveTheme = (key: KeepsakeThemeKey) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem(THEME_STORAGE_KEY, key);
+  } catch {
+    // Not critical: the choice just won't be remembered.
+  }
+};
+
+// Plain-text version for phone builds without the PDF module (expo-print arrived in a later build).
+const keepsakeText = (blog: any): string =>
+  [
+    blog.title || 'Trip keepsake',
+    blog.subtitle,
+    ...paragraphsFromRichText(blog.introduction),
+    ...(blog.days || []).flatMap((day: any) => [
+      day.headline || day.localDate,
+      day.summary,
+      ...(day.items || []).filter((item: any) => item.kindKey === 'core.text').flatMap((item: any) => paragraphsFromRichText(item.body)),
+    ]),
+  ].filter(Boolean).join('\n\n');
+
 const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, textColor = '#111827' }) => {
   const [busy, setBusy] = useState(false);
-  const exportKeepsake = async () => {
+  const [choosing, setChoosing] = useState(false);
+  const [themeKey, setThemeKey] = useState<KeepsakeThemeKey>(readSavedTheme);
+
+  const loadBlog = async () => {
+    const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog?limit=100`, { headers });
+    const blog = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(blog.error || 'Unable to prepare keepsake');
+    return blog;
+  };
+
+  const createKeepsake = async () => {
     if (busy) return;
+    saveTheme(themeKey);
+    setChoosing(false);
     setBusy(true);
+    // Open the print tab now, inside the tap, so pop-up blockers allow it; fill it once loaded.
+    const popup = Platform.OS === 'web' && typeof window !== 'undefined' ? window.open('', '_blank') : null;
     try {
-      const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog?limit=100`, { headers });
-      const blog = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(blog.error || 'Unable to prepare keepsake');
-      const lines = [blog.title || 'Trip keepsake', plain(blog.subtitle), plain(blog.introduction), ...(blog.days || []).flatMap((day: any) => [day.headline || day.localDate, plain(day.summary), ...(day.items || []).filter((item: any) => item.kindKey === 'core.text').map((item: any) => plain(item.body))])].filter(Boolean);
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const popup = window.open('', '_blank');
+      if (Platform.OS === 'web') {
         if (!popup) throw new Error('Allow pop-ups to open the print keepsake');
         popup.opener = null;
-        const sections = (blog.days || []).map((day: any) => {
-          const media = (day.items || []).flatMap((item: any) => item.kindKey === 'core.gallery' ? (item.assets || []) : item.kindKey?.startsWith('media.') ? [item] : []);
-          const figures = media.filter((item: any) => item.mediaKind === 'photo' && (item.primaryUrl || item.thumbnailUrl)).map((item: any) => `<figure><img src="${escapeHtml(item.primaryUrl || item.thumbnailUrl)}" alt="${escapeHtml(item.altText || item.caption || 'Trip photo')}">${item.caption ? `<figcaption>${escapeHtml(item.caption)}</figcaption>` : ''}</figure>`).join('');
-          return `<section><h2>${escapeHtml(day.headline || day.localDate)}</h2><p class="date">${escapeHtml(day.localDate)}</p>${day.summary ? `<p>${escapeHtml(day.summary)}</p>` : ''}${(day.items || []).filter((item: any) => item.kindKey === 'core.text').map((item: any) => `<p>${escapeHtml(item.body)}</p>`).join('')}${figures}</section>`;
-        }).join('');
-        popup.document.write(`<!doctype html><html><head><title>${escapeHtml(blog.title || 'Trip keepsake')}</title><style>body{font:16px/1.55 Georgia,serif;max-width:760px;margin:40px auto;padding:0 24px;color:#1f2937}h1,h2{font-family:system-ui,sans-serif}section{break-inside:avoid;margin:32px 0}.date,figcaption{color:#6b7280;font-size:13px}figure{margin:20px 0;break-inside:avoid}img{display:block;width:100%;max-height:620px;object-fit:contain;border-radius:8px}@media print{body{margin:0}}</style></head><body><h1>${escapeHtml(blog.title || 'Trip keepsake')}</h1>${blog.subtitle ? `<p>${escapeHtml(blog.subtitle)}</p>` : ''}${sections}</body></html>`);
+        popup.document.write('<p style="font:16px system-ui;padding:24px;color:#6b7280">Preparing your keepsake…</p>');
+        const blog = await loadBlog();
+        popup.document.open();
+        popup.document.write(buildKeepsakeHtml(blog, themeKey));
         popup.document.close();
         popup.focus();
-        window.setTimeout(() => popup.print(), 500);
-      } else {
-        await Share.share({ title: blog.title || 'Trip keepsake', message: lines.join('\n\n') });
+        // Give photos and the web font a moment to load before the print dialog.
+        window.setTimeout(() => popup.print(), 900);
+        return;
       }
-    } catch (error: any) { Alert.alert('Trip keepsake', error.message || 'Unable to prepare keepsake'); }
-    finally { setBusy(false); }
+      const blog = await loadBlog();
+      let Print: any = null;
+      let Sharing: any = null;
+      try {
+        // Native modules, required lazily: older app builds don't include expo-print.
+        Print = require('expo-print');
+        Sharing = require('expo-sharing');
+      } catch {
+        Print = null;
+      }
+      if (Print?.printToFileAsync && Sharing?.shareAsync) {
+        const { uri } = await Print.printToFileAsync({ html: buildKeepsakeHtml(blog, themeKey) });
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: blog.title || 'Trip keepsake' });
+      } else {
+        await Share.share({ title: blog.title || 'Trip keepsake', message: keepsakeText(blog) });
+      }
+    } catch (error: any) {
+      popup?.close();
+      Alert.alert('Trip keepsake', error.message || 'Unable to prepare keepsake');
+    } finally {
+      setBusy(false);
+    }
   };
-  return <TouchableOpacity testID="blog-keepsake-export" accessibilityRole="button" disabled={busy} onPress={exportKeepsake} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}><Text style={{ color: textColor, fontWeight: '700' }}>{busy ? 'Preparing keepsake…' : 'Print / share keepsake'}</Text></TouchableOpacity>;
+
+  return (
+    <>
+      <TouchableOpacity testID="blog-keepsake-export" accessibilityRole="button" disabled={busy} onPress={() => setChoosing(true)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+        <Text style={{ color: textColor, fontWeight: '700' }}>{busy ? 'Preparing keepsake…' : 'Print / share keepsake'}</Text>
+      </TouchableOpacity>
+      <Modal visible={choosing} transparent animationType="fade" onRequestClose={() => setChoosing(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'center', padding: 20 }}>
+          <View testID="keepsake-theme-picker" style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20, maxWidth: 440, width: '100%', alignSelf: 'center' }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 4 }}>Choose a keepsake style</Text>
+            <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 14 }}>Your trip's notes and photos, laid out for printing or saving as a PDF.</Text>
+            {KEEPSAKE_THEMES.map((theme) => {
+              const selected = theme.key === themeKey;
+              return (
+                <TouchableOpacity
+                  key={theme.key}
+                  testID={`keepsake-theme-${theme.key}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => setThemeKey(theme.key)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 12, borderWidth: 2, borderColor: selected ? theme.accent : '#e5e7eb', marginBottom: 8 }}
+                >
+                  {/* Mini page preview: background, card and accent stripe. */}
+                  <View style={{ width: 48, height: 40, borderRadius: 8, backgroundColor: theme.page, borderWidth: 1, borderColor: '#d1d5db', padding: 6, justifyContent: 'center' }}>
+                    <View style={{ height: 22, borderRadius: 4, backgroundColor: theme.card, borderTopWidth: 3, borderTopColor: theme.accent }} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '700', color: '#111827' }}>{theme.name}</Text>
+                    <Text style={{ fontSize: 12, color: '#6b7280' }}>{theme.description}</Text>
+                  </View>
+                  {selected ? <Text style={{ color: theme.accent === '#F5B041' ? '#b7791f' : theme.accent, fontWeight: '800' }}>✓</Text> : null}
+                </TouchableOpacity>
+              );
+            })}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <TouchableOpacity testID="keepsake-theme-cancel" onPress={() => setChoosing(false)} style={{ paddingVertical: 10, paddingHorizontal: 14 }}>
+                <Text style={{ color: '#374151', fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="keepsake-create" onPress={createKeepsake} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#F59E0B' }}>
+                <Text style={{ color: '#111827', fontWeight: '700' }}>{Platform.OS === 'web' ? 'Create & print' : 'Create PDF'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
 };
 
 export default BlogKeepsakeButton;
