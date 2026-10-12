@@ -220,10 +220,13 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
           // out of the item collection prevents a heading from becoming a
           // duplicate, checkable packing item.
           (group.items ?? [])
-            // Older seeded data could contain the preset title as an item
-            // (for example, "General" in the General preset). It is a
-            // heading artifact, not something a traveler can pack.
-            .filter((item: PackingItem) => !(group.kind === 'preset' && normalizePackingLabel(item.label) === normalizePackingLabel(group.label)))
+            // A group's own self-titled "heading" item (the preset's own name inside a preset,
+            // e.g. "General" in the General preset, or a traveler's own name inside their
+            // personal contribution) is a template/label artifact, not something to pack.
+            // The server already strips these (packingListDisplayImpl.ts); this is defense in
+            // depth so older cached responses can't resurrect a traveler's name as a bare,
+            // checkable row instead of only their matrix column header.
+            .filter((item: PackingItem) => normalizePackingLabel(item.label) !== normalizePackingLabel(group.label))
             .map((item: PackingItem) => ({ ...item, category: item.category || group.label }))
         )
       : (data.items ?? []).map((item: PackingItem, index: number) => ({ ...item, position: index }));
