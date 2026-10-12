@@ -1858,7 +1858,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 />
               </View>
             ) : null}
-            {!publicPreview && (day.activities || []).length > 0 ? (
+            {canEdit && (day.activities || []).length > 0 ? (
               <View style={{ marginTop: 14 }}>
                 <Text style={{ color: textColor, fontWeight: '700', marginBottom: 6 }}>Planned activities</Text>
                 {(day.activities || []).map((activity) => (
