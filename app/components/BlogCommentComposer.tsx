@@ -5,7 +5,8 @@
 // 'Visible publicly' label ... next to the submit action") — the caller decides the label from
 // the target's own effective audience, this component just renders whatever it's given.
 import React, { useState } from 'react';
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import AutoGrowTextInput from './AutoGrowTextInput';
 
 type Props = {
   onSubmit: (body: string) => Promise<void>;
@@ -58,7 +59,7 @@ const BlogCommentComposer: React.FC<Props> = ({
 
   return (
     <View testID={testID} style={{ gap: 6 }}>
-      <TextInput
+      <AutoGrowTextInput
         testID={testID ? `${testID}-input` : undefined}
         value={value}
         onChangeText={setValue}
@@ -66,10 +67,12 @@ const BlogCommentComposer: React.FC<Props> = ({
         placeholderTextColor={mutedColor}
         editable={!disabled && !submitting}
         autoFocus={autoFocus}
-        multiline
         maxLength={MAX_LENGTH}
+        minHeight={40}
+        maxLines={8}
+        lineHeight={20}
         style={{
-          borderWidth: 1, borderColor, borderRadius: 8, padding: 8, minHeight: 40,
+          borderWidth: 1, borderColor, borderRadius: 8, padding: 8, fontSize: 14, lineHeight: 20,
           color: textColor, backgroundColor,
         }}
         accessibilityLabel={placeholder}

@@ -24,6 +24,7 @@ import BlogReactionBar from '../components/BlogReactionBar';
 import BlogContributorStrip from '../components/BlogContributorStrip';
 import BlogCommentThread from '../components/BlogCommentThread';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
+import AutoGrowTextInput from '../components/AutoGrowTextInput';
 import BlogDayStarterCard from '../components/BlogDayStarterCard';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
@@ -1354,14 +1355,16 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           </View>
         ) : null}
         {canEdit ? (
-          <TextInput
+          <AutoGrowTextInput
             testID="blog-masthead-introduction-input"
             value={mastheadDraft?.introduction ?? (blog?.introduction ?? '')}
             onChangeText={(text) => scheduleMastheadSave({ introduction: text.slice(0, 5000) })}
             placeholder="Add an introduction for readers of this blog…"
             placeholderTextColor={mutedColor}
-            multiline
-            style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, marginBottom: 4, minHeight: 44, backgroundColor: inputColor }}
+            minHeight={44}
+            maxLines={10}
+            lineHeight={20}
+            style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, marginBottom: 4, lineHeight: 20, backgroundColor: inputColor }}
           />
         ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 4 }}>{blog.introduction}</Text> : null)}
       </View>
