@@ -3,6 +3,11 @@ import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, futureDateStringPlusDays, loginWebUser, registerWebUser } from './helpers';
 
+// Each test chains several upload-init/complete/GET-/blog round trips (GET /blog also runs the
+// public-by-default eligibility check on every call), which can run past Jest's 5 s default when
+// the whole suite is loading the machine.
+jest.setTimeout(60_000);
+
 const DAY1 = futureDateString();
 const DAY2 = futureDateStringPlusDays(1);
 
