@@ -1477,7 +1477,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     placeholderTextColor={mutedColor}
                     style={[styles.sectionTitle, { color: textColor, padding: 0 }]}
                   />
-                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 1 }}>{day.localDate}</Text>
+                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 1 }}>{formatDateLong(day.localDate)}</Text>
                   <TextInput
                     testID={`blog-day-summary-input-${day.localDate}`}
                     value={daySummary}
@@ -1504,8 +1504,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 </View>
               ) : (
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionTitle}>{day.headline || day.localDate}</Text>
-                  {day.headline ? <Text style={{ color: mutedColor, fontSize: 11 }}>{day.localDate}</Text> : null}
+                  <Text style={styles.sectionTitle}>{day.headline || formatDateLong(day.localDate)}</Text>
+                  {day.headline ? <Text style={{ color: mutedColor, fontSize: 11 }}>{formatDateLong(day.localDate)}</Text> : null}
                   {day.summary ? <Text style={{ color: mutedColor, fontSize: 13, marginTop: 2 }}>{day.summary}</Text> : null}
                 </View>
               )}
@@ -1620,7 +1620,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 } : undefined}
               >
                 {canEdit && capabilities.trip_blog_authoring_assist ? <Text style={{ color: mutedColor, fontSize: 11, marginBottom: 3 }}>⠿ Drag to reorder</Text> : null}
-                {item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
+                {canEdit && item.sourceId ? <Text style={{ color: mutedColor, fontSize: 12, marginBottom: 4 }}>{item.sourceDetached ? 'Copied from trip note/location · independent' : 'Linked to trip note/location · editing here disconnects it'}</Text> : null}
                 {canEdit ? (
                   <BlogRichTextEditor
                     key={item.id}
@@ -1644,7 +1644,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 {(item.tags || []).length ? <Text style={{ color: mutedColor, fontSize: 12, marginTop: 6 }}>Note tags: {(item.tags || []).map((tag) => `#${tag}`).join(' ')}</Text> : null}
                 {!editMode && item.engagement ? (
                   <View style={{ marginTop: 6 }}>
-                    <Text style={{ color: mutedColor, fontSize: 11 }}>Note reactions</Text>
                     <BlogReactionBar
                       testID={`blog-item-reactions-${item.id}`}
                       targetKind="item"
@@ -1830,24 +1829,6 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 spotlightUserId={editMode ? null : spotlightForDay(day)}
                 mutedColor={mutedColor}
               />
-            ) : null}
-            {!editMode && day.engagement && (day.items || []).length > 0 ? (
-              <View style={{ marginTop: (!publicPreview && (day.contributors || []).length > 0) ? 6 : 12 }}>
-                <Text style={{ color: mutedColor, fontSize: 11 }}>Day reactions</Text>
-                <BlogReactionBar
-                  testID={`blog-day-reactions-${day.localDate}`}
-                  targetKind="day"
-                  targetId={day.id}
-                  summary={engagement.getSummary('day', day.id)}
-                  canEngage={canReact}
-                  onToggle={engagement.toggle}
-                  onError={handleEngagementError}
-                  textColor={textColor}
-                  mutedColor={mutedColor}
-                  theme={theme}
-                  size="compact"
-                />
-              </View>
             ) : null}
             {!publicPreview && day.engagement && (day.items || []).length > 0 ? (
               <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>

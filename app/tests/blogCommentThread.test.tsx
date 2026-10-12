@@ -191,8 +191,9 @@ describe('BlogCommentThread', () => {
     expect(queryByTestId('thread-composer')).toBeNull();
   });
 
-  it('shows an empty state when there are no comments', () => {
-    const { getByText } = renderThread({ comments: [] });
-    expect(getByText('No comments yet.')).toBeTruthy();
+  it('renders nothing extra when there are no comments (no empty-state placeholder)', () => {
+    const { queryByText, getByTestId } = renderThread({ comments: [] });
+    expect(queryByText(/no comments/i)).toBeNull();
+    expect(getByTestId('thread')).toBeTruthy();
   });
 });
