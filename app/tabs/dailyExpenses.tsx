@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { AppTheme } from '../theme/theme';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -60,6 +60,8 @@ type Expense = {
 
 type ParsedReceiptExpenseDraft = {
   expenseDate?: string | null;
+  /** 24-hour "HH:MM" from the receipt; the server already used it to pick Breakfast/Lunch/Dinner. */
+  expenseTime?: string | null;
   amount?: number | null;
   currency?: string | null;
   vendor?: string | null;
@@ -254,6 +256,11 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [importExpensesVisible, setImportExpensesVisible] = useState(false);
   const [receiptParsing, setReceiptParsing] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  // Shown inside the expense dialog after a scan -- never written into the expense itself.
+  const [receiptNotice, setReceiptNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!expenseDraft.isOpen) setReceiptNotice(null);
+  }, [expenseDraft.isOpen]);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
@@ -363,14 +370,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     if (typeof parsed.amount === 'number' && Number.isFinite(parsed.amount)) {
       setDraftAmount(parsed.amount.toFixed(2));
     }
-    setDraftVendor(
+    // Description gets the merchant name only; review guidance goes in the dialog notice instead.
+    setDraftVendor(parsed.vendor ?? '');
+    setReceiptNotice(
       [
-        parsed.vendor ?? '',
-        parsed.notes ?? '',
+        'Filled in from your receipt. Check the amount, date and category before saving.',
         parsedDateOutsideTrip && parsed.expenseDate
-          ? `Receipt date ${formatDateLabel(parsed.expenseDate)} is outside this trip's dates.`
+          ? `The receipt date (${formatDateLabel(parsed.expenseDate)}) is outside this trip's dates, so the date was not changed.`
           : '',
-      ].filter(Boolean).join(' — ')
+        !parsed.expenseDate ? "The receipt's date couldn't be read." : '',
+        parsed.amount == null ? "The total couldn't be read." : '',
+      ].filter(Boolean).join(' ')
     );
     openAddExpenseModal();
   };
@@ -661,6 +671,11 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           useNativeModal
           cardStyle={[styles.modalCard, styles.expenseModalCard]}
         >
+              {receiptNotice ? (
+                <Text style={[styles.helperText, { marginBottom: 8 }]} testID="expense-receipt-review-notice">
+                  {receiptNotice}
+                </Text>
+              ) : null}
               <View style={styles.row}>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
@@ -726,6 +741,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <DraftTextInput
                     style={vendorFieldStyle}
                     placeholder="Description"
+                    testID="expense-description-input"
                     value={draftVendor}
                     onChangeText={setDraftVendor}
                     commitOnBlur={false}

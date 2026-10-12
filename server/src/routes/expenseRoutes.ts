@@ -200,6 +200,8 @@ router.post('/receipt/parse', receiptUpload.single('image'), async (req, res) =>
     const parsed = await parseReceiptImage(file.buffer, file.mimetype, {
       fallbackCurrency: trip?.currency ?? null,
       destination: trip?.destination ?? null,
+      tripStartDate: trip?.startDate ? String(trip.startDate).slice(0, 10) : null,
+      tripEndDate: trip?.endDate ? String(trip.endDate).slice(0, 10) : null,
     });
     res.json(parsed);
   } catch {

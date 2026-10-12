@@ -137,6 +137,60 @@ describe('DailyExpensesTab', () => {
     expect(withoutButton.queryByTestId('expense-balances-button')).toBeNull();
   });
 
+  it('fills the Description with just the merchant name after a scan and shows review guidance in the dialog', async () => {
+    const originalOS = Platform.OS;
+    const originalFetch = global.fetch;
+    Platform.OS = 'web';
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ expenseDate: '2025-02-01', expenseTime: '19:30', amount: 45.5, currency: 'EUR', vendor: 'Carul Cu Bere', category: 'Dinner', notes: null }),
+    })) as any;
+    try {
+      const screen = render(
+        <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed receiptScanningAllowed />
+      );
+      const file = new File(['img'], 'receipt.jpg', { type: 'image/jpeg' });
+      await act(async () => { fireEvent(screen.UNSAFE_getByProps({ 'data-testid': 'expense-receipt-input' }), 'change', { target: { files: [file] } }); });
+
+      await waitFor(() => expect(screen.getByTestId('expense-add-modal')).toBeTruthy());
+      expect(screen.getByTestId('expense-description-input').props.value).toBe('Carul Cu Bere');
+      expect(screen.getByTestId('expense-receipt-review-notice').props.children).toMatch(/Check the amount, date and category/);
+
+      fireEvent.press(screen.getByTestId('expense-cancel'));
+      fireEvent.press(screen.getByTestId('expense-add-button'));
+      expect(screen.queryByTestId('expense-receipt-review-notice')).toBeNull();
+    } finally {
+      Platform.OS = originalOS;
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('notes in the dialog, not the Description, when the receipt date is outside the trip', async () => {
+    const originalOS = Platform.OS;
+    const originalFetch = global.fetch;
+    Platform.OS = 'web';
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ expenseDate: '2024-06-01', amount: 10, currency: 'EUR', vendor: 'Cafe Nero', category: 'Breakfast', notes: null }),
+    })) as any;
+    try {
+      const screen = render(
+        <DailyExpensesTab backendUrl="http://example.test" theme={theme} headers={{}} jsonHeaders={{}} trip={trip}
+          groupMembers={groupMembers} expenses={expenses} setExpenses={() => {}} defaultPayerId="m1" styles={styles} costTrackingAllowed receiptScanningAllowed />
+      );
+      await act(async () => {
+        fireEvent(screen.UNSAFE_getByProps({ 'data-testid': 'expense-receipt-input' }), 'change', { target: { files: [new File(['x'], 'r.jpg', { type: 'image/jpeg' })] } });
+      });
+      await waitFor(() => expect(screen.getByTestId('expense-receipt-review-notice')).toBeTruthy());
+      expect(screen.getByTestId('expense-receipt-review-notice').props.children).toMatch(/outside this trip's dates/);
+      expect(screen.getByTestId('expense-description-input').props.value).toBe('Cafe Nero');
+    } finally {
+      Platform.OS = originalOS;
+      global.fetch = originalFetch;
+    }
+  });
+
   it('hides receipt scanning when the user is not entitled', () => {
     const screen = render(
       <DailyExpensesTab
