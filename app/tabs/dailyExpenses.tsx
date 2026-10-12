@@ -8,6 +8,7 @@ import PlaidImportQueue from '../components/PlaidImportQueue';
 import DraftTextInput from '../components/DraftTextInput';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import DateField from '../components/DateField';
+import { resolveExpenseDescription } from '../utils/expenseDescription';
 import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../utils/dateOnly';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -189,12 +190,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     return map;
   }, [activeMembers]);
 
-  const otherExpenseDescription = (expense: Expense): string => {
-    const sourceKey = expense.sourceType && expense.sourceId
-      ? `${expense.sourceType}:${expense.sourceId}`
-      : '';
-    return itineraryExpenseDescriptions[sourceKey] || expense.vendor || expense.notes || '-';
-  };
+  const otherExpenseDescription = (expense: Expense): string =>
+    resolveExpenseDescription(expense, itineraryExpenseDescriptions) || '-';
 
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseDraftStorageKey = `stp.daily-expense-draft.${trip?.id ?? 'none'}`;

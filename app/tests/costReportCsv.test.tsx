@@ -11,8 +11,8 @@ describe('CSV Conversion', () => {
   const formatMemberName = (m: any) => `${m.firstName} ${m.lastName}`;
 
   const allExpenses = [
-    { date: '2025-01-01', category: 'Flights', amount: 100, payerIds: ['m1'], forIds: ['m1', 'm2'] },
-    { date: '2025-01-02', category: 'Lodging', amount: 200, payerIds: ['m2'], forIds: ['m1', 'm2'] },
+    { date: '2025-01-01', category: 'Flights', description: 'Delta 123 · SEA → NRT', amount: 100, payerIds: ['m1'], forIds: ['m1', 'm2'] },
+    { date: '2025-01-02', category: 'Lodging', description: 'Hotel, "Grand" Tokyo', amount: 200, payerIds: ['m2'], forIds: ['m1', 'm2'] },
     { date: '2025-01-03', category: 'Dinner', amount: 60, payerIds: ['m3'], forIds: ['m1', 'm2', 'm3'] },
   ];
 
@@ -27,10 +27,10 @@ describe('CSV Conversion', () => {
     });
 
     const expectedCsv = [
-      'Date,Category,Alex Rider,Blair Lee,Casey Jones',
-      '2025-01-01,Flights,100.00,0.00,0.00',
-      '2025-01-02,Lodging,0.00,200.00,0.00',
-      '2025-01-03,Dinner,0.00,0.00,60.00',
+      'Date,Category,Description,Alex Rider,Blair Lee,Casey Jones',
+      '2025-01-01,Flights,Delta 123 · SEA → NRT,100.00,0.00,0.00',
+      '2025-01-02,Lodging,"Hotel, ""Grand"" Tokyo",0.00,200.00,0.00',
+      '2025-01-03,Dinner,,0.00,0.00,60.00',
     ].join('\n');
 
     expect(csv).toBe(expectedCsv);
@@ -49,10 +49,10 @@ describe('CSV Conversion', () => {
     });
 
     const expectedCsv = [
-      'Date,Category,Alex Rider,Casey Jones',
-      '2025-01-01,Flights,100.00,0.00',
-      '2025-01-02,Lodging,200.00,0.00',
-      '2025-01-03,Dinner,40.00,20.00',
+      'Date,Category,Description,Alex Rider,Casey Jones',
+      '2025-01-01,Flights,Delta 123 · SEA → NRT,100.00,0.00',
+      '2025-01-02,Lodging,"Hotel, ""Grand"" Tokyo",200.00,0.00',
+      '2025-01-03,Dinner,,40.00,20.00',
     ].join('\n');
 
     expect(csv).toBe(expectedCsv);

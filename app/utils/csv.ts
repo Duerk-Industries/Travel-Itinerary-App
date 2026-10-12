@@ -9,6 +9,8 @@ type Member = {
 type Expense = {
   date: string;
   category: string;
+  /** Linked item name (flights etc.) or the expense's own Description; may be empty. */
+  description?: string;
   amount: number;
   payerIds: string[];
   forIds: string[];
@@ -34,9 +36,9 @@ export const convertExpensesToCsv = (options: CsvConversionOptions): string => {
   const { expenses, members, formatMemberName, coveredBy, expenseType } = options;
   const memberIds = members.map((m) => m.id);
 
-  const header = ['Date', 'Category', ...members.map(formatMemberName)];
+  const header = ['Date', 'Category', 'Description', ...members.map(formatMemberName)];
   const rows = expenses.map((expense) => {
-    const row: (string | number)[] = [expense.date, expense.category];
+    const row: (string | number)[] = [expense.date, expense.category, expense.description ?? ''];
     const ids = expenseType === 'paid' ? expense.payerIds : expense.forIds;
     const rolledUpIds = (ids || []).map((id) => coveredBy[id] || id);
 
