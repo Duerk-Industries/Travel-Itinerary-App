@@ -72,10 +72,10 @@ test.describe('Trip Management', () => {
       await expect(page.getByText(heading).first()).toBeVisible({ timeout: 5000 });
     }
 
-    // Ledger is reached from within Cost Report, not the home nav grid.
-    await page.getByText(/Ledger/).first().click();
+    // Balances is reached from within Cost Report (the Settle Up button), not the home nav grid.
+    await page.getByText('Settle Up', { exact: true }).first().click();
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Ledger', { exact: true }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Balances', { exact: true }).first()).toBeVisible({ timeout: 5000 });
 
     // Return home before checking 'overview' (now labeled "Itinerary"), which navigates to its own page.
     await page.getByText('⌂', { exact: true }).click();

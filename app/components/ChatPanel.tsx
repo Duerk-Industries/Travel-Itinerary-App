@@ -15,9 +15,10 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
-  Dimensions,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Socket } from 'socket.io-client';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/events';
 import type { ChatMessage } from '../../packages/messaging/src/types';
@@ -38,9 +39,8 @@ interface Props {
 const PANEL_WIDTH = 360;
 const PANEL_HEIGHT = 480;
 
-// On narrow web viewports (phone-sized browsers) cap the panel so it doesn't
-// swallow the entire screen. Use window width when available; fall back to a
-// safe constant so SSR / non-browser environments don't throw.
+// Keep the desktop panel within the browser width. Phone-sized browsers use
+// the full-screen layout below.
 const getResponsivePanelWidth = (): number => {
   if (typeof window !== 'undefined' && window.innerWidth) {
     return Math.min(PANEL_WIDTH, window.innerWidth - 32);
@@ -86,6 +86,9 @@ const ChatPanel: React.FC<Props> = ({
   const lastMarkedReadIdRef = useRef<string | null>(null);
   const scrollTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const isWeb = Platform.OS === 'web';
+  const { width: viewportWidth } = useWindowDimensions();
+  const safeAreaInsets = useSafeAreaInsets();
+  const isPhoneLayout = !isWeb || viewportWidth < 600;
 
   const scheduleScrollToEnd = useCallback(
     (delayMs: number, animated: boolean) => {
@@ -292,9 +295,13 @@ const ChatPanel: React.FC<Props> = ({
   // -------------------------------------------------------------------------
   // Layout
   // -------------------------------------------------------------------------
-  const panelStyle = isWeb
-    ? themedStyles.panelDesktop
-    : themedStyles.panelMobile;
+  const panelStyle = isPhoneLayout
+    ? [themedStyles.panelMobile, {
+        // Absolute positioning ignores the parent SafeAreaView's padding.
+        top: (isWeb ? 'env(safe-area-inset-top, 0px)' : safeAreaInsets.top) as any,
+        bottom: (isWeb ? 'env(safe-area-inset-bottom, 0px)' : safeAreaInsets.bottom) as any,
+      }]
+    : themedStyles.panelDesktop;
 
   return (
     <KeyboardAvoidingView
@@ -304,18 +311,19 @@ const ChatPanel: React.FC<Props> = ({
     >
       {/* Header */}
       <View style={themedStyles.header}>
-        {!isWeb && (
-          <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="chat-back">
+        {isPhoneLayout && (
+          <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="chat-back"
+            accessibilityRole="button" accessibilityLabel="Close trip chat">
             <Text style={themedStyles.headerBtnText}>← Back</Text>
           </TouchableOpacity>
         )}
         <Text style={themedStyles.headerTitle}>Trip Chat</Text>
-        {isWeb && onMinimize && (
+        {!isPhoneLayout && onMinimize && (
           <TouchableOpacity onPress={onMinimize} style={themedStyles.headerBtn} testID="chat-minimize">
             <Text style={themedStyles.headerBtnText}>—</Text>
           </TouchableOpacity>
         )}
-        {isWeb && (
+        {!isPhoneLayout && (
           <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="chat-close">
             <Text style={themedStyles.headerBtnText}>✕</Text>
           </TouchableOpacity>
@@ -438,6 +446,10 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   headerBtn: {
     paddingHorizontal: 8,
     paddingVertical: 4,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerBtnText: {
     color: '#fff',

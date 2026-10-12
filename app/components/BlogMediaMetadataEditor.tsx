@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AutoGrowTextInput from './AutoGrowTextInput';
 import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
 
 export type BlogMediaMetadataPatch = { caption: string; altText: string; isDecorative: boolean; tags: string[] };
@@ -107,14 +108,16 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
   return (
     <View testID="blog-media-metadata-editor" style={{ marginTop: 10, borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor }}>
       <Text style={{ color: textColor, fontWeight: '700' }}>Photo details</Text>
-      <TextInput
+      <AutoGrowTextInput
         testID="blog-media-caption-input"
         value={caption}
         onChangeText={(value) => setCaption(value.slice(0, 500))}
         placeholder="Add a caption"
         placeholderTextColor={mutedColor}
-        multiline
-        style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
+        minHeight={38}
+        maxLines={6}
+        lineHeight={20}
+        style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8, lineHeight: 20 }}
       />
       <TextInput
         testID="blog-media-tags-input"
@@ -124,15 +127,17 @@ const BlogMediaMetadataEditor: React.FC<Props> = ({
         placeholderTextColor={mutedColor}
         style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
       />
-      <TextInput
+      <AutoGrowTextInput
         testID="blog-media-alt-text-input"
         value={altText}
         editable={!isDecorative}
         onChangeText={(value) => setAltText(value.slice(0, 1000))}
         placeholder={isDecorative ? 'Not required for a decorative image' : 'Describe the image for screen-reader users'}
         placeholderTextColor={mutedColor}
-        multiline
-        style={{ color: textColor, opacity: isDecorative ? 0.55 : 1, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8 }}
+        minHeight={38}
+        maxLines={6}
+        lineHeight={20}
+        style={{ color: textColor, opacity: isDecorative ? 0.55 : 1, borderWidth: 1, borderColor, borderRadius: 6, padding: 8, marginTop: 8, lineHeight: 20 }}
       />
       <TouchableOpacity testID="blog-media-decorative-toggle" accessibilityRole="checkbox" accessibilityState={{ checked: isDecorative }} onPress={() => { setIsDecorative((value) => !value); setNotice(''); }} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
         <Text style={{ color: textColor, marginRight: 6 }}>{isDecorative ? '☑' : '☐'}</Text>

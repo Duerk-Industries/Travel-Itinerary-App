@@ -87,7 +87,7 @@ const publicReactionRequest = async (req: any, res: any, clear: boolean, targetK
     res.status(404).json({ error: 'Public blog not found' });
     return;
   }
-  const visitorId = String(req.get('X-Public-Visitor-Id') ?? '');
+  const visitorId = String(req.body?.visitorId ?? req.get('X-Public-Visitor-Id') ?? '');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitorId)) {
     res.status(400).json({ error: 'A browser session is required to react' });
     return;
@@ -147,6 +147,12 @@ router.delete('/:username/:tripSlug/engagement/day/:dayDate/reaction', (req, res
     if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
   });
 });
+router.post('/:username/:tripSlug/engagement/day/:dayDate/reaction', (req, res) => {
+  if (req.body?.action !== 'set' && req.body?.action !== 'clear') return res.status(400).json({ error: 'Invalid reaction action' });
+  void publicReactionRequest(req, res, req.body.action === 'clear', 'day').catch(() => {
+    if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
+  });
+});
 for (const kind of ['item', 'asset'] as const) {
   router.put(`/:username/:tripSlug/engagement/${kind}/:targetId/reaction`, (req, res) => {
     void publicReactionRequest(req, res, false, kind).catch(() => {
@@ -155,6 +161,12 @@ for (const kind of ['item', 'asset'] as const) {
   });
   router.delete(`/:username/:tripSlug/engagement/${kind}/:targetId/reaction`, (req, res) => {
     void publicReactionRequest(req, res, true, kind).catch(() => {
+      if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
+    });
+  });
+  router.post(`/:username/:tripSlug/engagement/${kind}/:targetId/reaction`, (req, res) => {
+    if (req.body?.action !== 'set' && req.body?.action !== 'clear') return res.status(400).json({ error: 'Invalid reaction action' });
+    void publicReactionRequest(req, res, req.body.action === 'clear', kind).catch(() => {
       if (!res.headersSent) res.status(500).json({ error: 'Unable to save reaction' });
     });
   });
@@ -195,14 +207,20 @@ router.get('/:username/:tripSlug/engagement', async (req, res) => {
   res.setHeader('Cache-Control', hasVisitor ? 'private, no-store' : 'public, max-age=15, stale-while-revalidate=45');
 
   if (!dayDate) {
-    const targets = resolved.days.map((day) => ({ targetKind: 'day' as const, targetId: day.id }));
+    const postTargets = await publicPostTargets(resolved.tripId, username, tripSlug);
+    const targets = [...resolved.days.map((day) => ({ targetKind: 'day' as const, targetId: day.id })), ...postTargets];
     const summaries = await blogEngagementRepository().getEngagementSummaries(null, targets, ['public']);
     const own = hasVisitor ? await getPublicVisitorReactions(resolved.tripId, targets, visitorId) : {};
     const zero = { reactionCounts: {}, reactionTotal: 0, commentCount: 0 };
     return res.json({
+      reactionsEnabled: await isFeatureEnabled('trip_blog_reactions'),
       days: resolved.days.map((day) => {
         const s = summaries[`day:${day.id}`] ?? zero;
         return { localDate: day.localDate, reactionCounts: s.reactionCounts, reactionTotal: s.reactionTotal, commentCount: s.commentCount, ...(hasVisitor ? { userReaction: own[`day:${day.id}`] ?? null } : {}) };
+      }),
+      posts: postTargets.map((target) => {
+        const s = summaries[`${target.targetKind}:${target.targetId}`] ?? zero;
+        return { targetKind: target.targetKind, targetId: target.targetId, reactionCounts: s.reactionCounts, reactionTotal: s.reactionTotal, ...(hasVisitor ? { userReaction: own[`${target.targetKind}:${target.targetId}`] ?? null } : {}) };
       }),
     });
   }

@@ -78,11 +78,11 @@ export const GUIDE_CORPUS: GuideCorpusEntry[] = [
   {
     id: 'expenses',
     title: 'Expenses and cost splitting',
-    keywords: ['expense', 'expenses', 'cost', 'costs', 'split', 'ledger', 'who owes', 'payment', 'receipt'],
+    keywords: ['expense', 'expenses', 'cost', 'costs', 'split', 'ledger', 'balances', 'balance', 'settle up', 'who owes', 'payment', 'receipt'],
     content:
-      'Daily Expenses and the Ledger tab track shared costs and who owes whom, including receipts you ' +
+      'Daily Expenses and the Balances page (open it with the Settle Up button) track shared costs and who owes whom, including receipts you ' +
       'can scan to auto-fill an expense. Every trip item (flights, lodging, activities, car rentals) can ' +
-      'be marked as covered by specific travelers, and the ledger rolls that up into a settle-up summary.',
+      'be marked as covered by specific travelers, and Balances rolls that up into a settle-up summary.',
   },
   {
     id: 'overview',

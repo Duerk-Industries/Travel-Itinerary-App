@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ImageBackground, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { useBlogMediaUrlRefresh } from '../hooks/useBlogMediaUrlRefresh';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,6 +24,7 @@ import BlogReactionBar from '../components/BlogReactionBar';
 import BlogContributorStrip from '../components/BlogContributorStrip';
 import BlogCommentThread from '../components/BlogCommentThread';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
+import AutoGrowTextInput from '../components/AutoGrowTextInput';
 import BlogDayStarterCard from '../components/BlogDayStarterCard';
 import DayMediaGallery from '../components/DayMediaGallery';
 import DayMediaLightbox from '../components/DayMediaLightbox';
@@ -371,9 +373,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     return points;
   }, [flights, lodgings, tours, carRentals]);
 
-  const load = async (nextCursor = null) => {
+  const load = async (nextCursor = null, silent = false) => {
     if (!activeTripId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       // On a refresh (no cursor — e.g. after any mutation), re-request every day the user has
       // already paged in, so a small edit doesn't collapse the list back to the first page and
@@ -398,11 +400,13 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       const lastDay = days[days.length - 1];
       setCursor(days.length >= effectiveLimit && lastDay ? lastDay.localDate : null);
     } catch (error) {
-      alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
+      if (!silent) alertMessage('Trip blog', error.message || 'Unable to load the trip blog');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useBlogMediaUrlRefresh(blog, () => load(null, true));
 
   const loadCapabilities = async () => {
     if (!activeTripId) return;
@@ -1263,11 +1267,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           <View testID="blog-masthead-actions" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: compactMasthead ? 'flex-start' : 'flex-end', gap: 8, maxWidth: compactMasthead ? '100%' : '60%' }}>
             {!readOnly ? (
               <TouchableOpacity
+                testID="blog-edit-toggle"
                 accessibilityRole="button"
                 onPress={toggleEditMode}
-                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : undefined }]}
+                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : (theme?.colors?.cta ?? '#F59E0B') }]}
               >
-                <Text style={editMode ? { color: textColor } : styles.buttonText}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+                <Text style={[styles.buttonText, { color: editMode ? textColor : '#0B1726' }]}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
               </TouchableOpacity>
             ) : null}
             {publicPageUrl ? (
@@ -1350,14 +1355,16 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           </View>
         ) : null}
         {canEdit ? (
-          <TextInput
+          <AutoGrowTextInput
             testID="blog-masthead-introduction-input"
             value={mastheadDraft?.introduction ?? (blog?.introduction ?? '')}
             onChangeText={(text) => scheduleMastheadSave({ introduction: text.slice(0, 5000) })}
             placeholder="Add an introduction for readers of this blog…"
             placeholderTextColor={mutedColor}
-            multiline
-            style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, marginBottom: 4, minHeight: 44, backgroundColor: inputColor }}
+            minHeight={44}
+            maxLines={10}
+            lineHeight={20}
+            style={{ color: textColor, borderWidth: 1, borderColor, borderRadius: 8, padding: 8, marginBottom: 4, lineHeight: 20, backgroundColor: inputColor }}
           />
         ) : (blog?.introduction ? <Text style={{ color: textColor, marginBottom: 4 }}>{blog.introduction}</Text> : null)}
       </View>
@@ -1563,9 +1570,9 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 Phase 2: `dayMap`'s value is a signed image URL (the background render job's
                 static map artifact), not display text — it gets its own thumbnail rather than
                 being stringified into a text chip like every other fact. */}
-            {dayFacts[day.localDate]?.length ? (
+            {dayFacts[day.localDate]?.some((fact) => fact.key !== 'media' && (canEdit || (fact.key !== 'places' && fact.key !== 'plannedVsActual'))) ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4, marginBottom: 4 }}>
-                {dayFacts[day.localDate].filter((fact) => fact.key !== 'dayMap').map((fact) => (
+                {dayFacts[day.localDate].filter((fact) => fact.key !== 'dayMap' && fact.key !== 'media' && (canEdit || (fact.key !== 'places' && fact.key !== 'plannedVsActual'))).map((fact) => (
                   <View
                     key={fact.key}
                     testID={`blog-day-fact-${day.localDate}-${fact.key}`}
@@ -2070,7 +2077,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
               {capabilities.trip_blog_spend_summary && !readOnly ? (
                 <View testID="trip-blog-spend-summary" style={{ borderWidth: 1, borderColor, borderRadius: 8, padding: 10, backgroundColor: inputColor }}>
                   <Text style={{ color: textColor, fontWeight: '700' }}>Trip spend: {new Intl.NumberFormat(undefined, { style: 'currency', currency: tripCurrency }).format(spendTotal)}</Text>
-                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip expense ledger.</Text>
+                  <Text style={{ color: mutedColor, fontSize: 11, marginTop: 2 }}>Calculated on this device from the trip's expenses.</Text>
                 </View>
               ) : null}
             </View>

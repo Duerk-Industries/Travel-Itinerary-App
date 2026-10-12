@@ -47,6 +47,8 @@ const IngestionTab = lazy(() => import('./tabs/ingestion'));
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
+import { convertExpensesToCsv as convertExpensesToCsvRows } from './utils/csv';
+import { buildItineraryExpenseDescriptions } from './utils/expenseDescription';
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import ShareTripModal from './components/ShareTripModal';
 import IncomingShareModal from './components/IncomingShareModal';
@@ -1500,32 +1502,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
 
-  const itineraryExpenseDescriptions = useMemo(() => {
-    const descriptions: Record<string, string> = {};
-    const addDescription = (sourceType: string, sourceId: string | null | undefined, description: string) => {
-      const id = String(sourceId ?? '').trim();
-      const name = description.trim();
-      if (id && name) descriptions[`${sourceType}:${id}`] = name;
-    };
-
-    flights.forEach((flight) => {
-      const carrierAndNumber = [flight.carrier, flight.flight_number].filter(Boolean).join(' ').trim();
-      const departure = flight.departure_location || flight.departure_airport_code;
-      const arrival = flight.arrival_location || flight.arrival_airport_code;
-      const route = departure && arrival ? `${departure} → ${arrival}` : departure || arrival || '';
-      addDescription('flight', flight.id, [carrierAndNumber, route].filter(Boolean).join(' · '));
-    });
-    lodgings.forEach((lodging) => addDescription('lodging', lodging.id, lodging.name));
-    tours.forEach((tour) => addDescription('activity', tour.id, tour.name));
-    carRentals.forEach((rental) => {
-      const rentalName = [rental.vendor, rental.model].filter(Boolean).join(' · ').trim();
-      const route = rental.pickupLocation && rental.dropoffLocation
-        ? `${rental.pickupLocation} → ${rental.dropoffLocation}`
-        : rental.pickupLocation || rental.dropoffLocation;
-      addDescription('car_rental', rental.id, rentalName || route);
-    });
-    return descriptions;
-  }, [flights, lodgings, tours, carRentals]);
+  const itineraryExpenseDescriptions = useMemo(
+    () => buildItineraryExpenseDescriptions({ flights, lodgings, tours, carRentals }),
+    [flights, lodgings, tours, carRentals]
+  );
 
   const allExpenses = useMemo(
     () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, activeTrip?.currency ?? 'USD', allMemberIds),
@@ -1538,13 +1518,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
-  // Costs that came from bookings (flights, lodgings, activities, car rentals) rather than
-  // hand-entered expenses; the ledger lists them so the group can see they're already counted.
-  const bookingExpenses = useMemo(
-    () => allExpenses.filter((e) => !e.id.startsWith('expense-') && e.amount > 0),
-    [allExpenses]
-  );
-
   const costReportRows = useMemo(() => {
     const categories = [...new Set(allExpenses.map(e => e.category))].sort();
     return categories.map(category => {
@@ -1590,39 +1563,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return allExpenses;
   }, [allExpenses]);
 
-  const convertExpensesToCsv = (expenseType: 'paid' | 'incurred'): string => {
-    const escapeCsvCell = (cell: any) => {
-      const cellStr = String(cell ?? '');
-      if (/[",\n]/.test(cellStr)) {
-        return `"${cellStr.replace(/"/g, '""')}"`;
-      }
-      return cellStr;
-    };
-
-    const members = reportableMembers;
-    const memberIds = reportableMemberIds;
-
-    const header = ['Date', 'Category', ...members.map(formatMemberName)];
-    const rows = allExpensesForCsv.map(expense => {
-        const row: (string | number)[] = [expense.date, expense.category];
-        const ids = expenseType === 'paid' ? expense.payerIds : expense.forIds;
-        const rolledUpIds = (ids || []).map(id => coveredBy[id] || id);
-
-        const totals = computePayerTotals(
-            [{ amount: expense.amount, ids: rolledUpIds }],
-            item => item.amount,
-            item => item.ids,
-            memberIds,
-            { fallbackOnEmpty: true }
-        );
-
-        memberIds.forEach(id => {
-            row.push(totals[id]?.toFixed(2) || '0.00');
-        });
-        return row.map(escapeCsvCell).join(',');
+  const convertExpensesToCsv = (expenseType: 'paid' | 'incurred'): string =>
+    convertExpensesToCsvRows({
+      expenses: allExpensesForCsv,
+      members: reportableMembers,
+      formatMemberName,
+      coveredBy,
+      expenseType,
     });
-    return [header.map(escapeCsvCell).join(','), ...rows].join('\n');
-  };
 
   const downloadCsv = (csvContent: string, fileName: string) => {
     void exportCsv(csvContent, fileName).then((result) => {
@@ -3574,6 +3522,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   styles={styles}
                   itineraryExpenseDescriptions={itineraryExpenseDescriptions}
                   onEditItineraryItem={openItineraryExpenseEditor}
+                  onOpenBalances={isFollowingMode ? undefined : () => requestPageChange('ledger')}
                   costTrackingAllowed={costTrackingAllowed}
                   receiptScanningAllowed={receiptScanningAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
@@ -3600,7 +3549,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   payerName={payerName}
                   saveCoveredBy={saveCoveredBy}
                   readOnly={isFollowingMode || offlineReadOnly}
-                  bookingExpenses={bookingExpenses}
                   payments={tripPayments}
                   currentUserMemberId={currentUserMemberId}
                   onAddPayment={addTripPayment}
@@ -3681,7 +3629,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       style={[styles.button, styles.smallButton]}
                       onPress={() => requestPageChange('ledger')}
                     >
-                      <Text style={styles.buttonText}>📒 Ledger</Text>
+                      <Text style={styles.buttonText}>Settle Up</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>

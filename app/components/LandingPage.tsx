@@ -37,7 +37,7 @@ const SAMPLE_DAYS: SampleDay[] = [
 // homepage review.
 const FEATURES: string[] = [
   'Collaborative Planning: Build a shared day-by-day itinerary with flights, lodging, activities, and car rentals that everyone in your group can see and edit.',
-  'Shared Expenses: Split and track shared costs in a running ledger with automated total calculations for each traveler.',
+  'Shared Expenses: Split and track shared costs with automatic balances for each traveler, so everyone can settle up.',
   'AI Itinerary Generation: Generate intelligent itinerary suggestions based on your destinations and dates using state-of-the-art AI models.',
   'Real-time Collaboration: Chat with your group and see presence indicators to know who is online and planning with you.',
   'Packing & Notes: Manage shared packing lists and trip-wide notes to keep all your travel details in one central location.',

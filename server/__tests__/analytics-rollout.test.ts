@@ -27,6 +27,10 @@ import { clearErasureCacheForTesting } from '../src/services/privacyRightsServic
 import { runPrivacyRetention } from '../src/services/privacyRetentionService';
 import { cleanupTestUsersByEmail, futureDateString, futureDateStringPlusDays, makeAdminUser, registerAndLoginWebUser } from './helpers';
 
+// Several cases register and log in real accounts (password hashing) -- one registers ten -- so a
+// single test can run past Jest's 5 s default when the whole suite is loading the machine.
+jest.setTimeout(60_000);
+
 const emails: string[] = [];
 let seq = 0;
 const newUser = async () => {

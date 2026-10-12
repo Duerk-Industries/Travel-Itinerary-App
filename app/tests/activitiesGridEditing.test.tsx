@@ -5,7 +5,7 @@
 /// <reference types="node" />
 
 import React, { useState } from 'react';
-import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { ActivityTab, type Tour } from '../tabs/activities';
 
 jest.mock('react-native', () => {
@@ -42,6 +42,17 @@ jest.mock('react-native', () => {
 // several React state updates); the default testing-library waitFor budget is too
 // tight for that on a loaded machine, so use a longer timeout / finer poll interval.
 const ASYNC_WAIT_OPTIONS = { timeout: 3000, interval: 20 };
+
+// Saving runs entirely on already-resolved mock promises (fetch -> json -> state updates). Press
+// inside act() and yield one macrotask so that whole chain, and React's resulting renders, finish
+// before the test looks -- polling with waitFor alone raced React's act() batching and failed
+// intermittently, then consistently on a slow machine.
+const pressAndSettle = async (node: any) => {
+  await act(async () => {
+    fireEvent.press(node);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+};
 
 const styles = {
   card: {},
@@ -196,7 +207,7 @@ describe('Activities grid editing', () => {
 
     fireEvent.press(getByTestId('activity-table-edit'));
     fireEvent.changeText(getByDisplayValue('Museum Tour'), 'Updated Museum Tour');
-    fireEvent.press(getByTestId('activity-table-save'));
+    await pressAndSettle(getByTestId('activity-table-save'));
 
     await waitFor(() => expect(queryByTestId('activity-table-save')).toBeNull(), ASYNC_WAIT_OPTIONS);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -219,7 +230,7 @@ describe('Activities grid editing', () => {
     fireEvent.press(getByTestId('activity-table-edit'));
     fireEvent.changeText(getByDisplayValue('Museum Tour'), 'Updated Museum Tour');
     fireEvent.press(within(getByTestId('activity-row-tour-2')).getByText('Delete'));
-    fireEvent.press(getByTestId('activity-table-save'));
+    await pressAndSettle(getByTestId('activity-table-save'));
 
     await waitFor(() => expect(getByText(/Some rows could not be saved/)).toBeTruthy(), ASYNC_WAIT_OPTIONS);
     // The session stays open (partial failure), the successfully-deleted row is gone,
@@ -231,7 +242,7 @@ describe('Activities grid editing', () => {
       ok: true,
       json: async () => ({ updates: [{ id: 'tour-1', ok: true, activity: { ...tourOne, name: 'Updated Museum Tour' } }], deletes: [] }),
     });
-    fireEvent.press(getByTestId('activity-table-save'));
+    await pressAndSettle(getByTestId('activity-table-save'));
 
     await waitFor(() => expect(queryByTestId('activity-table-save')).toBeNull(), ASYNC_WAIT_OPTIONS);
     expect(fetchSpy).toHaveBeenCalledTimes(2);

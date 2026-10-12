@@ -1,4 +1,5 @@
-import { rollUpTotals } from './coveredBy';
+import { rollUpTotals } from './coveredBy';
+import { carRentalExpenseDescription, flightExpenseDescription } from './expenseDescription';
 
 const splitAmountIntoCents = (amount: number, parts: number): number[] => {
   if (!parts) return [];
@@ -90,7 +91,7 @@ export const buildAllExpenses = (
       id: `flight-${f.id}`,
       date: f.departureDate ?? f.departure_date,
       category: 'Flights',
-      description: `${f.carrier ?? ''} ${f.flightNumber ?? f.flight_number ?? ''}`.trim(),
+      description: flightExpenseDescription(f),
       amount: Number(f.cost) || 0,
       currency: tripCurrency,
       payerIds: paidBy.length ? paidBy : passengerIds.length ? passengerIds : allMemberIds,
@@ -153,7 +154,7 @@ export const buildAllExpenses = (
       id: `car-${c.id}`,
       date: c.pickupDate ?? c.pickup_date,
       category: 'Car Rentals',
-      description: c.vendor ?? c.model ?? '',
+      description: carRentalExpenseDescription(c),
       amount: Number(c.cost) || 0,
       currency: tripCurrency,
       payerIds: paidBy.length ? paidBy : allMemberIds,
@@ -168,7 +169,7 @@ export const buildAllExpenses = (
         id: `expense-${e.id}`,
         date: e.expenseDate ?? e.expense_date,
         category: e.category,
-        description: e.notes || e.category,
+        description: e.vendor || e.notes || '',
         amount: Number(e.amountInTripCurrency ?? e.amount) || 0,
         currency: tripCurrency,
         payerIds: Array.isArray(e.payerIds) && e.payerIds.length > 0 ? e.payerIds : allMemberIds,

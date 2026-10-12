@@ -423,9 +423,12 @@ npm --prefix app run export:web
 
 Output lands in `app/dist/`.
 
+`export:web` bakes in `EXPO_PUBLIC_BACKEND_URL=https://wander-bunnies.com` by default (it ignores the value in your local `app/.env`). To export for a different deployment, set the variable in your shell first. Check the first line of the export output shows the URL you expect: a wrong URL makes the live site call another host, which the CSP blocks.
+
 ### Copy to server and deploy
 
 ```bash
+rm -rf server/public && mkdir -p server/public   # the Docker build fails if server/public is missing
 cp -r app/dist/* server/public/
 ```
 

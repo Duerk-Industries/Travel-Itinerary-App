@@ -12,6 +12,7 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { useEditorBridge, RichText, Toolbar, DEFAULT_TOOLBAR_ITEMS, TenTapStartKit, CoreBridge } from '@10play/tentap-editor';
+import BlogRichTextView from './BlogRichTextView';
 
 type Props = {
   value: string;
@@ -24,7 +25,7 @@ type Props = {
   testID?: string;
 };
 
-const BlogRichTextEditor = ({
+const BlogRichTextEditable = ({
   value,
   onChangeHTML,
   editable = true,
@@ -94,5 +95,15 @@ const BlogRichTextEditor = ({
     </View>
   );
 };
+
+// Read-only notes render as plain React Native text sized to their content. The WebView editor
+// can't auto-size under Expo (tentap's content-height listener is a no-op there), so a read-only
+// one kept a fixed frame with blank space under short notes. Editing still uses the real editor.
+const BlogRichTextEditor = (props: Props) =>
+  props.editable === false ? (
+    <BlogRichTextView html={props.value} textColor={props.textColor} testID={props.testID} />
+  ) : (
+    <BlogRichTextEditable {...props} />
+  );
 
 export default BlogRichTextEditor;

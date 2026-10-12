@@ -13,7 +13,6 @@ import {
   toCents,
   type PaymentRecord,
 } from '../utils/settlement';
-import type { UnifiedExpense } from '../utils/costs';
 
 type Trip = {
   id: string;
@@ -60,7 +59,6 @@ type LedgerTabProps = {
   saveCoveredBy: () => Promise<void>;
   readOnly?: boolean;
   // Costs that came in from bookings (flights, lodgings, activities, car rentals).
-  bookingExpenses?: UnifiedExpense[];
   payments: TripPayment[];
   currentUserMemberId: string | null;
   onAddPayment: (draft: {
@@ -252,7 +250,6 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   payerName,
   saveCoveredBy,
   readOnly,
-  bookingExpenses = [],
   payments,
   currentUserMemberId,
   onAddPayment,
@@ -395,8 +392,8 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   if (!trip) {
     return (
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Ledger</Text>
-        <Text style={styles.helperText}>Select a trip to view the ledger.</Text>
+        <Text style={styles.sectionTitle}>Balances</Text>
+        <Text style={styles.helperText}>Select a trip to view balances.</Text>
       </View>
     );
   }
@@ -593,7 +590,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
     <View style={{ gap: 12 }}>
       <View style={styles.card} testID="ledger-summary">
         <View style={styles.row}>
-          <Text style={styles.sectionTitle}>Ledger</Text>
+          <Text style={styles.sectionTitle}>Balances</Text>
           <TouchableOpacity
             style={[styles.button, styles.smallButton, { marginLeft: 8 }]}
             onPress={() => onNavigate('cost')}
@@ -632,33 +629,6 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
               styles,
             })}
       </View>
-
-      {bookingExpenses.length ? (
-        <View style={styles.card} testID="ledger-bookings">
-          <Text style={styles.sectionTitle}>From your bookings</Text>
-          <Text style={styles.helperText}>Flights, stays, activities and rentals land on the group tab automatically.</Text>
-          <View style={{ gap: 8, marginTop: 4 }}>
-            {bookingExpenses.map((booking) => (
-              <View
-                key={booking.id}
-                style={[styles.card, { marginBottom: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }]}
-                testID={`ledger-booking-${booking.id}`}
-              >
-                <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-                  <Text style={[styles.cellText, { fontWeight: '600' }]}>
-                    {booking.description || booking.category}
-                    <Text style={[styles.helperText, { fontWeight: '400' }]}> (from {booking.category})</Text>
-                  </Text>
-                  <View style={{ alignSelf: 'flex-start', backgroundColor: '#dcfce7', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                    <Text style={{ color: '#166534', fontSize: 11, fontWeight: '700' }}>✓ Added to group tab</Text>
-                  </View>
-                </View>
-                <Text style={[styles.cellText, { fontWeight: '700' }]}>{formatMoney(booking.amount)}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
 
       <View style={styles.card} testID="ledger-settlement">
         <Text style={styles.sectionTitle}>Settlement</Text>

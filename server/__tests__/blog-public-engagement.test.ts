@@ -32,6 +32,7 @@ describe('public blog engagement endpoint', () => {
     await setFeatureFlag('trip_blog_reactions', true, null);
     await setFeatureFlag('trip_blog_comments', true, null);
     await setFeatureFlag('trip_blog_public_engagement', true, null);
+    await setFeatureFlag('trip_blog_photo_uploads', true, null);
 
     await registerWebUser(owner);
     await confirmWebUser(owner.email);
@@ -128,11 +129,11 @@ describe('public blog engagement endpoint', () => {
     const visitorId = randomUUID();
     const url = `/public/blog/${usernameSlug}/${tripSlug}/engagement/day/${dayDate}/reaction`;
     const headers = { 'X-Public-Visitor-Id': visitorId };
-    const first = await request(app).put(url).set(headers).send({ emoji: 'heart' }).expect(200);
+    const first = await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'heart' }).expect(200);
     expect(first.body.reactionCounts.heart).toBe(1);
     expect(first.body.userReaction).toBe('heart');
-    await request(app).put(url).set(headers).send({ emoji: 'heart' }).expect(200);
-    const changed = await request(app).put(url).set(headers).send({ emoji: 'clap' }).expect(200);
+    await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'heart' }).expect(200);
+    const changed = await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'clap' }).expect(200);
     expect(changed.body.reactionCounts.heart ?? 0).toBe(0);
     expect(changed.body.reactionCounts.clap).toBe(1);
     const publicRead = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).expect(200);
@@ -141,7 +142,7 @@ describe('public blog engagement endpoint', () => {
     const privateRead = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).set(headers).expect(200);
     expect(privateRead.headers['cache-control']).toBe('private, no-store');
     expect(privateRead.body.days.find((day: any) => day.localDate === dayDate).userReaction).toBe('clap');
-    const cleared = await request(app).delete(url).set(headers).expect(200);
+    const cleared = await request(app).post(url).type('form').send({ visitorId, action: 'clear' }).expect(200);
     expect(cleared.body.reactionTotal).toBe(0);
     expect(cleared.body.userReaction).toBeNull();
     const rows = await queryBlog('SELECT id FROM blog_reactions WHERE visitor_id = $1', [visitorId]);
@@ -154,6 +155,46 @@ describe('public blog engagement endpoint', () => {
     await request(app).put(url).set('X-Public-Visitor-Id', randomUUID()).send({ emoji: 'invalid' }).expect(400);
     await request(app).put(`/public/blog/${usernameSlug}/${tripSlug}/engagement/day/2030-01-01/reaction`)
       .set('X-Public-Visitor-Id', randomUUID()).send({ emoji: 'heart' }).expect(404);
+  });
+
+  it('accepts the browser-safe form request used by the public page', async () => {
+    const url = `/public/blog/${usernameSlug}/${tripSlug}/engagement/day/${dayDate}/reaction`;
+    const visitorId = randomUUID();
+    const response = await request(app).post(url).set('Origin', 'https://wander-bunnies.com')
+      .type('form').send({ visitorId, action: 'set', emoji: 'thanks' }).expect(200);
+    expect(response.headers['access-control-allow-origin']).toBe('https://wander-bunnies.com');
+    await request(app).post(url).type('form').send({ visitorId, action: 'clear' }).expect(200);
+  });
+
+  it('lets a public reader react to a public note but not a travelers-only note', async () => {
+    const visitorId = randomUUID();
+    const url = `/public/blog/${usernameSlug}/${tripSlug}/engagement/item/${publicItemId}/reaction`;
+    const result = await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'wow' }).expect(200);
+    expect(result.body.userReaction).toBe('wow');
+    const list = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).expect(200);
+    expect(list.body.posts.find((post: any) => post.targetKind === 'item' && post.targetId === publicItemId).reactionCounts.wow).toBe(1);
+    await request(app).post(`/public/blog/${usernameSlug}/${tripSlug}/engagement/item/${travelersOnlyItemId}/reaction`)
+      .type('form').send({ visitorId, action: 'set', emoji: 'heart' }).expect(404);
+    await request(app).post(url).type('form').send({ visitorId, action: 'clear' }).expect(200);
+  });
+
+  it('accepts reactions on a ready public photo and rejects its deleted item', async () => {
+    const init = await request(app).post(`/api/trips/${tripId}/blog/media/upload-init`)
+      .set('Authorization', `Bearer ${ownerToken}`).set('Idempotency-Key', `public-photo-${randomUUID()}`)
+      .send({ dayDate, mediaKind: 'photo', mimeType: 'image/jpeg', byteSize: 1024 }).expect(201);
+    const assetId = init.body.asset.id;
+    await request(app).post(`/api/trips/${tripId}/blog/media/${assetId}/complete`)
+      .set('Authorization', `Bearer ${ownerToken}`).send({ physicalBytes: 1024 }).expect(200);
+    await queryBlog("UPDATE blog_media_assets SET state = 'ready' WHERE id = $1", [assetId]);
+    await queryBlog("UPDATE blog_items SET audience = 'public' WHERE id IN (SELECT item_id FROM blog_item_assets WHERE asset_id = $1)", [assetId]);
+    const visitorId = randomUUID();
+    const url = `/public/blog/${usernameSlug}/${tripSlug}/engagement/asset/${assetId}/reaction`;
+    const added = await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'heart' }).expect(200);
+    expect(added.body.reactionCounts.heart).toBe(1);
+    const summary = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).expect(200);
+    expect(summary.body.posts.find((post: any) => post.targetKind === 'asset' && post.targetId === assetId).reactionCounts.heart).toBe(1);
+    await queryBlog("UPDATE blog_items SET deleted_at = NOW() WHERE id IN (SELECT item_id FROM blog_item_assets WHERE asset_id = $1)", [assetId]);
+    await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'clap' }).expect(404);
   });
 
   it('returns paginated public comments for a specific day, with no author identity', async () => {

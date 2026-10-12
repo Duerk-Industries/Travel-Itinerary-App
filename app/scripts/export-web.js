@@ -146,11 +146,25 @@ const addPublicMetadata = (args) => {
   console.log(`Added public app metadata and no-JavaScript description to ${indexPath}`);
 };
 
+// A web export is a production artifact. Expo would otherwise bake in EXPO_PUBLIC_BACKEND_URL from
+// the developer's local app/.env (e.g. a test domain), and on any non-localhost origin the web app
+// uses that configured URL instead of its own origin -- so the live site ends up calling another
+// host and the Content-Security-Policy connect-src blocks it. Expo never overrides a variable that
+// is already set in the environment, and expo.config.shared.cjs reloads .env with override:true, so
+// the URL is also passed as WANDERBUNNIES_EXPORT_BACKEND_URL. Production is the default unless the
+// caller explicitly sets EXPO_PUBLIC_BACKEND_URL (for example when exporting for a test deployment).
+const exportBackendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://wander-bunnies.com';
+console.log(`Exporting web build with EXPO_PUBLIC_BACKEND_URL=${exportBackendUrl}`);
+
 const child = spawn(process.execPath, [expoCli, 'export', '--platform', 'web', ...process.argv.slice(2)], {
   stdio: 'inherit',
   env: {
     ...process.env,
     EXPO_NO_SENTRY_METRO: '1',
+    EXPO_PUBLIC_BACKEND_URL: exportBackendUrl,
+    // Read by expo.config.shared.cjs, which loads .env files with override:true and would
+    // otherwise replace EXPO_PUBLIC_BACKEND_URL with the local app/.env value.
+    WANDERBUNNIES_EXPORT_BACKEND_URL: exportBackendUrl,
     // Expo emits workspace-root-relative entry and lazy-module paths in this
     // monorepo. Keep Metro's server root aligned during static web exports,
     // just as the local web launcher does.

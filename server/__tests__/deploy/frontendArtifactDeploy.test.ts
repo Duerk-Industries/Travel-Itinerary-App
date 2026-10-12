@@ -20,6 +20,21 @@ describe('Phase 11 frontend artifact deployment', () => {
     },
   );
 
+  it('allows the on-device assistant to download its WebLLM model in every hosting CSP source', () => {
+    const sources = [
+      fs.readFileSync(path.join(root, 'firebase.json'), 'utf8'),
+      fs.readFileSync(path.join(root, 'scripts/lib/deploy-common.sh'), 'utf8'),
+      fs.readFileSync(path.join(root, 'scripts/lib/deploy-common.ps1'), 'utf8'),
+    ];
+    for (const source of sources) {
+      // Model config/weights come from Hugging Face (weights redirect to its hf.co CDN); the
+      // WebAssembly model library comes from raw.githubusercontent.com.
+      expect(source).toMatch(/connect-src[^;]*https:\/\/huggingface\.co/);
+      expect(source).toMatch(/connect-src[^;]*https:\/\/\*\.hf\.co/);
+      expect(source).toMatch(/connect-src[^;]*https:\/\/raw\.githubusercontent\.com/);
+    }
+  });
+
   it('allows signed Google Cloud Storage uploads and media in every hosting CSP source', () => {
     const sources = [
       fs.readFileSync(path.join(root, 'firebase.json'), 'utf8'),
