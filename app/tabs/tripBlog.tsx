@@ -24,6 +24,7 @@ import BlogReactionBar from '../components/BlogReactionBar';
 import BlogContributorStrip from '../components/BlogContributorStrip';
 import BlogCommentThread from '../components/BlogCommentThread';
 import BlogRichTextEditor from '../components/BlogRichTextEditor';
+import BlogMediaMetadataEditor from '../components/BlogMediaMetadataEditor';
 import AutoGrowTextInput from '../components/AutoGrowTextInput';
 import BlogDayStarterCard from '../components/BlogDayStarterCard';
 import DayMediaGallery from '../components/DayMediaGallery';
@@ -94,6 +95,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const [storagePlans, setStoragePlans] = useState<PlanInfo[]>([]);
   const [addingDay, setAddingDay] = useState(null);
   const [composerFiles, setComposerFiles] = useState(null); // photo-first composer (A2): picked files awaiting day assignment
+  // Quick capture: snap-a-photo-and-dictate-a-caption, available outside edit mode (see
+  // quickCapturePhoto below). Holds the freshly uploaded asset while its caption modal is open.
+  const [quickCaptureAsset, setQuickCaptureAsset] = useState(null);
+  const [quickCapturing, setQuickCapturing] = useState(false);
   const [composerDefaultDay, setComposerDefaultDay] = useState(null); // set when opened from a specific day's button
   const [composerDefaultTags, setComposerDefaultTags] = useState([]);
   // Destination trip for the "+ Add photos to this trip" flow — defaults to whichever trip is
@@ -822,6 +827,79 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     }
   };
 
+  // Quick capture: launches the device's own camera app (no custom camera UI to build or
+  // maintain), uploads the single photo straight away, then opens a lightweight caption modal
+  // reusing BlogMediaMetadataEditor's existing "dictate a caption" flow. Available outside edit
+  // mode -- the whole point is to skip the edit-mode/day-picker/composer detour for the common
+  // "snap one photo right now" case. The per-day composer stays as-is for picking several photos
+  // or backfilling an earlier day.
+  const quickCapturePhoto = async () => {
+    if (readOnly || quickCapturing) return;
+    setQuickCapturing(true);
+    try {
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          alertMessage('Camera access needed', 'Allow camera access in Settings to take a photo for this trip blog.');
+          return;
+        }
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+        exif: true,
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      let mimeType = asset.mimeType || guessMimeTypeFromName(asset.fileName) || 'image/jpeg';
+      let uri = asset.uri;
+      let name = asset.fileName ?? null;
+      if (isHeicMimeType(mimeType, name)) {
+        const jpegUri = await convertImageToJpeg(uri).catch(() => null);
+        if (jpegUri) { uri = jpegUri; mimeType = 'image/jpeg'; name = toJpegName(name); }
+      }
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const capture = readNativeExifCapture(asset.exif);
+      const converted = uri !== asset.uri;
+      const pickedFile = {
+        blob, mimeType, size: converted ? blob.size : (asset.fileSize ?? blob.size),
+        name: name ?? 'photo', previewUri: uri ?? null, ...capture,
+      };
+      // Today's photo goes on today's entry; a capture timestamp (when present) overrides that in
+      // case the photo was actually taken earlier and is only being added now.
+      const dayDate = (typeof capture.capturedAt === 'string' ? capture.capturedAt.slice(0, 10) : null) || localDateString();
+
+      setUploading(true);
+      const uploadResult = await uploadBlogFiles({ backendUrl, headers, tripId: activeTripId }, dayDate, [pickedFile]);
+      setUploading(false);
+      if (uploadResult.quotaBlocked) {
+        const plans = await fetchBillingPlans(backendUrl, headers.Authorization?.replace('Bearer ', ''));
+        setStoragePlans(plans.filter((p) => p.planKey.startsWith('storage_')));
+        setShowQuotaModal(true);
+        return;
+      }
+      if (!uploadResult.succeeded || !uploadResult.assets[0]) {
+        alertMessage('Add photo', uploadResult.errors?.[0] || 'Unable to add this photo.');
+        return;
+      }
+      await load();
+      const uploadedAsset = uploadResult.assets[0];
+      setQuickCaptureAsset({
+        assetId: uploadedAsset.id,
+        caption: uploadedAsset.caption ?? '',
+        altText: uploadedAsset.altText ?? '',
+        isDecorative: Boolean(uploadedAsset.isDecorative),
+        tags: uploadedAsset.tags ?? [],
+      });
+    } catch (error) {
+      alertMessage('Add photo', error.message || 'Unable to take or add this photo.');
+    } finally {
+      setQuickCapturing(false);
+    }
+  };
+
   const handleVoiceNote = async (dayDate) => {
     if (!canEdit || uploading) return;
     setUploading(true);
@@ -1273,6 +1351,17 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: editMode ? (theme?.colors?.surfaceMuted ?? '#e5e7eb') : (theme?.colors?.cta ?? '#F59E0B') }]}
               >
                 <Text style={[styles.buttonText, { color: editMode ? textColor : '#0B1726' }]}>{editMode ? 'Done editing' : 'Edit blog'}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {!readOnly && !editMode ? (
+              <TouchableOpacity
+                testID="blog-camera-capture"
+                accessibilityRole="button"
+                disabled={quickCapturing || uploading}
+                onPress={quickCapturePhoto}
+                style={[styles.button, { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb', opacity: quickCapturing || uploading ? 0.6 : 1 }]}
+              >
+                <Text style={[styles.buttonText, { color: textColor }]}>{quickCapturing ? 'Opening camera…' : '📷 Add photo'}</Text>
               </TouchableOpacity>
             ) : null}
             {publicPageUrl ? (
@@ -2083,6 +2172,40 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         borderColor={borderColor}
         backgroundColor={surfaceColor}
       />
+      <Modal visible={!!quickCaptureAsset} transparent animationType="slide" onRequestClose={() => setQuickCaptureAsset(null)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, maxHeight: '85%' }}>
+            <ScrollView>
+              <Text style={{ color: textColor, fontSize: 18, fontWeight: 'bold', marginBottom: 4 }}>Photo added</Text>
+              <Text style={{ color: mutedColor, marginBottom: 8, fontSize: 13 }}>Add a caption now, or tap Done to add one later.</Text>
+              {quickCaptureAsset ? (
+                <BlogMediaMetadataEditor
+                  item={quickCaptureAsset}
+                  canSuggest={Boolean(capabilities.trip_blog_caption_ai)}
+                  canRecord={Boolean(capabilities.trip_blog_audio_transcription)}
+                  busy={metadataBusyAssetId === quickCaptureAsset.assetId}
+                  onSave={(patch) => saveMediaMetadata(quickCaptureAsset, patch)}
+                  onSuggest={() => suggestMediaMetadata(quickCaptureAsset)}
+                  onTranscribe={(recording) => transcribeMediaCaption(quickCaptureAsset, recording)}
+                  textColor={textColor}
+                  mutedColor={mutedColor}
+                  borderColor={borderColor}
+                  backgroundColor={inputColor}
+                  styles={styles}
+                  theme={theme}
+                />
+              ) : null}
+              <TouchableOpacity
+                testID="blog-quick-capture-done"
+                style={[styles.button, { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb', marginTop: 14 }]}
+                onPress={() => setQuickCaptureAsset(null)}
+              >
+                <Text style={{ color: textColor }}>Done</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={showQuotaModal} transparent animationType="slide" onRequestClose={() => setShowQuotaModal(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: surfaceColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
