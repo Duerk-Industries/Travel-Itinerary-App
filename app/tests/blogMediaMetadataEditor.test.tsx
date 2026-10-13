@@ -17,6 +17,9 @@ describe('BlogMediaMetadataEditor', () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
     const view = render(<BlogMediaMetadataEditor item={{ assetId: 'asset-1' }} onSave={onSave} styles={{ button: {}, buttonText: {} }} />);
     expect(view.getByTestId('blog-media-save-metadata').props.accessibilityState?.disabled ?? view.getByTestId('blog-media-save-metadata').props.disabled).toBeTruthy();
+    // The disabled Save button must say why, so a caption-only edit (e.g. after dictating a
+    // caption, which never fills alt text) isn't a silent dead end.
+    expect(view.getByText(/Add alt text \(or mark this photo decorative\) to save/)).toBeTruthy();
 
     fireEvent.changeText(view.getByTestId('blog-media-alt-text-input'), 'Two travelers beside a lake');
     fireEvent.press(view.getByTestId('blog-media-save-metadata'));
@@ -78,6 +81,9 @@ describe('BlogMediaMetadataEditor', () => {
     await waitFor(() => expect(view.getByTestId('blog-media-caption-input').props.value).toBe('A quiet morning by the lake'));
     await waitFor(() => expect(setAudioModeAsync).toHaveBeenNthCalledWith(2, { allowsRecording: false }));
     expect(onSave).not.toHaveBeenCalled();
+    // Dictation only ever fills the caption, never alt text, so Save is still disabled here —
+    // the transcription notice must say that, not just "review it before saving".
+    expect(view.getByText('Transcribed — add alt text (or mark decorative) below, then save.')).toBeTruthy();
   });
 
   it('shows a notice instead of recording when microphone permission is denied, and never touches the audio session', async () => {
