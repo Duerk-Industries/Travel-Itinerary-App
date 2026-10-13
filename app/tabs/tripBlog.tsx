@@ -42,6 +42,7 @@ import {
   uploadBlogFiles,
 } from '../utils/blogUpload';
 import { convertImageToJpeg, isHeicMimeType, toJpegName } from '../utils/heicToJpeg';
+import { actualAudioType, readLocalBlob } from '../utils/localBlob';
 import { defaultTemperatureUnitForRegion, formatWeatherFactValue, type TemperatureUnit } from '../utils/temperatureUnit';
 import { readImageCaptureMetadata, readNativeExifCapture } from '../utils/exifCapture';
 import PhotoFirstComposer from '../components/PhotoFirstComposer';
@@ -493,8 +494,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         // ("An audio recording is required"). Found via manual testing on web, not previously
         // exercised there. fetch() the blob: URI to get a real Blob, then append(name, blob,
         // filename) -- that's what actually attaches bytes to the multipart body in a browser.
-        const audioResponse = await fetch(recording.uri);
-        const audioBlob = await audioResponse.blob();
+        const audioBlob = recording.blob ?? await readLocalBlob(recording.uri);
         formData.append('audio', audioBlob, recording.name || 'caption-recording.m4a');
       } else {
         formData.append('audio', {
@@ -908,8 +908,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       const result = await DocumentPicker.getDocumentAsync({ type: SUPPORTED_AUDIO_MIME_TYPES, multiple: false, copyToCacheDirectory: true });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      let blob;
+      try {
+        blob = await readLocalBlob(asset.uri);
+      } catch (error) {
+        throw new Error(`Couldn't read that audio file on this device (${error.message || 'unknown error'}). Please try again.`);
+      }
       const mimeType = asset.mimeType || guessMimeTypeFromName(asset.name);
       if (!mimeType || !SUPPORTED_AUDIO_MIME_TYPES.includes(mimeType)) throw new Error('Choose an MP3, M4A, WAV, or WebM audio file.');
       const uploaded = await uploadBlogFiles(
@@ -940,12 +944,20 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     setUploading(true);
     setVoiceUploadFailures((current) => ({ ...current, [dayDate]: null }));
     try {
-      const response = await fetch(recording.uri);
-      const blob = await response.blob();
+      let blob;
+      try {
+        blob = await readLocalBlob(recording.uri);
+      } catch (error) {
+        throw new Error(`Couldn't read the recording on this device (${error.message || 'unknown error'}). Please try again.`);
+      }
+      // Label the audio with the format the browser really recorded (iPhone Safari: audio/mp4,
+      // Chrome: audio/webm), not the "audio/m4a" the recorder assumes, so it plays back elsewhere.
+      const { mimeType, extension } = actualAudioType(blob.type, recording.mimeType);
+      recording = { ...recording, mimeType, name: `voice-note.${extension}`, blob };
       const uploaded = await uploadBlogFiles(
         { backendUrl, headers, tripId: activeTripId },
         dayDate,
-        [{ blob, mimeType: recording.mimeType, size: blob.size, name: recording.name }]
+        [{ blob, mimeType, size: blob.size, name: recording.name }]
       );
       if (!uploaded.succeeded || !uploaded.assets[0]) {
         throw new Error(uploaded.quotaBlocked ? 'Your blog storage is full.' : uploaded.errors?.[0] || 'Unable to add the voice note.');
