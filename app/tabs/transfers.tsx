@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, type ViewStyle } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -530,8 +530,8 @@ const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes' | 'ra
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'status', label: 'Status', minWidth: 120 },
   { key: 'transfer_type', label: 'Type', minWidth: 120 },
-  { key: 'votes', label: 'Votes', minWidth: 120 },
-  { key: 'rating', label: 'Rating', minWidth: 120 },
+  { key: 'votes', label: 'Votes', minWidth: 96 },
+  { key: 'rating', label: 'Rating', minWidth: 96 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
   { key: 'departure_time', label: 'Departure Time' },
@@ -545,8 +545,13 @@ const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes' | 'ra
   { key: 'flight_number', label: 'Flight #' },
   { key: 'booking_reference', label: 'Booking Ref' },
   { key: 'paidBy', label: 'Paid by' },
-  { key: 'actions', label: 'Actions', minWidth: 180 },
+  { key: 'actions', label: 'Actions', minWidth: 140 },
 ];
+
+// Shrinks the Edit/Delete and thumbs-up/down buttons in the transfers table down to roughly
+// one line of text tall, instead of the app-wide button paddings meant for standalone buttons.
+const COMPACT_ACTION_BUTTON: ViewStyle = { height: 24, minWidth: 56, paddingHorizontal: 8, paddingVertical: 2 };
+const COMPACT_ICON_BUTTON: ViewStyle = { minWidth: 0, paddingHorizontal: 6, paddingVertical: 2 };
 
 
 export const FlightsTab: React.FC<FlightsTabProps> = ({
@@ -867,6 +872,62 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (match) return formatAirportLabel(match);
     return normalized;
   };
+
+  const getColumnDisplayValue = (item: Flight, key: typeof columns[number]['key']): string => {
+    const value = item[key as keyof Flight];
+    const baseDisplay = value != null ? String(value) : '-';
+    switch (key) {
+      case 'passenger_name': {
+        const ids = Array.isArray(item.passenger_ids) ? item.passenger_ids : [];
+        return formatTravelerListDisplay(ids, baseDisplay, groupMembers) || baseDisplay;
+      }
+      case 'cost':
+        return `$${value}`;
+      case 'costPerPerson': {
+        const count = Array.isArray(item.passenger_ids) ? item.passenger_ids.length : 0;
+        const per = count ? (Number(item.cost) || 0) / count : Number(item.cost) || 0;
+        return `$${per.toFixed(2)}`;
+      }
+      case 'booking_reference':
+        return baseDisplay.toUpperCase();
+      case 'paidBy':
+        return Array.isArray(item.paidBy) && item.paidBy.length ? item.paidBy.map(payerName).join(', ') : '-';
+      case 'departure_date':
+      case 'arrival_date':
+        return formatDateLong(baseDisplay);
+      case 'departure_location':
+        return formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel);
+      case 'arrival_location':
+        return formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel);
+      default:
+        return baseDisplay;
+    }
+  };
+
+  // Web ("on computer") gets columns sized to their actual content so a row renders on one
+  // line instead of wrapping; native keeps the fixed widths since horizontal scroll there is
+  // the more natural way to reach off-screen columns on a small viewport.
+  const dynamicColumnWidths = useMemo<Record<string, number>>(() => {
+    if (Platform.OS !== 'web') return {};
+    const CHAR_WIDTH_PX = 7.2;
+    const CELL_PADDING_PX = 32;
+    const MAX_COLUMN_WIDTH_PX = 420;
+    const widths: Record<string, number> = {};
+    for (const col of columns) {
+      if (col.key === 'actions' || col.key === 'votes' || col.key === 'rating') continue;
+      let longest = col.label.length;
+      for (const item of sortedFlights) {
+        const text = getColumnDisplayValue(item, col.key);
+        if (text.length > longest) longest = text.length;
+      }
+      const estimated = Math.ceil(longest * CHAR_WIDTH_PX) + CELL_PADDING_PX;
+      const minW = col.minWidth ?? 90;
+      widths[col.key as string] = Math.max(minW, Math.min(estimated, MAX_COLUMN_WIDTH_PX));
+    }
+    return widths;
+  }, [sortedFlights, groupMembers, airports]);
+  const colWidth = (col: { key: typeof columns[number]['key']; minWidth?: number }) =>
+    dynamicColumnWidths[col.key as string] ?? (col.minWidth ?? 120);
 
   const getLocationInputValue = (
     rawValue: string,
@@ -1532,7 +1593,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 key={col.key}
                 style={[
                   styles.cell,
-                  fixedTableColumn(col.minWidth ?? 120),
+                  fixedTableColumn(colWidth(col)),
                   col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   col.key === 'actions' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 4, backgroundColor: theme?.colors.surface } as any),
                   idx === columns.length - 1 && styles.lastCell,
@@ -1554,7 +1615,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.actionCell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', right: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                         isLast && styles.lastCell,
                       ]}
@@ -1563,10 +1624,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       <View style={styles.actionCell}>
                         {!readOnly ? (
                           <>
-                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)} testID={`transfer-edit-${item.id}`}>
+                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary, COMPACT_ACTION_BUTTON]} onPress={() => openFlightDetails(item)} testID={`transfer-edit-${item.id}`}>
                               <Text style={styles.buttonText}>Edit</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)} testID={`transfer-delete-${item.id}`}>
+                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger, COMPACT_ACTION_BUTTON]} onPress={() => removeFlight(item.id)} testID={`transfer-delete-${item.id}`}>
                               <Text style={styles.buttonText}>Delete</Text>
                             </TouchableOpacity>
                           </>
@@ -1588,21 +1649,21 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.actionCell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
                       {!readOnly && showButtons ? (
                         <>
                           <TouchableOpacity
-                            style={[styles.button, styles.smallButton]}
+                            style={[styles.button, styles.smallButton, COMPACT_ICON_BUTTON]}
                             onPress={() => voteOnFlight(item.id, 1)}
                             testID={`flight-vote-up-${item.id}`}
                           >
                             <Text style={styles.buttonText}>👍</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
                             onPress={() => voteOnFlight(item.id, -1)}
                             testID={`flight-vote-down-${item.id}`}
                           >
@@ -1625,20 +1686,20 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`${item.id}-${col.key}`}
                       style={[
                         styles.cell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
                       {!readOnly && showButtons ? (
                         <View style={styles.actionCell}>
                           <TouchableOpacity
-                            style={[styles.button, styles.smallButton]}
+                            style={[styles.button, styles.smallButton, COMPACT_ICON_BUTTON]}
                             onPress={() => rateFlight(item.id, 1)}
                           >
                             <Text style={styles.buttonText}>👍</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            style={[styles.button, styles.smallButton, styles.dangerButton, COMPACT_ICON_BUTTON]}
                             onPress={() => rateFlight(item.id, -1)}
                           >
                             <Text style={styles.buttonText}>👎</Text>
@@ -1652,39 +1713,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
-                const value = item[col.key as keyof Flight];
-                const baseDisplay = value != null ? String(value) : '-';
-                const display =
-                  col.key === 'passenger_name'
-                    ? (() => {
-                        const ids = Array.isArray(item.passenger_ids) ? item.passenger_ids : [];
-                        return formatTravelerListDisplay(ids, baseDisplay, groupMembers) || baseDisplay;
-                      })()
-                    : col.key === 'cost'
-                      ? `$${value}`
-                      : col.key === 'costPerPerson'
-                        ? (() => {
-                            const count = Array.isArray(item.passenger_ids) ? item.passenger_ids.length : 0;
-                            const per = count ? (Number(item.cost) || 0) / count : Number(item.cost) || 0;
-                            return `$${per.toFixed(2)}`;
-                          })()
-                        : col.key === 'booking_reference'
-                          ? baseDisplay.toUpperCase()
-                          : col.key === 'paidBy'
-                            ? Array.isArray(item.paidBy) && item.paidBy.length ? item.paidBy.map(payerName).join(', ') : '-'
-                            : col.key === 'departure_date'
-                              ? formatDateLong(baseDisplay)
-                              : col.key === 'departure_location'
-                                ? formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel)
-                                : col.key === 'arrival_location'
-                                  ? formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel)
-                                  : baseDisplay;
+                const display = getColumnDisplayValue(item, col.key);
                 return (
                   <View
                     key={`${item.id}-${col.key}`}
                     style={[
                       styles.cell,
-                      fixedTableColumn(col.minWidth ?? 120),
+                      fixedTableColumn(colWidth(col)),
                       col.key === 'passenger_name' && Platform.OS === 'web' && featureTapToEditTables && ({ position: 'sticky', left: 0, zIndex: 3, backgroundColor: theme?.colors.surface } as any),
                       isLast && styles.lastCell,
                     ]}
@@ -1706,7 +1741,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.actionCell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1722,7 +1757,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1736,7 +1771,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1792,7 +1827,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1813,7 +1848,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1841,7 +1876,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1875,7 +1910,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.locationField,
-                        { ...fixedTableColumn(col.minWidth ?? 120), position: 'relative' },
+                        { ...fixedTableColumn(colWidth(col)), position: 'relative' },
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1897,7 +1932,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       key={`input-${col.key}`}
                       style={[
                         styles.cell,
-                        fixedTableColumn(col.minWidth ?? 120),
+                        fixedTableColumn(colWidth(col)),
                         isLast && styles.lastCell,
                       ]}
                     >
@@ -1919,7 +1954,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     key={`input-${col.key}`}
                     style={[
                       styles.cell,
-                      fixedTableColumn(col.minWidth ?? 120),
+                      fixedTableColumn(colWidth(col)),
                       isLast && styles.lastCell,
                     ]}
                   >
