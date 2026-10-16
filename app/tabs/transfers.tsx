@@ -428,6 +428,7 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
   arrival_location: f.arrival_location ?? f.arrivalLocation ?? '',
   layover_location: f.layover_location ?? f.layoverLocation ?? '',
   layover_location_code: f.layover_location_code ?? f.layoverLocationCode ?? '',
+  layover_duration: f.layover_duration ?? f.layoverDuration ?? '',
   departure_airport_code: f.departure_airport_code ?? f.departureAirportCode ?? '',
   arrival_airport_code: f.arrival_airport_code ?? f.arrivalAirportCode ?? '',
   layover_airport_code: f.layover_airport_code ?? f.layoverAirportCode ?? '',
