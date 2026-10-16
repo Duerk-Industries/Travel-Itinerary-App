@@ -2353,6 +2353,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   };
 
+  // Full street addresses (e.g. "6-chome-10-7 Ueno, Taito City, Tokyo 110-0005, Japan",
+  // as saved from a Google Places lookup) are too long for the day card header — keep
+  // just the city segment. Addresses without a comma (an airport code, a bare city name)
+  // are returned unchanged.
+  const shortenLocationToCity = (location: string): string => {
+    const trimmed = (location || '').trim();
+    if (!trimmed) return trimmed;
+    const parts = trimmed.split(',').map((part) => part.trim()).filter(Boolean);
+    return parts.length > 1 ? parts[1] : trimmed;
+  };
+
   // Priority mirrors the day title rule: activities beat the transfer, which
   // beats lodging, so a lodging stay no longer masks a day that has activities
   // (or at least a transfer) happening on it. Empty when nothing is known, so
@@ -2360,13 +2371,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
     if (!info) return tripLocationLabel || '';
     const tour = info.tours[0];
-    if (tour) return tour.startLocation || tour.name || tripLocationLabel || '';
+    if (tour) return (tour.startLocation ? shortenLocationToCity(tour.startLocation) : '') || tour.name || tripLocationLabel || '';
     const flight = info.flights[0];
-    if (flight) return flight.departure_location || flight.departure_airport_code || tripLocationLabel || '';
+    if (flight) return (flight.departure_location ? shortenLocationToCity(flight.departure_location) : '') || flight.departure_airport_code || tripLocationLabel || '';
     const lodging = info.lodgings[0];
     if (lodging) return lodging.name || tripLocationLabel || '';
     const rental = info.rentals[0];
-    if (rental) return rental.pickupLocation || rental.vendor || tripLocationLabel || '';
+    if (rental) return (rental.pickupLocation ? shortenLocationToCity(rental.pickupLocation) : '') || rental.vendor || tripLocationLabel || '';
     return tripLocationLabel || '';
   };
 
