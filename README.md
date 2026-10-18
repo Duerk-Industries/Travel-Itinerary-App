@@ -88,6 +88,7 @@ For deployment and environment setup, use the guides in [`DEPLOYMENT-GCP-FIREBAS
 
 ### Planning and Reference Notes
 
+- [Gap-Closing Implementation Plan (Map, Discovery, Email Import, Dark Features, Offline)](docs/implementation_plans/implementation-plan-gap-closing.md)
 - [Expense Tracking Notes](EXPENSE_TRACKING.md)
 - [Accounting Fixes](Accounting_Fixes.md)
 - [Traits Reference](traits_list.md)
