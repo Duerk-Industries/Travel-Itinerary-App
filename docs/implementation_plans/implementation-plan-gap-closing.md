@@ -1,6 +1,6 @@
 # Gap-Closing Plan: Map, Discovery, Email Import, Dark Features, Offline
 
-**Status:** Proposed — nothing in this document is implemented yet.
+**Status:** Revised proposal — extends existing functionality; production configuration is unverified.
 **Last updated:** 2026-10-18
 **Authors:** assistant, in collaboration with Bryan Duerk
 **Builds on:** `implementation-plan-wanderlog-competitive-analysis.md` (§5.1–5.4),
@@ -17,9 +17,9 @@ This plan covers five gaps found in the Wanderlog/Stippl comparison: (1) in-app 
 (6) offline access. Gap 5, public pricing and social proof, is out of scope.
 
 Most of the groundwork already exists: a static day map, an email-import pipeline, a
-notification outbox, and an offline write queue. The plan adds **one new shared layer —
-address geocoding** — finishes the dark features, and makes email import both **safe**
-and **hands-off**.
+notification outbox, native offline trip snapshots/unlock, and an offline write queue.
+Extend those components rather than building competing stacks. Prioritize import
+attribution and reliable offline storage before expanding automation or provider spend.
 
 Two corrections to the comparison:
 
@@ -31,6 +31,29 @@ Two corrections to the comparison:
 **One security issue needs fixing before email import is widened** (§3.1): forwarded mail
 is attributed to an account by its spoofable `From` address.
 
+### Verification against the repository (2026-10-18)
+
+These are source-code findings, not evidence of deployed settings or live provider behavior.
+
+| Existing implementation | Consequence for this plan |
+| --- | --- |
+| `staticMapRoutes.ts` authenticates callers, normalizes up to 12 points, and uses a 32 MiB in-process TTL cache plus provider accounting. Requests accept arbitrary client coordinates/addresses rather than a trip id. | A cache miss after restart/scale-out still costs money. Audit effective HTTP rate limits, timeouts, response bounds, and paid-call abuse before enabling; a key alone is insufficient. |
+| `ingestion/intake/mailgun.ts` resolves users by sender; `ingestionWebhookRoutes.ts` consumes quota before constructing/deduplicating jobs and logs mail metadata. | Alias attribution, log minimization, durable admission, and retry-safe quota accounting are prerequisites. |
+| `virusScanProviders/clamavHttpAdapter.ts` implements real `scanBuffer`; its `scanBatch` returns `PASSED` without scanning. Intake currently calls the per-buffer path when available. Provider selection defaults unknown values to the stub. | Reuse and validate the adapter; remove false-success paths and fail closed on invalid production configuration. Do not describe scanning as an entirely new integration. |
+| `ingestion/extraction/index.ts` already has a user/content/version cache, static/learned strategies, and production-only sampled consensus. The sample default is 100%. | Tune the existing policy and measure quality; not every environment or cache hit makes two LLM calls. |
+| `offlineTripCache.ts`, `offlineAccess.ts`, `OfflineUnlockScreen.tsx`, and `App.tsx` already save native snapshots and support device-authenticated read-only unlock. Snapshots include members, payments, and coverage. | Improve the current implementation; do not lose those fields in a replacement bundle. Snapshot storage currently uses localStorage/AsyncStorage and email-scoped keys. |
+| `session.ts` and offline cache use a 30-day window; `App.tsx` clears trip snapshots on logout. `usePendingWrites.ts` uses one global storage key, drops entries after five failures, and has no replay lock. | The old 12-hour claim is stale. Expense replay requires account isolation, durable failures, and concurrency protection first. |
+| `notificationTypes.ts` already includes `activity_recap`; `notificationOutboxWorker.ts` already removes devices on Expo ticket `DeviceNotRegistered` errors and falls back from push to email. | Extend categories and delivery behavior; verify later receipts and email preferences rather than rebuilding token pruning. |
+| `entitlementService.ts` caches flags by key and currently ignores optional user/role arguments. | A cohort rollout requires cache-safe evaluation changes; passing a user id alone does nothing. |
+
+### Scope and priority
+
+**P0:** import attribution/admission, scan enforcement, queue account isolation and no data
+loss. **P1:** reliable native snapshots, notification inbox, catalog discovery, bounded map
+rollout. **P2:** interactive maps, reorder/optimization, opt-in auto-assignment, offline
+expenses. **Later:** web push, Gmail scheduling, public explore pages, paid route refinement.
+This document authorizes planning only; provisioning, flag flips, and rollout are separate implementation tasks.
+
 ### Architecture at a glance
 
 ```mermaid
@@ -40,7 +63,7 @@ flowchart LR
     A2["Nearby + Add to day<br/><b>new</b>"]
     A3["Import + review queue<br/><i>exists · auto-assign + alias</i>"]
     A4["Notification inbox<br/><b>new</b> · mobile push exists"]
-    A5["Offline snapshot<br/><b>new</b> · write queue exists"]
+    A5["Offline snapshot + native unlock<br/><i>exists · harden storage and replay</i>"]
   end
   subgraph API["API server (Express)"]
     S1["Maps proxy + geocoding queue"]
@@ -51,7 +74,7 @@ flowchart LR
     DB[("Postgres / Firestore / pg-mem<br/>geocode_cache · lat/lng · sort_order<br/>content_version · ingestion_aliases")]
   end
   subgraph Ext["Third-party services"]
-    E1["Google Static Maps · Nominatim · vector tiles"]
+    E1["Google Static Maps · approved geocoder · vector tiles"]
     E2["GetYourGuide (affiliate)"]
     E3["Mailgun inbound · ClamAV"]
     E4["Expo push · SMTP"]
@@ -69,56 +92,77 @@ flowchart LR
 ## 1. In-app map
 
 Turn on the static day map that already exists, add coordinates so it can draw routes,
-then add a keyless interactive map on desktop web.
+then evaluate an interactive map on desktop web as a later enhancement.
 
 **Already built:** `GET /api/maps/trip-day` in `server/src/routes/staticMapRoutes.ts` (24 h
-content-addressed cache, rate limit, $15/month budget cap) and `app/components/TripDayMap.tsx`
-in the Overview day view. Both sit behind `trip_day_map`, which is off only because no
-Google Static Maps key is provisioned.
+process-local content-addressed cache, provider usage limits, configured $15/month budget)
+and `app/components/TripDayMap.tsx`
+in the Overview day view. The flag seeds off. Source inspection cannot establish whether
+production has a usable key or whether that is the only deployment blocker.
 
 ### Steps
 
-1. **Enable it (no code).** Provision a server-only key restricted to the Static Maps API,
-   set `GOOGLE_STATIC_MAPS_API_KEY`, flip `trip_day_map`.
+1. **Bounded activation.** Audit authorization and effective per-user/IP/provider limits,
+   key restrictions, image-cache terms, fetch timeouts/size limits, and budget exhaustion UX
+   before provisioning or enabling. Keep keys server-only; redact provider URLs in logs.
+   Prefer an authorized trip/day request that derives points server-side; retain a strictly
+   limited preview route only where needed. Quota exhaustion leaves the itinerary and
+   external-map links usable. Restrict style/size options to prevent cache-key abuse.
 2. **Route line.** Once items carry coordinates (§1.1), send `lat`/`lng` instead of
    addresses — `normalizeTripMapPoints` already accepts them — and add Google's `path`
-   parameter in visit order.
+   parameter in visit order. Label it a connection between stops, not a navigable road
+   route; haversine estimates do not account for rivers, crossings, or accessibility.
 3. **Travel time between stops.** Show "~12 min walk" between consecutive stops using the
    existing `transferEstimationService`: haversine estimate by default, Directions API only
    where `attractions_transfer_directions_api` already allows it.
-4. **Stop order.** Add `sort_order` to activities (Postgres migration, Firestore field,
-   pg-mem inherits). Drag-to-reorder on web with `@dnd-kit/core`, per competitive-analysis §5.3.
+4. **Stop order.** Confirm existing ordering fields first, then persist stable per-day
+   activity order through an authorized, atomic bulk mutation with an expected version.
+   A global activity order must not reorder other days. Preserve timed bookings/transfers.
+   Provide keyboard and Move up/down controls alongside drag; test React Native Web
+   compatibility before adopting a drag library.
 5. **Optimize day.** Nearest-neighbour + 2-opt on the client over ≤ 12 coordinates,
-   starting and ending at the lodging — instant, no API call. Premium can refine with
-   Google Routes. Always show before/after with **Revert**.
+   with optional lodging endpoints — no API call. Respect fixed times, opening hours when
+   known, and user-pinned stops; missing coordinates produce an explicit partial result.
+   Describe the objective as reduced straight-line distance. Preview before applying;
+   Revert must detect intervening collaborators' edits. Defer paid routing until measured demand.
 6. **Interactive map on desktop web.** MapLibre GL JS with keyless vector tiles
    (OpenFreeMap; Protomaps PMTiles on Cloud Storage as the self-hosted fallback). Wide
    screens get a split view: itinerary left, map right; tapping a pin highlights its row
    and opens the existing item dialog. Lazy-load the map library when the map opens.
-   Native and narrow screens keep the static image.
+   Native and narrow screens keep the static image. Handle WebGL failure, reduced motion,
+   screen readers, and missing pins with the same usable itinerary list. Tile/style/glyph
+   endpoints require CSP and attribution review; third-party tiles reveal IP and viewport.
+   Keyless service does not imply a contractual availability guarantee or zero total cost.
 
 ### 1.1 Shared geocoding layer (new — also feeds §2, §3.3, §6)
 
-- `geocode_cache` keyed by a hash of the normalized address: `lat`, `lng`, `city`,
-  `country_code`, `provider`, `quality`, `created_at`. Shared across users, so each
-  address is looked up once, ever.
+- Prefer coordinates from the catalog, airports, and existing item metadata. Missing
+  coordinates must never block saving or viewing an item.
+- `geocode_cache`: normalized query plus country/locality/language context, provider and
+  normalization version; result coordinates, quality, provenance, expiry, and negative-result
+  TTL. Reuse public POIs across users where permitted; isolate sensitive/private addresses.
+  A plain address hash is guessable and is not anonymization. Never share reservation text.
+  Refresh stale results and invalidate item coordinates when the address changes.
 - Nullable `lat`, `lng`, `geo_city` on lodgings, activities, and car rentals (pickup and
   dropoff). Flights already resolve through the airports table, and catalog attractions
   already carry coordinates, so an activity added from the catalog needs no lookup.
-- Geocode when a user saves an item, through a **single-worker queue** off the request
-  path. Backfill existing rows once, single-threaded at **4 requests/minute**, as
-  Nominatim's bulk rules require.
-- Provider: Nominatim, already used by `merchantCategoryLookupService.ts`, behind
-  `usageLimiter` and `providerBudgeting`. Its public instance allows **1 request/second for
-  the whole app**, requires an identifying User-Agent, and must be switchable off without
-  an app update — a fail-closed flag (`geocoding_nominatim`) covers that. Google Places
-  stays off, preserving the earlier decision.
-- The public instance fits current volume, not growth. Put the provider behind an
-  interface, like `FlightParserConfigurator`, so a self-hosted or paid geocoder can
-  replace it.
-- Side benefits: fills the `LodgingLocation` latitude, longitude, and timezone that are
-  `null` today (helps `tripTimezoneService`), and lets the day-card title use `geo_city`
-  instead of the comma-splitting `shortenLocationToCity` heuristic in `overview.tsx`.
+- Use a durable, leased queue with idempotent jobs, retry/backoff, a dead-letter state,
+  bounded backlog, and stale-address checks before committing results. An in-process
+  single worker is insufficient across Cloud Run instances or restarts.
+- **Provider decision remains gated.** Existing `merchantCategoryLookupService.ts` uses
+  public Nominatim with process-local scheduling; consolidate all consumers if retained.
+  Its [usage policy](https://operations.osmfoundation.org/policies/nominatim/) limits the
+  whole application to 1 request/second, requires identification, attribution and caching,
+  restricts eligible bulk work to one thread/machine (4/minute for recurring or day-long
+  scripts), and prohibits submitting confidential or personal data. These limits do not
+  automatically authorize a production backfill. No autocomplete, systematic POI harvest,
+  or private-address submission. Document developer approval and permitted inputs first;
+  otherwise leave external geocoding off. Google Places remains off.
+- Keep a provider interface and server-controlled fail-closed flag. Evaluate alternatives
+  only when needed, including storage rights, privacy, fixed operational cost, and load.
+- Coordinates do not establish timezone by themselves. Use a separate offline timezone
+  lookup with provenance; allow correction of ambiguous geocodes. Use `geo_city` for display
+  only when quality is sufficient; retain the original location as fallback.
 
 ---
 
@@ -135,13 +179,18 @@ public trip blogs behind a consent flow, and trip following.
 ### Steps
 
 1. **"Nearby" panel in the day view.** Catalog places within ~2 km of that day's lodging
-   or first stop, ranked by the group's traits. Deterministic, no LLM call. Needs §1.1 for
-   the lodging's coordinates. Spatial lookup: an in-memory index per destination, loaded
-   at startup like the autocomplete prewarm, so a query costs no database reads.
+   or first stop, ranked by the group's traits. Deterministic, no LLM call. Start with
+   catalog coordinates or a manually selected destination; external geocoding is optional.
+   Reuse catalog loading/ranking helpers. Bound lazy per-destination indexes by memory and
+   TTL/version, deduplicate concurrent loads, and avoid full-catalog work on every cold start.
+   Warm lookups can avoid catalog DB reads; authorization/limits and index refresh still cost.
 2. **One-tap "Add to day".** Creates an activity prefilled with name, coordinates, typical
-   duration (`attractionDurationEstimationService`), and description.
+   duration (`attractionDurationEstimationService`), and description. Confirm trip/day,
+   validate membership and traveler limits server-side, and use an idempotency key so
+   double taps/retries create one item. Show source, estimated duration, and duplicate warning.
 3. **Bookable options inline.** GetYourGuide matches under a Nearby place when one exists.
-   Affiliate revenue offsets per-user cost.
+   Label affiliate links and keep ranking independent of commission. No paid enrichment per
+   card; revenue is uncertain and must not subsidize the budget model until measured.
 4. **"Trips like this".** On a trip's overview, list public blogs for the same destination.
    "Copy these activities" clones names, coordinates, and durations only — never another
    group's bookings, costs, or notes.
@@ -152,13 +201,18 @@ public trip blogs behind a consent flow, and trip following.
 
 **Guardrails:** browse and copy read only content published under public-sharing consent;
 discovery endpoints sit behind `httpRateLimitService`.
+Use an explicit public projection, recheck visibility when copying, and invalidate discovery
+caches on unpublish/delete. No booking references, travelers, precise private lodging,
+costs, or notes. Bound result count/radius and offer list-only, empty-state, and accessible
+filters; do not imply live opening hours or booking availability from cached descriptions.
 
 ---
 
 ## 3. Email import: safe, then hands-off
 
-Goal: a user forwards a confirmation, and within a minute it appears **in the right trip**
-with a notification — no review screen unless something is genuinely ambiguous. That
+Goal: a user forwards a confirmation and quickly sees receipt, progress, and a suggested
+trip. After measured rollout, opted-in users can receive confident imports automatically.
+Processing latency is a measured target, not a one-minute guarantee during cold starts. That
 requires fixing attribution first, because auto-assignment writes into a trip the whole
 group sees.
 
@@ -166,7 +220,7 @@ group sees.
 
 | Piece | State | Where |
 | --- | --- | --- |
-| Manual upload → review → assign | Production-ready | `ingestion/intake`, `review_queue`, `assignment` |
+| Manual upload → review → assign | Implemented; technical-debt record calls it production-ready, deployment not verified in this review | `ingestion/intake`, `review_queue`, `assignment` |
 | Mailgun forwarding | Flag on; "scaffolded" per `TECHNICAL_DEBT.md` | `intake/mailgun.ts`, `routes/ingestionWebhookRoutes.ts` |
 | Webhook HMAC, timestamp window, replay tokens | Done | `validateMailgunWebhookSignature` |
 | Single shared address | `travel.docs@wander-bunnies.com` | `INGESTION_DEFAULT_FORWARDING_ADDRESS` |
@@ -174,7 +228,7 @@ group sees.
 | Trip assignment | Always manual, by design | `assignParsedItemToTrip`; "No automatic assignment" in `TECHNICAL_DEBT.md` |
 | Assignment tracking | Each assignment gets an `assignment_transaction_id` | `shared/repository.ts` |
 | Traveler matching | Names → group member ids | `matchTravelerNamesToGroupMemberIds` |
-| Virus scanning | Production provider is a pass-through stub | `ingestion/virusScanProviders` |
+| Virus scanning | Real `clamav_http` buffer adapter exists; defaults/legacy paths can still use a stub or batch false-success | `ingestion/virusScanProviders`, `intake/index.ts` |
 | Gmail OAuth import | Flag off; manual-trigger only | `ingestion/gmail`, `gmailPollingService.ts` |
 
 ### 3.1 Security fix: stop trusting `From`
@@ -201,58 +255,95 @@ Info logs also record full sender, recipient, and subject for every webhook
      used for lookup), `address_ciphertext` (AES-256-GCM, the same pattern as
      `pushTokenCrypto.ts`, used only to show the address back to the user), `status`
      (`ACTIVE` | `ROTATED` | `REVOKED`), `created_at`, `grace_until`.
-   - **Rotate** in the Import screen: a new alias becomes active, the old one keeps
-     working for 7 days (`grace_until`), then is rejected. **Revoke** stops it immediately.
+   - **Rotate** in the Import screen: new alias active immediately; optional 7-day grace
+     only for routine rotation. Suspected compromise revokes the old alias immediately.
+     Bound active aliases per user; support key versioning, authenticated encryption with
+     user/alias id as associated data, and account-deletion cleanup. Never log alias tokens
+     or include them in analytics, public vCards, URLs, crash reports, or notifications.
 2. **Resolve by recipient, not sender.** Rewrite `resolveMailgunWebhookUser` to parse
    `body.recipient`, hash the token, and look up the alias. Unknown or revoked alias →
    drop with `200` (so Mailgun doesn't retry), log a counter, never reply.
-3. **Sender check (defense in depth).** Accept the message straight into the pipeline only
-   if the **envelope sender** (Mailgun's `sender` field) or `From`, after stripping
-   `+tags`, is one of the user's **verified addresses**: the account email plus any added
-   and confirmed on the Import screen. Gmail auto-forwarding keeps the airline in `From`
-   but sets the envelope sender to the user's own address with a `+caf_` tag, so stripping
-   tags is required — verify with a real auto-forward before shipping. Also require
-   Mailgun's SPF or DKIM result to pass (check the exact header names Mailgun adds on
-   inbound routes during implementation).
+3. **Sender check (defense in depth).** Domain authentication alone does not prove mailbox
+   ownership. Use only receiver-generated authentication results from a documented trusted
+   boundary, with identity/domain alignment; ignore forged `Authentication-Results` in
+   original mail. Verify added sender addresses with expiring, single-use tokens, and do
+   not treat an unverified account email as verified. Match normalized domains and exact
+   mailbox identities; no universal `+tag` stripping or assumptions about Gmail envelope
+   rewriting. Test real manual and automatic forwards for Gmail, Outlook, and Apple paths.
+   SPF may break on forwarding, and DKIM/ARC handling needs fixtures. An authentication
+   failure or uncertainty goes to hold, not auto-assignment. Verification gives permission
+   to import, never permission for an inbound email to modify settings or execute commands.
 4. **Unrecognized sender → hold, don't reject.** A message to a valid alias from an
    unverified sender goes to a new `HELD_UNVERIFIED_SENDER` job state **before
    normalization and extraction** — no LLM spend on unverified mail. The user sees "1
    message from `trips@spouse.example` — Import once / Always allow / Delete". "Always
    allow" adds a verified sender after a confirmation link is sent to that address.
-5. **Quota and rate limits after validation.** Move `assertAndConsumeMonthlyQuota` after
-   alias + sender validation, and add a per-alias cap (e.g. 50 messages/day) via
-   `httpRateLimitService` or the ingestion quota module.
+5. **Two admission budgets.** Enforce global/IP transport limits and aggregate multipart
+   bytes/parts/fields/timeouts before buffering; the current 20-file per-file cap is not an
+   aggregate cap. Then cap held mail by alias/account (initial proposal: 20 messages or
+   25 MiB, seven-day TTL), with coalesced alerts so a leaked alias cannot flood the inbox.
+   No parsing, OCR, scan-service calls, or LLM calls for held content. Store raw bytes in
+   private quarantine without preview. Consume the user import quota only on accepted
+   extraction work, once per message, with separate attachment/token bounds. Atomically
+   dedupe/reserve before enqueue; retries must not consume quota again. Budget checks and
+   storage failures fail closed and produce a recoverable status rather than losing mail.
 6. **No backscatter.** Never send an automatic email reply to the `From` of an inbound
    message. Status goes to the account owner in-app and by push (§4), or by email to the
    **account** address only.
-7. **Log hygiene.** Log the alias id, a hash of the sender, and message size — not
-   addresses or subjects.
-8. **Retire the shared address.** For 30 days, mail to `travel.docs@wander-bunnies.com`
-   is held as in step 4 (the user must tap "Yes, I sent this"), and the Import screen and
-   an email to the account address announce the new personal address. After that, the
-   shared address is dropped.
+7. **Log hygiene.** Log opaque job/alias ids, outcome, and byte counts. If sender correlation
+   is necessary, use a rotating keyed HMAC, not a dictionary-searchable email hash. Apply
+   this to error objects, filenames, provider errors, analytics, and parsing diagnostics too.
+8. **Retire the shared address.** Stop sender-based attribution immediately; a spoofed
+   sender must not select whose hold queue receives content. Announce migration in-app and
+   optionally to the verified account address under existing notification preferences.
+   Drop legacy-address mail with a successful acknowledgement; offer manual upload for
+   recovery. A grace period requires an authenticated claim mechanism, not a sender lookup.
 9. **Render safely.** Review and notification screens show normalized text only, never
    raw email HTML. Links in imported notes render as plain text with the domain visible.
-10. **Real virus scanning before wide rollout.** Scan attachments only (PDF, images); most
-    confirmations are plain bodies. Recommended: ClamAV as its own Cloud Run service scaled
-    to zero. Google Web Risk checks URLs, not file contents, so it does not fill this gap;
-    VirusTotal's public service is built around sharing submitted samples, so check its
-    terms before considering it. Scan before `pdf-parse`/OCR touch the bytes.
+10. **Enforce real attachment scanning before wide rollout.** Reuse `clamav_http` and test
+    actual bytes reach it on manual, Mailgun, and Gmail paths. Unknown provider, unavailable
+    scanner, stale signatures, malformed response, and unscanned batch must not mean clean.
+    Authenticate the private scan service, restrict its URL/egress, cap concurrency, and
+    benchmark memory, cold-start latency, signature refresh and idle cost before choosing
+    scale-to-zero. Scan before PDF/OCR; isolate parsers with byte/page/pixel/time limits,
+    reject unsupported archives and MIME mismatches. Antivirus is only one layer. Treat
+    plain text/HTML as untrusted input even where attachment scanning is skipped.
+11. **Durable receipt and retries.** Verify signature/timestamp/replay protection, then
+    persist a delivery record and all required payload references before acknowledging.
+    Current replay-token claiming precedes persistence: test retry after a crash at each
+    boundary so a token cannot make recoverable mail permanently unprocessable. Separate
+    transport replay prevention from business idempotency. Do not trust `Message-Id` alone
+    for dedupe; include account/content identity. Return provider-appropriate success for
+    already-committed deliveries; transient persistence/queue failures remain retryable.
+    Do not scan synchronously in the webhook request. Quarantined bytes must be durable
+    across worker instances/restarts, encrypted, access-controlled, and lifecycle-deleted.
+12. **Prompt and data boundaries.** Email content is data, not instructions: schema-validate
+    extractor output, constrain lengths/types, disable tools/URL fetching and external-image
+    loads, and never execute embedded instructions. No automatic changes/cancellations of
+    existing bookings, payments, reminders, or group membership. Document source/text/model
+    capture retention; default raw quarantine/held TTL seven days, purge after successful
+    processing when no longer needed, and provide deletion across objects and derived rows.
 
 ### 3.2 Making forwarding easy to set up
 
 1. **Import screen leads with the address.** Large, with Copy, "Add to contacts" (a vCard
-   download), and a QR code for setting it up on a phone.
+   download), and a QR code for setting it up on a phone. Mark the alias as private and
+   explain rotation; the vCard/QR must never be published or silently shared.
 2. **Provider walkthroughs.** Short steps for Gmail (filter → forward), Outlook (rule),
    and Apple Mail, with a "Send a test" button that emails a sample confirmation to the
-   alias and shows it arriving.
+   alias and shows it arriving. Require an authenticated action, rate-limit test sends,
+   mark them synthetic, bypass booking/quota side effects, and prevent outbound loops.
 3. **Gmail auto-forward verification.** Gmail sends a confirmation code to a new
    forwarding address before it will auto-forward. That email arrives at the user's alias.
-   Detect it (from `forwarding-noreply@google.com`), skip extraction, and show the code and
-   link in the Import screen, so setup completes without the user ever seeing our mailbox.
+   Recognize it only from authenticated, validated provider fixtures, skip extraction,
+   and display sanitized code/text to the authenticated alias owner. Do not auto-follow or
+   auto-approve links; validate any offered HTTPS verification host. Never surface the code
+   in a push notification or grant confirmation mail special trust based on `From` alone.
 4. **Tripmates.** Each group member has their own alias; the trip shows "Imported by Tristan".
 5. **Share sheet.** Extend the existing mobile share entry points (`trip_blog_mobile_share_*`)
    with "Import to WanderBunnies" for PDFs and screenshots, using the manual-upload source.
+   Verify native extension/build requirements instead of assuming blog flags provide a
+   generic file importer. Reuse the same quotas, scanning, and owner checks.
 
 ### 3.3 Assign to the right trip by default
 
@@ -261,8 +352,10 @@ trip clearly matches on time and place, assign it automatically, tell the user, 
 Undo.** This reverses the "No automatic assignment" decision in `TECHNICAL_DEBT.md`
 deliberately; update that file when this ships.
 
-**Gate:** auto-assignment ships only after §3.1 steps 1–4. Without them, a spoofed email
-would write straight into a group's trip.
+**Gate:** all §3.1 security/admission controls, atomic assignment/dedupe, safe undo,
+server-side membership rechecks, and a measured suggestion-only pilot pass first. Start
+auto-assignment opt-in and per-cohort fail-closed; consider a default change only after
+quality evidence and explicit product review. Mail can be genuine yet contain false data.
 
 #### Candidate trips
 
@@ -275,7 +368,7 @@ trips), the trip is not deleted, and the trip end date is no more than 30 days i
 | --- | --- | --- |
 | **Date fit** | Item's local start/end (from `startDateTimeUtc`, `endDateTimeUtc`, `originalTimezone`) falls within trip `startDate − 1 day` … `endDate + 1 day`. The slack covers overnight outbound and return flights. Trips with only `startMonth`/`startYear` get a weak month fit. | Required for auto |
 | **Place fit** | Any endpoint of the item matches the trip's places. Item places: flight/rail arrival and departure airport codes → city via the airports table; hotel/activity/car `address`/`location` → `geo_city` via §1.1, or a city-string match before §1.1 lands. Trip places: `destination`, `locationIds` (via `locationServices`), and cities of items already in the trip. Both legs of a round trip count — the return leg departs from the destination. | Strong |
-| **Booking continuity** | Same `confirmationNumber` or `providerVendor` + booking reference as an item already assigned to that trip (e.g. the return leg of a booking whose outbound is in the trip). Extends the existing dedupe fingerprint lookup. | Strongest |
+| **Booking continuity** | Exact provider + normalized booking reference within an authorized candidate trip; never global reference lookup. Require compatible dates/item type and distinguish revisions or cancellations from new reservations. Booking codes are not globally unique. | Strong, supporting date fit |
 | **Traveler fit** | `travelerNames` resolve to members of the trip's group via `matchTravelerNamesToGroupMemberIds`. | Supporting |
 | **Extraction confidence** | Item `confidenceScore` ≥ `INGESTION_CONFIDENCE_HIGH` (0.9), not `DUPLICATE_FLAGGED`, `timezoneStatus` ≠ `UNKNOWN` when the item sits on a trip's boundary day. | Required for auto |
 
@@ -288,18 +381,19 @@ and deterministic: no LLM, no network, unit-testable from fixtures.
 
 | Outcome | Condition | What the user sees |
 | --- | --- | --- |
-| **Auto-assign** | Exactly one candidate has date fit and (place fit or booking continuity); confidence gate passes; user setting on | Item is added; notification "Added Delta DL167 to *Japan 2026* · Undo"; activity-feed entry for tripmates |
+| **Auto-assign** | Exactly one candidate has strong day-level date fit and (unambiguous destination fit or scoped booking continuity); calibrated extraction gate passes; user opted in; no conflicting candidate | Item is added; private inbox gives trip and Undo; generic push says an import is ready; trip feed records attribution |
 | **Suggest** | Several trips fit, or only date fit, or confidence 0.7–0.9 | Review queue with the trip pre-selected and reasons shown; one-tap Confirm; "Confirm all suggestions" bulk action |
 | **No match** | No candidate fits | Review queue with "Create a trip from this", which opens the Quick Start wizard prefilled with destination and dates (no automatic trip creation) |
 
 #### Undo and safety
 
-- **Undo** from the notification or the item for 7 days. Each assignment already has an
-  `assignment_transaction_id`; undo deletes exactly the rows that transaction created and
-  returns the item to the review queue. Verify that the transaction record covers every
-  created row, including the expense from `syncAssignedFlightExpense`, before relying on it.
+- **Undo** from inbox/item for 7 days, as an authorized compensating transaction. Track
+  every created row and its version, including `syncAssignedFlightExpense`, with the
+  assignment id. Delete only unchanged rows owned by that transaction. If a tripmate
+  edited the item or linked/settled an expense, show a conflict and preserve their work.
+  Repeated undo is idempotent; revoked membership cannot authorize a trip mutation.
 - Auto-assigned items carry a small "Imported" badge with the reasons, in the item dialog.
-- **Setting:** "Add confident matches to trips automatically", **on by default**, per user,
+- **Setting:** "Add confident matches to trips automatically", **off by default**, per user,
   on the Import screen.
 - Never auto-assign into a trip where the item would duplicate an existing item; the
   existing `ASSIGNED_MATCH` disposition routes it to review instead.
@@ -311,27 +405,40 @@ and deterministic: no LLM, no network, unit-testable from fixtures.
 - `import_jobs`: new state `HELD_UNVERIFIED_SENDER`.
 - New tables: `ingestion_aliases` (§3.1), `ingestion_verified_senders` (`user_id`, `email`,
   `verified_at`, `verification_token_hash`).
-- User preference: `ingestion_auto_assign` (boolean, default true).
-- All three adapters (`db.postgres.ts` bootstrap/migration, `db.firebase.ts`, pg-mem via
-  postgres), with Firestore composite indexes for `(user_id, status, suggested_trip_id)`
-  and `(token_hash)` added to `firestore.indexes.json` in the same PR.
+- User preference: `ingestion_auto_assign` (boolean, default false).
+- Implement through the existing ingestion repositories and DB adapters (`db.postgres.ts`
+  bootstrap/migration, `db.firebase.ts`, pg-mem via postgres). Document query shapes before
+  choosing Firestore composite indexes. Firestore single-field token-hash lookup is not a
+  uniqueness constraint: reserve a deterministic hash document transactionally. Only add
+  necessary composite indexes; account for Firestore write and index storage cost.
 
 #### Metrics to watch
 
-Auto-assign rate, **undo rate** (above ~5% means thresholds are too loose), suggestion
-acceptance rate, held-sender rate, and median time from email received to item in trip.
+Auto-assign rate, wrong-trip reports, **undo rate**, suggestion acceptance, held-sender
+rate, and p50/p95 time from durable receipt to review/assignment. Undo alone misses
+unnoticed mistakes; use consented, redacted fixtures and a manually checked pilot sample.
+Month-only dates, unknown/ambiguous timezone on boundary days, origin-only city matches,
+cancellation/change notices, unsupported item types, and weak geocodes remain suggestions.
 Add these to the existing ingestion admin observability widgets.
 
 ### 3.4 Cheaper, unified extraction
 
-1. **Cheapest extractor first.** Every import runs static extraction plus two LLM parsers
-   today (`ingestion_dual_llm_consensus`). Tier it: `.ics` attachment or high-confidence
-   static/learned result → 0 LLM calls; medium → 1; low → 2 with consensus. Cache by
-   content hash so repeated airline templates stay free.
+1. **Cheapest validated extractor first.** Extend the existing policy: deterministic
+   calendar/static/learned parsing first; schema-valid complete results can use zero LLM
+   calls; bounded escalation uses one, then a second only when evidence supports it.
+   Very low-quality/adversarial inputs go to manual review rather than always spending more.
+   Verify `.ics` support before adding it (no remote calendar/attachment retrieval).
+   Keep deterministic consensus sampling for quality audits. Version the existing
+   user-scoped exact-content cache by parser/schema/model policy; repeated *identical
+   documents* can hit it, different bookings sharing a template cannot reuse personal
+   fields. Learn templates separately. Reserve total job cost atomically before parallel
+   calls, including retries, OCR, shadow parsing, and capture retention.
 2. **One parser stack.** Route the Transfers tab's "Paste Info" text through ingestion
    extraction as a manual-text source, retiring the separate `flightParserLLM` path.
-3. **Defer Gmail import.** Restricted Gmail scopes require a CASA security assessment and
-   re-assessment every 12 months. Forwarding covers the main case without it.
+3. **Defer Gmail expansion.** For the proposed public, server-processing use of restricted
+   Gmail data, plan for scope verification and annual security assessment unless a
+   documented exception applies. Forwarding avoids adding Gmail OAuth scopes; existing
+   deployed OAuth usage still needs its own compliance check.
 
 ### 3.5 Tests
 
@@ -341,7 +448,12 @@ Add these to the existing ingestion admin observability widgets.
 - Supertest integration tests posting signed Mailgun webhooks: spoofed `From` to the shared
   address is held; valid alias + verified sender is queued; valid alias + unknown sender is
   held without extraction; revoked alias is dropped; quota is untouched by rejected mail.
-- Auto-assign → undo round trip restores the trip exactly, including expenses.
+- Auto-assign → undo restores unchanged created rows/expenses; collaborator edits, settled
+  costs, concurrent assignment, revoked membership, repeated undo, and provider retries
+  preserve invariants. Test receipt crashes before/after durable commit and quota reservation.
+- Test aggregate upload/hold caps, MIME mismatch, oversized images/PDFs, scanner outage and
+  EICAR fixture, forged authentication headers, alias compromise/revocation, prompt injection,
+  raw-content deletion, cross-account dedupe isolation, and no raw payloads in logs.
 - Run against `DB_PROVIDER=memory` and the Firestore emulator.
 
 ---
@@ -353,7 +465,7 @@ step 1 checks):
 
 | Feature | Flag | What's missing |
 | --- | --- | --- |
-| Day map | `trip_day_map` | An API key (§1) |
+| Day map | `trip_day_map` | Deployment audit, provider terms, abuse limits, key and staged enablement (§1) |
 | In-app notification inbox | `notifications_in_app` | No inbox UI |
 | Mobile push | `notifications_push` | Delivery is wired; needs a staged rollout |
 | Web push | `notifications_web_push` | Seeds on, but no service worker or VAPID keys exist, so it does nothing |
@@ -366,55 +478,117 @@ step 1 checks):
    whether any UI reads it. Add a test that every flag the client reads through
    `GET /blog/capabilities` is in that route's `featureKeys` list — a missing key has
    silently hidden finished features before.
-2. **Notification inbox.** A bell with unread count in the top bar, updated over the
-   existing Socket.IO connection instead of polling.
-3. **Trip-planning notifications.** Every `NotificationCategory` today is blog-related.
+2. **Notification inbox.** A bell with unread count, paginated history, mark-read and
+   accessible actions. Reuse the existing notification API/repository. Socket.IO signals
+   invalidate data; the database remains authoritative. Authenticate user rooms, recheck
+   access to deep-link targets, and fetch missed notifications on reconnect/app resume
+   with a cursor. Avoid high-frequency polling and cross-user unread-count leakage.
+3. **Trip-planning notifications.** Most existing categories are blog-related;
+   `activity_recap` already exists.
    Add: free-cancellation or refund deadline within 48 hours (`freeCancelBy` on activities,
    `refund_by` on lodging), **import results** ("Added to *Japan 2026* · Undo",
    "2 reservations need a trip", "Held: message from an unknown sender"), AI itinerary
    finished, and a daily digest of tripmates' changes. Per-category preferences; digest
-   by default.
+   by default. Keep booking references, names, locations and trip titles out of lock-screen
+   payloads by default. Inbox details require authentication; reminder times use explicit
+   IANA timezone/DST policy and are recomputed/cancelled on booking edits/deletion.
+   Persist due work; do not depend on a process-local timer while Cloud Run is idle.
 4. **Push rollout.** Flags are global switches with no admin bypass, so add an optional
-   user allowlist to flag evaluation and enable push for the two admin accounts first.
-   Prune tokens Expo reports as `DeviceNotRegistered`.
-5. **Web push.** Turn `notifications_web_push` off now; build it later on the §6 service worker.
+   user cohort evaluated *after* the global switch. A globally disabled flag denies every
+   user, including cohort members and admins; missing cohort membership denies rollout
+   access. Stage with consenting test accounts before a small cohort. Keep global config
+   caching separate from user eligibility to avoid a key-only cache leaking decisions.
+   Existing ticket-error token pruning stays; add delayed receipt handling and tests.
+   Push permission is requested in context, never required to use planning features.
+   The current push-to-email fallback must honor independent email opt-in, quiet hours,
+   frequency caps and digest preferences; disabling push must not silently increase email.
+5. **Web push.** Propose a separate reviewed configuration change to turn the unused flag
+   off; this document does not change production. Build browser push later on the §6 worker.
 6. **Activity recap.** After an activity's end time, prompt the group to rate it and add a
-   blog note or photo, through the inbox and push.
+   blog note or photo, through the inbox and optional push. Reuse existing recap services,
+   dedupe by user/activity/version, allow dismissal, and never prompt repeatedly or publish
+   notes/photos without consent. Notification outbox claims/retries also need durable
+   scheduling, provider idempotency where supported, and a crash-after-send duplicate policy.
 
 ---
 
 ## 6. Offline access
 
-Make every trip readable offline and let expenses be added offline.
+Harden the existing native read-only experience, add deliberate offline downloads on web,
+and support reliable expense creation only after replay safety is proven.
 
-**Already built:** `app/hooks/usePendingWrites.ts` (persisted write queue with replay and a
-retry cap), `app/hooks/useConnectionState.ts`, `app/utils/persistentStorage.ts`, the blog's
-seven-day offline authoring queue, and `Idempotency-Key` enforcement in
-`blogEngagementRoutes.ts`.
+**Already built:** native snapshots/unlock in `offlineTripCache.ts`, `offlineAccess.ts`,
+`OfflineUnlockScreen.tsx`, and `App.tsx`; the pending-write and connection hooks;
+`persistentStorage.ts`; the blog's offline authoring queue and route-specific idempotency.
+The current prefetch fans out to many endpoints, maps failures to empty collections, and
+can overwrite a useful snapshot with incomplete data. Fix this before expanding prefetch.
 
 ### Steps
 
-1. **Trip bundle endpoint.** `GET /api/trips/:id/bundle` returns trip, transfers, lodging,
-   activities, car rentals, itinerary days, and expenses in one response. A
-   `content_version` counter on the trip, bumped on any child write, is the ETag; an
-   unchanged trip returns `304`, cutting requests and Firestore reads for online users too.
-2. **Local snapshot.** IndexedDB on web (localStorage is synchronous and capped at a few
-   MB); a file or SQLite on native. Save automatically for trips within 3 days of travel;
-   an "Available offline" toggle covers the rest. Include day-map images already fetched
-   as blobs.
-3. **App shell offline on web.** A service worker caches HTML, JS, and assets so the app
-   opens without a connection. The same worker is what real web push needs (§4).
-4. **Offline expenses first.** Extend `usePendingWrites` to expense creation; queued items
-   show a "pending sync" badge.
-5. **Safe replay.** Generalize the blog's `Idempotency-Key` handling into shared middleware
-   and send a key with every queued write. If the server copy changed after the snapshot,
-   ask which version to keep instead of overwriting.
-6. **Expired sessions.** Sessions last 12 hours by default. Keep queued writes past expiry
-   and replay after re-login.
-7. **Keep it free.** Stippl puts offline behind Pro. Read-only offline lowers server load.
+1. **Snapshot correctness first.** Retain the last complete snapshot on failed/partial
+   fetches; never turn a timeout into an empty list. Validate a shared typed/versioned
+   bundle, commit locally atomically, and surface storage failure instead of claiming
+   "Available offline". Reuse in-memory data before refetching it. Maintain current
+   payments, group-member and coverage fields subject to existing permission rules.
+2. **Trip bundle endpoint.** `GET /api/trips/:id/bundle` checks membership and field-level
+   entitlements before serving or returning `304`. Followers do not gain member data.
+   An ETag must include schema/projection/permission revisions as well as content version;
+   never reuse one across different authorized representations. Check a cheap version
+   record before loading children, use `Cache-Control: private, no-cache` and `Vary:
+   Authorization`, and prevent shared-CDN caching. A `304` still incurs auth/version reads.
+   Update version atomically with every child mutation, delete, assignment/undo, payment,
+   coverage, and membership change. Firestore transactions need a bounded consistency
+   strategy; reject/retry a mixed-version bundle rather than caching it. Benchmark version
+   document contention and added write/index costs before adopting a counter everywhere.
+   Bound bundle bytes/items; stage large trips and switch the saved snapshot only after
+   completion. The normal UI must remain usable without downloading an entire large trip.
+3. **Local storage migration.** Move from email-scoped blobs to immutable user-id namespaces
+   plus environment/schema version. IndexedDB on web; a transactional native store with
+   vetted encryption and device-backed key storage for private travel/financial data.
+   Device authentication alone does not encrypt AsyncStorage. Validate/migrate legacy data
+   once; purge only after a successful commit. Bound bytes/trips with LRU eviction, preserve
+   pending mutations, and offer Wi-Fi-only download, progress, last-synced time, size, remove,
+   and retry. Preserve active-trip caching; offer opt-in pretravel downloads instead of
+   silently multiplying reads for every upcoming trip. Exclude raw mail, secrets and
+   unnecessary sensitive fields. Defer offline provider imagery until storage rights are
+   established; text/coordinates and external-map links remain useful without map tiles.
+4. **App shell offline on web.** Versioned service worker caches same-origin build assets;
+   use a network-first navigation strategy with offline fallback and atomic build upgrades.
+   Exclude auth, API responses and provider URLs from generic caching; private snapshots
+   live in the account store. Verify worker scope, CSP and Expo deployment compatibility,
+   update recovery and cache cleanup. Web offline unlock/privacy requires an explicit UX
+   decision; do not claim it inherits native biometric protection.
+5. **Expense creation only after queue hardening.** Replace the global pending-write key
+   with account/environment scope, cryptographically random stable operation ids, durable
+   acknowledgement of enqueue, and one replay lease across tabs/app resumes. Fix native
+   hydration/enqueue races. Queue entries carry schema version, trip and owner ids, base
+   version where needed, attempts, next retry time and a visible status. Never silently
+   drop financial entries at a retry cap: retain a failed state with Retry/Edit/Discard.
+   Offline amounts/currency/splits get the same validation as online. Show pending expenses
+   distinctly and reconcile by operation id so totals do not count optimistic rows twice.
+6. **Server replay contract.** Shared middleware alone is insufficient: reserve the
+   idempotency key and commit expense/result atomically in the adapter. Scope by authenticated
+   user + operation/route; bind to a canonical request hash; same key with different data
+   returns `409`. Concurrent retries create one expense, including timeout after commit.
+   Retain completed keys at least as long as the maximum replay age (initially 30 days),
+   reject older operations for explicit recovery, and clean up with TTL. Recheck membership,
+   entitlements and referenced travelers at replay. Pause on `401` for same-account login;
+   `403/402` requires action; transient failures use jittered backoff. Expense updates/deletes
+   remain later scope and require conditional versions, never silent last-write-wins.
+7. **Access expiry and logout.** Preserve the implemented 30-day native offline access
+   window until a separate auth change is approved. Expired online sessions do not authorize
+   replay. Account switches must never replay another account's writes. Logout locks/clears
+   private snapshots, encryption keys, worker caches and queue visibility; if writes are
+   pending, explicitly offer sync, protected same-account retention, or discard. Test deletion
+   and logout racing with prefetch/hydration so data cannot reappear after cleanup. Offline
+   revocation cannot be instantaneous; state the access window and revalidate on reconnect.
+8. **Keep basic offline reading free.** Treat lower server load as a hypothesis: measure
+   avoided reads against snapshot refresh, version writes, storage and scheduling overhead.
 
-**Security:** the local copy is keyed by user id and wiped on logout (`session.ts`); it
-holds only what that user can already see.
+**Security gate:** prove account isolation, explicit logout/deletion cleanup and native
+encryption. Current snapshots use email keys, and cleanup is orchestrated by `App.tsx`,
+not `session.ts` alone. The globally keyed pending-write hook must not be extended to
+financial writes without these changes.
 
 ---
 
@@ -422,39 +596,98 @@ holds only what that user can already see.
 
 | Gap | Security | Performance | Cost per user |
 | --- | --- | --- | --- |
-| Map | Keys never reach the client; tiles need no key; the geocoder gets only an address string, never user or trip ids | Geocoding off the request path; map library lazy-loaded | Static map ~$2 per 1,000 loads (per the trip-day-map plan), cached 24 h by content; tiles $0; each address geocoded once |
-| Discovery | Browse/copy read only public, consented content; rate-limited | In-memory spatial index, no DB reads per query | ~$0; affiliate revenue offsets |
-| Import | Secret per-user alias, verified senders, SPF/DKIM, hold-before-extract, real attachment scanning, text-only rendering | Existing async worker queue; matcher is pure and in-process | 0–2 LLM calls per import by confidence instead of 2 always; no LLM spend on held mail |
-| Notifications | No booking details in push text (lock screens) | Socket.IO events instead of polling | Expo push is free; email defaults to a daily digest |
-| Offline | Local copy scoped to the user, wiped on logout; idempotent replay | One bundle request with 304s | Fewer reads; storage on device |
+| Map | Server-only key; authorized bounded requests; approved geocoding inputs; attribution and cache rights | Lazy map library; coordinate reuse; bounded durable background queue | Measure paid cache misses including restarts, tile/egress and hosting costs; no fixed-price or zero-cost assumption |
+| Discovery | Public projection, visibility recheck on copy, authorized destination trip | Bounded warm spatial index and paginated cards; lazy images | Catalog reuse avoids generation calls; include load/refresh, photo, auth and memory costs; exclude forecast affiliate revenue |
+| Import | Alias, tested sender trust, bounded hold, real scans, text-only rendering and constrained extraction | Durable queue, async scanning, pure matcher | Measure tokens, attachments, retries, shadow parsing, scanner idle cost, quarantine storage and retention per accepted import |
+| Notifications | Generic lock-screen text; private inbox; independent channel consent | Events plus cursor catch-up; scheduled/deduplicated digest work | Include outbox DB reads/writes, wakeups, email, receipts and connection overhead even if push provider delivery is free |
+| Offline | Encrypted native data; user-isolated queue; safe logout and atomic replay | Reuse existing snapshots, cheap version check, bounded downloads | Net reads saved minus version writes, refreshes and background work; one HTTP request can still fan out to many DB reads |
+
+### Unit economics and initial acceptance targets
+
+Instrument costs by feature, tier and time window using low-cardinality labels; keep
+per-user attribution in access-controlled aggregates, not raw addresses or metrics labels.
+Record cache misses, tokens, scan bytes, DB reads/writes, object byte-days, egress, worker
+runtime and retry amplification. Reconcile estimated charges with billing exports.
+
+`feature cost / active user = (variable provider + DB/storage/egress + allocated fixed
+runtime cost) / monthly active users using that feature`.
+Also report total infrastructure cost/all active users and cost per **successful** import
+or offline sync; otherwise rejected abuse and idle workers disappear from the denominator.
+Use measured cold/warm workloads at 100, 1,000 and 10,000 active users before widening.
+Do not add a shared cache, paid routing, or always-on scanner solely on assumed savings.
+
+Initial engineering targets (proposals to validate on representative hardware/load):
+
+| Area | Acceptance target / guardrail |
+| --- | --- |
+| Nearby | Warm API p95 < 300 ms at declared test concurrency; <= 20 cards/page; zero LLM calls on browse; report cold-start/index bytes separately |
+| Map | No map-library bytes in initial planning bundle; one in-flight fetch per identical map per process; provider timeout and response cap; usable list on 403/429/503 |
+| Import | Durable webhook receipt p95 < 2 s within bounded payload limits; processing p95 < 60 s for benchmark plain-text fixtures, report PDF/OCR/cold scans separately |
+| Assignment | 100% ownership/date/security fixtures pass; audited pilot precision >= 99% across at least 200 representative supported items before opt-in automation; undo > 2% or confirmed cross-trip disclosure pauses expansion |
+| Offline | Zero duplicate expenses or lost entries in retry/crash tests; complete cached small trip opens within 2 s after unlock on the named test phone; storage-full never reports download success |
+| Budget | Operator chooses an absolute monthly feature cap and per-active-user target before rollout; 80% alert and tested hard stop, including concurrent calls and retries |
+
+These are release targets, not claims about current measurements. Track false holds,
+task-completion rate, accessible control coverage, notification opt-outs and storage failure
+rate alongside latency/cost; an inexpensive feature that loses data is not acceptable.
 
 **Rules for every slice**
 
 - New paid calls go through `reserveApiUsageOrThrow` and `recordProviderRequestCost`, with
   a monthly budget and 80% alert in `server/config/api-limits.yaml`.
-- Flags for anything that calls a paid provider or contacts a person are fail-closed
-  (`FAIL_CLOSED_FLAGS` in `entitlementService.ts`).
-- Each schema change lands in the Postgres, Firebase, and memory adapters in one PR, with
-  Firestore composite indexes in `firestore.indexes.json` in that same PR.
-- Add Nominatim/OpenStreetMap and the tile host to the privacy policy as processors, and
-  show the OpenStreetMap attribution the tile terms require.
+- New paid-provider, external-contact and automatic-write flags must be explicitly added
+  to `FAIL_CLOSED_FLAGS` and covered by missing-row tests. This is an implementation task,
+  not a property guaranteed for every existing flag. Preserve current fail-open behavior
+  of unrelated legacy entitlements. Global flags have no admin/cohort bypass.
+- Each schema change lands in Postgres (migration/bootstrap), Firebase and memory behavior
+  in one PR, including ingestion/notification-specific repositories where applicable.
+  Add only query-required Firestore indexes, with emulator tests and schema changelog.
+  Use expand/backfill/contract changes with bounded resumable backfills; flags off must
+  preserve manual import, existing trip rendering, and old clients during rollout.
+- Review provider data flows, roles, location privacy and terms rather than automatically
+  classifying every third party as a processor. Record approved caching/offline use and
+  attribution; do not persist Google imagery or provider-derived coordinates under another
+  provider's license. Update disclosures before introducing a new data flow.
+- Run cheap payload/authorization checks before database-backed limits and paid work;
+  keep authoritative global budget reservations atomic across instances. Rate-limit DB
+  writes themselves have cost, so reject oversized/untrusted traffic at the edge where possible.
 
 ---
 
 ## 8. Phasing
 
-Four lanes run in parallel; work runs left to right within each lane.
+The workstreams below describe dependencies, not permission to bypass release gates.
+Each slice extends an existing component and ships behind a default-off flag where it
+adds provider spend, external contact, or automatic writes.
 
 | Lane | Step 1 | Step 2 | Step 3 | Step 4 |
 | --- | --- | --- | --- | --- |
-| Map + discovery | Turn on day map (key + flag) | **Geocoding layer** (cache, lat/lng, backfill) | Map v2 (route line, times, reorder, split view) | Discovery (Nearby, add to day, trips like this) |
-| Import | **Security fix** §3.1 steps 1–8 | Real virus scan; forwarding UX §3.2 | **Auto-assign** §3.3 | Tiered extraction, Paste Info merged §3.4 |
-| Notifications | Flag audit, capabilities test, web push flag off | Inbox + trip and import alerts | Push rollout (admin allowlist first) | Activity recap |
-| Offline | Trip bundle + ETag | Local snapshot | Service worker (+ web push) | Offline expenses + idempotency |
+| Map + discovery | Abuse/terms audit; catalog-only Nearby + idempotent Add to day | Coordinate provenance and optional approved geocoding; bounded map activation | Accessible per-day reorder and constrained optimization | Lazy split map, consent-safe public discovery |
+| Import | Alias/trust, bounded durable admission, scan enforcement and log cleanup | Suggestion-only matcher and forwarding setup; benchmark extraction/cost policy | Safe assignment/undo and opt-in pilot | Paste Info reuse, broader supported providers after fixture gates |
+| Notifications | Flag/cohort/cache audit and capability tests | Inbox + catch-up + generic import status | Independent channel preferences, durable scheduling, small-cohort push | Deadline digest and recap through existing services |
+| Offline | Snapshot completeness, scoped queue, storage errors and logout races | Typed bundle/version contract and encrypted native-store migration | Controlled downloads, web snapshot UX and app-shell worker | Atomic idempotent expense creation and durable recovery |
 
-Cross-lane dependencies: Nearby needs the geocoding layer; auto-assign needs the security
-fix and works better with geocoded places; import notifications need the inbox; web push
-needs the service worker.
+Cross-lane dependencies: catalog Nearby can ship without external geocoding. Automation
+needs all import security, quality and undo gates; delivery uses the inbox without requiring
+push. Expense replay needs queue/storage/idempotency gates. Web push stays separate from
+the app-shell release. External geocoding and paid routing are optional enhancements.
+
+### Required verification and rollback per slice
+
+| Slice | Evidence before enablement | Rollback behavior |
+| --- | --- | --- |
+| Admission/scanning | Signed webhook fixtures; forged sender/auth headers; duplicate delivery; crash at commit; quota once; EICAR and scanner outage; bounded memory | Disable mailbox admission with documented provider response/retry policy; preserve private manual review; never fall back to unscanned parsing |
+| Geocoding/maps/discovery | Negative/ambiguous cache, stale item update, multi-instance throttling/budget test; authorization and unpublish tests; missing-provider and WebGL/keyboard tests | Stop external work; retain original locations, catalog browse, list and external-map links |
+| Assignment/undo | Pure timezone/date/overlap fixtures; changed reservations; concurrent assign/undo; financial side effects and membership revocation; pilot quality report | Turn off auto-assignment, keep review/manual confirmation; preserve transaction history and conflict-safe recovery |
+| Inbox/delivery | Cross-user room isolation; lost event/reconnect; edited deadline/DST; duplicate tick/crash; receipt failures; independent channel consent | Stop provider delivery while keeping authorized history and pending state; no surprise email fallback |
+| Offline/expenses | Named-device airplane-mode test; interrupted download; corrupt/full storage; expiry; logout/prefetch race; account switch; two-tab replay; timeout after commit; 401/402/403/409 | Disable new enqueue/replay as needed, retain recoverable same-account pending entries; keep last complete readable snapshot |
+
+Use focused Jest/Supertest tests, actual Postgres integration where transactional semantics
+matter (pg-mem alone is insufficient), and Firestore emulator parity tests. Include web
+keyboard/screen-reader checks and native device authentication tests; mocks cannot prove
+encryption, real mail forwarding, scanner readiness or device receipt behavior. Record
+commands, fixtures, measurements, migration/backfill status and production config audit in
+each implementation PR. No claim of production readiness until these artifacts exist.
 
 **Later:** public SEO explore pages · Gmail import (security assessment) · native
 interactive map (EAS rebuild).
@@ -463,20 +696,31 @@ interactive map (EAS rebuild).
 
 ## 9. Open questions
 
-1. Is OpenFreeMap's free, no-SLA public instance acceptable to start, or self-host tiles
-   from day one?
-2. Should "Optimize day" stay free with the client-side optimizer, with only Google-refined
-   routing as Premium?
-3. Which geocoder replaces Nominatim's public instance at scale — self-hosted, or a paid
-   provider whose terms allow storing results?
-4. Auto-assign undo window: is 7 days right, or should undo stay available until the trip
-   starts?
-5. Should auto-assigned items notify the whole group, or only the person who forwarded them?
-6. After expenses, which offline edit comes next: activities or notes?
+Defaults for implementation: catalog-first discovery; basic offline reading and local
+optimization free; no paid route refinement; automation opt-in; private import notifications
+plus an attributed trip feed entry; seven-day conflict-safe undo. These can be changed with
+evidence without delaying the safe foundation.
+
+Decisions still required before the affected slice ships:
+
+1. Named geocoding/tile data flows with approved privacy/cache terms, measured demand and
+   fallback; public Nominatim is not the unconditional production default.
+2. Absolute feature budgets and tier-level cost-per-active-user targets, with billing owner.
+3. Native encrypted-store/key lifecycle and web offline access policy on shared devices.
+4. Tested inbound forwarding authentication behavior and provider retry semantics; scanner
+   deployment/readiness strategy and quarantine cleanup owner.
+5. Whether later offline updates cover activities or notes; neither is part of expense-create MVP.
 
 ## Sources
 
 - [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) — 1 req/s, bulk rules, switch-off requirement
-- [OpenFreeMap](https://openfreemap.org/) — free, keyless tiles; no SLA; attribution required
+- [OpenFreeMap](https://openfreemap.org/) — candidate from the original proposal; verify service terms/availability before implementation
 - [Google restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) — CASA assessment, 12-month re-assessment
 - [Google Web Risk overview](https://docs.cloud.google.com/web-risk/docs/overview) — checks URLs against threat lists
+- [Mailgun webhook security](https://documentation.mailgun.com/docs/mailgun/user-manual/webhooks/securing-webhooks) — HMAC timestamp/token format; not sender ownership
+- [Mailgun route actions](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/receive-http) — inbound fields and acknowledgement/retry contract
+- [Maps Static API overview](https://developers.google.com/maps/documentation/maps-static/overview) — follow linked current pricing/terms before activation; this plan does not assert caching rights or a current unit price
+
+Repository paths in the verification table and feature sections are the implementation
+evidence reviewed. Provider policies were checked on 2026-10-18 where cited; service pricing,
+production flags, real forwarding behavior and deployment readiness remain unverified.
