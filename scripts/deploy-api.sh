@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 # Report failures without printing commands that may contain secret values.
-trap 'status=$?; printf "ERROR: %s failed at line %s (exit %s).\n" "${BASH_SOURCE[0]}" "$LINENO" "$status" >&2; exit "$status"' ERR
+# EXIT also catches explicit exits and unset-variable errors missed by ERR.
+deploy_stage="initializing"
+trap 'failure_line=$LINENO' ERR
+trap 'status=$?; if ((status != 0)); then printf "ERROR: %s failed during %s near line %s (exit %s).\n" "${BASH_SOURCE[0]}" "$deploy_stage" "${failure_line:-$LINENO}" "$status" >&2; fi' EXIT
 
 SERVICE_NAME="${SERVICE_NAME:-travel-itinerary-app}"
 REGION="${REGION:-us-east5}"
@@ -31,6 +34,8 @@ if [[ -z "$SECRETS_FILE" && -f "server/.secrets" ]]; then
 fi
 
 if [[ "$SKIP_FIRESTORE_INDEXES" != "1" ]]; then
+  deploy_stage="Firestore index deployment"
+  echo "Starting Firestore index deployment..."
   "$SCRIPT_DIR/deploy-firestore-indexes.sh"
 else
   echo "Skipping Firestore index deployment because SKIP_FIRESTORE_INDEXES=1."
@@ -158,6 +163,8 @@ cleanup_legacy_secrets() {
     --clear-secrets
 }
 
+deploy_stage="reading deployment configuration"
+echo "Reading deployment configuration (values redacted)..."
 env_pairs=()
 declare -A secret_map=()
 saw_google_application_credentials=0
@@ -310,6 +317,7 @@ if [[ "${#env_keys[@]}" -gt 0 ]]; then
 fi
 
 if [[ -n "$remove_secrets_arg" ]]; then
+  deploy_stage="checking existing Cloud Run service"
   if gcloud run services describe "$SERVICE_NAME" --region "$REGION" >/dev/null 2>&1; then
     allow_clear_fallback=0
     if [[ "${#secret_map[@]}" -eq 0 ]]; then
@@ -319,6 +327,8 @@ if [[ -n "$remove_secrets_arg" ]]; then
   fi
 fi
 
+deploy_stage="Cloud Run source deployment"
+echo "Starting Cloud Run source deployment..."
 gcloud run deploy "$SERVICE_NAME" \
   --source "$SOURCE_DIR" \
   --region "$REGION" \
@@ -333,11 +343,14 @@ gcloud run deploy "$SERVICE_NAME" \
 
 # A prior canary deploy with --no-traffic pins the service away from LATEST
 # until this is explicitly restored; gcloud run deploy alone does not undo it.
+deploy_stage="routing traffic to the latest revision"
+echo "Routing traffic to the latest revision..."
 gcloud run services update-traffic "$SERVICE_NAME" \
   --region "$REGION" \
   --to-latest
 
 if [[ -n "$remove_secrets_arg" ]]; then
+  deploy_stage="post-deploy secret cleanup"
   allow_clear_fallback=0
   if [[ "${#secret_map[@]}" -eq 0 ]]; then
     allow_clear_fallback=1
