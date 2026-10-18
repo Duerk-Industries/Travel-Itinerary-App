@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+# Report failures without printing commands that may contain secret values.
+trap 'status=$?; printf "ERROR: %s failed at line %s (exit %s).\n" "${BASH_SOURCE[0]}" "$LINENO" "$status" >&2; exit "$status"' ERR
 
 SERVICE_NAME="${SERVICE_NAME:-travel-itinerary-app}"
 REGION="${REGION:-us-east5}"
@@ -11,6 +13,7 @@ IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,D
 IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS}"
 SKIP_FIRESTORE_INDEXES="${SKIP_FIRESTORE_INDEXES:-0}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # This script deploys API code, applies env vars from .env directly,
 # and applies optional secret mappings from .secrets or SECRETS via --set-secrets.
@@ -66,12 +69,12 @@ strip_inline_comment() {
       continue
     fi
     if [[ "$ch" == "'" && $in_double -eq 0 ]]; then
-      ((in_single = 1 - in_single))
+      in_single=$((1 - in_single))
       out+="$ch"
       continue
     fi
     if [[ "$ch" == '"' && $in_single -eq 0 ]]; then
-      ((in_double = 1 - in_double))
+      in_double=$((1 - in_double))
       out+="$ch"
       continue
     fi
@@ -259,7 +262,8 @@ if [[ "${#secret_map[@]}" -gt 0 ]]; then
   done
   env_pairs=("${filtered_env_pairs[@]}")
 fi
-env_pairs+=("NODE_OPTIONS=--max-old-space-size=1536" "GIT_SHA=$(git -C "$REPO_ROOT" rev-parse HEAD)")
+git_sha="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+env_pairs+=("NODE_OPTIONS=--max-old-space-size=1536" "GIT_SHA=$git_sha")
 env_keys=()
 for pair in "${env_pairs[@]}"; do
   env_keys+=("${pair%%=*}")
