@@ -1,8 +1,8 @@
 # Gap-Closing Plan: Map, Discovery, Email Import, Dark Features, Offline
 
-**Status:** Revised & Enhanced Implementation Plan — verified against the codebase 2026-10-18 (see §0.3)
+**Status:** Revised proposal — source-verified 2026-10-18; production settings and measurements unverified
 **Last updated:** 2026-10-18
-**Authors:** Senior Engineering & Architecture Team (in collaboration with Bryan Duerk)
+**Review:** Updated against repository code and primary provider documentation, in collaboration with Bryan Duerk
 **Builds on:** `implementation-plan-wanderlog-competitive-analysis.md` (§5.1–5.4), `implementation-plan-trip-day-map.md`, `server/src/ingestion/TECHNICAL_DEBT.md`
 
 ---
@@ -22,34 +22,38 @@ This plan closes five functionality gaps found in the competitive analysis again
 ### Core Architectural Pillars
 
 - **Security first:** inbound email is attributed by a secret per-user alias, never by `From`. Attachments are scanned fail-closed before any parser touches them. LLM output can never choose which trip an item lands in. Offline data is account-scoped and wiped on logout.
-- **Performance:** the webhook does only validation and an enqueue, with no parsing inline. Trip bundles revalidate with one counter read (`304`). Map libraries are lazy-loaded, and spatial lookups run in memory.
+- **Performance:** acknowledge mail after bounded validation and durable receipt, before scanning/parsing. Bundles check authorization and a cheap version record before reading children. Map libraries load on demand; warm spatial lookups run in bounded memory.
 - **Low cost per user:**
-  - Structured data first: `.ics` attachments and schema.org JSON-LD are parsed at $0, then the existing static/learned extractors, then an LLM only below the existing confidence threshold.
-  - No map images are stored or rendered server-side: the device draws maps from coordinates, on keyless vector tiles ($0). Geocoding is shared across users and done once per address. No Google Places.
+  - Structured data first avoids model fees where validation succeeds; CPU, scanning and storage still cost money. Reuse existing static/learned extractors before bounded model escalation.
+  - Draw maps on the device from reusable coordinates; avoid a new server rendering stack. Free public tiles have no delivery fee today, but app delivery, privacy review, device resources and fallback operations still matter. Cache eligible public geocodes with expiry; isolate private locations. No Google Places expansion.
   - Savings are measured from `usage_metering` and provider cost records, not assumed.
 - **Usability:** a one-tap "Send a test" during setup, Gmail auto-forward verification surfaced in-app, and trip auto-assignment with readable reasons and Undo. Also one-tap "Add to day", map–timeline sync, and offline expenses that sync themselves.
+- **Maintainability:** extend current routes, repositories, notification preferences and import state machine. Share typed contracts and pure logic, keep platform rendering/storage behind small adapters, and require a measured reason for every new dependency or provider.
 
 ---
 
 ## 0.1 Repository Verification & Baseline Findings
 
-Every row below was checked against the code on 2026-10-18.
+Source inspection establishes the behavior below, not live deployment settings. Older
+implementation records are context; code and current provider documentation take precedence.
 
 | Existing implementation | Consequence & required enhancement |
 | --- | --- |
 | **`routes/staticMapRoutes.ts`** — authenticated Google Static Maps proxy, ≤ 12 points, provider usage limits and budget. **Keeps Google PNGs in a 24 h in-process `mapCache`.** Accepts arbitrary client-supplied addresses/coordinates. | Remove the server-side cache of Google images (§1.1). For the native stopgap, derive points **server-side** from an authorized `tripId` + `dayDate` so the endpoint can't be an open proxy on our key (§1.5). Retire the route after the native MapLibre release. |
-| **`services/blogBackgroundWorker.ts` + `blogDayFactsService.ts`** — a background job downloads Google Static Maps PNGs of each blog day's photo geotags and **saves them to Cloud Storage** (`blog_day_map_artifacts`). `trip_blog_day_map_render` seeds **on**. The day-facts service returns a signed URL to the stored PNG. | **Compliance issue today:** turn the flag off and purge stored Google PNGs (§1.1). Return the points instead and draw them with `TripMap` on the device (§1.3). |
-| **`ingestion/intake/mailgun.ts` + `routes/ingestionWebhookRoutes.ts`** — HMAC signature, 5-minute timestamp window, and replay tokens are implemented. **User is resolved from the spoofable `sender`/`From` address.** Info logs record sender, recipient, and subject. Body: uses `stripped-text`, and HTML only when there is no text part. | **Critical:** resolve by recipient alias (§3.1). Redact logs. Pass the **unstripped `body-html`** to extraction as well, or schema.org JSON-LD never reaches the parser (§3.2). |
+| **`services/blogBackgroundWorker.ts` + `blogDayFactsService.ts`** — a background job downloads Google Static Maps PNGs of each blog day's photo geotags and **saves them to Cloud Storage** (`blog_day_map_artifacts`). `trip_blog_day_map_render` seeds **on**. The day-facts service returns a signed URL to the stored PNG. | Audit applicable storage terms and inventory artifacts; prepare a controlled pause/cleanup (§1.1). Add a versioned audience-safe point projection for device maps (§1.3). |
+| **`ingestion/intake/mailgun.ts` + `routes/ingestionWebhookRoutes.ts`** — HMAC signature, 5-minute timestamp window, and replay tokens are implemented. **User is resolved from the spoofable `sender`/`From` address.** Info logs record sender, recipient, and subject. Body: uses `stripped-text`, and HTML only when there is no text part. | Resolve by recipient alias (§3.1), redact logs, and durably accept before processing. Preserve bounded unstripped HTML for structured extraction (§3.3). |
 | **`ingestion/virusScanProviders/`** — `clamavHttpAdapter.scanBuffer` really scans; `scanBatch` is a documented no-op `PASSED`. Unknown or unset provider config **defaults to the stub**. | Production must select `clamav_http` and **fail closed**: startup check + per-file scan before normalization; unreachable scanner → hold, never pass. |
-| **`ingestion/extraction/index.ts`** — extraction cache keyed by `userId + contentHash + logicVersion`; static/learned extractors (`sourceDetection`, `hotelFieldExtractors`, `learnedExtractor`); dual-LLM consensus is **sampled** (`parser_consensus_sample_rate_percent`), not on every import. No `.ics` or JSON-LD parsing exists. | Add `.ics` and JSON-LD stages in front of the existing static/learned stages (§3.2). Measure the current per-import LLM cost from `usage_metering` before setting savings targets. |
+| **`ingestion/extraction/index.ts`** — extraction cache keyed by `userId + contentHash + logicVersion`; static/learned extractors; production-only dual-LLM consensus is sampled with a current default of 100%, after cache lookup. No `.ics` or JSON-LD extraction stage was found. | Extend stages/policy (§3.3); measure actual model usage and quality before promising savings. Preserve user-scoped cache isolation. |
 | **`ingestion/config.ts`** — `INGESTION_CONFIDENCE_HIGH = 0.9`, `INGESTION_CONFIDENCE_REVIEW_READY = 0.7`, `INGESTION_SIGNED_URL_TTL_SECONDS = 900`. | Reuse these thresholds everywhere in this plan. Don't introduce a parallel 0.85. |
-| **`ingestion/shared/repository.ts`** — `assignParsedItemToTrip` records an `assignment_transaction_id`; Postgres commits first, then calls `syncAssignedFlightExpense` **outside** that transaction. | Undo must also remove the expense synced by source (`upsertExpenseForSource`, `sourceType`/`sourceId`), not only the transaction's rows (§3.3). |
+| **`ingestion/shared/repository.ts`** — `assignParsedItemToTrip` records an `assignment_transaction_id`; Postgres commits first, then calls `syncAssignedFlightExpense` **outside** that transaction. | Assignment/expense completion needs atomicity or durable recovery; undo compensates only unchanged created rows/expenses (§3.4). |
 | **`app/utils/offlineTripCache.ts`, `offlineAccess.ts`, `components/OfflineUnlockScreen.tsx`** — read-only trip snapshots in `localStorage`/`AsyncStorage`, keyed by **email**, 30-day access window, biometric/device-PIN unlock; used by `App.tsx`, `tripBlog.tsx`, `tripReminderNotifications.ts`. | Re-key by `user_id`, move to encrypted storage on native, wipe on logout/account switch, feed from the versioned bundle (§5). |
 | **`app/hooks/usePendingWrites.ts`** — single global key `stp.pending-writes`, drops an entry after 5 failed attempts, no cross-tab lock. `useConnectionState` (expo-network + Socket.IO) exists. | Account-scope the queue, never silently drop a user's expense, add a replay lock, and send an `Idempotency-Key` per operation (§5.3). |
-| **`generation_idempotency` table** (both adapters) — `key`, `user_id`, `trip_id`, `status`, `response_body`, `expires_at`; used for AI generation. `blogEngagementRoutes.ts` enforces `Idempotency-Key` for comments. | Generalize into shared idempotency middleware; add `request_hash` so a reused key with a different payload is rejected (§5.3). |
+| **`generation_idempotency`** exists for AI jobs; blog routes also enforce operation-specific keys. | Reuse proven reservation concepts in a narrow adapter-atomic create helper with request hash, owner/operation scope and retention; do not assume middleware or AI-specific records alone handle expenses (§5.3). |
 | **`services/entitlementService.ts`** — `isFeatureEnabled(key, _userId, _role)` ignores user/role; 60 s cache per flag key; `FAIL_CLOSED_FLAGS` list. | Add cohort/allowlist evaluation **after** the cached flag lookup (cache the flag row + cohort, evaluate membership per call), preserving global kill switches (§4.1). |
-| **`services/notificationTypes.ts`, `notificationOutboxWorker.ts`** — categories are all blog-related plus `activity_recap`; Expo push with token pruning; email fallback. No quiet-hours or per-category preference support. | New categories (§4.2). Quiet hours and preferences are **new work**, not existing. |
-| **`locations` table** — catalog stored as JSON `payload` by `source_type`, indexed by `destinationKey`. No PostGIS. Production runs on **Firestore**. | Spatial queries must be an in-memory index (or geohash), not PostGIS (§2.1). |
+| **`notificationService.ts`, `notificationRoutes.ts`, `notificationOutboxWorker.ts`** — existing per-user/category/channel preferences and PATCH API, thread mute, Expo ticket-error token pruning and email fallback. Quiet hours are not implemented there. | Extend existing preferences and UI; add quiet hours, receipt handling and independent email consent. No replacement preference system (§4.2). |
+| **`locations` / catalog services** — cached catalog records and coordinates; no PostGIS dependency. Firebase is the GCP default, but production config was not inspected. | Use adapter-compatible catalog lookups and a bounded memory index; do not add PostGIS for this feature (§2.1). |
+| **`services/scheduledJobLease.ts`** — Postgres-only insert-per-window claim, catches all claim errors as false, no renewal/expiry/fencing. Its comment explicitly says the Firebase equivalent is absent. | Cannot serve as a production geocoding queue or global throttle as-is. Add a narrow durable-job contract with both adapters, explicit failure and stale-owner handling (§1.4). |
+| **`app/tabs/ingestion.tsx`** — already separates simplified regular-user UI from operational admin controls; web picker currently excludes `.ics`. | Preserve that separation. Extend intake MIME validation, picker and fixtures together; map internal states to simple action labels (§0.4). |
 | **`routes/activityRoutes.ts`** — mounted at `/api/activities`. | Discovery adds activities through the existing route (§2.2). |
 
 ---
@@ -68,7 +72,7 @@ flowchart TD
 
   subgraph Server["API Server (Node.js / Express)"]
     API_Maps["Static map proxy (native stopgap)<br/><i>server-derived points, no server copy</i>"]
-    API_Geo["Geocoding worker<br/><i>single lease, shared hash-keyed cache</i>"]
+    API_Geo["Optional geocoding worker<br/><i>durable jobs, scoped cache, global admission</i>"]
     API_Disc["Discovery & traits ranker<br/><i>in-memory spatial index</i>"]
     API_Ingest["Ingestion & alias resolver<br/><i>HMAC, alias, forwarder check</i>"]
     API_Extract["Extractors<br/><i>.ics → JSON-LD → static/learned → LLM</i>"]
@@ -78,7 +82,7 @@ flowchart TD
   end
 
   subgraph Storage["Database & Storage"]
-    DB[("Postgres / Firestore / pg-mem<br/>trips.content_version, ingestion_aliases,<br/>geocode_cache, generation_idempotency")]
+    DB[("Postgres / Firestore / pg-mem<br/>versioned trip graph, ingestion_aliases,<br/>scoped geocode cache, operation receipts")]
     GCS[("Cloud Storage<br/>ingestion quarantine (no map images)")]
   end
 
@@ -86,7 +90,7 @@ flowchart TD
     EXT_Mailgun["Mailgun inbound"]
     EXT_ClamAV["ClamAV (Cloud Run)"]
     EXT_AI["LLM providers"]
-    EXT_Maps["Google Static Maps (native stopgap) · Nominatim"]
+    EXT_Maps["Google native stopgap · approved optional geocoder"]
     EXT_Tiles["OpenFreeMap vector tiles"]
     EXT_GYG["GetYourGuide"]
     EXT_Push["Expo Push · SMTP"]
@@ -107,62 +111,88 @@ flowchart TD
 
 ---
 
-## 0.3 Verification log: what changed in this revision
+## 0.3 Maintainability and implementation boundaries
 
-| Area | Previous text | Correction | Why |
-| --- | --- | --- | --- |
-| Map engine | Google stored PNGs via CDN; later a "dual engine" (Google live + server-side MapLibre Native renders stored in GCS) | One engine drawn on the device: MapLibre + OpenFreeMap for every web surface, keepsake snapshots on the device, Google live-only on native until the next EAS build | Delivers the interactive map (the real gap) at $0 API, storage, and compute; server-side MapLibre Native would add native GL dependencies and memory pressure to a service that already has an OOM plan |
-| Stored Google images | Plan to store Google PNGs (CDN, then GCS) | Remove: purge `blog_day_map_artifacts` Google PNGs, turn off `trip_blog_day_map_render`, remove `staticMapRoutes.ts`'s 24 h server cache | Google's terms restrict storing map content; `blogBackgroundWorker.ts` already does this today |
-| Google pricing | "$200/mo free credit ≈ 100,000 views" | Static Maps is Essentials: 10,000 free calls/month, then $2.00 per 1,000 up to 100k (verified on Google's pricing page) | The $200 credit was retired on 2025-03-01 |
-| Static Maps caching | "May cache up to 30 days"; "Google sends `max-age=21600`" | Pass Google's `Cache-Control` through; no server cache; don't rely on 30 days | The current 30-day allowance covers coordinates, not Static Maps images; the header value is unverified until a keyed request is made |
-| Attribution | "© OpenStreetMap contributors" | On-screen MapLibre attribution kept visible; exports carry OpenFreeMap, OpenMapTiles, and OpenStreetMap credits | OpenFreeMap's terms for printed or exported use |
-| Terms citations | Specific section numbers (3.2.4(a), 3.2.4(b), 3.2.3) | Link the live terms instead | Section numbers couldn't be verified against the current text |
-| Geocoding throttle | "1 req/s in application layer" | One worker under `scheduledJobLease`; backfill 4 req/min; kill-switch flag | Cloud Run runs several instances, so a per-process throttle doesn't enforce Nominatim's app-wide limit |
-| Geocode cache | Stores normalized address text | Store only a hash of the normalized query | A shared cache shouldn't retain other users' addresses |
-| Discovery query | PostGIS on `locations` | In-memory index per destination | No PostGIS; production is Firestore |
-| Sender check | Hold mail whose sender *domain* isn't verified | Verify the **forwarding user** (envelope sender, `+tag` stripped); airline DKIM is only a confidence signal | Otherwise every new airline or hotel is held — the opposite of hands-off |
-| Extraction | New regex stage; LLM below 0.85; "70–80% savings" | Static/learned stages already exist; add `.ics` + JSON-LD; reuse 0.9/0.7 thresholds; capture unstripped HTML; measure from `usage_metering` | Consensus is already sampled; JSON-LD is dropped today by the stripped-text path |
-| Trip matcher | Additive points, auto at ≥ 80 | Required gates + uniqueness margin; booking continuity strongest | Additive points let "date + traveler + weak place" auto-assign and made the strongest signal non-decisive |
-| Undo | Removes the item | Also removes the source-synced expense | `syncAssignedFlightExpense` runs outside the assignment transaction |
-| Version endpoint | Computed from child timestamps | `trips.content_version` counter | Computing from children reads every child — on Firestore that's billed per document, defeating the 304 |
-| Offline sync | New `POST /api/expenses/sync`; 409 meant "dedup" | Existing `POST /api/expenses` + `Idempotency-Key`; replay returns the original response; 409 only for key reuse with a different payload | Less new surface; the diagram and text contradicted each other |
-| Connectivity | `NetInfo` listener | Existing `useConnectionState` | NetInfo isn't used in the app |
-| Routes | `POST /api/trips/:tripId/activities` | `POST /api/activities` | Actual mount in `app.ts` |
-| Restored | — | Shared-address migration, per-alias rate limit, quota after validation, no backscatter, Gmail forwarding confirmation, web-push flag fix, activity recap, open questions, sources | Dropped in the previous rewrite |
+- **One source of domain types.** Add shared bundle, operation-result and coordinate-provenance types to `server/src/types.ts`; frontend uses type-only imports. Validate external/request data with server schemas and return stable error codes. Do not add another locally redefined `Trip`/`Expense` model. Version persisted snapshots and queue payloads explicitly.
+- **Reuse the current entry points.** Existing `/api/activities` and `/api/expenses` own creates; ingestion owns extraction/review; notification repositories own preferences/history. Small shared idempotency helpers support adapter transactions; do not repurpose AI-generation-specific records into every operation without an expand migration and compatibility tests.
+- **Keep `App.tsx` integration thin.** Move snapshot download/replay orchestration into focused hooks/services; import setup, review cards, inbox and map legend into reusable components. Keep normal tab fetch helpers co-located per project convention; avoid a repo-wide API-layer refactor.
+- **Separate domain logic from platform code.** One map-point selector, public-location projection and matcher; `.web.tsx` / `.native.tsx` renderers; storage/replay adapters behind small contracts. A native build must not import DOM/WebGL dependencies. Add native dependencies only after a small compatibility spike proves Expo 54/RN 0.81 and supported device behavior.
+- **Make invariants adapter-owned.** Domain writes, version bumps, idempotency and outbox intent must share a database transaction or an explicit recoverable workflow. `db.ts` delegates; adding a second facade write is not atomic. Ingestion/blog/notification repositories also mutate data outside the facade and must participate.
+- **Bound dependency and operational growth.** Pin vetted parsers/map packages in lockfiles, review licenses and advisories, avoid runtime CDN script fallback, and configure provider endpoints server-side. Reuse existing budget/config/logging helpers and a small durable queue interface; no speculative plugin framework, new microservice, Redis or self-hosted tiles without measured need. Scanner isolation is justified by untrusted files.
+- **Migration and retirement.** Expand schema first, deploy compatible readers/writers, backfill in resumable bounded batches, verify, then contract. Document both Postgres and Firebase behavior and required indexes; pg-mem reuses Postgres but cannot prove production concurrency. Preserve old native clients through a declared minimum-version window before removing Google routes/flags or changing blog map response shapes. Every new flag has an owner, missing-row behavior and retirement criterion.
+- **Reviewable slices.** Each PR states user-visible behavior, supported platforms, touched adapters, cost impact, tests, rollback and remaining limitations. Separate necessary feature work from broad cleanup. Do not duplicate queues, preference stores, capability registries or parsers during transition.
+
+## 0.4 Experience for non-technical users (release requirement)
+
+Use existing app navigation and simplified Imports view. No new setup is needed to use a
+trip, browse places, or read already-saved data. Advanced automation is optional and never
+blocks manual upload or trip planning. UI labels below are proposed copy, not API enums.
+
+| Task | Default path | Recovery without technical knowledge |
+| --- | --- | --- |
+| Import a booking | Open **Imports** → **Upload a confirmation** or **Copy my forwarding address** → see **Received**, then a booking preview and trip suggestion → **Add to Japan trip** | **Choose a trip** if ambiguous; **Edit details** if dates/amount are missing; **Upload another file** if unsupported. Never show a confidence percentage or require provider settings. |
+| Set up email forwarding | Copy address first; optional **Set up automatic forwarding** opens provider-specific steps, progress and a test | Explain that mail-provider settings open outside the app; show the validated confirmation code when needed. Offer **I'll do this later** and manual upload. A test shows **Test received** and creates no booking/charge. |
+| Review unfamiliar mail | **Check this sender** with sanitized sender and receipt time → **Import this message** or **Delete** | Explain “We haven't verified this sender yet.” **Always allow this sender** requires verification, cannot change auto-add permission, and stays under More options. No raw HTML preview. |
+| Enable automation | After a successful reviewed import, offer **Automatically add matching bookings** with an example, shared-trip disclosure and an off-by-default switch | Show **Added to Japan trip** and **Undo** in import history and item details for seven days, not just a disappearing toast. Ambiguous matches always ask. |
+| Find an activity | Open a day → **Nearby** → card shows distance, estimated duration and **Add to [day]** | Default trip/day from context. Ask only when context is absent; show **Added** and **Undo**, prevent double taps, warn about an existing activity. Offer **Search another area** for no results. |
+| Use the map | Day list works first; **Show map** opens the same stops, with linked row/pin selection | **Map unavailable — your itinerary is still below**; **Open in Maps** for navigation. Explain straight-line connections and estimated times without technical terms. |
+| Save a trip | **Save for offline** → progress/size → **Saved on this device**, last-updated time | Storage/network failure keeps the previous complete copy and shows **Try again** or **Free up space**. Say whether map imagery is included; first release guarantees trip details, not turn-by-turn navigation. |
+| Add an expense offline | Normal **Add expense** form → **Saved on this device · waiting to sync**; automatic retry on reconnect | **Sign in to finish syncing**, **Fix details**, or **You no longer have access to this trip**. Never imply server save before local durability/server acknowledgement. Failed expenses stay visible until resolved/discarded. |
+| Leave a device | Normal **Sign out** | If unsynced work exists, explain the count and offer **Sync now**, **Keep safely on this device** (only with protected same-account retention), or explicitly confirmed **Discard and sign out**. Never silently delete financial work. |
+
+**Common requirements:** plain language and one primary action; preserve form input and
+filters across recoverable failures; show local date/time, currency and any uncertain
+timezone explicitly. Hide alias rotation, technical job states, parser diagnostics and
+provider/quota controls under Advanced/Admin. Do not expose “HMAC”, “LLM consensus”,
+“idempotency”, “ETag”, or “quarantine” in user tasks. Paid limits show a readable allowance
+and next reset/action before work starts, never a surprise failure after entry.
+
+Support screen readers, keyboard-only use, visible focus, text scaling, contrast, reduced
+motion and touch targets of at least 44 logical pixels. Never rely on pin color or status
+icons alone. Provide Move up/down alternatives to drag, persistent status instead of toast-only
+feedback, labeled errors next to fields, and confirmation only for destructive/financial
+conflicts. Do not request notification or location permission before the user invokes the
+relevant feature; denial leaves planning usable.
+
+**Usability gate:** test the above tasks with at least five people unfamiliar with the app,
+including mobile and a keyboard/screen-reader pass. Target at least 4/5 completing import,
+Add to day, offline save and offline-expense recovery without coaching; zero unnoticed data
+loss or accidental sharing. Record task times, confusing labels and mistakes; fix blockers
+before wider rollout. Small-sample results guide iteration, not a claim of population-wide
+success. No analytics collection outside existing consent rules.
 
 ---
-
 ## 1. In-App Map & Route Visualizer
 
 **Decision: store coordinates, not map images.** Maps are drawn on the device with MapLibre and OpenFreeMap tiles. Google Static Maps is only a live-view stopgap in the native app until its next EAS build.
 
-This is both the lowest-cost and the highest-impact option:
+This is the proposed direction; validate it on supported devices before rollout:
 
 - **Impact:** it delivers an interactive map, which is the actual gap against Wanderlog — a stored PNG doesn't close it.
-- **Cost:** $0 in API fees, storage, and server compute.
-- **Compliance:** it avoids Google's restrictions on storing map content.
+- **Cost:** avoids metered tile fees on the current public service and a new server renderer; still measure app bundle, device memory/battery, network and operational costs.
+- **Provider terms:** separate coordinate provenance, attribution and export rights from renderer choice. A browser cache header is not proof of contractual storage permission.
 
 ### 1.0 Map engine by surface
 
 | Surface | Engine | Image stored? | Cost |
 | --- | --- | --- | --- |
-| Day view, web | MapLibre GL JS + OpenFreeMap, drawn in the browser from stored coordinates | No | $0 |
-| Blog day map, public blog page, recap (web) | Same `TripMap` component | No | $0 |
-| Keepsake / print export | Snapshot of the MapLibre canvas inside the existing on-device keepsake renderer (`app/utils/keepsake.ts`) | Only in the user's exported file | $0 |
-| Day view, native app (until the next EAS build) | Google Static Maps, streamed live through the proxy, no server-side copy | No | Static Maps is an Essentials SKU: 10,000 free calls/month, then $2.00 per 1,000 (to 100k). Native-only live views should stay inside the free allowance |
-| Native app, after the next EAS build | MapLibre React Native + OpenFreeMap | No | $0; Google key retired |
+| Day view, web | MapLibre GL JS + OpenFreeMap, drawn in the browser from stored coordinates | No app-generated map artifact | Public tile delivery currently free; measure total cost |
+| Blog day map, public blog page, recap (web) | Same component with explicit audience-safe points | No app-generated map artifact | Same; defer until privacy projection passes |
+| Keepsake / print export | Dedicated on-device snapshot passed to the existing pure HTML keepsake renderer (`app/utils/keepsake.ts`) | Only in the user's exported file | Device work; prototype CORS/attribution/print readiness first |
+| Day view, native app during migration | Google Static Maps only where permitted, with authenticated proxy and no app-managed persistent copy | No app artifact | Validate billing account/SKU pricing and limits; free allowance is shared, not a per-user guarantee |
+| Native app after compatibility/release gate | MapLibre React Native with shared point/style contract | No app-generated map artifact | Public tile delivery currently free; dependency/build/device cost remains |
 | Images with no browser (email digests, link-preview images) | **Deferred.** If ever needed: a separate scale-to-zero service rendering OpenFreeMap tiles — never inside the API service, which already has a Cloud Run OOM remediation plan | Yes, OpenStreetMap-based only | Compute only |
 
-### 1.1 Compliance cleanup (P0 — do now)
+### 1.1 Provider-storage review and cleanup (P0)
 
 1. **Stop storing Google images.** `services/blogBackgroundWorker.ts` (render job at lines ~346–377 and ~620+) downloads Google Static Maps PNGs and saves them to Cloud Storage. Its flag, `trip_blog_day_map_render`, seeds **on**.
-   - Turn the flag off.
-   - Check production for `blog_day_map_artifacts` rows and objects under that bucket prefix; delete both.
+   - Prepare a configuration change to pause new artifacts while applicable account terms are reviewed. This document changes no flags and authorizes no deletion.
+   - Inventory rows/objects, provider provenance and readers; prepare a scoped dry-run cleanup with counts and exact prefixes. Purge confirmed ineligible artifacts in a separately reviewed, resumable job with audit evidence and no impact on user photos. Adapt old readers before retiring URLs; do not blindly delete bucket prefixes.
 2. **Remove the server-side Google image cache.** `routes/staticMapRoutes.ts` holds Google PNGs in a 24-hour in-process `mapCache` for both `/static` and `/trip-day`. Remove it, so responses stream straight through.
-   - **Pass Google's own `Cache-Control` header through unchanged** instead of setting our own (today's code sends `private, max-age=86400`). The client cache then follows exactly what Google allows for that image, with no terms interpretation on our side. Send `private` only if Google's header is missing.
-   - Don't rely on the 30-day caching allowance: the current Service Specific Terms grant it for coordinates (Directions, Geocoding, Geolocation), not for Static Maps images.
+   - Do not blindly forward an upstream `public` cache directive for authenticated trip content. Default the proxy to `Cache-Control: private, no-store`; any permitted browser-only caching requires documented terms and privacy review. Never let a CDN or generic service worker cache private maps. Upstream headers do not replace contract review.
+   - Verify the applicable regional/account agreement and Maps Static policy; do not generalize coordinate-specific allowances to images. Remove unsupported cache behavior before expanding traffic.
    - The existing per-caller daily caps and $15/month budget stay in place. Once web moves to MapLibre, only native live views reach Google.
-3. **Keep Google content off the open map.** Never draw Google Directions geometry or Google geocodes on MapLibre. Map coordinates come only from the airports table, the attractions catalog, Nominatim (§1.4), and photo EXIF. Travel times shown as text use the haversine estimate (§1.6).
+3. **Keep provider provenance.** Use only coordinates/content whose terms permit the target surface; record source, fetched time and allowed use. Do not assume catalog content is unrestricted merely because it is cached. Keep Google-derived content out of the open-map/export path unless explicitly permitted; even text-only display needs review. Haversine estimates need no routing provider.
 4. **Attribution.**
    - Keep MapLibre's on-screen attribution control visible (never hidden by CSS).
    - Exported or printed images carry "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" in the image itself, as OpenFreeMap's terms require for non-interactive use.
@@ -172,37 +202,37 @@ This is both the lowest-cost and the highest-impact option:
 ### 1.2 Day map on web: MapLibre (P1)
 
 - **One `TripMap` component** on MapLibre GL JS with the OpenFreeMap style. Pins are colored by kind (reusing `TripDayMap`'s legend colors) and lettered in visit order, with a straight-line route layer between stops labelled "connections, not directions".
-- **Lazy-loaded** with `import('maplibre-gl')` the first time a map scrolls into view. If Metro web doesn't split the bundle, load MapLibre from a pinned CDN URL instead.
+- **Lazy-loaded** through a web-only module when the user opens/approaches the map, with measured initial JS impact. Verify Metro splitting in the production export; if it fails, use a controlled build/asset strategy rather than a runtime CDN script fallback. Pin dependencies and limit CSP origins for style, tiles, glyphs and sprites. Destroy offscreen map instances; limit simultaneously mounted WebGL contexts and test low-memory devices.
 - **No new endpoint.** The day view already has the trip's items (and later the §5.1 bundle). The client builds points from item `lat`/`lng` (§1.4) and airport coordinates. Items without coordinates yet are listed under the map as "Not on the map yet".
 - **Layout:** at widths ≥ 1024 px, a split view — itinerary left, map right. Selecting a card centers its pin; clicking a pin scrolls to its card. Narrower web screens get a collapsible map above the list.
 - **Failure mode:** OpenFreeMap has no SLA. If tiles fail, show the list with "Map unavailable"; there is deliberately no Google fallback on web, so there's one engine to maintain.
 - **Accessibility:** the list stays the primary view. Pins are keyboard-focusable with text labels, and every fact on the map is also in the list.
 
-### 1.3 Blog, public blog page, recap, keepsake (P1)
+### 1.3 Blog, public blog page, recap, keepsake (P2)
 
 - Change the blog `dayMap` fact in `services/blogDayFactsService.ts` to return the day's points (media geotags) instead of a signed PNG URL. `tripBlog.tsx` and the public blog page render them with `TripMap`.
-- **Privacy:** these points are photo GPS locations. Show a public page's map only when the photos it plots are visible to that audience, and coarsen public coordinates (e.g. to ~100 m) so a home or hotel isn't pinpointed.
-- **Keepsake:** when the keepsake includes a day map, snapshot the MapLibre canvas on the device (`preserveDrawingBuffer: true`) and embed it with the attribution line. No server job.
+- **Privacy:** photo visibility is not consent to publish precise EXIF. Default public location sharing off; require an explicit approximate-location preview/consent, suppress home/private lodging points, and project only approved coarse points **on the server**. Rounding to 100 m is not anonymization. Public HTML, APIs, exports and analytics must not contain hidden exact coordinates. Recheck audience and invalidate caches on unpublish/delete.
+- **Keepsake:** prototype a bounded export-only map instance, wait for tiles/fonts with a timeout, snapshot with attribution and dispose it. Avoid `preserveDrawingBuffer` on every live map; test memory/CORS and native `expo-print` compatibility. Export still succeeds with a labeled list when imagery is unavailable; never output a silently blank canvas. No server render dependency.
 - **Retire** the render job, `trip_blog_day_map_render`, and `blog_day_map_artifacts` once nothing reads them (all three adapters).
 
-### 1.4 Geocoding layer (P0 — feeds §1.2, §1.6, §2, §3.4)
+### 1.4 Coordinate reuse and optional geocoding (P1)
 
-- **Resolution order, cheapest first:** catalog entries (coordinates in `locations.payload`) → airports table (IATA) → existing `LodgingLocation` records → `geocode_cache` → Nominatim.
-- **`geocode_cache`:** `query_hash` (SHA-256 of the normalized query, unique), `lat`, `lng`, `city`, `country_code`, `provider`, `quality_score`, `fetched_at`, `expires_at` (90 days). No address text is stored in the shared cache.
+- **Resolution order:** reuse permitted catalog/airport/item coordinates before cache or external lookup. Catalog Nearby and initial maps can ship without external geocoding; unresolved items retain their original text and remain usable.
+- **Cache:** key by normalized query + country/locality/language context + provider/normalizer version; record coordinates, quality/provenance, expiry and negative-result TTL. Reuse only eligible public POIs across users, isolate private locations. A plain address hash is dictionary-searchable, not anonymization. Refresh with deduplicated jobs; recheck the item's address version before writing results.
 - **Item columns:** nullable `lat`, `lng`, `geo_city` on lodgings, activities, and car rentals (pickup and dropoff), in all three adapters.
-- **Worker:** saves enqueue a geocode job; exactly one worker runs it under the existing `scheduledJobLease`, so Nominatim's limit of **1 request/second for the whole app** holds across Cloud Run instances.
-  - One-off backfill runs single-threaded at **4 requests/minute** (Nominatim's bulk rule).
-  - Identify with a real User-Agent, and add a fail-closed `geocoding_nominatim` flag so the service can be switched off without a deploy, as the policy requires.
-- **Provider interface** (like `FlightParserConfigurator`), so a self-hosted or paid geocoder can replace Nominatim's public instance when volume grows. A Google geocoder must not be chosen: its results couldn't be shown on the MapLibre map (§1.1 item 3).
-- **Side benefits:** fills `LodgingLocation` lat/lng/timezone (null today), improving `tripTimezoneService`. Lets the day-card title use `geo_city` instead of the `shortenLocationToCity` comma heuristic in `overview.tsx`.
+- **Worker:** durable idempotent jobs, bounded backlog, lease expiry/renewal with stale-owner fencing, retry/backoff and dead-letter visibility, implemented on both adapters. The existing `scheduledJobLease` is not this contract. Consolidate merchant-category lookup and geocoding under one provider admission policy; a lease alone does not throttle every caller or enforce one physical worker.
+- **Public Nominatim is conditional, not a default production backend.** Its [usage policy](https://operations.osmfoundation.org/policies/nominatim/) requires developer responsibility, app-wide <= 1 request/second, identification, attribution and caching. Bulk use is discouraged; eligible small jobs use one thread/machine, and recurring/day-long jobs <= 4/minute. Confidential/personal queries, autocomplete and systematic POI harvesting are prohibited. No production backfill/private-address submission until permitted scope is documented. A fail-closed server flag can stop external work without app updates.
+- **Provider interface:** one narrow lookup contract; choose any replacement only after reviewing storage/privacy/display rights, total fixed cost and measured volume. Missing provider never blocks item save.
+- **Timezone:** lat/lng alone is not a timezone. Use existing inference or a separate vetted offline lookup, retain provenance and support correction. Use `geo_city` in day titles only when sufficiently reliable; preserve the original location fallback.
 
 ### 1.5 Native app (P1 stopgap → P2)
 
 1. **Stopgap — Google live view only.** Provision a server-only key restricted to the Maps Static API, set `GOOGLE_STATIC_MAPS_API_KEY`, and flip `trip_day_map` for native.
    - Change `GET /api/maps/trip-day` to take `tripId` + `dayDate`, check `ensureUserCanReadTrip`, and derive points server-side, so clients can't run arbitrary addresses through our key.
    - Stream Google's image with no server copy (§1.1). Add a `reserveMapRenderRateLimit` per user in `httpRateLimitService`.
+   - Bound provider fetch duration/response bytes/content type and request dimensions; redact upstream URLs/keys. Provider timeout or budget exhaustion leaves the list usable. Add these checks before enabling the stopgap.
    - The single-address preview in `LodgingDetailsDialog` (`GET /api/maps/static`) follows the same rules; on web it switches to `TripMap`.
-2. **Next EAS build — MapLibre React Native.** Add `@maplibre/maplibre-react-native` with the same OpenFreeMap style, switch native to `TripMap`, and retire the Google key and `staticMapRoutes.ts`. Ship it in the same native release as §5.2's encrypted storage, which also needs an EAS build.
+2. **Native compatibility spike, then staged EAS release.** Verify Expo/RN support, gestures/accessibility, attribution, style support and low-memory devices before adding the dependency. It may share a build with encrypted storage, but each feature has independent flags/rollback. Retire Google routes/key only after supported old clients migrate; avoid an unnecessary two-engine rewrite if the native spike cannot pass. Existing list/external-map fallback stays usable.
 
 ### 1.6 Route lines, travel times, day optimization (P1 / P2)
 
@@ -210,11 +240,11 @@ This is both the lowest-cost and the highest-impact option:
 2. **Travel time between stops** via the existing `transferEstimationService`: haversine with walking (~5 km/h) or driving (~30 km/h) speeds, shown as "~12 min walk".
    - The Directions API is used only when `attractions_transfer_directions_api` is on **and** `assertCanUseFeature` passes for the user's tier — a flag alone is global, not per tier.
    - Directions results appear only as text, never as geometry on the map.
-3. **Stop order.** Add `sort_order` to activities (Postgres migration, Firestore field, pg-mem inherits). Drag-to-reorder on web with `@dnd-kit/core`.
+3. **Stop order.** Verify existing order fields first; use stable per-day order with an authorized atomic bulk update and expected version. Global activity order must not alter other days. Provide drag plus keyboard/Move up/down actions; validate a drag library against RN Web before adoption.
 4. **Optimize day (P2).** Nearest-neighbour + 2-opt on the client over ≤ 12 coordinates.
-   - Fixed-time bookings stay put; lodging anchors the start and end.
-   - Preview original vs optimized distance; one-tap Revert.
-   - Free. Google Routes refinement can be a Premium extra, shown as text only.
+   - Fixed-time bookings and pinned stops stay put; lodging anchors are optional. Explain missing coordinates, distance estimates and unmodeled barriers/accessibility; no implied road navigation or opening-hours guarantee.
+   - Preview before applying; Revert checks versions and never overwrites tripmates' intervening edits.
+   - Local optimization stays free. Defer metered routing until demand, display rights and per-user budgets justify it.
 
 ---
 
@@ -223,32 +253,37 @@ This is both the lowest-cost and the highest-impact option:
 ### 2.1 "Nearby" panel (P1)
 
 - Catalog places within 2 km of the day's lodging or first stop.
-- **Spatial lookup:** an in-memory index per `destinationKey`, built from the catalog the server already loads (same pattern as the autocomplete prewarm). It is a bounding-box prefilter, then a haversine distance check. No database reads per query; target p95 < 150 ms.
+- **Spatial lookup:** reuse catalog loader/ranker with a bounded lazy per-destination index, bounding-box prefilter then haversine check. Deduplicate loads, version on catalog refresh, cap memory/TTL and return <= 20 results/page. Warm catalog queries can avoid catalog reads; authorization/limits, cold loads and refresh still cost. Measure cold and warm latency separately.
 - **Ranking:** deterministic — trait match from `activityTypeInterestWeights` against the group's traits, plus a popularity signal where the catalog has one (Wikipedia pageviews), minus distance. No LLM.
 
 ### 2.2 One-tap "Add to day" & bookable options (P1)
 
 - "Add to day" calls the existing `POST /api/activities`, prefilled with name, coordinates (so no geocode is needed), `attractionDurationEstimationService` duration, category, and description.
 - It sends an `Idempotency-Key` through the shared middleware (§5.3), so a double tap can't create two activities.
+- Enforce atomic create/dedupe, membership and input validation in the existing route/repository; middleware alone cannot guarantee one create. Reuse a minimal idempotent-create primitive before Nearby ships; do not make it wait for the whole offline expense UI. Estimate duration locally/cached, not one paid call per visible card. Confirm exact trip/day only when context is missing.
 - GetYourGuide options appear when `getyourguide_activity_suggestions` is on, labelled "Partner". Ranking ignores affiliate status.
 
 ### 2.3 "Trips like this" & destination pages (P2)
 
 - Public trip blogs for the same destination. "Copy activities" clones names, categories, coordinates, and durations, and credits the source blog.
 - Only content published under the public-sharing consent is eligible. Never notes, costs, bookings, flight numbers, or traveler names.
+- Copy through a server-side allowlist projection, rechecking visibility and permissions at copy time; invalidate recommendations when the author unpublishes/deletes. Show affiliate disclosure clearly; do not budget against unearned commission.
 - Public, crawlable explore pages stay behind the SEO spike in competitive-analysis §5.4.
 
 ---
 
 ## 3. Automated Reservation Import & Ingestion Security
 
-Goal: a user forwards a confirmation, and within a minute it is in the right trip with a notification. Review is needed only when something is genuinely ambiguous. Auto-assignment writes into a trip the whole group sees, so attribution must be fixed first.
+Goal: forwarding produces clear receipt/progress and a suggested trip without technical
+setup. After a successful review, users may opt into confident automatic additions. Target
+latency is measured by input class; a cold scanner or OCR can take longer than a minute.
+Auto-assignment affects a shared trip, so trusted attribution and recovery ship first.
 
 ### 3.1 Critical security fix: per-user aliases (P0)
 
 **The vulnerability (current code).** `resolveMailgunWebhookUser` takes `body.sender ?? body.from`, looks up the account with that email, and enqueues the message. The webhook HMAC proves *Mailgun* sent the request, not who wrote the email. Anyone who knows a Premium user's address can:
 
-- inject fake reservations with phishing links into that user's queue (and, after §3.3, into a shared trip);
+- inject fake reservations with phishing links into that user's queue (and, after §3.4, into a shared trip);
 - burn the user's monthly import quota (it's consumed after attribution);
 - trigger extraction and LLM spend on attacker content.
 
@@ -258,51 +293,49 @@ Inbound email → Mailgun MX → POST /api/ingestion/webhooks/mailgun
   2. Parse recipient u-<token>@in.wander-bunnies.com      (new)
   3. SHA-256(token) → ingestion_aliases (ACTIVE or within grace)
        └─ not found / revoked → 200, drop, counter only
-  4. Forwarder check: envelope sender or From (+tags stripped)
-     is one of the user's verified addresses
-       ├─ yes → per-alias rate limit → quota → enqueue
-       └─ no  → HELD_UNVERIFIED_SENDER (no scan, no parse, no LLM)
+  4. Bounded alias/account admission + trusted sender validation
+       ├─ trusted → durable receipt + dedupe/quota reservation → worker
+       └─ uncertain → bounded private hold (no scan, parse or LLM)
 ```
 
 1. **Alias.** `u-<token>@in.wander-bunnies.com`, where `<token>` is 128 random bits, base32 (26 characters). It lives on a dedicated inbound subdomain with its own MX, so the main domain's mail is untouched.
-2. **`ingestion_aliases`:** `id`, `user_id`, `token_hash` (SHA-256, unique), `address_ciphertext` (AES-256-GCM, same pattern as `pushTokenCrypto.ts`, only for showing the address back), `status` (`ACTIVE` | `ROTATED` | `REVOKED`), `created_at`, `grace_until`. **Rotate:** the old alias keeps working for 7 days. **Revoke:** stops it immediately.
-3. **Forwarder check — verify the person forwarding, not the airline.** Accept if the envelope sender (Mailgun's `sender`) or `From`, after stripping `+tags`, is a verified address of the alias owner: the account email plus any added and confirmed on the Import screen (`ingestion_verified_senders`).
-   - Manual forwards carry the user in `From`.
-   - Gmail auto-forwarding keeps the airline in `From` and sets the envelope sender to the user's address with a `+caf_` tag — confirm with a real auto-forward during implementation.
-   - SPF/DKIM results (exact Mailgun header names to confirm) and the airline's own DKIM pass raise extraction confidence. They are **not** a gate, so a new airline is never held.
+2. **`ingestion_aliases`:** preserve id/owner/hash/encrypted address/status/timestamps with key version and authenticated-encryption associated data. PostgreSQL unique index; Firestore deterministic token-hash document reserved in a transaction, since an index is not a uniqueness constraint. Routine rotation may offer seven-day grace; suspected compromise revokes immediately. No alias tokens in logs, public links, analytics or notifications; deletion removes aliases/keys.
+3. **Trusted sender, not claimed sender.** A secret alias is a bearer capability, not proof of message truth. Only trusted receiver-generated authentication results with documented identity alignment may influence sender trust; attacker-supplied headers and `From` alone cannot. Account/additional addresses must actually be verified with expiring single-use tokens. Avoid universal plus-tag stripping; confirm real forwarding behavior with Gmail, Outlook and Apple fixtures. SPF may fail after forwarding; DKIM/ARC handling needs explicit validation. Uncertain cases go to review. Do not promise that every new airline bypasses checks, or assume Gmail rewrites the envelope to the user's mailbox. Provider authentication does not replace extraction quality validation.
 4. **Hold, don't reject.** A message to a valid alias from an unverified forwarder goes to `HELD_UNVERIFIED_SENDER` **before** scanning, normalization, or extraction. The Import screen and inbox show "1 message from `spouse@example.com` — Import once · Always allow · Delete". "Always allow" sends a confirmation link to that address first.
-5. **Quota and rate limits after validation.** Move `assertAndConsumeMonthlyQuota` after steps 3–4, and add a per-alias cap (e.g. 50 messages/day) in `httpRateLimitService`.
+5. **Two admission budgets.** Add global/IP transport limits, total bytes/parts/fields and deadlines before multipart buffering; 20 per-file limits do not bound total memory. After alias lookup bound held mail by account/alias (initial proposal: 20 messages or 25 MiB, seven-day TTL), with one coalesced alert. Enforce per-alias accepted rate caps and consume monthly quota once per accepted message, atomically with dedupe/admission, not once per retry/attachment. No billable extraction or scanner wakeup for unverified holds. Authenticated Import once still follows scan/quota rules; over-limit users retain manual review and readable recovery.
 6. **No backscatter.** Never auto-reply to an inbound sender. Results go to the alias owner in-app, by push (§4.2), or by email to the **account** address only.
-7. **Retire the shared address.** For 30 days, mail to `travel.docs@wander-bunnies.com` is held (step 4) until the user taps "Yes, I sent this". The Import screen and an email to the account address announce the personal address. Afterwards the shared address is dropped.
+7. **Retire the shared address safely.** Immediately stop using sender lookup to select an account, including a hold queue. Drop legacy-address mail with provider-appropriate success, announce the personal address to signed-in owners/verified account channels, and offer manual upload. Any grace path needs an authenticated claim mechanism; a spoofable sender cannot determine who receives private mail.
 8. **Attachment scanning, fail closed.** Store raw attachments in a private quarantine prefix. Scan each buffer with `clamav_http` before `pdf-parse`, OCR, or `.ics` parsing.
    - Production startup refuses to run forwarded-mailbox ingestion with the stub selected.
    - Scanner unreachable → keep the file held and retry with backoff (existing retry config); never pass unscanned bytes.
-   - Run ClamAV as its own Cloud Run service scaled to zero. Most confirmations have no attachments, so most messages never wake it.
+   - Reuse `clamav_http`; deploy a private authenticated scanner and benchmark scale-to-zero cold starts, signature updates/readiness, memory, concurrency and idle costs. Unknown provider, no-op batch, stale signatures, malformed result and timeout cannot mean clean. Scan actual bytes on each supported source; content sniffing, PDF-page/image-pixel/decompression limits and parser isolation remain necessary after antivirus.
    - Google Web Risk checks URLs, not files, so it doesn't fill this role.
 9. **LLM boundaries.** Fence email text in the prompt and validate every LLM response against a Zod schema per item type. Fences reduce prompt-injection risk; they are not a security boundary. The real controls:
    - the LLM gets no tools and no links are fetched;
-   - its output can't set `trip_id`, user, or status — the deterministic matcher decides (§3.3);
+   - its output can't set `trip_id`, user, or status — authorized domain logic applies the deterministic matcher (§3.4);
    - imported links render as plain text with the domain visible.
-10. **Log hygiene.** Log alias id, job id, a hash of the sender, and byte counts — never addresses, subjects, alias tokens, or bodies. Today's info logs in `ingestionWebhookRoutes.ts` print all three of sender, recipient, and subject.
+10. **Log hygiene.** Log opaque alias/job ids, outcome and byte counts; omit mail metadata, filenames and payloads from errors/capture/analytics. If sender correlation is essential, use a rotating keyed HMAC, not a dictionary-searchable plain email hash.
+11. **Durable receipt before ACK.** Quarantine in private durable object storage with TTL/access controls, persist delivery/jobs and enqueue intent, then acknowledge. Scanning/parsing runs off-request. Separate replay-token validation from business idempotency: current replay claiming occurs before persistence. Test a crash at every boundary so retries recover rather than reject already-claimed tokens and lose mail. Message-Id alone is attacker-controlled; scope dedupe by account/content identity. Duplicate committed deliveries return success without recharging quota; transient storage/queue errors remain retryable under Mailgun's documented contract.
+12. **One state machine and deletion policy.** Extend `import_job` as the source of progress; private hold references do not become a second pipeline. Raw bytes, extracted text, model/shadow captures, aliases and derived records have documented deletion/retention with lifecycle enforcement; remove raw content after processing when no longer required. Keep only minimal audit metadata. No external URL/image fetch, payment action or booking update/cancellation from email instructions. Render normalized text and validated fields, never raw HTML.
 
 ### 3.2 Easy setup (P1)
 
 1. **Import screen leads with the address:** Copy, QR code, "Add to contacts" (vCard), Rotate.
-2. **"Send a test":** emails a sample confirmation to the user's alias and shows it arriving, end to end.
+2. **"Send a test":** authenticated, rate-limited synthetic message proves receipt; it cannot add a booking, consume import allowance or trigger a reply loop. Explain success and the next step; failure leaves Copy/upload available.
 3. **Provider walkthroughs** for Gmail (filter → forward), Outlook (rule), and Apple Mail.
-4. **Gmail forwarding confirmation.** Gmail emails a confirmation code to a new forwarding address before it will auto-forward, and that email arrives at the alias. Detect it (from `forwarding-noreply@google.com`), skip extraction, and show the code and confirm link on the Import screen. Without this, auto-forward setup silently fails.
+4. **Gmail forwarding confirmation.** Recognize validated provider fixtures, not a `From` string alone. Show sanitized code only to the authenticated alias owner, validate any offered HTTPS host, never auto-follow/approve, and keep codes out of push/logs. Explain that the user completes Gmail's own forwarding settings; the app cannot silently create their mail rules.
 5. **Tripmates** each have their own alias; imported items show "Imported by Tristan".
 6. **Share sheet:** extend the existing mobile share entry points with "Import to WanderBunnies" for PDFs and screenshots (manual-upload source, same scanning).
 
-### 3.3 Structured-data-first extraction (P0 for cost)
+### 3.3 Structured-data-first extraction (P1, after security admission)
 
 ```mermaid
 flowchart TD
   A["Scanned email parts"] --> B{".ics attachment?"}
-  B -- yes --> C["Parse VEVENT ($0)"]
+  B -- yes --> C["Bounded VEVENT parsing (no model fee)"]
   B -- no --> D{"schema.org JSON-LD / microdata in body-html?"}
-  D -- yes --> E["Map Flight/Lodging/RentalCar/EventReservation ($0)"]
-  D -- no --> F["Existing static + learned extractors ($0)"]
+  D -- yes --> E["Validated reservation schema mapping (no model fee)"]
+  D -- no --> F["Existing static + learned extractors (no model fee)"]
   C --> G{"confidence ≥ 0.9?"}
   E --> G
   F --> G
@@ -315,18 +348,20 @@ flowchart TD
 ```
 
 1. **Capture structured data.** Pass the unstripped `body-html` as an extraction input alongside `stripped-text`. Today HTML is used only when there is no text part, so embedded JSON-LD is thrown away.
-2. **`.ics` stage.** Use a maintained iCalendar parser with limits: file size ≤ the existing 10 MB cap, ≤ 50 `VEVENT`s, and **no `RRULE` expansion** — a recurring rule can expand without bound.
-3. **JSON-LD stage.** Bound each `<script type="application/ld+json">` to 256 KB, parse with `JSON.parse` only, and accept a fixed allowlist of `@type`s.
-4. **Then the existing stages:** static/learned extractors, then the LLM only below `INGESTION_CONFIDENCE_HIGH` (0.9), keeping today's sampled consensus. Cache results by `contentHash`, as today, so a repeated template stays free.
+2. **`.ics` stage.** Use a vetted maintained parser; update MIME allowlist, manual picker and all source paths. Bound bytes/events/text/time, handle `TZID`, all-day/floating dates and duplicates; **no recurrence expansion or remote attachment fetching**. Calendar updates/cancellations and unknown timezones require review rather than auto-editing existing bookings.
+3. **JSON-LD stage.** Bound aggregate HTML/script bytes, script count, nesting and processing time (not just one 256 KB script). Parse JSON without executing HTML/JS or resolving remote contexts; allowlist supported reservation schemas and validate fields. Structured content is still untrusted and not automatically high-confidence.
+4. **Then existing stages:** complete validated static/learned output can avoid models; bounded escalation uses one model, then consensus only if quality/cost evidence justifies it. Preserve deterministic sampled quality auditing. Very poor/adversarial documents go to review rather than unbounded escalation. Cache identical documents by user + exact content + parser/schema/model-policy version; matching an airline template does not permit reusing another booking's personal data. Reserve aggregate job cost before parallel model work, including retries, OCR/shadow calls and captures.
 5. **One parser stack:** route the Transfers tab's "Paste Info" through ingestion extraction as a manual-text source and retire the separate `flightParserLLM` path.
 6. **Measure:** record the per-import LLM cost from `usage_metering` for 2 weeks before the change and compare after. Report per-stage hit rates in the existing ingestion admin widgets.
-7. **Defer Gmail OAuth import.** Restricted Gmail scopes require a CASA security assessment and re-assessment every 12 months. Forwarding covers the main case without it.
+7. **Defer Gmail expansion.** For public server-side processing of restricted Gmail data, plan scope verification and annual assessment unless a documented exception applies. Forwarding avoids new Gmail scopes; already-deployed OAuth usage still needs its own review.
 
-### 3.4 Assign to the right trip by default (P1)
+### 3.4 Suggest first; opt-in automatic additions after quality gates (P2)
 
 This reverses the deliberate "No automatic assignment" decision in `ingestion/TECHNICAL_DEBT.md`; update that file when it ships.
 
-**Gate:** ships only after §3.1 steps 1–5 and 8 are live. Without them, a spoofed or malicious email would write straight into a group's trip.
+**Gate:** all §3.1 controls, transactional/recoverable assignment side effects, safe undo,
+membership checks and a suggestion-only pilot pass before automatic writes. Default off,
+with a fail-closed cohort flag and per-user opt-in. Confirmation, not score, is the safe fallback.
 
 #### Candidate trips
 
@@ -343,7 +378,7 @@ Trips from `listTrips(userId)` where the alias owner is an active group member �
 
 | Signal | Computation | Strength |
 | --- | --- | --- |
-| Booking continuity | Same confirmation number, or vendor + booking reference, as an item already in the trip (e.g. the return leg). Extends the existing dedupe fingerprint lookup. | Strongest |
+| Booking continuity | Exact provider + normalized reference scoped to an authorized candidate trip, compatible dates/item type; references are not globally unique. Updates/cancellations require review. | Strong supporting evidence, not an authorization shortcut |
 | Place fit | Any endpoint matches the trip's places. Item: airport codes → city (airports table); hotel/activity/car address → `geo_city` (§1.4), or city-string match before §1.4. Trip: `destination`, `locationIds`, and cities of items already in it. Both legs count — the return departs from the destination. | Strong |
 | Date fit | As in gate 2; month-only trips (`startMonth`/`startYear`) give a weak fit that can only suggest | Required |
 | Traveler fit | `travelerNames` resolve to group members via `matchTravelerNamesToGroupMemberIds` | Tie-breaker |
@@ -361,21 +396,26 @@ Trips from `listTrips(userId)` where the alias owner is an active group member �
 #### Conflict-safe Undo (7 days)
 
 - Each auto-assignment stores `assignment_mode = 'AUTO'` and `undo_expires_at`.
-- Undo removes the rows that `assignment_transaction_id` created **and** the expense created by `syncAssignedFlightExpense` (by `sourceType`/`sourceId`), then returns the item to the review queue.
-- If a tripmate has edited the item, or its expense is part of a settled ledger payment, ask first: "Edited by Sarah — move back to review anyway?"
-- **Setting:** "Add confident matches to trips automatically", on by default, per user, on the Import screen.
+- Track every created row/expense with assignment id and expected version. Assignment and source-expense sync need an atomic transaction or durable recoverable intent before automation; an expense currently created after commit cannot be assumed complete.
+- Undo is an authorized idempotent compensating operation: remove only unchanged rows created by that assignment. Tripmate edits, shared references or settled payments require a conflict-specific recovery flow; never offer a generic button that silently deletes financial history. Recheck membership and keep an audit trail.
+- **Setting:** "Automatically add matching bookings", **off by default**, with a plain-language shared-trip explanation. Undo stays accessible in import history/item details for seven days.
 
 #### Data model
 
 - `parsed_items`: add `suggested_trip_id`, `match_reasons` (JSON), `assignment_mode` (`MANUAL` | `SUGGESTED` | `AUTO`), `undo_expires_at`.
 - `import_jobs`: add state `HELD_UNVERIFIED_SENDER`.
 - New tables: `ingestion_aliases`, `ingestion_verified_senders` (`user_id`, `email`, `verified_at`, `verification_token_hash`).
-- User preference: `ingestion_auto_assign` (default true).
-- All three adapters. Firestore composite indexes (`token_hash`; `user_id` + `status` + `suggested_trip_id`) go in `firestore.indexes.json` in the same PR.
+- User preference: `ingestion_auto_assign` (default false).
+- Implement in existing ingestion/DB repositories for Postgres, Firebase and pg-mem behavior; add query-required composite indexes only. A Firestore token-hash lookup needs a deterministic unique reservation, not a composite index.
 
 #### Metrics
 
-Auto-assign rate and **undo rate** — above ~5% means the gates are too loose. Also track suggestion acceptance, held-forwarder rate, and median time from email to item in trip.
+Track wrong-trip reports and audited pilot precision as well as undo/suggestion acceptance,
+holds, latency by input class and cost per successful import. Confidence >= 0.9 is a score,
+not a measured 90% accuracy guarantee. Require strong destination fit (origin-only city
+matches, weak geocodes and month-only trips suggest), date/timezone validation and a unique
+candidate. Stop expansion on any confirmed cross-trip disclosure or > 2% undo during the
+pilot; investigate causes before resetting thresholds.
 
 ---
 
@@ -384,10 +424,10 @@ Auto-assign rate and **undo rate** — above ~5% means the gates are too loose. 
 | Feature | Flag (seed default) | What's missing |
 | --- | --- | --- |
 | Day map (native stopgap) | `trip_day_map` (off) | An API key and server-derived points (§1.5); web uses `TripMap` instead (§1.2) |
-| Blog day-map render | `trip_blog_day_map_render` (**on**) | Stores Google PNGs — turn off now and retire (§1.1, §1.3) |
+| Blog day-map render | `trip_blog_day_map_render` (**on**) | Prepare audited pause/cleanup and reader migration (§1.1, §1.3) |
 | Notification inbox | `notifications_in_app` (off) | Inbox UI |
 | Mobile push | `notifications_push` (off) | Staged rollout |
-| Web push | `notifications_web_push` (**on**) | No service worker or VAPID keys exist, so the flag does nothing — turn it off until §5.4 |
+| Web push | `notifications_web_push` (**on**) | No browser push implementation found; propose separate config change to disable unused delivery flag |
 | Activity recap | `activity_recap` (off) | UI |
 | Gmail import | `feature_ingest_gmail_import` (off) | Deferred (§3.3) |
 
@@ -397,164 +437,213 @@ Production values may differ from these seed defaults; §4.1 checks them.
 
 - **Admin flag report:** production value, seed default, and whether any client or route reads each flag.
 - **Capabilities test:** every flag the client reads through the blog capabilities endpoint (`blogRoutes.ts`, `/:tripId/blog/capabilities`) must be listed in that route's `featureKeys`. A missing key has silently hidden finished features before.
-- **Cohorts:** allow an optional allowlist (user ids or roles) per flag. Cache the flag row and cohort for 60 s as today, and evaluate membership per call. The global value remains a kill switch, and `FAIL_CLOSED_FLAGS` semantics are unchanged.
+- **Cohorts:** optional explicit user cohorts evaluated after cached global configuration. Global off always denies, including admins/cohort members. Missing membership denies new rollout access. Never cache one user's eligibility by flag key alone. Keep global flag/permission rules distinct; test both the route and capability response. Owner/retirement criteria keep temporary flags from becoming permanent complexity.
 
 ### 4.2 Notification inbox & push (P1)
 
-1. **Inbox:** a bell with unread count, a paginated drawer, mark read / mark all, and deep links. Updates arrive over the existing Socket.IO connection, so there is no polling.
+1. **Inbox:** bell with unread count, paginated history, mark read/all and authorized deep links; reuse current routes/repository. Socket.IO invalidates data, while cursor catch-up on reconnect/resume recovers missed events. Authenticate user rooms, bound page sizes and mark-read input, and recheck target membership. Do not rely on a live socket for delivery correctness or add frequent idle polling.
 2. **New categories:**
    - `import_result` — "Added to *Japan 2026* · Undo", "2 reservations need a trip", "Held: message from an unknown sender"
    - `cancellation_deadline` — `freeCancelBy` on activities, `refund_by` on lodging, 48 hours ahead
    - `ai_finished`
    - `trip_digest` — daily summary of tripmates' changes
-3. **Preferences (new):** per category and channel (in-app / push / email), quiet hours, and digest by default.
-4. **Push:** enable `notifications_push` for the admin cohort first, then everyone. Prune `DeviceNotRegistered` tokens (exists). Push text never includes confirmation numbers or addresses, since it shows on lock screens.
-5. **Activity recap:** after an activity's end time, prompt the group to rate it and add a blog note or photo.
+3. **Preferences:** extend the existing category/channel model with a simple UI, optional quiet hours and digest timing. Start with **Important updates** and **Daily summary**; advanced per-category choices stay optional. Preserve saved preferences; independent email consent must apply even to today's push-to-email fallback. Switching push off cannot silently increase email.
+4. **Push:** consenting test cohort, then measured small rollout. Ticket token pruning exists; add delayed receipt processing. Use generic lock-screen text (no trip titles, travelers, locations or booking details by default); reveal specifics in authenticated inbox. Ask permission after the user enables alerts; denial leaves inbox/planning usable.
+5. **Activity recap:** reuse existing category/services; one dismissible opt-in nudge, no automatic photo/note publication. Deadline/digest jobs persist due time, timezone/DST policy and dedupe key; edits/deletion cancel/recompute reminders. Workers need durable scheduled execution on Cloud Run, lease recovery and crash-after-send handling, not only process-local intervals. Channel kill switches leave recoverable intent visible without surprise fallback sends.
 
 ---
 
 ## 5. Offline Access & Sync (comparison gap 6)
 
-### 5.1 Versioned trip bundle (P0)
+### 5.1 Versioned trip bundle (P1, after snapshot correctness)
 
-1. **`trips.content_version`** — an integer bumped in the same write as any change to a trip's children (transfers, lodging, activities, car rentals, expenses, ledger payments, packing list, members). Bump it inside the `db.ts` facade functions so no route can forget, and add a test that every mutating facade function bumps it.
-2. **`GET /api/trips/:id/version`** reads one trip document and returns `{ version }`. This is one read, not a scan of children.
-3. **`GET /api/trips/:id/bundle`** returns the full trip graph with `ETag: "bundle-<version>"` and `Cache-Control: private, no-cache`. `If-None-Match` → `304` after that single read.
+1. **Version and mutation inventory.** List all writes affecting the authorized snapshot, including ingestion/undo, payments/coverage, itinerary details, deletes and group membership outside `db.ts`. Increment `content_version` inside adapter/domain transactions, not as a separate facade call. Group changes need group/permission revision in the validator rather than unbounded fan-out to every trip. Benchmark Firestore hot-document contention and extra writes/indexes.
+2. **One conditional bundle request by default.** Avoid `/version` then `/bundle` on every refresh. `GET /api/trips/:id/bundle` authenticates and checks membership, entitlements and permission/schema projection before comparing `If-None-Match`. Include content + permission/group + representation/schema revision in the ETag. Revoked users must never get `304` or private data; unchanged responses still cost auth/version reads.
+3. **Bounded typed bundle.** Preserve current snapshot fields (trip, members, transfers, lodging, activities, rentals, itinerary, expenses, payments and coverage) only where authorized. Use `Cache-Control: private, no-cache`, `Vary: Authorization`, and no shared CDN cache. Bound items/bytes, allow staged large downloads, and use a transaction-consistent/version-checked read so a mixed old/new graph is never marked current. Revalidate once on resume/relevant changes, with backoff; don't download every trip on every edit.
+4. **Complete snapshots only.** Current `App.tsx` prefetch converts errors to empty arrays: fix that first. Keep the last complete snapshot on timeout/partial failure; atomically replace only after validation/durable storage succeeds. Reuse already-loaded data, coalesce prefetch and expose failure. Separate ordinary screen fetching from user-requested large offline downloads.
 
-### 5.2 Secure local storage (P0)
+### 5.2 Secure local storage (P0 isolation; staged native-store migration)
 
-- **Build on `offlineTripCache.ts`:** keep its 30-day access window and `OfflineUnlockScreen`, re-key from email to `user_id` (one-time migration of existing entries), and populate from the bundle.
-- **Native:** encrypt the snapshot with a key held in `expo-secure-store` (Keychain / Keystore), using SQLCipher via `expo-sqlite` or encrypted MMKV. Both need a new EAS build, so schedule this with a native release.
-- **Web:** IndexedDB per account (localStorage is synchronous and capped at a few MB). Browsers offer no hardware-backed key, so data minimization and wipe-on-logout are the protection on web.
-- **Logout or account switch:** delete keys and wipe snapshots and queues, extending the existing `clearOfflineTripCache`.
+- **Build on `offlineTripCache.ts`:** preserve 30-day access/unlock; key by immutable user id + environment + schema version. Migrate authenticated-owner legacy email entries once, validating before commit and deleting only after success; account switching cannot relabel another user's data.
+- **Native:** choose one transactional encrypted store after an Expo/device spike; hold keys in device-backed secure storage, not the snapshot. Device unlock alone does not encrypt AsyncStorage. Test restore/reinstall/key loss and provide **Download again** recovery. New builds are required; keep migration/renderer flags independent.
+- **Web:** account-scoped IndexedDB, minimal fields and explicit shared-device warning on offline save. Do not claim native biometric protection or browser storage encryption against same-origin XSS; prioritize CSP and avoiding unsafe HTML. No long-lived server tokens or raw mail in snapshots.
+- **Download controls:** current/active trip first, explicit pretravel save, progress/bytes/last-updated and storage-full recovery. Bound bytes/trips with LRU eviction, never evict unsynced work; optional Wi-Fi-only download. First release stores text/details and coordinates, not guaranteed offline base tiles. Tile downloads need a separate provider-limit/size/attribution design before marketing offline maps.
+- **Logout/account switch:** stop and fence in-flight prefetch/replay, clear in-memory views and private snapshots/worker caches/keys; never silently delete pending financial writes. Offer sync, protected same-account retention only where technically supported, or explicit discard. Another user cannot see/replay retained work. Test signout racing with hydrate/persist; revoked membership is enforced on reconnect, not instantly while offline. Local access expiry never authorizes online writes.
 
-### 5.3 Offline expenses with idempotent replay (P1)
+### 5.3 Offline expenses with idempotent replay (P2)
 
-1. **Queue:** extend `usePendingWrites`: storage key scoped by `user_id`; each entry gets an `operation_id` (UUIDv4), `trip_id`, payload, and client timestamp. Use a single-replay lock (Web Locks API on web, an in-memory mutex on native). Items show a "Pending sync" icon.
+1. **Queue:** extend `usePendingWrites` with owner/environment/schema scope, cryptographically random stable operation id, trip id, validated payload, creation time, status, attempts and next retry time. Await durable enqueue before **Saved on this device**. Prevent native hydration/enqueue races and concurrent replay with a lease/lock appropriate to supported browsers (Web Locks where available, tested transactional fallback) and native app lifecycle. One in-memory mutex alone does not provide persistence/crash recovery.
 2. **Never silently drop an expense.** Replace the 5-attempt drop with exponential backoff. Permanent failures (`403` membership revoked, `422` validation) go to a "Couldn't sync" list with Retry, Edit, Export, and Discard.
-3. **Server:** the existing `POST /api/expenses` with `Idempotency-Key: <operation_id>`, through shared middleware generalized from `generation_idempotency` with a new `request_hash` column and 30-day retention:
+3. **Server:** existing `POST /api/expenses`, scoped idempotent-create helper (not a second sync route). Reserve key + canonical request hash + expense + response atomically in the adapter, or use an explicit recovery state machine. Shared middleware without transactional domain writes does not prevent duplicates. Keys bind to authenticated owner/operation; keep them at least the maximum replay age (initially 30 days), with explicit recovery for older queued operations:
    - first request → process, store status + body;
    - same key, same payload → return the stored status + body, with an `Idempotent-Replayed: true` header;
    - same key, different payload → `409`.
-4. **Trigger:** replay when `useConnectionState` reports `online`. Toast "3 offline expenses synced".
-5. **Keep offline free.** Stippl gates offline behind Pro; read-only offline also lowers server load.
+4. **Trigger/recovery:** reconnect/resume schedules one bounded drain; connectivity is a hint, request outcomes authoritative. `401` pauses for same-account login without consuming attempts; `402/403` shows action needed; transient errors use jittered backoff. Recheck membership, tier, currency and traveler references server-side. Retry after timeout-after-commit returns the original expense. Optimistic rows reconcile by operation id without double-counting totals; editing a definitively rejected entry creates a new operation. Updates/deletes are later scope with expected versions.
+5. **Feedback:** persistent queued/syncing/needs-action status and history, plus **3 expenses synced**. Preserve input and unsynced work across restarts. Keep basic offline reading free; measure avoided reads versus refresh/version overhead rather than assuming a cost reduction.
 
 ### 5.4 App shell offline on web (P2)
 
-A service worker caches HTML, JS, and assets so the web app opens without a connection. The same worker is what real web push needs (§4).
+Versioned same-origin shell/build assets, network-first navigation with offline fallback,
+atomic build updates and recovery from stale clients. Exclude auth/API/provider URLs from
+generic cache rules; private bundles live in the account store. Verify Expo export, CSP,
+worker scope, logout cleanup and old-build behavior. Web push is a separate later feature,
+not an automatic dependency or outcome of shell caching.
 
 ---
 
-## 6. Security, Performance, & Cost Matrix
+## 6. Security, Performance, Cost and Maintenance Controls
 
-| Gap | Security | Performance | Cost per user |
+| Area | Security and usability | Performance and unit cost | Maintenance constraint |
 | --- | --- | --- | --- |
-| Map | No map images stored; Google key server-only, native stopgap with server-derived points; public blog coordinates coarsened; geocoder receives a query, never user or trip ids | Drawn on the device from data already loaded (no extra request); MapLibre lazy-loaded; geocoding off the request path | $0 tiles, storage, and compute on web; native Google views within the free monthly usage at current volume; geocoding once per address |
-| Discovery | Public, consented content only; rate-limited | In-memory spatial index, p95 < 150 ms | $0 marginal; affiliate revenue offsets |
-| Import | Alias, verified forwarder, hold-before-parse, fail-closed scanning, schema-validated LLM output that can't pick the trip, redacted logs | Webhook does validation + enqueue only; matcher in-process | Structured stages at $0; LLM only below 0.9; no spend on held or spoofed mail; measured via `usage_metering` |
-| Dark features | Cohort flags keep kill switches; no booking details in push text | Socket.IO events instead of polling | Expo push free; email digests by default |
-| Offline | Account-scoped, encrypted on native, wiped on logout; idempotent replay with payload check | One-read `304` revalidation | Fewer reads during travel; storage on device |
+| Map | Audience-safe points, no private CDN caches, usable list/navigation fallback | Device drawing, bounded map instances; track tile/app egress and native fallback paid misses | Shared point/provenance contract; platform renderers; retire old routes only after client migration |
+| Discovery | Server-authorized idempotent Add to day; public allowlist projection and consent recheck | No model call per browse/card; bounded warm indexes, pagination and lazy images | Reuse catalog loading/ranking, existing activity route and duration cache |
+| Import | Alias/trusted receiver rules; bounded private hold, scan before parsers, constrained output, clear receipt/review | Durable async work, exact-document cache, finite model/token/attachment budget and retry cap | Extend one ingestion state machine, schemas and parser policy; fixtures per supported source |
+| Notifications | Authenticated history/rooms; independent channel consent and generic push text | Cursor catch-up, coalesced digests, durable due-work scheduling; measure idle outbox reads | Extend existing categories/preferences/outbox; no replacement notification subsystem |
+| Offline | Owner-scoped store/queue, encryption where promised, no lost expenses or account crossover | Reuse last complete snapshot, conditional bundle before child reads; bounded download and replay | Versioned types/migrations, adapter-atomic writes; one storage backend per platform |
 
-**Rules for every slice**
+### 6.1 Measure total cost, not only provider price
 
-- New paid calls go through `reserveApiUsageOrThrow` + `recordProviderRequestCost`, with a monthly budget and 80% alert in `server/config/api-limits.yaml`.
-- Flags that call a paid provider or contact a person are fail-closed (`FAIL_CLOSED_FLAGS`).
-- Schema changes land in the Postgres, Firebase, and memory adapters in one PR, with Firestore composite indexes in `firestore.indexes.json` in that same PR.
-- Add Nominatim/OpenStreetMap and the tile host to the privacy policy as processors; show OpenStreetMap attribution (MapLibre adds it).
+`feature cost per active user = (provider + allocated compute + DB reads/writes + storage
++ egress + retries/background idle work) / monthly active users of that feature`.
 
----
+Also report total cost/all active users and cost/successful import or sync. Held/rejected
+abuse, OCR, shadow parsing/captures, ClamAV signature refresh/cold-start cost, Socket.IO
+connections, outbox polling and cache warmups remain in the numerator. Affiliate revenue
+is reported separately; do not subtract forecast commissions to justify spend.
 
-## 7. Phased Execution Roadmap
+Use existing usage/provider records plus access-controlled aggregates; do not put email,
+alias, booking or user ids in high-cardinality metric labels. Reconcile estimates against
+billing exports. Benchmark representative cold/warm workloads at 100, 1,000 and 10,000
+monthly active users, stating assumptions about trips/imports per user and attachment sizes.
+No provider price, free allowance or p95 figure is a production guarantee.
 
-Dates are indicative and assume parallel work. The dependency order is what matters:
+The current Google pricing page lists a Static Maps free usage cap and paid tiers; verify
+applicable billing-account/region/contract pricing before enabling, including other features
+sharing the allowance. Free OpenFreeMap delivery does not make all map operations free.
+Do not self-host tiles, add shared caching infrastructure, or enable paid route refinement
+until measured cost/reliability requirements justify the fixed maintenance burden.
 
-- map compliance cleanup first, before anything turns on more map rendering;
-- the geocoding layer before `TripMap`, place-aware matching, and Nearby;
-- native MapLibre ships in the same EAS release as encrypted offline storage;
-- aliases and scanning before auto-assign;
-- the inbox before import notifications;
-- the service worker before web push.
+### 6.2 Mandatory controls for every slice
 
-```mermaid
-gantt
-  title Gap-Closing Implementation Timeline (indicative)
-  dateFormat  YYYY-MM-DD
-  section Phase 0: Security & Foundation
-  Map compliance cleanup (flag off, purge, cache removal) :crit, p0_0, 2026-11-01, 3d
-  Email alias, forwarder check, log redaction :crit, p0_1, 2026-11-01, 10d
-  ClamAV fail-closed enforcement           :crit, p0_2, 2026-11-05, 7d
-  Flag audit, cohorts, web push flag off   :p0_3, 2026-11-03, 5d
-  Geocoding layer + backfill               :p0_4, 2026-11-08, 10d
-  section Phase 1: Import UX & Cost
-  Structured-data-first extraction         :p1_1, 2026-11-15, 10d
-  Import setup UX + Gmail confirmation     :p1_2, 2026-11-15, 8d
-  Trip matcher + auto-assign + undo        :p1_3, after p0_1 p0_2, 12d
-  section Phase 2: Map & Discovery
-  TripMap on web (day view + split view)   :p2_1, after p0_4, 10d
-  Blog, public page, keepsake on TripMap   :p2_2, after p2_1, 6d
-  Native Google stopgap (server points)    :p2_3, 2026-11-20, 4d
-  Route lines, travel times, reorder       :p2_4, after p2_1, 8d
-  Nearby + Add to day                      :p2_5, after p0_4, 8d
-  Native MapLibre (with §5.2 EAS release)  :p2_6, 2027-01-04, 8d
-  section Phase 3: Notifications & Offline
-  Inbox + new categories + preferences     :p3_1, 2026-12-10, 10d
-  Push rollout (admin cohort first)        :p3_2, after p3_1, 5d
-  content_version + bundle + 304           :p3_3, 2026-12-10, 8d
-  Offline cache re-key + encryption (EAS)  :p3_4, after p3_3, 10d
-  Offline expenses + idempotency           :p3_5, after p3_3, 8d
-  section Phase 4: Verification
-  E2E, security review, cost baseline diff :p4_1, 2027-01-11, 10d
-```
+- Paid calls use `reserveApiUsageOrThrow` / `recordProviderRequestCost`, with an operator-chosen absolute monthly cap and per-active-user target, 80% alert, and a tested atomic hard stop across instances. Include retries and parallel model reservations. Budget exhaustion degrades to review/list/manual work, not silent failure.
+- New external-contact/paid/automatic-write flags explicitly join `FAIL_CLOSED_FLAGS` with missing-row tests; preserve unrelated fail-open legacy entitlements. Global off denies everyone; cohorts never bypass global flags or authorization.
+- Validate cheaply before database-backed rate-limit writes; cap aggregate body/storage/queue sizes. Edge rejection reduces both memory pressure and DB metering cost under abuse.
+- Every schema/transaction change covers Postgres, Firebase, pg-mem behavior and ingestion/blog/notification repositories where relevant. Add only query-required Firestore indexes and document write amplification; test hot-document contention. Keep migrations resumable and backwards compatible.
+- Track provider data flows, permitted storage/display/export and attribution. Do not automatically classify every provider as a processor. Review applicable terms/privacy obligations and approved inputs; no new geocoding/private-location flow based solely on a hash or an absent API key.
+- Ownership/deletion/invalidation is part of each data model: account deletion, membership loss, unpublish, alias revocation and stale offline access have explicit behavior. Keep only minimal audit metadata and bounded retention.
 
 ---
 
-## 8. Test Matrix & Acceptance Criteria
+## 7. Dependency-Based Delivery and Rollback
 
-| Workstream | Required scenarios | Location |
-| --- | --- | --- |
-| Ingestion security | HMAC pass/fail; alias resolves; unknown or revoked alias → silent 200 with no quota use; spoofed `From` to the shared address → held; Gmail auto-forward with `+caf_` envelope accepted; **mail from a new airline via a verified forwarder is not held**; per-alias cap enforced; logs carry no addresses or subjects | `server/__tests__/ingestion-alias-security.test.ts` |
-| Scanning | EICAR file held; clean file proceeds; scanner unreachable → held and retried; production refuses the stub | `server/__tests__/clamav-scan.test.ts` |
-| Extraction | `.ics` parsed without an LLM; `RRULE` not expanded; oversized JSON-LD ignored; JSON-LD read from `body-html` when `stripped-text` exists; LLM called only below 0.9; Zod rejects malformed LLM output | `server/__tests__/ingestion-structured-extraction.test.ts` |
-| Trip matcher | Single fit → auto; two overlapping trips → suggest; return leg by booking continuity; overnight flight on a boundary day; unknown timezone on a boundary → suggest; month-only trip → suggest; followed trip never a candidate; LLM output cannot set the trip | `server/__tests__/trip-matcher.test.ts` |
-| Undo | Restores the trip exactly **including the synced expense**; tripmate edit → confirmation required; opt-out disables auto | `server/__tests__/import-undo.test.ts` |
-| Map — server | Native proxy derives points server-side (client points ignored); unauthorized trip → 403; no Google image is cached server-side or written to storage; the proxy forwards Google's `Cache-Control` header unchanged; `trip_blog_day_map_render` off and no new `blog_day_map_artifacts` rows; blog `dayMap` fact returns points, not a URL; public blog points are coarsened and follow photo audience rules; per-user rate limit enforced | `server/__tests__/static-map-proxy.test.ts`, `server/__tests__/blog-day-facts-map.test.ts` |
-| Map — client | `TripMap` builds points from loaded items without an extra request; items without coordinates listed as "Not on the map yet"; MapLibre loads only when a map enters view; tile failure shows the list with "Map unavailable"; attribution control present; keepsake snapshot includes the attribution line | `app/tests/tripMap.test.tsx`, Playwright `app/e2e/trip-map.spec.ts` |
-| Offline | Every mutating facade function bumps `content_version`; version endpoint does one read; same-key replay returns the original response; same key + different payload → 409; revoked member → 403 → "Couldn't sync" list, never dropped; logout wipes keys and caches | `server/__tests__/offline-vault-sync.test.ts`, `app/tests/usePendingWrites.test.ts`, `app/tests/offlineTripCache.test.ts` |
-| Flags | Cohort member sees the feature, non-member doesn't; global off overrides cohorts; capabilities `featureKeys` covers every client-read flag | `server/__tests__/feature-flag-cohorts.test.ts` |
+Dates and staffing are not established. Release small slices after their own checks; do not
+leave security, device tests or usability evaluation until a final project phase. The lanes
+below describe sequencing, not authorization for deployment, deletion or provider signup.
 
-Run server suites with `DB_PROVIDER=memory` and against the Firestore emulator.
+| Slice | Scope and prerequisites | Evidence before enabling | Rollback / fallback |
+| --- | --- | --- | --- |
+| P0: source/config/storage audit | Inventory map artifacts and readers; pause unsupported artifact generation via separate config change; import logs/attribution, scan config, queue isolation | Applicable terms/config audit, exact cleanup dry run, no impact on user media, adapter failure cases | Stop new provider work; keep trip list/manual paths and recoverable data; no broad bucket deletion |
+| P0: safe mail admission | Alias/trust checks, bounded hold, durable receipt/dedupe/quota, fail-closed scanning and lifecycle cleanup | Signed/forged sender fixtures, real forwarding trials, crash/retry tests and scanner readiness | Disable mailbox admission with documented provider retry/hold response; never revert to sender attribution or unscanned parsing |
+| P0: native snapshot reliability | Complete-only snapshot writes, visible storage failure, owner isolation and logout races | Interrupted/partial fetch, storage-full, account switch and pending-work recovery tests | Keep last complete readable snapshot; stop unsafe new writes |
+| P1: import assistance | Easy setup/test/confirmation; structured parsers behind schema/quality gates; suggestion-only matcher | Redacted representative fixtures, task-based user trial, measured model quality/cost diff | Manual upload/review and existing validated extractor fallback; automatic writes stay off |
+| P1: catalog discovery and web map | Catalog/airport coordinate reuse, shared points/provenance, minimal idempotent-create helper; no external geocoder prerequisite | Production bundle/RN import checks, memory/latency, keyboard/list failure fallback and double-tap tests | Keep lists, catalog browse and external Maps links; stop loading map library |
+| P1: inbox and bundle contract | Existing notification preference API; cursor catch-up; typed authorized conditional bundle and mutation inventory | Room/deep-link isolation, missed-event catch-up, version/permission/consistent-read tests | Inbox history/manual refresh; retain existing screen fetches and last valid snapshots |
+| P2: native migration and public map/export | Compatibility spike, encrypted storage migration, audience-safe projection/export prototype | Named real-device EAS tests, old-client support, print readiness and privacy review | Independent renderer/storage flags, original list/keepsake without map; keep old routes during support window |
+| P2: optional geocoding, reorder/optimize | Permitted inputs/provider decision, durable queue both adapters, global throttle; expected-version reorder | Queue crash/fencing and provider throttling, stale address results, fixed-time/accessibility tests | No external lookup; preserve original location/order and manual adjustments |
+| P2: opt-in automatic imports | All security gates, assignment + expense workflow, conflict-safe undo, suggestion pilot | Audited supported-item precision and wrong-trip review, opt-in UX and undo tests | Switch automation off, preserve review/history/undo; do not delete prior items blindly |
+| P2: offline expense create | Durable encrypted/scoped queue, shared atomic idempotent create, bundle/storage maturity | Concurrent retries, timeout after commit, native hydration, lifecycle/account isolation and novice recovery tasks | Pause replay/new enqueue as needed, retain same-account work for recovery; online creation still available |
+| Later: browser shell/push, public explore, Gmail expansion | Separate platform/privacy/SEO/OAuth gates; not required for core planning | Feature-specific tests and total-cost case | Existing inbox, authenticated planning and manual import remain usable |
 
----
-
-## 9. Definition of Done & Release Verification
-
-1. **Security:** all forwarded mail is attributed by alias; the shared address is retired; scanning is fail-closed in production; webhook logs are redacted; offline data is account-scoped and encrypted on native.
-2. **Compliance:** no Google map image is stored or cached server-side; previously stored Google PNGs are purged; every web map surface uses `TripMap` (MapLibre + OpenFreeMap) with visible attribution, and exports carry OpenFreeMap, OpenMapTiles, and OpenStreetMap credits; no Google content is drawn on MapLibre; the privacy policy lists all new processors.
-3. **Cost:** per-import LLM cost compared against the pre-change `usage_metering` baseline and reported; Google Static Maps calls limited to native live views and within the free monthly usage (`recordProviderRequestCost` report); Nominatim usage stays within policy.
-4. **Performance:** webhook ACK < 200 ms p95; version check < 50 ms p95; Nearby < 150 ms p95.
-5. **Usability:** "Send a test" works end to end; Gmail auto-forward setup completes in-app; auto-assign undo rate < 5% over the first 2 weeks; offline expenses sync without duplicates.
-6. **Tests:** all suites in §8 pass in CI, on both adapters.
+One cross-cutting idempotent-create primitive is a dependency of Add to day and expenses;
+shipping Nearby does not require the entire offline-sync subsystem. A useful map can use
+catalog coordinates before geocoding. Native encryption does not wait for native MapLibre,
+and browser push does not block the inbox. These boundaries reduce critical-path risk.
 
 ---
 
-## 10. Open Questions
+## 8. Test Matrix and Proposed Acceptance Targets
 
-1. **Resolved — map engine, cost, and caching:**
-   - **Engine:** don't store Google map images. Draw maps on the device with MapLibre + OpenFreeMap; Google Static Maps only for native live views until the next EAS build (§1.0).
-   - **Cost:** Static Maps is an Essentials SKU — 10,000 free calls/month, then $2.00 per 1,000.
-   - **Client caching:** follows Google's own `Cache-Control` header, passed through by the proxy (§1.1). Once the key is provisioned, record the header Google actually sends (`curl -sI` on one keyed request) in this section.
-2. Is OpenFreeMap's free, no-SLA instance acceptable to start, or self-host tiles from day one?
-3. Which geocoder replaces Nominatim's public instance at scale — self-hosted, or a paid provider whose terms allow storing results?
-4. Should auto-assigned imports notify the whole group or only the forwarder?
-5. Is a 7-day undo window right, or should undo last until the trip starts?
-6. Should "Optimize day" stay free with the client-side optimizer, with Google-refined routing as Premium?
+All targets below are release criteria to measure, not claims about current performance.
+Name hardware, payload mix, concurrency, region and cold/warm state in each report.
 
-## Sources
+| Area | Required scenarios and acceptance |
+| --- | --- |
+| Email security | Valid/invalid HMAC and timestamp; forged From/authentication headers; unknown/revoked/compromised alias; legacy shared address cannot select an account; verified versus uncertain real forwarding; no secrets/PII in logs or push |
+| Admission/retries | Aggregate multipart and hold cap, private TTL cleanup, quota exactly once on duplicated/retried message, crash before/after replay claim/persistence/enqueue, durable worker delivery across instances; no success ACK before recoverable receipt |
+| Scan/extraction | Clean/EICAR/MIME mismatch, scanner outage/signature age/no-op/invalid config, malicious PDF/image limits; supported calendar dates/cancellations/no recurrence expansion; aggregate HTML/JSON limits, no JS/remote-context fetch, prompt injection and field schema validation |
+| Match/undo | Overlapping/month-only trips, origin-only match, return leg scoped continuity, same reference at another provider, DST/overnight/unknown timezone, followed/revoked trip; concurrent assignment/undo, partial expense sync and edited/settled financial conflicts; no duplicate rows or blind rollback |
+| Maps/discovery | Authenticated native proxy; request/time/response bounds; public payload contains no hidden precise EXIF; unpublish invalidation; WebGL/tile/offscreen/low-memory failures; accessible list/keyboard reorder; idempotent Add to day and changed visibility at copy time; export fallback/attribution |
+| Bundle/storage | Permission/schema-sensitive ETag; revoked caller never receives 304; no child scan for unchanged response; inventory-driven version updates; consistent large bundle, partial fetch keeps old snapshot; storage-full/corrupt migration/key loss/logout races and account switch |
+| Expense replay | Concurrent tabs/resume, native hydration/enqueue race, offline restart, timeout after server commit, same key/different request, same key/different owner, expiry and 401/402/403 recovery; queued financial work is never silently dropped; optimistic totals reconcile once |
+| Notifications/flags | Authorized rooms/history/deep links, reconnect catch-up, independent category/channel consent, no unwanted email fallback, DST/deadline edit/cancel, receipt token cleanup, duplicate schedule/crash handling; global-off overrides cohorts and capabilities match route gates |
+| Non-technical use | Tasks and recovery in §0.4 tested with unfamiliar users; >= 4/5 uncoached completion for core tasks; no unnoticed loss/sharing; screen-reader/keyboard/text-scaling pass; clear first-run, empty, loading, disabled and error states |
+| Maintainability | Shared types/validator compatibility, migration from previous schema and old supported client payloads, adapter contract tests, no native DOM imports, pinned dependency/license/advisory review; remove obsolete branches only after support window |
 
-- [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) — 1 req/s app-wide, bulk 4 req/min, switch-off requirement
-- [OpenFreeMap](https://openfreemap.org/) — free, keyless tiles; no SLA; attribution required; self-hostable
-- [Google restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) — CASA assessment, 12-month re-assessment
-- [Google Web Risk overview](https://docs.cloud.google.com/web-risk/docs/overview) — checks URLs against threat lists, not file contents
-- [Google Maps Platform Terms of Service](https://cloud.google.com/maps-platform/terms) and [Service Specific Terms](https://cloud.google.com/maps-platform/terms/maps-service-terms) — caching and storage restrictions (open question 1)
-- [Google Maps Platform March 2025 billing changes](https://developers.google.com/maps/billing-and-pricing/march-2025) — per-SKU free monthly usage replaced the $200 credit
-- [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing) — Static Maps: Essentials, 10,000 free/month, $2.00 per 1,000 to 100k
+**Initial performance proposals:** warm Nearby API p95 < 300 ms at declared concurrency,
+<= 20 cards/page and no browse LLM calls; durable mail receipt p95 < 2 seconds for bounded
+benchmark payloads; plain-text import processing p95 < 60 seconds, reporting scan/OCR/cold
+paths separately. Small complete cached trip opens within 2 seconds after unlock on the
+named supported test phone. Initial planning bundle contains no map-library code unless a
+measured build limitation is explicitly accepted. Measure bundle auth/version and child
+reads separately; do not promise a universal one-read or < 50 ms response.
+
+**Automatic-assignment quality:** suggestion-only pilot and manually audited/redacted
+supported fixtures; target >= 99% precision across at least 200 representative supported
+items before small opt-in rollout. This is a gate, not statistical proof of production
+safety. Wrong-trip disclosure pauses automation immediately; track undo (> 2% pauses
+expansion), complaints and unnoticed errors rather than using undo alone as accuracy.
+
+Run focused Jest/Supertest and existing frontend tests with memory adapter, real Postgres
+for concurrency/transaction semantics, and Firestore emulator parity. Add representative
+Playwright flows and named-device native tests; mocks do not prove actual provider mail
+headers, scanner readiness, encryption/key lifecycle or WebGL/print behavior. Test files in
+implementation PRs may extend existing suites; do not build tests that merely mirror helpers.
+
+---
+
+## 9. Definition of Done and Release Evidence
+
+A slice is done when its user task and failure recovery pass, its supported adapters/platforms
+are verified, measured security/performance/cost targets meet the declared gate, and its
+migration, owner, rollout flag and rollback are documented. Include exact test commands,
+redacted fixtures, supported-client window and cost/latency/task-completion results in the PR.
+
+No claim of production readiness based only on source review or seed defaults. Confirm
+runtime provider settings and flags separately. No destructive cleanup, production flip or
+new external contact is performed by this planning change.
+
+Review total cost/user, task completion, false holds, data-loss/duplicate reports, privacy
+incidents, queue age and notification opt-outs after each cohort; widen only when the same
+experience remains understandable and recoverable. Scheduled-job failures must be visible
+to operators without requiring ordinary users to interpret logs.
+
+---
+
+## 10. Decisions and Deferred Questions
+
+Defaults: extend existing services; simple manual import/suggestions first; automation off
+until opted in; private import details and generic push; basic offline reading and local
+optimization free; no new paid routing or server map renderer. Keep exact public location
+sharing off. Manual upload, list view and saved trip details remain usable independently.
+
+Resolve only before the affected slice ships:
+
+1. Approved map/geocoder inputs, applicable account terms, export/storage rights, optional public-location consent and scoped artifact cleanup inventory. Public Nominatim is not unconditional production infrastructure.
+2. Absolute feature budgets, per-active-user target, named billing owner and measured load assumptions.
+3. One vetted encrypted native store/key lifecycle and explicit web shared-device policy; protected pending-work retention behavior at logout.
+4. Real forwarding/authentication fixtures, durable retry semantics, scanner readiness/deployment and retention/cleanup owner.
+5. Supported minimum native versions before Google retirement; MapLibre/Expo and keepsake compatibility results. Avoid tying encryption release to map readiness.
+6. Later offline edits (activities/notes), browser push, public SEO and Gmail expansion each require their own use/cost case; no automatic scope expansion.
+
+## Sources and Verification Limits
+
+Repository evidence: paths in §0.1 plus `app/App.tsx`, `server/src/db.ts`, ingestion intake,
+assignment and extraction repositories, and notification service/routes were reviewed on
+2026-10-18. This is a plan review, not a deployed-system audit or proof of current pricing.
+
+- [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) — application-wide limits, bulk restrictions, privacy and permitted use; checked 2026-10-18.
+- [OpenFreeMap](https://openfreemap.org/) — current public delivery model, attribution, offline-download limits and absence of SLA; checked 2026-10-18. Follow linked current terms before implementation.
+- [Google Maps Platform Service Specific Terms](https://cloud.google.com/maps-platform/terms/maps-service-terms) — consult the applicable regional/account terms and product rules; checked 2026-10-18. Upstream headers alone do not establish storage rights.
+- [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing) — verify applicable SKU/account tiers at activation; checked 2026-10-18. This plan does not guarantee a free native allowance.
+- [Mailgun route actions](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/receive-http) — inbound fields and provider acknowledgement/retry semantics; checked 2026-10-18.
+- [Google restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) — annual assessment for applicable restricted-data access, with documented exceptions; recheck before Gmail expansion.
