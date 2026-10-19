@@ -17,6 +17,15 @@ type ConfirmDialogProps = {
    * Modal (e.g. a picker) — a plain positioned view can end up stacked behind
    * a native Modal's portal regardless of zIndex. */
   useNativeModal?: boolean;
+  /** Request in flight: buttons are disabled and the confirm label shows progress. Lets a caller
+   * keep the dialog open until the work finishes instead of closing it and then raising an
+   * Alert — on iOS an Alert presented while a native Modal is still dismissing leaves the whole
+   * app unresponsive. */
+  busy?: boolean;
+  /** Text on the confirm button while busy (e.g. "Deleting…"). */
+  busyLabel?: string;
+  /** Shown inside the dialog when the confirmed action failed, so the user can retry or cancel. */
+  errorMessage?: string | null;
 };
 
 const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
@@ -30,6 +39,9 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
   styles,
   testID,
   useNativeModal,
+  busy = false,
+  busyLabel = "Working…",
+  errorMessage,
 }) => {
   return (
     <DialogShell
@@ -37,24 +49,32 @@ const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
       title={title}
       message={message}
       styles={styles}
-      onClose={onCancel}
+      onClose={busy ? () => undefined : onCancel}
       testID={testID || 'confirm-dialog'}
       accessibilityRole="alert"
       scrollable
       useNativeModal={useNativeModal}
     >
+      {errorMessage ? (
+        <Text style={[styles.helperText, { color: '#B3261E', marginBottom: 8 }]} accessibilityRole="alert">
+          {errorMessage}
+        </Text>
+      ) : null}
       <View style={styles.row}>
         <TouchableOpacity
-          style={[styles.button, styles.dangerButton, { flex: 1 }]}
-          onPress={onConfirm}
+          style={[styles.button, styles.dangerButton, { flex: 1 }, busy ? { opacity: 0.6 } : null]}
+          onPress={busy ? undefined : onConfirm}
+          disabled={busy}
           accessibilityRole="button"
           accessibilityLabel={confirmLabel}
+          accessibilityState={{ disabled: busy, busy }}
         >
-          <Text style={styles.dangerButtonText}>{confirmLabel}</Text>
+          <Text style={styles.dangerButtonText}>{busy ? busyLabel : confirmLabel}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.button, { flex: 1 }]}
-          onPress={onCancel}
+          style={[styles.button, { flex: 1 }, busy ? { opacity: 0.6 } : null]}
+          onPress={busy ? undefined : onCancel}
+          disabled={busy}
           accessibilityRole="button"
           accessibilityLabel={cancelLabel}
         >
