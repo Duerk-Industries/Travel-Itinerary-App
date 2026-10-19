@@ -72,6 +72,8 @@ import {
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import DateField from '../components/DateField';
 import NearbyPlacesPanel from '../components/NearbyPlacesPanel';
+import DayActivitiesOrdering from '../components/DayActivitiesOrdering';
+import { orderDayActivities } from '../../packages/domain/src/dayOrder';
 import { selectPlanningDayPoints } from '../../packages/domain/src/planningMapPoints';
 import TripDayMap from '../components/TripDayMap';
 import { type TripMapPoint } from '../utils/googleMaps';
@@ -2746,15 +2748,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const heroTitle = buildHeroTitle(startLocation, summary);
         const narrativeLines = buildDayNarrative(activeDayInfo, activeDayCard.date);
         const flightsForDay = activeDayInfo.flights;
-        const activityTimeKey = (tour: Tour) => {
-          const value = String(tour.startTime ?? '').trim();
-          return /^\d{1,2}:\d{2}$/.test(value) ? value.padStart(5, '0') : '99:99';
-        };
-        const toursForDay = [...activeDayInfo.tours].sort((a, b) => {
-          const byTime = activityTimeKey(a).localeCompare(activityTimeKey(b));
-          if (byTime !== 0) return byTime;
-          return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
-        });
+        // Same order the day map letters its pins in: an explicit saved position first, then start time.
+        const toursForDay = orderDayActivities(activeDayInfo.tours);
         const lodgingsForDay = activeDayInfo.lodgings;
         const rentalsForDay = activeDayInfo.rentals;
 
@@ -2764,6 +2759,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           lodgings: lodgingsForDay.map(l => ({ ...l, check_in_date: l.checkInDate, check_out_date: l.checkOutDate })),
           activities: toursForDay.map(t => ({ ...t, cost: Number(t.cost) || 0 })), carRentals: rentalsForDay,
         });
+        const dayLodgingAnchor = (() => {
+          const lodging = dayMapPoints.find(p => p.kind === 'lodging' && typeof p.lat === 'number' && typeof p.lng === 'number');
+          return lodging ? { lat: lodging.lat as number, lng: lodging.lng as number } : null;
+        })();
         const nearbyAnchor = dayMapPoints.find(p => p.kind === 'lodging' && typeof p.lat === 'number' && typeof p.lng === 'number')
           ?? dayMapPoints.find(p => typeof p.lat === 'number' && typeof p.lng === 'number');
 
@@ -2923,7 +2922,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {toursForDay.length ? (
                 <View style={styles.dayInfoCard}>
                   <Text style={styles.sectionTitle}>Activities</Text>
-                  {toursForDay.map((tour) => {
+                  <DayActivitiesOrdering
+                    tripId={trip.id}
+                    date={activeDayCard.date}
+                    backendUrl={backendUrl}
+                    headers={headers}
+                    activities={toursForDay}
+                    lodgingAnchor={dayLodgingAnchor}
+                    readOnly={readOnly}
+                    onChanged={onTourDataChanged ?? (() => undefined)}
+                    styles={styles}
+                    renderRow={(tour, controls) => {
                     const participants =
                       Array.isArray(tour.paidBy) && tour.paidBy.length
                         ? formatTravelerNames(tour.paidBy)
@@ -2975,9 +2984,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             testID={`day-details-getyourguide-${tour.id}`}
                           />
                         </View>
+                        {controls}
                       </View>
                     );
-                  })}
+                    }}
+                  />
                   <TouchableOpacity
                     testID="day-details-add-activity-button"
                     accessibilityRole="button"

@@ -7,6 +7,9 @@ flags:
   planning_web_map:
     enabled: false
     description: "P1 on-device web map; enable after bundle and WebGL checks"
+  planning_day_order:
+    enabled: false
+    description: "P2 move-up/down reorder and Optimize day for a day's activities; stored per-day order, no external routing provider"
   planning_nearby:
     enabled: false
     description: "P1 catalog Nearby and atomic Add to day; no external geocoder"

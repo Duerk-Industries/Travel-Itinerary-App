@@ -631,9 +631,9 @@ router.get('/:id/planning-capabilities', async (req, res) => {
   try {
     const access = await ensureUserCanReadTrip(String(req.params.id), userId);
     if (!access) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
-    const [map, nearby, partner] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions'].map(key => isFeatureEnabled(key)));
+    const [map, nearby, partner, dayOrder] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order'].map(key => isFeatureEnabled(key)));
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ map, nearby: nearby && access.access === 'member', partner });
+    res.json({ map, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member' });
   } catch { res.status(503).json({ error: 'Planning options are temporarily unavailable.' }); }
 });
 

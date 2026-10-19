@@ -1,5 +1,6 @@
 // Generated from packages/domain/src/planningMapPoints.ts by scripts/sync-planning-points.cjs.
 import type { Activity, CarRental, Flight, Lodging, PlanningMapPoint } from '../types';
+import { orderDayActivities } from './dayOrder';
 type Identified<T> = Partial<T> & { id: string };
 export const selectPlanningDayPoints = (input: {
   date: string; flights: Identified<Flight>[]; lodgings: Identified<Lodging>[];
@@ -18,9 +19,7 @@ export const selectPlanningDayPoints = (input: {
     id: lodging.id, kind: 'lodging', title: lodging.name || 'Lodging', address: lodging.address,
     lat: lodging.lat, lng: lodging.lng, coordinateSource: lodging.coordinateSource,
   });
-  const activities = input.activities.filter(a => active(a.status) && same(a.date)).sort((a, b) =>
-    (a.dayPosition ?? Number.MAX_SAFE_INTEGER) - (b.dayPosition ?? Number.MAX_SAFE_INTEGER)
-    || (a.startTime || '99:99').localeCompare(b.startTime || '99:99') || (a.name || '').localeCompare(b.name || '') || a.id.localeCompare(b.id));
+  const activities = orderDayActivities(input.activities.filter(a => active(a.status) && same(a.date)));
   for (const activity of activities) points.push({ id: activity.id, kind: 'activity', title: activity.name || 'Activity', address: activity.startLocation, lat: activity.lat, lng: activity.lng, coordinateSource: activity.coordinateSource });
   for (const rental of input.carRentals.filter(r => active(r.status))) {
     if (same(rental.pickupDate)) points.push({ id: `${rental.id}:pickup`, kind: 'car_rental', title: rental.pickupLocation || 'Car pickup', address: rental.pickupLocation, lat: rental.lat, lng: rental.lng, coordinateSource: rental.coordinateSource });

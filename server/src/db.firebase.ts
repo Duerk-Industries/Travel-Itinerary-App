@@ -90,6 +90,8 @@ import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
 import { normalizePackingLabel } from './utils/packingListNormalize';
+import { orderDayActivities } from './utils/dayOrder';
+import type { DayOrderOutcome } from './db.postgres';
 import { buildPackingListDisplayGroups } from './utils/packingListDisplay';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
@@ -4963,6 +4965,39 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   return payload;
 };
 
+// Same contract as the Postgres adapter: all of a day's activities are reordered in one transaction,
+// and nothing is written when the caller's `expectedIds` no longer match the stored order.
+export const reorderActivitiesForDay = async (
+  userId: string,
+  tripId: string,
+  date: string,
+  orderedIds: string[],
+  expectedIds: string[]
+): Promise<DayOrderOutcome> => {
+  if (!(await ensureUserInTrip(tripId, userId))) return { ok: false, reason: 'forbidden', currentOrder: [] };
+  const db = getDb();
+  return db.runTransaction(async (tx) => {
+    const snapshot = await tx.get(db.collection('tours').where('tripId', '==', tripId));
+    const dayDocs = snapshot.docs
+      .map((doc) => ({ ref: doc.ref, activity: normalizeActivityRecord(doc.data()) as Activity }))
+      .filter(({ activity }) => String(activity.date ?? '').slice(0, 10) === date);
+    const current = orderDayActivities(dayDocs.map(({ activity }) => ({ ...activity, id: String(activity.id) })));
+    const currentOrder = current.map((row) => row.id);
+    if (currentOrder.length !== expectedIds.length || currentOrder.some((id, index) => id !== expectedIds[index])) {
+      return { ok: false, reason: 'stale', currentOrder } as DayOrderOutcome;
+    }
+    const sameSet = orderedIds.length === currentOrder.length && new Set(orderedIds).size === orderedIds.length
+      && orderedIds.every((id) => currentOrder.includes(id));
+    if (!sameSet) return { ok: false, reason: 'mismatch', currentOrder } as DayOrderOutcome;
+    const positionById = new Map(current.map((row) => [row.id, row.dayPosition ?? null]));
+    const refById = new Map(dayDocs.map(({ ref, activity }) => [String(activity.id), ref]));
+    orderedIds.forEach((id, index) => {
+      if (positionById.get(id) !== index) tx.update(refById.get(id)!, { dayPosition: index });
+    });
+    return { ok: true, order: orderedIds } as DayOrderOutcome;
+  });
+};
+
 export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const db = getDb();
   const doc = await db.collection('tours').doc(id).get();
@@ -4973,6 +5008,8 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
   const updatePayload = stripUndefined({
     ...activity,
     ...(activity.startLocation !== undefined && activity.startLocation !== current.startLocation ? { lat: null, lng: null, coordinateSource: null } : {}),
+    // A stop moved to another day must not carry its old rank into that day's order.
+    ...(activity.date !== undefined && String(activity.date).slice(0, 10) !== String(current.date ?? '').slice(0, 10) ? { dayPosition: null } : {}),
     activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
   });
   if (Object.keys(updatePayload).length > 0) {

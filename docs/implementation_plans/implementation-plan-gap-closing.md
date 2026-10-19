@@ -275,6 +275,15 @@ This is the proposed direction; validate it on supported devices before rollout:
 
 ### 1.6 Route lines, travel times, day optimization (P1 / P2)
 
+**Implementation status (2026-10-19) — items 3 and 4 (reorder + Optimize day) built; not yet released.**
+
+- **Order is now one definition.** `packages/domain/src/dayOrder.ts` (synced to `server/src/utils/dayOrder.ts` by `scripts/sync-planning-points.cjs`) orders a day's activities: saved `day_position`, then start time (`9:30` = `09:30`), then name, then id. The day list, the map's pin letters and the server's conflict check all use it, so what the user sees, what the map letters and what the server compares are the same. The Overview day list previously ignored `day_position`.
+- **`PUT /api/activities/day-order`** (`planning_day_order` flag, fail-closed, reported as `dayOrder` by `planning-capabilities`): one transaction on both adapters sets positions for all of one trip's activities on one date. The client sends the order it was looking at (`expectedIds`); if the day changed underneath it the server writes nothing and answers `409` with the current order. Other days and other trips are never touched. Moving an activity to another day clears its position. No schema change: it uses the Phase 1 `day_position` column.
+- **`dayRouteOptimizer.ts`** (pure, deterministic): nearest-neighbour + 2-opt for up to 12 stops. Booked activities with a set time and stops without coordinates keep their slot; an optional lodging anchor makes the route start and end there; it never returns a longer route than it was given.
+- **`DayActivitiesOrdering`** in the Overview day view: Move up / Move down (44 px targets, labelled for screen readers), **Optimize order** with a preview (straight-line distance before/after, what stays put, "not walking or driving times"), **Use this order**, **Keep my order**, and **Undo** (itself a checked save). Conflicts, offline and double taps are handled in place with a persistent notice.
+
+Not done yet: drag-and-drop (needs a drag library validated against React Native Web; Move up/down is the accessible baseline), travel-time labels between stops (§1.6 item 2), enabling the flag per environment, a usability pass, and a Firestore emulator run of the new server tests (they pass on the in-memory adapter).
+
 1. **Route line:** a MapLibre line layer in visit order. On the native Google stopgap, the `path` parameter, which needs `lat`/`lng` from §1.4.
 2. **Travel time between stops** via the existing `transferEstimationService`: haversine with walking (~5 km/h) or driving (~30 km/h) speeds, shown as "~12 min walk".
    - The Directions API is used only when `attractions_transfer_directions_api` is on **and** `assertCanUseFeature` passes for the user's tier — a flag alone is global, not per tier.

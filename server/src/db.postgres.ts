@@ -97,6 +97,7 @@ import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 import { normalizePackingLabel } from './utils/packingListNormalize';
+import { orderDayActivities } from './utils/dayOrder';
 import { ActivityBlockSchema, LocationProfileSchema, type ActivityBlock, type LocationProfile } from './schemas/itineraryCacheSchemas';
 
 
@@ -4945,6 +4946,47 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   return created;
 };
 
+export type DayOrderOutcome =
+  | { ok: true; order: string[] }
+  | { ok: false; reason: 'forbidden' | 'stale' | 'mismatch'; currentOrder: string[] };
+
+// Sets the visit order of ALL of one trip's activities on one date, atomically.
+// `expectedIds` is the order the caller was looking at; if the day has changed underneath them
+// (a tripmate reordered, added or removed a stop) nothing is written and the current order is returned.
+// Only this day's rows are touched, so other days keep their positions.
+export const reorderActivitiesForDay = async (
+  userId: string,
+  tripId: string,
+  date: string,
+  orderedIds: string[],
+  expectedIds: string[]
+): Promise<DayOrderOutcome> =>
+  withPlanningTransaction(async (client) => {
+    if (!(await ensureUserInTrip(tripId, userId))) return { ok: false, reason: 'forbidden', currentOrder: [] };
+    const { rows } = await client.query<{ id: string; name: string | null; startTime: string | null; dayPosition: number | null }>(
+      `SELECT id, name, start_time as "startTime", day_position as "dayPosition"
+       FROM tours
+       WHERE trip_id = $1 AND date = $2::date
+       FOR UPDATE`,
+      [tripId, date]
+    );
+    const current = orderDayActivities(rows.map((row) => ({ ...row, id: String(row.id) })));
+    const currentOrder = current.map((row) => row.id);
+    if (currentOrder.length !== expectedIds.length || currentOrder.some((id, index) => id !== expectedIds[index])) {
+      return { ok: false, reason: 'stale', currentOrder };
+    }
+    const sameSet = orderedIds.length === currentOrder.length && new Set(orderedIds).size === orderedIds.length
+      && orderedIds.every((id) => currentOrder.includes(id));
+    if (!sameSet) return { ok: false, reason: 'mismatch', currentOrder };
+    const positionById = new Map(current.map((row) => [row.id, row.dayPosition ?? null]));
+    for (let index = 0; index < orderedIds.length; index += 1) {
+      const id = orderedIds[index]!;
+      if (positionById.get(id) === index) continue;
+      await client.query(`UPDATE tours SET day_position = $1 WHERE id = $2 AND trip_id = $3`, [index, id, tripId]);
+    }
+    return { ok: true, order: orderedIds };
+  });
+
 export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const p = getPool();
   const current = await getActivityById(id);
@@ -4961,6 +5003,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
     SET
       status = COALESCE($3, status),
       activity_type = COALESCE($4, activity_type),
+      day_position = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN NULL ELSE day_position END,
       date = COALESCE($5, date),
       name = COALESCE($6, name),
       lat = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lat END,

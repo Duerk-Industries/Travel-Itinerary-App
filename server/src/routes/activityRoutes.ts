@@ -13,6 +13,7 @@ import {
   insertActivity,
   listGroupMembers,
   listActivities,
+  reorderActivitiesForDay,
   updateActivity,
   upsertExpenseForSource,
 } from '../db';
@@ -315,6 +316,39 @@ router.patch('/bulk', async (req, res) => {
   }
 
   res.json({ updates, deletes });
+});
+
+const dayOrderDto = z.object({
+  tripId: z.string().uuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // The order the client was looking at. A mismatch means someone else changed the day first.
+  expectedIds: z.array(z.string().min(1).max(64)).max(100),
+  orderedIds: z.array(z.string().min(1).max(64)).max(100),
+});
+
+// Registered before '/:id' so "day-order" is never read as an activity id.
+router.put('/day-order', async (req, res) => {
+  const dto = dayOrderDto.safeParse(req.body ?? {});
+  if (!dto.success) { res.status(400).json({ error: 'Choose a trip, a day and the new order.', code: 'INVALID_DAY_ORDER' }); return; }
+  const userId = (req as any).user.userId as string;
+  try {
+    if (!(await isFeatureEnabled('planning_day_order'))) { res.status(404).json({ error: 'Reordering is currently unavailable.', code: 'FEATURE_DISABLED' }); return; }
+    await reserveHttpRateLimitOrThrow({ name: 'activity_day_order', identity: userId, limit: 60, windowMs: 60_000 });
+    const { tripId, date, orderedIds, expectedIds } = dto.data;
+    const outcome = await reorderActivitiesForDay(userId, tripId, date, orderedIds, expectedIds);
+    if (outcome.ok) { res.json({ order: outcome.order }); return; }
+    if (outcome.reason === 'forbidden') { res.status(403).json({ error: 'You must be in the group for this trip.' }); return; }
+    res.status(409).json({
+      error: outcome.reason === 'stale'
+        ? 'This day was changed by someone else. Review the new order and try again.'
+        : 'The new order does not match this day\'s activities.',
+      code: outcome.reason === 'stale' ? 'DAY_ORDER_STALE' : 'DAY_ORDER_MISMATCH',
+      currentOrder: outcome.currentOrder,
+    });
+  } catch (error) {
+    if (error instanceof HttpRateLimitExceededError) { res.setHeader('Retry-After', String(error.retryAfterSeconds)); res.status(429).json({ error: error.message }); return; }
+    res.status(503).json({ error: 'The order could not be saved. Please try again.' });
+  }
 });
 
 router.put('/:id', async (req, res) => {
