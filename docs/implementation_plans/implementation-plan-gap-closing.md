@@ -1,9 +1,25 @@
 # Gap-Closing Plan: Map, Discovery, Email Import, Dark Features, Offline
 
-**Status:** Revised proposal — source-verified 2026-10-18; production settings and measurements unverified
-**Last updated:** 2026-10-18
+**Status:** Revised proposal — source-verified 2026-10-18, re-verified 2026-10-19 (§0.5); production settings and measurements unverified
+**Last updated:** 2026-10-19
 **Review:** Updated against repository code and primary provider documentation, in collaboration with Bryan Duerk
 **Builds on:** `implementation-plan-wanderlog-competitive-analysis.md` (§5.1–5.4), `implementation-plan-trip-day-map.md`, `server/src/ingestion/TECHNICAL_DEBT.md`
+
+**How to read this:** the plain-language overview below is for everyone. §0.4 describes what travelers see. §0.5 lists fixes worth doing first. §1–5 are for implementers, and §6–9 are for reviewers.
+
+---
+
+## Plain-language overview
+
+What travelers get, in the order it is planned:
+
+1. **Forwarded booking emails become safe and simple.** Each person gets a private forwarding address. Bookings show up with a suggested trip, and confident matches can be added automatically with Undo.
+2. **Saved trips stay correct offline.** A failed download never replaces a good saved copy with an empty one. Expenses added without signal sync later and are never lost.
+3. **A real, movable map.** Each day's stops appear on an interactive map next to the itinerary, at no per-view cost on web.
+4. **"Nearby" ideas.** Places close to where the group is staying, added to a day with one tap.
+5. **An in-app notification inbox.** For example: "free cancellation ends tomorrow" and "your booking was added".
+
+What stays the same: planning, manual upload, and the itinerary list keep working even if any new feature is switched off. Reading saved trips offline and the map stay free.
 
 ---
 
@@ -78,7 +94,7 @@ flowchart TD
     API_Extract["Extractors<br/><i>.ics → JSON-LD → static/learned → LLM</i>"]
     API_Match["Trip matcher<br/><i>deterministic, never LLM</i>"]
     API_Notif["Notification outbox worker"]
-    API_Sync["Trip bundle + idempotency middleware"]
+    API_Sync["Trip bundle + idempotent-create helper"]
   end
 
   subgraph Storage["Database & Storage"]
@@ -132,8 +148,8 @@ blocks manual upload or trip planning. UI labels below are proposed copy, not AP
 | --- | --- | --- |
 | Import a booking | Open **Imports** → **Upload a confirmation** or **Copy my forwarding address** → see **Received**, then a booking preview and trip suggestion → **Add to Japan trip** | **Choose a trip** if ambiguous; **Edit details** if dates/amount are missing; **Upload another file** if unsupported. Never show a confidence percentage or require provider settings. |
 | Set up email forwarding | Copy address first; optional **Set up automatic forwarding** opens provider-specific steps, progress and a test | Explain that mail-provider settings open outside the app; show the validated confirmation code when needed. Offer **I'll do this later** and manual upload. A test shows **Test received** and creates no booking/charge. |
-| Review unfamiliar mail | **Check this sender** with sanitized sender and receipt time → **Import this message** or **Delete** | Explain “We haven't verified this sender yet.” **Always allow this sender** requires verification, cannot change auto-add permission, and stays under More options. No raw HTML preview. |
-| Enable automation | After a successful reviewed import, offer **Automatically add matching bookings** with an example, shared-trip disclosure and an off-by-default switch | Show **Added to Japan trip** and **Undo** in import history and item details for seven days, not just a disappearing toast. Ambiguous matches always ask. |
+| Review unfamiliar mail | Most mail needs no extra step: if the forwarder can't be confirmed, the booking still appears as a normal suggestion with "We couldn't confirm who forwarded this — check it before adding". Only suspicious mail shows **Check this message** → **Import once** or **Delete** | **Always allow this sender** requires verification, cannot change auto-add permission, and stays under More options. No raw HTML preview. |
+| Automatic adding | Once released (after the pilot gate in §3.4), confident matches from a verified forwarder are added automatically. The first time, a one-screen explanation shows an example, says tripmates will see the booking, and offers **Keep on** / **Always ask me** | **Added to Japan trip** with **Undo** in import history and item details for seven days, not just a disappearing toast. Ambiguous matches always ask. The switch lives in Imports settings. |
 | Find an activity | Open a day → **Nearby** → card shows distance, estimated duration and **Add to [day]** | Default trip/day from context. Ask only when context is absent; show **Added** and **Undo**, prevent double taps, warn about an existing activity. Offer **Search another area** for no results. |
 | Use the map | Day list works first; **Show map** opens the same stops, with linked row/pin selection | **Map unavailable — your itinerary is still below**; **Open in Maps** for navigation. Explain straight-line connections and estimated times without technical terms. |
 | Save a trip | **Save for offline** → progress/size → **Saved on this device**, last-updated time | Storage/network failure keeps the previous complete copy and shows **Try again** or **Free up space**. Say whether map imagery is included; first release guarantees trip details, not turn-by-turn navigation. |
@@ -154,12 +170,25 @@ feedback, labeled errors next to fields, and confirmation only for destructive/f
 conflicts. Do not request notification or location permission before the user invokes the
 relevant feature; denial leaves planning usable.
 
-**Usability gate:** test the above tasks with at least five people unfamiliar with the app,
+**Usability gate:** test the tasks above with at least five people unfamiliar with the app,
 including mobile and a keyboard/screen-reader pass. Target at least 4/5 completing import,
 Add to day, offline save and offline-expense recovery without coaching; zero unnoticed data
 loss or accidental sharing. Record task times, confusing labels and mistakes; fix blockers
 before wider rollout. Small-sample results guide iteration, not a claim of population-wide
 success. No analytics collection outside existing consent rules.
+
+## 0.5 Verified quick wins (do first — small, independent changes)
+
+Each item below was confirmed in code on 2026-10-19 and can ship as its own small PR or configuration change, ahead of the larger slices.
+
+| # | Problem (verified) | Fix | Why first |
+| --- | --- | --- | --- |
+| 1 | **Forwarded mail can be lost on retry.** `validateMailgunWebhookSignature` claims the replay token before the message is stored or queued. If anything later fails (500), Mailgun retries with the same token, the replay check throws a 406, and Mailgun never retries a 406. The monthly quota is also consumed before payloads are built and queued. | Claim the replay token and consume quota in the same step that durably records the delivery; treat a replay of an already-recorded delivery as success. Return a permanent 406 only for truly unprocessable mail, never for temporary failures. Also confirm Mailgun accepts the current `202` as success — its docs name only `200`. Check whether its retries (up to ~8 h) carry the original signature timestamp, which the 5-minute window would reject. | Silent loss of a user's booking email is the worst import failure |
+| 2 | **Offline snapshot can save empty lists.** `App.tsx` builds the snapshot with `.catch(() => [])` on each fetch, and `fetchFlightsForTrip` returns `[]` on a non-OK response. A failed request is saved as "this trip has no flights". | Save a snapshot only when every part loaded. Otherwise keep the previous complete copy and show "Couldn't update the saved copy" (§5.1 item 4). | A traveler offline at the airport sees a trip with missing flights |
+| 3 | **Every production import runs two LLM parsers.** The default consensus sample rate is 100% (`DEFAULT_CONSENSUS_SAMPLE_RATE_PERCENT`). | Check consensus agreement rates in the existing admin comparison data, then lower `parser_consensus_sample_rate_percent` through the existing admin setting. No code change. | Largest immediate cost lever per import |
+| 4 | **Google map images are stored.** `trip_blog_day_map_render` seeds on and saves Google PNGs (§1.1). | Pause via flag; inventory before any cleanup (§1.1). | Compliance |
+| 5 | **Webhook logs contain personal data.** Info logs print sender, recipient and subject. | Log opaque ids and counts only (§3.1 item 10). | Privacy; trivial change |
+| 6 | **A dead flag claims a feature exists.** `notifications_web_push` seeds on with no browser push implementation. | Turn the flag off. | Removes a misleading signal from the flag audit |
 
 ---
 ## 1. In-App Map & Route Visualizer
@@ -259,7 +288,7 @@ This is the proposed direction; validate it on supported devices before rollout:
 ### 2.2 One-tap "Add to day" & bookable options (P1)
 
 - "Add to day" calls the existing `POST /api/activities`, prefilled with name, coordinates (so no geocode is needed), `attractionDurationEstimationService` duration, category, and description.
-- It sends an `Idempotency-Key` through the shared middleware (§5.3), so a double tap can't create two activities.
+- It sends an `Idempotency-Key` through the shared idempotent-create helper (§5.3), so a double tap can't create two activities.
 - Enforce atomic create/dedupe, membership and input validation in the existing route/repository; middleware alone cannot guarantee one create. Reuse a minimal idempotent-create primitive before Nearby ships; do not make it wait for the whole offline expense UI. Estimate duration locally/cached, not one paid call per visible card. Confirm exact trip/day only when context is missing.
 - GetYourGuide options appear when `getyourguide_activity_suggestions` is on, labelled "Partner". Ranking ignores affiliate status.
 
@@ -275,7 +304,7 @@ This is the proposed direction; validate it on supported devices before rollout:
 ## 3. Automated Reservation Import & Ingestion Security
 
 Goal: forwarding produces clear receipt/progress and a suggested trip without technical
-setup. After a successful review, users may opt into confident automatic additions. Target
+setup. Once released, confident matches are added to the right trip automatically by default, with Undo. Target
 latency is measured by input class; a cold scanner or OCR can take longer than a minute.
 Auto-assignment affects a shared trip, so trusted attribution and recovery ship first.
 
@@ -293,15 +322,23 @@ Inbound email → Mailgun MX → POST /api/ingestion/webhooks/mailgun
   2. Parse recipient u-<token>@in.wander-bunnies.com      (new)
   3. SHA-256(token) → ingestion_aliases (ACTIVE or within grace)
        └─ not found / revoked → 200, drop, counter only
-  4. Bounded alias/account admission + trusted sender validation
-       ├─ trusted → durable receipt + dedupe/quota reservation → worker
-       └─ uncertain → bounded private hold (no scan, parse or LLM)
+  4. Bounded alias/account admission (caps, sizes, rate)
+       └─ over a cap / abuse signal → bounded private hold (no scan, parse or LLM)
+  5. Durable receipt + dedupe/quota reservation → worker
+  6. Sender trust tier decides what the result may do:
+       ├─ verified forwarder → suggestion, eligible for automatic add
+       └─ alias only         → suggestion only (never automatic)
 ```
 
 1. **Alias.** `u-<token>@in.wander-bunnies.com`, where `<token>` is 128 random bits, base32 (26 characters). It lives on a dedicated inbound subdomain with its own MX, so the main domain's mail is untouched.
 2. **`ingestion_aliases`:** preserve id/owner/hash/encrypted address/status/timestamps with key version and authenticated-encryption associated data. PostgreSQL unique index; Firestore deterministic token-hash document reserved in a transaction, since an index is not a uniqueness constraint. Routine rotation may offer seven-day grace; suspected compromise revokes immediately. No alias tokens in logs, public links, analytics or notifications; deletion removes aliases/keys.
 3. **Trusted sender, not claimed sender.** A secret alias is a bearer capability, not proof of message truth. Only trusted receiver-generated authentication results with documented identity alignment may influence sender trust; attacker-supplied headers and `From` alone cannot. Account/additional addresses must actually be verified with expiring single-use tokens. Avoid universal plus-tag stripping; confirm real forwarding behavior with Gmail, Outlook and Apple fixtures. SPF may fail after forwarding; DKIM/ARC handling needs explicit validation. Uncertain cases go to review. Do not promise that every new airline bypasses checks, or assume Gmail rewrites the envelope to the user's mailbox. Provider authentication does not replace extraction quality validation.
-4. **Hold, don't reject.** A message to a valid alias from an unverified forwarder goes to `HELD_UNVERIFIED_SENDER` **before** scanning, normalization, or extraction. The Import screen and inbox show "1 message from `spouse@example.com` — Import once · Always allow · Delete". "Always allow" sends a confirmation link to that address first.
+4. **Trust tiers instead of holding everything uncertain.** The 128-bit alias is the credential that admits mail; sender trust only limits what the result may do. Holding every message whose sender can't be verified would hold most auto-forwarded mail, because Gmail and Outlook forwarding keeps the airline as `From`. Non-technical users would then have to approve every booking by hand.
+   - **Alias valid, forwarder verified** (a trusted receiver authentication result aligned with one of the owner's verified addresses): processed normally; the result is eligible for automatic add (§3.4).
+   - **Alias valid, forwarder not verified:** processed normally — scanned, extracted, quota and caps applied — but the result is **suggestion-only**. The user confirms the trip with one tap; it is never added automatically. The review card says "We couldn't confirm who forwarded this — check it before adding".
+   - **Held before any scanning or parsing** (`HELD_UNVERIFIED_SENDER`) only on abuse signals: per-alias caps exceeded, a sudden volume spike, or mail claiming to come from the owner's own address that fails authentication. The Import screen shows "Check this message — Import once · Delete". "Always allow this sender" stays under More options and sends a confirmation link to that address first.
+   - **Cost bound:** unverified-but-admitted mail costs extraction, so per-alias daily caps and the monthly quota (item 5) must ship together with this tier.
+   - If the alias leaks, rotate it in one tap (item 2). The worst case without rotation is unwanted suggestions, never writes to a trip.
 5. **Two admission budgets.** Add global/IP transport limits, total bytes/parts/fields and deadlines before multipart buffering; 20 per-file limits do not bound total memory. After alias lookup bound held mail by account/alias (initial proposal: 20 messages or 25 MiB, seven-day TTL), with one coalesced alert. Enforce per-alias accepted rate caps and consume monthly quota once per accepted message, atomically with dedupe/admission, not once per retry/attachment. No billable extraction or scanner wakeup for unverified holds. Authenticated Import once still follows scan/quota rules; over-limit users retain manual review and readable recovery.
 6. **No backscatter.** Never auto-reply to an inbound sender. Results go to the alias owner in-app, by push (§4.2), or by email to the **account** address only.
 7. **Retire the shared address safely.** Immediately stop using sender lookup to select an account, including a hold queue. Drop legacy-address mail with provider-appropriate success, announce the personal address to signed-in owners/verified account channels, and offer manual upload. Any grace path needs an authenticated claim mechanism; a spoofable sender cannot determine who receives private mail.
@@ -340,7 +377,7 @@ flowchart TD
   E --> G
   F --> G
   G -- yes --> M["Trip matcher"]
-  G -- no --> H["LLM extractor (sampled consensus, existing)"]
+  G -- no --> H["LLM extractor (consensus at configured rate; default 100%)"]
   H --> I{"≥ 0.9 / 0.7–0.9 / < 0.7"}
   I -- "≥ 0.9" --> M
   I -- "0.7–0.9" --> R["Review queue (suggested trip)"]
@@ -355,13 +392,20 @@ flowchart TD
 6. **Measure:** record the per-import LLM cost from `usage_metering` for 2 weeks before the change and compare after. Report per-stage hit rates in the existing ingestion admin widgets.
 7. **Defer Gmail expansion.** For public server-side processing of restricted Gmail data, plan scope verification and annual assessment unless a documented exception applies. Forwarding avoids new Gmail scopes; already-deployed OAuth usage still needs its own review.
 
-### 3.4 Suggest first; opt-in automatic additions after quality gates (P2)
+### 3.4 Automatic adding to the right trip — on by default after quality gates (P2)
 
 This reverses the deliberate "No automatic assignment" decision in `ingestion/TECHNICAL_DEBT.md`; update that file when it ships.
 
 **Gate:** all §3.1 controls, transactional/recoverable assignment side effects, safe undo,
-membership checks and a suggestion-only pilot pass before automatic writes. Default off,
-with a fail-closed cohort flag and per-user opt-in. Confirmation, not score, is the safe fallback.
+membership checks and a suggestion-only pilot pass before automatic writes. Confirmation, not score, is the safe fallback.
+
+**Default — confirmed product decision (2026-10-18, reconfirmed 2026-10-19): automatic adding is ON by default.** When time and place align, the booking goes into the right trip without the user doing anything. No user ever has to find or enable a setting. The steps below are internal release gates, not user opt-ins:
+
+1. **Internal pilot (before general release):** the matcher runs in suggestion-only mode so its picks can be audited against what users confirm. The release flag stays fail-closed.
+2. **Admin cohort:** automatic adding on for the admin accounts once the precision gate (§8) passes.
+3. **General release:** **on by default for every user**, with the first-time notice in §0.4 and a per-user switch to turn it off (**Always ask me**).
+
+Automatic add applies only to verified-forwarder imports (§3.1 item 4) and unique, strong matches. Everything else stays a one-tap suggestion. A default-off switch would leave most non-technical users without the feature, since few find and enable opt-in automation.
 
 #### Candidate trips
 
@@ -398,14 +442,14 @@ Trips from `listTrips(userId)` where the alias owner is an active group member �
 - Each auto-assignment stores `assignment_mode = 'AUTO'` and `undo_expires_at`.
 - Track every created row/expense with assignment id and expected version. Assignment and source-expense sync need an atomic transaction or durable recoverable intent before automation; an expense currently created after commit cannot be assumed complete.
 - Undo is an authorized idempotent compensating operation: remove only unchanged rows created by that assignment. Tripmate edits, shared references or settled payments require a conflict-specific recovery flow; never offer a generic button that silently deletes financial history. Recheck membership and keep an audit trail.
-- **Setting:** "Automatically add matching bookings", **off by default**, with a plain-language shared-trip explanation. Undo stays accessible in import history/item details for seven days.
+- **Setting:** "Automatically add matching bookings" — **on by default** (see Default above). A plain-language notice the first time says tripmates will see the booking. Users can switch it off. Undo stays accessible in import history/item details for seven days.
 
 #### Data model
 
 - `parsed_items`: add `suggested_trip_id`, `match_reasons` (JSON), `assignment_mode` (`MANUAL` | `SUGGESTED` | `AUTO`), `undo_expires_at`.
 - `import_jobs`: add state `HELD_UNVERIFIED_SENDER`.
 - New tables: `ingestion_aliases`, `ingestion_verified_senders` (`user_id`, `email`, `verified_at`, `verification_token_hash`).
-- User preference: `ingestion_auto_assign` (default false).
+- User preference: `ingestion_auto_assign` — nullable; `null` means "use the default", which is **on** once the release flag is on. An explicit user choice always wins, and the release flag can stop automatic writes for everyone without touching user settings.
 - Implement in existing ingestion/DB repositories for Postgres, Firebase and pg-mem behavior; add query-required composite indexes only. A Firestore token-hash lookup needs a deterministic unique reservation, not a composite index.
 
 #### Metrics
@@ -542,6 +586,7 @@ below describe sequencing, not authorization for deployment, deletion or provide
 
 | Slice | Scope and prerequisites | Evidence before enabling | Rollback / fallback |
 | --- | --- | --- | --- |
+| P0: verified quick wins (§0.5) | Mail-retry/quota ordering, complete-only offline snapshots, consensus sample-rate review, map-render pause, log redaction, dead web-push flag | Crash/retry tests for the webhook, partial-fetch snapshot test, consensus agreement data before lowering the rate | Each is independent and individually revertible |
 | P0: source/config/storage audit | Inventory map artifacts and readers; pause unsupported artifact generation via separate config change; import logs/attribution, scan config, queue isolation | Applicable terms/config audit, exact cleanup dry run, no impact on user media, adapter failure cases | Stop new provider work; keep trip list/manual paths and recoverable data; no broad bucket deletion |
 | P0: safe mail admission | Alias/trust checks, bounded hold, durable receipt/dedupe/quota, fail-closed scanning and lifecycle cleanup | Signed/forged sender fixtures, real forwarding trials, crash/retry tests and scanner readiness | Disable mailbox admission with documented provider retry/hold response; never revert to sender attribution or unscanned parsing |
 | P0: native snapshot reliability | Complete-only snapshot writes, visible storage failure, owner isolation and logout races | Interrupted/partial fetch, storage-full, account switch and pending-work recovery tests | Keep last complete readable snapshot; stop unsafe new writes |
@@ -550,7 +595,7 @@ below describe sequencing, not authorization for deployment, deletion or provide
 | P1: inbox and bundle contract | Existing notification preference API; cursor catch-up; typed authorized conditional bundle and mutation inventory | Room/deep-link isolation, missed-event catch-up, version/permission/consistent-read tests | Inbox history/manual refresh; retain existing screen fetches and last valid snapshots |
 | P2: native migration and public map/export | Compatibility spike, encrypted storage migration, audience-safe projection/export prototype | Named real-device EAS tests, old-client support, print readiness and privacy review | Independent renderer/storage flags, original list/keepsake without map; keep old routes during support window |
 | P2: optional geocoding, reorder/optimize | Permitted inputs/provider decision, durable queue both adapters, global throttle; expected-version reorder | Queue crash/fencing and provider throttling, stale address results, fixed-time/accessibility tests | No external lookup; preserve original location/order and manual adjustments |
-| P2: opt-in automatic imports | All security gates, assignment + expense workflow, conflict-safe undo, suggestion pilot | Audited supported-item precision and wrong-trip review, opt-in UX and undo tests | Switch automation off, preserve review/history/undo; do not delete prior items blindly |
+| P2: automatic imports (on by default) | All security gates, assignment + expense workflow, conflict-safe undo, suggestion pilot, then admin cohort | Audited supported-item precision and wrong-trip review, first-time notice/switch and undo tests | Switch automation off, preserve review/history/undo; do not delete prior items blindly |
 | P2: offline expense create | Durable encrypted/scoped queue, shared atomic idempotent create, bundle/storage maturity | Concurrent retries, timeout after commit, native hydration, lifecycle/account isolation and novice recovery tasks | Pause replay/new enqueue as needed, retain same-account work for recovery; online creation still available |
 | Later: browser shell/push, public explore, Gmail expansion | Separate platform/privacy/SEO/OAuth gates; not required for core planning | Feature-specific tests and total-cost case | Existing inbox, authenticated planning and manual import remain usable |
 
@@ -568,7 +613,7 @@ Name hardware, payload mix, concurrency, region and cold/warm state in each repo
 
 | Area | Required scenarios and acceptance |
 | --- | --- |
-| Email security | Valid/invalid HMAC and timestamp; forged From/authentication headers; unknown/revoked/compromised alias; legacy shared address cannot select an account; verified versus uncertain real forwarding; no secrets/PII in logs or push |
+| Email security | Valid/invalid HMAC and timestamp; forged From/authentication headers; unknown/revoked/compromised alias; legacy shared address cannot select an account; verified versus uncertain real forwarding; **unverified-forwarder mail becomes suggestion-only and is never auto-added**; abuse signals hold before scanning; a retry of an already-recorded delivery returns success and temporary failures never return 406; no secrets/PII in logs or push |
 | Admission/retries | Aggregate multipart and hold cap, private TTL cleanup, quota exactly once on duplicated/retried message, crash before/after replay claim/persistence/enqueue, durable worker delivery across instances; no success ACK before recoverable receipt |
 | Scan/extraction | Clean/EICAR/MIME mismatch, scanner outage/signature age/no-op/invalid config, malicious PDF/image limits; supported calendar dates/cancellations/no recurrence expansion; aggregate HTML/JSON limits, no JS/remote-context fetch, prompt injection and field schema validation |
 | Match/undo | Overlapping/month-only trips, origin-only match, return leg scoped continuity, same reference at another provider, DST/overnight/unknown timezone, followed/revoked trip; concurrent assignment/undo, partial expense sync and edited/settled financial conflicts; no duplicate rows or blind rollback |
@@ -589,7 +634,7 @@ reads separately; do not promise a universal one-read or < 50 ms response.
 
 **Automatic-assignment quality:** suggestion-only pilot and manually audited/redacted
 supported fixtures; target >= 99% precision across at least 200 representative supported
-items before small opt-in rollout. This is a gate, not statistical proof of production
+items before the admin-cohort rollout, and again before general release. This is a gate, not statistical proof of production
 safety. Wrong-trip disclosure pauses automation immediately; track undo (> 2% pauses
 expansion), complaints and unnoticed errors rather than using undo alone as accuracy.
 
@@ -621,8 +666,8 @@ to operators without requiring ordinary users to interpret logs.
 
 ## 10. Decisions and Deferred Questions
 
-Defaults: extend existing services; simple manual import/suggestions first; automation off
-until opted in; private import details and generic push; basic offline reading and local
+Defaults: extend existing services; simple manual import/suggestions first; automatic adding
+**on by default** for verified-forwarder unique matches once released (§3.4, confirmed product decision); private import details and generic push; basic offline reading and local
 optimization free; no new paid routing or server map renderer. Keep exact public location
 sharing off. Manual upload, list view and saved trip details remain usable independently.
 
