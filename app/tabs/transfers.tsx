@@ -464,12 +464,13 @@ export const fetchFlightsForTrip = async ({
     const res = await fetch(`${backendUrl}/api/transfers?tripId=${activeTripId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error('Unable to load trip details');
     const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Invalid trip details response');
     return (data as any[]).map((f) => normalizeFlightFromApi(f));
   } catch (err) {
     console.error('Failed to fetch flights', err);
-    return [];
+    throw err;
   }
 };
 

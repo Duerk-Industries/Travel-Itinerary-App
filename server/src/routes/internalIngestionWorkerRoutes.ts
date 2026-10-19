@@ -5,6 +5,7 @@ import { processImportJob } from '../ingestion/orchestrator';
 import { getRetryPolicyConfig, listDeadLetterImportJobs, listFailedJobsReadyForRetry, requeueImportJob } from '../ingestion/shared/repository';
 import { requeueDeadLetterImportJob } from '../ingestion/orchestrator';
 import { getJobQueue } from '../ingestion/worker/jobQueue';
+import { drainMailReceipts } from '../ingestion/worker/mailReceiptWorker';
 import { logError, logInfo } from '../logger';
 
 const router = Router();
@@ -31,6 +32,11 @@ const calculateRetryDelayMs = (retryCount: number, baseDelaySeconds: number, max
   const jitter = Math.floor(exponential * 0.2);
   return (exponential + jitter) * 1000;
 };
+
+router.post('/mail-receipts/drain', authenticateWorker, async (_req, res) => {
+  try { res.json(await drainMailReceipts()); }
+  catch { res.status(503).json({ error: 'Mail receipt processing is temporarily unavailable.' }); }
+});
 
 router.post('/jobs/:jobId/run', authenticateWorker, (req, res) => {
   const jobId = String(req.params.jobId);

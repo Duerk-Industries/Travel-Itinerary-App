@@ -15,7 +15,7 @@ export const INGESTION_MAX_NORMALIZED_TEXT_BYTES = 1_000_000;
 export const INGESTION_DEFAULT_FORWARDING_ADDRESS = 'travel.docs@wander-bunnies.com';
 export const INGESTION_DEFAULT_FORWARDING_PROVIDER = 'mailgun';
 export const INGESTION_FORWARDING_SETTINGS_COPY =
-  'Forward travel confirmations to the Mailgun-backed inbox. The displayed address can be copied by users, but changing the underlying destination requires an admin/provider update.';
+  'Forward confirmations to your private address. Keep it private. Bookings appear as suggestions for you to check before adding to a trip.';
 export const INGESTION_JOB_QUEUE_MODE_DEFAULT = 'cloud_run';
 export const INGESTION_RETRY_PROVIDER_GLOBAL = 'GLOBAL';
 export const INGESTION_VIRUS_SCAN_PROVIDER_DEFAULT = 'cloud_native';

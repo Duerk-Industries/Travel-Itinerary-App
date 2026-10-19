@@ -123,7 +123,8 @@ export const fetchCarRentalsForTrip = async (params: {
   const res = await fetch(`${backendUrl}/api/car-rentals?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error('Unable to load trip details');
   const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Invalid trip details response');
   return Array.isArray(data) ? data.map((item) => normalizeCarRentalFromApi(item)) : [];
 };

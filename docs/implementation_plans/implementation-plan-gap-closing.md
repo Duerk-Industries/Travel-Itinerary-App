@@ -7,6 +7,16 @@
 
 **How to read this:** the plain-language overview below is for everyone. §0.4 describes what travelers see. §0.5 lists fixes worth doing first. §1–5 are for implementers, and §6–9 are for reviewers.
 
+**P0 code implementation (2026-10-19):** Mail aliases, transactional encrypted receipts/quota,
+held-message recovery, scheduled processing, fail-closed scanner checks, complete-only
+owner-scoped offline snapshots, map-cache removal, privacy redaction and seed defaults
+are implemented. See [implementation and rollout evidence](../operations/gap-closing-p0.md)
+and [source flag/artifact audit](gap-closing-p0-source-audit.json). Production flag changes,
+consensus sampling decisions, bucket inventory/cleanup review, real forwarding/scanner
+trials and device/adapter concurrency verification remain explicit release gates. The
+initial mailbox bound is 256 KiB combined content (larger documents use manual upload);
+all sender trust is unverified/suggestion-only until real receiver fixtures are validated.
+
 ---
 
 ## Plain-language overview

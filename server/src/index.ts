@@ -27,6 +27,8 @@ import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './con
 import { getBillingPlanConfig } from './db';
 import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
 import { syncPackingPresetCatalogFromDisk } from './services/packingListCatalogService';
+import { assertMailAdmissionReady } from './ingestion/worker/mailReceiptWorker';
+import { isFeatureEnabled } from './services/entitlementService';
 import { refreshMeanVector } from './services/meanVectorService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
@@ -91,6 +93,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await initDb();
     await seedEntitlementDefaults();
     await applyStartupFeatureFlagOverrides();
+    if (await isFeatureEnabled('feature_ingest_forwarded_mailbox')) assertMailAdmissionReady();
     await syncPackingPresetCatalogFromDisk();
     await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();

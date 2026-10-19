@@ -285,8 +285,9 @@ export const fetchActivitiesForTrip = async ({
   const res = await fetch(`${backendUrl}/api/activities?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error('Unable to load trip details');
   const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Invalid trip details response');
   return (data as any[]).map((t) => ({
     ...t,
     activityType: ACTIVITY_TYPES.includes(t.activityType) ? t.activityType : 'Tour',

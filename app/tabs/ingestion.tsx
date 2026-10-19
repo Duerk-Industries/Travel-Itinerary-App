@@ -48,6 +48,7 @@ type ConfigResponse = {
     llmEscalations: string;
   };
   forwarding: {
+    receipts?: Array<{ id: string; state: string; expiresAt: number }>;
     provider?: string;
     currentAddress: string;
     instructions: string;
@@ -157,6 +158,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
         fetch(`${backendUrl}/api/ingestion/jobs`, { headers }),
         fetch(`${backendUrl}/api/ingestion/assignment/trips`, { headers }),
       ]);
+      if (!configRes.ok) throw new Error('Import settings unavailable');
       const configData = await configRes.json();
       setConfig(configData);
       if (itemsRes.ok) {
@@ -532,7 +534,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
         </View>
       ) : null}
 
-      {isAdmin ? (
+      {config.features.forwardedMailbox && isAdmin ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Forwarding</Text>
           <Text style={styles.helperText}>Provider: {config.forwarding.provider || 'mailgun'}</Text>
@@ -540,13 +542,32 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
           <Text style={styles.helperText}>{config.forwarding.instructions}</Text>
           <Text style={styles.helperText}>{config.forwarding.adminManagedNote}</Text>
         </View>
-      ) : (
+      ) : config.features.forwardedMailbox ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Forward by Email</Text>
           <Text style={styles.helperText}>Forward travel confirmations to:</Text>
           <Text style={styles.flightTitle}>{config.forwarding.currentAddress}</Text>
+          <Text style={styles.helperText}>Keep this address private. Check each booking before adding it to a trip.</Text>
         </View>
-      )}
+      ) : <Text style={styles.helperText}>Email forwarding is temporarily unavailable. You can upload a confirmation below.</Text>}
+
+      {(config.forwarding.receipts ?? []).filter(r => r.state !== 'COMPLETE').map(receipt => (
+        <View key={receipt.id} style={styles.section}>
+          <Text style={styles.helperText}>{receipt.state === 'HELD' ? 'Check this message before importing. Your plan allowance still applies.' : 'Received — preparing your booking preview.'}</Text>
+          {receipt.state === 'HELD' && <TouchableOpacity style={styles.button} accessibilityRole="button" onPress={() => {
+            void fetch(`${backendUrl}/api/ingestion/forwarding/receipts/${receipt.id}/release`, { method: 'POST', headers }).then(async response => {
+              if (!response.ok) { setError('Could not import this message. Check your allowance or try again later.'); return; }
+              await load();
+            }).catch(() => setError('Could not import this message. Please try again.'));
+          }}><Text style={styles.buttonText}>Import once</Text></TouchableOpacity>}
+          <TouchableOpacity style={styles.button} accessibilityRole="button" onPress={() => {
+            void fetch(`${backendUrl}/api/ingestion/forwarding/receipts/${receipt.id}`, { method: 'DELETE', headers }).then(async response => {
+              if (!response.ok) { setError('Could not delete this message. Please try again.'); return; }
+              await load();
+            }).catch(() => setError('Could not delete this message. Please try again.'));
+          }}><Text style={styles.buttonText}>Delete message</Text></TouchableOpacity>
+        </View>
+      ))}
 
       {isAdmin ? (
         <View style={styles.section}>
@@ -722,6 +743,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                   beginEdit(item);
                 }}
               >
+                {item.sourceType === 'FORWARDED_MAILBOX' && <Text style={styles.helperText}>We couldn't confirm who forwarded this — check it before adding.</Text>}
                 <Text style={styles.flightTitle}>
                   {item.itemType} • {item.providerVendor || 'Unknown provider'}
                 </Text>

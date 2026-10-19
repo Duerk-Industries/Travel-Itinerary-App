@@ -47,7 +47,7 @@ flags:
     enabled: true
     description: "Phase 1 manual upload ingestion and review queue"
   feature_ingest_forwarded_mailbox:
-    enabled: true
+    enabled: false
     description: "Phase 2 forwarded mailbox ingestion"
   feature_ingest_gmail_import:
     enabled: false
@@ -231,7 +231,7 @@ flags:
   # externally-billed call in the feature set." A day map is rendered once per (trip-day,
   # points-hash) by a background job, never on a request path (architecture §14.1).
   trip_blog_day_map_render:
-    enabled: true
+    enabled: false
     description: "Background day-map render job (§14.1) — writes a stored PNG via Google Static Maps once per (trip-day, points-hash); no request path ever calls out"
   # Phase 6 — every independently releasable surface defaults off. Caption AI and nudges are
   # fail-closed in entitlementService because they call a paid provider or contact a person.
@@ -278,7 +278,7 @@ flags:
     enabled: false
     description: "Optional client Sentry diagnostics; fails closed when missing"
   notifications_web_push:
-    enabled: true
+    enabled: false
     description: "Web push notification delivery"
   # Added alongside real push delivery (2026-09-14) — beyond the original four-flag table above.
   # notifications_web_push was reserved for literal browser push (service worker + VAPID), which

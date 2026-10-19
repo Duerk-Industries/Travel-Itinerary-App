@@ -284,7 +284,7 @@ export const normalizeIngestionPayload = async (importJobId: string, payload: In
   }
 
   const signalSummary = classifyDocumentContent(normalizedText);
-  if (getEnvFlag('INGESTION_DEBUG_LLM')) {
+  if (getEnvFlag('INGESTION_DEBUG_LLM') && payload.sourceType !== 'FORWARDED_MAILBOX') {
     logInfo(
       `[ingestion][debug][normalize] job=${importJobId} file="${payload.originalFilename}" mime=${payload.mimeType} source=${normalized.extractedTextSource} quality=${normalized.normalizationQuality} preview=${JSON.stringify(
         debugPreview(normalizedText)

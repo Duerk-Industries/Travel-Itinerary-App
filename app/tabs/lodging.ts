@@ -196,8 +196,9 @@ export const fetchLodgingsApi = async (backendUrl: string, activeTripId: string,
   const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error('Unable to load trip details');
   const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Invalid trip details response');
   return (data as any[]).map(normalizeLodgingFromApi);
 };
 

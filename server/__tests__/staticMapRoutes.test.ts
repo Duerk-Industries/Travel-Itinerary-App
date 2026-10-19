@@ -24,7 +24,7 @@ describe('Static Maps proxy', () => {
     jest.restoreAllMocks();
   });
 
-  it('proxies authenticated map images, caches them, and counts only the upstream miss', async () => {
+  it('proxies private images without retaining them and counts every provider request', async () => {
     const request = require('supertest') as typeof import('supertest');
     const { app } = require('../src/app') as typeof import('../src/app');
     const helpers = require('./helpers') as typeof import('./helpers');
@@ -41,16 +41,16 @@ describe('Static Maps proxy', () => {
     } as Response);
 
     const path = '/api/maps/static?address=1%20Main%20Street%2C%20Boston';
-    await request(app).get(path).set({ Authorization: `Bearer ${token}` }).expect(200);
-    await request(app).get(path).set({ Authorization: `Bearer ${token}` }).expect(200);
+    await request(app).get(path).set({ Authorization: `Bearer ${token}` }).expect('Cache-Control', 'private, no-store').expect(200);
+    await request(app).get(path).set({ Authorization: `Bearer ${token}` }).expect('Cache-Control', 'private, no-store').expect(200);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     const upstreamUrl = String(fetchMock.mock.calls[0]?.[0]);
     expect(upstreamUrl).toContain('maps.googleapis.com/maps/api/staticmap');
     expect(upstreamUrl).toContain('key=server-only-map-key');
     expect(upstreamUrl).not.toContain('EXPO_PUBLIC');
 
     const usage = await getApiUsageSummary();
-    expect(usage.find((entry) => entry.provider === 'GOOGLE_STATIC_MAPS' && entry.caller === 'STATIC_MAP_PREVIEW')?.used).toBe(1);
+    expect(usage.find((entry) => entry.provider === 'GOOGLE_STATIC_MAPS' && entry.caller === 'STATIC_MAP_PREVIEW')?.used).toBe(2);
   });
 });

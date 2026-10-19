@@ -14,18 +14,20 @@ import {
   startOfflineAccessPeriod,
 } from '../utils/offlineTripCache';
 
+const owner = { userId: 'user-1', environment: 'https://api.example.com' };
+
 describe('offline trip cache', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
   });
 
   it('keeps cached trip data scoped to an account for a 30-day access period', async () => {
-    const now = Date.UTC(2026, 8, 21, 12, 0, 0);
-    const initial = await startOfflineAccessPeriod('Traveler@example.com', now);
+    const now = Date.now();
+    const initial = await startOfflineAccessPeriod(owner, now);
     expect(initial?.accessExpiresAt).toBe(now + OFFLINE_ACCESS_WINDOW_MS);
 
     await saveOfflineTripSnapshot(
-      'traveler@example.com',
+      owner,
       {
         tripId: 'trip-1',
         savedAt: now,
@@ -43,17 +45,17 @@ describe('offline trip cache', () => {
       { trips: [{ id: 'trip-1', name: 'Rome' }], groups: [{ id: 'group-1' }] },
     );
 
-    const cached = await loadOfflineTripCache('TRAVELER@example.com');
+    const cached = await loadOfflineTripCache(owner);
     expect(cached?.snapshots['trip-1']?.trip).toEqual({ id: 'trip-1', name: 'Rome' });
     expect(isOfflineAccessValid(cached, now + OFFLINE_ACCESS_WINDOW_MS - 1)).toBe(true);
     expect(isOfflineAccessValid(cached, now + OFFLINE_ACCESS_WINDOW_MS)).toBe(false);
-    expect(await loadOfflineTripCache('other@example.com')).toBeNull();
+    expect(await loadOfflineTripCache({ ...owner, userId: 'user-2' })).toBeNull();
   });
 
   it('retains independent snapshots for the selected trip and other trips available offline', async () => {
-    await startOfflineAccessPeriod('traveler@example.com');
+    await startOfflineAccessPeriod(owner);
     await saveOfflineTripSnapshot(
-      'traveler@example.com',
+      owner,
       {
         tripId: 'selected-trip',
         savedAt: Date.now(),
@@ -69,7 +71,7 @@ describe('offline trip cache', () => {
       { trips: [{ id: 'selected-trip' }], groups: [{ id: 'group-1' }] },
     );
     await saveOfflineTripSnapshot(
-      'traveler@example.com',
+      owner,
       {
         tripId: 'current-trip',
         savedAt: Date.now(),
@@ -80,7 +82,7 @@ describe('offline trip cache', () => {
       { trips: [{ id: 'selected-trip' }, { id: 'current-trip' }], groups: [{ id: 'group-1' }, { id: 'group-2' }] },
     );
 
-    const cached = await loadOfflineTripCache('traveler@example.com');
+    const cached = await loadOfflineTripCache(owner);
     expect(Object.keys(cached?.snapshots ?? {}).sort()).toEqual(['current-trip', 'selected-trip']);
     expect(cached?.snapshots['selected-trip']?.itinerary).toEqual({
       id: 'itinerary-1',
@@ -92,9 +94,9 @@ describe('offline trip cache', () => {
   });
 
   it('removes cached trip data on logout and recognizes a trip active today', async () => {
-    await startOfflineAccessPeriod('traveler@example.com');
+    await startOfflineAccessPeriod(owner);
     await saveOfflineTripSnapshot(
-      'traveler@example.com',
+      owner,
       {
         tripId: 'trip-1',
         savedAt: Date.now(),
@@ -106,7 +108,7 @@ describe('offline trip cache', () => {
     expect(isTripActiveToday({ startDate: '2026-09-20', endDate: '2026-09-22' }, new Date(2026, 8, 21))).toBe(true);
     expect(isTripActiveToday({ startDate: '2026-09-22', endDate: '2026-09-25' }, new Date(2026, 8, 21))).toBe(false);
 
-    await clearOfflineTripCache('traveler@example.com');
-    expect(await loadOfflineTripCache('traveler@example.com')).toBeNull();
+    await clearOfflineTripCache(owner);
+    expect(await loadOfflineTripCache(owner)).toBeNull();
   });
 });

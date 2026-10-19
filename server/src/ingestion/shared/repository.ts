@@ -366,7 +366,7 @@ const mapRetryPolicyRow = (row: RetryPolicyRow): RetryPolicyConfigRecord => ({
   updatedAt: row.updated_at,
 });
 
-const getFirebaseDb = (): Firestore => {
+export const getFirebaseDb = (): Firestore => {
   if (!firebaseApp) {
     if (getApps().length > 0) {
       firebaseApp = getApps()[0]!;
@@ -395,7 +395,7 @@ const getFirebaseDb = (): Firestore => {
   return databaseId ? getFirestore(firebaseApp!, databaseId) : getFirestore(firebaseApp!);
 };
 
-const getPg = (): Pool => poolClient();
+export const getPg = (): Pool => poolClient();
 
 const ensurePgSchema = async (): Promise<void> => {
   if (schemaReady.has('postgres')) return;
@@ -2749,6 +2749,7 @@ export const getReviewQueueSignedUrl = async (_documentId: string): Promise<{ ur
 
 export const deleteUserIngestionData = async (userId: string): Promise<void> => {
   await ensureIngestionRepositoryReady();
+  await (await import('./mailAdmission')).deleteUserMailAdmissionData(userId);
   if (getCurrentDbProvider() === 'firebase') {
     const db = getFirebaseDb();
     const collections = [

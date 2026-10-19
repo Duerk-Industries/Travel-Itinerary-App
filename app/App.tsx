@@ -95,8 +95,10 @@ import {
   saveOfflineTripSnapshot,
   startOfflineAccessPeriod,
   type OfflineTripCache,
+  type OfflineTripSnapshot,
   type OfflineItinerarySnapshot,
 } from './utils/offlineTripCache';
+import { downloadOfflineTripSnapshot } from './utils/downloadOfflineTripSnapshot';
 import { requestOfflineUnlock } from './utils/offlineAccess';
 
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
@@ -391,7 +393,7 @@ const decodeBase64UrlUtf8 = (value: string): string | null => {
 
 const decodeTokenClaims = (
   token: string
-): { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
+): { userId?: string; firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;
@@ -563,10 +565,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     applySession,
     clearSessionState,
   } = useAuthSession();
+  const offlineOwner = useMemo(() => userId ? { userId, environment: backendUrl, legacyEmail: userEmail } : null, [userId, backendUrl, userEmail]);
+  const [offlineSaveError, setOfflineSaveError] = useState<string | null>(null);
   const privacy = usePrivacyConsent(backendUrl, userToken);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const offlineUnlockEpochRef = useRef(0);
+  const offlineDownloadsRef = useRef<Record<string, Promise<OfflineTripSnapshot>>>({});
   const offlineSnapshotPrefetchRef = useRef<Record<string, number>>({});
   const refreshInFlightRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1015,7 +1021,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!pendingOfflineUnlock || offlineUnlocking) return;
     setOfflineUnlocking(true);
     setOfflineUnlockMessage(null);
+    const epoch = offlineUnlockEpochRef.current;
     const result = await requestOfflineUnlock();
+    if (epoch !== offlineUnlockEpochRef.current) return;
     setOfflineUnlocking(false);
     if (!result.ok) {
       setOfflineUnlockMessage(result.message);
@@ -1041,45 +1049,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [applySession, hydrateOfflineTripCache, offlineUnlocking, pendingOfflineUnlock]);
 
   useEffect(() => {
-    if (Platform.OS === 'web' || !userToken || !userEmail || offlineReadOnly || !activeTrip) return;
-    void saveOfflineTripSnapshot(
-      userEmail,
-      {
-        tripId: activeTrip.id,
-        savedAt: Date.now(),
-        trip: activeTrip,
-        groupMembers,
-        flights,
-        lodgings,
-        tours,
-        carRentals,
-        expenses,
-        payments: tripPayments,
-        coveredBy,
-        itinerary: offlineItineraries[activeTrip.id] ?? null,
-      },
-      { trips, groups },
-    );
-  }, [
-    activeTrip,
-    carRentals,
-    coveredBy,
-    expenses,
-    flights,
-    groupMembers,
-    groups,
-    lodgings,
-    offlineReadOnly,
-    offlineItineraries,
-    tours,
-    tripPayments,
-    trips,
-    userEmail,
-    userToken,
-  ]);
-
-  useEffect(() => {
-    if (Platform.OS === 'web' || !userToken || !userEmail || offlineReadOnly) return;
+    if (Platform.OS === 'web' || !userToken || !offlineOwner || offlineReadOnly || !accountProfile.entitlements) return;
     const now = Date.now();
     const currentTripIds = trips
       .filter((trip) => trip.id === activeTripId || isTripActiveToday(trip))
@@ -1087,79 +1057,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!currentTripIds.length) return;
     let cancelled = false;
 
-    const fetchList = async (path: string): Promise<unknown[]> => {
-      try {
-        const response = await fetch(`${backendUrl}${path}`, { headers });
-        if (!response.ok) return [];
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch {
-        return [];
-      }
-    };
-    const fetchRecord = async (path: string): Promise<Record<string, string>> => {
-      try {
-        const response = await fetch(`${backendUrl}${path}`, { headers });
-        if (!response.ok) return {};
-        const data = await response.json();
-        return data && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, string> : {};
-      } catch {
-        return {};
-      }
-    };
-    const fetchItinerary = async (tripId: string): Promise<OfflineItinerarySnapshot | null> => {
-      const records = await fetchList('/api/itineraries');
-      const matching = records.filter((record: any) => record?.tripId === tripId);
-      if (!matching.length) return null;
-      const latest = [...matching].sort(
-        (a: any, b: any) => new Date(b?.updatedAt ?? b?.createdAt ?? 0).getTime() - new Date(a?.updatedAt ?? a?.createdAt ?? 0).getTime(),
-      )[0] as any;
-      const id = typeof latest?.id === 'string' ? latest.id : null;
-      if (!id) return null;
-      return {
-        id,
-        planMarkdown: typeof latest.planMarkdown === 'string' && latest.planMarkdown.trim() ? latest.planMarkdown : null,
-        details: await fetchList(`/api/itineraries/${encodeURIComponent(id)}/details`),
-      };
-    };
-
     void Promise.all(currentTripIds.map(async (tripId) => {
       // Avoid re-downloading the same current-trip snapshot more than once in
       // a five-minute refresh window when another piece of active data changes.
-      if ((offlineSnapshotPrefetchRef.current[tripId] ?? 0) > now - 5 * 60 * 1000) return;
-      offlineSnapshotPrefetchRef.current[tripId] = now;
-      const trip = trips.find((candidate) => candidate.id === tripId);
-      if (!trip) return;
-      const [members, tripFlights, tripLodgings, tripTours, tripRentals, tripExpenses, tripPayments, tripCoveredBy, tripItinerary] = await Promise.all([
-        fetchList(`/api/groups/${trip.groupId}/members`),
-        fetchFlightsForTrip({ backendUrl, activeTripId: tripId, token: userToken }).catch(() => []),
-        fetchLodgingsApi(backendUrl, tripId, userToken).catch(() => []),
-        fetchActivitiesForTrip({ backendUrl, activeTripId: tripId, token: userToken }).catch(() => []),
-        fetchCarRentalsForTrip({ backendUrl, activeTripId: tripId, token: userToken }).catch(() => []),
-        costTrackingAllowed ? fetchList(`/api/expenses?tripId=${encodeURIComponent(tripId)}`) : Promise.resolve([]),
-        costTrackingAllowed ? fetchList(`/api/payments?tripId=${encodeURIComponent(tripId)}`) : Promise.resolve([]),
-        fetchRecord(`/api/trips/${tripId}/covered-by`),
-        fetchItinerary(tripId),
-      ]);
-      if (cancelled) return;
-      await saveOfflineTripSnapshot(
-        userEmail,
-        {
-          tripId,
-          savedAt: Date.now(),
-          trip,
-          groupMembers: members,
-          flights: tripFlights,
-          lodgings: tripLodgings,
-          tours: tripTours,
-          carRentals: tripRentals,
-          expenses: tripExpenses,
-          payments: tripPayments,
-          coveredBy: tripCoveredBy,
-          itinerary: tripItinerary,
-        },
-        { trips, groups },
-      );
+      const cacheKey = `${offlineOwner.userId}:${offlineOwner.environment}:${tripId}:${costTrackingAllowed}`;
+      if ((offlineSnapshotPrefetchRef.current[cacheKey] ?? 0) > now - 5 * 60 * 1000) return;
+      try {
+        const trip = trips.find(candidate => candidate.id === tripId);
+        if (!trip) return;
+        let download = offlineDownloadsRef.current[cacheKey];
+        if (!download) {
+          download = downloadOfflineTripSnapshot({ trip, backendUrl, token: userToken, costTrackingAllowed });
+          offlineDownloadsRef.current[cacheKey] = download;
+          void download.finally(() => {
+            if (offlineDownloadsRef.current[cacheKey] === download) delete offlineDownloadsRef.current[cacheKey];
+          }).catch(() => undefined);
+        }
+        const snapshot = await download;
+        if (cancelled) return;
+        await saveOfflineTripSnapshot(offlineOwner, snapshot, { trips, groups });
+        if (!cancelled) { offlineSnapshotPrefetchRef.current[cacheKey] = Date.now(); setOfflineSaveError(null); }
+      } catch {
+        delete offlineSnapshotPrefetchRef.current[cacheKey];
+        if (!cancelled) setOfflineSaveError("Couldn't update the saved copy. Your previous saved copy is still available. Try again when connected.");
+      }
     }));
 
     return () => {
@@ -1167,11 +1088,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     };
   }, [
     activeTripId,
+    accountProfile.entitlements,
     backendUrl,
     costTrackingAllowed,
     groups,
     headers,
     offlineReadOnly,
+    offlineOwner,
     trips,
     userEmail,
     userToken,
@@ -1180,15 +1103,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   useEffect(() => {
     if (!offlineReadOnly || !userEmail || !activeTripId) return;
     let cancelled = false;
-    void loadOfflineTripCache(userEmail).then((cache) => {
+    void loadOfflineTripCache(offlineOwner).then((cache) => {
       if (!cancelled && cache && isOfflineAccessValid(cache)) {
         hydrateOfflineTripCache(cache, activeTripId);
       }
-    });
+    }).catch(() => { if (!cancelled) setOfflineSaveError("Couldn't read the saved copy. Connect to the internet and download again."); });
     return () => {
       cancelled = true;
     };
-  }, [activeTripId, hydrateOfflineTripCache, offlineReadOnly, userEmail]);
+  }, [activeTripId, hydrateOfflineTripCache, offlineReadOnly, offlineOwner, userEmail]);
 
   useEffect(() => {
     if (offlineMode && connection.status === 'online') {
@@ -1581,8 +1504,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const logout = useCallback(() => {
+    offlineUnlockEpochRef.current += 1;
+    setOfflineUnlocking(false);
+    setLodgings([]);
+    setCarRentals([]);
+    setGroupMembers([]);
+    setCoveredBy({});
     if (userId) void clearOfflineBlogAccount(userId);
-    void clearOfflineTripCache(userEmail);
+    void clearOfflineTripCache(offlineOwner).catch(() => setOfflineSaveError("Couldn't remove the saved copy from this device."));
+    offlineSnapshotPrefetchRef.current = {};
+    offlineDownloadsRef.current = {};
+    setOfflineItineraries({});
     setOfflineMode(false);
     setPendingOfflineUnlock(null);
     setOfflineUnlockMessage(null);
@@ -1615,7 +1547,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // PresenceProvider and ChatProvider reset their state automatically when
     // userToken or activeTripId becomes null after clearSession().
     void clearSessionAsync();
-  }, [clearSessionState, clearTripsData, userEmail, userId]);
+  }, [clearSessionState, clearTripsData, offlineOwner, userEmail, userId]);
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.
@@ -1738,6 +1670,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const handleAuthSuccess = useCallback(
     (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
+    offlineUnlockEpochRef.current += 1;
+    offlineSnapshotPrefetchRef.current = {};
+    offlineDownloadsRef.current = {};
+    setOfflineUnlocking(false);
     markLoginStarted();
     const decoded = decodeTokenClaims(token);
     const name =
@@ -1754,7 +1690,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setOfflineMode(false);
     setPendingOfflineUnlock(null);
     if (Platform.OS !== 'web') {
-      void startOfflineAccessPeriod(decoded?.email ?? null);
+      void startOfflineAccessPeriod(decodedUserId ? { userId: decodedUserId, environment: backendUrl } : null).catch(() => setOfflineSaveError("Couldn't save trips on this device. Free up space and try again."));
     }
     setInvitesLoaded(false);
     connectSocket(token);
@@ -2714,7 +2650,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           const network = await getNetworkStateAsync();
           const isOffline = network.isInternetReachable === false || network.isConnected === false;
           if (isOffline) {
-            const cache = await loadOfflineTripCache(session.email ?? null);
+            const cache = await loadOfflineTripCache(decodeTokenClaims(session.token)?.userId ? { userId: decodeTokenClaims(session.token)!.userId!, environment: backendUrl } : null);
             if (cancelled) return;
             if (isOfflineAccessValid(cache)) {
               setPendingOfflineUnlock({ cache: cache as OfflineTripCache, session });
@@ -2724,7 +2660,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             // No snapshot or a lapsed access period means an online sign-in is
             // required before cached trip information can be viewed again.
             void clearSessionAsync();
-            setAuthErrorMessage('Offline access has expired. Connect to the internet and sign in again.');
+            setAuthErrorMessage(cache ? 'Offline access has expired. Connect to the internet and sign in again.' : 'Connect to the internet and sign in to download your trips again.');
             return;
           }
         } catch {
@@ -3389,6 +3325,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         ) : null}
       </View>
       <OfflineBanner status={connection.status} offlineReadOnly={offlineReadOnly} />
+      {offlineSaveError && <Text accessibilityRole="alert">{offlineSaveError}</Text>}
       {userToken ? (
         <View style={styles.contentViewport}>
           {activePage === 'home'

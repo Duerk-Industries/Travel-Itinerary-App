@@ -79,12 +79,12 @@ const ensureImportJob = async (
       });
       const retriedJob = await requeueImportJob(existingJob.id);
       logInfo(
-        `[ingestion][orchestrator] retrying failed manual upload job=${existingJob.id} previous_state=${existingJob.state} user=${payload.userId} file="${payload.originalFilename}"`
+        `[ingestion][orchestrator] retrying failed manual upload job=${existingJob.id} previous_state=${existingJob.state} user=${payload.userId}`
       );
       return { job: retriedJob ?? existingJob, created: true };
     }
     logInfo(
-      `[ingestion][orchestrator] reusing existing job=${existingJob.id} state=${existingJob.state} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}"`
+      `[ingestion][orchestrator] reusing existing job=${existingJob.id} state=${existingJob.state} source=${payload.sourceType} user=${payload.userId}`
     );
     return { job: existingJob, created: false };
   }
@@ -119,7 +119,7 @@ const ensureImportJob = async (
     processorConfig,
   });
   logInfo(
-    `[ingestion][orchestrator] created job=${job.id} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}" correlation=${payload.correlationId}`
+    `[ingestion][orchestrator] created job=${job.id} source=${payload.sourceType} user=${payload.userId} correlation=${payload.correlationId}`
   );
   return { job, created: true };
 };
@@ -154,7 +154,7 @@ const processExistingImportJob = async (
 
   try {
     logInfo(
-      `[ingestion][orchestrator] processing job=${job.id} state=${job.state} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}"`
+      `[ingestion][orchestrator] processing job=${job.id} state=${job.state} source=${payload.sourceType} user=${payload.userId}`
     );
     await updateImportJobState({ jobId: job.id, state: 'RECEIVED' });
     await updateImportJobState({ jobId: job.id, state: 'NORMALIZING' });

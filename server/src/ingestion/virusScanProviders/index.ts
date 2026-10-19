@@ -5,8 +5,8 @@ import type { VirusScannerAdapter } from './types';
 
 /**
  * Resolve the configured virus-scan adapter by env. Defaults to the stub to
- * preserve historical behavior. Any unknown value also falls back to the
- * stub with a warning so a misspelled env doesn't secretly disable scanning.
+ * preserve manual-upload behavior. Unknown values fail closed; mailbox
+ * admission additionally requires the real authenticated scanner.
  */
 export const getVirusScanner = (): VirusScannerAdapter => {
   const raw = (getEnvValue('INGESTION_VIRUS_SCAN_PROVIDER') || '').trim().toLowerCase();
@@ -19,8 +19,7 @@ export const getVirusScanner = (): VirusScannerAdapter => {
     case 'clamav': // legacy label — stub variant pretending to be clamav sidecar
       return stubAdapter;
     default:
-      // Unknown value → stub (safest).
-      return stubAdapter;
+      throw new Error('Unknown ingestion virus scanner provider');
   }
 };
 

@@ -113,7 +113,7 @@ describe('Trip-day map proxy (GET /api/maps/trip-day)', () => {
       token = user.token;
     });
 
-    it('renders labeled, colored markers for each point and records exactly one upstream call across two identical requests (cache hit)', async () => {
+    it('renders labeled, colored markers for each point and records both provider calls and never caches private map images', async () => {
       const request = require('supertest') as typeof import('supertest');
       const { app } = require('../src/app') as typeof import('../src/app');
       const { getApiUsageSummary } = require('../src/apis/usageLimiter') as typeof import('../src/apis/usageLimiter');
@@ -127,10 +127,10 @@ describe('Trip-day map proxy (GET /api/maps/trip-day)', () => {
       ];
       const qs = `points=${encodeURIComponent(JSON.stringify(body))}`;
 
-      await request(app).get(`/api/maps/trip-day?${qs}`).set({ Authorization: `Bearer ${token}` }).expect(200);
-      await request(app).get(`/api/maps/trip-day?${qs}`).set({ Authorization: `Bearer ${token}` }).expect(200);
+      await request(app).get(`/api/maps/trip-day?${qs}`).set({ Authorization: `Bearer ${token}` }).expect('Cache-Control', 'private, no-store').expect(200);
+      await request(app).get(`/api/maps/trip-day?${qs}`).set({ Authorization: `Bearer ${token}` }).expect('Cache-Control', 'private, no-store').expect(200);
 
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
       const upstreamUrl = String(fetchMock.mock.calls[0]?.[0]);
       const parsed = new URL(upstreamUrl);
       expect(`${parsed.origin}${parsed.pathname}`).toBe('https://maps.googleapis.com/maps/api/staticmap');
@@ -148,7 +148,7 @@ describe('Trip-day map proxy (GET /api/maps/trip-day)', () => {
       const usage = await getApiUsageSummary();
       expect(
         usage.find((entry) => entry.provider === 'GOOGLE_STATIC_MAPS' && entry.caller === 'TRIP_DAY_MAP')?.used
-      ).toBe(1);
+      ).toBe(2);
       // The pre-existing single-address caller must stay unaffected by this new route.
       expect(
         usage.find((entry) => entry.provider === 'GOOGLE_STATIC_MAPS' && entry.caller === 'STATIC_MAP_PREVIEW')?.used

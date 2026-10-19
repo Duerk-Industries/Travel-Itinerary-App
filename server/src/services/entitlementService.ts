@@ -163,6 +163,7 @@ export const applyStartupFeatureFlagOverrides = async (): Promise<void> => {
 const flagCache = new Map<string, { enabled: boolean; expiresAt: number }>();
 const FLAG_CACHE_TTL_MS = 60_000;
 const FAIL_CLOSED_FLAGS = new Set([
+  'feature_ingest_forwarded_mailbox',
   'packing_lists_v2',
   'itinerary_block_cache',
   'itinerary_block_cache_reads',

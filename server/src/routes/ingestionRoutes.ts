@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, type Request, type Response, type RequestHandler } from 'express';
 import bodyParser from 'body-parser';
 import multer from 'multer';
 import { authenticate, type TokenPayload } from '../auth';
 import { listTrips, writeAuditLog } from '../db';
 import { resolveAndValidateRedirectUri } from '../redirects';
 import { isFeatureEnabled } from '../services/entitlementService';
-import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS, getIngestionForwardingAddress } from '../ingestion/config';
+import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS } from '../ingestion/config';
 import { assignReviewItemToTrip, bulkAssignReviewItemsToTrip, bulkDeleteReviewItems, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
 import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
 import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
@@ -28,6 +28,7 @@ import {
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getBackendUrl, getEnvValue } from '../env';
+import { getMailAlias, listMailReceipts, updateMailReceipt, releaseHeldMail } from '../ingestion/shared/mailAdmission';
 import { logError, logInfo } from '../logger';
 import { readDto } from '../utils/dtoParse';
 import {
@@ -40,6 +41,13 @@ import {
 const router = Router();
 router.use(bodyParser.json({ limit: '2mb' }));
 router.use(authenticate);
+
+const mailSettingsHandler = (handler: (req: Request, res: Response) => Promise<void>): RequestHandler => (req, res) => {
+  void handler(req, res).catch(() => {
+    logError('[ingestion][mailgun] settings unavailable');
+    if (!res.headersSent) res.status(503).json({ error: 'Import settings are temporarily unavailable. Please try again.' });
+  });
+};
 
 type TierRules = (typeof INGESTION_TIER_RULES)[keyof typeof INGESTION_TIER_RULES];
 
@@ -119,7 +127,7 @@ const getActiveGmailConnection = async (userId: string) => {
   return updated;
 };
 
-router.get('/config', async (req, res) => {
+router.get('/config', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { tierKey, rules } = await getTierIngestionRules(userId);
   const gmailConnection = await getProviderConnection(userId, 'gmail');
@@ -138,9 +146,10 @@ router.get('/config', async (req, res) => {
     quotas: rules,
     forwarding: {
       provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-      currentAddress: getIngestionForwardingAddress(),
+      currentAddress: mailboxFlag && tierKey !== 'free' ? await getMailAlias(userId) : '',
       instructions: INGESTION_FORWARDING_SETTINGS_COPY,
-      adminManagedNote: 'Changing the destination inbox may require an admin update and provider redeploy.',
+      adminManagedNote: 'Keep your address private. Creating a new address stops mail to the old one immediately.',
+      receipts: (await listMailReceipts(userId)).filter(r => r.expiresAt > Date.now()).map(r => ({ id: r.id, state: r.state, expiresAt: r.expiresAt })),
     },
     gmail: {
       scope: GMAIL_READONLY_SCOPE_URL,
@@ -163,7 +172,7 @@ router.get('/config', async (req, res) => {
           },
     },
   });
-});
+}));
 
 router.get('/review-items', async (req, res) => {
   const userId = (req as any).user.userId as string;
@@ -373,15 +382,53 @@ router.get('/assignment/trips', async (req, res) => {
   res.json({ trips });
 });
 
-router.get('/forwarding', async (_req, res) => {
+router.get('/forwarding', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
   const enabled = await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox);
   res.status(enabled ? 200 : 403).json({
     enabled,
     provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-    currentAddress: getIngestionForwardingAddress(),
+    currentAddress: (await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox)) ? await getMailAlias(userId) : '',
     instructions: INGESTION_FORWARDING_SETTINGS_COPY,
   });
-});
+}));
+
+router.post('/forwarding/rotate', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  res.json({ currentAddress: await getMailAlias(userId, true) });
+}));
+router.get('/forwarding/receipts', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const receipts = await listMailReceipts(userId);
+  res.json({ receipts: receipts.filter(r => r.expiresAt > Date.now()).map(r => ({
+    id: r.id, state: r.state, expiresAt: r.expiresAt,
+  })) });
+}));
+router.post('/forwarding/receipts/:id/release', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await requireTierAccess(userId, res);
+  if (!access) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) {
+    res.status(403).json({ error: 'Forwarded mail is currently disabled.' }); return;
+  }
+  try {
+    const released = await releaseHeldMail(String(req.params.id), userId, access.rules.monthlyUploads);
+    res.status(released ? 200 : 404).json({ released });
+  } catch (error) {
+    if (error instanceof IngestionError) { res.status(error.httpStatus).json({ error: error.message, code: error.code }); return; }
+    res.status(503).json({ error: 'Please try again later.' });
+  }
+}));
+router.delete('/forwarding/receipts/:id', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const receipt = await updateMailReceipt(String(req.params.id), current =>
+    current.userId === userId && current.leaseUntil <= Date.now()
+      ? { ...current, state: 'COMPLETE', encrypted: null } : null);
+  res.status(receipt ? 200 : 404).json({ deleted: Boolean(receipt) });
+}));
 
 router.get('/gmail/status', async (req, res) => {
   const userId = (req as any).user.userId as string;

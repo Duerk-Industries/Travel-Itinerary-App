@@ -5,7 +5,6 @@ import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimi
 import { recordProviderRequestCost } from '../apis/providerBudgeting';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { getEnvValue } from '../env';
-import { createTtlCache } from '../utils/ttlCache';
 import { logError } from '../logger';
 import type { Response } from 'express';
 
@@ -13,32 +12,14 @@ const STATIC_MAP_CALLER = 'STATIC_MAP_PREVIEW';
 const TRIP_DAY_MAP_CALLER = 'TRIP_DAY_MAP';
 const TRIP_DAY_MAP_FEATURE_FLAG = 'trip_day_map';
 const GOOGLE_STATIC_MAPS_URL = 'https://maps.googleapis.com/maps/api/staticmap';
-const DEFAULT_CACHE_TTL_MINUTES = 24 * 60;
 const DEFAULT_MAX_TRIP_DAY_POINTS = 12;
 const MAX_ADDRESS_LENGTH = 200;
-
-type CachedMap = { body: Buffer; contentType: string };
-
-const getCacheTtlMs = (): number => {
-  const configured = getApiCacheSetting('googleStaticMaps', 'cacheTtlMinutes');
-  const minutes = Number(configured ?? DEFAULT_CACHE_TTL_MINUTES);
-  return (Number.isFinite(minutes) && minutes > 0 ? minutes : DEFAULT_CACHE_TTL_MINUTES) * 60 * 1000;
-};
 
 const getMaxTripDayPoints = (): number => {
   const configured = getApiCacheSetting('googleStaticMaps', 'maxPointsPerTripDayMap');
   const parsed = Number(configured);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_MAX_TRIP_DAY_POINTS;
 };
-
-const mapCache = createTtlCache<CachedMap>({
-  defaultTtlMs: getCacheTtlMs(),
-  metricName: 'google_static_maps',
-  maxSizeBytes: 32 * 1024 * 1024,
-  sizeOf: (value) => value.body.byteLength,
-});
-
-export const clearStaticMapCacheForTests = (): void => mapCache.clear();
 
 // ---------------------------------------------------------------------------
 // Trip-day map: multiple labeled pins (flight/lodging/activity/car rental)
@@ -146,43 +127,38 @@ router.get('/static', async (req, res) => {
     return;
   }
 
-  const cacheKey = `single:${address.toLowerCase().replace(/\s+/g, ' ')}`;
   try {
-    const cached = await mapCache.getOrFetch(
-      cacheKey,
-      async () => {
-        const apiKey = getStaticMapsApiKey();
-        if (!apiKey) {
-          const error = new Error('Google Static Maps is not configured');
-          (error as any).statusCode = 503;
-          throw error;
-        }
+    const apiKey = getStaticMapsApiKey();
+    if (!apiKey) {
+      const error = new Error('Google Static Maps is not configured');
+      (error as any).statusCode = 503;
+      throw error;
+    }
 
-        await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: STATIC_MAP_CALLER });
-        await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
+    await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: STATIC_MAP_CALLER });
+    await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
 
-        const url = new URL(GOOGLE_STATIC_MAPS_URL);
-        url.searchParams.set('center', address);
-        url.searchParams.set('zoom', '14');
-        url.searchParams.set('size', '600x320');
-        url.searchParams.set('scale', '2');
-        url.searchParams.set('maptype', 'roadmap');
-        url.searchParams.set('markers', `color:red|${address}`);
-        url.searchParams.set('key', apiKey);
+    const url = new URL(GOOGLE_STATIC_MAPS_URL);
+    url.searchParams.set('center', address);
+    url.searchParams.set('zoom', '14');
+    url.searchParams.set('size', '600x320');
+    url.searchParams.set('scale', '2');
+    url.searchParams.set('maptype', 'roadmap');
+    url.searchParams.set('markers', `color:red|${address}`);
+    url.searchParams.set('key', apiKey);
 
-        const response = await fetch(url.toString(), { headers: { Accept: 'image/*' } });
-        if (!response.ok) {
-          throw new Error(`Google Static Maps returned HTTP ${response.status}`);
-        }
-        return {
-          body: Buffer.from(await response.arrayBuffer()),
-          contentType: response.headers.get('content-type') || 'image/png',
-        };
-      },
-      getCacheTtlMs()
-    );
-    res.setHeader('Cache-Control', `private, max-age=${Math.floor(getCacheTtlMs() / 1000)}`);
-    res.type(cached.contentType).send(cached.body);
+    const response = await fetch(url.toString(), { headers: { Accept: 'image/*' } });
+    if (!response.ok) {
+      throw new Error(`Google Static Maps returned HTTP ${response.status}`);
+    }
+    const result = {
+      body: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get('content-type') || 'image/png',
+    };
+    // Private itinerary images must not be retained by application/CDN caches.
+    // https://cloud.google.com/maps-platform/terms/maps-service-terms
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.type(result.contentType).send(result.body);
   } catch (err) {
     sendMapErrorResponse(res, err, 'single-address proxy request');
   }
@@ -208,51 +184,41 @@ router.get('/trip-day', async (req, res) => {
     return;
   }
 
-  // Content-addressed cache key: identical itinerary state (same points, same
-  // order) always hits cache regardless of which user/trip asked for it, and
-  // any edit to the day naturally produces a new key with no manual
-  // invalidation needed.
-  const cacheKey = `tripday:${JSON.stringify(points)}`;
-
   try {
-    const cached = await mapCache.getOrFetch(
-      cacheKey,
-      async () => {
-        const apiKey = getStaticMapsApiKey();
-        if (!apiKey) {
-          const error = new Error('Google Static Maps is not configured');
-          (error as any).statusCode = 503;
-          throw error;
-        }
+    const apiKey = getStaticMapsApiKey();
+    if (!apiKey) {
+      const error = new Error('Google Static Maps is not configured');
+      (error as any).statusCode = 503;
+      throw error;
+    }
 
-        await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: TRIP_DAY_MAP_CALLER });
-        await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
+    await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: TRIP_DAY_MAP_CALLER });
+    await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
 
-        const url = new URL(GOOGLE_STATIC_MAPS_URL);
-        url.searchParams.set('size', '640x400');
-        url.searchParams.set('scale', '2');
-        url.searchParams.set('maptype', 'roadmap');
-        // No explicit center/zoom: Google auto-fits the viewport to the
-        // supplied markers when both are omitted.
-        for (const point of points) {
-          const color = MARKER_COLOR_BY_KIND[point.kind];
-          url.searchParams.append('markers', `color:${color}|label:${point.label}|${point.location}`);
-        }
-        url.searchParams.set('key', apiKey);
+    const url = new URL(GOOGLE_STATIC_MAPS_URL);
+    url.searchParams.set('size', '640x400');
+    url.searchParams.set('scale', '2');
+    url.searchParams.set('maptype', 'roadmap');
+    // No explicit center/zoom: Google auto-fits the viewport to the
+    // supplied markers when both are omitted.
+    for (const point of points) {
+      const color = MARKER_COLOR_BY_KIND[point.kind];
+      url.searchParams.append('markers', `color:${color}|label:${point.label}|${point.location}`);
+    }
+    url.searchParams.set('key', apiKey);
 
-        const response = await fetch(url.toString(), { headers: { Accept: 'image/*' } });
-        if (!response.ok) {
-          throw new Error(`Google Static Maps returned HTTP ${response.status}`);
-        }
-        return {
-          body: Buffer.from(await response.arrayBuffer()),
-          contentType: response.headers.get('content-type') || 'image/png',
-        };
-      },
-      getCacheTtlMs()
-    );
-    res.setHeader('Cache-Control', `private, max-age=${Math.floor(getCacheTtlMs() / 1000)}`);
-    res.type(cached.contentType).send(cached.body);
+    const response = await fetch(url.toString(), { headers: { Accept: 'image/*' } });
+    if (!response.ok) {
+      throw new Error(`Google Static Maps returned HTTP ${response.status}`);
+    }
+    const result = {
+      body: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get('content-type') || 'image/png',
+    };
+    // Private itinerary images must not be retained by application/CDN caches.
+    // https://cloud.google.com/maps-platform/terms/maps-service-terms
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.type(result.contentType).send(result.body);
   } catch (err) {
     sendMapErrorResponse(res, err, 'trip-day proxy request');
   }
