@@ -113,7 +113,8 @@ flowchart TD
 | --- | --- | --- | --- |
 | Map engine | Google stored PNGs via CDN; later a "dual engine" (Google live + server-side MapLibre Native renders stored in GCS) | One engine drawn on the device: MapLibre + OpenFreeMap for every web surface, keepsake snapshots on the device, Google live-only on native until the next EAS build | Delivers the interactive map (the real gap) at $0 API, storage, and compute; server-side MapLibre Native would add native GL dependencies and memory pressure to a service that already has an OOM plan |
 | Stored Google images | Plan to store Google PNGs (CDN, then GCS) | Remove: purge `blog_day_map_artifacts` Google PNGs, turn off `trip_blog_day_map_render`, remove `staticMapRoutes.ts`'s 24 h server cache | Google's terms restrict storing map content; `blogBackgroundWorker.ts` already does this today |
-| Google pricing | "$200/mo free credit ≈ 100,000 views" | Per-SKU free monthly usage since 2025-03-01 (10,000 for Essentials SKUs); confirm Static Maps' tier | The $200 credit was retired |
+| Google pricing | "$200/mo free credit ≈ 100,000 views" | Static Maps is Essentials: 10,000 free calls/month, then $2.00 per 1,000 up to 100k (verified on Google's pricing page) | The $200 credit was retired on 2025-03-01 |
+| Static Maps caching | "May cache up to 30 days"; "Google sends `max-age=21600`" | Pass Google's `Cache-Control` through; no server cache; don't rely on 30 days | The current 30-day allowance covers coordinates, not Static Maps images; the header value is unverified until a keyed request is made |
 | Attribution | "© OpenStreetMap contributors" | On-screen MapLibre attribution kept visible; exports carry OpenFreeMap, OpenMapTiles, and OpenStreetMap credits | OpenFreeMap's terms for printed or exported use |
 | Terms citations | Specific section numbers (3.2.4(a), 3.2.4(b), 3.2.3) | Link the live terms instead | Section numbers couldn't be verified against the current text |
 | Geocoding throttle | "1 req/s in application layer" | One worker under `scheduledJobLease`; backfill 4 req/min; kill-switch flag | Cloud Run runs several instances, so a per-process throttle doesn't enforce Nominatim's app-wide limit |
@@ -148,7 +149,7 @@ This is both the lowest-cost and the highest-impact option:
 | Day view, web | MapLibre GL JS + OpenFreeMap, drawn in the browser from stored coordinates | No | $0 |
 | Blog day map, public blog page, recap (web) | Same `TripMap` component | No | $0 |
 | Keepsake / print export | Snapshot of the MapLibre canvas inside the existing on-device keepsake renderer (`app/utils/keepsake.ts`) | Only in the user's exported file | $0 |
-| Day view, native app (until the next EAS build) | Google Static Maps, streamed live through the proxy, no server-side copy | No | Google's free monthly usage per SKU replaced the $200 credit on 2025-03-01. Budget against 10,000/month and confirm Static Maps' tier |
+| Day view, native app (until the next EAS build) | Google Static Maps, streamed live through the proxy, no server-side copy | No | Static Maps is an Essentials SKU: 10,000 free calls/month, then $2.00 per 1,000 (to 100k). Native-only live views should stay inside the free allowance |
 | Native app, after the next EAS build | MapLibre React Native + OpenFreeMap | No | $0; Google key retired |
 | Images with no browser (email digests, link-preview images) | **Deferred.** If ever needed: a separate scale-to-zero service rendering OpenFreeMap tiles — never inside the API service, which already has a Cloud Run OOM remediation plan | Yes, OpenStreetMap-based only | Compute only |
 
@@ -158,7 +159,8 @@ This is both the lowest-cost and the highest-impact option:
    - Turn the flag off.
    - Check production for `blog_day_map_artifacts` rows and objects under that bucket prefix; delete both.
 2. **Remove the server-side Google image cache.** `routes/staticMapRoutes.ts` holds Google PNGs in a 24-hour in-process `mapCache` for both `/static` and `/trip-day`. Remove it, so responses stream straight through.
-   - Client caching relies on the response's `Cache-Control: private, max-age=…`. Confirm the allowed duration in Google's terms before keeping today's 24 hours.
+   - **Pass Google's own `Cache-Control` header through unchanged** instead of setting our own (today's code sends `private, max-age=86400`). The client cache then follows exactly what Google allows for that image, with no terms interpretation on our side. Send `private` only if Google's header is missing.
+   - Don't rely on the 30-day caching allowance: the current Service Specific Terms grant it for coordinates (Directions, Geocoding, Geolocation), not for Static Maps images.
    - The existing per-caller daily caps and $15/month budget stay in place. Once web moves to MapLibre, only native live views reach Google.
 3. **Keep Google content off the open map.** Never draw Google Directions geometry or Google geocodes on MapLibre. Map coordinates come only from the airports table, the attractions catalog, Nominatim (§1.4), and photo EXIF. Travel times shown as text use the haversine estimate (§1.6).
 4. **Attribution.**
@@ -515,7 +517,7 @@ gantt
 | Extraction | `.ics` parsed without an LLM; `RRULE` not expanded; oversized JSON-LD ignored; JSON-LD read from `body-html` when `stripped-text` exists; LLM called only below 0.9; Zod rejects malformed LLM output | `server/__tests__/ingestion-structured-extraction.test.ts` |
 | Trip matcher | Single fit → auto; two overlapping trips → suggest; return leg by booking continuity; overnight flight on a boundary day; unknown timezone on a boundary → suggest; month-only trip → suggest; followed trip never a candidate; LLM output cannot set the trip | `server/__tests__/trip-matcher.test.ts` |
 | Undo | Restores the trip exactly **including the synced expense**; tripmate edit → confirmation required; opt-out disables auto | `server/__tests__/import-undo.test.ts` |
-| Map — server | Native proxy derives points server-side (client points ignored); unauthorized trip → 403; no Google image is cached server-side or written to storage; `trip_blog_day_map_render` off and no new `blog_day_map_artifacts` rows; blog `dayMap` fact returns points, not a URL; public blog points are coarsened and follow photo audience rules; per-user rate limit enforced | `server/__tests__/static-map-proxy.test.ts`, `server/__tests__/blog-day-facts-map.test.ts` |
+| Map — server | Native proxy derives points server-side (client points ignored); unauthorized trip → 403; no Google image is cached server-side or written to storage; the proxy forwards Google's `Cache-Control` header unchanged; `trip_blog_day_map_render` off and no new `blog_day_map_artifacts` rows; blog `dayMap` fact returns points, not a URL; public blog points are coarsened and follow photo audience rules; per-user rate limit enforced | `server/__tests__/static-map-proxy.test.ts`, `server/__tests__/blog-day-facts-map.test.ts` |
 | Map — client | `TripMap` builds points from loaded items without an extra request; items without coordinates listed as "Not on the map yet"; MapLibre loads only when a map enters view; tile failure shows the list with "Map unavailable"; attribution control present; keepsake snapshot includes the attribution line | `app/tests/tripMap.test.tsx`, Playwright `app/e2e/trip-map.spec.ts` |
 | Offline | Every mutating facade function bumps `content_version`; version endpoint does one read; same-key replay returns the original response; same key + different payload → 409; revoked member → 403 → "Couldn't sync" list, never dropped; logout wipes keys and caches | `server/__tests__/offline-vault-sync.test.ts`, `app/tests/usePendingWrites.test.ts`, `app/tests/offlineTripCache.test.ts` |
 | Flags | Cohort member sees the feature, non-member doesn't; global off overrides cohorts; capabilities `featureKeys` covers every client-read flag | `server/__tests__/feature-flag-cohorts.test.ts` |
@@ -537,7 +539,10 @@ Run server suites with `DB_PROVIDER=memory` and against the Firestore emulator.
 
 ## 10. Open Questions
 
-1. **Resolved — map engine:** don't store Google map images. Draw maps on the device with MapLibre + OpenFreeMap; Google Static Maps only for native live views until the next EAS build (§1.0). **Still to confirm in Google's live terms:** how long a client may cache a Static Maps image (`max-age`), and which free-usage tier Static Maps is in.
+1. **Resolved — map engine, cost, and caching:**
+   - **Engine:** don't store Google map images. Draw maps on the device with MapLibre + OpenFreeMap; Google Static Maps only for native live views until the next EAS build (§1.0).
+   - **Cost:** Static Maps is an Essentials SKU — 10,000 free calls/month, then $2.00 per 1,000.
+   - **Client caching:** follows Google's own `Cache-Control` header, passed through by the proxy (§1.1). Once the key is provisioned, record the header Google actually sends (`curl -sI` on one keyed request) in this section.
 2. Is OpenFreeMap's free, no-SLA instance acceptable to start, or self-host tiles from day one?
 3. Which geocoder replaces Nominatim's public instance at scale — self-hosted, or a paid provider whose terms allow storing results?
 4. Should auto-assigned imports notify the whole group or only the forwarder?
@@ -552,3 +557,4 @@ Run server suites with `DB_PROVIDER=memory` and against the Firestore emulator.
 - [Google Web Risk overview](https://docs.cloud.google.com/web-risk/docs/overview) — checks URLs against threat lists, not file contents
 - [Google Maps Platform Terms of Service](https://cloud.google.com/maps-platform/terms) and [Service Specific Terms](https://cloud.google.com/maps-platform/terms/maps-service-terms) — caching and storage restrictions (open question 1)
 - [Google Maps Platform March 2025 billing changes](https://developers.google.com/maps/billing-and-pricing/march-2025) — per-SKU free monthly usage replaced the $200 credit
+- [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing) — Static Maps: Essentials, 10,000 free/month, $2.00 per 1,000 to 100k
