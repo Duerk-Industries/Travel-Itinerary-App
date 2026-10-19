@@ -637,6 +637,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
   const [tripToDelete, setTripToDelete] = useState<{ id: string; name: string; isLastTraveler: boolean } | null>(null);
+  const [tripDeleteBusy, setTripDeleteBusy] = useState(false);
+  const [tripDeleteError, setTripDeleteError] = useState<string | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -3008,16 +3010,36 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
   }, []);
 
-  const deleteTrip = async (tripId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
-      method: 'DELETE',
-      headers,
-    });
+  // Resolves to null on success, or a user-facing message on failure. It never throws and never
+  // raises an Alert: the confirm dialog stays open (as a native Modal) until this settles and shows
+  // the message inline. Closing the Modal and then calling Alert.alert left iOS unresponsive, since
+  // an Alert can't be presented while a Modal is still dismissing.
+  const deleteTrip = async (tripId: string): Promise<string | null> => {
+    if (!userToken) return 'You are signed out. Sign in again and retry.';
+    // React Native's fetch has no default timeout, so on a weak connection the dialog would sit on
+    // "Deleting…" indefinitely. Give up after 20s; the delete may still have reached the server, so
+    // the trip list is refreshed either way.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    let res: Response;
+    try {
+      res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
+        method: 'DELETE',
+        headers,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if ((err as any)?.name === 'AbortError') {
+        fetchTrips();
+        return 'This is taking too long. The trip may or may not have been removed. Check your trip list, then try again if it is still there.';
+      }
+      return 'Could not reach the server. Check your connection and try again.';
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      Alert.alert(data.error || 'Unable to delete trip');
-      return;
+      return data?.error || 'Unable to delete trip';
     }
     // Drop any in-flight async itinerary tracker for this trip so its poller
     // doesn't keep hitting a trip the user no longer belongs to.
@@ -3037,6 +3059,31 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setActivePage('account');
     }
     fetchTrips();
+    return null;
+  };
+
+  const runTripDelete = async () => {
+    if (!tripToDelete || tripDeleteBusy) return;
+    if (connection.status === 'offline') {
+      setTripDeleteError("You're offline. Connect to the internet to delete or leave a trip, then try again.");
+      return;
+    }
+    const tripId = tripToDelete.id;
+    setTripDeleteBusy(true);
+    setTripDeleteError(null);
+    const error = await deleteTrip(tripId);
+    setTripDeleteBusy(false);
+    if (error) {
+      setTripDeleteError(error);
+      return;
+    }
+    setTripToDelete(null);
+  };
+
+  const dismissTripDelete = () => {
+    if (tripDeleteBusy) return;
+    setTripToDelete(null);
+    setTripDeleteError(null);
   };
 
   // Opens the confirmation dialog immediately (no waiting on a network round
@@ -3048,6 +3095,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // "leave trip" if other travelers are still on it.
   const confirmDeleteTrip = (trip: { id: string; name: string }) => {
     if (!userToken) return;
+    setTripDeleteError(null);
+    setTripDeleteBusy(false);
     setTripToDelete({ id: trip.id, name: trip.name, isLastTraveler: true });
     fetch(`${backendUrl}/api/account/trips/${trip.id}/members`, { headers })
       .then((res) => (res.ok ? res.json() : null))
@@ -4317,12 +4366,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               : `Are you sure you want to leave "${tripToDelete.name}"? You'll be removed from this trip, but it will remain for the other travelers.`
           }
           confirmLabel={tripToDelete.isLastTraveler ? 'Delete Trip' : 'Leave Trip'}
-          onConfirm={() => {
-            const tripId = tripToDelete.id;
-            setTripToDelete(null);
-            deleteTrip(tripId);
-          }}
-          onCancel={() => setTripToDelete(null)}
+          onConfirm={runTripDelete}
+          onCancel={dismissTripDelete}
+          busy={tripDeleteBusy}
+          busyLabel={tripToDelete.isLastTraveler ? 'Deleting…' : 'Leaving…'}
+          errorMessage={tripDeleteError}
           styles={styles}
           testID="trip-delete-confirm-dialog"
           useNativeModal
