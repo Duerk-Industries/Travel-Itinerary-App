@@ -7,6 +7,9 @@ flags:
   planning_web_map:
     enabled: false
     description: "P1 on-device web map; enable after bundle and WebGL checks"
+  planning_auto_assign:
+    enabled: false
+    description: "P2 add confident, matching bookings from the person's own uploads to the right trip automatically, with Undo for 7 days. Default for everyone once on; each person can turn it off. Forwarded email never qualifies."
   planning_day_order:
     enabled: false
     description: "P2 move-up/down reorder and Optimize day for a day's activities; stored per-day order, no external routing provider"

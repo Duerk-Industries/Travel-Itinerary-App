@@ -1,4 +1,5 @@
 import { suggestTrips } from '../ingestion/assignment/tripSuggestions';
+import { AUTO_ASSIGN_FLAG, automaticAddingEnabledFor, decideTripForItem } from '../ingestion/assignment/autoAssign';
 import { reserveHttpRateLimitOrThrow, HttpRateLimitExceededError } from '../services/httpRateLimitService';
 import { Router, type Request, type Response, type RequestHandler } from 'express';
 import bodyParser from 'body-parser';
@@ -21,6 +22,11 @@ import {
   upsertProviderConnection,
   updateProviderConnectionStatus,
   getIngestedDocumentById,
+  getAssignmentSummaries,
+  getAutoAssignPreference,
+  listRecentAutoAssignments,
+  setAutoAssignPreference,
+  undoParsedItemAssignment,
   createDataDeletionJob,
   markDataDeletionJobRunning,
   markDataDeletionJobSucceeded,
@@ -207,6 +213,59 @@ router.get('/review-items', async (req, res) => {
   res.json({ items: filtered });
 });
 
+// What the person has chosen about automatic adding, and what is actually in effect for them.
+router.get('/settings', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const [available, choice] = await Promise.all([isFeatureEnabled(AUTO_ASSIGN_FLAG, userId), getAutoAssignPreference(userId)]);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ autoAssign: { available, choice, enabled: available && (choice ?? true) } });
+});
+
+router.put('/settings', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const value = req.body?.autoAssign;
+  if (value !== true && value !== false && value !== null) {
+    res.status(400).json({ error: 'Choose on, off, or the default.', code: 'INVALID_SETTING' });
+    return;
+  }
+  await setAutoAssignPreference(userId, value);
+  res.json({ autoAssign: { available: await isFeatureEnabled(AUTO_ASSIGN_FLAG, userId), choice: value, enabled: await automaticAddingEnabledFor(userId) } });
+});
+
+// Bookings that were added to a trip automatically and can still be taken back.
+router.get('/auto-added', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const recent = await listRecentAutoAssignments(userId);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ items: recent });
+});
+
+router.post('/review-items/:id/undo', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'ingestion_undo', identity: userId, limit: 30, windowMs: 60_000 });
+  } catch (error) {
+    if (error instanceof HttpRateLimitExceededError) {
+      res.setHeader('Retry-After', String(error.retryAfterSeconds));
+      res.status(429).json({ error: error.message });
+      return;
+    }
+    throw error;
+  }
+  const outcome = await undoParsedItemAssignment(userId, req.params.id);
+  if (outcome.ok) {
+    res.json({ undone: true, itemId: outcome.parsedItemId, tripId: outcome.tripId });
+    return;
+  }
+  // 409 = refused to protect someone's work; 404/403 = nothing to undo or not theirs.
+  const status = outcome.reason === 'not_found' ? 404 : outcome.reason === 'forbidden' ? 403 : 409;
+  res.status(status).json({ error: outcome.message, code: `UNDO_${outcome.reason.toUpperCase()}` });
+});
+
 router.get('/jobs', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await requireTierAccess(userId, res))) return;
@@ -249,7 +308,12 @@ router.get('/review-items/:id', async (req, res) => {
   }
   const signed = await getReviewQueueSignedUrl(item.rawDocId);
   const rawDocument = await getIngestedDocumentById(item.rawDocId);
+  const [automaticAddingOn, assignments] = await Promise.all([automaticAddingEnabledFor(userId), getAssignmentSummaries(userId, [item.id])]);
+  const placement = item.status === 'ASSIGNED' ? null : await decideTripForItem(item, userId, automaticAddingOn);
   res.json({
+    // Where this booking probably belongs and why, in plain language. `heldBack` says why it was not added automatically.
+    placement: placement && { decision: placement.decision, tripId: placement.tripId, tripName: placement.tripName, reasons: placement.reasons, heldBack: placement.heldBack ?? null },
+    assignment: assignments.get(item.id) ?? null,
     suggestions: suggestTrips(item, await listTrips(userId)),
     item,
     signedDocument: signed,

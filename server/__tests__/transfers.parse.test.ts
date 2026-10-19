@@ -5,7 +5,8 @@ import { app } from '../src/app';
 import { initDb, closePool, setUserRole } from '../src/db';
 import { resetApiUsageSummaries } from '../src/apis/usageLimiter';
 import { registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail, setUserTierInDb } from './helpers';
-import { FlightParserConfigurator } from '../src/services/flightParserLLM';
+import * as ingestion from '../src/ingestion/orchestrator';
+import type { ExtractionResult } from '../src/ingestion/contracts';
 
 describe('POST /api/transfers/parse', () => {
   jest.setTimeout(30000);
@@ -38,17 +39,12 @@ describe('POST /api/transfers/parse', () => {
     adminId = adminLogin.userId;
     await setUserRole(adminId, 'admin');
     
-    // Mock the parser dynamically to avoid jest.mock module hoisting issues that can break app init
-    jest.spyOn(FlightParserConfigurator, 'getParser').mockReturnValue({
-      parse: async () => ({
-        primary: {
-          carrier: 'MockAir',
-          flightNumber: '123',
-          departureDate: '2026-05-15',
-        },
-        bulk: [],
-      })
-    });
+    // Paste Info uses ingestion's shared extractor; no separate flight LLM.
+    jest.spyOn(ingestion, 'previewIngestionPayload').mockResolvedValue({
+      parsedItems: [{ itemType: 'flight', travelerNames: ['Test Traveler'], confirmationNumber: 'DEMO123', extractedFields: { carrier: 'MockAir', flightNumber: '123', departureDate: '2026-05-15' } }],
+      usageMetrics: { tokensIn: 0, tokensOut: 0, estimatedCostUsd: 0, provider: 'test', modelName: null },
+      metadata: { logicVersion: 'test', extractedAt: new Date().toISOString(), strategyName: 'Test' },
+    } as ExtractionResult);
   });
 
   afterAll(async () => {
@@ -74,7 +70,7 @@ describe('POST /api/transfers/parse', () => {
       .set('Authorization', `Bearer ${userToken}`)
       .send({ text: 'Flight to JFK on May 15' });
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(402);
     expect(res.body.error).toContain("does not include access to 'flight_parser'");
   });
 
@@ -87,6 +83,8 @@ describe('POST /api/transfers/parse', () => {
     expect(res.status).toBe(200);
     expect(res.body.primary.carrier).toBe('MockAir');
     expect(res.body.primary.flightNumber).toBe('123');
+    expect(res.body.primary.bookingReference).toBe('DEMO123');
+    expect(ingestion.previewIngestionPayload).toHaveBeenCalledWith(expect.objectContaining({ sourceType: 'MANUAL_UPLOAD', dryRun: true }), expect.any(Boolean), expect.any(Boolean));
   });
 
   it('allows premium users to parse text', async () => {

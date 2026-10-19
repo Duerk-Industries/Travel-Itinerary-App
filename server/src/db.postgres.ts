@@ -1516,7 +1516,7 @@ export const initDb = async (): Promise<void> => {
       const pathMod = require('node:path') as typeof import('node:path');
       const migrationsDir = pathMod.join(__dirname, '..', 'migrations');
       const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
-      await runMigrations({ client, dir: migrationsDir, dialect: getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' ? 'memory' : 'postgres' });
+      await runMigrations({ client, dir: migrationsDir, dialect: getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || getEnvValue('DATABASE_URL')?.startsWith('pg-mem://') ? 'memory' : 'postgres' });
     } catch (err) {
       const { logError } = require('./logger') as typeof import('./logger');
       logError('[migrations] auto-apply on initDb failed', err);
@@ -4694,9 +4694,9 @@ export const updateLodging = async (
           refund_by = COALESCE($8, refund_by),
           total_cost = COALESCE($9, total_cost),
           cost_per_night = COALESCE($10, cost_per_night),
-          lat = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM address THEN NULL ELSE lat END,
-          lng = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM address THEN NULL ELSE lng END,
-          coordinate_source = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM address THEN NULL ELSE coordinate_source END,
+          lat = CASE WHEN $11 IS NOT NULL AND ($11 <> address OR address IS NULL) THEN NULL ELSE lat END,
+          lng = CASE WHEN $11 IS NOT NULL AND ($11 <> address OR address IS NULL) THEN NULL ELSE lng END,
+          coordinate_source = CASE WHEN $11 IS NOT NULL AND ($11 <> address OR address IS NULL) THEN NULL ELSE coordinate_source END,
           address = COALESCE($11, address),
           notes = COALESCE($12, notes),
           features = COALESCE($13::jsonb, features),
@@ -4738,9 +4738,9 @@ export const updateLodging = async (
           refund_by = COALESCE($8, l.refund_by),
           total_cost = COALESCE($9, l.total_cost),
           cost_per_night = COALESCE($10, l.cost_per_night),
-          lat = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM l.address THEN NULL ELSE l.lat END,
-          lng = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM l.address THEN NULL ELSE l.lng END,
-          coordinate_source = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM l.address THEN NULL ELSE l.coordinate_source END,
+          lat = CASE WHEN $11 IS NOT NULL AND ($11 <> l.address OR l.address IS NULL) THEN NULL ELSE l.lat END,
+          lng = CASE WHEN $11 IS NOT NULL AND ($11 <> l.address OR l.address IS NULL) THEN NULL ELSE l.lng END,
+          coordinate_source = CASE WHEN $11 IS NOT NULL AND ($11 <> l.address OR l.address IS NULL) THEN NULL ELSE l.coordinate_source END,
           address = COALESCE($11, l.address),
           notes = COALESCE($12, l.notes),
           features = COALESCE($13::jsonb, l.features),
@@ -5225,10 +5225,10 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
       UPDATE car_rentals c
       SET
         status = COALESCE($3, c.status),
-        lat = CASE WHEN $4 IS NOT NULL AND $4 IS DISTINCT FROM c.pickup_location THEN NULL ELSE c.lat END,
-        lng = CASE WHEN $4 IS NOT NULL AND $4 IS DISTINCT FROM c.pickup_location THEN NULL ELSE c.lng END,
-        dropoff_lat = CASE WHEN $6 IS NOT NULL AND $6 IS DISTINCT FROM c.dropoff_location THEN NULL ELSE c.dropoff_lat END,
-        dropoff_lng = CASE WHEN $6 IS NOT NULL AND $6 IS DISTINCT FROM c.dropoff_location THEN NULL ELSE c.dropoff_lng END,
+        lat = CASE WHEN $4 IS NOT NULL AND ($4 <> c.pickup_location OR c.pickup_location IS NULL) THEN NULL ELSE c.lat END,
+        lng = CASE WHEN $4 IS NOT NULL AND ($4 <> c.pickup_location OR c.pickup_location IS NULL) THEN NULL ELSE c.lng END,
+        dropoff_lat = CASE WHEN $6 IS NOT NULL AND ($6 <> c.dropoff_location OR c.dropoff_location IS NULL) THEN NULL ELSE c.dropoff_lat END,
+        dropoff_lng = CASE WHEN $6 IS NOT NULL AND ($6 <> c.dropoff_location OR c.dropoff_location IS NULL) THEN NULL ELSE c.dropoff_lng END,
         pickup_location = COALESCE($4, c.pickup_location),
         pickup_date = COALESCE(NULLIF($5, '')::date, c.pickup_date),
         dropoff_location = COALESCE($6, c.dropoff_location),
@@ -13829,7 +13829,7 @@ export { createCatalogActivityPostgres as createCatalogActivity, undoCatalogActi
 
 /** Revision scopes are updated by DB triggers, including non-facade writers. */
 export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {
-  if (getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory') return (await import('./services/planningMemoryRevision')).memoryPlanningRevision();
+  if (getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || getEnvValue('DATABASE_URL')?.startsWith('pg-mem://')) return (await import('./services/planningMemoryRevision')).memoryPlanningRevision();
   const result = await getPool().query('SELECT scope,revision FROM planning_revisions WHERE scope = ANY($1::text[]) ORDER BY scope', [[`trip:${tripId}`, `group:${groupId}`, 'global:profiles']]);
   return JSON.stringify(result.rows);
 };

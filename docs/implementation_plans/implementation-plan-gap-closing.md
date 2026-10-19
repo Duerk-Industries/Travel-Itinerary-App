@@ -17,6 +17,14 @@ trials and device/adapter concurrency verification remain explicit release gates
 initial mailbox bound is 256 KiB combined content (larger documents use manual upload);
 all sender trust is unverified/suggestion-only until real receiver fixtures are validated.
 
+
+**P1 source implementation (2026-10-19):** Import setup and bounded structured parsing,
+private catalog discovery/web maps, authorized native map context, notification inbox /
+scheduled work and conditional trip bundles are implemented behind rollout gates. See
+[implementation, mutation inventory and rollout](../operations/gap-closing-p1.md).
+Validated Gmail receiver/confirmation fixtures, real adapters/devices, performance and
+user-task evidence remain release gates; forwarding remains suggestion-only.
+
 ---
 
 ## Plain-language overview

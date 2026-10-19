@@ -1,3 +1,4 @@
+import { EntitlementError } from '../errors';
 import { withAirportCoordinates } from '../services/planningPointsService';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
@@ -106,7 +107,13 @@ router.post('/parse', async (req, res) => {
     const first = result.parsedItems.find(item => ['flight', 'rail', 'ferry_bus_transfer'].includes(item.itemType));
     if (!first) { res.status(422).json({ error: 'No transfer details found. Try a full confirmation or use Imports.' }); return; }
     res.json({ primary: { ...first.extractedFields, passengerName: first.travelerNames.join(', '), bookingReference: first.confirmationNumber || first.extractedFields.bookingReference || '' } });
-  } catch (error) { res.status(error instanceof ApiLimitExceededError ? 429 : 503).json({ error: 'This confirmation could not be read. Please try again or enter its details.' }); }
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      res.status(402).json({ error: error.message, code: error.code });
+      return;
+    }
+    res.status(error instanceof ApiLimitExceededError ? 429 : 503).json({ error: 'This confirmation could not be read. Please try again or enter its details.' });
+  }
 });
 
 router.post('/', async (req, res) => {

@@ -50,6 +50,14 @@ describe('P1 private planning contracts', () => {
     const changed = await readPlanningBundle(userId, tripId, undefined, first.etag);
     expect(changed.etag).not.toBe(first.etag); expect(changed.bundle).toBeDefined();
   });
+  it('preserves lodging coordinates on unrelated edits and clears them on an address change', async () => {
+    const lodging = await db.insertLodging({ userId, tripId, status: 'Proposed', name: 'Coordinate hotel', checkInDate: '2027-05-01', checkOutDate: '2027-05-03', rooms: 1, totalCost: 0, costPerNight: 0, address: 'Original address' });
+    await queryBlog("UPDATE lodgings SET lat=48.86,lng=2.33,coordinate_source='manual' WHERE id=$1", [lodging.id]);
+    await db.updateLodging(lodging.id, userId, { notes: 'Keep this location' });
+    expect(await db.getLodgingById(lodging.id)).toMatchObject({ lat: 48.86, lng: 2.33, coordinateSource: 'manual' });
+    await db.updateLodging(lodging.id, userId, { address: 'New address' });
+    expect(await db.getLodgingById(lodging.id)).toMatchObject({ lat: null, lng: null, coordinateSource: null });
+  });
   it('rejects arbitrary native map proxy inputs without contacting a provider', async () => {
     const upstream = jest.spyOn(globalThis, 'fetch');
     await request(app).get('/api/maps/static?address=private+address').set('Authorization', `Bearer ${token}`).expect(400);

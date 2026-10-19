@@ -4,6 +4,7 @@ import { extractCandidates } from './extraction';
 import { normalizeIngestionPayload } from './normalization';
 import { ensureFutureDatedExtraction } from './intake/gmail';
 import { persistReviewQueueItems } from './review_queue';
+import { applyAutomaticAssignments } from './assignment/autoAssign';
 import { mapErrorToFailureCode } from './shared/audit';
 import { buildImportJobIdempotencyKey } from './shared/hashing';
 import {
@@ -236,13 +237,16 @@ const processExistingImportJob = async (
       throw new Error('Token budget exceeded for import job');
     }
 
-    await persistReviewQueueItems({
+    const persistedItems = await persistReviewQueueItems({
       userId: payload.userId,
       importJobId: job.id,
       rawDocId: rawDoc.id,
       extractionResult: finalExtraction,
       logicVersion: processorConfig.logicVersion,
     });
+    // Best effort and after the items are safely in the review queue: this can only ever move an item
+    // out of the queue into the right trip, and it never fails the import.
+    await applyAutomaticAssignments({ userId: payload.userId, items: persistedItems });
     logInfo(
       `[ingestion][orchestrator] extracted job=${job.id} items=${finalExtraction.parsedItems.length} strategy=${finalExtraction.metadata.strategyName}`
     );

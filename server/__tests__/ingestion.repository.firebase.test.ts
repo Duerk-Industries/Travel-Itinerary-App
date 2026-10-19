@@ -19,6 +19,7 @@ describe('ingestion repository firebase writes', () => {
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+      getEnvFlag: jest.fn(() => false),
     }));
     jest.doMock('firebase-admin/app', () => ({
       getApps: () => [{}],
@@ -66,6 +67,7 @@ describe('ingestion repository firebase writes', () => {
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+      getEnvFlag: jest.fn(() => false),
     }));
     jest.doMock('firebase-admin/app', () => ({
       getApps: () => [{}],
@@ -144,6 +146,7 @@ describe('ingestion repository firebase writes', () => {
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+      getEnvFlag: jest.fn(() => false),
     }));
     jest.doMock('firebase-admin/app', () => ({
       getApps: () => [{}],
@@ -215,6 +218,7 @@ describe('ingestion repository firebase writes', () => {
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+      getEnvFlag: jest.fn(() => false),
     }));
     jest.doMock('firebase-admin/app', () => ({
       getApps: () => [{}],
@@ -299,6 +303,7 @@ describe('ingestion repository firebase writes', () => {
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+      getEnvFlag: jest.fn(() => false),
     }));
     jest.doMock('firebase-admin/app', () => ({
       getApps: () => [{}],
@@ -506,6 +511,7 @@ describe('ingestion repository firebase writes', () => {
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+      getEnvFlag: jest.fn(() => false),
     }));
     jest.doMock('../src/apis/frankfurterApi', () => ({
       fetchFrankfurterExchangeRate: jest.fn(),
@@ -532,13 +538,16 @@ describe('ingestion repository firebase writes', () => {
     expect(storedFlight?.arrivalTime).toBe('10:40');
     expect(storedFlight?.cost).toBe(591.2);
     expect(fakeDb.getDocData('parsed_items', 'parsed-1')?.reviewStatus).toBe('ASSIGNED');
-    expect(upsertExpenseForSource).toHaveBeenCalledWith(expect.objectContaining({
+    const storedExpenses = Array.from(((fakeDb as any).collections.get('expenses') || new Map()).values());
+    expect(storedExpenses).toHaveLength(1);
+    expect(upsertExpenseForSource).not.toHaveBeenCalled(); // expense is part of the Firestore transaction
+    expect(storedExpenses[0]).toEqual(expect.objectContaining({
       tripId: 'trip-1',
       category: 'Flights',
       amount: 591.2,
       currency: 'USD',
-      amountInTripCurrency: undefined,
-      exchangeRateToTripCurrency: undefined,
+      amountInTripCurrency: 591.2,
+      exchangeRateToTripCurrency: 1,
       payerIds: expect.arrayContaining(['gm-bryan', 'gm-vicky']),
       forIds: expect.arrayContaining(['gm-bryan', 'gm-vicky']),
       sourceType: 'flight',
@@ -710,6 +719,7 @@ describe('ingestion repository firebase writes', () => {
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+      getEnvFlag: jest.fn(() => false),
     }));
     jest.doMock('../src/apis/frankfurterApi', () => ({
       fetchFrankfurterExchangeRate,
@@ -733,7 +743,10 @@ describe('ingestion repository firebase writes', () => {
       toCurrency: 'USD',
       date: '2025-12-15',
     });
-    expect(upsertExpenseForSource).toHaveBeenCalledWith(expect.objectContaining({
+    const storedExpenses = Array.from(((fakeDb as any).collections.get('expenses') || new Map()).values());
+    expect(storedExpenses).toHaveLength(1);
+    expect(upsertExpenseForSource).not.toHaveBeenCalled(); // expense is part of the Firestore transaction
+    expect(storedExpenses[0]).toEqual(expect.objectContaining({
       tripId: 'trip-2',
       amount: 1000,
       currency: 'THB',
