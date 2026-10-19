@@ -560,6 +560,15 @@ Still to do before this ships (all listed in §5.2 / the usability gate):
 
 ### 5.4 App shell offline on web (P2)
 
+**Implementation status (2026-10-19) — built and unit-tested; not yet verified in a real browser or on a deployed build.**
+
+- `app/public/sw.js` (copied to the site root by the Expo export) caches only `index.html` and the content-hashed files under `/_expo/static/` and `/assets/`. Navigations are **network-first** (4 s timeout), so an online user always gets the newest build; the cache is only the offline fallback. It never touches `/api`, `/socket.io`, `/public/blog`, Firebase's `/__/`, other origins, non-GET, range or `Authorization` requests, or the worker script, so no trip data or session ever enters its caches. Static pages such as `/privacy.html` are left to the network. Old `wb-` caches are deleted on activate; stored files are capped at 150.
+- `utils/registerServiceWorker.ts` registers it after page load, in production builds over HTTPS/localhost only, from `AppEntry.js`, and never affects startup if it fails. **Rollback:** build with `EXPO_PUBLIC_DISABLE_OFFLINE_SHELL=1` and the app unregisters the worker and deletes its caches on next load (or ship a `sw.js` that unregisters itself).
+- `/sw.js` is served `Cache-Control: no-cache` with `Service-Worker-Allowed: /` from Firebase Hosting (`firebase.json`) and from the Express static server.
+- The offline banner now matches reality: signed-out visitors are told to connect to sign in; signed-in users offline are told they can still add expenses (§5.3) and everything else is read-only. It previously claimed changes would not be saved.
+
+Not done: a real-browser check (install, offline reload, update after a deploy, old-build recovery) against an actual `expo export` build; confirming the Firebase Hosting header ordering for `/sw.js` after deploy; a web snapshot of trip data (the shell opens offline, but web still has no offline trip data, §5.2); and web push, which remains separate.
+
 Versioned same-origin shell/build assets, network-first navigation with offline fallback,
 atomic build updates and recovery from stale clients. Exclude auth/API/provider URLs from
 generic cache rules; private bundles live in the account store. Verify Expo export, CSP,

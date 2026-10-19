@@ -208,11 +208,20 @@ if (!hasWebApp) {
   app.get('/', (_req, res) => res.sendFile(loginPath));
 }
 
-app.use(express.static(publicDir));
+// The offline-shell worker must always be revalidated, or a bad version could outlive its fix.
+const staticOptions: Parameters<typeof express.static>[1] = {
+  setHeaders: (res, filePath) => {
+    if (path.basename(filePath) === 'sw.js') {
+      res.setHeader('Cache-Control', 'no-cache, max-age=0');
+      res.setHeader('Service-Worker-Allowed', '/');
+    }
+  },
+};
+app.use(express.static(publicDir, staticOptions));
 // In local server-only runs the Expo export is not copied to server/public yet.
 // Keep the profile's public legal links reachable from their checked-in pages.
 const appPublicDir = path.join(__dirname, '..', '..', 'app', 'public');
-if (fs.existsSync(appPublicDir)) app.use(express.static(appPublicDir));
+if (fs.existsSync(appPublicDir)) app.use(express.static(appPublicDir, staticOptions));
 
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, createOAuthNonce, decodeOAuthState, authenticate } from './auth';

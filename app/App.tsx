@@ -3390,7 +3390,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         ) : null}
       </View>
-      <OfflineBanner status={connection.status} offlineReadOnly={offlineReadOnly} />
+      <OfflineBanner
+        status={connection.status}
+        offlineReadOnly={offlineReadOnly}
+        signedIn={Boolean(userToken) || offlineMode}
+        canAddExpenses={Boolean(userId) && !offlineMode && !isFollowingMode}
+      />
       {offlineSaveError && <Text accessibilityRole="alert">{offlineSaveError}</Text>}
       {userToken ? (
         <View style={styles.contentViewport}>

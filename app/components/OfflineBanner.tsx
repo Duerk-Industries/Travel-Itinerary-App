@@ -10,6 +10,10 @@ type OfflineBannerProps = {
   status: ConnectionStatus;
   /** Cached trip data is visible, but editing must remain unavailable offline. */
   offlineReadOnly?: boolean;
+  /** False when nobody is signed in: the message then says what to do (connect), not what is read-only. */
+  signedIn?: boolean;
+  /** New expenses can still be added offline (they sync when the connection returns). */
+  canAddExpenses?: boolean;
 };
 
 const defaultContainer: Record<string, unknown> = {
@@ -31,10 +35,18 @@ const messageFor = (status: string): string => {
   return '';
 };
 
-const OfflineBanner: React.FC<OfflineBannerProps> = ({ containerStyle, textStyle, status, offlineReadOnly = false }) => {
+const OfflineBanner: React.FC<OfflineBannerProps> = ({
+  containerStyle, textStyle, status, offlineReadOnly = false, signedIn = true, canAddExpenses = false,
+}) => {
   const isDegraded = status !== 'online';
   if (!isDegraded && !offlineReadOnly) return null;
-  const message = offlineReadOnly ? 'Offline — cached trip data is read-only.' : messageFor(status);
+  const message = !signedIn && status === 'offline'
+    ? "You're offline. Connect to the internet to sign in."
+    : offlineReadOnly && canAddExpenses
+      ? 'Offline — you can still add expenses. Everything else is read-only until you reconnect.'
+      : offlineReadOnly
+        ? 'Offline — cached trip data is read-only.'
+        : messageFor(status);
   return (
     <View
       style={[defaultContainer, containerStyle] as any}

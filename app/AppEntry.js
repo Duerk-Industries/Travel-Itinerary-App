@@ -175,3 +175,10 @@ const styles = StyleSheet.create({
 // wrapApp returns Root unchanged when Sentry isn't initialized, so this is
 // safe even on a fresh checkout with no DSN configured.
 registerRootComponent(wrapApp(Root));
+
+// Web only: let the app shell open without a connection. A failure here must never affect startup.
+if (Platform.OS === 'web') {
+  import('./utils/registerServiceWorker')
+    .then(({ registerOfflineShell }) => registerOfflineShell())
+    .catch(() => undefined);
+}
