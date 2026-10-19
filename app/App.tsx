@@ -88,6 +88,7 @@ import OfflineUnlockScreen from './components/OfflineUnlockScreen';
 import NotificationInbox from './components/NotificationInbox';
 import OfflineBanner from './components/OfflineBanner';
 import { useConnectionState } from './hooks/useConnectionState';
+import { usePendingExpenseSync } from './hooks/usePendingExpenseSync';
 import {
   clearOfflineTripCache,
   isOfflineAccessValid,
@@ -918,6 +919,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
     [userToken]
   );
+
+  // Expenses added without a connection are saved on this device (account-scoped) and sent when the
+  // device is online with a valid session, even if the user has left the Expenses tab.
+  const pendingExpenses = usePendingExpenseSync({
+    userId,
+    backendUrl,
+    headers,
+    canSync: Boolean(userToken) && !offlineMode && connection.status !== 'offline',
+    onSynced: (expense, tripId) => {
+      if (tripId !== activeTripId) return;
+      setExpenses((prev) => [expense as unknown as Expense, ...prev.filter((e) => e.id !== (expense as { id?: string }).id)]);
+    },
+  });
 
   const { userMembers, memberIds, currentUserMemberId, defaultPayerId } = useTripMembers(
     groupMembers,
@@ -3515,6 +3529,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   costTrackingAllowed={costTrackingAllowed}
                   receiptScanningAllowed={receiptScanningAllowed}
                   readOnly={isFollowingMode || offlineReadOnly}
+                  allowOfflineAdd={!isFollowingMode && Boolean(userId) && !offlineMode}
+                  pendingExpenses={{
+                    entries: pendingExpenses.entries,
+                    syncedNotice: pendingExpenses.syncedNotice,
+                    queueExpense: pendingExpenses.queueExpense,
+                    retryEntry: pendingExpenses.retryEntry,
+                    discardEntry: pendingExpenses.discardEntry,
+                  }}
                 />
               )
             : null}

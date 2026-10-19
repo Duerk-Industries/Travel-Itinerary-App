@@ -526,6 +526,20 @@ Production values may differ from these seed defaults; §4.1 checks them.
 
 ### 5.3 Offline expenses with idempotent replay (P2)
 
+**Implementation status (2026-10-19) — first slice built; not yet released.**
+
+Built and tested:
+- `POST /api/expenses` accepts an `Idempotency-Key` header. A `client_operation_id` column with a unique index (Postgres) or a deterministic document id written with `create()` (Firestore) makes the create atomic. A retry returns the original expense with `Idempotent-Replayed: true`; the same key with a different payload returns `409 IDEMPOTENCY_KEY_REUSED`. Membership and entitlement are rechecked on every replay. This is the expense-specific create helper, not a repurposed `generation_idempotency` record.
+- `usePendingWrites` gained an account-scoped storage key, never-drop mode, `failed`/`pause` outcomes, backoff, a one-drain-at-a-time lock (Web Locks where available), native hydration merge, and `enqueueDurable` (resolves only after a read-back).
+- `usePendingExpenseSync` (app-level) queues and drains expenses; `DailyExpensesTab` lets a new expense be added offline, shows "Saved on this device · waiting to sync", and offers **Try again** / **Discard**.
+
+Still to do before this ships (all listed in §5.2 / the usability gate):
+- **Sign-out warning** with the unsynced count and Sync now / Keep on this device / Discard (the queue survives sign-out under the account's own key, but the user is not told).
+- **Edit** and **Export** actions for expenses that couldn't sync.
+- Encrypting the queue on native (§5.2); today it is plain `AsyncStorage`/`localStorage` like the existing snapshot.
+- Firestore emulator parity run for the new server tests (they pass on the in-memory adapter), real-device checks, and the novice-recovery usability test.
+- Deciding whether the entry-queue key should include the environment hash instead of the raw backend URL.
+
 1. **Queue:** extend `usePendingWrites` with owner/environment/schema scope, cryptographically random stable operation id, trip id, validated payload, creation time, status, attempts and next retry time. Await durable enqueue before **Saved on this device**. Prevent native hydration/enqueue races and concurrent replay with a lease/lock appropriate to supported browsers (Web Locks where available, tested transactional fallback) and native app lifecycle. One in-memory mutex alone does not provide persistence/crash recovery.
 2. **Never silently drop an expense.** Replace the 5-attempt drop with exponential backoff. Permanent failures (`403` membership revoked, `422` validation) go to a "Couldn't sync" list with Retry, Edit, Export, and Discard.
 3. **Server:** existing `POST /api/expenses`, scoped idempotent-create helper (not a second sync route). Reserve key + canonical request hash + expense + response atomically in the adapter, or use an explicit recovery state machine. Shared middleware without transactional domain writes does not prevent duplicates. Keys bind to authenticated owner/operation; keep them at least the maximum replay age (initially 30 days), with explicit recovery for older queued operations:

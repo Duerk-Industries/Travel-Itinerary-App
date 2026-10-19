@@ -1188,6 +1188,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vendor TEXT;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS notes TEXT;`);
+  // Client-supplied operation key (owner + random id) so a retried offline create returns the original expense instead of a duplicate.
+  await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS client_operation_id TEXT;`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_client_operation ON expenses(client_operation_id);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_payments (
@@ -5516,6 +5519,7 @@ export const insertExpense = async (expense: {
   sourceId?: string | null;
   vendor?: string | null;
   notes?: string | null;
+  clientOperationId?: string | null;
 }): Promise<any> => {
   const p = getPool();
   const id = randomUUID();
@@ -5531,9 +5535,9 @@ export const insertExpense = async (expense: {
     `
       INSERT INTO expenses (
         id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
-        payer_ids, for_ids, source_type, source_id, vendor, notes
+        payer_ids, for_ids, source_type, source_id, vendor, notes, client_operation_id
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18
       )
       RETURNING
         id,
@@ -5573,6 +5577,7 @@ export const insertExpense = async (expense: {
       expense.sourceId ?? null,
       expense.vendor ?? null,
       expense.notes ?? null,
+      expense.clientOperationId ?? null,
     ]
   );
   const row = rows[0] as any;
@@ -5581,6 +5586,61 @@ export const insertExpense = async (expense: {
     payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
     forIds: Array.isArray(row.forIds) ? row.forIds : [],
   };
+};
+
+const getExpenseByClientOperation = async (clientOperationId: string): Promise<any | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT id,
+             trip_id as "tripId",
+             group_id as "groupId",
+             user_id as "userId",
+             to_char(expense_date, 'YYYY-MM-DD') as "expenseDate",
+             category,
+             amount::numeric as amount,
+             currency,
+             amount_in_trip_currency::numeric as "amountInTripCurrency",
+             exchange_rate_to_trip_currency::numeric as "exchangeRateToTripCurrency",
+             to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
+             COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
+             COALESCE(for_ids, '[]'::jsonb) as "forIds",
+             source_type as "sourceType",
+             source_id as "sourceId",
+             vendor,
+             notes,
+             created_at as "createdAt"
+      FROM expenses
+      WHERE client_operation_id = $1
+      LIMIT 1
+    `,
+    [clientOperationId]
+  );
+  const row = rows[0] as any;
+  if (!row) return null;
+  return {
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  };
+};
+
+// Create-once by (owner, operation id). The unique index makes concurrent retries race safely: the
+// loser re-reads and returns the winner's row as a replay instead of failing or duplicating.
+export const insertExpenseIdempotent = async (
+  expense: Parameters<typeof insertExpense>[0],
+  clientOperationId: string
+): Promise<{ expense: any; replayed: boolean }> => {
+  const existing = await getExpenseByClientOperation(clientOperationId);
+  if (existing) return { expense: existing, replayed: true };
+  try {
+    const created = await insertExpense({ ...expense, clientOperationId });
+    return { expense: created, replayed: false };
+  } catch (err) {
+    const raced = await getExpenseByClientOperation(clientOperationId);
+    if (raced) return { expense: raced, replayed: true };
+    throw err;
+  }
 };
 
 export const updateExpense = async (

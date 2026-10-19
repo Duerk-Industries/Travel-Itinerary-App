@@ -16,11 +16,17 @@ export interface PendingWrite<TArgs = unknown> {
   args: TArgs;
   /** Wall-clock ms when enqueued. Surfaced in UI so stale entries are obvious. */
   enqueuedAtMs: number;
-  /** How many times we've attempted to replay. Caps to `maxAttempts`. */
+  /** How many times we've attempted to replay. */
   attempts: number;
+  /** `failed` entries are never retried automatically; they wait for the user (`retry` / `remove`). */
+  status?: 'pending' | 'failed';
+  /** Earliest time the next automatic replay may try this entry (backoff). */
+  nextAttemptAtMs?: number;
+  /** Last user-facing reason this entry has not synced. */
+  lastError?: string;
 }
 
-const STORAGE_KEY = 'stp.pending-writes';
+const DEFAULT_STORAGE_KEY = 'stp.pending-writes';
 const DEFAULT_MAX_ATTEMPTS = 5;
 
 const parseQueue = (raw: string | null): PendingWrite[] => {
@@ -33,14 +39,25 @@ const parseQueue = (raw: string | null): PendingWrite[] => {
   }
 };
 
-const readQueueSync = (): PendingWrite[] => parseQueue(readSync(STORAGE_KEY));
+const readQueueSync = (key: string): PendingWrite[] => parseQueue(readSync(key));
 
-const persistQueue = (queue: PendingWrite[]): void => {
+const persistQueue = (key: string, queue: PendingWrite[]): void => {
   const serialized = JSON.stringify(queue);
   if (canAccessWebStorage()) {
-    writeSync(STORAGE_KEY, serialized);
+    writeSync(key, serialized);
   } else {
-    void writeAsync(STORAGE_KEY, serialized);
+    void writeAsync(key, serialized);
+  }
+};
+
+/** Writes then reads back, so callers can tell the user "Saved on this device" only when it is true. */
+const persistQueueDurably = async (key: string, queue: PendingWrite[]): Promise<boolean> => {
+  const serialized = JSON.stringify(queue);
+  try {
+    await writeAsync(key, serialized);
+    return (await readAsync(key)) === serialized;
+  } catch {
+    return false;
   }
 };
 
@@ -49,18 +66,41 @@ const makeId = (): string => {
   return `${Date.now().toString(36)}-${rnd}`;
 };
 
+const mergeById = (persisted: PendingWrite[], current: PendingWrite[]): PendingWrite[] => {
+  const seen = new Set(persisted.map((e) => e.id));
+  return [...persisted, ...current.filter((e) => !seen.has(e.id))];
+};
+
 /**
- * `replayFn` contract: resolve true when the write was successfully
- * applied (the entry is dropped from the queue), resolve false or throw to
- * leave it in place for the next replay. The hook bumps `attempts` on
- * failure; when `attempts >= maxAttempts` the entry is dropped so the
- * queue can't grow without bound from a permanent backend failure.
+ * What a replay function reports for one entry. A plain boolean is the
+ * original contract (true = applied, false = retry later).
+ *  - `done`:   applied; remove it.
+ *  - `retry`:  transient failure; keep it and back off.
+ *  - `failed`: will never succeed as-is; keep it, mark `failed`, wait for the user.
+ *  - `pause`:  cannot proceed for now (e.g. signed out); stop the drain and leave every
+ *              remaining entry untouched without spending an attempt.
  */
-export type PendingWriteReplayFn = (entry: PendingWrite) => Promise<boolean>;
+export type PendingWriteReplayResult =
+  | boolean
+  | { outcome: 'done' | 'retry' | 'failed' | 'pause'; error?: string };
+
+export type PendingWriteReplayFn = (entry: PendingWrite) => Promise<PendingWriteReplayResult>;
 
 export interface UsePendingWritesOptions {
-  /** Maximum replay attempts before an entry is dropped. Default 5. */
-  maxAttempts?: number;
+  /** Maximum replay attempts before an entry is dropped. Default 5. `null` never drops an entry. */
+  maxAttempts?: number | null;
+  /** Storage key. Scope it per account so another user on the same device never sees or replays this queue. */
+  storageKey?: string;
+  /** Delay before an entry may be retried automatically, given its failed-attempt count. Default: immediate. */
+  backoffMs?: (attempts: number) => number;
+}
+
+export interface ReplaySummary {
+  replayed: number;
+  remaining: number;
+  dropped: number;
+  failed: number;
+  paused: boolean;
 }
 
 export interface UsePendingWritesResult {
@@ -68,13 +108,34 @@ export interface UsePendingWritesResult {
   pending: PendingWrite[];
   /** Queue a new write and return its generated id. */
   enqueue: <TArgs>(kind: string, args: TArgs) => string;
+  /** Like `enqueue`, but resolves only after the write is read back from storage. `null` means it was NOT saved. */
+  enqueueDurable: <TArgs>(kind: string, args: TArgs) => Promise<string | null>;
   /** Remove a single entry by id (no-op if not found). */
   remove: (id: string) => void;
+  /** Make a `failed` entry eligible for replay again. */
+  retry: (id: string) => void;
   /** Clear the full queue. Used by "give up" UI affordances. */
   clear: () => void;
   /** Iterate the queue, calling `replayFn` per entry. Removes ones that succeed. */
-  replay: (replayFn: PendingWriteReplayFn) => Promise<{ replayed: number; remaining: number; dropped: number }>;
+  replay: (replayFn: PendingWriteReplayFn, options?: { ignoreBackoff?: boolean }) => Promise<ReplaySummary>;
 }
+
+type LockManagerLike = {
+  request: (name: string, options: { ifAvailable: boolean }, cb: (lock: unknown) => Promise<unknown>) => Promise<unknown>;
+};
+
+/** Runs `work` only if no other tab/window holds the queue's replay lock. Falls back to running when Web Locks is unavailable. */
+const withReplayLock = async <T,>(name: string, work: () => Promise<T>): Promise<T | null> => {
+  const locks = (typeof navigator !== 'undefined' ? (navigator as { locks?: LockManagerLike }).locks : undefined) ?? null;
+  if (!locks) return work();
+  let result: T | null = null;
+  await locks.request(`replay:${name}`, { ifAvailable: true }, async (lock) => {
+    if (!lock) return null;
+    result = await work();
+    return null;
+  });
+  return result;
+};
 
 /**
  * Hook that persists pending writes via the hybrid persistentStorage helper
@@ -93,94 +154,165 @@ export interface UsePendingWritesResult {
 export function usePendingWrites(
   opts: UsePendingWritesOptions = {},
 ): UsePendingWritesResult {
-  const maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-  const [pending, setPending] = useState<PendingWrite[]>(() => readQueueSync());
+  const maxAttempts = opts.maxAttempts === undefined ? DEFAULT_MAX_ATTEMPTS : opts.maxAttempts;
+  const storageKey = opts.storageKey ?? DEFAULT_STORAGE_KEY;
+  const backoffMs = opts.backoffMs;
+
+  const [pending, setPending] = useState<PendingWrite[]>(() => readQueueSync(storageKey));
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
+  const keyRef = useRef(storageKey);
+  const replayingRef = useRef(false);
 
   const persist = useCallback((next: PendingWrite[]) => {
     pendingRef.current = next;
-    persistQueue(next);
+    persistQueue(keyRef.current, next);
     setPending(next);
   }, []);
 
-  // Native hydration: the synchronous initial read returns [] on native; pull
-  // the persisted queue from AsyncStorage and adopt it if non-empty.
+  // Account switch (a different storage key): never carry the previous account's entries over.
+  useEffect(() => {
+    if (keyRef.current === storageKey) return;
+    keyRef.current = storageKey;
+    const next = readQueueSync(storageKey);
+    pendingRef.current = next;
+    setPending(next);
+  }, [storageKey]);
+
+  // Native hydration: the synchronous initial read returns [] on native; pull the persisted queue from
+  // AsyncStorage and MERGE it with anything enqueued before hydration finished, so a fast first
+  // enqueue can't overwrite the stored queue.
   useEffect(() => {
     if (canAccessWebStorage()) return;
     let cancelled = false;
+    const key = storageKey;
     void (async () => {
-      const raw = await readAsync(STORAGE_KEY);
-      if (cancelled) return;
-      const queue = parseQueue(raw);
-      if (queue.length === 0) return;
-      pendingRef.current = queue;
-      setPending(queue);
+      const raw = await readAsync(key);
+      if (cancelled || keyRef.current !== key) return;
+      const persisted = parseQueue(raw);
+      if (persisted.length === 0) return;
+      const merged = mergeById(persisted, pendingRef.current);
+      pendingRef.current = merged;
+      setPending(merged);
+      if (merged.length !== persisted.length) persistQueue(key, merged);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [storageKey]);
+
+  const buildEntry = <TArgs,>(kind: string, args: TArgs): PendingWrite => ({
+    id: makeId(),
+    kind,
+    args: args as unknown,
+    enqueuedAtMs: Date.now(),
+    attempts: 0,
+    status: 'pending',
+  });
 
   const enqueue = useCallback(<TArgs>(kind: string, args: TArgs): string => {
-    const entry: PendingWrite<TArgs> = {
-      id: makeId(),
-      kind,
-      args,
-      enqueuedAtMs: Date.now(),
-      attempts: 0,
-    };
-    persist([...pendingRef.current, entry as PendingWrite]);
+    const entry = buildEntry(kind, args);
+    persist([...pendingRef.current, entry]);
     return entry.id;
   }, [persist]);
 
+  const enqueueDurable = useCallback(async <TArgs>(kind: string, args: TArgs): Promise<string | null> => {
+    const entry = buildEntry(kind, args);
+    const next = [...pendingRef.current, entry];
+    const saved = await persistQueueDurably(keyRef.current, next);
+    if (!saved) return null;
+    pendingRef.current = next;
+    setPending(next);
+    return entry.id;
+  }, []);
+
   const remove = useCallback((id: string) => {
     persist(pendingRef.current.filter((e) => e.id !== id));
+  }, [persist]);
+
+  const retry = useCallback((id: string) => {
+    persist(pendingRef.current.map((e) => (e.id === id ? { ...e, status: 'pending', nextAttemptAtMs: undefined } : e)));
   }, [persist]);
 
   const clear = useCallback(() => {
     persist([]);
   }, [persist]);
 
-  const replay = useCallback(async (replayFn: PendingWriteReplayFn) => {
-    // Snapshot the queue up-front so entries enqueued mid-drain are left
-    // for the next replay tick (avoids re-entrancy issues).
-    const snapshot = pendingRef.current.slice();
-    let replayed = 0;
-    let dropped = 0;
-    const survivors: PendingWrite[] = [];
-    for (const entry of snapshot) {
-      let succeeded = false;
-      try {
-        succeeded = await replayFn(entry);
-      } catch {
-        succeeded = false;
-      }
-      if (succeeded) {
-        replayed += 1;
-        continue;
-      }
-      const nextAttempts = entry.attempts + 1;
-      if (nextAttempts >= maxAttempts) {
-        dropped += 1;
-        continue;
-      }
-      survivors.push({ ...entry, attempts: nextAttempts });
+  const replay = useCallback(async (replayFn: PendingWriteReplayFn, options?: { ignoreBackoff?: boolean }): Promise<ReplaySummary> => {
+    const empty: ReplaySummary = { replayed: 0, remaining: pendingRef.current.length, dropped: 0, failed: 0, paused: false };
+    // One drain at a time in this tab, and one tab at a time per queue, so a resume + reconnect
+    // (or two open tabs) cannot send the same entry twice concurrently.
+    if (replayingRef.current) return empty;
+    replayingRef.current = true;
+    try {
+      const summary = await withReplayLock(keyRef.current, async (): Promise<ReplaySummary> => {
+        // Snapshot the queue up-front so entries enqueued mid-drain are left
+        // for the next replay tick (avoids re-entrancy issues).
+        const snapshot = pendingRef.current.slice();
+        const now = Date.now();
+        let replayed = 0;
+        let dropped = 0;
+        let failed = 0;
+        let paused = false;
+        const updated = new Map<string, PendingWrite | null>();
+        for (let i = 0; i < snapshot.length; i += 1) {
+          const entry = snapshot[i]!;
+          if (paused) break;
+          if (entry.status === 'failed') continue;
+          if (!options?.ignoreBackoff && entry.nextAttemptAtMs && entry.nextAttemptAtMs > now) continue;
+          let result: PendingWriteReplayResult = false;
+          try {
+            result = await replayFn(entry);
+          } catch {
+            result = false;
+          }
+          const outcome = typeof result === 'boolean' ? (result ? 'done' : 'retry') : result.outcome;
+          const error = typeof result === 'boolean' ? undefined : result.error;
+          if (outcome === 'done') {
+            replayed += 1;
+            updated.set(entry.id, null);
+          } else if (outcome === 'pause') {
+            paused = true;
+            if (error) updated.set(entry.id, { ...entry, lastError: error });
+          } else if (outcome === 'failed') {
+            failed += 1;
+            updated.set(entry.id, { ...entry, status: 'failed', attempts: entry.attempts + 1, lastError: error });
+          } else {
+            const nextAttempts = entry.attempts + 1;
+            if (maxAttempts !== null && nextAttempts >= maxAttempts) {
+              dropped += 1;
+              updated.set(entry.id, null);
+            } else {
+              updated.set(entry.id, {
+                ...entry,
+                attempts: nextAttempts,
+                lastError: error,
+                nextAttemptAtMs: backoffMs ? Date.now() + backoffMs(nextAttempts) : undefined,
+              });
+            }
+          }
+        }
+        // Apply results to the LATEST queue so entries enqueued or removed while draining are preserved.
+        const next = pendingRef.current.flatMap((e) => {
+          if (!updated.has(e.id)) return [e];
+          const replacement = updated.get(e.id);
+          return replacement ? [replacement] : [];
+        });
+        persist(next);
+        return { replayed, remaining: next.length, dropped, failed, paused };
+      });
+      return summary ?? empty;
+    } finally {
+      replayingRef.current = false;
     }
-    // Preserve any entries enqueued while we were draining — they sit at
-    // the tail of the queue, survivors sit at the head (oldest-first).
-    const latest = pendingRef.current;
-    const enqueuedDuringDrain = latest.filter((e) => !snapshot.some((s) => s.id === e.id));
-    persist([...survivors, ...enqueuedDuringDrain]);
-    return { replayed, remaining: survivors.length + enqueuedDuringDrain.length, dropped };
-  }, [maxAttempts, persist]);
+  }, [backoffMs, maxAttempts, persist]);
 
   // Re-hydrate from storage whenever the window gains focus — another tab
   // may have mutated the same queue. (Web only — native is single-instance.)
   useEffect(() => {
     if (!canAccessWebStorage()) return;
     const onFocus = () => {
-      const stored = readQueueSync();
+      const stored = readQueueSync(keyRef.current);
       if (JSON.stringify(stored) !== JSON.stringify(pendingRef.current)) {
         setPending(stored);
         pendingRef.current = stored;
@@ -190,5 +322,5 @@ export function usePendingWrites(
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  return { pending, enqueue, remove, clear, replay };
+  return { pending, enqueue, enqueueDurable, remove, retry, clear, replay };
 }

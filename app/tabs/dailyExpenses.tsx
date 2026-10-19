@@ -13,11 +13,14 @@ import { formatLocalDateOnly, localTodayDateOnly, parseLocalDateOnly } from '../
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
+import { formatDateLong } from '../utils/formatDateLong';
 import { toWebStyle } from '../utils/webStyle';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { fixedTableColumn } from '../utils/tableColumns';
 import { startItemSaveTask } from '../utils/analytics/track';
+import { newPendingExpenseArgs, type PendingExpenseArgs } from '../utils/pendingExpenses';
+import type { PendingExpenseEntry } from '../hooks/usePendingExpenseSync';
 
 type Trip = {
   id: string;
@@ -89,6 +92,16 @@ type DailyExpensesTabProps = {
   costTrackingAllowed?: boolean;
   receiptScanningAllowed?: boolean;
   readOnly?: boolean;
+  /** Lets "Add Expense" work while the rest of the tab is read-only because the device is offline. */
+  allowOfflineAdd?: boolean;
+  /** Expenses saved on this device and waiting to sync. Provided by the app-level sync hook. */
+  pendingExpenses?: {
+    entries: PendingExpenseEntry[];
+    syncedNotice: string | null;
+    queueExpense: (args: PendingExpenseArgs) => Promise<string | null>;
+    retryEntry: (id: string) => void;
+    discardEntry: (id: string) => void;
+  };
 };
 
 const categoryOptions = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'] as const;
@@ -180,7 +193,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   costTrackingAllowed,
   receiptScanningAllowed,
   readOnly = false,
+  allowOfflineAdd = false,
+  pendingExpenses,
 }) => {
+  const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
+  const tripPendingEntries = useMemo(
+    () => (pendingExpenses?.entries ?? []).filter((entry) => entry.args.payload.tripId === trip?.id),
+    [pendingExpenses?.entries, trip?.id],
+  );
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isNarrowLayout = viewportWidth < 700;
   const activeMembers = useMemo(
@@ -424,7 +444,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const saveExpense = async () => {
-    if (readOnly) {
+    // Offline, only brand-new expenses may be added (they are saved on this device and synced later).
+    // Editing an existing expense, or following someone else's trip, stays read-only.
+    const canQueueOffline = allowOfflineAdd && Boolean(pendingExpenses) && !editingExpenseId;
+    if (readOnly && !canQueueOffline) {
       alertMessage('Offline trip information is read-only. Reconnect to add an expense.');
       return;
     }
@@ -484,11 +507,33 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       forIds: draftForIds,
       vendor: draftVendor || undefined,
     };
+    // A new expense carries one stable operation key for its whole life. Whether the first attempt
+    // reaches the server, times out after committing, or is replayed later from the offline queue, the
+    // server returns the same expense instead of creating a duplicate.
+    const pendingArgs: PendingExpenseArgs | null = editingExpenseId ? null : newPendingExpenseArgs(payload);
+
+    const saveOnThisDevice = async (): Promise<boolean> => {
+      if (!pendingArgs || !pendingExpenses) return false;
+      const queuedId = await pendingExpenses.queueExpense(pendingArgs);
+      if (!queuedId) {
+        // Keep the form open with everything the user typed; do not claim anything was saved.
+        alertMessage("Couldn't save this expense on your device. Free up some space and try again.");
+        return true;
+      }
+      cancelAddExpenseModal();
+      return true;
+    };
+
+    if (readOnly && pendingArgs) {
+      await saveOnThisDevice();
+      return;
+    }
+
     const saveTask = startItemSaveTask('expenses', Boolean(editingExpenseId), trip.id);
     try {
       const res = await saveTask.request(editingExpenseId ? `${backendUrl}/api/expenses/${editingExpenseId}` : `${backendUrl}/api/expenses`, {
         method: editingExpenseId ? 'PUT' : 'POST',
-        headers: jsonHeaders,
+        headers: pendingArgs ? { ...jsonHeaders, 'Idempotency-Key': pendingArgs.operationKey } : jsonHeaders,
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
@@ -501,6 +546,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         : [data as Expense, ...prev.filter((expense) => expense.id !== data.id)]);
       cancelAddExpenseModal();
     } catch (err) {
+      // The request never got an answer (lost connection mid-save). For a new expense the answer is
+      // unknown, so queue it under the same key: the server dedupes if it did save.
+      if (pendingArgs && (await saveOnThisDevice())) return;
       alertMessage((err as Error).message || 'Unable to save expense');
     }
   };
@@ -599,7 +647,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
           onPress={openAddExpenseModal}
-          disabled={readOnly}
+          disabled={readOnly && !(allowOfflineAdd && pendingExpenses)}
           testID="expense-add-button"
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
@@ -646,6 +694,74 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         />
       ) : null}
       {receiptError ? <Text style={styles.warningText}>{receiptError}</Text> : null}
+      {pendingExpenses?.syncedNotice ? (
+        <Text style={styles.helperText} accessibilityRole="alert" testID="expense-synced-notice">
+          {pendingExpenses.syncedNotice}
+        </Text>
+      ) : null}
+      {tripPendingEntries.length ? (
+        <View style={styles.card} testID="expense-pending-section" accessibilityLabel="Expenses waiting to sync">
+          <Text style={styles.flightTitle}>Saved on this device · waiting to sync</Text>
+          <Text style={styles.helperText}>
+            These expenses are not on the server yet. They are sent automatically when you are back online and signed in.
+          </Text>
+          {tripPendingEntries.map((entry) => {
+            const failed = entry.status === 'failed';
+            const { payload } = entry.args;
+            return (
+              <View key={entry.id} style={styles.groupRow} testID={`expense-pending-${entry.id}`}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cellText}>
+                    {formatDateLong(payload.expenseDate)} · {payload.category}
+                    {payload.vendor ? ` · ${payload.vendor}` : ''} · {payload.amount.toFixed(2)} {payload.currency}
+                  </Text>
+                  <Text style={failed ? styles.warningText : styles.helperText}>
+                    {failed
+                      ? `Couldn't sync: ${entry.lastError || 'the server rejected this expense.'}`
+                      : entry.lastError
+                        ? `Waiting to sync · ${entry.lastError}`
+                        : 'Waiting to sync'}
+                  </Text>
+                </View>
+                {failed ? (
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => pendingExpenses?.retryEntry(entry.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Try syncing this expense again"
+                  >
+                    <Text style={styles.buttonText}>Try again</Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, styles.dangerButton]}
+                  onPress={() => setPendingDiscardId(entry.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Discard this expense"
+                >
+                  <Text style={styles.dangerButtonText}>Discard</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+      {pendingDiscardId ? (
+        <ConfirmDialog
+          visible
+          title="Discard this expense?"
+          message="It has not been saved to the trip yet. Discarding it removes it from this device for good."
+          confirmLabel="Discard"
+          onConfirm={() => {
+            pendingExpenses?.discardEntry(pendingDiscardId);
+            setPendingDiscardId(null);
+          }}
+          onCancel={() => setPendingDiscardId(null)}
+          styles={styles}
+          testID="expense-pending-discard-dialog"
+          useNativeModal
+        />
+      ) : null}
       {importExpensesVisible && trip && (
         <PlaidImportQueue
           theme={theme}

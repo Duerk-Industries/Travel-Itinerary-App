@@ -397,6 +397,8 @@ export const listExpenses = async (...args: Parameters<ReturnType<typeof adapter
   adapter().listExpenses(...args);
 export const insertExpense = async (...args: Parameters<ReturnType<typeof adapter>['insertExpense']>) =>
   adapter().insertExpense(...args);
+export const insertExpenseIdempotent = async (...args: Parameters<ReturnType<typeof adapter>['insertExpenseIdempotent']>) =>
+  adapter().insertExpenseIdempotent(...args);
 export const updateExpense = async (...args: Parameters<ReturnType<typeof adapter>['updateExpense']>) =>
   adapter().updateExpense(...args);
 export const upsertExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['upsertExpenseForSource']>) =>

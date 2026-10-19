@@ -5299,6 +5299,51 @@ export const insertExpense = async (expense: {
   return payload;
 };
 
+// Create-once by (owner, operation id): the document id is derived from the key and written with
+// create(), which fails if the document exists, so concurrent retries cannot both succeed.
+export const insertExpenseIdempotent = async (
+  expense: Parameters<typeof insertExpense>[0],
+  clientOperationId: string
+): Promise<{ expense: any; replayed: boolean }> => {
+  const db = getDb();
+  const docId = `op_${createHash('sha256').update(clientOperationId).digest('hex').slice(0, 40)}`;
+  const ref = db.collection('expenses').doc(docId);
+  const existing = await ref.get();
+  if (existing.exists) return { expense: existing.data(), replayed: true };
+  const tripDoc = await db.collection('trips').doc(expense.tripId).get();
+  const tripCurrency = (tripDoc.data() as any)?.currency ?? 'USD';
+  const currency = expense.currency ?? tripCurrency ?? 'USD';
+  const payload = {
+    id: docId,
+    tripId: expense.tripId,
+    groupId: expense.groupId,
+    userId: expense.userId,
+    expenseDate: expense.expenseDate,
+    category: expense.category,
+    amount: expense.amount ?? 0,
+    currency,
+    amountInTripCurrency: expense.amountInTripCurrency ?? (currency === tripCurrency ? expense.amount ?? 0 : null),
+    exchangeRateToTripCurrency: expense.exchangeRateToTripCurrency ?? (currency === tripCurrency ? 1 : null),
+    exchangeRateDate: expense.exchangeRateDate ?? null,
+    payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
+    forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    sourceType: null,
+    sourceId: null,
+    vendor: expense.vendor ?? null,
+    notes: expense.notes ?? null,
+    clientOperationId,
+    createdAt: nowIso(),
+  };
+  try {
+    await ref.create(payload);
+    return { expense: payload, replayed: false };
+  } catch (err) {
+    const raced = await ref.get();
+    if (raced.exists) return { expense: raced.data(), replayed: true };
+    throw err;
+  }
+};
+
 export const updateExpense = async (
   expenseId: string,
   userId: string,
