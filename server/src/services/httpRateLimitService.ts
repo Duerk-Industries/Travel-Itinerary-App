@@ -208,3 +208,8 @@ export const accountPasswordRateLimit: RequestHandler = async (req: Request, res
     next(err);
   }
 };
+
+/** Only called after cheap request validation and trip authorization. */
+export const reserveMapRenderRateLimit = (userId: string, ip?: string | null): Promise<void> => reserveRequestRateLimits({
+  name: 'map_render', identities: [`user:${userId}`, ip ? `ip:${ip}` : null], limit: 30, windowMs: 5 * 60_000,
+});

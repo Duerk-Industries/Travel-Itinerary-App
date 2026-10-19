@@ -5,6 +5,8 @@ import { buildTripDayMapUrl, type TripMapPoint, type TripMapPointKind } from '..
 
 type TripDayMapProps = {
   points: TripMapPoint[];
+  tripId?: string;
+  dayDate?: string;
   backendUrl: string;
   requestHeaders: Record<string, string>;
   testID?: string;
@@ -38,8 +40,7 @@ const LegendPin: React.FC<{ color: string }> = ({ color }) => (
 
 /**
  * Static, multi-pin map for one day of an itinerary (flights, lodging,
- * activities, car rentals). Backed by GET /api/maps/trip-day — server-side
- * cached, rate-limited, and gated by the `trip_day_map` feature flag.
+ * activities, car rentals). Backed by GET /api/maps/trip-day — private live image, rate-limited, and gated by the `trip_day_map` feature flag.
  *
  * This is a progressive enhancement, not core functionality: while the flag
  * is off (default) or no API key is configured yet, every request 403s/503s.
@@ -47,11 +48,11 @@ const LegendPin: React.FC<{ color: string }> = ({ color }) => (
  * how the day hero image elsewhere in Overview already falls back to a
  * plain color box instead of surfacing a fetch failure to the user.
  */
-const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, requestHeaders, testID }) => {
+const TripDayMapComponent: React.FC<TripDayMapProps> = ({ points, backendUrl, requestHeaders, testID, tripId, dayDate }) => {
   const [failed, setFailed] = useState(false);
   const [webObjectUrl, setWebObjectUrl] = useState<string | null>(null);
 
-  const mapUrl = useMemo(() => buildTripDayMapUrl(points, backendUrl), [points, backendUrl]);
+  const mapUrl = useMemo(() => points.length && backendUrl && tripId && dayDate ? `${backendUrl}/api/maps/trip-day?tripId=${encodeURIComponent(tripId)}&dayDate=${encodeURIComponent(dayDate)}` : '', [tripId, dayDate, backendUrl, points.length]);
   // Stable dependency for the effect below — requestHeaders is commonly a fresh object every
   // render, and re-fetching the map on every unrelated re-render would be wasteful. Refetch only
   // when the header *values* actually change (e.g. a token refresh), not the object identity.

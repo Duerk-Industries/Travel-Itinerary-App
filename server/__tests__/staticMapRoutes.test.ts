@@ -1,56 +1,23 @@
-/// <reference types="jest" />
-/// <reference types="node" />
-
-const setMemoryEnv = () => {
-  process.env.DB_PROVIDER = 'memory';
-  process.env.USE_IN_MEMORY_DB = '1';
-  process.env.DATABASE_URL = 'pg-mem://localhost/static-map-test';
-  process.env.GOOGLE_STATIC_MAPS_API_KEY = 'server-only-map-key';
-  process.env.WEB_URL = 'http://localhost:8081';
-  delete process.env.FIRESTORE_EMULATOR_HOST;
-};
-
-describe('Static Maps proxy', () => {
-  beforeEach(async () => {
-    jest.resetModules();
-    setMemoryEnv();
-    const db = require('../src/db') as typeof import('../src/db');
-    await db.initDb();
-    const helpers = require('./helpers') as typeof import('./helpers');
-    await helpers.seedTiersForTest();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('proxies private images without retaining them and counts every provider request', async () => {
-    const request = require('supertest') as typeof import('supertest');
-    const { app } = require('../src/app') as typeof import('../src/app');
-    const helpers = require('./helpers') as typeof import('./helpers');
-    const { getApiUsageSummary } = require('../src/apis/usageLimiter') as typeof import('../src/apis/usageLimiter');
-    const user = { firstName: 'Map', lastName: 'Viewer', email: 'map-viewer@example.com', password: 'secret123' };
-    const { token } = await helpers.registerAndLoginWebUser(user);
-
-    const body = Buffer.from('fake-png');
-    const fetchMock = jest.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: { get: (name: string) => name.toLowerCase() === 'content-type' ? 'image/png' : null },
-      arrayBuffer: async () => body,
-    } as Response);
-
-    const path = '/api/maps/static?address=1%20Main%20Street%2C%20Boston';
-    await request(app).get(path).set({ Authorization: `Bearer ${token}` }).expect('Cache-Control', 'private, no-store').expect(200);
-    await request(app).get(path).set({ Authorization: `Bearer ${token}` }).expect('Cache-Control', 'private, no-store').expect(200);
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const upstreamUrl = String(fetchMock.mock.calls[0]?.[0]);
-    expect(upstreamUrl).toContain('maps.googleapis.com/maps/api/staticmap');
-    expect(upstreamUrl).toContain('key=server-only-map-key');
-    expect(upstreamUrl).not.toContain('EXPO_PUBLIC');
-
-    const usage = await getApiUsageSummary();
-    expect(usage.find((entry) => entry.provider === 'GOOGLE_STATIC_MAPS' && entry.caller === 'STATIC_MAP_PREVIEW')?.used).toBe(2);
-  });
+import express from 'express';
+import request from 'supertest';
+jest.mock('../src/auth', () => ({ authenticate: (req: any, _res: any, next: any) => { req.user = { userId: 'viewer' }; next(); } }));
+jest.mock('../src/db', () => ({ ensureUserCanReadTrip: jest.fn(async () => ({ access: 'member' })), getLodgingById: jest.fn(async () => ({ id: 'lodging', tripId: 'trip', address: 'Stored hotel address' })) }));
+jest.mock('../src/services/planningPointsService', () => ({ getPlanningDayPoints: jest.fn() }));
+jest.mock('../src/services/httpRateLimitService', () => ({ ...jest.requireActual('../src/services/httpRateLimitService'), reserveMapRenderRateLimit: jest.fn(async () => undefined) }));
+jest.mock('../src/apis/usageLimiter', () => ({ ...jest.requireActual('../src/apis/usageLimiter'), reserveApiUsageOrThrow: jest.fn(async () => undefined) }));
+jest.mock('../src/apis/providerBudgeting', () => ({ recordProviderRequestCost: jest.fn(async () => undefined) }));
+import router from '../src/routes/staticMapRoutes';
+import { ensureUserCanReadTrip } from '../src/db';
+const app = express().use('/maps', router);
+it('requires an authorized stored lodging, never an arbitrary address', async () => {
+  process.env.GOOGLE_STATIC_MAPS_API_KEY = 'server-key';
+  const provider = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('png', { headers: { 'Content-Type': 'image/png' } }));
+  await request(app).get('/maps/static?address=Injected').expect(400);
+  const path = '/maps/static?lodgingId=11111111-1111-4111-8111-111111111111';
+  jest.mocked(ensureUserCanReadTrip).mockResolvedValueOnce(null);
+  await request(app).get(path).expect(403); expect(provider).not.toHaveBeenCalled();
+  for (let i=0;i<2;i++) await request(app).get(path).expect('Cache-Control','private, no-store').expect(200);
+  expect(provider).toHaveBeenCalledTimes(2);
+  expect(new URL(String(provider.mock.calls[0][0])).searchParams.get('markers')).toContain('Stored hotel address');
+  provider.mockRestore();
 });

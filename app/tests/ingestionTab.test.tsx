@@ -246,10 +246,10 @@ describe('IngestionTab', () => {
       pressTextButton(getAllByText('Japan Trip')[0]);
     });
 
-    expect(getByDisplayValue('trip-1')).toBeTruthy();
+    expect(getAllByText('Japan Trip').length).toBeGreaterThan(0);
 
     await act(async () => {
-      pressTextButton(getAllByText('Assign')[0]);
+      pressTextButton(getAllByText('Add to Japan Trip')[0]);
     });
 
     await waitFor(() => {
@@ -330,7 +330,7 @@ describe('IngestionTab role-based view', () => {
 
     expect(await findByPlaceholderText('Search provider or confirmation')).toBeTruthy();
     expect(await findByPlaceholderText('Status or ALL')).toBeTruthy();
-    expect(await findByText('Forwarding')).toBeTruthy();
+    expect(await findByText('Copy my forwarding address')).toBeTruthy();
     expect(await findByText('Gmail import is currently disabled.')).toBeTruthy();
   });
 });

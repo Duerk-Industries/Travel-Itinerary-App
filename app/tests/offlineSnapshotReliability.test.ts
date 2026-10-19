@@ -72,3 +72,19 @@ it('fences queued saves at logout and does not recreate access afterward', async
   await saveOfflineTripSnapshot(owner, snapshot, catalog);
   expect(await loadOfflineTripCache(owner)).toBeNull();
 });
+
+it('uses conditional bundles only with the same complete trip and cost projection', async () => {
+  const previous = { ...snapshot, bundleEtag: '"version-1"', bundleCostTracking: true };
+  global.fetch = jest.fn(async () => ({ status: 304, ok: false })) as unknown as typeof fetch;
+  const next = await downloadOfflineTripSnapshot({ trip: { id: 'trip', groupId: 'group' }, backendUrl: owner.environment, token: 'token', costTrackingAllowed: true, useBundle: true, previous });
+  expect(next.flights).toEqual(snapshot.flights);
+  expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/bundle'), { headers: { Authorization: 'Bearer token', 'If-None-Match': '"version-1"' } });
+  await expect(downloadOfflineTripSnapshot({ trip: { id: 'trip', groupId: 'group' }, backendUrl: owner.environment, token: 'token', costTrackingAllowed: false, useBundle: true, previous })).rejects.toThrow('Saved copy');
+});
+it('preserves the previous durable bundle and ETag on incomplete or failed refresh', async () => {
+  const previous = { ...snapshot, bundleEtag: '"last-good"', bundleCostTracking: true };
+  await saveOfflineTripSnapshot(owner, previous, catalog);
+  global.fetch = jest.fn(async () => ({ status: 200, ok: true, json: async () => ({ schemaVersion: 1, tripId: 'trip' }) })) as unknown as typeof fetch;
+  await expect(downloadOfflineTripSnapshot({ trip: { id: 'trip', groupId: 'group' }, backendUrl: owner.environment, token: 'token', costTrackingAllowed: true, useBundle: true, previous }).then(next => saveOfflineTripSnapshot(owner, next, catalog))).rejects.toThrow();
+  expect((await loadOfflineTripCache(owner))?.snapshots.trip.bundleEtag).toBe('"last-good"');
+});

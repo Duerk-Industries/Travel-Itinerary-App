@@ -27,6 +27,7 @@ module.exports = {
     '^socket\\.io-client$': '<rootDir>/tests/__mocks__/socket.io-client.ts',
     '^react-native-svg$': '<rootDir>/tests/__mocks__/react-native-svg.ts',
     '^@expo/metro-runtime$': '<rootDir>/tests/__mocks__/@expo/metro-runtime.ts',
+    '^expo-crypto$': '<rootDir>/tests/__mocks__/expo-crypto.ts',
     '^expo-image-picker$': '<rootDir>/tests/__mocks__/expo-image-picker.ts',
     '^expo-local-authentication$': '<rootDir>/tests/__mocks__/expo-local-authentication.ts',
     '^expo-network$': '<rootDir>/tests/__mocks__/expo-network.ts',

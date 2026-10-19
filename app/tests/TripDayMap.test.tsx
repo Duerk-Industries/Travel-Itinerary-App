@@ -20,33 +20,36 @@ const POINTS: TripMapPoint[] = [
 describe('TripDayMap', () => {
   it('renders nothing when there are no points', () => {
     const { queryByTestId } = render(
-      <TripDayMap points={[]} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      <TripDayMap points={[]} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
     );
     expect(queryByTestId('day-detail-map')).toBeNull();
   });
 
   it('renders nothing when backendUrl is missing (feature not wired up yet)', () => {
     const { queryByTestId } = render(
-      <TripDayMap points={POINTS} backendUrl="" requestHeaders={HEADERS} testID="day-detail-map" />
+      <TripDayMap points={POINTS} backendUrl="" requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
     );
     expect(queryByTestId('day-detail-map')).toBeNull();
   });
 
   it('renders an authenticated Image against /api/maps/trip-day when points are present', () => {
     const { getByTestId, UNSAFE_getByType } = render(
-      <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
     );
     expect(getByTestId('day-detail-map')).toBeTruthy();
 
     const { Image } = require('react-native');
     const image = UNSAFE_getByType(Image);
-    expect(image.props.source?.uri).toContain(`${BACKEND_URL}/api/maps/trip-day?points=`);
+    expect(image.props.source?.uri).toContain(`${BACKEND_URL}/api/maps/trip-day?tripId=`);
     expect(image.props.source?.headers).toEqual(HEADERS);
+    expect(image.props.source?.uri).toContain('dayDate=2027-05-02');
+    expect(image.props.source?.uri).not.toContain('points=');
+    expect(image.props.source?.uri).not.toContain('Selina');
   });
 
   it('collapses to nothing after the image fails to load (e.g. flag off, key missing, rate limited)', () => {
     const { getByTestId, queryByTestId, UNSAFE_getByType } = render(
-      <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
     );
     expect(getByTestId('day-detail-map')).toBeTruthy();
 
@@ -85,12 +88,12 @@ describe('TripDayMap', () => {
       global.fetch = jest.fn(async () => ({ ok: true, blob: async () => fakeBlob })) as any;
 
       const { findByTestId, UNSAFE_getByType } = render(
-        <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+        <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
       );
       await findByTestId('day-detail-map');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`${BACKEND_URL}/api/maps/trip-day?points=`),
+        expect.stringContaining(`${BACKEND_URL}/api/maps/trip-day?tripId=`),
         { headers: HEADERS }
       );
       expect((global as any).URL.createObjectURL).toHaveBeenCalledWith(fakeBlob);
@@ -107,7 +110,7 @@ describe('TripDayMap', () => {
       global.fetch = jest.fn(async () => ({ ok: false, status: 401 })) as any;
 
       const { queryByTestId } = render(
-        <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+        <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
       );
 
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -117,7 +120,7 @@ describe('TripDayMap', () => {
 
   it('shows a legend entry for each kind present, in flight/lodging/activity/car_rental order', () => {
     const { getByTestId, getByText, queryByText } = render(
-      <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      <TripDayMap points={POINTS} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
     );
     expect(getByTestId('day-detail-map-legend')).toBeTruthy();
     expect(getByText('Flight')).toBeTruthy();
@@ -133,14 +136,14 @@ describe('TripDayMap', () => {
       { kind: 'car_rental' as const, address: 'Dropoff' },
     ];
     const { getAllByText } = render(
-      <TripDayMap points={repeated} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      <TripDayMap points={repeated} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
     );
     expect(getAllByText('Car rental')).toHaveLength(1);
   });
 
   it('renders no legend when there are no points', () => {
     const { queryByTestId } = render(
-      <TripDayMap points={[]} backendUrl={BACKEND_URL} requestHeaders={HEADERS} testID="day-detail-map" />
+      <TripDayMap points={[]} backendUrl={BACKEND_URL} requestHeaders={HEADERS} tripId="11111111-1111-4111-8111-111111111111" dayDate="2027-05-02" testID="day-detail-map" />
     );
     expect(queryByTestId('day-detail-map-legend')).toBeNull();
   });

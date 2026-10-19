@@ -1,3 +1,4 @@
+import type { PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -74,7 +75,9 @@ export const ACTIVITY_TYPES: ActivityType[] = [
   'Tour',
 ];
 
-export type Tour = {
+export type Tour = PlanningCoordinates & {
+  dayPosition?: number | null;
+  catalogId?: string | null;
   id: string;
   status: ItineraryStatus;
   activityType: ActivityType;
@@ -288,7 +291,10 @@ export const fetchActivitiesForTrip = async ({
   if (!res.ok) throw new Error('Unable to load trip details');
   const data = await res.json();
     if (!Array.isArray(data)) throw new Error('Invalid trip details response');
-  return (data as any[]).map((t) => ({
+  return (data as any[]).map(normalizeActivityFromApi);
+};
+
+export const normalizeActivityFromApi = (t: any): Tour => ({
     ...t,
     activityType: ACTIVITY_TYPES.includes(t.activityType) ? t.activityType : 'Tour',
     status: normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS),
@@ -302,8 +308,7 @@ export const fetchActivitiesForTrip = async ({
     bookedOn: t.bookedOn ?? '',
     freeCancelBy: t.freeCancelBy ?? '',
     notes: t.notes ?? '',
-  }));
-};
+  });
 
 type TourTabProps = {
   backendUrl: string;

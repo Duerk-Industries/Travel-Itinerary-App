@@ -1,3 +1,4 @@
+import ImportForwardingSetup from '../components/ImportForwardingSetup';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { usePolling } from '../hooks/usePolling';
@@ -98,11 +99,16 @@ const prettyDate = (value?: string | null): string => {
 const ACTIVE_JOB_STATES = new Set(['PENDING', 'RECEIVED', 'NORMALIZING', 'NORMALIZED', 'EXTRACTING', 'AWAITING_REVIEW']);
 
 const openFilePicker = async (): Promise<File[]> => {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') return [];
+  if (Platform.OS !== 'web') {
+    const picker = await import('expo-document-picker');
+    const result = await picker.getDocumentAsync({ type: ['text/plain', 'text/html', 'text/calendar', 'application/pdf', 'image/*'], multiple: true, copyToCacheDirectory: true });
+    return result.canceled ? [] : result.assets.map(asset => ({ uri: asset.uri, name: asset.name, type: asset.mimeType || 'application/octet-stream' } as unknown as File));
+  }
+  if (typeof document === 'undefined') return [];
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.txt,.html,.htm,.pdf,.png,.jpg,.jpeg,.webp';
+    input.accept = '.txt,.html,.htm,.ics,.pdf,.png,.jpg,.jpeg,.webp';
     input.multiple = true;
     input.onchange = () => resolve(Array.from(input.files ?? []));
     input.click();
@@ -134,6 +140,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   const [editProvider, setEditProvider] = useState('');
   const [editConfirmation, setEditConfirmation] = useState('');
   const [editNotes, setEditNotes] = useState('');
+  const [suggestionReasons, setSuggestionReasons] = useState<string[]>([]);
   const [assignTripId, setAssignTripId] = useState<string>('');
   const [dateFilter, setDateFilter] = useState('');
   const [confidenceFilter, setConfidenceFilter] = useState('');
@@ -252,10 +259,14 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     setEditNotes(String(item.editedFields?.notes ?? item.extractedFields?.notes ?? item.extractedFields?.summary ?? ''));
     setAssignTripId('');
     setSignedDocumentUrl(null);
+    setSuggestionReasons([]);
     const response = await fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, {
       headers,
     });
     const body = await response.json().catch(() => ({}));
+    const suggestions = (body as any).suggestions || [];
+    if (suggestions.length === 1 && suggestions[0].reasons.length >= 2) setAssignTripId(suggestions[0].tripId);
+    setSuggestionReasons(suggestions.length === 1 ? suggestions[0].reasons : []);
     setSelectedDocumentSummary((body as any).documentSummary ?? null);
     setSignedDocumentUrl((body as any).signedDocument ?? null);
   };
@@ -534,22 +545,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
         </View>
       ) : null}
 
-      {config.features.forwardedMailbox && isAdmin ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Forwarding</Text>
-          <Text style={styles.helperText}>Provider: {config.forwarding.provider || 'mailgun'}</Text>
-          <Text style={styles.helperText}>{config.forwarding.currentAddress}</Text>
-          <Text style={styles.helperText}>{config.forwarding.instructions}</Text>
-          <Text style={styles.helperText}>{config.forwarding.adminManagedNote}</Text>
-        </View>
-      ) : config.features.forwardedMailbox ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Forward by Email</Text>
-          <Text style={styles.helperText}>Forward travel confirmations to:</Text>
-          <Text style={styles.flightTitle}>{config.forwarding.currentAddress}</Text>
-          <Text style={styles.helperText}>Keep this address private. Check each booking before adding it to a trip.</Text>
-        </View>
-      ) : <Text style={styles.helperText}>Email forwarding is temporarily unavailable. You can upload a confirmation below.</Text>}
+      {config.features.forwardedMailbox ? <ImportForwardingSetup address={config.forwarding.currentAddress} backendUrl={backendUrl} headers={headers} styles={styles}
+        onRotated={address => setConfig(current => current ? { ...current, forwarding: { ...current.forwarding, currentAddress: address } } : current)} />
+        : <Text style={styles.helperText}>Email forwarding is temporarily unavailable. You can upload a confirmation below.</Text>}
 
       {(config.forwarding.receipts ?? []).filter(r => r.state !== 'COMPLETE').map(receipt => (
         <View key={receipt.id} style={styles.section}>
@@ -790,12 +788,18 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                 {selectedItem.timezoneStatus === 'UNKNOWN' ? (
                   <Text style={styles.warningText}>Timezone unknown{selectedItem.rawDatetimeString ? ` (raw: ${selectedItem.rawDatetimeString})` : ''}</Text>
                 ) : null}
-                {selectedDocumentSummary ? (
+                {isAdmin && selectedDocumentSummary ? (
                   <Text style={styles.helperText}>
                     {selectedDocumentSummary.originalFilename || 'Document'} • normalization {selectedDocumentSummary.normalizationQuality || 'unknown'} • virus scan {selectedDocumentSummary.virusScanStatus || 'unknown'}
                   </Text>
                 ) : null}
-                <Text style={styles.helperText}>{JSON.stringify(selectedItem.extractedFields, null, 2)}</Text>
+                {isAdmin ? <Text style={styles.helperText}>{JSON.stringify(selectedItem.extractedFields, null, 2)}</Text> : <>
+                  <Text style={styles.helperText}>Imported by you · Check this booking before adding it.</Text>
+                  {selectedItem.sourceType === 'FORWARDED_MAILBOX' && <Text style={styles.helperText}>We couldn’t confirm who forwarded this — check it before adding.</Text>}
+                  <Text style={styles.flightTitle}>{String(selectedItem.extractedFields.name || selectedItem.extractedFields.propertyName || selectedItem.providerVendor || 'Booking')}</Text>
+                  <Text style={styles.helperText}>{selectedItem.startDateTimeUtc ? new Date(selectedItem.startDateTimeUtc).toLocaleString() : 'Check the local date and timezone.'}</Text>
+                  <Text style={styles.helperText}>{String(selectedItem.extractedFields.address || selectedItem.extractedFields.startLocation || '')}</Text>
+                </>}
                 <Text style={styles.modalLabel}>Provider</Text>
                 <TextInput style={styles.input} value={editProvider} onChangeText={setEditProvider} />
                 <Text style={styles.modalLabel}>Confirmation</Text>
@@ -812,8 +816,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                   </View>
                 ) : (
                   <>
-                    <TextInput style={styles.input} value={assignTripId} onChangeText={setAssignTripId} placeholder="Paste or select a trip id" />
-                    {trips.map((trip) => (
+                    {isAdmin && <TextInput style={styles.input} value={assignTripId} onChangeText={setAssignTripId} placeholder="Paste or select a trip id" />}
+                    {suggestionReasons.length > 0 && <Text style={styles.helperText}>Suggested: {suggestionReasons.join(". ")}. Check the details before adding.</Text>}
+              {trips.map((trip) => (
                       <TouchableOpacity key={trip.id} style={styles.navButton} onPress={() => setAssignTripId(trip.id)}>
                         <Text style={styles.navButtonText}>{trip.name}</Text>
                       </TouchableOpacity>
@@ -831,7 +836,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                   <Text style={styles.buttonText}>Save Edits</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.button} onPress={assignItem} disabled={!assignTripId}>
-                  <Text style={styles.buttonText}>Assign</Text>
+                  <Text style={styles.buttonText}>{assignTripId ? `Add to ${trips.find(trip => trip.id === assignTripId)?.name || 'selected trip'}` : 'Choose a trip'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={() => deleteItem(selectedItem.id)}>
                   <Text style={styles.dangerButtonText}>Delete</Text>

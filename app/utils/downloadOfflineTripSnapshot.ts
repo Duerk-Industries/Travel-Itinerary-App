@@ -1,17 +1,37 @@
-import type { Trip } from '../../server/src/types';
-import { fetchFlightsForTrip } from '../tabs/transfers';
-import { fetchActivitiesForTrip } from '../tabs/activities';
-import { fetchLodgingsApi } from '../tabs/lodging';
-import { fetchCarRentalsForTrip } from '../tabs/carRentals';
+import type { PlanningBundle, Trip } from '../../server/src/types';
+import { fetchFlightsForTrip, normalizeFlightFromApi } from '../tabs/transfers';
+import { fetchActivitiesForTrip, normalizeActivityFromApi } from '../tabs/activities';
+import { fetchLodgingsApi, normalizeLodgingFromApi } from '../tabs/lodging';
+import { fetchCarRentalsForTrip, normalizeCarRentalFromApi } from '../tabs/carRentals';
 import type { OfflineTripSnapshot, OfflineItinerarySnapshot } from './offlineTripCache';
 
 /** Ordinary screen state can contain defaults or data from the previous trip.
  * Only this complete download is eligible to replace a durable snapshot. */
 export const downloadOfflineTripSnapshot = async (params: {
-  trip: Pick<Trip, 'id' | 'groupId'>; backendUrl: string; token: string; costTrackingAllowed: boolean;
+  trip: Pick<Trip, 'id' | 'groupId'>; backendUrl: string; token: string; costTrackingAllowed: boolean; previous?: OfflineTripSnapshot; useBundle?: boolean;
 }): Promise<OfflineTripSnapshot> => {
   const { trip, backendUrl, token, costTrackingAllowed } = params;
   const tripId = encodeURIComponent(trip.id);
+  if (params.useBundle) {
+    const previous = params.previous?.tripId === trip.id && params.previous.bundleCostTracking === costTrackingAllowed ? params.previous : undefined;
+    const response = await fetch(`${backendUrl}/api/trips/${tripId}/bundle`, { headers: {
+      Authorization: `Bearer ${token}`, ...(previous?.bundleEtag ? { 'If-None-Match': previous.bundleEtag } : {}),
+    } });
+    if (response.status === 304) {
+      if (!previous?.bundleEtag) throw new Error('Saved copy is unavailable');
+      return { ...previous, savedAt: Date.now() };
+    }
+    if (response.ok) {
+      const bundle = await response.json() as PlanningBundle;
+      if (bundle.schemaVersion !== 1 || bundle.tripId !== trip.id || bundle.representation?.costTracking !== costTrackingAllowed
+        || !bundle.trip || !['groupMembers', 'flights', 'lodgings', 'tours', 'carRentals', 'expenses', 'payments'].every(key => Array.isArray((bundle as any)[key]))
+        || !bundle.coveredBy || (bundle.itinerary !== null && !Array.isArray(bundle.itinerary?.details))) throw new Error('Invalid saved trip bundle');
+      return { ...bundle, savedAt: Date.now(), bundleEtag: response.headers.get('ETag') ?? undefined,
+        bundleCostTracking: costTrackingAllowed, flights: bundle.flights.map(normalizeFlightFromApi),
+        lodgings: bundle.lodgings.map(normalizeLodgingFromApi), tours: bundle.tours.map(normalizeActivityFromApi), carRentals: bundle.carRentals.map(normalizeCarRentalFromApi) };
+    }
+    if (response.status !== 404) throw new Error('Saved trip download failed');
+  }
   const fetchValue = async (path: string): Promise<unknown> => {
     const response = await fetch(`${backendUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new Error('Saved trip download failed');

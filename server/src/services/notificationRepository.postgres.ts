@@ -1,16 +1,17 @@
+import { parseNotificationCursor } from './notificationCursor';
 import { randomUUID } from 'crypto';
 import { queryBlog, withBlogTransaction } from '../db.postgres';
 
-export const createNotification = async (n: any): Promise<string> => {
-  const id = randomUUID();
-  await queryBlog(
-    `INSERT INTO notifications (id, user_id, category, trip_id, actor_user_id, title, body, deep_link, payload, dedupe_key)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-     ON CONFLICT (user_id, dedupe_key) DO NOTHING`,
-    [id, n.userId, n.category, n.tripId ?? null, n.actorUserId ?? null, n.title, n.body, n.deepLink ?? null, JSON.stringify(n.payload ?? {}), n.dedupeKey ?? null]
-  );
-  return id;
-};
+export const createNotificationWithOutbox = async (n: any, channels: Array<'push' | 'email'>): Promise<string> => withBlogTransaction(async client => {
+  const created = await client.query(
+    `INSERT INTO notifications (id,user_id,category,trip_id,actor_user_id,title,body,deep_link,payload,dedupe_key,in_app)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (user_id,dedupe_key) DO NOTHING RETURNING id`,
+    [randomUUID(),n.userId,n.category,n.tripId ?? null,n.actorUserId ?? null,n.title,n.body,n.deepLink ?? null,JSON.stringify(n.payload ?? {}),n.dedupeKey ?? null,n.inApp !== false]);
+  const id = created.rows[0]?.id ?? (await client.query('SELECT id FROM notifications WHERE user_id=$1 AND dedupe_key=$2',[n.userId,n.dedupeKey])).rows[0].id;
+  for (const channel of channels) await client.query('INSERT INTO notification_outbox(id,notification_id,channel) VALUES($1,$2,$3) ON CONFLICT(notification_id,channel) DO NOTHING',[randomUUID(),id,channel]);
+  return String(id);
+});
+export const createNotification = (n: any): Promise<string> => createNotificationWithOutbox(n, []);
 
 export const enqueueOutbox = async (entries: any[]): Promise<void> => {
   for (const e of entries) {
@@ -36,28 +37,24 @@ export const isThreadMuted = async (userId: string, threadKey: string): Promise<
 };
 
 export const getUnreadCount = async (userId: string): Promise<number> => {
-  const result = await queryBlog('SELECT COUNT(*)::int FROM notifications WHERE user_id = $1 AND read_at IS NULL', [userId]);
+  const result = await queryBlog('SELECT COUNT(*)::int FROM notifications WHERE user_id = $1 AND in_app = true AND read_at IS NULL', [userId]);
   return result.rows[0]?.count ?? 0;
 };
 
 export const listNotifications = async (userId: string, options: { limit?: number; cursor?: string; unreadOnly?: boolean }): Promise<any[]> => {
-  const limit = Math.min(100, Math.max(1, options.limit ?? 20));
-  const unreadClause = options.unreadOnly ? 'AND read_at IS NULL' : '';
-  const cursorClause = options.cursor ? 'AND created_at < (SELECT created_at FROM notifications WHERE id = $3)' : '';
-  const params: any[] = [userId];
-  if (options.cursor) params.push(options.cursor);
-
-  const result = await queryBlog(
-    `SELECT * FROM notifications WHERE user_id = $1 ${unreadClause} ${cursorClause}
-     ORDER BY created_at DESC LIMIT ${limit}`,
-    params
-  );
+  const limit = Math.min(50, Math.max(1, options.limit ?? 20));
+  const cursor = parseNotificationCursor(options.cursor);
+  const params: unknown[] = [userId];
+  if (cursor) params.push(cursor.t, cursor.id);
+  const result = await queryBlog(`SELECT * FROM notifications WHERE user_id=$1 AND in_app = true ${options.unreadOnly ? 'AND read_at IS NULL' : ''}
+    ${cursor ? 'AND (created_at < $2 OR (created_at = $2 AND id::text < $3))' : ''}
+    ORDER BY created_at DESC,id DESC LIMIT ${limit}`, params);
   return result.rows;
 };
 
 export const markAsRead = async (userId: string, ids: string[] | 'all'): Promise<void> => {
   if (ids === 'all') {
-    await queryBlog('UPDATE notifications SET read_at = NOW() WHERE user_id = $1 AND read_at IS NULL', [userId]);
+    await queryBlog('UPDATE notifications SET read_at = NOW() WHERE user_id = $1 AND in_app = true AND read_at IS NULL', [userId]);
   } else if (ids.length) {
     const placeholders = ids.map((_, i) => `$${i + 2}`).join(',');
     await queryBlog(`UPDATE notifications SET read_at = NOW() WHERE user_id = $1 AND id IN (${placeholders}) AND read_at IS NULL`, [userId, ...ids]);
@@ -114,22 +111,14 @@ export const updatePreferences = async (userId: string, prefs: any[]): Promise<v
 };
 
 export const claimOutboxBatch = async (leaseOwner: string, batchSize: number, leaseSeconds: number): Promise<any[]> => {
-  const leaseExpiresAt = new Date(Date.now() + leaseSeconds * 1000);
-  const result = await queryBlog(
-    `UPDATE notification_outbox
-     SET state = 'leased', lease_owner = $1, lease_expires_at = $2, updated_at = NOW()
-     WHERE id IN (
-       SELECT id FROM notification_outbox
-       WHERE state IN ('pending', 'leased')
-         AND next_attempt_at <= NOW()
-         AND (lease_expires_at IS NULL OR lease_expires_at < NOW())
-       ORDER BY next_attempt_at ASC, created_at ASC
-       LIMIT $3
-     )
-     RETURNING *`,
-    [leaseOwner, leaseExpiresAt, batchSize]
-  );
-  return result.rows;
+  const candidates = await queryBlog(`SELECT id FROM notification_outbox WHERE state IN ('pending','leased') AND next_attempt_at <= NOW() AND (lease_expires_at IS NULL OR lease_expires_at < NOW()) ORDER BY next_attempt_at,created_at LIMIT $1`, [Math.min(50,batchSize)]);
+  const claimed: any[] = [];
+  for (const candidate of candidates.rows) {
+    const result = await queryBlog(`UPDATE notification_outbox SET state='leased',lease_owner=$2,lease_expires_at=$3,updated_at=NOW()
+      WHERE id=$1 AND state IN ('pending','leased') AND (lease_expires_at IS NULL OR lease_expires_at < NOW()) RETURNING *`, [candidate.id,leaseOwner,new Date(Date.now()+leaseSeconds*1000)]);
+    claimed.push(...result.rows);
+  }
+  return claimed;
 };
 
 export const updateOutboxState = async (id: string, state: string, options: any = {}): Promise<void> => {
@@ -139,7 +128,9 @@ export const updateOutboxState = async (id: string, state: string, options: any 
   if (options.nextAttemptAt != null) { sets.push(`next_attempt_at = $${params.length + 1}`); params.push(options.nextAttemptAt); }
   if (options.lastErrorCode != null) { sets.push(`last_error_code = $${params.length + 1}`); params.push(options.lastErrorCode); }
 
-  await queryBlog(`UPDATE notification_outbox SET ${sets.join(', ')} WHERE id = $1`, params);
+  let fence = '';
+  if (options.leaseOwner) { params.push(options.leaseOwner); fence = ` AND lease_owner=$${params.length}`; }
+  await queryBlog(`UPDATE notification_outbox SET ${sets.join(', ')} WHERE id = $1${fence}`, params);
 };
 
 export const pruneNotifications = async (retentionDays: number, maxPerRow: number): Promise<void> => {

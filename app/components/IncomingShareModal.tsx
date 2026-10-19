@@ -32,9 +32,10 @@ type IncomingShareModalProps = {
   activeTripId?: string | null;
   styles?: any;
   theme?: any;
+  onImported?: () => void;
 };
 
-const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, styles, theme }: IncomingShareModalProps) => {
+const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, styles, theme, onImported }: IncomingShareModalProps) => {
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
   const [selectedTripId, setSelectedTripId] = useState(activeTripId ?? null);
   const [dayDate, setDayDate] = useState(todayDate());
@@ -69,6 +70,24 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
   const close = () => {
     resetShareIntent();
     setMessage('');
+  };
+
+  const importFiles = async () => {
+    if (submitting) return;
+    const supported = files.filter(file => /^(application\/pdf|image\/(png|jpeg|webp))$/.test(file.mimeType || ''));
+    if (!supported.length || supported.length !== files.length || supported.length > 10) {
+      Alert.alert('Import confirmation', 'Share up to 10 PDF, PNG, JPEG, or WebP confirmations.'); return;
+    }
+    setSubmitting(true);
+    try {
+      const form = new FormData();
+      supported.forEach(file => form.append('files', { uri: file.path, name: file.fileName || 'confirmation', type: file.mimeType } as any));
+      const response = await fetch(`${backendUrl}/api/ingestion/upload`, { method: 'POST', headers: { Authorization: headers.Authorization }, body: form });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Import unavailable. Try the Imports screen.');
+      Alert.alert('Confirmation received', 'Your files will be scanned before parsing. Review the booking and choose its trip in Imports.');
+      close(); onImported?.();
+    } catch (error) { Alert.alert('Import confirmation', error?.message || 'Upload failed. Your shared files have not been added.'); }
+    finally { setSubmitting(false); }
   };
 
   const submit = async () => {
@@ -126,7 +145,7 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
   };
 
   return (
-    <DialogShell visible title="Add to trip blog" styles={styles} onClose={close} useNativeModal cardStyle={{ maxWidth: 480, width: '92%', maxHeight: '85%' }}>
+    <DialogShell visible title="Send to WanderBunnies" styles={styles} onClose={close} useNativeModal cardStyle={{ maxWidth: 480, width: '92%', maxHeight: '85%' }}>
       <ScrollView style={{ maxHeight: 420 }}>
         <Text style={{ color: mutedColor, marginBottom: 10 }}>
           {files.length} {files.length === 1 ? 'item' : 'items'} shared from your device.
@@ -192,11 +211,12 @@ const IncomingShareModal = ({ backendUrl, headers, trips = [], activeTripId, sty
         </Text>
       </ScrollView>
 
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+        <TouchableOpacity accessibilityRole="button" disabled={submitting} onPress={importFiles} style={[styles?.button, { minHeight: 44 }]}><Text style={styles?.buttonText}>Import to WanderBunnies</Text></TouchableOpacity>
         <TouchableOpacity
           testID="share-submit"
           accessibilityRole="button"
-          disabled={submitting || !selectedTripId || !isValidDayDate(dayDate)}
+          disabled={submitting || !selectedTripId || !isValidDayDate(dayDate) || files.some(file => file.mimeType === 'application/pdf')}
           onPress={submit}
           style={styles?.button}
         >

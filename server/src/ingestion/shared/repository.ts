@@ -1,3 +1,4 @@
+import { planningFirestore } from '../../services/planningFirestore';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
@@ -392,7 +393,7 @@ export const getFirebaseDb = (): Firestore => {
     }
   }
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
-  return databaseId ? getFirestore(firebaseApp!, databaseId) : getFirestore(firebaseApp!);
+  return planningFirestore(databaseId ? getFirestore(firebaseApp!, databaseId) : getFirestore(firebaseApp!));
 };
 
 export const getPg = (): Pool => poolClient();

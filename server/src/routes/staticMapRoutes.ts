@@ -1,3 +1,6 @@
+import { ensureUserCanReadTrip, getLodgingById } from '../db';
+import { getPlanningDayPoints } from '../services/planningPointsService';
+import { reserveMapRenderRateLimit, HttpRateLimitExceededError } from '../services/httpRateLimitService';
 import { Router } from 'express';
 import { authenticate } from '../auth';
 import { getApiCacheSetting } from '../config/apiLimits';
@@ -18,7 +21,7 @@ const MAX_ADDRESS_LENGTH = 200;
 const getMaxTripDayPoints = (): number => {
   const configured = getApiCacheSetting('googleStaticMaps', 'maxPointsPerTripDayMap');
   const parsed = Number(configured);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_MAX_TRIP_DAY_POINTS;
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(DEFAULT_MAX_TRIP_DAY_POINTS, Math.floor(parsed)) : DEFAULT_MAX_TRIP_DAY_POINTS;
 };
 
 // ---------------------------------------------------------------------------
@@ -100,128 +103,68 @@ export const normalizeTripMapPoints = (raw: unknown, maxPoints: number): TripMap
   return out;
 };
 
-const sendMapErrorResponse = (res: Response, err: unknown, logLabel: string): void => {
-  if (err instanceof ApiLimitExceededError) {
-    res.status(429).json({ error: err.message });
-    return;
-  }
-  const statusCode = Number((err as any)?.statusCode);
-  if (statusCode === 503) {
-    res.status(503).json({ error: (err as Error).message });
-    return;
-  }
-  logError(`[static-maps] ${logLabel} failed`, err);
-  res.status(502).json({ error: 'Unable to load map' });
-};
-
 const getStaticMapsApiKey = (): string | null =>
   getEnvValue('GOOGLE_STATIC_MAPS_API_KEY') || getEnvValue('GOOGLE_MAPS_API_KEY') || null;
 
 const router = Router();
 router.use(authenticate);
 
+const validId = (id: unknown): id is string => typeof id === 'string' && /^[a-f0-9-]{36}$/i.test(id);
+const proxyImage = async (res: Response, userId: string, ip: string | undefined, caller: string, points: TripMapPoint[]): Promise<void> => {
+  const key = getStaticMapsApiKey();
+  if (!key) { res.status(503).json({ error: 'Map unavailable.' }); return; }
+  await reserveMapRenderRateLimit(userId, ip);
+  await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller });
+  await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
+  const url = new URL(GOOGLE_STATIC_MAPS_URL);
+  url.searchParams.set('size', '640x400'); url.searchParams.set('scale', '2'); url.searchParams.set('key', key);
+  for (const point of points) url.searchParams.append('markers', `color:${MARKER_COLOR_BY_KIND[point.kind]}|label:${point.label}|${point.location}`);
+  const coordinates = points.map(point => point.location).filter(location => /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/.test(location));
+  if (coordinates.length > 1) url.searchParams.set('path', `color:0x475569ff|weight:3|${coordinates.join('|')}`);
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(url.toString(), { signal: controller.signal, headers: { Accept: 'image/png' } });
+    const contentType = response.headers.get('content-type')?.split(';')[0];
+    if (!response.ok || !['image/png', 'image/jpeg'].includes(contentType || '') || Number(response.headers.get('content-length') || 0) > 2 * 1024 * 1024 || !response.body) throw new Error('Invalid map response');
+    const chunks: Uint8Array[] = []; let size = 0; const reader = response.body.getReader();
+    for (;;) {
+      const part = await reader.read(); if (part.done) break;
+      size += part.value.byteLength;
+      if (size > 2 * 1024 * 1024) { await reader.cancel(); throw new Error('Map response too large'); }
+      chunks.push(part.value);
+    }
+    res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('Vary', 'Authorization');
+    res.type(contentType!).send(Buffer.concat(chunks));
+  } finally { clearTimeout(timer); }
+};
+const mapError = (res: Response, error: unknown): void => {
+  if (error instanceof ApiLimitExceededError || error instanceof HttpRateLimitExceededError) {
+    res.status(429).json({ error: 'Map allowance reached. Your itinerary is still available.' }); return;
+  }
+  logError('[static-maps] provider request failed');
+  res.status(502).json({ error: 'Map unavailable. Your itinerary is still available.' });
+};
 router.get('/static', async (req, res) => {
-  const address = String(req.query.address ?? '').trim();
-  if (!address || address.length > 500) {
-    res.status(400).json({ error: 'address is required and must be at most 500 characters' });
-    return;
-  }
-
+  if (!validId(req.query.lodgingId)) { res.status(400).json({ error: 'lodgingId is required.' }); return; }
   try {
-    const apiKey = getStaticMapsApiKey();
-    if (!apiKey) {
-      const error = new Error('Google Static Maps is not configured');
-      (error as any).statusCode = 503;
-      throw error;
-    }
-
-    await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: STATIC_MAP_CALLER });
-    await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
-
-    const url = new URL(GOOGLE_STATIC_MAPS_URL);
-    url.searchParams.set('center', address);
-    url.searchParams.set('zoom', '14');
-    url.searchParams.set('size', '600x320');
-    url.searchParams.set('scale', '2');
-    url.searchParams.set('maptype', 'roadmap');
-    url.searchParams.set('markers', `color:red|${address}`);
-    url.searchParams.set('key', apiKey);
-
-    const response = await fetch(url.toString(), { headers: { Accept: 'image/*' } });
-    if (!response.ok) {
-      throw new Error(`Google Static Maps returned HTTP ${response.status}`);
-    }
-    const result = {
-      body: Buffer.from(await response.arrayBuffer()),
-      contentType: response.headers.get('content-type') || 'image/png',
-    };
-    // Private itinerary images must not be retained by application/CDN caches.
-    // https://cloud.google.com/maps-platform/terms/maps-service-terms
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.type(result.contentType).send(result.body);
-  } catch (err) {
-    sendMapErrorResponse(res, err, 'single-address proxy request');
-  }
+    const userId = (req as any).user.userId as string;
+    const lodging = await getLodgingById(req.query.lodgingId);
+    if (!lodging || !(await ensureUserCanReadTrip(lodging.tripId ?? lodging.trip_id, userId))) { res.status(403).json({ error: 'Lodging unavailable.' }); return; }
+    const points = normalizeTripMapPoints([{ kind: 'lodging', address: lodging.address, lat: lodging.lat, lng: lodging.lng }], 1);
+    if (!points.length) { res.status(404).json({ error: 'No location for this lodging.' }); return; }
+    await proxyImage(res, userId, req.ip, STATIC_MAP_CALLER, points);
+  } catch (error) { mapError(res, error); }
 });
-
 router.get('/trip-day', async (req, res) => {
-  if (!(await isFeatureEnabled(TRIP_DAY_MAP_FEATURE_FLAG))) {
-    res.status(403).json({ error: 'Trip day map is currently disabled', code: 'FEATURE_DISABLED' });
-    return;
-  }
-
-  let rawPoints: unknown;
+  if (!validId(req.query.tripId) || typeof req.query.dayDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(req.query.dayDate)) { res.status(400).json({ error: 'tripId and dayDate are required.' }); return; }
   try {
-    rawPoints = JSON.parse(String(req.query.points ?? '[]'));
-  } catch {
-    res.status(400).json({ error: 'points must be a JSON-encoded array' });
-    return;
-  }
-
-  const points = normalizeTripMapPoints(rawPoints, getMaxTripDayPoints());
-  if (!points.length) {
-    res.status(400).json({ error: 'No valid map points provided' });
-    return;
-  }
-
-  try {
-    const apiKey = getStaticMapsApiKey();
-    if (!apiKey) {
-      const error = new Error('Google Static Maps is not configured');
-      (error as any).statusCode = 503;
-      throw error;
-    }
-
-    await reserveApiUsageOrThrow({ provider: 'GOOGLE_STATIC_MAPS', caller: TRIP_DAY_MAP_CALLER });
-    await recordProviderRequestCost({ provider: 'GOOGLE_STATIC_MAPS' });
-
-    const url = new URL(GOOGLE_STATIC_MAPS_URL);
-    url.searchParams.set('size', '640x400');
-    url.searchParams.set('scale', '2');
-    url.searchParams.set('maptype', 'roadmap');
-    // No explicit center/zoom: Google auto-fits the viewport to the
-    // supplied markers when both are omitted.
-    for (const point of points) {
-      const color = MARKER_COLOR_BY_KIND[point.kind];
-      url.searchParams.append('markers', `color:${color}|label:${point.label}|${point.location}`);
-    }
-    url.searchParams.set('key', apiKey);
-
-    const response = await fetch(url.toString(), { headers: { Accept: 'image/*' } });
-    if (!response.ok) {
-      throw new Error(`Google Static Maps returned HTTP ${response.status}`);
-    }
-    const result = {
-      body: Buffer.from(await response.arrayBuffer()),
-      contentType: response.headers.get('content-type') || 'image/png',
-    };
-    // Private itinerary images must not be retained by application/CDN caches.
-    // https://cloud.google.com/maps-platform/terms/maps-service-terms
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.type(result.contentType).send(result.body);
-  } catch (err) {
-    sendMapErrorResponse(res, err, 'trip-day proxy request');
-  }
+    if (!(await isFeatureEnabled(TRIP_DAY_MAP_FEATURE_FLAG))) { res.status(403).json({ error: 'Map disabled.', code: 'FEATURE_DISABLED' }); return; }
+    const userId = (req as any).user.userId as string;
+    if (!(await ensureUserCanReadTrip(req.query.tripId, userId))) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
+    const raw = await getPlanningDayPoints(userId, req.query.tripId, req.query.dayDate);
+    const points = normalizeTripMapPoints(raw, getMaxTripDayPoints());
+    if (!points.length) { res.status(404).json({ error: 'No locations for this day.' }); return; }
+    await proxyImage(res, userId, req.ip, TRIP_DAY_MAP_CALLER, points);
+  } catch (error) { mapError(res, error); }
 });
-
 export default router;

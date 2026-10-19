@@ -7,6 +7,7 @@ export const normalizeMimeType = (mimeType: string, filename: string): string =>
   const normalized = String(mimeType ?? '').trim().toLowerCase();
   const lowerName = filename.toLowerCase();
   const inferFromFilename = (): string => {
+    if (lowerName.endsWith('.ics')) return 'text/calendar';
     if (lowerName.endsWith('.txt')) return 'text/plain';
     if (lowerName.endsWith('.html') || lowerName.endsWith('.htm')) return 'text/html';
     if (lowerName.endsWith('.pdf')) return 'application/pdf';
@@ -15,6 +16,7 @@ export const normalizeMimeType = (mimeType: string, filename: string): string =>
     if (lowerName.endsWith('.webp')) return 'image/webp';
     return normalized || 'application/octet-stream';
   };
+  if (['application/ics', 'application/icalendar', 'text/x-vcalendar'].includes(normalized)) return 'text/calendar';
   if (normalized && normalized !== 'application/octet-stream') return normalized;
   return inferFromFilename();
 };

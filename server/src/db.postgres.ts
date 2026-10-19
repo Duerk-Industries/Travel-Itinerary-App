@@ -1,3 +1,5 @@
+import { trackMemoryPlanningWrites } from './services/planningMemoryRevision';
+import { AsyncLocalStorage } from 'async_hooks';
 // server/src/db.ts
 import type {
   AnalyticsEventRecord,
@@ -250,7 +252,23 @@ export const setPoolFactory = (factory: PoolCtor): void => {
 };
 
 
+const planningTransaction = new AsyncLocalStorage<PoolClient>();
+/** Adapter-owned transaction context: nested domain helpers use the same client. */
+export const withPlanningTransaction = async <T>(work: (client: PoolClient) => Promise<T>): Promise<T> => {
+  const active = planningTransaction.getStore();
+  if (active) return work(active);
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await planningTransaction.run(client, () => work(client));
+    await client.query('COMMIT'); return result;
+  } catch (error) { await client.query('ROLLBACK'); throw error; }
+  finally { client.release(); }
+};
+
 function getPool(): Pool {
+  const active = planningTransaction.getStore();
+  if (active) return active as unknown as Pool;
   if (!pool) {
     const cs = getEnvValue('DATABASE_URL');
 
@@ -303,6 +321,7 @@ function getPool(): Pool {
     }
 
     pool = new PoolFactory({ connectionString: cs });
+    if (getEnvFlag('USE_IN_MEMORY_DB') || cs.startsWith('pg-mem://')) pool = trackMemoryPlanningWrites(pool);
   }
   return pool;
 }
@@ -1493,7 +1512,7 @@ export const initDb = async (): Promise<void> => {
       const pathMod = require('node:path') as typeof import('node:path');
       const migrationsDir = pathMod.join(__dirname, '..', 'migrations');
       const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
-      await runMigrations({ client, dir: migrationsDir });
+      await runMigrations({ client, dir: migrationsDir, dialect: getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' ? 'memory' : 'postgres' });
     } catch (err) {
       const { logError } = require('./logger') as typeof import('./logger');
       logError('[migrations] auto-apply on initDb failed', err);
@@ -4424,7 +4443,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.refund_by as "refundBy",
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
-             l.address,
+             l.address, l.lat, l.lng, l.geo_city as "geoCity", l.coordinate_source as "coordinateSource",
              l.notes,
              COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
@@ -4475,7 +4494,7 @@ export const getLodgingById = async (lodgingId: string): Promise<(Lodging & { tr
              l.refund_by as "refundBy",
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
-             l.address,
+             l.address, l.lat, l.lng, l.geo_city as "geoCity", l.coordinate_source as "coordinateSource",
              l.notes,
              COALESCE(l.features, '[]'::jsonb) as features,
              l.place_id as "placeId",
@@ -4671,6 +4690,9 @@ export const updateLodging = async (
           refund_by = COALESCE($8, refund_by),
           total_cost = COALESCE($9, total_cost),
           cost_per_night = COALESCE($10, cost_per_night),
+          lat = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM address THEN NULL ELSE lat END,
+          lng = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM address THEN NULL ELSE lng END,
+          coordinate_source = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM address THEN NULL ELSE coordinate_source END,
           address = COALESCE($11, address),
           notes = COALESCE($12, notes),
           features = COALESCE($13::jsonb, features),
@@ -4712,6 +4734,9 @@ export const updateLodging = async (
           refund_by = COALESCE($8, l.refund_by),
           total_cost = COALESCE($9, l.total_cost),
           cost_per_night = COALESCE($10, l.cost_per_night),
+          lat = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM l.address THEN NULL ELSE l.lat END,
+          lng = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM l.address THEN NULL ELSE l.lng END,
+          coordinate_source = CASE WHEN $11 IS NOT NULL AND $11 IS DISTINCT FROM l.address THEN NULL ELSE l.coordinate_source END,
           address = COALESCE($11, l.address),
           notes = COALESCE($12, l.notes),
           features = COALESCE($13::jsonb, l.features),
@@ -4774,6 +4799,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
+      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition",
       tu.start_time as "startTime",
       tu.duration,
       tu.cost::numeric as cost,
@@ -4819,6 +4845,7 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
+      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition",
       tu.start_time as "startTime",
       tu.duration,
       tu.cost::numeric as cost,
@@ -4865,6 +4892,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
+      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition",
       start_time as "startTime",
       duration,
       cost::numeric as cost,
@@ -4932,6 +4960,9 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       activity_type = COALESCE($4, activity_type),
       date = COALESCE($5, date),
       name = COALESCE($6, name),
+      lat = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lat END,
+      lng = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lng END,
+      coordinate_source = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE coordinate_source END,
       start_location = COALESCE($7, start_location),
       start_time = COALESCE($8, start_time),
       duration = COALESCE($9, duration),
@@ -4952,6 +4983,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
+      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition",
       start_time as "startTime",
       duration,
       cost::numeric as cost,
@@ -5010,6 +5042,7 @@ export const listCarRentals = async (userId: string, tripId?: string): Promise<C
              c.user_id as "userId",
              c.trip_id as "tripId",
              c.status,
+             c.lat, c.lng, c.dropoff_lat as "dropoffLat", c.dropoff_lng as "dropoffLng", c.geo_city as "geoCity", c.coordinate_source as "coordinateSource",
              c.pickup_location as "pickupLocation",
              to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
              c.dropoff_location as "dropoffLocation",
@@ -5053,6 +5086,7 @@ export const getCarRentalById = async (id: string): Promise<CarRental | null> =>
              c.user_id as "userId",
              c.trip_id as "tripId",
              c.status,
+             c.lat, c.lng, c.dropoff_lat as "dropoffLat", c.dropoff_lng as "dropoffLng", c.geo_city as "geoCity", c.coordinate_source as "coordinateSource",
              c.pickup_location as "pickupLocation",
              to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
              c.dropoff_location as "dropoffLocation",
@@ -5145,6 +5179,10 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
       UPDATE car_rentals c
       SET
         status = COALESCE($3, c.status),
+        lat = CASE WHEN $4 IS NOT NULL AND $4 IS DISTINCT FROM c.pickup_location THEN NULL ELSE c.lat END,
+        lng = CASE WHEN $4 IS NOT NULL AND $4 IS DISTINCT FROM c.pickup_location THEN NULL ELSE c.lng END,
+        dropoff_lat = CASE WHEN $6 IS NOT NULL AND $6 IS DISTINCT FROM c.dropoff_location THEN NULL ELSE c.dropoff_lat END,
+        dropoff_lng = CASE WHEN $6 IS NOT NULL AND $6 IS DISTINCT FROM c.dropoff_location THEN NULL ELSE c.dropoff_lng END,
         pickup_location = COALESCE($4, c.pickup_location),
         pickup_date = COALESCE(NULLIF($5, '')::date, c.pickup_date),
         dropoff_location = COALESCE($6, c.dropoff_location),
@@ -5170,7 +5208,8 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
                 c.user_id as "userId",
                 c.trip_id as "tripId",
                 c.status,
-                c.pickup_location as "pickupLocation",
+                c.lat, c.lng, c.dropoff_lat as "dropoffLat", c.dropoff_lng as "dropoffLng", c.geo_city as "geoCity", c.coordinate_source as "coordinateSource",
+             c.pickup_location as "pickupLocation",
                 to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
                 c.dropoff_location as "dropoffLocation",
                 to_char(c.dropoff_date, 'YYYY-MM-DD') as "dropoffDate",
@@ -7635,7 +7674,7 @@ export const listAttractionCatalogEntries = async (
   const key = String(destinationKey ?? '').trim().toLowerCase();
   if (!key) return [];
   const p = getPool();
-  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 2000);
   const { rows } = await p.query(
     `SELECT id, name, payload, updated_at as "updatedAt"
        FROM locations
@@ -13681,4 +13720,13 @@ export const getTripTimezone = async (tripId: string): Promise<string | null> =>
 
 export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
   await getPool().query(`UPDATE trips SET timezone = $2 WHERE id = $1`, [tripId, timezone]);
+};
+
+export { createCatalogActivityPostgres as createCatalogActivity, undoCatalogActivityPostgres as undoCatalogActivity } from './services/planningOperations';
+
+/** Revision scopes are updated by DB triggers, including non-facade writers. */
+export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {
+  if (getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory') return (await import('./services/planningMemoryRevision')).memoryPlanningRevision();
+  const result = await getPool().query('SELECT scope,revision FROM planning_revisions WHERE scope = ANY($1::text[]) ORDER BY scope', [[`trip:${tripId}`, `group:${groupId}`, 'global:profiles']]);
+  return JSON.stringify(result.rows);
 };

@@ -85,6 +85,7 @@ import {
   saveSessionAsync,
 } from './utils/session';
 import OfflineUnlockScreen from './components/OfflineUnlockScreen';
+import NotificationInbox from './components/NotificationInbox';
 import OfflineBanner from './components/OfflineBanner';
 import { useConnectionState } from './hooks/useConnectionState';
 import {
@@ -635,6 +636,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const connection = useConnectionState();
   const offlineReadOnly = offlineMode || connection.status === 'offline';
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
+  const [pendingNotificationId, setPendingNotificationId] = useState<string | null>(null);
   const [shareTripModalOpen, setShareTripModalOpen] = useState(false);
   const [overviewEditSignal, setOverviewEditSignal] = useState(0);
   const [goToDay1Signal, setGoToDay1Signal] = useState(0);
@@ -1067,7 +1069,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         if (!trip) return;
         let download = offlineDownloadsRef.current[cacheKey];
         if (!download) {
-          download = downloadOfflineTripSnapshot({ trip, backendUrl, token: userToken, costTrackingAllowed });
+          download = loadOfflineTripCache(offlineOwner).then(cache => downloadOfflineTripSnapshot({ trip, backendUrl, token: userToken, costTrackingAllowed, useBundle: true, previous: cache?.snapshots[tripId] }));
           offlineDownloadsRef.current[cacheKey] = download;
           void download.finally(() => {
             if (offlineDownloadsRef.current[cacheKey] === download) delete offlineDownloadsRef.current[cacheKey];
@@ -2501,8 +2503,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         await configureEveningTripReminderHandler();
         const Notifications = await import('expo-notifications');
         if (cancelled) return;
+        const last = await Notifications.getLastNotificationResponseAsync();
+        const lastId = last?.notification.request.content.data?.notificationId;
+        if (!cancelled && typeof lastId === 'string') { setPendingNotificationId(lastId); await Notifications.clearLastNotificationResponseAsync(); }
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-          const data = response.notification.request.content.data as { type?: string; tripId?: string; deepLink?: string | null } | undefined;
+          const data = response.notification.request.content.data as { type?: string; tripId?: string; deepLink?: string | null; notificationId?: string } | undefined;
+          if (data?.notificationId) { setPendingNotificationId(data.notificationId); return; }
           if (data?.type === 'evening_trip_reminder' && data.tripId) {
             setActiveTripId(data.tripId);
             setActivePage('blog');
@@ -2631,14 +2637,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       fetchPendingTripShareInvites();
     }
   }, [userToken, requirePasswordSetup, ageVerificationRequired, ageVerifiedReloadKey, offlineReadOnly, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
-
-  useEffect(() => {
-    // Best-effort, native-only (see pushNotifications.ts) — never awaited/blocking, and safe to
-    // re-run on every token change since /api/notifications/devices upserts on the token hash.
-    if (userToken && !requirePasswordSetup) {
-      void registerForPushNotificationsAsync(userToken);
-    }
-  }, [userToken, requirePasswordSetup]);
 
   useEffect(() => {
     if (userToken) return;
@@ -3274,6 +3272,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         {userToken ? (
           <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
+              {!offlineReadOnly && <NotificationInbox backendUrl={backendUrl} token={userToken} openNotificationId={pendingNotificationId} onOpenHandled={() => setPendingNotificationId(null)} onOpen={target => {
+                if (target.tripId) setActiveTripId(target.tripId);
+                requestPageChange(target.page);
+              }} />}
+
               {!isPhoneLayout ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {activeTripId && (
@@ -4190,6 +4193,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         <IncomingShareModal
           backendUrl={backendUrl}
           headers={headers}
+          onImported={() => setActivePage('ingest')}
           trips={trips}
           activeTripId={activeTripId}
           styles={styles}

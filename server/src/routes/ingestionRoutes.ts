@@ -1,3 +1,5 @@
+import { suggestTrips } from '../ingestion/assignment/tripSuggestions';
+import { reserveHttpRateLimitOrThrow, HttpRateLimitExceededError } from '../services/httpRateLimitService';
 import { Router, type Request, type Response, type RequestHandler } from 'express';
 import bodyParser from 'body-parser';
 import multer from 'multer';
@@ -248,6 +250,7 @@ router.get('/review-items/:id', async (req, res) => {
   const signed = await getReviewQueueSignedUrl(item.rawDocId);
   const rawDocument = await getIngestedDocumentById(item.rawDocId);
   res.json({
+    suggestions: suggestTrips(item, await listTrips(userId)),
     item,
     signedDocument: signed,
     documentSummary: rawDocument
@@ -392,6 +395,20 @@ router.get('/forwarding', mailSettingsHandler(async (req, res) => {
     currentAddress: (await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox)) ? await getMailAlias(userId) : '',
     instructions: INGESTION_FORWARDING_SETTINGS_COPY,
   });
+}));
+
+router.post('/forwarding/test', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) { res.status(403).json({ error: 'Forwarding is paused' }); return; }
+  try { await reserveHttpRateLimitOrThrow({ name: 'import_setup_test', identity: userId, limit: 3, windowMs: 60_000 }); }
+  catch (error) { if (error instanceof HttpRateLimitExceededError) { res.status(429).json({ error: error.message }); return; } throw error; }
+  // This is an authenticated synthetic inbox receipt, not an email send. No
+  // parser, scanner, reply, quota reservation or booking write can occur.
+  const alias = await getMailAlias(userId);
+  const { recordSyntheticReceipt } = await import('../ingestion/shared/mailAdmission');
+  await recordSyntheticReceipt(userId, alias);
+  res.json({ received: true, synthetic: true });
 }));
 
 router.post('/forwarding/rotate', mailSettingsHandler(async (req, res) => {

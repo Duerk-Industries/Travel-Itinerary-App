@@ -1,3 +1,4 @@
+import { planningFirestore } from './services/planningFirestore';
 // Firebase adapter (Firestore-backed)
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldPath, FieldValue } from 'firebase-admin/firestore';
@@ -795,7 +796,7 @@ export const getDb = (): Firestore => {
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
   if (databaseId) {
   }
-  return databaseId ? getFirestore(app!, databaseId) : getFirestore(app!);
+  return planningFirestore(databaseId ? getFirestore(app!, databaseId) : getFirestore(app!));
 };
 
 export const initDb = async (): Promise<void> => {
@@ -2013,6 +2014,13 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('billing_subscriptions').where('userId', '==', userId).get(),
     db.collection('privacy_choice_events').where('userId', '==', userId).get(),
   ]);
+  for (const [collection, field] of [['operation_receipts', 'userId'], ['notification_work', 'data.userId'], ['notification_work', 'data.ownerId']]) {
+    for (;;) {
+      const page = await db.collection(collection).where(field, '==', userId).limit(200).get();
+      if (page.empty) break;
+      await deleteDocRefsInBatches(page.docs.map(doc => doc.ref));
+    }
+  }
   await scrubBlogEngagementForDeletedUser(userId);
   const refs = [
     db.collection('users').doc(userId),
@@ -4412,14 +4420,14 @@ export const listAttractionCatalogEntries = async (
   const key = String(destinationKey ?? '').trim().toLowerCase();
   if (!key) return [];
   const db = getDb();
-  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 2000);
   // Use top-level destinationKey field for an indexed Firestore query
   // instead of loading 500 docs and filtering in-memory.
   const snapshot = await db
     .collection('locations')
     .where('sourceType', '==', 'attraction')
     .where('destinationKey', '==', key)
-    .limit(safeLimit * 2)
+    .limit(safeLimit)
     .get();
   const filtered = snapshot.docs
     .map((doc) => toAttractionCatalogEntry(doc.id, doc.data()))
@@ -4894,7 +4902,7 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
     await ensureLodgingLocation(placeId, updates.name || data.name, updates.address || data.address);
   }
 
-  const updatePayload = stripUndefined(updates);
+  const updatePayload = stripUndefined({ ...updates, ...(updates.address !== undefined && updates.address !== data.address ? { lat: null, lng: null, coordinateSource: null } : {}) });
   if (Object.keys(updatePayload).length > 0) {
     await db.collection('lodgings').doc(lodgingId).update(updatePayload);
   }
@@ -4964,6 +4972,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
   if (!membership) return null;
   const updatePayload = stripUndefined({
     ...activity,
+    ...(activity.startLocation !== undefined && activity.startLocation !== current.startLocation ? { lat: null, lng: null, coordinateSource: null } : {}),
     activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
   });
   if (Object.keys(updatePayload).length > 0) {
@@ -5048,6 +5057,8 @@ export const updateCarRental = async (id: string, userId: string, updates: Parti
   if (!membership) return null;
   const payload = stripUndefined({
     ...updates,
+    ...(updates.pickupLocation !== undefined && updates.pickupLocation !== data.pickupLocation ? { lat: null, lng: null } : {}),
+    ...(updates.dropoffLocation !== undefined && updates.dropoffLocation !== data.dropoffLocation ? { dropoffLat: null, dropoffLng: null } : {}),
     status: typeof updates.status === 'undefined' ? undefined : normalizeItineraryStatus((updates as any).status),
     cost: typeof updates.cost === 'undefined' ? undefined : Number(updates.cost) || 0,
   });
@@ -9636,4 +9647,12 @@ export const getTripTimezone = async (tripId: string): Promise<string | null> =>
 
 export const setTripTimezone = async (tripId: string, timezone: string): Promise<void> => {
   await getDb().collection('trips').doc(tripId).set({ timezone }, { merge: true });
+};
+
+export { createCatalogActivityFirebase as createCatalogActivity, undoCatalogActivityFirebase as undoCatalogActivity } from './services/planningOperations';
+
+export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {
+  const db = getDb();
+  const docs = await db.getAll(...[`trip:${tripId}`, `group:${groupId}`, 'global:profiles'].map(scope => db.collection('planning_revisions').doc(scope)));
+  return JSON.stringify(docs.map(doc => [doc.id, doc.data()?.revision ?? 0]));
 };

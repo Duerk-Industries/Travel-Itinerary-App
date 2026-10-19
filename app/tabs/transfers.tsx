@@ -1,3 +1,4 @@
+import type { PlanningCoordinates } from '../../server/src/types';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, type ViewStyle } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -24,6 +25,7 @@ import {
 } from '../utils/itineraryStatus';
 
 export interface Flight {
+  departureLat?: number | null; departureLng?: number | null; arrivalLat?: number | null; arrivalLng?: number | null;
   id: string;
   status?: ItineraryStatus;
   transfer_type?: TransferType;
@@ -400,6 +402,7 @@ export const removeFlightApi = async (
 };
 
 export const normalizeFlightFromApi = (f: any): Flight => ({
+  departureLat: f.departureLat, departureLng: f.departureLng, arrivalLat: f.arrivalLat, arrivalLng: f.arrivalLng,
   ...f,
   status: normalizeItineraryStatus(f.status, LEGACY_ITINERARY_STATUS),
   transfer_type: TRANSFER_TYPES.includes(f.transfer_type)

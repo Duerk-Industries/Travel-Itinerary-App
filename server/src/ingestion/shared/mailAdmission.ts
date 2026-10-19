@@ -308,3 +308,15 @@ export const deleteUserMailAdmissionData = async (userId: string): Promise<void>
   await getPg().query('DELETE FROM ingestion_aliases WHERE user_id=$1', [userId]);
   await getPg().query('DELETE FROM ingestion_mail_receipts WHERE user_id=$1', [userId]);
 };
+
+export const recordSyntheticReceipt = async (userId: string, address: string): Promise<void> => {
+  const id = `setup-test:${userId}`;
+  const data = { id, userId, state: 'COMPLETE', encrypted: null, synthetic: true, quotaReserved: false, attempts: 0,
+    nextAttemptAt: Date.now(), lease: null, leaseUntil: 0, expiresAt: Date.now() + MAIL_RETENTION_MS, allowLargeLlm: false, allowSmallLlm: false };
+  // Reuse the private receipt store and coalesce repeated tests. The address is
+  // deliberately not persisted/logged; resolving it above checks alias storage.
+  if (!address) throw new Error('Alias unavailable');
+  await ensureMailAdmissionSchema();
+  if (firebase()) await getFirebaseDb().collection('ingestion_mail_receipts').doc(id).set(data);
+  else await getPg().query('INSERT INTO ingestion_mail_receipts(id,user_id,data) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data', [id,userId,JSON.stringify(data)]);
+};

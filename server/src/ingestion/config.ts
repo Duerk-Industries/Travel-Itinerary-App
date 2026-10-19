@@ -29,6 +29,7 @@ export const getIngestionForwardingAddress = (): string =>
 
 export const INGESTION_SUPPORTED_MIME_TYPES = [
   'text/plain',
+  'text/calendar',
   'text/html',
   'application/pdf',
   'image/png',

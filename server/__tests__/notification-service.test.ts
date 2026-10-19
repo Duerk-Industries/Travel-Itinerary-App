@@ -69,7 +69,7 @@ describe('notification service', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    const match = res.body.notifications.filter((n: any) => n.dedupe_key === 'dedupe-123');
+    const match = res.body.notifications.filter((n: any) => n.title === 'Dedupe Title');
     expect(match).toHaveLength(1);
   });
 
@@ -122,6 +122,18 @@ describe('notification service', () => {
       .get('/api/notifications')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    expect(updated.body.notifications.find((n: any) => n.id === id).read_at).toBeTruthy();
+    expect(updated.body.notifications.find((n: any) => n.id === id).readAt).toBeTruthy();
   });
+  it('honors email-only consent without showing a row in the inbox and dedupes its outbox intent', async () => {
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`).send({ preferences: [{ category: 'trip_digest', inApp: false, push: false, email: true }] }).expect(204);
+    const options = { userIds: [userId], category: 'trip_digest' as const, title: 'Email only', body: 'Summary', dedupeKey: 'email-only-dedupe' };
+    await notify(options); await notify(options);
+    const stored = await queryBlog('SELECT id,in_app FROM notifications WHERE user_id=$1 AND dedupe_key=$2', [userId,options.dedupeKey]);
+    expect(stored.rows).toHaveLength(1); expect(stored.rows[0].in_app).toBe(false);
+    const queued = await queryBlog('SELECT channel FROM notification_outbox WHERE notification_id=$1',[stored.rows[0].id]);
+    expect(queued.rows).toEqual([{ channel: 'email' }]);
+    const inbox = await request(app).get('/api/notifications').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(inbox.body.notifications.some((row: any) => row.id === stored.rows[0].id)).toBe(false);
+  });
+
 });

@@ -8,6 +8,8 @@ import { readAsyncOrThrow, removeAsyncOrThrow, writeAsyncOrThrow } from './persi
  */
 export type OfflineTripSnapshot = {
   tripId: string;
+  bundleEtag?: string;
+  bundleCostTracking?: boolean;
   savedAt: number;
   trip: unknown;
   groupMembers: unknown[];

@@ -1,82 +1,78 @@
-import { Router } from 'express';
+import { Router, type Request, type Response, type RequestHandler } from 'express';
+import { z } from 'zod';
 import { authenticate } from '../auth';
+import { ensureUserCanReadTrip, getActivityById } from '../db';
 import { notificationRepository } from '../services/notificationRepository';
+import { DEFAULT_PREFERENCES, getNotificationPreference } from '../services/notificationService';
+import { notificationCursor, parseNotificationCursor } from '../services/notificationCursor';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { encryptPushToken, hashPushToken } from '../utils/pushTokenCrypto';
+import type { NotificationCategory } from '../types';
 
-const router = Router();
-router.use(authenticate);
-
-const userIdOf = (req: any): string => String(req.user?.userId ?? '');
-
-// architecture §9.1 — fail-closed (entitlementService.ts's FAIL_CLOSED_FLAGS): the in-app inbox
-// itself, not just delivery, is gated so the whole surface can be switched off cleanly.
-router.use(async (req, res, next) => {
-  if (!(await isFeatureEnabled('notifications_in_app'))) {
-    res.status(404).json({ error: 'Notifications are not enabled' });
-    return;
-  }
-  next();
+const router = Router(); router.use(authenticate);
+const owner = (req: Request): string => String((req as Request & { user: { userId: string } }).user.userId);
+const safe = (fn: (req: Request, res: Response) => Promise<void>): RequestHandler => (req, res) => {
+  void fn(req, res).catch(() => { if (!res.headersSent) res.status(503).json({ error: 'Notifications are temporarily unavailable.' }); });
+};
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('Vary', 'Authorization');
+  void isFeatureEnabled('notifications_in_app').then(enabled => enabled ? next() : res.status(404).json({ error: 'Notifications are not enabled' })).catch(() => res.status(503).end());
 });
-
-router.get('/', async (req, res) => {
-  const options = {
-    limit: req.query.limit ? Number(req.query.limit) : undefined,
-    cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
-    unreadOnly: req.query.unreadOnly === 'true',
-  };
-  const notifications = await notificationRepository().listNotifications(userIdOf(req), options);
-  const unreadCount = await notificationRepository().getUnreadCount(userIdOf(req));
-  res.json({ notifications, unreadCount });
+const normalize = (row: Record<string, any>) => ({
+  id: String(row.id), category: row.category, tripId: row.tripId ?? row.trip_id ?? null,
+  title: String(row.title), body: String(row.body), readAt: row.readAt ?? row.read_at ?? null,
+  createdAt: new Date(row.createdAt ?? row.created_at).toISOString(),
 });
-
-router.post('/read', async (req, res) => {
-  const ids = req.body.all === true ? 'all' : Array.isArray(req.body.ids) ? req.body.ids : [];
-  await notificationRepository().markAsRead(userIdOf(req), ids);
+router.get('/', safe(async (req, res) => {
+  const query = z.object({ limit: z.coerce.number().int().min(1).max(50).default(20), cursor: z.string().max(2048).optional(), unreadOnly: z.enum(['true', 'false']).optional() }).safeParse(req.query);
+  if (!query.success) { res.status(400).json({ error: 'Invalid notification page.' }); return; }
+  try { parseNotificationCursor(query.data.cursor); } catch { res.status(400).json({ error: 'Invalid notification cursor.' }); return; }
+  const repository = notificationRepository();
+  const rows = await repository.listNotifications(owner(req), { ...query.data, unreadOnly: query.data.unreadOnly === 'true' });
+  const notifications = await Promise.all(rows.map(async row => {
+    const notification = normalize(row);
+    if (notification.tripId && !(await ensureUserCanReadTrip(notification.tripId, owner(req)))) return { ...notification, title: 'Update unavailable', body: 'You no longer have access to this trip.', tripId: null };
+    return notification;
+  }));
+  res.json({ notifications, unreadCount: await repository.getUnreadCount(owner(req)),
+    nextCursor: rows.length === query.data.limit ? notificationCursor(normalize(rows[rows.length - 1])) : null });
+}));
+router.post('/read', safe(async (req, res) => {
+  const parsed = z.union([z.object({ all: z.literal(true) }), z.object({ ids: z.array(z.string().min(1).max(512)).max(100) })]).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Choose up to 100 notifications.' }); return; }
+  await notificationRepository().markAsRead(owner(req), 'all' in parsed.data ? 'all' : [...new Set(parsed.data.ids)]);
   res.status(204).end();
-});
-
-router.get('/devices', async (req, res) => {
-  const devices = await notificationRepository().listDevices(userIdOf(req));
-  res.json({ devices });
-});
-
-router.post('/devices', async (req, res) => {
-  // The client sends the raw Expo push token over HTTPS — the server encrypts it here (never the
-  // client; see pushTokenCrypto.ts) before it's persisted. pushTokenHash is derived server-side
-  // too, not trusted from the request, since it's the UNIQUE(user_id, push_token_hash) upsert key.
-  const { platform, pushToken, deviceLabel } = req.body;
-  if (!platform || typeof pushToken !== 'string' || !pushToken.trim()) {
-    res.status(400).json({ error: 'Missing required device fields' });
-    return;
-  }
-  if (!['ios', 'android', 'web'].includes(platform)) {
-    res.status(400).json({ error: 'Unsupported platform' });
-    return;
-  }
-  const trimmedToken = pushToken.trim();
-  await notificationRepository().upsertDevice(userIdOf(req), {
-    platform,
-    pushTokenCiphertext: encryptPushToken(trimmedToken),
-    pushTokenHash: hashPushToken(trimmedToken),
-    deviceLabel,
-  });
+}));
+router.get('/preferences', safe(async (req, res) => {
+  const saved = await notificationRepository().getPreferences([owner(req)]);
+  const preferences = await Promise.all((Object.keys(DEFAULT_PREFERENCES) as NotificationCategory[]).map(async category => ({ category, ...await getNotificationPreference(owner(req), category, saved) })));
+  res.json({ preferences });
+}));
+router.patch('/preferences', safe(async (req, res) => {
+  const schema = z.object({ preferences: z.array(z.object({ category: z.enum(Object.keys(DEFAULT_PREFERENCES) as [string, ...string[]]), inApp: z.boolean(), push: z.boolean(), email: z.boolean() }).strict()).max(30) }).strict();
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Invalid notification preferences.' }); return; }
+  await notificationRepository().updatePreferences(owner(req), parsed.data.preferences); res.status(204).end();
+}));
+router.get('/devices', safe(async (req, res) => { res.json({ devices: await notificationRepository().listDevices(owner(req)) }); }));
+router.post('/devices', safe(async (req, res) => {
+  const parsed = z.object({ platform: z.enum(['ios', 'android', 'web']), pushToken: z.string().trim().min(1).max(1024), deviceLabel: z.string().max(120).optional() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Invalid device registration.' }); return; }
+  await notificationRepository().upsertDevice(owner(req), { platform: parsed.data.platform, pushTokenCiphertext: encryptPushToken(parsed.data.pushToken), pushTokenHash: hashPushToken(parsed.data.pushToken), deviceLabel: parsed.data.deviceLabel });
   res.status(204).end();
-});
-
-router.delete('/devices/:id', async (req, res) => {
-  await notificationRepository().deleteDevice(userIdOf(req), req.params.id);
-  res.status(204).end();
-});
-
-router.patch('/preferences', async (req, res) => {
-  const { preferences } = req.body;
-  if (!Array.isArray(preferences)) {
-    res.status(400).json({ error: 'preferences must be an array' });
-    return;
+}));
+router.delete('/devices/:id', safe(async (req, res) => { await notificationRepository().deleteDevice(owner(req), String(req.params.id)); res.status(204).end(); }));
+router.get('/:id/open', safe(async (req, res) => {
+  const row = await notificationRepository().getNotificationById(String(req.params.id));
+  if (!row || (row.userId ?? row.user_id) !== owner(req)) { res.status(404).json({ error: 'Update unavailable.' }); return; }
+  const tripId = row.tripId ?? row.trip_id;
+  if (tripId && !(await ensureUserCanReadTrip(String(tripId), owner(req)))) { res.status(403).json({ error: 'You no longer have access to this trip.' }); return; }
+  const activityId = row.payload?.activityId;
+  if (activityId) {
+    const activity = await getActivityById(String(activityId));
+    if (!activity || activity.tripId !== tripId) { res.status(404).json({ error: 'This activity is no longer available.' }); return; }
   }
-  await notificationRepository().updatePreferences(userIdOf(req), preferences);
-  res.status(204).end();
-});
-
+  // Never return an arbitrary stored URL for the client to follow.
+  res.json({ tripId: tripId || null, page: row.category === 'import_result' ? 'ingest' : row.category === 'activity_recap' ? 'blog' : 'overview', activityId: activityId || null });
+}));
 export default router;

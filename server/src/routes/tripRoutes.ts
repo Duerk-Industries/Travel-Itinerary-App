@@ -1,3 +1,7 @@
+import { z } from 'zod';
+import { getEnvFlag } from '../env';
+import { readPlanningBundle } from '../services/planningBundleService';
+import { PlanningError } from '../services/planningOperations';
 import { Router } from 'express';
 import { recordServerEvent } from '../analytics/ingestService';
 import bodyParser from 'body-parser';
@@ -100,6 +104,23 @@ const isPastUtcDate = (value?: string | null): boolean => Boolean(value && value
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
+
+router.get('/:id/bundle', async (req, res) => {
+  res.set({ 'Cache-Control': 'private, no-cache', Vary: 'Authorization' });
+  if (!z.string().uuid().safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid trip' }); return; }
+  try {
+    if (!getEnvFlag('TRIP_BUNDLE_VERSIONING') || !(await isFeatureEnabled('trip_bundle'))) { res.status(404).json({ error: 'Bundle unavailable' }); return; }
+    const user = (req as any).user as TokenPayload;
+    const result = await readPlanningBundle(user.userId, req.params.id, user.role, req.get('If-None-Match'));
+    res.set('ETag', result.etag);
+    if (!result.bundle) { res.status(304).end(); return; }
+    res.json(result.bundle);
+  } catch (error) {
+    if (error instanceof PlanningError) { res.status(error.status).json({ error: error.message, code: error.code }); return; }
+    res.status(503).json({ error: 'Saved trip download is temporarily unavailable' });
+  }
+});
+
 
 // Following is not yet implemented server-side; return empty data instead of 404s for client calls.
 router.get('/followed', async (req, res) => {
@@ -603,6 +624,17 @@ router.get('/:id/messages', async (req, res) => {
   const limit = Math.min(Number(req.query.limit ?? 200), 500);
   const messages = await listTripMessages(req.params.id, limit);
   res.json({ tripId: req.params.id, messages });
+});
+
+router.get('/:id/planning-capabilities', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const access = await ensureUserCanReadTrip(String(req.params.id), userId);
+    if (!access) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
+    const [map, nearby, partner] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions'].map(key => isFeatureEnabled(key)));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ map, nearby: nearby && access.access === 'member', partner });
+  } catch { res.status(503).json({ error: 'Planning options are temporarily unavailable.' }); }
 });
 
 router.get('/:id/covered-by', async (req, res) => {

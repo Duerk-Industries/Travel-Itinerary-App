@@ -9,6 +9,7 @@ import {
   INGESTION_WEBHOOK_MAX_AGE_MS,
 } from '../config';
 import type { IngestionPayload } from '../contracts';
+import { sha256 } from '../shared/hashing';
 import { deleteTempBytes } from '../shared/tempStorage';
 import { MAIL_MAX_BYTES, resolveMailAlias } from '../shared/mailAdmission';
 import { isSupportedMimeType, normalizeMimeType } from '../shared/parserSelection';
@@ -139,7 +140,7 @@ export const buildMailgunWebhookPayloads = async (req: Request, userId: string, 
   const receivedAtRaw = getHeaderValue(body, 'Date') ?? coerceString(body.Date) ?? new Date().toISOString();
   const receivedAt = Number.isNaN(new Date(receivedAtRaw).getTime()) ? new Date().toISOString() : new Date(receivedAtRaw).toISOString();
   const strippedText = coerceString(body['stripped-text'] ?? body['body-plain'] ?? body.text);
-  const strippedHtml = coerceString(body['stripped-html'] ?? body['body-html'] ?? body.html);
+  const strippedHtml = coerceString(body['body-html'] ?? body['stripped-html'] ?? body.html);
 
   const payloads: IngestionPayload[] = [];
   const commonMetadata = {
@@ -184,6 +185,15 @@ export const buildMailgunWebhookPayloads = async (req: Request, userId: string, 
           },
         })
       );
+    }
+
+    if (strippedText && strippedHtml && payloads[0]) {
+      const scannedHtml = await buildWebhookPayload({ sourceType: 'FORWARDED_MAILBOX', userId,
+        filename: 'structured-email.html', mimeType: 'text/html', bytes: Buffer.from(strippedHtml),
+        externalMessageId: `${messageId}::structured-html`, metadata: commonMetadata });
+      payloads[0].contentHash = sha256(`${payloads[0].contentHash}:${scannedHtml.contentHash}`);
+      payloads[0].metadata.structuredHtml = strippedHtml;
+      await deleteTempBytes(scannedHtml.contentBytesRef);
     }
 
     for (let index = 0; index < files.length; index += 1) {

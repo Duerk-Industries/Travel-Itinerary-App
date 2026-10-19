@@ -1,9 +1,11 @@
-import { randomUUID } from 'crypto';
+import { putNotificationWork } from './notificationWorkRepository';
+import { createHash, randomUUID } from 'crypto';
 import { notificationRepository } from './notificationRepository';
 import { logError, logInfo } from '../logger';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { isFeatureEnabled } from './entitlementService';
-import { getUserById } from '../db';
+import { getNotificationPreference } from './notificationService';
+import { ensureUserCanReadTrip, getUserById } from '../db';
 import { sendNotificationEmail } from '../mailer';
 import { sendExpoPushNotifications } from '../apis/expoPushApi';
 import { decryptPushToken } from '../utils/pushTokenCrypto';
@@ -11,14 +13,14 @@ import { decryptPushToken } from '../utils/pushTokenCrypto';
 // Phase 4.5: Notification outbox worker.
 // Durable, leased provider delivery (architecture §13.3).
 
-const BATCH_SIZE = 50;
-const LEASE_SECONDS = 60;
+const BATCH_SIZE = 10;
+const LEASE_SECONDS = 300;
 const TICK_MS = 5000;
 
-export const startNotificationOutboxWorker = () => {
+export class NotificationDeliveryPaused extends Error {}
+
+export const drainNotificationOutbox = async (): Promise<void> => {
   const leaseOwner = `outbox-worker-${randomUUID()}`;
-  setInterval(async () => {
-    try {
       if (!(await isFeatureEnabled('notifications_outbox_enabled'))) return;
 
       const batch = await notificationRepository().claimOutboxBatch(leaseOwner, BATCH_SIZE, LEASE_SECONDS);
@@ -33,8 +35,12 @@ export const startNotificationOutboxWorker = () => {
           } else if (entry.channel === 'email') {
             await deliverEmail(entry);
           }
-          await notificationRepository().updateOutboxState(entry.id, 'sent');
+          await notificationRepository().updateOutboxState(entry.id, 'sent', { leaseOwner });
         } catch (err) {
+          if (err instanceof NotificationDeliveryPaused) {
+            await notificationRepository().updateOutboxState(entry.id, 'pending', { nextAttemptAt: new Date(Date.now() + 60 * 60_000), leaseOwner, lastErrorCode: 'CHANNEL_PAUSED' });
+            continue;
+          }
           // entry.attempt_count (Postgres row) vs entry.attemptCount (Firestore doc) — the two
           // repositories don't share a casing convention (see notificationRepository.ts), so this
           // reads whichever one the active provider actually set.
@@ -42,17 +48,17 @@ export const startNotificationOutboxWorker = () => {
           const isDead = attemptCount >= 5;
           const nextAttemptAt = new Date(Date.now() + Math.pow(2, attemptCount) * 1000);
           await notificationRepository().updateOutboxState(entry.id, isDead ? 'dead' : 'pending', {
-            attemptCount,
+            leaseOwner, attemptCount,
             nextAttemptAt,
             lastErrorCode: String((err as any)?.message || 'DELIVERY_FAILED').slice(0, 100),
           });
           logError(`[notification-outbox] delivery failed for entry ${entry.id}`, err);
         }
       }
-    } catch (err) {
-      logError('[notification-outbox] worker tick failed', err);
-    }
-  }, TICK_MS);
+
+};
+export const startNotificationOutboxWorker = () => {
+  setInterval(() => { void drainNotificationOutbox().catch(error => logError('[notification-outbox] worker tick failed', error)); }, TICK_MS);
 };
 
 // Both repositories' rows are read defensively below (snake_case Postgres columns vs camelCase
@@ -64,36 +70,37 @@ export const deliverPush = async (entry: any) => {
   if (!notification) return; // notification since pruned/deleted — nothing left to deliver
 
   const userId = String(notification.user_id ?? notification.userId ?? '');
-  // The notifications_push flag gates real Expo sending only, not the email fallback below — an
-  // admin turning mobile push off (or it defaulting off pre-launch; see feature-flags.yaml) is a
-  // reason to treat this user as device-less, not a reason to skip notifying them entirely.
+  const tripId = notification.trip_id ?? notification.tripId;
+  if (tripId && !(await ensureUserCanReadTrip(String(tripId), userId))) return;
+  const preference = await getNotificationPreference(userId, notification.category);
+  if (!preference.push) return;
   const pushEnabled = await isFeatureEnabled('notifications_push');
+  if (!pushEnabled) throw new NotificationDeliveryPaused('Push delivery is paused');
   const devices = pushEnabled ? await notificationRepository().listActivePushDevicesForUser(userId) : [];
 
   if (!devices.length) {
-    // No mobile device registered for this user — most likely someone using the web app, which
-    // has no push token to deliver to. Product decision: fall back to a real email so "push:true"
-    // still reaches them somehow (see notifications_email's description in feature-flags.yaml).
-    await deliverEmail(entry);
-    return;
+    // Independently consented email already has its own atomic outbox row.
+    // Sending it here as well would duplicate email on no-device retries.
+    throw new NotificationDeliveryPaused('No consenting mobile device');
   }
-
-  const title = String(notification.title ?? '');
-  const body = String(notification.body ?? '');
-  const deepLink = notification.deep_link ?? notification.deepLink ?? null;
 
   const messages = devices.map((d) => ({
     to: decryptPushToken(String(d.push_token_ciphertext ?? d.pushTokenCiphertext ?? '')),
     sound: 'default' as const,
-    title,
-    body,
-    data: { deepLink, notificationId: notification.id },
+    title: 'Travel update',
+    body: 'Open WanderBunnies to view this update.',
+    data: { notificationId: notification.id },
   }));
 
   const { tickets } = await sendExpoPushNotifications({ caller: 'NOTIFICATION_PUSH', messages });
 
   await Promise.all(devices.map(async (device, index) => {
     const ticket = tickets[index];
+    if (ticket?.status === 'ok') {
+      await putNotificationWork({ id: createHash('sha256').update(`receipt:${ticket.id}`).digest('hex'), kind: 'receipt', dueAt: Date.now() + 15 * 60_000,
+        data: { ticketId: ticket.id, deviceId: device.id, userId, expiresAt: Date.now() + 24 * 3600_000 } });
+      return;
+    }
     if (!ticket || ticket.status !== 'error') return;
     // DeviceNotRegistered means the OS has revoked this token (app uninstalled, etc.) — it will
     // never succeed again, so disable it outright rather than letting failure_count creep up on a
@@ -104,15 +111,19 @@ export const deliverPush = async (entry: any) => {
       await notificationRepository().incrementDeviceFailure(device.id);
     }
   }));
+  if (tickets.some(ticket => !ticket || (ticket.status === 'error' && ticket.details?.error !== 'DeviceNotRegistered'))) throw new Error('PUSH_RETRY_REQUIRED');
 };
 
 export const deliverEmail = async (entry: any) => {
-  if (!(await isFeatureEnabled('notifications_email'))) return;
+  if (!(await isFeatureEnabled('notifications_email'))) throw new NotificationDeliveryPaused('Email delivery is paused');
 
   const notification = await notificationRepository().getNotificationById(notificationIdOf(entry));
   if (!notification) return;
 
   const userId = String(notification.user_id ?? notification.userId ?? '');
+  const tripId = notification.trip_id ?? notification.tripId;
+  if (tripId && !(await ensureUserCanReadTrip(String(tripId), userId))) return;
+  if (!(await getNotificationPreference(userId, notification.category)).email) return;
   const user = await getUserById(userId);
   if (!user?.email) return; // nothing to send to — not a delivery failure worth retrying
 

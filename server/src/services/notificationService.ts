@@ -1,3 +1,4 @@
+import { getIo } from '../socket';
 import { notificationRepository } from './notificationRepository';
 import { NotificationCategory } from './notificationTypes';
 import { logError } from '../logger';
@@ -13,9 +14,14 @@ export interface NotifyOptions {
   payload?: Record<string, any>;
   dedupeKey?: string | null;
   threadKey?: string | null;
+  requireDurable?: boolean;
 }
 
-const DEFAULT_PREFERENCES: Record<string, { inApp: boolean; push: boolean; email: boolean }> = {
+export const DEFAULT_PREFERENCES: Record<string, { inApp: boolean; push: boolean; email: boolean }> = {
+  import_result: { inApp: true, push: false, email: false },
+  cancellation_deadline: { inApp: true, push: false, email: false },
+  ai_finished: { inApp: true, push: false, email: false },
+  trip_digest: { inApp: false, push: false, email: false },
   blog_mention: { inApp: true, push: true, email: false },
   blog_comment_reply: { inApp: true, push: true, email: false },
   blog_nudge: { inApp: true, push: false, email: false },
@@ -51,32 +57,27 @@ export const notify = async (options: NotifyOptions): Promise<void> => {
       // field and always fall through to "enabled" regardless of what the default actually says.
       const inAppEnabled = userPref.in_app ?? userPref.inApp ?? true;
 
-      let notificationId: string | null = null;
-      if (inAppEnabled !== false) {
-        notificationId = await notificationRepository().createNotification({
-          userId,
-          category,
-          tripId: options.tripId,
-          actorUserId: options.actorUserId,
-          title: options.title,
-          body: options.body,
-          deepLink: options.deepLink,
-          payload: options.payload,
-          dedupeKey: options.dedupeKey,
-        });
-      }
-
-      if (notificationId) {
-        const outboxEntries: any[] = [];
-        if (userPref.push) outboxEntries.push({ notificationId, channel: 'push' });
-        if (userPref.email) outboxEntries.push({ notificationId, channel: 'email' });
-
-        if (outboxEntries.length) {
-          await notificationRepository().enqueueOutbox(outboxEntries);
-        }
-      }
+      // Independent channel consent: email-only users still need a durable
+      // delivery row; it is excluded from inbox history/counts.
+      if (inAppEnabled === false && !userPref.push && !userPref.email) continue;
+      const channels: Array<'push' | 'email'> = [];
+      if (userPref.push) channels.push('push');
+      if (userPref.email) channels.push('email');
+      await notificationRepository().createNotificationWithOutbox({
+        userId, category, inApp: inAppEnabled !== false, tripId: options.tripId ?? null,
+        actorUserId: options.actorUserId ?? null, title: options.title, body: options.body,
+        deepLink: options.deepLink ?? null, payload: options.payload ?? {}, dedupeKey: options.dedupeKey ?? null,
+      }, channels);
+      getIo()?.to(`user:${userId}`).emit('notification:changed', {});
     }
   } catch (err) {
     logError('[notification-service] failed to dispatch notifications', err);
+    if (options.requireDurable) throw err;
   }
+};
+
+export const getNotificationPreference = async (userId: string, category: NotificationCategory, rows?: any[]): Promise<{ inApp: boolean; push: boolean; email: boolean }> => {
+  const saved = (rows ?? await notificationRepository().getPreferences([userId])).find(row => row.category === category);
+  const fallback = DEFAULT_PREFERENCES[category] || { inApp: true, push: false, email: false };
+  return { inApp: saved?.in_app ?? saved?.inApp ?? fallback.inApp, push: saved?.push ?? fallback.push, email: saved?.email ?? fallback.email };
 };

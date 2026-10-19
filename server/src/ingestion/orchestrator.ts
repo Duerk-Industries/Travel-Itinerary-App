@@ -325,6 +325,20 @@ export const runIngestionPipeline = async (
   return processImportJob(job.id, overrides);
 };
 
+/** Manual-text preview uses the same normalization, schemas, cache and budget
+ * policy as imports. It creates no trip item or review-queue duplicate. */
+export const previewIngestionPayload = async (payload: IngestionPayload, allowLargeLlm: boolean, allowSmallLlm: boolean): Promise<ExtractionResult> => {
+  const config = buildProcessorConfig(allowLargeLlm, allowSmallLlm);
+  const { job } = await ensureImportJob(payload, config);
+  try {
+    const doc = await normalizeIngestionPayload(job.id, payload);
+    const result = await extractCandidates(doc, { userId: payload.userId, importJobId: job.id, contentHash: payload.contentHash,
+      correlationId: payload.correlationId, logicVersion: config.logicVersion, allowLargeLlm, allowSmallLlm });
+    await updateImportJobState({ jobId: job.id, state: 'COMPLETED' });
+    return result;
+  } finally { await deleteTempBytes(payload.contentBytesRef); }
+};
+
 export const requeueDeadLetterImportJob = async (jobId: string): Promise<PersistedImportJob> => {
   const job = await requeueImportJob(jobId);
   if (!job) {

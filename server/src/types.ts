@@ -307,6 +307,10 @@ export interface WebUser {
 }
 
 export interface Flight {
+  departureLat?: number | null;
+  departureLng?: number | null;
+  arrivalLat?: number | null;
+  arrivalLng?: number | null;
   id: string;
   userId: string;
   status: ItineraryStatus;
@@ -588,7 +592,26 @@ export interface Trait {
   createdAt: string;
 }
 
-export interface Lodging {
+export type CoordinateSource = 'catalog' | 'airport' | 'manual';
+export interface PlanningCoordinates {
+  lat?: number | null;
+  lng?: number | null;
+  geoCity?: string | null;
+  coordinateSource?: CoordinateSource | null;
+}
+export type PlanningMapPoint = PlanningCoordinates & {
+  id: string; kind: 'flight' | 'lodging' | 'activity' | 'car_rental';
+  title: string; address?: string; label?: string;
+};
+export type NearbyPlace = {
+  catalogId: string; name: string; lat: number; lng: number; distanceMeters: number;
+  activityType: ActivityType; description: string; durationMinutes: number;
+  sourceUrl: string | null; sourceLabel: string | null;
+};
+export type CatalogActivityCreate = { tripId: string; date: string; catalogId: string; operationKey: string };
+export type CatalogActivityResult = { activity: Activity; replayed: boolean };
+
+export interface Lodging extends PlanningCoordinates {
   id: string;
   user_id: string;
   trip_id: string;
@@ -614,7 +637,9 @@ export interface Lodging {
   placeId?: string;
 }
 
-export interface Activity {
+export interface Activity extends PlanningCoordinates {
+  catalogId?: string | null;
+  dayPosition?: number | null;
   id: string;
   userId: string;
   tripId: string;
@@ -642,7 +667,9 @@ export interface Activity {
 // Temporary compatibility alias while call sites transition to Activity naming.
 export type Tour = Activity;
 
-export interface CarRental {
+export interface CarRental extends PlanningCoordinates {
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
   id: string;
   userId: string;
   tripId: string;
@@ -1330,4 +1357,75 @@ export interface AnalyticsEventRecord {
   occurredAt: string;
   receivedAt: string;
   expiresAt: string;
+}
+
+export type NotificationCategory = 'blog_mention' | 'blog_comment_reply' | 'blog_nudge' | 'blog_reaction_digest' | 'blog_memory_lane' | 'blog_milestone' | 'blog_day_photo_reminder' | 'activity_recap' | 'import_result' | 'cancellation_deadline' | 'ai_finished' | 'trip_digest';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  category: NotificationCategory;
+  tripId?: string | null;
+  actorUserId?: string | null;
+  title: string;
+  body: string;
+  deepLink?: string | null;
+  payload: Record<string, any>;
+  readAt?: string | null;
+  seenAt?: string | null;
+  createdAt: string;
+  dedupeKey?: string | null;
+}
+
+export interface NotificationDevice {
+  id: string;
+  userId: string;
+  platform: 'ios' | 'android' | 'web';
+  pushTokenCiphertext: string;
+  pushTokenHash: string;
+  deviceLabel?: string | null;
+  permissionState: 'granted' | 'denied' | 'undetermined' | 'revoked';
+  lastSeenAt: string;
+  failureCount: number;
+  disabledAt?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationPreferences {
+  userId: string;
+  category: NotificationCategory;
+  inApp: boolean;
+  push: boolean;
+  email: boolean;
+}
+
+export interface NotificationOutboxEntry {
+  id: string;
+  notificationId: string;
+  channel: 'push' | 'email';
+  state: 'pending' | 'leased' | 'sent' | 'dead';
+  attemptCount: number;
+  nextAttemptAt: string;
+  leaseOwner?: string | null;
+  leaseExpiresAt?: string | null;
+  lastErrorCode?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Private member projection. Never used for public/followed trip pages. */
+export interface PlanningBundle {
+  schemaVersion: 1;
+  tripId: string;
+  representation: { costTracking: boolean };
+  trip: Trip;
+  groupMembers: unknown[];
+  flights: Flight[];
+  lodgings: Lodging[];
+  tours: Activity[];
+  carRentals: CarRental[];
+  expenses: unknown[];
+  payments: unknown[];
+  coveredBy: Record<string, string>;
+  itinerary: { id: string; planMarkdown: string | null; details: ItineraryDetail[] } | null;
 }

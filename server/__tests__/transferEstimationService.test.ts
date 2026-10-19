@@ -6,6 +6,7 @@ import { ApiLimitExceededError } from '../src/apis/usageLimiter';
 
 jest.mock('../src/services/entitlementService', () => ({
   isFeatureEnabled: jest.fn(),
+  assertCanUseFeature: jest.fn(async () => undefined),
 }));
 jest.mock('axios');
 jest.mock('../src/apis/usageLimiter', () => {
@@ -92,7 +93,7 @@ describe('getTransferEstimator', () => {
 
   it('returns the directions-api estimator when the flag is on', async () => {
     mockedEntitlement.isFeatureEnabled.mockResolvedValue(true);
-    const estimator = await getTransferEstimator();
+    const estimator = await getTransferEstimator('authorized-user');
     expect(estimator).toBeInstanceOf(DirectionsApiTransferEstimator);
   });
 });

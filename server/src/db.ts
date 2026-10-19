@@ -819,3 +819,8 @@ export const getTripTimezone = async (...args: Parameters<ReturnType<typeof adap
   adapter().getTripTimezone(...args);
 export const setTripTimezone = async (...args: Parameters<ReturnType<typeof adapter>['setTripTimezone']>) =>
   adapter().setTripTimezone(...args);
+
+export const createCatalogActivity = async (...args: Parameters<ReturnType<typeof adapter>['createCatalogActivity']>) => adapter().createCatalogActivity(...args);
+export const undoCatalogActivity = async (...args: Parameters<ReturnType<typeof adapter>['undoCatalogActivity']>) => adapter().undoCatalogActivity(...args);
+
+export const getPlanningRevision = async (...args: Parameters<ReturnType<typeof adapter>['getPlanningRevision']>) => adapter().getPlanningRevision(...args);

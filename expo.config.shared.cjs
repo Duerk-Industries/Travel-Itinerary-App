@@ -212,9 +212,10 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
           iosActivationRules: {
             NSExtensionActivationSupportsImageWithMaxCount: 20,
             NSExtensionActivationSupportsMovieWithMaxCount: 20,
+            NSExtensionActivationSupportsFileWithMaxCount: 10,
           },
-          androidIntentFilters: ['image/*', 'video/*'],
-          androidMultiIntentFilters: ['image/*', 'video/*'],
+          androidIntentFilters: ['image/*', 'video/*', 'application/pdf'],
+          androidMultiIntentFilters: ['image/*', 'video/*', 'application/pdf'],
           // Explicit rather than relying on the plugin's implicit default
           // (`group.${bundleIdentifier}`, which this happens to match) — this is
           // the exact string that must be registered as an "App Groups" identifier

@@ -1,3 +1,4 @@
+import { extractStructured } from './structuredExtractor';
 import { createHash } from 'crypto';
 import { INGESTION_CONFIDENCE_HIGH, INGESTION_CONFIDENCE_REVIEW_READY, INGESTION_FEATURE_FLAGS, INGESTION_JOB_TOKEN_BUDGET_USD, INGESTION_LOGIC_VERSION } from '../config';
 import type { ExtractionConfig, ExtractionResult, NormalizedDocument, ParsedItemCandidate, ParsedItemType, TimezoneStatus } from '../contracts';
@@ -1332,6 +1333,24 @@ export const extractCandidates = async (
     correlationId: config.correlationId,
     aiProvider: config.aiProvider,
   };
+
+  if (await isFeatureEnabled('planning_structured_import')) {
+    const [primaryPolicy, secondaryPolicy] = await Promise.all([getActiveAiProvider('ingestion_llm_extract'), getActiveAiProvider('ingestion_llm_extract_secondary')]);
+    const policy = createHash('sha256').update(JSON.stringify([primaryPolicy, secondaryPolicy, extractionConfig.allowSmallLlm, extractionConfig.allowLargeLlm,
+      getConfiguredProviderModels(primaryPolicy.provider, []), getConfiguredProviderModels(secondaryPolicy.provider, [])])).digest('hex').slice(0, 16);
+    extractionConfig.logicVersion += `:structured-v1:${policy}`;
+    const exact = await getExtractionCacheEntry(extractionConfig.userId, extractionConfig.contentHash, extractionConfig.logicVersion);
+    if (exact && (exact as any).metadata?.strategyName === 'StructuredReservationParser') return exact as unknown as ExtractionResult;
+    const structured = extractStructured(doc, extractionConfig.logicVersion);
+    if (structured) {
+      const result = await validateAndAdjustExtractionResult(sanitizeExtractionResult(structured));
+      await recordUsageMetering({ userId: extractionConfig.userId, importJobId: extractionConfig.importJobId,
+        sourceType: doc.sourceType, parserStage: 'StructuredReservationParser', provider: 'structured', modelName: null,
+        tokenCountIn: 0, tokenCountOut: 0, estimatedCostUsd: 0 });
+      await saveExtractionCacheEntry(extractionConfig.userId, extractionConfig.contentHash, extractionConfig.logicVersion, result as unknown as Record<string, unknown>);
+      return result;
+    }
+  }
 
   const parserConsensusFlagEnabled = getEnvValue('NODE_ENV', { defaultValue: 'development' }) === 'production'
     && await isFeatureEnabled(INGESTION_FEATURE_FLAGS.parserConsensus).catch(() => false);

@@ -2832,7 +2832,7 @@ const attachAttractionMetadata = async (
   let estimator: TransferEstimator | null = null;
   if (userId) {
     try {
-      estimator = await getTransferEstimator();
+      estimator = await getTransferEstimator(userId);
     } catch (err) {
       logError('[itinerary] transfer estimator init failed; skipping transfer time estimation', err);
     }
