@@ -1,4 +1,4 @@
-import { trackMemoryPlanningWrites } from './services/planningMemoryRevision';
+import { memoryPlanningRevision, trackMemoryPlanningWrites } from './services/planningMemoryRevision';
 import { AsyncLocalStorage } from 'async_hooks';
 // server/src/db.ts
 import type {
@@ -13829,7 +13829,7 @@ export { createCatalogActivityPostgres as createCatalogActivity, undoCatalogActi
 
 /** Revision scopes are updated by DB triggers, including non-facade writers. */
 export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {
-  if (getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || getEnvValue('DATABASE_URL')?.startsWith('pg-mem://')) return (await import('./services/planningMemoryRevision')).memoryPlanningRevision();
+  if (getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || getEnvValue('DATABASE_URL')?.startsWith('pg-mem://')) return memoryPlanningRevision();
   const result = await getPool().query('SELECT scope,revision FROM planning_revisions WHERE scope = ANY($1::text[]) ORDER BY scope', [[`trip:${tripId}`, `group:${groupId}`, 'global:profiles']]);
   return JSON.stringify(result.rows);
 };
