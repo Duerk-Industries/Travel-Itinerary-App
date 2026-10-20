@@ -3,6 +3,7 @@ import type { PendingWriteStore } from './pendingWriteStore';
 
 export const PENDING_REPLAY_LEASE_MS = 30_000;
 export const MAX_PENDING_REPLAY_BATCH = 20;
+export const MAX_PENDING_REPLAY_DURATION_MS = 45_000;
 
 /** Persistent ownership survives tab crashes. Every result commits separately
  * under the same fencing token, so a stale/suspended worker cannot overwrite a
@@ -22,14 +23,16 @@ export const replayTransactionalPending = async (options: {
   }, 10_000);
   const started = Date.now();
   try {
-    const snapshot = (await store.read(key)).filter(entry => entry.status !== 'failed')
+    const eligibleAt = Date.now();
+    const snapshot = (await store.read(key)).filter(entry => entry.status !== 'failed'
+      && (options.ignoreBackoff || (entry.nextAttemptAtMs ?? 0) <= eligibleAt))
       .sort((a, b) => a.enqueuedAtMs - b.enqueuedAtMs || a.id.localeCompare(b.id)).slice(0, MAX_PENDING_REPLAY_BATCH);
     for (const initial of snapshot) {
-      if (!owned || !current() || Date.now() - started >= 45_000) break;
+      if (!owned || !current() || Date.now() - started >= MAX_PENDING_REPLAY_DURATION_MS) break;
       if (!await store.renew(key, token, PENDING_REPLAY_LEASE_MS)) break;
       const entry = (await store.read(key)).find(candidate => candidate.id === initial.id);
       if (!entry || entry.status === 'failed' || (!options.ignoreBackoff && (entry.nextAttemptAtMs ?? 0) > Date.now())) continue;
-      if (!current() || !owned) break;
+      if (!current() || !owned || Date.now() - started >= MAX_PENDING_REPLAY_DURATION_MS) break;
       let result;
       try { result = await options.replay(entry); } catch { result = false; }
       if (!current() || !owned) break;

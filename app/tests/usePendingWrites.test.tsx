@@ -389,3 +389,19 @@ it('exposes corrupt queue recovery data only for the current account', async () 
   rerender({ key: 'another-owner' });
   expect(await result.current.getRecoveryData()).toBeNull();
 });
+
+
+it('bounds legacy replay and resumes past entries waiting for backoff', async () => {
+  window.localStorage.clear();
+  const delayed = Array.from({ length: 20 }, (_, n) => ({ id: `delayed-${n}`, kind: 'expense', args: {}, enqueuedAtMs: n, attempts: 1, nextAttemptAtMs: Date.now() + 60_000 }));
+  const ready = Array.from({ length: 25 }, (_, n) => ({ id: `ready-${n}`, kind: 'expense', args: {}, enqueuedAtMs: n + 20, attempts: 0 }));
+  window.localStorage.setItem('bounded-replay', JSON.stringify([...delayed, ...ready]));
+  const { result } = renderHook(() => usePendingWrites({ storageKey: 'bounded-replay', maxAttempts: null }));
+  const send = jest.fn(async () => true);
+  await act(async () => { await result.current.replay(send); });
+  expect(send).toHaveBeenCalledTimes(20);
+  expect(result.current.pending).toHaveLength(25);
+  await act(async () => { await result.current.replay(send); });
+  expect(send).toHaveBeenCalledTimes(25);
+  expect(result.current.pending.map(e => e.id)).toEqual(delayed.map(e => e.id));
+});

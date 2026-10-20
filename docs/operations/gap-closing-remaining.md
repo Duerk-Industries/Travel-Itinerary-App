@@ -305,7 +305,7 @@ reused rather than suffixed.
 | §3.1 / §3.2 sender trust | Trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
 | §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
 | §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
-| §5.3 queue concurrency and recovery | Two-tab browser verification is done (`node scripts/check-queue-locks.cjs`: the IndexedDB lease is exclusive across two real tabs, hands over on release, refuses writes without the lease and ignores a clock-skewed lease; the localStorage fallback lock double-ran 0 of 40 simultaneous races, which can still happen rarely because localStorage has no compare-and-swap). Still open: encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; (the corrupt-queue repair/import flow is built; see above). Durable discard feedback and raw whole-queue recovery export are now implemented. |
+| §5.3 queue concurrency and recovery | Two-tab browser verification is done (`node scripts/check-queue-locks.cjs`: the IndexedDB lease is exclusive across two real tabs, hands over on release, refuses writes without the lease and ignores a clock-skewed lease; the localStorage fallback lock double-ran 0 of 40 simultaneous races, which can still happen rarely because localStorage has no compare-and-swap). Still open: encrypted native queue retention; native/device replay lifecycle evidence (bounded replay and automated resume/recovery checks are implemented; see the 2026-10-20 continuation below). The corrupt-queue repair/import flow is built (see above). Durable discard feedback and raw whole-queue recovery export are now implemented. |
 | §5.4 browser shell | Local Chromium install/offline reload and simulated HTML update checked. `firebase.json` hosting headers reviewed: `/sw.js` is `no-cache` with `Service-Worker-Allowed: /`, `/index.html` is `no-store`, the catch-all adds only the CSP (which already allows the tile host and blob workers). Still needs a real deployment check of hash-change recovery, signed-in offline flows and other browsers. Browser push and public explore remain later scope in §7. |
 
 Snapshot eviction is oldest-saved, not a claim of access-based LRU. Queue storage
@@ -360,3 +360,13 @@ of their respective slices; this audit takes precedence for completion status.
 - Workspace typechecks passed; production web export passed. Actual IndexedDB
   abort/isolation/concurrent-write checks passed in local Chromium. No native,
   real-provider or production deployment validation is claimed.
+
+
+### Bounded expense replay continuation — 2026-10-20
+
+- Due entries are filtered before selecting the oldest 20 operations, so a batch of delayed retries cannot starve later ready expenses.
+- Legacy/native replay now shares the transactional path's 20-entry and 45-second request-start bounds. Transactional replay checks elapsed time again after awaiting storage, before starting HTTP. An in-flight expense request retains its existing 15-second timeout; the drain budget does not cancel an already-started request.
+- Automated coverage exercises a second bounded drain, backoff starvation, foreground resume with the original operation key and listener cleanup, account fencing, interrupted per-entry commits, lease replacement, concurrent discard, authentication pause and retained permanent rejection.
+- Encrypted native storage and actual native suspend/kill/relaunch/key-loss evidence remain open; this completes the bounded replay implementation and automated lifecycle slice only.
+
+Validation: four focused frontend suites / 56 tests passed; frontend TypeScript check and `git diff --check` passed. The full frontend/backend suites were not rerun for this slice.

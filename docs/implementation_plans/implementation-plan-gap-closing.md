@@ -1,7 +1,7 @@
 # Gap-Closing Plan: Map, Discovery, Email Import, Dark Features, Offline
 
 **Status:** Revised proposal — source-verified 2026-10-18, re-verified 2026-10-19 (§0.5); production settings and measurements unverified
-**Last updated:** 2026-10-19
+**Last updated:** 2026-10-20
 **Review:** Updated against repository code and primary provider documentation, in collaboration with Bryan Duerk
 **Builds on:** `implementation-plan-wanderlog-competitive-analysis.md` (§5.1–5.4), `implementation-plan-trip-day-map.md`, `server/src/ingestion/TECHNICAL_DEBT.md`
 
@@ -34,6 +34,19 @@ timing, browser IndexedDB saves and durable discard/corrupt-queue export recover
 P0/P1/P2 are not all complete. See the
 [current completion audit](../operations/gap-closing-remaining.md) for outstanding
 source work separately from provider, device and release evidence.
+
+## Remaining work — 2026-10-20
+
+Source work still open (see the [completion audit](../operations/gap-closing-remaining.md) for evidence):
+
+- **Maps (§1.3–1.5):** public/recap integration, bounded keepsake map capture, legacy-artifact retirement, optional geocoder policy/jobs/cache/throttling, and native renderer compatibility plus staged rollout.
+- **Day editing (§1.6):** validated drag-and-drop; Move up/down is implemented. Environment rollout and usability checks remain.
+- **Discovery (§2.3):** destination-based “Trips like this” and privacy-safe activity copying with source credit. Public explore/SEO remains later scope (§7).
+- **Email import (§3.1–3.2):** trusted receiver authentication alignment and validated Gmail confirmation recognition using actual receiver fixtures.
+- **Offline storage (§5.2–5.3):** encrypted transactional native storage, device-backed keys and migration/reinstall/key-loss recovery; access-based LRU snapshot eviction and optional Wi-Fi-only downloads.
+- **Release evidence (§4–5 and acceptance gates):** real notification delivery/cohort/timing measurements, deployed shell/hash-change and authenticated offline recovery across browsers, provider/scanner/forwarding trials, database concurrency/index readiness, named native devices, accessibility/usability, import precision and performance evidence.
+
+**Implemented in this continuation (§5.3):** replay selects due entries before taking a batch, preventing delayed entries from starving ready expenses. Both storage paths process at most 20 entries per drain and stop starting requests after 45 seconds; transactional replay rechecks the budget after storage awaits. Focused tests cover bounded continuation, foreground resume, stable operation keys, interrupted commits, account fencing and lease replacement. These automated checks do not establish native device/background or production recovery evidence.
 
 ## Plain-language overview
 
@@ -298,7 +311,7 @@ This is the proposed direction; validate it on supported devices before rollout:
 - **`dayRouteOptimizer.ts`** (pure, deterministic): nearest-neighbour + 2-opt for up to 12 stops. Booked activities with a set time and stops without coordinates keep their slot; an optional lodging anchor makes the route start and end there; it never returns a longer route than it was given.
 - **`DayActivitiesOrdering`** in the Overview day view: Move up / Move down (44 px targets, labelled for screen readers), **Optimize order** with a preview (straight-line distance before/after, what stays put, "not walking or driving times"), **Use this order**, **Keep my order**, and **Undo** (itself a checked save). Conflicts, offline and double taps are handled in place with a persistent notice.
 
-Not done yet: drag-and-drop (needs a drag library validated against React Native Web; Move up/down is the accessible baseline), enabling the flag per environment, a usability pass, and a Firestore emulator run of the new server tests (they pass on the in-memory adapter).
+Not done yet: drag-and-drop (needs a drag library validated against React Native Web; Move up/down is the accessible baseline), enabling the flag per environment, a usability pass, and native/device evidence. Firestore emulator parity is recorded in the completion audit.
 
 1. **Route line:** a MapLibre line layer in visit order. On the native Google stopgap, the `path` parameter, which needs `lat`/`lng` from §1.4.
 2. **Travel time between stops** via the existing `transferEstimationService`: haversine with walking (~5 km/h) or driving (~30 km/h) speeds, shown as "~12 min walk".

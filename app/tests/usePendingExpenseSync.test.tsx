@@ -5,6 +5,7 @@
 /// <reference types="node" />
 
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { AppState } from 'react-native';
 import { usePendingExpenseSync } from '../hooks/usePendingExpenseSync';
 import { newPendingExpenseArgs } from '../utils/pendingExpenses';
 
@@ -130,4 +131,34 @@ describe('usePendingExpenseSync', () => {
     const other = setup({ userId: 'u2', canSync: false });
     expect(other.result.current.entries).toHaveLength(0);
   });
+});
+
+
+it('retries a due expense on foreground resume with the same operation key and removes its listener', async () => {
+  window.localStorage.clear();
+  const originalFetch = global.fetch;
+  const fetchMock = jest.fn(async () => { throw new TypeError('offline'); }) as jest.Mock<Promise<Response>>;
+  global.fetch = fetchMock as unknown as typeof fetch;
+  const { result, unmount } = setup({ userId: 'resume-owner', canSync: true });
+  let clock: jest.SpyInstance | undefined;
+  try {
+    const args = newPendingExpenseArgs(payload);
+    await act(async () => { await result.current.queueExpense(args); });
+    await waitFor(() => expect(result.current.entries[0]?.attempts).toBe(1));
+    const due = result.current.entries[0].nextAttemptAtMs!;
+    clock = jest.spyOn(Date, 'now').mockReturnValue(due + 1);
+    fetchMock.mockImplementation(async () => reply(201, { id: 'resumed', tripId: payload.tripId }));
+    const mock = jest.mocked(AppState.addEventListener).mock;
+    const listener = mock.calls[mock.calls.length - 1][1];
+    const subscription = mock.results[mock.results.length - 1].value;
+    act(() => listener('active'));
+    await waitFor(() => expect(result.current.entries).toHaveLength(0));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const call of fetchMock.mock.calls) {
+      const init = (call as unknown as [string, RequestInit])[1];
+      expect((init.headers as Record<string, string>)['Idempotency-Key']).toBe(args.operationKey);
+    }
+    unmount();
+    expect(subscription.remove).toHaveBeenCalled();
+  } finally { clock?.mockRestore(); global.fetch = originalFetch; }
 });

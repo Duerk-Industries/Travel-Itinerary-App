@@ -1,6 +1,6 @@
 import { parsePendingWriteQueue as parseQueue } from '../utils/pendingWriteValidation';
 import { transactionalPendingWriteStore, type PendingWriteStore } from '../utils/pendingWriteStore';
-import { replayTransactionalPending } from '../utils/transactionalPendingReplay';
+import { replayTransactionalPending, MAX_PENDING_REPLAY_BATCH, MAX_PENDING_REPLAY_DURATION_MS } from '../utils/transactionalPendingReplay';
 import { withStorageLease } from '../utils/replayLock';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { mergeSalvage, salvageRecoveryData } from '../utils/pendingQueueRepair';
@@ -411,8 +411,11 @@ export function usePendingWrites(
       const summary = await withReplayLock(replayKey, async (): Promise<ReplaySummary> => {
         // Snapshot the queue up-front so entries enqueued mid-drain are left
         // for the next replay tick (avoids re-entrancy issues).
-        const snapshot = pendingRef.current.slice();
         const now = Date.now();
+        const snapshot = pendingRef.current.filter(entry => entry.status !== 'failed'
+          && (options?.ignoreBackoff || (entry.nextAttemptAtMs ?? 0) <= now))
+          .sort((a, b) => a.enqueuedAtMs - b.enqueuedAtMs)
+          .slice(0, MAX_PENDING_REPLAY_BATCH);
         let replayed = 0;
         let dropped = 0;
         let failed = 0;
@@ -420,7 +423,7 @@ export function usePendingWrites(
         const updated = new Map<string, PendingWrite | null>();
         for (let i = 0; i < snapshot.length; i += 1) {
           const entry = snapshot[i]!;
-          if (paused || !current()) break;
+          if (paused || !current() || Date.now() - now >= MAX_PENDING_REPLAY_DURATION_MS) break;
           if (entry.status === 'failed') continue;
           if (!options?.ignoreBackoff && entry.nextAttemptAtMs && entry.nextAttemptAtMs > now) continue;
           let result: PendingWriteReplayResult = false;
