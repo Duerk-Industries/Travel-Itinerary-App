@@ -1,3 +1,6 @@
+import { getIngestedDocumentById } from '../shared/repository';
+import { getMailReceipt } from '../shared/mailAdmission';
+import { trustedForwarder } from '../shared/receiverAuthentication';
 import { listTrips } from '../../db';
 import { getDestinationLocationOptionsByIds } from '../../services/destinationAttractionAutocompleteService';
 import { getLocationOptionsByIds } from '../../services/locationServices';
@@ -18,8 +21,8 @@ export const AUTO_ASSIGN_FLAG = 'planning_auto_assign';
 
 /**
  * Sources where the signed-in owner personally handed us the document (their own upload or share).
- * Forwarded email is NOT here: anyone who learns an address could send to it, so it only ever suggests
- * until forwarder verification exists. Provider-authenticated sources (Gmail import) are not included either.
+ * Forwarded email is checked separately against private receiver provenance and a currently verified
+ * forwarding mailbox. A claimed From, extracted trust field or Gmail OAuth source cannot grant trust.
  */
 const TRUSTED_SOURCES = new Set<PersistedParsedItem['sourceType']>(['MANUAL_UPLOAD']);
 
@@ -78,7 +81,17 @@ const toMatchTrip = (
 export const decideTripForItem = async (item: PersistedParsedItem, userId: string, automaticAddingOn: boolean): Promise<MatchDecision & { tripName: string | null }> => {
   const trips = await listTrips(userId);
   const base = trips.map((trip) => toMatchTrip(trip));
-  const options = { sourceTrusted: TRUSTED_SOURCES.has(item.sourceType), automaticAddingOn };
+  let sourceTrusted = TRUSTED_SOURCES.has(item.sourceType);
+  if (item.sourceType === 'FORWARDED_MAILBOX') {
+    // Extraction text/editedFields cannot grant trust. Use only server-owned provenance.
+    const document = await getIngestedDocumentById(item.rawDocId);
+    const receiptId = document?.metadata?.receiverReceiptId;
+    if (document?.userId === userId && document.importJobId === item.importJobId && document.virusScanStatus === 'PASSED' && document.sourceType === 'FORWARDED_MAILBOX' && typeof receiptId === 'string') {
+      const receipt = await getMailReceipt(receiptId, userId);
+      sourceTrusted = Boolean(receipt && receipt.expiresAt > Date.now() && receipt.state !== 'HELD' && await trustedForwarder(userId, receipt.authentication));
+    }
+  }
+  const options = { sourceTrusted, automaticAddingOn };
   let decision = matchItemToTrip(item, base, options);
   if (decision.candidates.length) {
     // Only for the few trips that already fit on dates: where they are going, and booking numbers already in them.

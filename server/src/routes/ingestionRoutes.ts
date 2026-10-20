@@ -1,3 +1,5 @@
+import { readGmailConfirmation, resolveMailAlias } from '../ingestion/shared/mailAdmission';
+import { ownerVerifiedAddress, receiverAuthenticationEnabled, receiverPolicyCurrent } from '../ingestion/shared/receiverAuthentication';
 import { suggestTrips } from '../ingestion/assignment/tripSuggestions';
 import { AUTO_ASSIGN_FLAG, automaticAddingEnabledFor, decideTripForItem } from '../ingestion/assignment/autoAssign';
 import { reserveHttpRateLimitOrThrow, HttpRateLimitExceededError } from '../services/httpRateLimitService';
@@ -159,7 +161,7 @@ router.get('/config', mailSettingsHandler(async (req, res) => {
       currentAddress: mailboxFlag && tierKey !== 'free' ? await getMailAlias(userId) : '',
       instructions: INGESTION_FORWARDING_SETTINGS_COPY,
       adminManagedNote: 'Keep your address private. Creating a new address stops mail to the old one immediately.',
-      receipts: (await listMailReceipts(userId)).filter(r => r.expiresAt > Date.now()).map(r => ({ id: r.id, state: r.state, expiresAt: r.expiresAt })),
+      receipts: (await listMailReceipts(userId)).filter(r => r.expiresAt > Date.now() && r.state !== 'CONFIRMATION').map(r => ({ id: r.id, state: r.state, expiresAt: r.expiresAt, holdReason: r.holdReason })),
     },
     gmail: {
       scope: GMAIL_READONLY_SCOPE_URL,
@@ -523,12 +525,27 @@ router.delete('/forwarding/addresses/:id', mailSettingsHandler(async (req, res) 
   const removed = await removeSender(userId, String(req.params.id));
   res.status(removed ? 200 : 404).json({ removed });
 }));
+router.get('/forwarding/confirmations', mailSettingsHandler(async (req, res) => {
+  const userId = (req as unknown as { user: { userId: string } }).user.userId;
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox)) || !await receiverAuthenticationEnabled()) { res.json({ confirmations: [] }); return; }
+  const current = await resolveMailAlias(await getMailAlias(userId));
+  const confirmations = [];
+  for (const receipt of await listMailReceipts(userId)) {
+    if (!current || receipt.aliasHash !== current.aliasHash || !receiverPolicyCurrent(receipt.authentication)) continue;
+    const confirmation = readGmailConfirmation(receipt);
+    if (confirmation && await ownerVerifiedAddress(userId, confirmation.requestedBy)) confirmations.push({ id: receipt.id, ...confirmation });
+  }
+  res.json({ confirmations: confirmations.sort((a, b) => b.expiresAt - a.expiresAt).slice(0, 5) });
+}));
+
 router.get('/forwarding/receipts', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await requireTierAccess(userId, res))) return;
   const receipts = await listMailReceipts(userId);
-  res.json({ receipts: receipts.filter(r => r.expiresAt > Date.now()).map(r => ({
-    id: r.id, state: r.state, expiresAt: r.expiresAt,
+  res.json({ receipts: receipts.filter(r => r.expiresAt > Date.now() && r.state !== 'CONFIRMATION').map(r => ({
+    id: r.id, state: r.state, expiresAt: r.expiresAt, holdReason: r.holdReason,
   })) });
 }));
 router.post('/forwarding/receipts/:id/release', mailSettingsHandler(async (req, res) => {

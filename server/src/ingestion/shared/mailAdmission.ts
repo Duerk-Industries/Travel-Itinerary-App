@@ -1,3 +1,5 @@
+import type { ReceiverAuthentication } from './receiverAuthentication';
+import type { GmailForwardingConfirmation } from './gmailConfirmation';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'crypto';
 import { getCurrentDbProvider } from '../../db';
 import { getEnvValue } from '../../env';
@@ -14,10 +16,13 @@ const DAILY_LIMIT = 20;
 const QUEUE_LIMIT = 20;
 export type RawMail = {
   body: Record<string, string>;
+  authentication?: ReceiverAuthentication;
+  transport?: { token: string; timestamp: string };
   files: Array<{ originalname: string; mimetype: string; bytes: string }>;
 };
 export type MailReceipt = {
-  id: string; userId: string; quotaReserved: boolean; state: 'PENDING' | 'HELD' | 'COMPLETE';
+  id: string; userId: string; quotaReserved: boolean; state: 'PENDING' | 'HELD' | 'COMPLETE' | 'CONFIRMATION';
+  aliasHash?: string; authentication?: ReceiverAuthentication; holdReason?: 'SENDER_AUTH_FAILED' | 'GMAIL_CONFIRMATION_UNVERIFIED';
   encrypted: string | null; attempts: number; nextAttemptAt: number;
   lease: string | null; leaseUntil: number; expiresAt: number;
   allowLargeLlm: boolean; allowSmallLlm: boolean;
@@ -121,7 +126,7 @@ export const resolveMailAlias = async (recipient: unknown): Promise<{ userId: st
 };
 
 export const mailReceiptId = (userId: string, body: Record<string, unknown>): string =>
-  hash(`${userId}:${String(body.token)}`);
+  hash(`${userId}:${String(body.token).trim()}`);
 
 /** Receipt + transport dedupe + quota are one transaction. Holds consume no quota.
  * User row locks serialize PostgreSQL admission across alias rotations/instances.
@@ -129,15 +134,18 @@ export const mailReceiptId = (userId: string, body: Record<string, unknown>): st
 export const admitMail = async (params: {
   id: string; userId: string; aliasHash: string; raw: RawMail; monthlyLimit: number;
   allowLargeLlm: boolean; allowSmallLlm: boolean;
+  confirmation?: GmailForwardingConfirmation | null; forceHold?: boolean; holdReason?: MailReceipt['holdReason'];
 }): Promise<MailReceipt | null> => {
   await ensureMailAdmissionSchema();
   const now = Date.now(); const month = new Date(now).toISOString().slice(0, 7);
   const day = new Date(now).toISOString().slice(0, 10);
   const metric = INGESTION_USAGE_KEYS.forwardedMailboxDeliveries;
   const makeReceipt = (held: boolean): MailReceipt => ({
-    id: params.id, userId: params.userId, quotaReserved: !held, state: held ? 'HELD' : 'PENDING',
-    encrypted: seal(JSON.stringify(params.raw), `receipt:${params.userId}:${params.id}`),
-    attempts: 0, nextAttemptAt: now, lease: null, leaseUntil: 0, expiresAt: now + MAIL_RETENTION_MS,
+    id: params.id, userId: params.userId, aliasHash: params.aliasHash, ...(params.raw.authentication ? { authentication: params.raw.authentication } : {}),
+    ...(params.forceHold ? { holdReason: params.holdReason ?? 'SENDER_AUTH_FAILED' as const } : {}),
+    quotaReserved: !held && !params.confirmation, state: params.confirmation ? 'CONFIRMATION' : held ? 'HELD' : 'PENDING',
+    encrypted: seal(JSON.stringify(params.confirmation ? { confirmation: params.confirmation } : params.raw), `receipt:${params.userId}:${params.id}`),
+    attempts: 0, nextAttemptAt: now, lease: null, leaseUntil: 0, expiresAt: params.confirmation?.expiresAt ?? now + MAIL_RETENTION_MS,
     allowLargeLlm: params.allowLargeLlm, allowSmallLlm: params.allowSmallLlm,
   });
   if (firebase()) {
@@ -148,7 +156,7 @@ export const admitMail = async (params: {
       const quota = db.collection('usage_counters').doc(`${params.userId}_${metric}_${month}`);
       const [old, alias, usage, queued] = await Promise.all([
         tx.get(ref), tx.get(owner), tx.get(quota),
-        tx.get(db.collection('ingestion_mail_receipts').where('userId', '==', params.userId).where('state', 'in', ['PENDING', 'HELD']).limit(20)),
+        tx.get(db.collection('ingestion_mail_receipts').where('userId', '==', params.userId).where('state', 'in', ['PENDING', 'HELD', 'CONFIRMATION']).limit(20)),
       ]);
       if (old.exists) return old.data() as MailReceipt;
       if (alias.data()?.tokenHash !== params.aliasHash) return null;
@@ -156,13 +164,14 @@ export const admitMail = async (params: {
       if (pending.length >= QUEUE_LIMIT) return null;
       const count = Number(usage.data()?.count ?? 0);
       const daily = alias.data()?.day === day ? Number(alias.data()?.accepted ?? 0) : 0;
-      const held = count >= params.monthlyLimit || daily >= DAILY_LIMIT;
+      if (params.confirmation && daily >= DAILY_LIMIT) return null;
+      const held = Boolean(params.forceHold) || count >= params.monthlyLimit || daily >= DAILY_LIMIT;
       const receipt = makeReceipt(held);
       tx.create(ref, receipt);
-      if (!held) {
+      if (!held && !params.confirmation) {
         tx.set(quota, { userId: params.userId, metricKey: metric, windowKey: month, count: count + 1, updatedAt: new Date(now).toISOString() });
-        tx.update(owner, { day, accepted: daily + 1 });
       }
+      if (!held || params.confirmation) tx.update(owner, { day, accepted: daily + 1 });
       return receipt;
     });
   }
@@ -174,21 +183,22 @@ export const admitMail = async (params: {
     if (old.rows[0]) { await client.query('COMMIT'); return old.rows[0].data; }
     const alias = await client.query<{ data: Alias & { day?: string; accepted?: number } }>('SELECT data FROM ingestion_aliases WHERE user_id=$1 AND token_hash=$2', [params.userId, params.aliasHash]);
     if (!alias.rows[0]) { await client.query('ROLLBACK'); return null; }
-    const queued = await client.query<{ data: MailReceipt }>("SELECT data FROM ingestion_mail_receipts WHERE user_id=$1 AND data->>'state' IN ('PENDING','HELD') LIMIT 20", [params.userId]);
+    const queued = await client.query<{ data: MailReceipt }>("SELECT data FROM ingestion_mail_receipts WHERE user_id=$1 AND data->>'state' IN ('PENDING','HELD','CONFIRMATION') LIMIT 20", [params.userId]);
     if (queued.rows.length >= QUEUE_LIMIT) {
       await client.query('ROLLBACK'); return null;
     }
     const usage = await client.query<{ count: string }>('SELECT count FROM usage_counters WHERE user_id=$1 AND metric_key=$2 AND window_key=$3', [params.userId, metric, month]);
     const count = Number(usage.rows[0]?.count ?? 0);
     const daily = alias.rows[0].data.day === day ? Number(alias.rows[0].data.accepted ?? 0) : 0;
-    const held = count >= params.monthlyLimit || daily >= DAILY_LIMIT;
+    if (params.confirmation && daily >= DAILY_LIMIT) { await client.query('ROLLBACK'); return null; }
+    const held = Boolean(params.forceHold) || count >= params.monthlyLimit || daily >= DAILY_LIMIT;
     const receipt = makeReceipt(held);
     await client.query('INSERT INTO ingestion_mail_receipts (id,user_id,data) VALUES ($1,$2,$3)', [receipt.id, receipt.userId, JSON.stringify(receipt)]);
-    if (!held) {
+    if (!held && !params.confirmation) {
       await client.query(`INSERT INTO usage_counters (id,user_id,metric_key,window_key,count) VALUES ($1,$2,$3,$4,1)
         ON CONFLICT (user_id,metric_key,window_key) DO UPDATE SET count=usage_counters.count+1`, [randomUUID(), params.userId, metric, month]);
-      await client.query('UPDATE ingestion_aliases SET data=$2 WHERE user_id=$1', [params.userId, JSON.stringify({ ...alias.rows[0].data, day, accepted: daily + 1 })]);
     }
+    if (!held || params.confirmation) await client.query('UPDATE ingestion_aliases SET data=$2 WHERE user_id=$1', [params.userId, JSON.stringify({ ...alias.rows[0].data, day, accepted: daily + 1 })]);
     await client.query('COMMIT'); return receipt;
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
@@ -240,7 +250,7 @@ export const releaseHeldMail = async (id: string, userId: string, limit: number)
   const month = new Date().toISOString().slice(0, 7);
   const metric = INGESTION_USAGE_KEYS.forwardedMailboxDeliveries;
   const canRelease = (r: MailReceipt | undefined): r is MailReceipt =>
-    Boolean(r && r.userId === userId && r.state === 'HELD' && r.expiresAt > Date.now());
+    Boolean(r && r.userId === userId && r.state === 'HELD' && r.holdReason !== 'GMAIL_CONFIRMATION_UNVERIFIED' && r.expiresAt > Date.now());
   const released = (r: MailReceipt): MailReceipt => ({ ...r, quotaReserved: true, state: 'PENDING', attempts: 0, nextAttemptAt: Date.now() });
   if (firebase()) {
     const db = getFirebaseDb();
@@ -321,4 +331,22 @@ export const recordSyntheticReceipt = async (userId: string, address: string): P
   await ensureMailAdmissionSchema();
   if (firebase()) await getFirebaseDb().collection('ingestion_mail_receipts').doc(id).set(data);
   else await getPg().query('INSERT INTO ingestion_mail_receipts(id,user_id,data) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data', [id,userId,JSON.stringify(data)]);
+};
+
+
+export const getMailReceipt = async (id: string, userId: string): Promise<MailReceipt | null> => {
+  await ensureMailAdmissionSchema();
+  const receipt = firebase()
+    ? (await getFirebaseDb().collection('ingestion_mail_receipts').doc(id).get()).data() as MailReceipt | undefined
+    : (await getPg().query<{ data: MailReceipt }>('SELECT data FROM ingestion_mail_receipts WHERE id=$1 AND user_id=$2', [id, userId])).rows[0]?.data;
+  return receipt?.userId === userId ? receipt : null;
+};
+/** No HTML, links, subject or original body can escape the confirmation endpoint. */
+export const readGmailConfirmation = (receipt: MailReceipt): GmailForwardingConfirmation | null => {
+  if (receipt.state !== 'CONFIRMATION' || !receipt.encrypted || receipt.expiresAt <= Date.now()) return null;
+  try {
+    const value = JSON.parse(open(receipt.encrypted, `receipt:${receipt.userId}:${receipt.id}`)).confirmation as GmailForwardingConfirmation;
+    return value?.provider === 'gmail' && /^[0-9]{9}$/.test(value.code) && value.expiresAt > Date.now()
+      ? { provider: 'gmail', code: value.code, requestedBy: value.requestedBy, expiresAt: value.expiresAt } : null;
+  } catch { return null; }
 };

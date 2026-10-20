@@ -4,6 +4,9 @@
 # file has no effect on already-seeded flags. Use the admin API to change live values.
 
 flags:
+  feature_ingest_receiver_auth:
+    enabled: false
+    description: "Content-bound trusted receiver attestations; enable only after receiver policy/real forwarding fixture validation"
   planning_native_map:
     enabled: false
     description: "Native MapLibre renderer; requires compatible EAS binary and named-device checks"

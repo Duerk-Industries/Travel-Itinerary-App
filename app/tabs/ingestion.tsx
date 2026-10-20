@@ -50,7 +50,7 @@ type ConfigResponse = {
     llmEscalations: string;
   };
   forwarding: {
-    receipts?: Array<{ id: string; state: string; expiresAt: number }>;
+    receipts?: Array<{ id: string; state: string; expiresAt: number; holdReason?: string }>;
     provider?: string;
     currentAddress: string;
     instructions: string;
@@ -553,8 +553,8 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
 
       {(config.forwarding.receipts ?? []).filter(r => r.state !== 'COMPLETE').map(receipt => (
         <View key={receipt.id} style={styles.section}>
-          <Text style={styles.helperText}>{receipt.state === 'HELD' ? 'Check this message before importing. Your plan allowance still applies.' : 'Received — preparing your booking preview.'}</Text>
-          {receipt.state === 'HELD' && <TouchableOpacity style={styles.button} accessibilityRole="button" onPress={() => {
+          <Text style={styles.helperText}>{receipt.holdReason === 'GMAIL_CONFIRMATION_UNVERIFIED' ? 'This forwarding confirmation could not be verified. Delete it and request another in Gmail; it will not be imported as a booking.' : receipt.state === 'HELD' ? 'Check this message before importing. Your plan allowance still applies.' : 'Received — preparing your booking preview.'}</Text>
+          {receipt.state === 'HELD' && receipt.holdReason !== 'GMAIL_CONFIRMATION_UNVERIFIED' && <TouchableOpacity style={styles.button} accessibilityRole="button" onPress={() => {
             void fetch(`${backendUrl}/api/ingestion/forwarding/receipts/${receipt.id}/release`, { method: 'POST', headers }).then(async response => {
               if (!response.ok) { setError('Could not import this message. Check your allowance or try again later.'); return; }
               await load();

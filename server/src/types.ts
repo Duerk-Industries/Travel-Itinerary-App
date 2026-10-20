@@ -1438,3 +1438,5 @@ export type GeocodeQuery = { name: string; locality: string; country: string; la
 export type GeocodeResult = { lat: number; lng: number; geoCity: string | null; quality: 'approximate'; providerCategory?: string; providerType?: string; attribution: string; provider: string };
 export type GeocodeJob = { key: string; query: GeocodeQuery; state: 'pending' | 'done' | 'dead'; attempts: number; dueAt: number; leaseToken?: string; leaseUntil?: number; result?: GeocodeResult | null; expiresAt?: number };
 export type GeocodingState = { jobs: GeocodeJob[]; nextAllowedAt: number; providerLeaseToken?: string; providerLeaseUntil?: number };
+
+export type GmailForwardingConfirmation = { provider: 'gmail'; code: string; requestedBy: string; expiresAt: number };

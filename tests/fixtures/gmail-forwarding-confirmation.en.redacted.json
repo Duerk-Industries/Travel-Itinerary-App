@@ -1,0 +1,7 @@
+{
+  "profile": "gmail-forwarding-confirmation-en-v1",
+  "provenance": "Synthetic redacted contract fixture; not a captured production Gmail or Mailgun message",
+  "from": "Gmail Team <forwarding-noreply@google.com>",
+  "subject": "Gmail Forwarding Confirmation - Receive Mail from owner@gmail.com",
+  "text": "owner@gmail.com has requested to automatically forward mail to your email address {{recipient}}. Confirmation code: 123456789. To stop this request, ignore this message."
+}

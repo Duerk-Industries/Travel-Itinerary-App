@@ -1,3 +1,5 @@
+import { MAIL_CONTENT_FIELDS, verifyReceiverAuthentication, ownerVerifiedAddress } from '../ingestion/shared/receiverAuthentication';
+import { recognizeGmailConfirmation, isGmailConfirmationCandidate } from '../ingestion/shared/gmailConfirmation';
 import { Router, type RequestHandler, type ErrorRequestHandler } from 'express';
 import multer from 'multer';
 import bodyParser from 'body-parser';
@@ -47,21 +49,26 @@ router.post('/mailgun', mailgunWebhookMiddleware, async (req, res) => {
     if (tierKey === 'free') { res.status(200).json({ accepted: true }); return; }
     const files = Array.isArray(req.files) ? req.files as Express.Multer.File[] : [];
     const safeBody: Record<string, string> = {};
-    for (const name of ['subject', 'sender', 'from', 'recipient', 'Message-Id', 'message-id', 'message-headers', 'Date', 'stripped-text', 'body-plain', 'text', 'stripped-html', 'body-html', 'html']) {
+    for (const name of MAIL_CONTENT_FIELDS) {
       if (typeof body[name] === 'string') safeBody[name] = body[name] as string;
     }
-    safeBody['Message-Id'] ||= `mailgun-${mailReceiptId(alias.userId, body)}`;
-    safeBody.Date ||= new Date().toISOString();
     const totalBytes = Buffer.byteLength(JSON.stringify(safeBody)) + files.reduce((sum, file) => sum + file.buffer.length, 0);
     if (totalBytes > MAIL_MAX_BYTES) throw new IngestionError('file_too_large', 406);
     if (!['stripped-text', 'body-plain', 'text', 'stripped-html', 'body-html', 'html'].some(name => safeBody[name]?.trim())
       && !files.some(file => isSupportedMimeType(normalizeMimeType(file.mimetype, file.originalname)))) {
       throw new IngestionError('unsupported_file_type', 406);
     }
-    const raw: RawMail = { body: safeBody, files: files.map(file => ({ originalname: file.originalname, mimetype: file.mimetype, bytes: file.buffer.toString('base64') })) };
+    const raw: RawMail = { body: safeBody, transport: { token: String(body.token), timestamp: String(body.timestamp) }, files: files.map(file => ({ originalname: file.originalname, mimetype: file.mimetype, bytes: file.buffer.toString('base64') })) };
+    const authentication = await verifyReceiverAuthentication(req.get('X-WanderBunnies-Receiver-Authentication'), raw);
+    if (authentication) raw.authentication = authentication;
+    const confirmation = await recognizeGmailConfirmation(alias.userId, raw, authentication);
+    const unverifiedConfirmation = !confirmation && isGmailConfirmationCandidate(raw);
+    const forceHold = unverifiedConfirmation || (authentication?.author.dkim === 'fail' && await ownerVerifiedAddress(alias.userId, authentication.author.email));
+    raw.body['Message-Id'] ||= `mailgun-${mailReceiptId(alias.userId, body)}`;
+    raw.body.Date ||= new Date().toISOString();
     const receipt = await admitMail({
       id: mailReceiptId(alias.userId, body), userId: alias.userId, aliasHash: alias.aliasHash, raw,
-      monthlyLimit: rules.monthlyUploads,
+      monthlyLimit: rules.monthlyUploads, confirmation, forceHold, holdReason: unverifiedConfirmation ? 'GMAIL_CONFIRMATION_UNVERIFIED' : undefined,
       allowLargeLlm: rules.llmEscalations === 'LARGE_ALLOWED', allowSmallLlm: rules.llmEscalations !== 'NONE',
     });
     logInfo(`[ingestion][mailgun] delivery recorded receipt=${receipt?.id ?? 'dropped'} parts=${files.length + 1}`);

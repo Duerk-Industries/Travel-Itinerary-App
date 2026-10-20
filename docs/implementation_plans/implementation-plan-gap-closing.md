@@ -42,7 +42,7 @@ Source work still open (see the [completion audit](../operations/gap-closing-rem
 - **Maps (§1.3–1.5):** public/recap integration, bounded browser keepsake capture, native renderer source and bounded public-catalog geocoding are implemented ([details and activation](../operations/gap-closing-maps.md)). Remaining: named-device/EAS and native print checks, reviewed geocoding endpoint/scheduler activation, production evidence, and legacy-artifact retirement after old-client migration.
 - **Day editing (§1.6):** validated drag-and-drop; Move up/down is implemented. Environment rollout and usability checks remain.
 - **Discovery (§2.3):** destination-based “Trips like this” and privacy-safe activity copying with source credit. Public explore/SEO remains later scope (§7).
-- **Email import (§3.1–3.2):** trusted receiver authentication alignment and validated Gmail confirmation recognition using actual receiver fixtures.
+- **Email import (§3.1–3.2):** signed, content-bound receiver-attestation verification, provenance-gated forwarder trust and Gmail confirmation recognition/UI are implemented ([contract and rollout](../operations/gap-closing-receiver-auth.md)). Remaining: deploy the trusted gateway/signer and validate real receiver/forwarding/Gmail fixtures before enabling; synthetic contract fixtures are not production evidence.
 - **Offline storage (§5.2–5.3):** encrypted transactional native storage, device-backed keys and migration/reinstall/key-loss recovery; access-based LRU snapshot eviction and optional Wi-Fi-only downloads.
 - **Release evidence (§4–5 and acceptance gates):** real notification delivery/cohort/timing measurements, deployed shell/hash-change and authenticated offline recovery across browsers, provider/scanner/forwarding trials, database concurrency/index readiness, named native devices, accessibility/usability, import precision and performance evidence.
 
@@ -410,6 +410,8 @@ Inbound email → Mailgun MX → POST /api/ingestion/webhooks/mailgun
 12. **One state machine and deletion policy.** Extend `import_job` as the source of progress; private hold references do not become a second pipeline. Raw bytes, extracted text, model/shadow captures, aliases and derived records have documented deletion/retention with lifecycle enforcement; remove raw content after processing when no longer required. Keep only minimal audit metadata. No external URL/image fetch, payment action or booking update/cancellation from email instructions. Render normalized text and validated fields, never raw HTML.
 
 ### 3.2 Easy setup (P1)
+
+**2026-10-20 implementation:** Authenticated, expiring Gmail code display is wired to encrypted, quota-free setup receipts. A separate content-bound receiver attestation protects author/forwarder observations; automatic-add trust uses private receipt/document provenance and current verified mailbox ownership. Unverified setup messages cannot enter booking parsing. [Receiver contract, validation and remaining deployment evidence](../operations/gap-closing-receiver-auth.md).
 
 1. **Import screen leads with the address:** Copy, QR code, "Add to contacts" (vCard), Rotate.
 2. **"Send a test":** authenticated, rate-limited synthetic message proves receipt; it cannot add a booking, consume import allowance or trigger a reply loop. Explain success and the next step; failure leaves Copy/upload available.

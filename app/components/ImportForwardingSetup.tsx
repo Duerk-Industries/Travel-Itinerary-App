@@ -1,3 +1,4 @@
+import GmailForwardingConfirmation from './GmailForwardingConfirmation';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import { copyToClipboard } from '../utils/clipboard';
@@ -61,9 +62,10 @@ export default function ImportForwardingSetup({ address, backendUrl, headers, on
     <Text style={styles.helperText}>Set up automatic forwarding (optional)</Text>
     <View style={styles.row}>{['Gmail', 'Outlook', 'Apple Mail'].map(name => button(name, () => setProvider(name)))}</View>
     {provider && <Text style={styles.helperText}>{provider === 'Gmail'
-      ? 'In Gmail on a computer: Settings → See all settings → Forwarding and POP/IMAP → Add a forwarding address. Paste your address. Complete Gmail’s confirmation, then create a filter for travel confirmations and choose Forward it. Forward a booking to check the rule. Forwarding confirmation recognition becomes available only after the receiver’s verification checks have been validated.'
+      ? 'In Gmail on a computer: Settings → See all settings → Forwarding and POP/IMAP → Add a forwarding address. Paste your address. Complete Gmail’s confirmation, then create a filter for travel confirmations and choose Forward it. Forward a booking to check the rule. Use the verified confirmation code below when it arrives.'
       : provider === 'Outlook' ? 'In Outlook: Settings → Mail → Rules → Add new rule. Choose the travel senders or subjects you want, then Forward to your private address. Save and forward a booking to check it.'
       : 'In Mail on your Mac: Mail → Settings → Rules → Add Rule. Match travel senders or subjects and choose Forward Message to your private address. Your Mac must be running Mail for the rule to run.'}</Text>}
+    {provider === 'Gmail' && <GmailForwardingConfirmation address={address} backendUrl={backendUrl} headers={headers} />}
     <Text style={styles.helperText}>You can do this later and upload a confirmation instead. These steps open in your email provider; WanderBunnies does not create mail rules for you.</Text>
     {notice ? <Text accessibilityLiveRegion="polite" style={styles.helperText}>{notice}</Text> : null}
     <ImportSenderAddresses backendUrl={backendUrl} headers={headers} styles={styles} />

@@ -43,8 +43,9 @@ export const drainMailReceipts = async (): Promise<{ processed: number }> => {
       const raw = readRawMail(receipt);
       const files = raw.files.map(file => ({ ...file, buffer: Buffer.from(file.bytes, 'base64'), size: Buffer.from(file.bytes, 'base64').length }));
       const request = { body: raw.body, files } as unknown as Request;
-      payloads = await buildMailgunWebhookPayloads(request, receipt.userId, '');
+      payloads = await buildMailgunWebhookPayloads(request, receipt.userId, '', receipt.authentication);
       for (const payload of payloads) {
+        payload.metadata.receiverReceiptId = receipt.id;
         const existing = await getImportJobByIdempotencyKey(payload.userId, buildImportJobIdempotencyKey(payload));
         if (existing?.state === 'FAILED' || existing?.state === 'DEAD_LETTERED') await requeueImportJob(existing.id);
         const job = await runIngestionPipeline(payload, receipt.allowLargeLlm, receipt.allowSmallLlm);

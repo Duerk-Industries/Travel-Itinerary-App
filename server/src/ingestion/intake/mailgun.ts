@@ -1,3 +1,4 @@
+import { trustedForwarder, type ReceiverAuthentication } from '../shared/receiverAuthentication';
 import crypto from 'crypto';
 import multer from 'multer';
 import type { Request, RequestHandler } from 'express';
@@ -129,7 +130,7 @@ export const resolveMailgunWebhookUser = async (body: Record<string, unknown>): 
   return { userId: alias.userId, senderEmail };
 };
 
-export const buildMailgunWebhookPayloads = async (req: Request, userId: string, _senderEmail: string): Promise<IngestionPayload[]> => {
+export const buildMailgunWebhookPayloads = async (req: Request, userId: string, _senderEmail: string, authentication?: ReceiverAuthentication): Promise<IngestionPayload[]> => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const files = ((req.files as Express.Multer.File[] | undefined) ?? []) as Express.Multer.File[];
   const subject = coerceString(body.subject) || 'Forwarded travel confirmation';
@@ -143,9 +144,10 @@ export const buildMailgunWebhookPayloads = async (req: Request, userId: string, 
   const strippedHtml = coerceString(body['body-html'] ?? body['stripped-html'] ?? body.html);
 
   const payloads: IngestionPayload[] = [];
+  const verifiedForwarder = await trustedForwarder(userId, authentication);
   const commonMetadata = {
-    senderTrust: 'UNVERIFIED_FORWARDER',
-    automaticAssignmentAllowed: false,
+    senderTrust: verifiedForwarder ? 'VERIFIED_FORWARDER' : 'UNVERIFIED_FORWARDER',
+    automaticAssignmentAllowed: verifiedForwarder,
     provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
     sourceChannel: 'mailgun_inbound_webhook',
     // The claimed sender never grants trust or ownership.
