@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePendingWrites, type PendingWrite } from './usePendingWrites';
 import {
   PENDING_EXPENSE_KIND,
+  isReplayablePendingExpense,
   backoffDelayMs,
   pendingExpensesStorageKey,
   sendPendingExpense,
@@ -118,6 +119,7 @@ export function usePendingExpenseSync({ userId, backendUrl, headers, canSync, on
     entries,
     storageError: userId ? queue.storageError : null,
     getRecoveryData: queue.getRecoveryData,
+    repairQueue: (extraRecoveryData: string[]) => queue.repairQueue(extraRecoveryData, isReplayablePendingExpense),
     syncedNotice,
     queueExpense,
     retryEntry,

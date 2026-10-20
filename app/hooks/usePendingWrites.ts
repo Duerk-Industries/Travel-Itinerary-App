@@ -3,6 +3,7 @@ import { transactionalPendingWriteStore, type PendingWriteStore } from '../utils
 import { replayTransactionalPending } from '../utils/transactionalPendingReplay';
 import { withStorageLease } from '../utils/replayLock';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
+import { mergeSalvage, salvageRecoveryData } from '../utils/pendingQueueRepair';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { canAccessWebStorage, readAsync, readAsyncOrThrow, readSync, writeAsync, writeSync } from '../utils/persistentStorage';
 
@@ -89,6 +90,11 @@ export interface UsePendingWritesOptions {
   backoffMs?: (attempts: number) => number;
 }
 
+export type RepairOutcome =
+  | { status: 'repaired'; restored: number; skipped: number; alreadyHandled: number; backupKey: string }
+  | { status: 'nothing-recoverable'; skipped: number }
+  | { status: 'failed' };
+
 export interface ReplaySummary {
   replayed: number;
   remaining: number;
@@ -102,6 +108,12 @@ export interface UsePendingWritesResult {
   pending: PendingWrite[];
   storageError: string | null;
   getRecoveryData: () => Promise<string | null>;
+  /**
+   * Rebuilds an unreadable queue from what can still be read, plus recovery data from an exported file.
+   * The original is backed up first and kept; entries keep their ids and operation keys. `accept` filters
+   * out anything the caller could not replay.
+   */
+  repairQueue: (extraRecoveryData: string[], accept: (entry: PendingWrite) => boolean) => Promise<RepairOutcome>;
   /** Queue a new write and return its generated id. */
   enqueue: <TArgs>(kind: string, args: TArgs) => string;
   /** Like `enqueue`, but resolves only after the write is read back from storage. `null` means it was NOT saved. */
@@ -331,6 +343,36 @@ export function usePendingWrites(
     enqueueTail.current = work;
     return work;
   }, [store, updateStore]);
+  const repairQueue = useCallback(async (extra: string[], keepEntry: (entry: PendingWrite) => boolean): Promise<RepairOutcome> => {
+    const key = keyRef.current, generation = generationRef.current;
+    const fenced = () => key !== keyRef.current || generation !== generationRef.current;
+    try {
+      const current = store ? await store.recovery(key) : await readAsyncOrThrow(key);
+      const merged = mergeSalvage([salvageRecoveryData(current), ...extra.map(salvageRecoveryData)]);
+      const usable = merged.entries.filter(keepEntry);
+      const skipped = merged.skipped + (merged.entries.length - usable.length);
+      // Replacing the stored queue with nothing would destroy data that might still be recoverable by hand.
+      if (!usable.length) return { status: 'nothing-recoverable', skipped };
+      if (fenced()) return { status: 'failed' };
+      let backupKey: string, written: number, alreadyHandled = 0, next: PendingWrite[];
+      if (store) {
+        if (!store.repair) return { status: 'failed' };
+        ({ backupKey, written, alreadyHandled } = await store.repair(key, usable));
+        next = await store.read(key);
+      } else {
+        backupKey = `${key}.corrupt-backup.${Date.now()}`;
+        if (current !== null) {
+          await writeAsync(backupKey, current);
+          if (await readAsync(backupKey) !== current) return { status: 'failed' };
+        }
+        if (!await persistQueueDurably(key, usable)) return { status: 'failed' };
+        written = usable.length; next = usable;
+      }
+      if (fenced()) return { status: 'failed' };
+      accept(key, generation, next);
+      return { status: 'repaired', restored: written, skipped, alreadyHandled, backupKey };
+    } catch { return { status: 'failed' }; }
+  }, [store, accept]);
   const removeDurable = useCallback((id: string) => discardDurably(id), [discardDurably]);
   const clearDurable = useCallback(() => discardDurably(), [discardDurably]);
 
@@ -444,5 +486,5 @@ export function usePendingWrites(
     return () => window.removeEventListener('focus', onFocus);
   }, [store]);
 
-  return { pending: keyRef.current === storageKey ? pendingRef.current : [], storageError, getRecoveryData, enqueue, enqueueDurable, replaceFailedDurable, removeDurable, clearDurable, remove, retry, clear, replay };
+  return { pending: keyRef.current === storageKey ? pendingRef.current : [], storageError, getRecoveryData, repairQueue, enqueue, enqueueDurable, replaceFailedDurable, removeDurable, clearDurable, remove, retry, clear, replay };
 }

@@ -3413,7 +3413,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       </View>
       {userToken && offlineOwner && activeTrip && !isFollowingMode && <SaveTripOffline trip={activeTrip} trips={trips} groups={groups}
         owner={offlineOwner} token={userToken} costTrackingAllowed={costTrackingAllowed} disabled={offlineReadOnly} />}
-      {userId && <PendingExpenseRecovery error={pendingExpenses.storageError} getRecoveryData={pendingExpenses.getRecoveryData} ownerId={userId} environment={backendUrl} />}
+      {userId && <PendingExpenseRecovery error={pendingExpenses.storageError} getRecoveryData={pendingExpenses.getRecoveryData} repairQueue={pendingExpenses.repairQueue} ownerId={userId} environment={backendUrl} />}
       <OfflineBanner
         status={connection.status}
         offlineReadOnly={offlineReadOnly}

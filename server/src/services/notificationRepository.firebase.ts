@@ -1,5 +1,5 @@
 import { parseNotificationCursor } from './notificationCursor';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '../db.firebase';
 
@@ -7,7 +7,6 @@ const nowIso = () => new Date().toISOString();
 
 export const createNotificationWithOutbox = async (n: any, channels: Array<'push' | 'email'>): Promise<string> => {
   const db = getDb();
-  const { createHash } = await import('crypto');
   const id = n.dedupeKey ? createHash('sha256').update(`${n.userId}:${n.dedupeKey}`).digest('hex') : randomUUID();
   const ref = db.collection('notifications').doc(id);
   await db.runTransaction(async tx => {
@@ -92,16 +91,29 @@ export const upsertDevice = async (userId: string, d: any): Promise<void> => {
   }, { merge: true });
 };
 
+// Same columns and snake_case names as the Postgres adapter. The encrypted token and its hash are
+// never part of this public projection (listActivePushDevicesForUser is the internal delivery read).
 export const listDevices = async (userId: string): Promise<any[]> => {
   const snap = await getDb().collection('notification_devices')
     .where('userId', '==', userId)
     .where('disabledAt', '==', null)
     .get();
-  return snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+  return snap.docs.map(doc => {
+    const d = doc.data() as any;
+    return {
+      id: doc.id, platform: d.platform, device_label: d.deviceLabel ?? null,
+      permission_state: d.permissionState ?? null, last_seen_at: d.lastSeenAt ?? null, created_at: d.createdAt ?? null,
+    };
+  });
 };
 
+// Only the owner's own device can be disabled (Postgres filters on user_id the same way).
 export const deleteDevice = async (userId: string, deviceId: string): Promise<void> => {
-  await getDb().collection('notification_devices').doc(deviceId).update({ disabledAt: nowIso() });
+  const ref = getDb().collection('notification_devices').doc(deviceId);
+  await getDb().runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (snap.exists && (snap.data() as any).userId === userId) tx.update(ref, { disabledAt: nowIso() });
+  });
 };
 
 export const getNotificationById = async (id: string): Promise<any | null> => {

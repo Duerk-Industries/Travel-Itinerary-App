@@ -798,8 +798,16 @@ export const getDb = (): Firestore => {
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
   if (databaseId) {
   }
-  return planningFirestore(databaseId ? getFirestore(app!, databaseId) : getFirestore(app!));
+  const firestore = databaseId ? getFirestore(app!, databaseId) : getFirestore(app!);
+  if (!configuredFirestores.has(firestore)) {
+    configuredFirestores.add(firestore);
+    // A missing optional value (a Google profile with no photo, an Apple sign-in with no name) is
+    // stored as absent, the way Postgres stores NULL, instead of failing the whole write.
+    try { firestore.settings({ ignoreUndefinedProperties: true }); } catch { /* already in use: keep its current settings */ }
+  }
+  return planningFirestore(firestore);
 };
+const configuredFirestores = new WeakSet<object>();
 
 export const initDb = async (): Promise<void> => {
   logInfo('Initializing DB connection...');
@@ -2835,18 +2843,21 @@ export const createGroupWithMembers = async (
   const invites: { id: string; email: string }[] = [];
   for (const member of members) {
     const guestName = member.guestName?.trim();
-    if (guestName) {
-      await db.collection('group_members').doc(randomUUID()).set({
-        groupId,
-        guestName,
-        addedBy: ownerId,
-        createdAt: nowIso(),
-        removedAt: null,
-      });
+    const normalized = member.email ? normalizeEmail(member.email) : '';
+    // An email always means an invite (a name alongside it is just a label, as on Postgres); only a
+    // person with no email becomes a guest on the trip.
+    if (!normalized) {
+      if (guestName) {
+        await db.collection('group_members').doc(randomUUID()).set({
+          groupId,
+          guestName,
+          addedBy: ownerId,
+          createdAt: nowIso(),
+          removedAt: null,
+        });
+      }
       continue;
     }
-    const normalized = member.email ? normalizeEmail(member.email) : '';
-    if (!normalized) continue;
     const user = await findUserByEmail(normalized);
     const inviteId = randomUUID();
     invites.push({ id: inviteId, email: normalized });
@@ -2855,6 +2866,7 @@ export const createGroupWithMembers = async (
       inviterId: ownerId,
       inviteeUserId: user?.id ?? null,
       inviteeEmail: normalized,
+      guestName: guestName || null,
       status: 'pending',
       createdAt: nowIso(),
     });
@@ -6047,9 +6059,10 @@ export const deleteItineraryDetail = async (userId: string, detailId: string): P
   }
 };
 
+// Argument order is (userId, detailId, ...) like the Postgres adapter and the shared interface.
 export const updateItineraryDetail = async (
-  detailId: string,
   userId: string,
+  detailId: string,
   updates: Partial<ItineraryDetail>
 ): Promise<ItineraryDetail> => {
   const db = getDb();
@@ -8881,7 +8894,8 @@ export const claimStripeWebhookEvent = async (data: {
       livemode: data.livemode,
       eventCreated: data.eventCreated ?? null,
       processingStatus: 'pending',
-      attemptCount: previous?.attemptCount ?? 0,
+      // The first delivery counts as attempt 1, as on Postgres (column default), so retries read 2, 3, ...
+      attemptCount: previous?.attemptCount ?? 1,
       lastError: null,
       receivedAt: previous?.receivedAt ?? nowIso(),
       processedAt: null,

@@ -700,6 +700,30 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     }
   };
 
+  // Whether newly uploaded photos keep where they were taken. Not retroactive (server enforces at upload time).
+  const [photoLocationBusy, setPhotoLocationBusy] = useState(false);
+  const [photoLocationNotice, setPhotoLocationNotice] = useState('');
+  const setPhotoLocation = async (enabled) => {
+    if (!activeTripId || !canEdit || photoLocationBusy) return;
+    setPhotoLocationBusy(true);
+    setPhotoLocationNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoLocationEnabled: enabled }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to update photo locations');
+      setPhotoLocationNotice(enabled ? 'Photos you add from now on will keep where they were taken.' : 'Photos you add from now on will not keep their location.');
+      await refreshBlogAndPublication();
+    } catch (error) {
+      setPhotoLocationNotice(error.message || 'Unable to update photo locations');
+    } finally {
+      setPhotoLocationBusy(false);
+    }
+  };
+
   const toggleEditMode = () => {
     setEditMode((current) => {
       if (current) {
@@ -2199,6 +2223,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                         : 'Blogs go public automatically when every traveler is 16+ with a date of birth in their profile and none has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
                     {' '}Travelers and followers can always see this blog.
                   </Text>
+                </View>
+              ) : null}
+              {canEdit && !readOnly ? (
+                <View testID="blog-photo-location-settings" style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
+                  <Text style={{ color: textColor, fontWeight: '700' }}>Keep photo locations: {blog?.photoLocationEnabled ? 'On' : 'Off'}</Text>
+                  <Text style={{ color: mutedColor, marginTop: 4, fontSize: 12 }}>
+                    Off by default. When on, photos added from now on keep where they were taken, which lets this trip draw a map of each day. Photos already added are not changed, and turning this off does not remove locations already saved. Only travelers see exact locations; followers see a map only if you also share day maps below.
+                  </Text>
+                  <TouchableOpacity
+                    testID="blog-photo-location-toggle"
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: Boolean(blog?.photoLocationEnabled), disabled: photoLocationBusy }}
+                    disabled={photoLocationBusy}
+                    onPress={() => setPhotoLocation(!blog?.photoLocationEnabled)}
+                    style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 5, paddingHorizontal: 10, minHeight: 44, justifyContent: 'center', ...(blog?.photoLocationEnabled ? { backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' } : {}) }]}
+                  >
+                    <Text style={blog?.photoLocationEnabled ? { color: textColor } : styles.buttonText}>{photoLocationBusy ? 'Updating…' : blog?.photoLocationEnabled ? 'Stop keeping locations' : 'Keep photo locations'}</Text>
+                  </TouchableOpacity>
+                  {photoLocationNotice ? <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>{photoLocationNotice}</Text> : null}
                 </View>
               ) : null}
               {canEdit && !readOnly ? (

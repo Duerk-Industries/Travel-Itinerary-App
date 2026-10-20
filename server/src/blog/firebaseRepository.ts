@@ -333,7 +333,9 @@ export const updateBlogTextItem = async (userId: string, itemId: string, patch: 
     // authorized state on a conflict, not a bare rejection.
     return { conflict: true, latest: mapItem({ id: itemId, data: () => row }) };
   }
-  const update = { body: patch.body === undefined ? row.body : String(patch.body), tags: patch.tags === undefined ? normalizeBlogTags(row.tags ?? []) : normalizeBlogTags(patch.tags), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso() };
+  // Editing detaches an item from its itinerary source (the link, and the item field the API reads).
+  const detach = row.sourceId ? { sourceDetached: true } : {};
+  const update = { body: patch.body === undefined ? row.body : String(patch.body), tags: patch.tags === undefined ? normalizeBlogTags(row.tags ?? []) : normalizeBlogTags(patch.tags), languageTag: patch.languageTag === undefined ? row.languageTag ?? null : patch.languageTag, audience: patch.audience ?? row.audience ?? 'public', version: Number(row.version ?? 1) + 1, lastEditorUserId: userId, updatedAt: nowIso(), ...detach };
   await ref.set(update, { merge: true });
   await getDb().collection('blog_item_source_links').where('itemId', '==', itemId).get().then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.set({ detached: true, updatedAt: nowIso() }, { merge: true }))));
   await getDb().collection('trip_blogs').doc(String(row.tripId)).set({ contentRevision: (await ensureBlog(String(row.tripId))).contentRevision + 1, updatedAt: nowIso() }, { merge: true });

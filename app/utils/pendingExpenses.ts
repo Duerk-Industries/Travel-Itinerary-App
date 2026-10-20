@@ -23,6 +23,19 @@ export type PendingExpenseArgs = {
   payload: PendingExpensePayload;
 };
 
+const stringList = (value: unknown): boolean => Array.isArray(value) && value.every(item => typeof item === 'string');
+
+/** True only for an entry this app could actually replay. Used when restoring a queue from damaged or imported data. */
+export const isReplayablePendingExpense = (entry: { kind?: unknown; args?: unknown }): boolean => {
+  if (entry.kind !== PENDING_EXPENSE_KIND || !entry.args || typeof entry.args !== 'object') return false;
+  const { operationKey, payload } = entry.args as Partial<PendingExpenseArgs>;
+  if (typeof operationKey !== 'string' || !operationKey || !payload || typeof payload !== 'object') return false;
+  return typeof payload.tripId === 'string' && !!payload.tripId && typeof payload.expenseDate === 'string'
+    && typeof payload.category === 'string' && typeof payload.currency === 'string'
+    && typeof payload.amount === 'number' && Number.isFinite(payload.amount)
+    && stringList(payload.payerIds) && stringList(payload.forIds);
+};
+
 export const newPendingExpenseArgs = (payload: PendingExpensePayload): PendingExpenseArgs => ({
   operationKey: createIdempotencyKey('exp'),
   payload,

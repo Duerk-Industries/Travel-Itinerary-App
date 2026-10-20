@@ -3,12 +3,12 @@ import request from 'supertest';
 import { createHash } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag, setAdminSetting } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { docs, isFirebase, sql } from './providerRows';
 import { notify } from '../src/services/notificationService';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 
 describe('notification service', () => {
-  const user = { firstName: 'Notify', lastName: 'User', email: 'notify-test@example.com', password: 'Password123!' };
+  const user = { firstName: 'Notify', lastName: 'User', email: `notify-test-${Date.now()}@example.com`, password: 'Password123!' };
   let token = '';
   let userId = '';
 
@@ -81,8 +81,8 @@ describe('notification service', () => {
     expect(notifications.body.notifications).toHaveLength(1);
     expect(notifications.body.notifications[0].title).toBe('Test Title');
 
-    const outbox = await queryBlog('SELECT * FROM notification_outbox');
-    expect(outbox.rows.length).toBeGreaterThan(0);
+    const outbox = isFirebase() ? await docs('notification_outbox') : (await sql('SELECT * FROM notification_outbox')).rows;
+    expect(outbox.length).toBeGreaterThan(0);
   });
 
   it('dedupe_key prevents duplicate notifications for the same user', async () => {
@@ -117,15 +117,17 @@ describe('notification service', () => {
       .send({ platform: 'ios', pushToken: 'ExponentPushToken[abc123]', deviceLabel: 'Test iPhone' })
       .expect(204);
 
-    const stored = await queryBlog('SELECT push_token_ciphertext, push_token_hash FROM notification_devices WHERE user_id = $1', [userId]);
-    expect(stored.rows).toHaveLength(1);
-    expect(stored.rows[0].push_token_ciphertext).not.toContain('ExponentPushToken');
-    expect(stored.rows[0].push_token_hash).toBe(createHash('sha256').update('ExponentPushToken[abc123]').digest('hex'));
+    const stored = isFirebase()
+      ? (await docs('notification_devices', [['userId', userId]])).map(d => ({ push_token_ciphertext: d.pushTokenCiphertext, push_token_hash: d.pushTokenHash }))
+      : (await sql('SELECT push_token_ciphertext, push_token_hash FROM notification_devices WHERE user_id = $1', [userId])).rows;
+    expect(stored).toHaveLength(1);
+    expect(stored[0].push_token_ciphertext).not.toContain('ExponentPushToken');
+    expect(stored[0].push_token_hash).toBe(createHash('sha256').update('ExponentPushToken[abc123]').digest('hex'));
 
     // The public GET /devices response must never leak the ciphertext back out.
     const listed = await request(app).get('/api/notifications/devices').set('Authorization', `Bearer ${token}`).expect(200);
     expect(listed.body.devices).toHaveLength(1);
-    expect(listed.body.devices[0]).not.toHaveProperty('push_token_ciphertext');
+    for (const secret of ['push_token_ciphertext', 'pushTokenCiphertext', 'push_token_hash', 'pushTokenHash']) expect(listed.body.devices[0]).not.toHaveProperty(secret);
     expect(listed.body.devices[0].device_label).toBe('Test iPhone');
   });
 
@@ -165,12 +167,30 @@ describe('notification service', () => {
     await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`).send({ preferences: [{ category: 'trip_digest', inApp: false, push: false, email: true }] }).expect(204);
     const options = { userIds: [userId], category: 'trip_digest' as const, title: 'Email only', body: 'Summary', dedupeKey: 'email-only-dedupe' };
     await notify(options); await notify(options);
-    const stored = await queryBlog('SELECT id,in_app FROM notifications WHERE user_id=$1 AND dedupe_key=$2', [userId,options.dedupeKey]);
-    expect(stored.rows).toHaveLength(1); expect(stored.rows[0].in_app).toBe(false);
-    const queued = await queryBlog('SELECT channel FROM notification_outbox WHERE notification_id=$1',[stored.rows[0].id]);
-    expect(queued.rows).toEqual([{ channel: 'email' }]);
+    const stored = isFirebase()
+      ? (await docs('notifications', [['userId', userId], ['dedupeKey', options.dedupeKey]])).map(d => ({ id: d._id, in_app: d.inApp }))
+      : (await sql('SELECT id,in_app FROM notifications WHERE user_id=$1 AND dedupe_key=$2', [userId, options.dedupeKey])).rows;
+    expect(stored).toHaveLength(1); expect(stored[0].in_app).toBe(false);
+    const queued = isFirebase()
+      ? (await docs('notification_outbox', [['notificationId', stored[0].id]])).map(d => ({ channel: d.channel }))
+      : (await sql('SELECT channel FROM notification_outbox WHERE notification_id=$1', [stored[0].id])).rows;
+    expect(queued).toEqual([{ channel: 'email' }]);
     const inbox = await request(app).get('/api/notifications').set('Authorization', `Bearer ${token}`).expect(200);
-    expect(inbox.body.notifications.some((row: any) => row.id === stored.rows[0].id)).toBe(false);
+    expect(inbox.body.notifications.some((row: any) => row.id === stored[0].id)).toBe(false);
   });
 
+  it("will not let one person disable another person's device", async () => {
+    const other = { firstName: 'Other', lastName: 'Person', email: `notify-other-${Date.now()}@example.com`, password: 'Password123!' };
+    await registerWebUser(other); await confirmWebUser(other.email);
+    const otherToken = (await loginWebUser(other)).body.token;
+    await request(app).post('/api/notifications/devices').set('Authorization', `Bearer ${token}`).send({ platform: 'android', pushToken: 'ExponentPushToken[owner-device]', deviceLabel: 'Owner phone' }).expect(204);
+    const before = (await request(app).get('/api/notifications/devices').set('Authorization', `Bearer ${token}`).expect(200)).body.devices;
+    const target = before.find((d: any) => d.device_label === 'Owner phone');
+    expect(target).toBeTruthy();
+    await request(app).delete(`/api/notifications/devices/${target.id}`).set('Authorization', `Bearer ${otherToken}`).expect(204);
+    const after = (await request(app).get('/api/notifications/devices').set('Authorization', `Bearer ${token}`).expect(200)).body.devices;
+    expect(after.some((d: any) => d.id === target.id)).toBe(true);
+    await request(app).delete(`/api/notifications/devices/${target.id}`).set('Authorization', `Bearer ${token}`).expect(204);
+    await cleanupTestUsersByEmail([other.email]);
+  });
 });

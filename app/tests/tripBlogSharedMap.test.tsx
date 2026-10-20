@@ -13,8 +13,8 @@ const tripId = 'trip-1';
 const jsonResponse = (body: unknown, status = 200) =>
   Promise.resolve({ ok: status >= 200 && status < 300, status, json: async () => body } as Response);
 
-const blogBody = (sharedMapEnabled: boolean) => ({
-  id: 'blog-1', tripId, title: 'Blog', subtitle: null, introduction: null, contentRevision: 1, sharedMapEnabled,
+const blogBody = (sharedMapEnabled: boolean, photoLocationEnabled = false) => ({
+  id: 'blog-1', tripId, title: 'Blog', subtitle: null, introduction: null, contentRevision: 1, sharedMapEnabled, photoLocationEnabled,
   visibilityState: 'private', visibilityEpoch: 0, publicPath: null,
   days: [{ id: 'day-1', tripId, localDate: '2026-09-01', headline: null, summary: null, coverItemId: null, updateVersion: 1, activities: [],
     items: [{ id: 'item-1', kindKey: 'core.text', body: 'A day worth reading', audience: 'travelers', updateVersion: 1 }] }],
@@ -22,6 +22,7 @@ const blogBody = (sharedMapEnabled: boolean) => ({
 
 const mount = (preview: Array<{ dayDate: string; points: Array<{ lat: number; lng: number }> }>) => {
   let enabled = false;
+  let locations = false;
   const calls: string[] = [];
   (global as any).fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -31,11 +32,12 @@ const mount = (preview: Array<{ dayDate: string; points: Array<{ lat: number; ln
     if (url.includes('/facts')) return jsonResponse({ facts: [] });
     if (url.includes('/blog/map-sharing-preview')) { calls.push('preview'); return jsonResponse({ days: preview }); }
     if (method === 'PATCH' && url.endsWith(`/api/trips/${tripId}/blog`)) {
-      enabled = JSON.parse(String(init?.body)).sharedMapEnabled;
-      calls.push(`patch:${enabled}`);
-      return jsonResponse(blogBody(enabled));
+      const patch = JSON.parse(String(init?.body));
+      if (patch.photoLocationEnabled !== undefined) { locations = patch.photoLocationEnabled; calls.push(`locations:${locations}`); }
+      else { enabled = patch.sharedMapEnabled; calls.push(`patch:${enabled}`); }
+      return jsonResponse(blogBody(enabled, locations));
     }
-    if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(blogBody(enabled));
+    if (method === 'GET' && url.includes(`/api/trips/${tripId}/blog?`)) return jsonResponse(blogBody(enabled, locations));
     return jsonResponse({}, 404);
   });
   const screen = render(<TripBlogTab backendUrl="https://wanderbunnies.test" headers={{ Authorization: 'Bearer t' }} activeTripId={tripId} styles={styles} theme={{ colors: {} }} readOnly={false} />);
@@ -79,5 +81,21 @@ describe('TripBlogTab — follower day maps setting', () => {
     expect(screen.getByTestId('blog-shared-map-on').props.accessibilityState?.disabled ?? screen.getByTestId('blog-shared-map-on').props.disabled).toBeTruthy();
     fireEvent.press(screen.getByTestId('blog-shared-map-on'));
     expect(calls).toEqual(['preview']);
+  });
+});
+
+describe('TripBlogTab — photo location setting', () => {
+  it('is off by default, says it is not retroactive, and toggles on and off', async () => {
+    const { screen, calls } = mount([]);
+    await openSettings(screen);
+    expect(screen.getByText('Keep photo locations: Off')).toBeTruthy();
+    expect(screen.getByText(/Photos already added are not changed/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('blog-photo-location-toggle'));
+    await waitFor(() => expect(screen.getByText('Keep photo locations: On')).toBeTruthy());
+    expect(screen.getByText('Photos you add from now on will keep where they were taken.')).toBeTruthy();
+    expect(screen.getByTestId('blog-photo-location-toggle').props.accessibilityState.checked).toBe(true);
+    fireEvent.press(screen.getByTestId('blog-photo-location-toggle'));
+    await waitFor(() => expect(screen.getByText('Keep photo locations: Off')).toBeTruthy());
+    expect(calls).toEqual(['locations:true', 'locations:false']);
   });
 });

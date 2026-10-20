@@ -1,4 +1,6 @@
 import { queryBlog } from '../db.postgres';
+import { getCurrentDbProvider } from '../db';
+import { getDb } from '../db.firebase';
 
 // Phase 0's "DB lease primitive" prerequisite (blocked Phases 2, 4.5, 6; not built in Phase 1 —
 // built here, in Phase 2, scoped to what the counter reconciliation job below actually needs
@@ -14,14 +16,25 @@ import { queryBlog } from '../db.postgres';
 // only "did the loser instance retry needlessly" — which it doesn't, since claimJobLease returns
 // false immediately rather than blocking.
 //
-// Postgres/memory only. A Firebase equivalent (a document transaction with a deterministic ID —
-// see architecture §3.5) is not built here: nothing in Phase 2 needs it yet — the counter
-// reconciliation job below is the only caller, and Firestore counters are already atomic via
-// FieldValue.increment (firebaseEngagementRepository.ts), so the same drift problem this lease
-// exists to let a job safely fix doesn't arise there the way it does for Postgres/pg-mem's
-// read-then-write JSONB counters.
+// Firestore: the same guarantee comes from `create()` on a deterministic document id, which fails
+// with ALREADY_EXISTS for every racer but one. (The counter reconciliation job itself still skips
+// Firestore, whose counters are FieldValue.increment-atomic, but the primitive works on both.)
+const firebase = (): boolean => getCurrentDbProvider() === 'firebase';
+const leaseDocId = (jobKey: string, windowStart: Date): string =>
+  `${jobKey.replace(/[^A-Za-z0-9_-]/g, '_')}__${windowStart.toISOString()}`;
 
 export const claimJobLease = async (jobKey: string, windowStart: Date, leaseOwner: string): Promise<boolean> => {
+  if (firebase()) {
+    try {
+      await getDb().collection('scheduled_job_leases').doc(leaseDocId(jobKey, windowStart)).create({
+        jobKey, windowStart: windowStart.toISOString(), leaseOwner, claimedAt: new Date().toISOString(), completedAt: null,
+      });
+      return true;
+    } catch {
+      // ALREADY_EXISTS: another instance holds this window. Any other failure also means "do not run".
+      return false;
+    }
+  }
   try {
     await queryBlog(
       'INSERT INTO scheduled_job_leases (job_key, window_start, lease_owner) VALUES ($1, $2, $3)',
@@ -35,6 +48,10 @@ export const claimJobLease = async (jobKey: string, windowStart: Date, leaseOwne
 };
 
 export const completeJobLease = async (jobKey: string, windowStart: Date): Promise<void> => {
+  if (firebase()) {
+    await getDb().collection('scheduled_job_leases').doc(leaseDocId(jobKey, windowStart)).update({ completedAt: new Date().toISOString() });
+    return;
+  }
   await queryBlog(
     'UPDATE scheduled_job_leases SET completed_at = NOW() WHERE job_key = $1 AND window_start = $2',
     [jobKey, windowStart]

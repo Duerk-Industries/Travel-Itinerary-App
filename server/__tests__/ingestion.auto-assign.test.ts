@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { app } from '../src/app';
 import * as db from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { firestore, isFirebase, sql } from './providerRows';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { applyAutomaticAssignments } from '../src/ingestion/assignment/autoAssign';
 import { getParsedItemById } from '../src/ingestion/shared/repository';
@@ -20,6 +20,51 @@ const FLIGHT_FIELDS = {
   providerVendor: 'Delta',
   cost: 450,
   currency: 'USD',
+};
+
+// Fixture writes that deliberately bypass the API (to make a row look edited, expired or paid), done
+// through whichever adapter is active, so this suite runs on pg-mem and on Firestore.
+const rewriteParsedItem = async (id: string, row: Record<string, any>) => {
+  if (isFirebase()) {
+    await firestore().collection('parsed_items').doc(id).update({
+      itemType: row.item_type, sourceType: row.source_type, confidenceScore: row.confidence_score, timezoneStatus: row.timezone_status,
+      originalTimezone: row.original_timezone, startDateTimeUtc: row.start, endDateTimeUtc: row.end, confirmationNumber: row.confirmation,
+      extractedFields: row.fields, reviewStatus: row.review_status, status: row.review_status, providerVendor: 'Delta',
+      travelerNames: ['Day Order'], deduplicationFingerprint: `seed-${randomUUID()}`,
+    });
+    return;
+  }
+  await sql(
+    `UPDATE parsed_items SET item_type=$2, source_type=$3, confidence_score=$4, timezone_status=$5, original_timezone=$6,
+       start_datetime_utc=$7, end_datetime_utc=$8, confirmation_number=$9, extracted_fields=$10::jsonb, review_status=$11,
+       provider_vendor='Delta', traveler_names='["Day Order"]'::jsonb, deduplication_fingerprint=$12 WHERE id=$1`,
+    [id, row.item_type, row.source_type, row.confidence_score, row.timezone_status, row.original_timezone, row.start, row.end, row.confirmation, JSON.stringify(row.fields), row.review_status, `seed-${randomUUID()}`]
+  );
+};
+const setTripDestination = async (tripId: string, destination: string) => {
+  if (isFirebase()) await firestore().collection('trips').doc(tripId).update({ destination });
+  else await sql('UPDATE trips SET destination=$2 WHERE id=$1', [tripId, destination]);
+};
+const changeFlightCarrier = async (flightId: string, carrier: string) => {
+  if (isFirebase()) await firestore().collection('flights').doc(flightId).update({ carrier });
+  else await sql('UPDATE flights SET carrier = $2 WHERE id = $1', [flightId, carrier]);
+};
+const changeFlightExpenseAmount = async (flightId: string, amount: number) => {
+  if (isFirebase()) {
+    const snap = await firestore().collection('expenses').where('sourceType', '==', 'flight').where('sourceId', '==', flightId).get();
+    await Promise.all(snap.docs.map(doc => doc.ref.update({ amount })));
+  } else await sql(`UPDATE expenses SET amount = $2 WHERE source_type = 'flight' AND source_id = $1`, [flightId, amount]);
+};
+const recordLaterPayment = async (tripId: string, groupId: string, userId: string) => {
+  await new Promise(resolve => setTimeout(resolve, 20));
+  await db.insertTripPayment({ tripId, groupId, recordedBy: userId, payerId: randomUUID(), receiverId: randomUUID(), paymentDate: '2027-05-12', amountCents: 1000, currency: 'USD' });
+};
+const expireUndoWindow = async (parsedItemId: string) => {
+  const past = new Date(Date.now() - 60_000).toISOString();
+  if (isFirebase()) {
+    const snap = await firestore().collection('parsed_item_assignments').where('parsedItemId', '==', parsedItemId).get();
+    await Promise.all(snap.docs.map(doc => doc.ref.update({ undoExpiresAt: past })));
+  } else await sql('UPDATE parsed_item_assignments SET undo_expires_at = $2 WHERE parsed_item_id = $1', [parsedItemId, past]);
 };
 
 describe('automatic adding of matching bookings', () => {
@@ -53,12 +98,7 @@ describe('automatic adding of matching bookings', () => {
       confirmation: `CONF${Math.floor(Math.random() * 1e6)}`, fields: FLIGHT_FIELDS, review_status: 'READY_FOR_REVIEW',
       ...over,
     };
-    await queryBlog(
-      `UPDATE parsed_items SET item_type=$2, source_type=$3, confidence_score=$4, timezone_status=$5, original_timezone=$6,
-         start_datetime_utc=$7, end_datetime_utc=$8, confirmation_number=$9, extracted_fields=$10::jsonb, review_status=$11,
-         provider_vendor='Delta', traveler_names='["Day Order"]'::jsonb, deduplication_fingerprint=$12 WHERE id=$1`,
-      [id, row.item_type, row.source_type, row.confidence_score, row.timezone_status, row.original_timezone, row.start, row.end, row.confirmation, JSON.stringify(row.fields), row.review_status, `seed-${randomUUID()}`]
-    );
+    await rewriteParsedItem(id, row);
     return id;
   };
 
@@ -86,7 +126,7 @@ describe('automatic adding of matching bookings', () => {
     await request(app).post(`/api/groups/${groupId}/members`).set(auth).send({ email: `auto-assign-mate+${uniq}@example.com` }).expect(201);
     const trip = await request(app).post('/api/trips').set(auth).send({ groupId, name: 'Tokyo 2027', startDate: '2027-05-11', endDate: '2027-05-21' }).expect(201);
     tripId = trip.body.id;
-    await queryBlog('UPDATE trips SET destination=$2 WHERE id=$1', [tripId, 'Tokyo, Japan']);
+    await setTripDestination(tripId, 'Tokyo, Japan');
     const members = await request(app).get(`/api/groups/${groupId}/members`).set(auth).expect(200);
     memberId = members.body.find((m: any) => (m.email ?? m.userEmail) === `auto-assign+${uniq}@example.com`)?.id;
     await setFlag(true);
@@ -179,7 +219,7 @@ describe('automatic adding of matching bookings', () => {
 
     it('asks first when two trips fit equally well', async () => {
       const twin = await request(app).post('/api/trips').set(auth).send({ groupId, name: 'Tokyo again', startDate: '2027-05-11', endDate: '2027-05-21' }).expect(201);
-      await queryBlog('UPDATE trips SET destination=$2 WHERE id=$1', [twin.body.id, 'Tokyo, Japan']);
+      await setTripDestination(twin.body.id, 'Tokyo, Japan');
       const id = await seedItem();
       expect(await run(id)).toHaveLength(0);
       expect((await status(id)).placement.heldBack).toBe('not_unique');
@@ -232,7 +272,7 @@ describe('automatic adding of matching bookings', () => {
       await run(id);
       const flight = (await flights()).find((f) => (f.bookingReference ?? f.booking_reference) === 'EDITME1');
       await request(app).patch(`/api/transfers/${flight.id}`).set({ Authorization: `Bearer ${tripmateToken}` }).send({ carrier: 'Changed Airline' });
-      await queryBlog('UPDATE flights SET carrier = $2 WHERE id = $1', [flight.id, 'Changed Airline']);
+      await changeFlightCarrier(flight.id, 'Changed Airline');
       const refused = await undo(id).expect(409);
       expect(refused.body.code).toBe('UNDO_BOOKING_EDITED');
       expect((await flights()).some((f) => f.id === flight.id)).toBe(true);
@@ -242,7 +282,7 @@ describe('automatic adding of matching bookings', () => {
       const id = await seedItem({ confirmation: 'COSTME1' });
       await run(id);
       const flight = (await flights()).find((f) => (f.bookingReference ?? f.booking_reference) === 'COSTME1');
-      await queryBlog(`UPDATE expenses SET amount = 999 WHERE source_type = 'flight' AND source_id = $1`, [flight.id]);
+      await changeFlightExpenseAmount(flight.id, 999);
       const refused = await undo(id).expect(409);
       expect(refused.body.code).toBe('UNDO_EXPENSE_EDITED');
       expect((await flights()).some((f) => f.id === flight.id)).toBe(true);
@@ -251,11 +291,7 @@ describe('automatic adding of matching bookings', () => {
     it('leaves everything alone if travelers recorded payments after it was added', async () => {
       const id = await seedItem({ confirmation: 'PAYME01' });
       await run(id);
-      await queryBlog(
-        `INSERT INTO trip_payments (id, trip_id, group_id, recorded_by, payer_id, receiver_id, payment_date, amount_cents, currency, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,'2027-05-12',1000,'USD', NOW() + INTERVAL '1 minute')`,
-        [randomUUID(), tripId, groupId, userId, randomUUID(), randomUUID()]
-      );
+      await recordLaterPayment(tripId, groupId, userId);
       const refused = await undo(id).expect(409);
       expect(refused.body.code).toBe('UNDO_PAYMENTS_RECORDED');
     });
@@ -263,7 +299,7 @@ describe('automatic adding of matching bookings', () => {
     it('stops working after the seven days are up', async () => {
       const id = await seedItem({ confirmation: 'LATE001' });
       await run(id);
-      await queryBlog(`UPDATE parsed_item_assignments SET undo_expires_at = NOW() - INTERVAL '1 minute' WHERE parsed_item_id = $1`, [id]);
+      await expireUndoWindow(id);
       const refused = await undo(id).expect(409);
       expect(refused.body.code).toBe('UNDO_EXPIRED');
       const recent = (await request(app).get('/api/ingestion/auto-added').set(auth).expect(200)).body.items;

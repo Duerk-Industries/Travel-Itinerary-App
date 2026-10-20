@@ -59,9 +59,13 @@ const chunk = <T>(items: T[], size = 10): T[][] => {
 // Keyed on `localDate`, not the blog_days doc id: firebaseMediaRepository.initUpload writes media
 // blog_items with `blogDayId = <date string>` while text items use `blogDayId = <doc id>` — the
 // one field every blog_items doc sets consistently is `localDate`.
-export const getVisibleMediaForDay = async (dayDate: string, visibleAudiences: BlogAudience[]): Promise<FirebaseMediaRow[]> => {
+//
+// Scoped to the trip: another trip's photos on the same calendar date are never this trip's day (the
+// Postgres query joins through the trip's own blog_days). Without this a day's facts, and the map
+// points derived from them, could include another trip's photo locations.
+export const getVisibleMediaForDay = async (tripId: string, dayDate: string, visibleAudiences: BlogAudience[]): Promise<FirebaseMediaRow[]> => {
   const db = getDb();
-  const itemSnap = await db.collection('blog_items').where('localDate', '==', dayDate).get();
+  const itemSnap = await db.collection('blog_items').where('tripId', '==', tripId).where('localDate', '==', dayDate).get();
   const itemIds = itemSnap.docs
     .filter((doc) => {
       const data = doc.data() as any;
@@ -93,10 +97,10 @@ const ALL_AUDIENCES: BlogAudience[] = ['travelers', 'followers', 'public'];
 
 // Postgres's day-starter media count has no audience filter (`blogDayStarterService.ts`'s
 // mediaCount query) — passing every audience reproduces that.
-export const countAllReadyMediaForDay = async (dayDate: string): Promise<number> => (await getVisibleMediaForDay(dayDate, ALL_AUDIENCES)).length;
+export const countAllReadyMediaForDay = async (tripId: string, dayDate: string): Promise<number> => (await getVisibleMediaForDay(tripId, dayDate, ALL_AUDIENCES)).length;
 
-export const hasTextItemForDay = async (dayDate: string): Promise<boolean> => {
-  const snap = await getDb().collection('blog_items').where('localDate', '==', dayDate).where('kindKey', '==', 'core.text').get();
+export const hasTextItemForDay = async (tripId: string, dayDate: string): Promise<boolean> => {
+  const snap = await getDb().collection('blog_items').where('tripId', '==', tripId).where('localDate', '==', dayDate).where('kindKey', '==', 'core.text').get();
   return snap.docs.some((doc) => (doc.data() as any).deletedAt == null);
 };
 

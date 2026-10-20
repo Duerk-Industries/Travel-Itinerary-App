@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { initDb } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { docs, isFirebase, sql } from './providerRows';
 import { putNotificationWork, claimNotificationWork, finishNotificationWork } from '../src/services/notificationWorkRepository';
 import { cancellationInstant } from '../src/services/planningNotificationScheduler';
 import { selectPlanningDayPoints } from '../src/utils/planningMapPoints';
@@ -20,7 +20,10 @@ it('recovers expired leases and fences stale workers without duplicating complet
   expect(await finishNotificationWork(recovered)).toBe(true);
   await putNotificationWork({ id, kind: 'deadline', dueAt: 0, data: { marker: 'must not reset' } });
   expect((await claimNotificationWork(200000)).some(job => job.id === id)).toBe(false);
-  expect((await queryBlog('SELECT data FROM notification_work WHERE id=$1', [id])).rows[0].data.marker).toBe('original');
+  const stored = isFirebase()
+    ? (await docs('notification_work')).find(row => row._id === id)?.data
+    : (await sql('SELECT data FROM notification_work WHERE id=$1', [id])).rows[0].data;
+  expect(stored.marker).toBe('original');
 });
 it('uses an explicit fixed UTC policy for date-only deadlines and preserves zoned instants across DST', () => {
   expect(cancellationInstant('2026-11-01')).toBe(Date.parse('2026-11-01T00:00:00Z'));

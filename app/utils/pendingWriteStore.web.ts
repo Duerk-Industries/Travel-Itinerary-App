@@ -126,6 +126,43 @@ export const transactionalPendingWriteStore: PendingWriteStore = {
     const legacy = localStorage.getItem(key);
     return stored || legacy !== null ? JSON.stringify({ transactional: stored?.raw ?? null, legacy }) : null;
   },
+  repair: async (key, entries) => {
+    const db = await open();
+    const backupKey = `${key}::corrupt-backup::${Date.now()}`;
+    // An unreadable legacy copy would make every later read throw, so it is backed up (and verified)
+    // before it is cleared. A readable one is left alone: it is the older-tab recovery copy.
+    const legacy = localStorage.getItem(key);
+    let legacyUnreadable = false;
+    if (legacy !== null) { try { parsePendingWriteQueue(legacy, true); } catch { legacyUnreadable = true; } }
+    if (legacyUnreadable) {
+      localStorage.setItem(backupKey, legacy!);
+      if (localStorage.getItem(backupKey) !== legacy) throw new Error('The backup could not be saved, so nothing was changed.');
+    }
+    let written = 0, alreadyHandled = 0;
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const request = store.get(key);
+      request.onsuccess = () => {
+        try {
+          const row: Row = request.result ?? { raw: '[]', retired: {} };
+          const retired = row.retired && typeof row.retired === 'object' && !Array.isArray(row.retired) ? row.retired : {};
+          const keep = entries.filter(entry => !Object.prototype.hasOwnProperty.call(retired, entry.id));
+          alreadyHandled = entries.length - keep.length; written = keep.length;
+          const raw = JSON.stringify(keep);
+          parsePendingWriteQueue(raw, true);
+          if (raw.length > MAX_CHARACTERS || keep.length > MAX_ENTRIES) throw new Error('The recovered queue is too large to store.');
+          store.put({ raw: row.raw, retired: {} } satisfies Row, backupKey);
+          store.put({ raw, retired } satisfies Row, key);
+        } catch (error) { tx.abort(); reject(error); }
+      };
+      tx.onabort = () => reject(tx.error ?? new Error('Repair was interrupted; nothing was changed.'));
+      tx.oncomplete = () => resolve();
+    });
+    if (legacyUnreadable) localStorage.removeItem(key);
+    broadcast(key);
+    return { backupKey, written, alreadyHandled };
+  },
   subscribe: (key, callback) => {
     const callbacks = listeners.get(key) ?? new Set(); callbacks.add(callback); listeners.set(key, callbacks);
     if (!channel && typeof BroadcastChannel !== 'undefined') {

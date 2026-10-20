@@ -163,6 +163,109 @@ when `navigator.locks` is missing.
   corrupt expense-queue exports (financial data; it needs its own design and review), and
   everything listed under external evidence.
 
+## Continuation: queue repair, photo locations and Firestore emulator runs
+
+- **Corrupt expense-queue repair (§5.3).** The recovery screen now offers, after an export,
+  *Repair saved expenses* and *Restore from a recovery file* (file chooser on web, paste
+  everywhere). Repair keeps every entry that individually validates and that the app could replay
+  (`isReplayablePendingExpense`), under its original id and operation key, so the server's
+  Idempotency-Key still prevents duplicates. The unreadable original is backed up first and kept
+  (IndexedDB row `<key>::corrupt-backup::<time>`, plus a localStorage copy of an unreadable legacy
+  value; native uses `<key>.corrupt-backup.<time>`). If nothing is recoverable, nothing changes.
+  Ids already synced or discarded (the store's tombstones) are not resurrected from an old file.
+  A file from another account or server is refused. Logic: `utils/pendingQueueRepair.ts`,
+  `repairQueue` in `usePendingWrites`, `repair` in `pendingWriteStore.web.ts`.
+  Verified by `pendingQueueRepair`, `usePendingWritesRepair` and `PendingExpenseRepairFlow` tests,
+  and in real Chromium against the actual IndexedDB adapter with
+  `node scripts/check-pending-queue-repair.cjs` (interrupted repair leaves the original; keys,
+  tombstones, both backups and a readable legacy copy all behave). Still untested: native
+  devices, a real two-tab race during repair, and a usability pass on the wording.
+- **Photo locations.** Blog tools has a "Keep photo locations" switch (off by default) that sets
+  the existing `photoLocationEnabled`. Copy states it is not retroactive and does not remove
+  saved locations. Covered by `tripBlogSharedMap.test.tsx`.
+- **Firestore emulator runs.** Run with a throwaway project on its own ports, for example
+  `firebase emulators:start --only firestore --project demo-x` using a config with port 8181, then
+  `JEST_DB_PROVIDER=firebase FIRESTORE_EMULATOR_HOST=127.0.0.1:8181 GCLOUD_PROJECT_ID=demo-x npx jest
+  --config jest.projects.js --runInBand ...` (the bootstrap reads `JEST_DB_PROVIDER`, not
+  `DB_PROVIDER`). **Passing on the real emulator:** expense idempotency and sync, expenses,
+  day order, ingestion routes, pending queue, trip matcher, mailgun, data deletion, mail
+  admission, verified senders, notification outbox delivery and timing, gap-closing flags, and two
+  new provider-neutral suites: `planning.adapter-parity` (cohorts, idempotent Add and Undo, bundle
+  304 and version change, day order, lodging coordinates, map proxy bounds) and
+  `blog-day-map-points` (opt-in, coarsening, lodging suppression, immediate withdrawal, preview).
+  **Cannot run on Firestore by design:** suites that call Postgres directly
+  (`planningP1Contracts`, `planningNotificationWork`, `notification-service`,
+  `ingestion.auto-assign`, `blog-day-facts`); the provider-neutral suites above cover their
+  Firestore behaviour except notification inbox/work-queue internals and auto-assign
+  assignment/undo, which still need a Firestore-native test. Emulator runs show behaviour, not
+  contention, indexes or cost; those remain production-scale measurements.
+
+## Continuation: Firestore parity (everything that runs on Postgres runs on Firestore)
+
+Goal: the deployment only has Firestore, so every gap-closing behaviour has to be proven there.
+
+**Run it:** start an emulator (`firebase emulators:start --only firestore`), then
+`npm --prefix server run test:firestore -- __tests__/<suite>.test.ts ...` (set
+`FIRESTORE_EMULATOR_HOST` if it is not on 127.0.0.1:8080). Data goes under a throwaway project id
+(`demo-server-tests`), not your dev project. Without file arguments it runs the whole server suite,
+which takes a long time.
+
+**Real defects found by running on Firestore, and fixed:**
+- `GET /api/notifications/devices` returned the raw device document, including the encrypted push
+  token and its hash. It now returns the same scrubbed columns as Postgres.
+- `DELETE /api/notifications/devices/:id` did not check ownership on Firestore (any signed-in user
+  who knew an id could disable another person's device). It now only acts on the caller's own.
+- Day media lookups on Firestore (`getVisibleMediaForDay`, `countAllReadyMediaForDay`,
+  `hasTextItemForDay`) filtered by calendar date only, so a trip's day facts could include another
+  trip's photos from the same date, and with shared maps their locations. They are now scoped to
+  the trip, like the Postgres queries. Regression test: "never mixes in another trip's photos".
+- `scheduledJobLease` was Postgres-only; it now works on Firestore (`create()` on a deterministic id).
+
+- **Sign-in with a missing profile field failed on Firestore.** Google (new or returning user) and
+  Apple sign-in wrote `undefined` for fields like `picture` or `firstName`, which Firestore rejects.
+  Firestore is now created with `ignoreUndefinedProperties`, so a missing value is stored as absent,
+  as Postgres stores NULL.
+- **Trip wizard never invited a named traveler who had an email.** On Firestore a name took
+  precedence over an email, so the person became a guest and no invite was created (Postgres
+  invites them and keeps the name as a label). Fixed; this also fixed `packing-list`.
+- **Editing an itinerary item failed on Firestore** with "Itinerary detail not found": the
+  adapter's `updateItineraryDetail` had its `(userId, detailId)` arguments in the opposite order
+  to the shared interface. Fixed.
+- **Blog items edited after syncing from the itinerary were not marked detached** on Firestore
+  (the link was, the item field the API reads was not). Fixed.
+- **Stripe webhook attempt counts** started at 0 on Firestore and 1 on Postgres; now both 1.
+
+**Converted to run on both adapters** (raw SQL fixtures replaced by provider-aware helpers in
+`__tests__/providerRows.ts`): `ingestion.auto-assign` (add, Undo, edited/paid/expired refusals),
+`planningP1Contracts` (cohorts, digest scheduling, idempotent Add, bundle 304 and invalidation by
+direct writes, lodging coordinates), `planningNotificationWork`, `notification-service`,
+`blog-day-facts`, `blog-day-map-points`. New: `planning.adapter-parity`, `scheduledJobLease`.
+Together with the earlier suites (expenses, idempotency, day order, ingestion, mail admission,
+verified senders, notification delivery and timing, flags) all 25 listed suites pass on both pg-mem
+and the Firestore emulator.
+
+**Full-suite Firestore run (358 suites): 326 passed before these fixes.** The 31 failures were 20
+suites with raw-SQL fixtures plus 11 others; of those 11, six were the defects above. Left as-is
+and not caused by this work: `firestore.rules` (needs the rules emulator, which my throwaway one
+did not load), `aiAssistantActionsEntitlement` (expects a flag with no stored row, but Firestore
+startup seeds flag rows), `ai/captureNeverBlocks` (mocked pipeline takes a different path under
+Firestore's seeded flags), `packing-list-v2` (three tests are raw-SQL migration tests; one shows
+packing groups in a different order on Firestore, "Clothing & Footwear" first rather than "Health &
+Toiletries", which is a product decision), and `blog-account-deletion-scrub` (fixed email collides
+across runs). Re-run the full suite on your own emulator before relying on this list.
+
+**Still Postgres-only, not part of this work:** 16 older blog suites seed rows with raw SQL
+(`blog-auto-publish`, `blog-comment-routes`, `blog-publication`, `blog-engagement-authorization`,
+`blog-account-deletion-scrub`, `blog-gallery`, `blog-get-engagement-block`,
+`blog-public-engagement`, `blog-security`, `blog-comment-audience-inheritance`,
+`blog-reaction-routes`, `blog-phase7-routes`, `blog-media`, `blog-recap`,
+`blog-counter-reconciliation`, `public-blog`; the last two are Postgres-specific by design for
+counters). Their first SQL line fails with "DATABASE_URL is missing", so the product code behind
+them was not exercised on Firestore here. Firestore-native coverage exists for engagement and day
+media (`blog-engagement-firebase`, `blog-firebase-day-media`). Converting the rest is a separate,
+mechanical job, and given the media bug above it is worth doing before relying on those blog
+features in production.
+
 ## Source work still outstanding
 
 | Plan area | Actual remaining implementation |
@@ -173,7 +276,7 @@ when `navigator.locks` is missing.
 | §3.1 / §3.2 sender trust | Trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
 | §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
 | §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
-| §5.3 queue concurrency and recovery | Real two-tab browser verification of the lease fallbacks; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; a supported automatic repair/import flow for corrupt queue exports. Durable discard feedback and raw whole-queue recovery export are now implemented. |
+| §5.3 queue concurrency and recovery | Real two-tab browser verification of the lease fallbacks; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; (the corrupt-queue repair/import flow is built; see above). Durable discard feedback and raw whole-queue recovery export are now implemented. |
 | §5.4 browser shell | Local Chromium install/offline reload and simulated HTML update checked. Real deployment/hash-change recovery, hosting headers, signed-in offline flows and other browsers still need verification. Browser push and public explore remain later scope in §7. |
 
 Snapshot eviction is oldest-saved, not a claim of access-based LRU. Queue storage
