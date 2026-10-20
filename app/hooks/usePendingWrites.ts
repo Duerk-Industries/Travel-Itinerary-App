@@ -1,5 +1,6 @@
+import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { canAccessWebStorage, readAsync, readSync, writeAsync, writeSync } from '../utils/persistentStorage';
+import { canAccessWebStorage, readAsync, readAsyncOrThrow, readSync, writeAsync, writeSync } from '../utils/persistentStorage';
 
 /**
  * A single queued write captured while the client was offline. The `kind`
@@ -29,12 +30,17 @@ export interface PendingWrite<TArgs = unknown> {
 const DEFAULT_STORAGE_KEY = 'stp.pending-writes';
 const DEFAULT_MAX_ATTEMPTS = 5;
 
-const parseQueue = (raw: string | null): PendingWrite[] => {
+const parseQueue = (raw: string | null, strict = false): PendingWrite[] => {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as PendingWrite[]) : [];
+    if (!Array.isArray(parsed) || !parsed.every(entry => entry && typeof entry.id === 'string'
+      && typeof entry.kind === 'string' && Number.isFinite(entry.enqueuedAtMs) && Number.isFinite(entry.attempts))) {
+      throw new Error('Unreadable saved queue');
+    }
+    return parsed as PendingWrite[];
   } catch {
+    if (strict) throw new Error('Unreadable saved queue; keep it for recovery');
     return [];
   }
 };
@@ -61,10 +67,7 @@ const persistQueueDurably = async (key: string, queue: PendingWrite[]): Promise<
   }
 };
 
-const makeId = (): string => {
-  const rnd = Math.random().toString(36).slice(2, 10);
-  return `${Date.now().toString(36)}-${rnd}`;
-};
+const makeId = (): string => createIdempotencyKey('queue');
 
 const mergeById = (persisted: PendingWrite[], current: PendingWrite[]): PendingWrite[] => {
   const seen = new Set(persisted.map((e) => e.id));
@@ -110,6 +113,7 @@ export interface UsePendingWritesResult {
   enqueue: <TArgs>(kind: string, args: TArgs) => string;
   /** Like `enqueue`, but resolves only after the write is read back from storage. `null` means it was NOT saved. */
   enqueueDurable: <TArgs>(kind: string, args: TArgs) => Promise<string | null>;
+  replaceFailedDurable: <TArgs>(id: string, args: TArgs) => Promise<boolean>;
   /** Remove a single entry by id (no-op if not found). */
   remove: (id: string) => void;
   /** Make a `failed` entry eligible for replay again. */
@@ -163,8 +167,19 @@ export function usePendingWrites(
   pendingRef.current = pending;
   const keyRef = useRef(storageKey);
   const replayingRef = useRef(false);
+  const generationRef = useRef(0);
+  const mutationRef = useRef(0);
+  useEffect(() => () => { generationRef.current += 1; }, []);
+  const enqueueTail = useRef<Promise<unknown>>(Promise.resolve());
+  // Fence before effects run: async completions may arrive between render and commit.
+  if (keyRef.current !== storageKey) {
+    keyRef.current = storageKey;
+    generationRef.current += 1;
+    pendingRef.current = readQueueSync(storageKey);
+  }
 
   const persist = useCallback((next: PendingWrite[]) => {
+    mutationRef.current += 1;
     pendingRef.current = next;
     persistQueue(keyRef.current, next);
     setPending(next);
@@ -172,9 +187,7 @@ export function usePendingWrites(
 
   // Account switch (a different storage key): never carry the previous account's entries over.
   useEffect(() => {
-    if (keyRef.current === storageKey) return;
-    keyRef.current = storageKey;
-    const next = readQueueSync(storageKey);
+    const next = pendingRef.current;
     pendingRef.current = next;
     setPending(next);
   }, [storageKey]);
@@ -186,9 +199,10 @@ export function usePendingWrites(
     if (canAccessWebStorage()) return;
     let cancelled = false;
     const key = storageKey;
+    const mutation = mutationRef.current;
     void (async () => {
       const raw = await readAsync(key);
-      if (cancelled || keyRef.current !== key) return;
+      if (cancelled || keyRef.current !== key || mutationRef.current !== mutation) return;
       const persisted = parseQueue(raw);
       if (persisted.length === 0) return;
       const merged = mergeById(persisted, pendingRef.current);
@@ -216,14 +230,45 @@ export function usePendingWrites(
     return entry.id;
   }, [persist]);
 
-  const enqueueDurable = useCallback(async <TArgs>(kind: string, args: TArgs): Promise<string | null> => {
+  const enqueueDurable = useCallback(<TArgs,>(kind: string, args: TArgs): Promise<string | null> => {
+    const key = keyRef.current;
+    const generation = generationRef.current;
     const entry = buildEntry(kind, args);
-    const next = [...pendingRef.current, entry];
-    const saved = await persistQueueDurably(keyRef.current, next);
-    if (!saved) return null;
-    pendingRef.current = next;
-    setPending(next);
-    return entry.id;
+    const work = enqueueTail.current.then(async () => {
+      if (key !== keyRef.current || generation !== generationRef.current) return null;
+      // Read persisted native entries before the first write, even if hydration is still pending.
+      const stored = parseQueue(await readAsyncOrThrow(key), true);
+      if (key !== keyRef.current || generation !== generationRef.current) return null;
+      const next = [...mergeById(stored, pendingRef.current), entry];
+      if (!await persistQueueDurably(key, next)) return null;
+      if (key !== keyRef.current || generation !== generationRef.current) return null;
+      mutationRef.current += 1;
+      pendingRef.current = next;
+      setPending(next);
+      return entry.id;
+    });
+    enqueueTail.current = work.catch(() => undefined);
+    return work.catch(() => null);
+  }, []);
+
+  const replaceFailedDurable = useCallback(async <TArgs,>(id: string, args: TArgs): Promise<boolean> => {
+    const key = keyRef.current;
+    const generation = generationRef.current;
+    const work = enqueueTail.current.then(async () => {
+      if (generation !== generationRef.current) return false;
+      const original = pendingRef.current.find(entry => entry.id === id);
+      // Unknown outcomes must retain their original idempotency key until reconciled.
+      if (!original || original.status !== 'failed') return false;
+      const next = pendingRef.current.map(entry => entry.id === id ? { ...entry, args, attempts: 0, status: 'pending' as const, lastError: undefined, nextAttemptAtMs: undefined } : entry);
+      if (!await persistQueueDurably(key, next)) return false;
+      if (generation !== generationRef.current) return false;
+      mutationRef.current += 1;
+      pendingRef.current = next;
+      setPending(next);
+      return true;
+    });
+    enqueueTail.current = work.catch(() => undefined);
+    return work;
   }, []);
 
   const remove = useCallback((id: string) => {
@@ -244,8 +289,11 @@ export function usePendingWrites(
     // (or two open tabs) cannot send the same entry twice concurrently.
     if (replayingRef.current) return empty;
     replayingRef.current = true;
+    const replayKey = keyRef.current;
+    const generation = generationRef.current;
+    const current = () => keyRef.current === replayKey && generationRef.current === generation;
     try {
-      const summary = await withReplayLock(keyRef.current, async (): Promise<ReplaySummary> => {
+      const summary = await withReplayLock(replayKey, async (): Promise<ReplaySummary> => {
         // Snapshot the queue up-front so entries enqueued mid-drain are left
         // for the next replay tick (avoids re-entrancy issues).
         const snapshot = pendingRef.current.slice();
@@ -257,7 +305,7 @@ export function usePendingWrites(
         const updated = new Map<string, PendingWrite | null>();
         for (let i = 0; i < snapshot.length; i += 1) {
           const entry = snapshot[i]!;
-          if (paused) break;
+          if (paused || !current()) break;
           if (entry.status === 'failed') continue;
           if (!options?.ignoreBackoff && entry.nextAttemptAtMs && entry.nextAttemptAtMs > now) continue;
           let result: PendingWriteReplayResult = false;
@@ -292,6 +340,7 @@ export function usePendingWrites(
             }
           }
         }
+        if (!current()) return { ...empty, paused: true };
         // Apply results to the LATEST queue so entries enqueued or removed while draining are preserved.
         const next = pendingRef.current.flatMap((e) => {
           if (!updated.has(e.id)) return [e];
@@ -322,5 +371,5 @@ export function usePendingWrites(
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  return { pending, enqueue, enqueueDurable, remove, retry, clear, replay };
+  return { pending: keyRef.current === storageKey ? pendingRef.current : [], enqueue, enqueueDurable, replaceFailedDurable, remove, retry, clear, replay };
 }

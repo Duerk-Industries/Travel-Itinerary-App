@@ -42,6 +42,9 @@ export type OfflineTripCache = {
 
 export const OFFLINE_ACCESS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const CACHE_KEY_PREFIX = 'stp.offline-trip-cache.v2';
+export const MAX_OFFLINE_TRIP_SNAPSHOTS = 5;
+// At most four UTF-8 bytes per UTF-16 code unit: conservative 20 MB ceiling.
+const MAX_CACHE_CHARACTERS = 5_000_000;
 export type OfflineCacheOwner = { userId: string; environment: string; legacyEmail?: string | null };
 const cacheKeyFor = (owner: OfflineCacheOwner): string =>
   `${CACHE_KEY_PREFIX}.${encodeURIComponent(owner.environment)}.${encodeURIComponent(owner.userId)}`;
@@ -147,6 +150,18 @@ export const saveOfflineTripSnapshot = async (
     const updated: OfflineTripCache = { ...current, savedAt: Date.now(),
       trips: catalog.trips, groups: catalog.groups,
       snapshots: { ...current.snapshots, [snapshot.tripId]: { ...snapshot, savedAt: Date.now() } } };
+    // Snapshot eviction never touches the separately stored financial write queue.
+    // The requested trip is retained; reject an oversized single trip atomically.
+    const oldest = Object.values(updated.snapshots)
+      .filter(entry => entry.tripId !== snapshot.tripId)
+      .sort((a, b) => a.savedAt - b.savedAt || a.tripId.localeCompare(b.tripId));
+    while (oldest.length && (Object.keys(updated.snapshots).length > MAX_OFFLINE_TRIP_SNAPSHOTS
+      || JSON.stringify(updated).length > MAX_CACHE_CHARACTERS)) {
+      delete updated.snapshots[oldest.shift()!.tripId];
+    }
+    if (JSON.stringify(updated).length > MAX_CACHE_CHARACTERS) {
+      throw new Error('This trip is too large to save on this device. The previous saved copy is still available.');
+    }
     await writeCache(owner, updated);
     // Email-only entries cannot prove immutable ownership. Replace them from
     // online data, and remove the legacy copy only after the new commit.

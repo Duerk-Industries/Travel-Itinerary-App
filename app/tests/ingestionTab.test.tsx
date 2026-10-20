@@ -8,6 +8,10 @@ import React from 'react';
 import { act, render, waitFor } from '@testing-library/react-native';
 import IngestionTab from '../tabs/ingestion';
 
+// Settings/history have their own request and conflict tests. Keep this suite's
+// ordered HTTP fixture focused on upload polling and assignment refresh.
+jest.mock('../components/AutomaticImportSettings', () => () => null);
+
 jest.mock('react-native', () => {
   return {
     Platform: { OS: 'ios' },

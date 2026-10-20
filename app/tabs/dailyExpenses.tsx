@@ -1,3 +1,4 @@
+import { exportCsv } from '../utils/csvExport';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { AppTheme } from '../theme/theme';
@@ -100,6 +101,7 @@ type DailyExpensesTabProps = {
     syncedNotice: string | null;
     queueExpense: (args: PendingExpenseArgs) => Promise<string | null>;
     retryEntry: (id: string) => void;
+    replaceEntry?: (id: string, args: PendingExpenseArgs) => Promise<boolean>;
     discardEntry: (id: string) => void;
   };
 };
@@ -196,6 +198,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   allowOfflineAdd = false,
   pendingExpenses,
 }) => {
+  const [editingPendingId, setEditingPendingId] = useState<string | null>(null);
   const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
   const tripPendingEntries = useMemo(
     () => (pendingExpenses?.entries ?? []).filter((entry) => entry.args.payload.tripId === trip?.id),
@@ -337,18 +340,21 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
 
   const openAddExpenseModal = () => {
+    setEditingPendingId(null);
     setEditingExpenseId(null);
     updateExpenseDraft({ isOpen: true });
   };
 
   const cancelAddExpenseModal = () => {
     setExpenseDraft(null);
+    setEditingPendingId(null);
     setEditingExpenseId(null);
     setReceiptError(null);
   };
 
   const openEditExpenseModal = (expense: Expense) => {
     if (readOnly) return;
+    setEditingPendingId(null);
     setPendingDeleteExpense(null);
     setDetailTarget(null);
     setEditingExpenseId(expense.id);
@@ -524,6 +530,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       return true;
     };
 
+    if (editingPendingId && pendingArgs) {
+      if (!await pendingExpenses?.replaceEntry?.(editingPendingId, pendingArgs)) {
+        alertMessage("Couldn't replace this expense. The original is still saved. Try again.");
+        return;
+      }
+      cancelAddExpenseModal();
+      return;
+    }
     if (readOnly && pendingArgs) {
       await saveOnThisDevice();
       return;
@@ -733,6 +747,20 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     <Text style={styles.buttonText}>Try again</Text>
                   </TouchableOpacity>
                 ) : null}
+                {failed && pendingExpenses?.replaceEntry ? <TouchableOpacity style={[styles.button, styles.smallButton]}
+                  accessibilityRole="button" accessibilityLabel="Edit this rejected expense" onPress={() => {
+                    setEditingExpenseId(null); setEditingPendingId(entry.id);
+                    setExpenseDraft({ isOpen: true, date: payload.expenseDate, category: payload.category as CategoryOption,
+                      currency: payload.currency, amount: String(payload.amount), vendor: payload.vendor || '',
+                      forIds: payload.forIds, payerIds: payload.payerIds });
+                  }}><Text style={styles.buttonText}>Edit</Text></TouchableOpacity> : null}
+                <TouchableOpacity style={[styles.button, styles.smallButton]} accessibilityRole="button"
+                  accessibilityLabel="Export this unsynced expense" onPress={() => {
+                    // JSON inside a quoted CSV cell preserves recovery data without formula execution.
+                    const recovery = JSON.stringify({ operationKey: entry.args.operationKey, ...payload });
+                    void exportCsv(`Recovery data\n"${recovery.replace(/"/g, '""')}"`, 'unsynced-expense.csv')
+                      .then(result => { if (result === 'failed' || result === 'unavailable') alertMessage('Could not export. Your expense is still saved on this device.'); });
+                  }}><Text style={styles.buttonText}>Export</Text></TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.dangerButton]}
                   onPress={() => setPendingDiscardId(entry.id)}

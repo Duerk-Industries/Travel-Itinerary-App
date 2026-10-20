@@ -48,7 +48,7 @@ replay are P2 scope and are outside this P1 record.
   events, so a producer crash can recover. Deadline edits/deletion/cancellation
   invalidate queued work at delivery. Date-only deadlines mean 00:00 UTC; zoned
   values retain their instant. Digests use fixed UTC days, at most 100 feed events
-  per trip/day, and are off by default. Quiet-hour customization is not enabled.
+  per trip/day, and are off by default. Quiet hours were subsequently implemented; see `gap-closing-remaining.md`.
   Provider delivery is at-least-once: a crash after provider acceptance can still
   duplicate an external message; do not claim exactly-once push/SMTP delivery.
 - Bundles: private member-only typed v1 bundle, permission/schema/owner-sensitive

@@ -1,3 +1,4 @@
+import { quietUntil } from './notificationTiming';
 import { putNotificationWork } from './notificationWorkRepository';
 import { createHash, randomUUID } from 'crypto';
 import { notificationRepository } from './notificationRepository';
@@ -17,7 +18,9 @@ const BATCH_SIZE = 10;
 const LEASE_SECONDS = 300;
 const TICK_MS = 5000;
 
-export class NotificationDeliveryPaused extends Error {}
+export class NotificationDeliveryPaused extends Error {
+  constructor(message: string, readonly until?: number) { super(message); }
+}
 
 export const drainNotificationOutbox = async (): Promise<void> => {
   const leaseOwner = `outbox-worker-${randomUUID()}`;
@@ -38,7 +41,7 @@ export const drainNotificationOutbox = async (): Promise<void> => {
           await notificationRepository().updateOutboxState(entry.id, 'sent', { leaseOwner });
         } catch (err) {
           if (err instanceof NotificationDeliveryPaused) {
-            await notificationRepository().updateOutboxState(entry.id, 'pending', { nextAttemptAt: new Date(Date.now() + 60 * 60_000), leaseOwner, lastErrorCode: 'CHANNEL_PAUSED' });
+            await notificationRepository().updateOutboxState(entry.id, 'pending', { nextAttemptAt: new Date(err.until ?? Date.now() + 60 * 60_000), leaseOwner, lastErrorCode: 'CHANNEL_PAUSED' });
             continue;
           }
           // entry.attempt_count (Postgres row) vs entry.attemptCount (Firestore doc) — the two
@@ -74,6 +77,8 @@ export const deliverPush = async (entry: any) => {
   if (tripId && !(await ensureUserCanReadTrip(String(tripId), userId))) return;
   const preference = await getNotificationPreference(userId, notification.category);
   if (!preference.push) return;
+  const until = quietUntil(preference.quietTiming);
+  if (until) throw new NotificationDeliveryPaused('Quiet hours', until);
   const pushEnabled = await isFeatureEnabled('notifications_push');
   if (!pushEnabled) throw new NotificationDeliveryPaused('Push delivery is paused');
   const devices = pushEnabled ? await notificationRepository().listActivePushDevicesForUser(userId) : [];
@@ -123,7 +128,10 @@ export const deliverEmail = async (entry: any) => {
   const userId = String(notification.user_id ?? notification.userId ?? '');
   const tripId = notification.trip_id ?? notification.tripId;
   if (tripId && !(await ensureUserCanReadTrip(String(tripId), userId))) return;
-  if (!(await getNotificationPreference(userId, notification.category)).email) return;
+  const preference = await getNotificationPreference(userId, notification.category);
+  if (!preference.email) return;
+  const until = quietUntil(preference.quietTiming);
+  if (until) throw new NotificationDeliveryPaused('Quiet hours', until);
   const user = await getUserById(userId);
   if (!user?.email) return; // nothing to send to — not a delivery failure worth retrying
 

@@ -1,3 +1,4 @@
+import { travelEstimate } from '../../packages/domain/src/planningTravelEstimates';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { Map as LibreMap } from 'maplibre-gl';
@@ -81,11 +82,12 @@ export default function TripMap({ points, selectedId, onSelect, testID }: TripMa
           {points.map((point, index) => <li key={point.id}><button ref={node => { rowRefs.current[point.id] = node; }} type="button" aria-pressed={selected === point.id}
             onClick={() => chooseRef.current(point.id)} style={{ minHeight: 44, width: '100%', textAlign: 'left', background: selected === point.id ? '#e0f2fe' : 'transparent', border: 'none', cursor: 'pointer', padding: 8 }}>
             {point.label || String(index + 1)} · {point.title} · {point.kind.replace('_', ' ')}{!located(point) ? ' · Not on the map yet' : ''}
+            {located(point) && index > 0 && located(points[index - 1]) && <span style={{ display: 'block' }}>{travelEstimate(points[index - 1], point)}</span>}
           </button></li>)}
         </ol>
         <div ref={host} aria-label="Interactive map of day stops" style={{ flex: 2, minHeight: 360, height: 400, display: failed || !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
       </div>
-      <Text>Connections, not directions. Letters show visit order. Blue: flight · Orange: lodging · Green: activity · Purple: car rental.</Text>
+      <Text>Straight-line estimates, not directions. Roads, barriers, traffic and accessibility can change travel time. Letters show visit order. Blue: flight · Orange: lodging · Green: activity · Purple: car rental.</Text>
       <Text>© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</Text>
     </>}
   </View>;

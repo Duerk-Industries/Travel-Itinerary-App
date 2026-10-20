@@ -148,7 +148,8 @@ describe('install', () => {
     });
     partial.worker.onInstall({ waitUntil: (p: Promise<unknown>) => { work = p; } });
     await work;
-    expect((await (await partial.assets()).keys()).length).toBe(2);
+    expect((await (await partial.assets()).keys()).length).toBe(0);
+    expect(await (await partial.shell()).match('/index.html')).toBeUndefined();
   });
 
   it('does not store an error page as the shell', async () => {
@@ -332,4 +333,30 @@ describe('activate', () => {
     expect((await caches.keys()).sort()).toEqual(['some-other-app-cache', sw.SHELL_CACHE].sort());
     expect(claim).toHaveBeenCalledTimes(1);
   });
+});
+
+
+describe('atomic offline build updates', () => {
+  it('keeps the previous shell when a new hashed boot chunk is unavailable', async () => {
+    const nextHtml = '<html><script src="/_expo/static/js/web/new-build.js"></script></html>';
+    const { worker, shell } = setup(async url => keyOf(url).includes('new-build.js')
+      ? new FakeResponse('missing', { status: 404 }) : new FakeResponse(nextHtml));
+    await (await shell()).put('/index.html', new FakeResponse('LAST COMPLETE BUILD'));
+    const event = fetchEvent(request('/', { mode: 'navigate' }));
+    worker.onFetch(event);
+    expect((await run(event.response))?.body).toBe(nextHtml);
+    expect((await (await shell()).match('/index.html'))?.body).toBe('LAST COMPLETE BUILD');
+  });
+});
+
+
+it('never evicts the current shell boot chunk while trimming optional cached assets', async () => {
+  const { worker, shell, assets } = setup(async () => new FakeResponse('asset'));
+  await (await shell()).put('/index.html', new FakeResponse('<script src="/_expo/static/js/web/boot.js"></script>'));
+  await (await assets()).put('/_expo/static/js/web/boot.js', new FakeResponse('boot'));
+  for (let i = 0; i < sw.MAX_ASSET_ENTRIES; i += 1) {
+    const event = fetchEvent(request(`/assets/optional-${i}.png`)); worker.onFetch(event); await run(event.response);
+  }
+  expect((await (await assets()).keys())).toHaveLength(sw.MAX_ASSET_ENTRIES);
+  expect((await (await assets()).match('/_expo/static/js/web/boot.js'))?.body).toBe('boot');
 });

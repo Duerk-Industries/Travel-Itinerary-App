@@ -1,3 +1,4 @@
+import { validTimezone } from '../services/notificationTiming';
 import { Router, type Request, type Response, type RequestHandler } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../auth';
@@ -49,7 +50,7 @@ router.get('/preferences', safe(async (req, res) => {
   res.json({ preferences });
 }));
 router.patch('/preferences', safe(async (req, res) => {
-  const schema = z.object({ preferences: z.array(z.object({ category: z.enum(Object.keys(DEFAULT_PREFERENCES) as [string, ...string[]]), inApp: z.boolean(), push: z.boolean(), email: z.boolean() }).strict()).max(30) }).strict();
+  const schema = z.object({ preferences: z.array(z.object({ category: z.enum(Object.keys(DEFAULT_PREFERENCES) as [string, ...string[]]), inApp: z.boolean(), push: z.boolean(), email: z.boolean(), quietTiming: z.object({ timezone: z.string().max(100).refine(validTimezone), quietStart: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/), quietEnd: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/) }).strict().nullable().optional() }).strict()).max(30) }).strict();
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid notification preferences.' }); return; }
   await notificationRepository().updatePreferences(owner(req), parsed.data.preferences); res.status(204).end();

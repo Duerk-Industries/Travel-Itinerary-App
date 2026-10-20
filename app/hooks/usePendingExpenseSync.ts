@@ -64,11 +64,13 @@ export function usePendingExpenseSync({ userId, backendUrl, headers, canSync, on
     if (pausedForAuthRef.current !== null && pausedForAuthRef.current === authValue) return;
     pausedForAuthRef.current = null;
     let cancelled = false;
+    const replayHeaders = { ...headersRef.current };
     void (async () => {
       const summary = await replay(async (entry) => {
+        if (cancelled) return { outcome: 'pause' as const };
         const args = entry.args as PendingExpenseArgs;
-        const result = await sendPendingExpense(args, { backendUrl, headers: headersRef.current });
-        if (result.outcome === 'done') onSyncedRef.current(result.expense, args.payload.tripId);
+        const result = await sendPendingExpense(args, { backendUrl, headers: replayHeaders });
+        if (!cancelled && result.outcome === 'done') onSyncedRef.current(result.expense, args.payload.tripId);
         return result;
       });
       if (cancelled) return;
@@ -108,6 +110,8 @@ export function usePendingExpenseSync({ userId, backendUrl, headers, canSync, on
     syncedNotice,
     queueExpense,
     retryEntry,
+    replaceEntry: queue.replaceFailedDurable,
     discardEntry: remove,
+    syncNow: () => setTick(n => n + 1),
   };
 }

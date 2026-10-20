@@ -112,3 +112,20 @@ describe('offline trip cache', () => {
     expect(await loadOfflineTripCache(owner)).toBeNull();
   });
 });
+
+
+it('bounds saved trips and never evicts unsynced financial work', async () => {
+  await AsyncStorage.clear();
+  await startOfflineAccessPeriod(owner);
+  await AsyncStorage.setItem('stp.pending-expenses.keep', 'unsynced');
+  for (let index = 0; index < 7; index += 1) {
+    const tripId = `bounded-${index}`;
+    await saveOfflineTripSnapshot(owner, { tripId, savedAt: Date.now(), trip: { id: tripId }, groupMembers: [], flights: [], lodgings: [], tours: [], carRentals: [], expenses: [], payments: [], coveredBy: {}, itinerary: null }, { trips: [], groups: [] });
+  }
+  const saved = await loadOfflineTripCache(owner);
+  expect(Object.keys(saved!.snapshots)).toHaveLength(5);
+  expect(saved!.snapshots['bounded-6']).toBeDefined();
+  expect(await AsyncStorage.getItem('stp.pending-expenses.keep')).toBe('unsynced');
+  await expect(saveOfflineTripSnapshot(owner, { tripId: 'too-big', savedAt: Date.now(), trip: { id: 'too-big', notes: 'x'.repeat(5_000_001) }, groupMembers: [], flights: [], lodgings: [], tours: [], carRentals: [], expenses: [], payments: [], coveredBy: {}, itinerary: null }, { trips: [], groups: [] })).rejects.toThrow('too large');
+  expect((await loadOfflineTripCache(owner))!.snapshots).toEqual(saved!.snapshots);
+});

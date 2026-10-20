@@ -27,6 +27,21 @@ describe('notification service', () => {
     await cleanupTestUsersByEmail([user.email]);
   });
 
+  it('round-trips quiet hours, preserves them on channel-only edits, and validates timezones', async () => {
+    const quietTiming = { timezone: 'America/New_York', quietStart: '22:00', quietEnd: '08:00' };
+    const preference = { category: 'ai_finished', inApp: true, push: false, email: false };
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`)
+      .send({ preferences: [{ ...preference, quietTiming }] }).expect(204);
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`)
+      .send({ preferences: [preference] }).expect(204);
+    const saved = await request(app).get('/api/notifications/preferences').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(saved.body.preferences.find((row: { category: string }) => row.category === 'ai_finished').quietTiming).toEqual(quietTiming);
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`)
+      .send({ preferences: [{ ...preference, quietTiming: { ...quietTiming, timezone: 'not-a-zone' } }] }).expect(400);
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`)
+      .send({ preferences: [{ ...preference, quietTiming: null }] }).expect(204);
+  });
+
   it('notify creates an in-app notification and enqueues to outbox', async () => {
     await notify({
       userIds: [userId],

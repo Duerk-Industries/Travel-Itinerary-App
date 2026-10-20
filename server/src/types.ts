@@ -1392,6 +1392,7 @@ export interface NotificationDevice {
 }
 
 export interface NotificationPreferences {
+  quietTiming?: { timezone: string; quietStart: string; quietEnd: string } | null;
   userId: string;
   category: NotificationCategory;
   inApp: boolean;

@@ -1,3 +1,4 @@
+import type { NotificationPreferences } from '../types';
 import { getIo } from '../socket';
 import { notificationRepository } from './notificationRepository';
 import { NotificationCategory } from './notificationTypes';
@@ -76,8 +77,8 @@ export const notify = async (options: NotifyOptions): Promise<void> => {
   }
 };
 
-export const getNotificationPreference = async (userId: string, category: NotificationCategory, rows?: any[]): Promise<{ inApp: boolean; push: boolean; email: boolean }> => {
+export const getNotificationPreference = async (userId: string, category: NotificationCategory, rows?: any[]): Promise<Pick<NotificationPreferences, 'inApp' | 'push' | 'email' | 'quietTiming'>> => {
   const saved = (rows ?? await notificationRepository().getPreferences([userId])).find(row => row.category === category);
   const fallback = DEFAULT_PREFERENCES[category] || { inApp: true, push: false, email: false };
-  return { inApp: saved?.in_app ?? saved?.inApp ?? fallback.inApp, push: saved?.push ?? fallback.push, email: saved?.email ?? fallback.email };
+  return { quietTiming: saved?.quiet_timing ?? saved?.quietTiming ?? null, inApp: saved?.in_app ?? saved?.inApp ?? fallback.inApp, push: saved?.push ?? fallback.push, email: saved?.email ?? fallback.email };
 };

@@ -1,3 +1,4 @@
+import PendingExpenseLogoutDialog from './components/PendingExpenseLogoutDialog';
 /**
  * Main client app for Shared Trip Planner.
  *
@@ -1566,6 +1567,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // userToken or activeTripId becomes null after clearSession().
     void clearSessionAsync();
   }, [clearSessionState, clearTripsData, offlineOwner, userEmail, userId]);
+  const [pendingLogoutVisible, setPendingLogoutVisible] = useState(false);
+  const requestLogout = useCallback(() => {
+    if (pendingExpenses.entries.length) setPendingLogoutVisible(true);
+    else logout();
+  }, [pendingExpenses.entries.length, logout]);
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.
@@ -3289,6 +3295,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
       <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
+      <PendingExpenseLogoutDialog visible={pendingLogoutVisible} count={pendingExpenses.entries.length}
+        onCancel={() => setPendingLogoutVisible(false)}
+        onSync={() => { setPendingLogoutVisible(false); pendingExpenses.syncNow(); }}
+        onKeep={() => { setPendingLogoutVisible(false); logout(); }}
+        onDiscard={() => { pendingExpenses.entries.forEach(entry => pendingExpenses.discardEntry(entry.id)); setPendingLogoutVisible(false); logout(); }} />
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
         <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
           {userToken && activePage !== 'home' ? (
@@ -3381,7 +3392,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               ) : null}
               <TouchableOpacity
                 style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                onPress={logout}
+                onPress={requestLogout}
                 testID="topbar-logout"
               >
                 <Text style={styles.buttonText}>Logout</Text>
@@ -3540,6 +3551,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     syncedNotice: pendingExpenses.syncedNotice,
                     queueExpense: pendingExpenses.queueExpense,
                     retryEntry: pendingExpenses.retryEntry,
+                    replaceEntry: pendingExpenses.replaceEntry,
                     discardEntry: pendingExpenses.discardEntry,
                   }}
                 />
@@ -3691,7 +3703,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   jsonHeaders={jsonHeaders}
                   airportOptions={flightAirportOptions}
                   onSearchAirports={fetchFlightAirports}
-                  logout={logout}
+                  logout={requestLogout}
                   styles={styles}
                   traits={traits}
                   setTraits={setTraits}
@@ -4077,7 +4089,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   followCodePayloads={followCodePayloads}
                   setFollowCodePayloads={setFollowCodePayloads}
                   styles={styles}
-                  logout={logout}
+                  logout={requestLogout}
                   onOpenFollowedTrip={(tripId) => handleSelectFollowedTrip(tripId, 'following')}
                 />
               )
@@ -4220,7 +4232,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             // The profile request was refused before the date of birth was saved; load it now.
             void loadAccountProfile();
           }}
-          onSignOut={logout}
+          onSignOut={requestLogout}
         />
       ) : null}
       {userToken && !requirePasswordSetup && ageVerificationRequired === false ? (

@@ -307,3 +307,58 @@ describe('usePendingWrites: durable, account-scoped queue (offline expenses)', (
     expect(readStorage()).toEqual([expect.objectContaining({ id, kind: 'expense', status: 'pending' })]);
   });
 });
+
+
+describe('pending write session fencing', () => {
+  beforeEach(() => window.localStorage.clear());
+  it('stops a suspended drain after switching accounts and preserves both queues', async () => {
+    const { result, rerender } = renderHook(({ k }: { k: string }) => usePendingWrites({ storageKey: k, maxAttempts: null }), { initialProps: { k: 'a' } });
+    act(() => { result.current.enqueue('first', {}); result.current.enqueue('second', {}); });
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const send = jest.fn(async () => { await gate; return true; });
+    let drain!: ReturnType<typeof result.current.replay>;
+    act(() => { drain = result.current.replay(send); });
+    rerender({ k: 'b' });
+    act(() => { result.current.enqueue('b-only', {}); });
+    await act(async () => { release(); await drain; });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(result.current.pending.map(e => e.kind)).toEqual(['b-only']);
+    expect(JSON.parse(window.localStorage.getItem('a')!)).toHaveLength(2);
+    expect(JSON.parse(window.localStorage.getItem('b')!)).toHaveLength(1);
+  });
+  it('preserves simultaneous durable enqueues', async () => {
+    const { result } = renderHook(() => usePendingWrites());
+    await act(async () => {
+      const ids = await Promise.all([result.current.enqueueDurable('a', {}), result.current.enqueueDurable('b', {})]);
+      expect(ids.every(Boolean)).toBe(true);
+    });
+    expect(result.current.pending.map(e => e.kind)).toEqual(['a', 'b']);
+    expect(JSON.parse(window.localStorage.getItem('stp.pending-writes')!)).toHaveLength(2);
+  });
+});
+
+
+it('only edits definitively rejected entries and preserves the original when storage fails', async () => {
+  window.localStorage.clear();
+  const { result } = renderHook(() => usePendingWrites({ maxAttempts: null }));
+  let id = '';
+  act(() => { id = result.current.enqueue('expense', { operationKey: 'old' }); });
+  await act(async () => { expect(await result.current.replaceFailedDurable(id, { operationKey: 'new' })).toBe(false); });
+  await act(async () => { await result.current.replay(async () => ({ outcome: 'failed' as const })); });
+  const write = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('full'); });
+  await act(async () => { expect(await result.current.replaceFailedDurable(id, { operationKey: 'new' })).toBe(false); });
+  expect(result.current.pending[0].args).toEqual({ operationKey: 'old' });
+  write.mockRestore();
+  await act(async () => { expect(await result.current.replaceFailedDurable(id, { operationKey: 'new' })).toBe(true); });
+  expect(result.current.pending[0].args).toEqual({ operationKey: 'new' });
+  expect(result.current.pending[0].status).toBe('pending');
+});
+
+
+it('does not overwrite a corrupt financial queue when a new expense is enqueued', async () => {
+  window.localStorage.setItem('corrupt-expenses', '{damaged-data');
+  const { result } = renderHook(() => usePendingWrites({ storageKey: 'corrupt-expenses' }));
+  await act(async () => { expect(await result.current.enqueueDurable('expense', {})).toBeNull(); });
+  expect(window.localStorage.getItem('corrupt-expenses')).toBe('{damaged-data');
+});

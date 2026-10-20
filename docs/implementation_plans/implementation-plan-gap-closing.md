@@ -27,6 +27,12 @@ user-task evidence remain release gates; forwarding remains suggestion-only.
 
 ---
 
+**Remaining-work audit (2026-10-19):** Additional expense recovery/session fencing,
+notification quiet hours, bounded snapshots, map travel estimates and automatic-import
+controls are implemented. P0/P1/P2 are not all complete. See the
+[current completion audit](../operations/gap-closing-remaining.md) for outstanding
+source work separately from provider, device and release evidence.
+
 ## Plain-language overview
 
 What travelers get, in the order it is planned:
@@ -84,7 +90,7 @@ implementation records are context; code and current provider documentation take
 | **`app/hooks/usePendingWrites.ts`** — single global key `stp.pending-writes`, drops an entry after 5 failed attempts, no cross-tab lock. `useConnectionState` (expo-network + Socket.IO) exists. | Account-scope the queue, never silently drop a user's expense, add a replay lock, and send an `Idempotency-Key` per operation (§5.3). |
 | **`generation_idempotency`** exists for AI jobs; blog routes also enforce operation-specific keys. | Reuse proven reservation concepts in a narrow adapter-atomic create helper with request hash, owner/operation scope and retention; do not assume middleware or AI-specific records alone handle expenses (§5.3). |
 | **`services/entitlementService.ts`** — `isFeatureEnabled(key, _userId, _role)` ignores user/role; 60 s cache per flag key; `FAIL_CLOSED_FLAGS` list. | Add cohort/allowlist evaluation **after** the cached flag lookup (cache the flag row + cohort, evaluate membership per call), preserving global kill switches (§4.1). |
-| **`notificationService.ts`, `notificationRoutes.ts`, `notificationOutboxWorker.ts`** — existing per-user/category/channel preferences and PATCH API, thread mute, Expo ticket-error token pruning and email fallback. Quiet hours are not implemented there. | Extend existing preferences and UI; add quiet hours, receipt handling and independent email consent. No replacement preference system (§4.2). |
+| **`notificationService.ts`, `notificationRoutes.ts`, `notificationOutboxWorker.ts`** — existing per-user/category/channel preferences and PATCH API, thread mute, Expo ticket-error token pruning and email fallback. Quiet hours are now implemented; configurable digest timing remains outstanding. | Extend existing preferences and UI; add quiet hours, receipt handling and independent email consent. No replacement preference system (§4.2). |
 | **`locations` / catalog services** — cached catalog records and coordinates; no PostGIS dependency. Firebase is the GCP default, but production config was not inspected. | Use adapter-compatible catalog lookups and a bounded memory index; do not add PostGIS for this feature (§2.1). |
 | **`services/scheduledJobLease.ts`** — Postgres-only insert-per-window claim, catches all claim errors as false, no renewal/expiry/fencing. Its comment explicitly says the Firebase equivalent is absent. | Cannot serve as a production geocoding queue or global throttle as-is. Add a narrow durable-job contract with both adapters, explicit failure and stale-owner handling (§1.4). |
 | **`app/tabs/ingestion.tsx`** — already separates simplified regular-user UI from operational admin controls; web picker currently excludes `.ics`. | Preserve that separation. Extend intake MIME validation, picker and fixtures together; map internal states to simple action labels (§0.4). |
@@ -290,7 +296,7 @@ This is the proposed direction; validate it on supported devices before rollout:
 - **`dayRouteOptimizer.ts`** (pure, deterministic): nearest-neighbour + 2-opt for up to 12 stops. Booked activities with a set time and stops without coordinates keep their slot; an optional lodging anchor makes the route start and end there; it never returns a longer route than it was given.
 - **`DayActivitiesOrdering`** in the Overview day view: Move up / Move down (44 px targets, labelled for screen readers), **Optimize order** with a preview (straight-line distance before/after, what stays put, "not walking or driving times"), **Use this order**, **Keep my order**, and **Undo** (itself a checked save). Conflicts, offline and double taps are handled in place with a persistent notice.
 
-Not done yet: drag-and-drop (needs a drag library validated against React Native Web; Move up/down is the accessible baseline), travel-time labels between stops (§1.6 item 2), enabling the flag per environment, a usability pass, and a Firestore emulator run of the new server tests (they pass on the in-memory adapter).
+Not done yet: drag-and-drop (needs a drag library validated against React Native Web; Move up/down is the accessible baseline), enabling the flag per environment, a usability pass, and a Firestore emulator run of the new server tests (they pass on the in-memory adapter).
 
 1. **Route line:** a MapLibre line layer in visit order. On the native Google stopgap, the `path` parameter, which needs `lat`/`lng` from §1.4.
 2. **Travel time between stops** via the existing `transferEstimationService`: haversine with walking (~5 km/h) or driving (~30 km/h) speeds, shown as "~12 min walk".
@@ -551,8 +557,8 @@ Built and tested:
 - `usePendingExpenseSync` (app-level) queues and drains expenses; `DailyExpensesTab` lets a new expense be added offline, shows "Saved on this device · waiting to sync", and offers **Try again** / **Discard**.
 
 Still to do before this ships (all listed in §5.2 / the usability gate):
-- **Sign-out warning** with the unsynced count and Sync now / Keep on this device / Discard (the queue survives sign-out under the account's own key, but the user is not told).
-- **Edit** and **Export** actions for expenses that couldn't sync.
+- **Completed:** sign-out warning with unsynced count, Sync now / Keep on this device / Discard. Retention explicitly warns that current storage is unencrypted.
+- **Completed:** Edit for definitively rejected expenses, plus per-expense Export; unknown outcomes retain the original operation key.
 - Encrypting the queue on native (§5.2); today it is plain `AsyncStorage`/`localStorage` like the existing snapshot.
 - Firestore emulator parity run for the new server tests (they pass on the in-memory adapter), real-device checks, and the novice-recovery usability test.
 - Deciding whether the entry-queue key should include the environment hash instead of the raw backend URL.

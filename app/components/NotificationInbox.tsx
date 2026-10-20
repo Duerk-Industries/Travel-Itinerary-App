@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { Notification, NotificationPreferences } from '../../server/src/types';
 import { getSocket } from '../utils/socket';
 import { registerForPushNotificationsAsync } from '../utils/pushNotifications';
@@ -16,6 +16,10 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<NotificationPreferences[]>([]);
+  const [timingCategory, setTimingCategory] = useState<string | null>(null);
+  const [timezone, setTimezone] = useState('UTC');
+  const [quietStart, setQuietStart] = useState('22:00');
+  const [quietEnd, setQuietEnd] = useState('08:00');
   const [settings, setSettings] = useState(false);
   const epoch = useRef(0);
   const headers = { Authorization: `Bearer ${token}` };
@@ -70,12 +74,27 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
     const current = epoch.current;
     try {
       if (channel === 'push' && !preference.push && Platform.OS !== 'web' && !(await registerForPushNotificationsAsync(token))) throw new Error('Mobile alerts are unavailable or permission was declined. Your inbox still works.');
-      const update = { category: preference.category, inApp: preference.inApp, push: preference.push, email: preference.email, [channel]: !preference[channel] };
+      const update = { category: preference.category, inApp: preference.inApp, push: preference.push, email: preference.email, quietTiming: preference.quietTiming, [channel]: !preference[channel] };
       const response = await fetch(`${backendUrl}/api/notifications/preferences`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: [update] }) });
       if (!response.ok) throw new Error('Settings could not be saved. Please try again.');
       if (current !== epoch.current) return;
       setPreferences(previous => previous.map(row => row.category === preference.category ? { ...row, ...update } : row));
     } catch (error) { setError((error as Error).message); }
+    finally { busy.current = false; }
+  };
+  const saveTiming = async (preference: NotificationPreferences, clear = false) => {
+    if (busy.current) return;
+    busy.current = true;
+    const current = epoch.current;
+    try {
+      const quietTiming = clear ? null : { timezone, quietStart, quietEnd };
+      const update = { category: preference.category, inApp: preference.inApp, push: preference.push, email: preference.email, quietTiming };
+      const response = await fetch(`${backendUrl}/api/notifications/preferences`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: [update] }) });
+      if (!response.ok) throw new Error('Use a timezone such as America/New_York and 24-hour times such as 22:00.');
+      if (current !== epoch.current) return;
+      setPreferences(previous => previous.map(row => row.category === preference.category ? { ...row, quietTiming } : row));
+      setTimingCategory(null); setError(null);
+    } catch (error) { if (current === epoch.current) setError((error as Error).message); }
     finally { busy.current = false; }
   };
   if (!enabled) return null;
@@ -98,6 +117,18 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
               <Text>Important updates and Daily summary have independent inbox, mobile alert, and email choices. Turning mobile alerts off never enables email.</Text>
               {preferences.map(preference => <View key={preference.category} style={{ paddingVertical: 8 }}>
                 <Text style={{ fontWeight: '700' }}>{LABELS[preference.category] || preference.category.replace(/_/g, ' ')}</Text>
+                <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => {
+                  setTimingCategory(preference.category); setTimezone(preference.quietTiming?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+                  setQuietStart(preference.quietTiming?.quietStart || '22:00'); setQuietEnd(preference.quietTiming?.quietEnd || '08:00');
+                }}><Text>{preference.quietTiming ? 'Edit quiet hours' : 'Set quiet hours'}</Text></TouchableOpacity>
+                {timingCategory === preference.category && <View>
+                  <Text>Mobile alerts and email wait until quiet hours end. Updates still appear in your inbox.</Text>
+                  <TextInput accessibilityLabel="Quiet hours timezone" value={timezone} onChangeText={setTimezone} style={{ minHeight: 44 }} />
+                  <TextInput accessibilityLabel="Quiet hours start, 24 hour time" value={quietStart} onChangeText={setQuietStart} style={{ minHeight: 44 }} />
+                  <TextInput accessibilityLabel="Quiet hours end, 24 hour time" value={quietEnd} onChangeText={setQuietEnd} style={{ minHeight: 44 }} />
+                  <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveTiming(preference)}><Text>Save quiet hours</Text></TouchableOpacity>
+                  <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveTiming(preference, true)}><Text>Turn quiet hours off</Text></TouchableOpacity>
+                </View>}
                 {(['inApp', 'push', 'email'] as const).map(channel => <TouchableOpacity key={channel} style={buttonStyle} accessibilityRole="checkbox" accessibilityState={{ checked: preference[channel] }} accessibilityLabel={`${LABELS[preference.category] || preference.category} ${channel}`}
                   onPress={() => void toggle(preference, channel)}><Text>{preference[channel] ? '☑' : '☐'} {channel === 'inApp' ? 'Inbox' : channel === 'push' ? 'Mobile alerts' : 'Email'}</Text></TouchableOpacity>)}
               </View>)}

@@ -54,30 +54,47 @@ function createWorker({ caches, fetchFn, setTimeoutFn = setTimeout, clearTimeout
 
   async function trim(cache) {
     const keys = await cache.keys();
-    const overflow = keys.length - MAX_ASSET_ENTRIES;
-    for (let i = 0; i < overflow; i += 1) await cache.delete(keys[i]);
+    let overflow = keys.length - MAX_ASSET_ENTRIES;
+    if (overflow <= 0) return;
+    const shell = await (await caches.open(SHELL_CACHE)).match(SHELL_URL);
+    const pinned = new Set(shell ? (await shell.text()).match(ASSET_URL_PATTERN) || [] : []);
+    for (const key of keys) {
+      if (overflow <= 0) break;
+      if (pinned.has(new URL(key.url, selfOrigin).pathname)) continue;
+      await cache.delete(key);
+      overflow -= 1;
+    }
+  }
+
+  // Commit the entry document only after its boot assets are durably cached.
+  // A partial deploy/download must not replace a still-readable offline build.
+  async function saveCompleteShell(response) {
+    const html = await response.clone().text();
+    const urls = Array.from(new Set(html.match(ASSET_URL_PATTERN) || []));
+    if (urls.length > 32 || html.length > 1024 * 1024) return false;
+    const assets = await caches.open(ASSET_CACHE);
+    try {
+      const staged = [];
+      for (const url of urls) {
+        if (await assets.match(url)) continue;
+        const asset = await fetchFn(url);
+        if (!cacheable(asset)) return false;
+        staged.push([url, asset]);
+      }
+      for (const [url, asset] of staged) await assets.put(url, asset);
+      const shell = await caches.open(SHELL_CACHE);
+      await shell.put(SHELL_URL, response.clone());
+      await trim(assets);
+      return true;
+    } catch { return false; }
   }
 
   async function precache() {
     try {
       const response = await fetchFn(SHELL_URL, { cache: 'reload' });
-      if (!cacheable(response)) return;
-      const shell = await caches.open(SHELL_CACHE);
-      await shell.put(SHELL_URL, response.clone());
-      const html = await response.text();
-      const assets = await caches.open(ASSET_CACHE);
-      const urls = Array.from(new Set(html.match(ASSET_URL_PATTERN) || []));
-      await Promise.all(urls.map(async (assetUrl) => {
-        try {
-          const assetResponse = await fetchFn(assetUrl);
-          if (cacheable(assetResponse)) await assets.put(assetUrl, assetResponse);
-        } catch {
-          // A file that can't be fetched now is simply cached the first time it is used.
-        }
-      }));
-      await trim(assets);
+      if (cacheable(response)) await saveCompleteShell(response);
     } catch {
-      // Installing must never fail just because the user is offline or the network is flaky.
+      // Offline installation retains the previous complete build.
     }
   }
 
@@ -93,7 +110,7 @@ function createWorker({ caches, fetchFn, setTimeoutFn = setTimeout, clearTimeout
     return response;
   }
 
-  async function networkFirstShell(request) {
+  async function networkFirstShell(request, keepAlive) {
     const shell = await caches.open(SHELL_CACHE);
     let timer;
     const network = fetchFn(request).then(
@@ -107,7 +124,9 @@ function createWorker({ caches, fetchFn, setTimeoutFn = setTimeout, clearTimeout
     clearTimeoutFn(timer);
 
     if (first.response && cacheable(first.response)) {
-      await shell.put(SHELL_URL, first.response.clone());
+      const save = saveCompleteShell(first.response);
+      if (keepAlive) keepAlive(save);
+      else await save;
       return first.response;
     }
     // Offline, slow, or the server is erroring: fall back to the last good shell if there is one.
@@ -143,7 +162,8 @@ function createWorker({ caches, fetchFn, setTimeoutFn = setTimeout, clearTimeout
       selfOrigin,
     });
     if (strategy === 'asset') event.respondWith(cacheFirst(request));
-    else if (strategy === 'shell') event.respondWith(networkFirstShell(request));
+    else if (strategy === 'shell') event.respondWith(networkFirstShell(request,
+      typeof event.waitUntil === 'function' ? (work) => event.waitUntil(work) : undefined));
   }
 
   return { onInstall, onActivate, onFetch };

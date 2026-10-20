@@ -1,3 +1,4 @@
+import AutomaticImportSettings from '../components/AutomaticImportSettings';
 import ImportForwardingSetup from '../components/ImportForwardingSetup';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -514,6 +515,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Ingest & Review</Text>
+      <AutomaticImportSettings backendUrl={backendUrl} headers={headers} onChanged={() => void load()} />
       <Text style={styles.helperText}>
         {config.tierKey === 'free'
           ? 'Premium or Pro is required to upload and review imported travel items.'

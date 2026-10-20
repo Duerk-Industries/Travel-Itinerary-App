@@ -1,3 +1,4 @@
+import * as notificationService from '../src/services/notificationService';
 jest.mock('../src/services/notificationWorkRepository', () => ({ putNotificationWork: jest.fn(async () => undefined) }));
 import { describe, expect, test, jest, beforeEach } from '@jest/globals';
 
@@ -60,6 +61,21 @@ describe('notification outbox real delivery', () => {
     body: 'The day is almost over.',
     deep_link: '/trips/trip-1/blog',
   };
+
+  test('quiet hours defer both external channels without calling providers', async () => {
+    mockGetNotificationById.mockResolvedValue(notification);
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-19T03:00:00Z'));
+    const preference = jest.spyOn(notificationService, 'getNotificationPreference').mockResolvedValue({
+      inApp: true, push: true, email: true,
+      quietTiming: { timezone: 'America/New_York', quietStart: '22:00', quietEnd: '08:00' },
+    });
+    try {
+      await expect(deliverPush({ notification_id: 'notif-1' })).rejects.toMatchObject({ until: Date.parse('2026-10-19T12:00:00Z') });
+      await expect(deliverEmail({ notification_id: 'notif-1' })).rejects.toMatchObject({ until: Date.parse('2026-10-19T12:00:00Z') });
+      expect(mockSendExpoPushNotifications).not.toHaveBeenCalled();
+      expect(mockSendNotificationEmail).not.toHaveBeenCalled();
+    } finally { preference.mockRestore(); jest.useRealTimers(); }
+  });
 
   test('sends a real push to every registered device', async () => {
     mockGetNotificationById.mockResolvedValue(notification);
