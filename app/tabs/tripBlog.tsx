@@ -656,6 +656,50 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
     }
   };
 
+  // Followers' approximate maps: off until a traveler has seen exactly what would be shown.
+  const [mapPreview, setMapPreview] = useState<Array<{ dayDate: string; points: Array<{ lat: number; lng: number }> }> | null>(null);
+  const [mapShareBusy, setMapShareBusy] = useState(false);
+  const [mapShareNotice, setMapShareNotice] = useState('');
+  useEffect(() => { setMapPreview(null); setMapShareNotice(''); }, [activeTripId]);
+  const loadMapPreview = async () => {
+    if (!activeTripId || mapShareBusy) return;
+    setMapShareBusy(true);
+    setMapShareNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/map-sharing-preview`, { headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to build the preview');
+      setMapPreview(Array.isArray(data.days) ? data.days : []);
+    } catch (error) {
+      setMapShareNotice(error.message || 'Unable to build the preview');
+    } finally {
+      setMapShareBusy(false);
+    }
+  };
+  const setSharedMap = async (enabled) => {
+    if (!activeTripId || !canEdit || mapShareBusy) return;
+    // Consent is informed: turning sharing on requires a preview that actually shows something.
+    if (enabled && !mapPreview?.length) return;
+    setMapShareBusy(true);
+    setMapShareNotice('');
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sharedMapEnabled: enabled }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Unable to update map sharing');
+      setMapShareNotice(enabled ? 'Followers can now see approximate day maps.' : 'Followers no longer see day maps.');
+      if (!enabled) setMapPreview(null);
+      await refreshBlogAndPublication();
+    } catch (error) {
+      setMapShareNotice(error.message || 'Unable to update map sharing');
+    } finally {
+      setMapShareBusy(false);
+    }
+  };
+
   const toggleEditMode = () => {
     setEditMode((current) => {
       if (current) {
@@ -2155,6 +2199,51 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                         : 'Blogs go public automatically when every traveler is 16+ with a date of birth in their profile and none has chosen private. Otherwise, public viewing needs consent from all adult account travelers.'}
                     {' '}Travelers and followers can always see this blog.
                   </Text>
+                </View>
+              ) : null}
+              {canEdit && !readOnly ? (
+                <View testID="blog-shared-map-settings" style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
+                  <Text style={{ color: textColor, fontWeight: '700' }}>Follower day maps: {blog?.sharedMapEnabled ? 'On' : 'Off'}</Text>
+                  <Text style={{ color: mutedColor, marginTop: 4, fontSize: 12 }}>
+                    Off by default. When on, followers see a map of each day built from your photo locations, rounded to about 1 km, without places near where you stayed. Any traveler can change this. Travelers always see their own exact locations.
+                  </Text>
+                  {blog?.sharedMapEnabled ? (
+                    <TouchableOpacity testID="blog-shared-map-off" accessibilityRole="button" disabled={mapShareBusy} onPress={() => setSharedMap(false)} style={[styles.button, { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]}>
+                      <Text style={{ color: textColor }}>{mapShareBusy ? 'Updating…' : 'Stop sharing maps'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ marginTop: 8, gap: 8 }}>
+                      <TouchableOpacity testID="blog-shared-map-preview" accessibilityRole="button" disabled={mapShareBusy} onPress={loadMapPreview} style={[styles.button, { alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 10, backgroundColor: theme?.colors?.surfaceMuted ?? '#e5e7eb' }]}>
+                        <Text style={{ color: textColor }}>{mapShareBusy && !mapPreview ? 'Building preview…' : 'Preview what followers would see'}</Text>
+                      </TouchableOpacity>
+                      {mapPreview ? (
+                        <View testID="blog-shared-map-preview-result" style={{ gap: 6 }}>
+                          {mapPreview.length === 0 ? (
+                            <Text style={{ color: mutedColor, fontSize: 12 }}>No day has enough photo locations to show a map, so followers would see none.</Text>
+                          ) : (
+                            <>
+                              <Text style={{ color: textColor, fontSize: 12 }}>Followers would see a map on {mapPreview.length} {mapPreview.length === 1 ? 'day' : 'days'}:</Text>
+                              {mapPreview.map((day) => (
+                                <View key={day.dayDate} style={{ gap: 2 }}>
+                                  <Text style={{ color: mutedColor, fontSize: 12 }}>{day.dayDate} · {day.points.length} approximate areas</Text>
+                                  {Platform.OS === 'web' ? (
+                                    <TripMap
+                                      testID={`blog-shared-map-preview-${day.dayDate}`}
+                                      points={day.points.map((point, index) => ({ id: `preview-${day.dayDate}-${index}`, kind: 'activity' as const, lat: point.lat, lng: point.lng, coordinateSource: 'manual' as const, title: `Approximate area ${index + 1}` }))}
+                                    />
+                                  ) : null}
+                                </View>
+                              ))}
+                            </>
+                          )}
+                          <TouchableOpacity testID="blog-shared-map-on" accessibilityRole="button" disabled={mapShareBusy || mapPreview.length === 0} onPress={() => setSharedMap(true)} style={[styles.button, { alignSelf: 'flex-start', paddingVertical: 5, paddingHorizontal: 10, opacity: mapPreview.length === 0 ? 0.5 : 1 }]}>
+                            <Text style={styles.buttonText}>{mapShareBusy ? 'Updating…' : 'Share these maps with followers'}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+                  {mapShareNotice ? <Text style={{ color: mutedColor, marginTop: 8, fontSize: 12 }}>{mapShareNotice}</Text> : null}
                 </View>
               ) : null}
               <BlogDiscoveryPanel

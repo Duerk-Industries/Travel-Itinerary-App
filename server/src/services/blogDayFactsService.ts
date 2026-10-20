@@ -3,12 +3,12 @@ import { getCurrentDbProvider, listFlights, listLodgings, listActivities, listCa
 import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import { createTtlCache } from '../utils/ttlCache';
 import { getApiCacheSetting } from '../config/apiLimits';
-import { resolveActorMembership, visibleAudiencesForMembership } from './blogEngagementService';
+import { resolveActorMembership, visibleAudiencesForMembership, BlogEngagementUnauthorizedError } from './blogEngagementService';
 import { BlogTargetNotFoundError } from './blogEngagementErrors';
 import { createHash } from 'crypto';
 import { createBlogReadUrl } from './blogStorageClient';
 import { findBundledAirport } from './airportCatalog';
-import { getBlogDayByDate, getTripName, getVisibleMediaForDay, getDayMapArtifact, getSharedMapEnabled, getTripLodgingAnchors } from '../blog/firebaseBlogDayData';
+import { getBlogDayByDate, listBlogDayDates, getTripName, getVisibleMediaForDay, getDayMapArtifact, getSharedMapEnabled, getTripLodgingAnchors } from '../blog/firebaseBlogDayData';
 import { projectBlogDayMapPoints, type BlogDayMapPoints } from './blogMapProjection';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §7.1.
@@ -421,4 +421,41 @@ const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: str
   });
 
   return { dayDate, facts, timeline, ...(mapPoints ? { mapPoints } : {}) };
+};
+
+export interface SharedMapPreviewDay { dayDate: string; points: Array<{ lat: number; lng: number }> }
+
+// What followers would receive if shared maps were on, for the owner to review before agreeing.
+// Travelers only. Runs the same projection as the facts path, so the preview cannot drift from it.
+export const previewSharedMapPoints = async (tripId: string, actorUserId: string): Promise<SharedMapPreviewDay[]> => {
+  if ((await resolveActorMembership(tripId, actorUserId)) !== 'traveler') throw new BlogEngagementUnauthorizedError('Only travelers can preview shared maps');
+  const isFirebase = getCurrentDbProvider() === 'firebase';
+  const audiences = visibleAudiencesForMembership('follower');
+  let dayDates: string[];
+  if (isFirebase) dayDates = await listBlogDayDates(tripId);
+  else dayDates = (await queryBlog<{ local_date: string }>('SELECT local_date FROM blog_days WHERE trip_id = $1 ORDER BY local_date', [tripId])).rows.map((r) => new Date(String(r.local_date)).toISOString().slice(0, 10));
+  const anchors = await readLodgingAnchors(tripId);
+  const days: SharedMapPreviewDay[] = [];
+  for (const dayDate of dayDates.slice(0, 60)) {
+    let rows: MediaRow[];
+    if (isFirebase) rows = (await getVisibleMediaForDay(dayDate, audiences)) as unknown as MediaRow[];
+    else {
+      const placeholders = audiences.map((_, i) => `$${i + 3}`).join(',');
+      rows = (await queryBlog<MediaRow>(
+        `SELECT a.id, a.captured_at, a.captured_lat, a.captured_lng, a.media_kind_key
+         FROM blog_media_assets a
+         JOIN blog_item_assets ia ON ia.asset_id = a.id
+         JOIN blog_items i ON i.id = ia.item_id
+         JOIN blog_days d ON d.id = i.blog_day_id
+         WHERE d.trip_id = $1 AND d.local_date = $2::date AND i.deleted_at IS NULL AND i.audience IN (${placeholders}) AND a.state = 'ready'`,
+        [tripId, dayDate, ...audiences]
+      )).rows;
+    }
+    const sources = rows
+      .filter((r) => r.captured_lat != null && r.captured_lng != null && r.captured_at != null)
+      .map((r) => ({ lat: Number(r.captured_lat), lng: Number(r.captured_lng), time: new Date(r.captured_at!).getTime() }));
+    const projected = projectBlogDayMapPoints({ sources, membership: 'follower', sharedMapEnabled: true, privateAnchors: anchors });
+    if (projected) days.push({ dayDate, points: projected.points });
+  }
+  return days;
 };

@@ -96,4 +96,13 @@ describe('blog day facts mapPoints', () => {
     await request(app).patch(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).send({ sharedMapEnabled: false }).expect(200);
     expect((await facts(followerToken)).mapPoints).toBeUndefined();
   });
+
+  it('previews exactly what followers would see, for travelers only', async () => {
+    const preview = await request(app).get(`/api/trips/${tripId}/blog/map-sharing-preview`).set('Authorization', `Bearer ${travelerToken}`).expect(200);
+    expect(preview.headers['cache-control']).toContain('no-store');
+    expect(preview.body.days).toEqual([{ dayDate, points: expect.any(Array) }]);
+    expect(preview.body.days[0].points.length).toBeGreaterThanOrEqual(2);
+    expect(JSON.stringify(preview.body)).not.toMatch(/48\.858|2\.2944|48\.8606|2\.3376|48\.8746/);
+    await request(app).get(`/api/trips/${tripId}/blog/map-sharing-preview`).set('Authorization', `Bearer ${followerToken}`).expect(403);
+  });
 });

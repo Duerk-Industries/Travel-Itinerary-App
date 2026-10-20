@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import { copyToClipboard } from '../utils/clipboard';
+import ImportSenderAddresses from './ImportSenderAddresses';
 
 export default function ImportForwardingSetup({ address, backendUrl, headers, onRotated, styles }: {
   address: string; backendUrl: string; headers: Record<string, string>; onRotated: (address: string) => void; styles: Record<string, any>;
@@ -65,5 +66,6 @@ export default function ImportForwardingSetup({ address, backendUrl, headers, on
       : 'In Mail on your Mac: Mail → Settings → Rules → Add Rule. Match travel senders or subjects and choose Forward Message to your private address. Your Mac must be running Mail for the rule to run.'}</Text>}
     <Text style={styles.helperText}>You can do this later and upload a confirmation instead. These steps open in your email provider; WanderBunnies does not create mail rules for you.</Text>
     {notice ? <Text accessibilityLiveRegion="polite" style={styles.helperText}>{notice}</Text> : null}
+    <ImportSenderAddresses backendUrl={backendUrl} headers={headers} styles={styles} />
   </View>;
 }

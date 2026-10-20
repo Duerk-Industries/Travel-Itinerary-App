@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../auth';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../apis/usageLimiter';
-import { getDayFacts } from '../services/blogDayFactsService';
+import { getDayFacts, previewSharedMapPoints } from '../services/blogDayFactsService';
 import { BlogEngagementUnauthorizedError } from '../services/blogEngagementService';
 import { BlogTargetNotFoundError } from '../services/blogEngagementErrors';
 import { getOrQueueBlogRecap } from '../services/blogRecapService';
@@ -56,6 +56,24 @@ router.get('/:tripId/blog/days/:dayDate/facts', async (req, res) => {
     const message = String((err as any)?.message ?? 'Unable to load day facts');
     logError('[blog-insight] request failed', err);
     res.status(500).json({ error: message });
+  }
+});
+
+router.get('/:tripId/blog/map-sharing-preview', async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled('trip_blog'))) {
+      res.status(404).json({ error: 'Trip blog is not enabled' });
+      return;
+    }
+    await reserveApiUsageOrThrow({ provider: 'TRIP_BLOG_SOCIAL_API', caller: 'BLOG_DAY_FACTS_READ', requireConfiguredLimit: true });
+    const days = await previewSharedMapPoints(req.params.tripId, userIdOf(req));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ days });
+  } catch (err) {
+    if (err instanceof BlogEngagementUnauthorizedError) { res.status(403).json({ error: err.message }); return; }
+    if (err instanceof ApiLimitExceededError) { res.status(429).json({ error: 'Previews are at capacity right now — please try again shortly' }); return; }
+    logError('[blog-insight] map preview failed', err);
+    res.status(500).json({ error: 'Unable to build the preview' });
   }
 });
 

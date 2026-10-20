@@ -147,14 +147,30 @@ when `navigator.locks` is missing.
 - Still open here: real two-tab browser run, native encrypted queue, bounded resume recovery and
   an automatic repair/import flow for corrupt queue exports.
 
+## Continuation: app controls for shared blog maps and extra forwarding addresses
+
+- **Follower day maps (§1.3).** In Blog tools (edit mode) a "Follower day maps" box shows On/Off.
+  Turning it on requires first loading `GET /api/trips/:id/blog/map-sharing-preview`
+  (travelers only, `private, no-store`), which runs the same projection followers get and lists
+  the approximate areas per day; the confirm button is unavailable, and the handler refuses,
+  when the preview is empty. "Stop sharing maps" applies on the next request.
+  Covered by `tripBlogSharedMap.test.tsx` and the preview case in `blog-day-map-points.test.ts`.
+- **Extra forwarding addresses (§3.1).** `ImportSenderAddresses` (inside Forward by Email) is
+  collapsed by default and loads only when opened: send a code, enter it, list, remove. Copy
+  says plainly that confirming does not yet change how forwarded bookings are handled.
+  Covered by `ImportSenderAddresses.test.tsx`. Full app suite: 255 suites / 1,663 tests pass.
+- Not done: the settings control for `photoLocationEnabled`, the automatic repair/import flow for
+  corrupt expense-queue exports (financial data; it needs its own design and review), and
+  everything listed under external evidence.
+
 ## Source work still outstanding
 
 | Plan area | Actual remaining implementation |
 | --- | --- |
-| §1.3 public/blog/recap maps and keepsake | Server projection, consent flag and web blog-day rendering are built (see above). Remaining: settings control and owner preview of the approximate map, public page/recap integration, bounded export-only keepsake capture, and legacy-artifact retirement after reader migration. Do not publish EXIF or private lodging coordinates. |
+| §1.3 public/blog/recap maps and keepsake | Server projection, consent flag and web blog-day rendering are built (see above). Remaining: public page/recap integration, bounded export-only keepsake capture, and legacy-artifact retirement after reader migration. Do not publish EXIF or private lodging coordinates. |
 | §1.4 optional geocoder | Provider/input policy decision, shared admission/throttling, durable jobs/cache and adapter fencing. This is optional; current catalog/airport maps need no geocoder. No private query or bulk Nominatim backfill is authorized. |
 | §1.5 native renderer | Expo/RN compatibility and named-device spike before adding the native renderer, independent rollback flag, staged EAS build and supported-old-client retirement. Current authorized static-map/list fallback stays supported. |
-| §3.1 / §3.2 sender trust | Imports UI for the (now built) address verification API, trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
+| §3.1 / §3.2 sender trust | Trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
 | §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
 | §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
 | §5.3 queue concurrency and recovery | Real two-tab browser verification of the lease fallbacks; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; a supported automatic repair/import flow for corrupt queue exports. Durable discard feedback and raw whole-queue recovery export are now implemented. |
