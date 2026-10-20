@@ -275,6 +275,13 @@ accumulated state because the tests use the named database from `server/.env`, n
 - Deleting an account tombstoned the author's comments but kept the author's user id on them;
   Postgres clears it through a foreign key. Now cleared.
 
+**Firestore security rules.** `firestore.rules.test.ts` needs the Firestore and Auth emulators and the
+rules loaded. `npm --prefix server run test:firestore-rules` loads `firestore.rules` into the running
+emulator (REST `PUT /emulator/v1/projects/<id>:securityRules`) for a throwaway project id
+(`demo-rules-test`) and runs the test there, so your dev project's data and rules are untouched. Result
+on the running emulator (127.0.0.1:8080, Auth 9099): 13 of 13 pass. It failed earlier only because the
+throwaway emulator I used had no rules loaded.
+
 **Known, unchanged (same on both adapters):** two trips whose owner and trip name slug to the same
 words share one public address, because aliases are unique on (username slug, trip slug) and are
 reused rather than suffixed.
