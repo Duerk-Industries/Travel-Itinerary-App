@@ -303,10 +303,12 @@ export const deleteUserMailAdmissionData = async (userId: string): Promise<void>
       if (docs.empty) break;
       const batch = db.batch(); docs.docs.forEach(doc => batch.delete(doc.ref)); await batch.commit();
     }
+    await (await import('./verifiedSenders')).deleteUserVerifiedSenders(userId);
     return;
   }
   await getPg().query('DELETE FROM ingestion_aliases WHERE user_id=$1', [userId]);
   await getPg().query('DELETE FROM ingestion_mail_receipts WHERE user_id=$1', [userId]);
+  await (await import('./verifiedSenders')).deleteUserVerifiedSenders(userId);
 };
 
 export const recordSyntheticReceipt = async (userId: string, address: string): Promise<void> => {

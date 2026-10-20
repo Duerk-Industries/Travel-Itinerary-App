@@ -37,6 +37,8 @@ import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestio
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getBackendUrl, getEnvValue } from '../env';
 import { getMailAlias, listMailReceipts, updateMailReceipt, releaseHeldMail } from '../ingestion/shared/mailAdmission';
+import { SenderVerificationError, listSenders, startSenderVerification, confirmSenderVerification, removeSender } from '../ingestion/shared/verifiedSenders';
+import { sendShareEmailBestEffort } from '../mailer';
 import { logError, logInfo } from '../logger';
 import { readDto } from '../utils/dtoParse';
 import {
@@ -479,6 +481,47 @@ router.post('/forwarding/rotate', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await requireTierAccess(userId, res))) return;
   res.json({ currentAddress: await getMailAlias(userId, true) });
+}));
+// Additional forwarding addresses: the user proves they can read mail at the address.
+// Codes are emailed only to that address and never returned, logged or pushed.
+const senderErrorResponse = (error: unknown, res: Response): boolean => {
+  if (error instanceof SenderVerificationError) { res.status(error.httpStatus).json({ error: error.message, code: error.code }); return true; }
+  if (error instanceof HttpRateLimitExceededError) { res.status(429).json({ error: error.message }); return true; }
+  return false;
+};
+router.get('/forwarding/addresses', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  res.json({ addresses: await listSenders(userId) });
+}));
+router.post('/forwarding/addresses', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox))) { res.status(403).json({ error: 'Forwarding is paused' }); return; }
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_sender_verify_start', identity: userId, limit: 10, windowMs: 60 * 60_000 });
+    const started = await startSenderVerification(userId, req.body?.email);
+    if (started.alreadyVerified) { res.json({ status: 'VERIFIED' }); return; }
+    const { sent } = await sendShareEmailBestEffort(started.email, 'Your WanderBunnies forwarding code',
+      [`Use this code to confirm this address for forwarding bookings to WanderBunnies:`, '', started.code, '',
+        'It expires in 30 minutes. If you did not request it, ignore this email.'].join('\n'));
+    if (!sent) { res.status(503).json({ error: 'We could not send the code. Please try again later.' }); return; }
+    res.status(202).json({ status: 'PENDING' });
+  } catch (error) { if (!senderErrorResponse(error, res)) throw error; }
+}));
+router.post('/forwarding/addresses/confirm', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_sender_verify_confirm', identity: userId, limit: 20, windowMs: 60 * 60_000 });
+    const address = await confirmSenderVerification(userId, req.body?.email, req.body?.code);
+    res.json({ address });
+  } catch (error) { if (!senderErrorResponse(error, res)) throw error; }
+}));
+router.delete('/forwarding/addresses/:id', mailSettingsHandler(async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const removed = await removeSender(userId, String(req.params.id));
+  res.status(removed ? 200 : 404).json({ removed });
 }));
 router.get('/forwarding/receipts', mailSettingsHandler(async (req, res) => {
   const userId = (req as any).user.userId as string;

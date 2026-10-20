@@ -86,6 +86,23 @@ and ten concurrent writes committed. Evidence: `output/playwright/idb-check.log`
 This does not establish a signed-in offline app flow or cross-tab financial queue
 locking. Snapshot storage and pending financial queues remain distinct.
 
+## Continuation: additional forwarding-address verification (§3.1)
+
+`server/src/ingestion/shared/verifiedSenders.ts` plus `GET|POST /api/ingestion/forwarding/addresses`,
+`POST .../addresses/confirm` and `DELETE .../addresses/:id`. A user adds up to five
+extra addresses; an eight-character single-use code is emailed only to that address
+(30-minute expiry, 60-second resend cooldown, five wrong guesses invalidate it, hourly
+rate limits on start and confirm). Codes are stored only as hashes bound to the user
+and address, and never returned, logged or listed. Both adapters are transactional
+(user-row lock / Firestore transaction); account deletion removes the records.
+Needs no manual migration on Postgres (table is created on first use, as for aliases);
+Firestore collection `ingestion_verified_senders` is queried by `userId` only.
+
+This grants **no** trust yet: forwarded mail is still suggestion-only. `isVerifiedSender`
+exists for the matcher, but using it requires trusted receiver authentication fixtures
+(below). The Imports UI for adding/confirming addresses is not built. Covered by
+`server/__tests__/verifiedSenders.test.ts` (pg-mem only).
+
 ## Source work still outstanding
 
 | Plan area | Actual remaining implementation |
@@ -93,7 +110,7 @@ locking. Snapshot storage and pending financial queues remain distinct.
 | §1.3 public/blog/recap maps and keepsake | Explicit approximate-location consent/preview, server audience-safe projection, shared renderer integration, bounded export-only capture and legacy-artifact retirement after reader migration. Do not publish EXIF or private lodging coordinates. |
 | §1.4 optional geocoder | Provider/input policy decision, shared admission/throttling, durable jobs/cache and adapter fencing. This is optional; current catalog/airport maps need no geocoder. No private query or bulk Nominatim backfill is authorized. |
 | §1.5 native renderer | Expo/RN compatibility and named-device spike before adding the native renderer, independent rollback flag, staged EAS build and supported-old-client retirement. Current authorized static-map/list fallback stays supported. |
-| §3.1 / §3.2 sender trust | Additional-address verification, trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
+| §3.1 / §3.2 sender trust | Imports UI for the (now built) address verification API, trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
 | §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
 | §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
 | §5.3 queue concurrency and recovery | Transactional cross-tab fallback where Web Locks is unavailable; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; a supported automatic repair/import flow for corrupt queue exports. Durable discard feedback and raw whole-queue recovery export are now implemented. |
