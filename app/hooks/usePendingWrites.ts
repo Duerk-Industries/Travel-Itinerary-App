@@ -1,3 +1,6 @@
+import { parsePendingWriteQueue as parseQueue } from '../utils/pendingWriteValidation';
+import { transactionalPendingWriteStore, type PendingWriteStore } from '../utils/pendingWriteStore';
+import { replayTransactionalPending } from '../utils/transactionalPendingReplay';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { canAccessWebStorage, readAsync, readAsyncOrThrow, readSync, writeAsync, writeSync } from '../utils/persistentStorage';
@@ -29,21 +32,6 @@ export interface PendingWrite<TArgs = unknown> {
 
 const DEFAULT_STORAGE_KEY = 'stp.pending-writes';
 const DEFAULT_MAX_ATTEMPTS = 5;
-
-const parseQueue = (raw: string | null, strict = false): PendingWrite[] => {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || !parsed.every(entry => entry && typeof entry.id === 'string'
-      && typeof entry.kind === 'string' && Number.isFinite(entry.enqueuedAtMs) && Number.isFinite(entry.attempts))) {
-      throw new Error('Unreadable saved queue');
-    }
-    return parsed as PendingWrite[];
-  } catch {
-    if (strict) throw new Error('Unreadable saved queue; keep it for recovery');
-    return [];
-  }
-};
 
 const readQueueSync = (key: string): PendingWrite[] => parseQueue(readSync(key));
 
@@ -92,6 +80,8 @@ export type PendingWriteReplayFn = (entry: PendingWrite) => Promise<PendingWrite
 export interface UsePendingWritesOptions {
   /** Maximum replay attempts before an entry is dropped. Default 5. `null` never drops an entry. */
   maxAttempts?: number | null;
+  /** Injected storage for transaction/concurrency verification; browser expenses use IndexedDB. */
+  store?: PendingWriteStore | null;
   /** Storage key. Scope it per account so another user on the same device never sees or replays this queue. */
   storageKey?: string;
   /** Delay before an entry may be retried automatically, given its failed-attempt count. Default: immediate. */
@@ -165,9 +155,10 @@ export function usePendingWrites(
   const maxAttempts = opts.maxAttempts === undefined ? DEFAULT_MAX_ATTEMPTS : opts.maxAttempts;
   const storageKey = opts.storageKey ?? DEFAULT_STORAGE_KEY;
   const backoffMs = opts.backoffMs;
+  const store = opts.store === undefined ? (storageKey.startsWith('stp.pending-expenses.') ? transactionalPendingWriteStore : null) : opts.store;
 
   const [storageError, setStorageError] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingWrite[]>(() => readQueueSync(storageKey));
+  const [pending, setPending] = useState<PendingWrite[]>(() => store ? [] : readQueueSync(storageKey));
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
   const keyRef = useRef(storageKey);
@@ -180,23 +171,45 @@ export function usePendingWrites(
   if (keyRef.current !== storageKey) {
     keyRef.current = storageKey;
     generationRef.current += 1;
-    pendingRef.current = readQueueSync(storageKey);
+    pendingRef.current = store ? [] : readQueueSync(storageKey);
   }
 
+  const accept = useCallback((key: string, generation: number, next: PendingWrite[]) => {
+    if (keyRef.current !== key || generationRef.current !== generation) return;
+    mutationRef.current += 1; pendingRef.current = next; setPending(next); setStorageError(null);
+  }, []);
+  const storeFailure = useCallback((key: string, generation: number) => {
+    if (keyRef.current === key && generationRef.current === generation) setStorageError('Saved expenses could not be read or updated. They have been kept for recovery.');
+  }, []);
   useEffect(() => {
-    const key = storageKey;
+    const key = storageKey, generation = generationRef.current;
     let cancelled = false;
     setStorageError(null);
-    void readAsyncOrThrow(key).then(raw => { parseQueue(raw, true); }).catch(() => {
-      if (!cancelled && keyRef.current === key) setStorageError('Saved expenses could not be read. They have been kept for recovery.');
-    });
-    return () => { cancelled = true; };
-  }, [storageKey]);
+    const refresh = () => {
+      const read = store ? store.read(key).then(entries => { if (!cancelled) accept(key, generation, entries); })
+        : readAsyncOrThrow(key).then(raw => { parseQueue(raw, true); });
+      void read.catch(() => { if (!cancelled) storeFailure(key, generation); });
+    };
+    refresh();
+    const unsubscribe = store?.subscribe(key, refresh);
+    const focus = () => refresh();
+    if (store && typeof window !== 'undefined') window.addEventListener('focus', focus);
+    return () => { cancelled = true; unsubscribe?.(); if (store && typeof window !== 'undefined') window.removeEventListener('focus', focus); };
+  }, [storageKey, store, accept, storeFailure]);
   const getRecoveryData = useCallback(async (): Promise<string | null> => {
     const key = keyRef.current, generation = generationRef.current;
-    const raw = await readAsyncOrThrow(key);
+    const raw = store ? await store.recovery(key) : await readAsyncOrThrow(key);
     return generation === generationRef.current && key === keyRef.current ? raw : null;
-  }, []);
+  }, [store]);
+  const updateStore = useCallback(async (change: (entries: PendingWrite[]) => PendingWrite[]): Promise<boolean> => {
+    if (!store) return false;
+    const key = keyRef.current, generation = generationRef.current;
+    try {
+      const next = await store.update(key, entries => generation === generationRef.current && keyRef.current === key ? change(entries) : entries);
+      if (generation !== generationRef.current) return false;
+      accept(key, generation, next); return true;
+    } catch { storeFailure(key, generation); return false; }
+  }, [store, accept, storeFailure]);
 
   const persist = useCallback((next: PendingWrite[]) => {
     mutationRef.current += 1;
@@ -216,7 +229,7 @@ export function usePendingWrites(
   // AsyncStorage and MERGE it with anything enqueued before hydration finished, so a fast first
   // enqueue can't overwrite the stored queue.
   useEffect(() => {
-    if (canAccessWebStorage()) return;
+    if (store || canAccessWebStorage()) return;
     let cancelled = false;
     const key = storageKey;
     const mutation = mutationRef.current;
@@ -233,7 +246,7 @@ export function usePendingWrites(
     return () => {
       cancelled = true;
     };
-  }, [storageKey]);
+  }, [storageKey, store]);
 
   const buildEntry = <TArgs,>(kind: string, args: TArgs): PendingWrite => ({
     id: makeId(),
@@ -246,14 +259,16 @@ export function usePendingWrites(
 
   const enqueue = useCallback(<TArgs>(kind: string, args: TArgs): string => {
     const entry = buildEntry(kind, args);
-    persist([...pendingRef.current, entry]);
+    if (store) void updateStore(entries => [...entries, entry]);
+    else persist([...pendingRef.current, entry]);
     return entry.id;
-  }, [persist]);
+  }, [persist, store, updateStore]);
 
   const enqueueDurable = useCallback(<TArgs,>(kind: string, args: TArgs): Promise<string | null> => {
     const key = keyRef.current;
     const generation = generationRef.current;
     const entry = buildEntry(kind, args);
+    if (store) return updateStore(entries => [...entries, entry]).then(saved => saved ? entry.id : null);
     const work = enqueueTail.current.then(async () => {
       if (key !== keyRef.current || generation !== generationRef.current) return null;
       // Read persisted native entries before the first write, even if hydration is still pending.
@@ -269,11 +284,20 @@ export function usePendingWrites(
     });
     enqueueTail.current = work.catch(() => undefined);
     return work.catch(() => null);
-  }, []);
+  }, [store, updateStore]);
 
   const replaceFailedDurable = useCallback(async <TArgs,>(id: string, args: TArgs): Promise<boolean> => {
     const key = keyRef.current;
     const generation = generationRef.current;
+    if (store) {
+      let changed = false;
+      const saved = await updateStore(entries => entries.map(entry => {
+        if (entry.id !== id || entry.status !== 'failed') return entry;
+        changed = true;
+        return { ...entry, args, attempts: 0, status: 'pending', lastError: undefined, nextAttemptAtMs: undefined };
+      }));
+      return saved && changed;
+    }
     const work = enqueueTail.current.then(async () => {
       if (generation !== generationRef.current) return false;
       const original = pendingRef.current.find(entry => entry.id === id);
@@ -289,9 +313,10 @@ export function usePendingWrites(
     });
     enqueueTail.current = work.catch(() => undefined);
     return work;
-  }, []);
+  }, [store, updateStore]);
 
   const discardDurably = useCallback((id?: string): Promise<boolean> => {
+    if (store) return updateStore(entries => id === undefined ? [] : entries.filter(entry => entry.id !== id));
     const key = keyRef.current, generation = generationRef.current;
     const work = enqueueTail.current.then(async () => {
       if (generation !== generationRef.current) return false;
@@ -304,21 +329,24 @@ export function usePendingWrites(
     }).catch(() => false);
     enqueueTail.current = work;
     return work;
-  }, []);
+  }, [store, updateStore]);
   const removeDurable = useCallback((id: string) => discardDurably(id), [discardDurably]);
   const clearDurable = useCallback(() => discardDurably(), [discardDurably]);
 
   const remove = useCallback((id: string) => {
+    if (store) { void discardDurably(id); return; }
     persist(pendingRef.current.filter((e) => e.id !== id));
-  }, [persist]);
+  }, [persist, store, discardDurably]);
 
   const retry = useCallback((id: string) => {
+    if (store) { void updateStore(entries => entries.map(entry => entry.id === id ? { ...entry, status: 'pending', nextAttemptAtMs: undefined } : entry)); return; }
     persist(pendingRef.current.map((e) => (e.id === id ? { ...e, status: 'pending', nextAttemptAtMs: undefined } : e)));
-  }, [persist]);
+  }, [persist, store, updateStore]);
 
   const clear = useCallback(() => {
+    if (store) { void discardDurably(); return; }
     persist([]);
-  }, [persist]);
+  }, [persist, store, discardDurably]);
 
   const replay = useCallback(async (replayFn: PendingWriteReplayFn, options?: { ignoreBackoff?: boolean }): Promise<ReplaySummary> => {
     const empty: ReplaySummary = { replayed: 0, remaining: pendingRef.current.length, dropped: 0, failed: 0, paused: false };
@@ -330,6 +358,13 @@ export function usePendingWrites(
     const generation = generationRef.current;
     const current = () => keyRef.current === replayKey && generationRef.current === generation;
     try {
+      if (store) {
+        try {
+          const summary = await replayTransactionalPending({ store, key: replayKey, token: makeId(), current, replay: replayFn, maxAttempts, backoffMs, ignoreBackoff: options?.ignoreBackoff });
+          if (current()) accept(replayKey, generation, await store.read(replayKey));
+          return summary;
+        } catch { storeFailure(replayKey, generation); return empty; }
+      }
       const summary = await withReplayLock(replayKey, async (): Promise<ReplaySummary> => {
         // Snapshot the queue up-front so entries enqueued mid-drain are left
         // for the next replay tick (avoids re-entrancy issues).
@@ -391,12 +426,12 @@ export function usePendingWrites(
     } finally {
       replayingRef.current = false;
     }
-  }, [backoffMs, maxAttempts, persist]);
+  }, [backoffMs, maxAttempts, persist, store, accept, storeFailure]);
 
   // Re-hydrate from storage whenever the window gains focus — another tab
   // may have mutated the same queue. (Web only — native is single-instance.)
   useEffect(() => {
-    if (!canAccessWebStorage()) return;
+    if (store || !canAccessWebStorage()) return;
     const onFocus = () => {
       const stored = readQueueSync(keyRef.current);
       if (JSON.stringify(stored) !== JSON.stringify(pendingRef.current)) {
@@ -406,7 +441,7 @@ export function usePendingWrites(
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, []);
+  }, [store]);
 
   return { pending: keyRef.current === storageKey ? pendingRef.current : [], storageError, getRecoveryData, enqueue, enqueueDurable, replaceFailedDurable, removeDurable, clearDurable, remove, retry, clear, replay };
 }

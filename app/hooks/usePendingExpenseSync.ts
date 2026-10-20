@@ -1,3 +1,4 @@
+import { AppState } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePendingWrites, type PendingWrite } from './usePendingWrites';
 import {
@@ -58,30 +59,38 @@ export function usePendingExpenseSync({ userId, backendUrl, headers, canSync, on
   }, [hasDue]);
 
   const authValue = headers.Authorization ?? '';
+  const scope = JSON.stringify([userId, backendUrl, authValue, canSync]);
+  const scopeRef = useRef(scope); scopeRef.current = scope;
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => { if (state === 'active') setTick(n => n + 1); });
+    return () => subscription.remove();
+  }, []);
   useEffect(() => {
     if (!canSync || !userId || !hasDue) return;
     // A 401 paused the queue for this exact credential; wait for a new sign-in instead of looping.
     if (pausedForAuthRef.current !== null && pausedForAuthRef.current === authValue) return;
     pausedForAuthRef.current = null;
-    let cancelled = false;
+    const replayScope = scopeRef.current;
+    const current = () => mounted.current && scopeRef.current === replayScope;
     const replayHeaders = { ...headersRef.current };
     void (async () => {
       const summary = await replay(async (entry) => {
-        if (cancelled) return { outcome: 'pause' as const };
+        if (!current()) return { outcome: 'pause' as const };
         const args = entry.args as PendingExpenseArgs;
         const result = await sendPendingExpense(args, { backendUrl, headers: replayHeaders });
-        if (!cancelled && result.outcome === 'done') onSyncedRef.current(result.expense, args.payload.tripId);
+        if (current() && result.outcome === 'done') onSyncedRef.current(result.expense, args.payload.tripId);
         return result;
       });
-      if (cancelled) return;
+      if (!current()) return;
       if (summary.paused) pausedForAuthRef.current = authValue;
       if (summary.replayed > 0) {
         setSyncedNotice(`${summary.replayed} offline expense${summary.replayed === 1 ? '' : 's'} synced`);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    // Queue commits can change entries while this drain owns its lease. Only
+    // identity/connectivity changes fence callbacks, not its own progress updates.
     // `entries.length` and `tick` re-run the drain for newly queued entries and expired backoff.
   }, [authValue, backendUrl, canSync, entries.length, hasDue, replay, tick, userId]);
 

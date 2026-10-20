@@ -60,9 +60,14 @@ const FAILURE_COPY: Record<number, string> = {
  *  - 408/425/429/5xx: transient, retry with backoff
  *  - other 4xx (validation, access, key reuse): will not succeed on retry; surface to the user
  */
-export const classifyExpenseResponse = (status: number, body: any): ReplayOutcome => {
-  if (status >= 200 && status < 300) return { outcome: 'done', expense: body ?? {} };
-  const serverMessage = typeof body?.error === 'string' ? body.error : '';
+export const classifyExpenseResponse = (status: number, body: unknown): ReplayOutcome => {
+  const record = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
+  if (status >= 200 && status < 300) {
+    return typeof record.id === 'string' && record.id.trim()
+      ? { outcome: 'done', expense: record }
+      : { outcome: 'retry', error: 'The server confirmation was incomplete. Your saved expense will be retried safely.' };
+  }
+  const serverMessage = typeof record.error === 'string' ? record.error : '';
   if (status === 401) return { outcome: 'pause', error: 'Sign in again to finish syncing.' };
   if (status === 408 || status === 425 || status === 429 || status >= 500) {
     return { outcome: 'retry', error: serverMessage || 'The server is busy. Will try again.' };
@@ -76,18 +81,33 @@ export const sendPendingExpense = async (
   deps: { backendUrl: string; headers: Record<string, string>; fetchImpl?: typeof fetch }
 ): Promise<ReplayOutcome> => {
   const doFetch = deps.fetchImpl ?? fetch;
-  let response: Response;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<ReplayOutcome>(resolve => {
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve({ outcome: 'retry', error: 'The request timed out. Your saved expense will be retried safely.' });
+    }, 15_000);
+  });
   try {
-    response = await doFetch(`${deps.backendUrl}/api/expenses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...deps.headers, 'Idempotency-Key': args.operationKey },
-      body: JSON.stringify(args.payload),
-    });
+    const request = (async (): Promise<ReplayOutcome> => {
+      const response = await doFetch(`${deps.backendUrl}/api/expenses`, {
+        method: 'POST', signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', ...deps.headers, 'Idempotency-Key': args.operationKey },
+        body: JSON.stringify(args.payload),
+      });
+      const body: unknown = await response.json().catch(() => null);
+      const result = classifyExpenseResponse(response.status, body);
+      if (result.outcome === 'done' && result.expense.tripId !== undefined && result.expense.tripId !== args.payload.tripId) {
+        return { outcome: 'retry', error: 'The server confirmation did not match this trip. Your saved expense has been kept.' };
+      }
+      return result;
+    })();
+    return await Promise.race([request, timeout]);
   } catch {
     return { outcome: 'retry', error: 'No connection. Will try again.' };
-  }
-  const body = await response.json().catch(() => ({}));
-  return classifyExpenseResponse(response.status, body);
+  } finally { if (timer !== undefined) clearTimeout(timer); }
+
 };
 
 /** Local-only stand-in shown in the list until the server confirms. Never mixed into totals as if it were saved. */
