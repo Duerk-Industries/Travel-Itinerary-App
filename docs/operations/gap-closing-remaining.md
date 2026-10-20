@@ -299,9 +299,9 @@ reused rather than suffixed.
 
 | Plan area | Actual remaining implementation |
 | --- | --- |
-| §1.3 public/blog/recap maps and keepsake | Server projection, consent flag and web blog-day rendering are built (see above). Remaining: public page/recap integration, bounded export-only keepsake capture, and legacy-artifact retirement after reader migration. Do not publish EXIF or private lodging coordinates. |
-| §1.4 optional geocoder | Provider/input policy decision, shared admission/throttling, durable jobs/cache and adapter fencing. This is optional; current catalog/airport maps need no geocoder. No private query or bulk Nominatim backfill is authorized. |
-| §1.5 native renderer | Expo/RN compatibility and named-device spike before adding the native renderer, independent rollback flag, staged EAS build and supported-old-client retirement. Current authorized static-map/list fallback stays supported. |
+| §1.3 public/blog/recap maps and keepsake | Server projection, consent flag and web blog-day rendering are built (see above). Public/recap integration and bounded browser capture are now built; see [map continuation](gap-closing-maps.md). Remaining: native print/device checks and legacy-artifact retirement after reader migration. Do not publish EXIF or private lodging coordinates. |
+| §1.4 optional geocoder | Public-catalog-only provider interface, shared admission/daily quota, durable jobs/cache and adapter fencing are built. Activation needs a reviewed self-hosted/contracted endpoint and scheduler. Public OSM/private queries/backfill are excluded; see [map continuation](gap-closing-maps.md). |
+| §1.5 native renderer | Native MapLibre source, Expo plugin and independent build/DB flags are built. Expo/RN compatibility still needs actual named-device/EAS evidence before enabling, then staged rollout and supported-old-client retirement. Static-map/list fallback stays supported; see [map continuation](gap-closing-maps.md). |
 | §3.1 / §3.2 sender trust | Trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
 | §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
 | §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
@@ -370,3 +370,8 @@ of their respective slices; this audit takes precedence for completion status.
 - Encrypted native storage and actual native suspend/kill/relaunch/key-loss evidence remain open; this completes the bounded replay implementation and automated lifecycle slice only.
 
 Validation: four focused frontend suites / 56 tests passed; frontend TypeScript check and `git diff --check` passed. The full frontend/backend suites were not rerun for this slice.
+
+
+### Map continuation — 2026-10-20
+
+Public/recap maps, browser keepsake capture, native renderer source and optional public-POI geocoding are implemented. [Behavior, configuration, validation and remaining release gates](gap-closing-maps.md). Native print uses a labeled-area fallback; no production provider, flag, key or scheduler was changed.

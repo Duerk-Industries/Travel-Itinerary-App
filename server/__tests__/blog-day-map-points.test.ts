@@ -150,4 +150,27 @@ describe('blog day facts mapPoints', () => {
     const preview = (await request(app).get(`/api/trips/${tripId}/blog/map-sharing-preview`).set('Authorization', `Bearer ${travelerToken}`).expect(200)).body;
     expect(JSON.stringify(preview)).not.toMatch(/35\.6|35\.7|139\./);
   });
+  it('serves fresh recap/export maps with audience and consent checks', async () => {
+    await request(app).patch(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).send({ sharedMapEnabled: false }).expect(200);
+    const maps = (token: string, shared = '') => request(app).get(`/api/trips/${tripId}/blog/maps${shared}`).set('Authorization', `Bearer ${token}`);
+    const own = await maps(travelerToken).expect(200);
+    expect(own.headers['cache-control']).toContain('no-store');
+    expect(own.body.days[0].mapPoints.precision).toBe('exact');
+    expect((await maps(followerToken).expect(200)).body.days).toEqual([]);
+    expect((await maps(travelerToken, '?shared=1').expect(200)).body.days).toEqual([]);
+    await request(app).patch(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).send({ sharedMapEnabled: true }).expect(200);
+    // Followers can see followers-audience sources. Exports/public readers cannot.
+    expect((await maps(followerToken).expect(200)).body.days[0].mapPoints.precision).toBe('approximate');
+    expect((await maps(travelerToken, '?shared=1').expect(200)).body.days).toEqual([]);
+    if (isFirebase()) {
+      const items = await firestore().collection('blog_items').where('tripId', '==', tripId).get();
+      for (const doc of items.docs) await doc.ref.update({ audience: 'public' });
+    } else await sql("UPDATE blog_items SET audience='public' WHERE trip_id=$1", [tripId]);
+    const exported = await maps(travelerToken, '?shared=1').expect(200);
+    expect(exported.body.days[0].mapPoints.precision).toBe('approximate');
+    expect(JSON.stringify(exported.body)).not.toMatch(/48\.85837|2\.29448|captured|assetId/);
+    await request(app).patch(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${travelerToken}`).send({ sharedMapEnabled: false }).expect(200);
+    expect((await maps(travelerToken, '?shared=1').expect(200)).body.days).toEqual([]);
+  });
+
 });

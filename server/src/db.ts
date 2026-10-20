@@ -828,3 +828,5 @@ export const createCatalogActivity = async (...args: Parameters<ReturnType<typeo
 export const undoCatalogActivity = async (...args: Parameters<ReturnType<typeof adapter>['undoCatalogActivity']>) => adapter().undoCatalogActivity(...args);
 
 export const getPlanningRevision = async (...args: Parameters<ReturnType<typeof adapter>['getPlanningRevision']>) => adapter().getPlanningRevision(...args);
+
+export const mutateGeocodingState = (...args: Parameters<ReturnType<typeof adapter>['mutateGeocodingState']>) => adapter().mutateGeocodingState(...args);

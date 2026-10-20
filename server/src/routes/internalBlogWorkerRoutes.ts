@@ -1,3 +1,4 @@
+import { processGeocodingJob, geocodingStatus } from '../services/geocodingService';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { getEnvValue } from '../env';
@@ -22,6 +23,16 @@ const authenticateWorker = (req: any, res: any, next: any) => {
   }
   next();
 };
+
+router.get('/geocoding', authenticateWorker, async (_req, res) => {
+  try { res.setHeader('Cache-Control', 'no-store'); res.json(await geocodingStatus()); }
+  catch { res.status(503).json({ error: 'Geocoding status unavailable' }); }
+});
+
+router.post('/geocoding', authenticateWorker, async (_req, res) => {
+  try { res.setHeader('Cache-Control', 'no-store'); res.json(await processGeocodingJob()); }
+  catch { res.status(503).json({ error: 'Geocoding worker unavailable' }); }
+});
 
 router.post('/process-media/:userId/:assetId', authenticateWorker, async (req, res) => {
   const { userId, assetId } = req.params;

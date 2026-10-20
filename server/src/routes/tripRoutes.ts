@@ -1,3 +1,5 @@
+import { ensureUserInTrip, getFeatureFlag } from '../db';
+import { getPlanningDayPoints } from '../services/planningPointsService';
 import { z } from 'zod';
 import { getEnvFlag } from '../env';
 import { readPlanningBundle } from '../services/planningBundleService';
@@ -626,14 +628,29 @@ router.get('/:id/messages', async (req, res) => {
   res.json({ tripId: req.params.id, messages });
 });
 
+router.get('/:id/planning-map-points', async (req, res) => {
+  const userId = (req as unknown as { user: { userId: string } }).user.userId;
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    if (!await ensureUserInTrip(req.params.id, userId)) return res.status(403).json({ error: 'Trip access required' });
+    const date = String(req.query.dayDate || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date))) return res.status(400).json({ error: 'Choose a valid day' });
+    const enabled = await Promise.all(['planning_web_map', 'planning_native_map'].map(key => isFeatureEnabled(key, userId)));
+    if (!enabled.some(Boolean)) return res.status(404).json({ error: 'Maps are not enabled' });
+    const points = await getPlanningDayPoints(userId, req.params.id, date);
+    if (!await ensureUserInTrip(req.params.id, userId)) return res.status(403).json({ error: 'Trip access required' });
+    return res.json({ points });
+  } catch { return res.status(503).json({ error: 'Map points unavailable' }); }
+});
+
 router.get('/:id/planning-capabilities', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
     const access = await ensureUserCanReadTrip(String(req.params.id), userId);
     if (!access) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
-    const [map, nearby, partner, dayOrder] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order'].map(key => isFeatureEnabled(key, userId)));
+    const [map, nearby, partner, dayOrder, nativeMap] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order', 'planning_native_map'].map(key => isFeatureEnabled(key, userId)));
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ map, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member' });
+    res.json({ map, nativeMap: nativeMap && (await getFeatureFlag('planning_native_map'))?.enabled === true, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member' });
   } catch { res.status(503).json({ error: 'Planning options are temporarily unavailable.' }); }
 });
 

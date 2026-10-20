@@ -593,7 +593,7 @@ export interface Trait {
   createdAt: string;
 }
 
-export type CoordinateSource = 'catalog' | 'airport' | 'manual';
+export type CoordinateSource = 'catalog' | 'airport' | 'manual' | 'geocoder';
 export interface PlanningCoordinates {
   lat?: number | null;
   lng?: number | null;
@@ -1432,3 +1432,9 @@ export interface PlanningBundle {
   coveredBy: Record<string, string>;
   itinerary: { id: string; planMarkdown: string | null; details: ItineraryDetail[] } | null;
 }
+
+// Only reviewed public catalog POIs enter this shared queue; never item addresses.
+export type GeocodeQuery = { name: string; locality: string; country: string; language: string; providerVersion: string };
+export type GeocodeResult = { lat: number; lng: number; geoCity: string | null; quality: 'approximate'; providerCategory?: string; providerType?: string; attribution: string; provider: string };
+export type GeocodeJob = { key: string; query: GeocodeQuery; state: 'pending' | 'done' | 'dead'; attempts: number; dueAt: number; leaseToken?: string; leaseUntil?: number; result?: GeocodeResult | null; expiresAt?: number };
+export type GeocodingState = { jobs: GeocodeJob[]; nextAllowedAt: number; providerLeaseToken?: string; providerLeaseUntil?: number };

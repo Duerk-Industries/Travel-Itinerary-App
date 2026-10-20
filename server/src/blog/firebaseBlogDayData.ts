@@ -80,7 +80,7 @@ export const getVisibleMediaForDay = async (tripId: string, dayDate: string, vis
     const assetSnap = await db.collection('blog_media_assets').where('blogItemId', 'in', ids).get();
     assetSnap.docs.forEach((doc) => {
       const data = doc.data() as any;
-      if (String(data.state) !== 'ready') return;
+      if (String(data.state) !== 'ready' || data.moderationState === 'blocked') return;
       rows.push({
         id: doc.id,
         captured_at: data.capturedAt ? new Date(data.capturedAt) : null,

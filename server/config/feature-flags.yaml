@@ -4,6 +4,12 @@
 # file has no effect on already-seeded flags. Use the admin API to change live values.
 
 flags:
+  planning_native_map:
+    enabled: false
+    description: "Native MapLibre renderer; requires compatible EAS binary and named-device checks"
+  planning_geocoding:
+    enabled: false
+    description: "Reviewed public catalog POI lookup via a configured self-hosted/contracted endpoint; no private addresses"
   planning_web_map:
     enabled: false
     description: "P1 on-device web map; enable after bundle and WebGL checks"

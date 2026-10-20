@@ -13833,3 +13833,5 @@ export const getPlanningRevision = async (tripId: string, groupId: string): Prom
   const result = await getPool().query('SELECT scope,revision FROM planning_revisions WHERE scope = ANY($1::text[]) ORDER BY scope', [[`trip:${tripId}`, `group:${groupId}`, 'global:profiles']]);
   return JSON.stringify(result.rows);
 };
+
+export { mutateGeocodingPostgres as mutateGeocodingState } from './services/geocodingRepository';

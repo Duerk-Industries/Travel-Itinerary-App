@@ -39,7 +39,7 @@ source work separately from provider, device and release evidence.
 
 Source work still open (see the [completion audit](../operations/gap-closing-remaining.md) for evidence):
 
-- **Maps (§1.3–1.5):** public/recap integration, bounded keepsake map capture, legacy-artifact retirement, optional geocoder policy/jobs/cache/throttling, and native renderer compatibility plus staged rollout.
+- **Maps (§1.3–1.5):** public/recap integration, bounded browser keepsake capture, native renderer source and bounded public-catalog geocoding are implemented ([details and activation](../operations/gap-closing-maps.md)). Remaining: named-device/EAS and native print checks, reviewed geocoding endpoint/scheduler activation, production evidence, and legacy-artifact retirement after old-client migration.
 - **Day editing (§1.6):** validated drag-and-drop; Move up/down is implemented. Environment rollout and usability checks remain.
 - **Discovery (§2.3):** destination-based “Trips like this” and privacy-safe activity copying with source credit. Public explore/SEO remains later scope (§7).
 - **Email import (§3.1–3.2):** trusted receiver authentication alignment and validated Gmail confirmation recognition using actual receiver fixtures.
@@ -278,12 +278,16 @@ This is the proposed direction; validate it on supported devices before rollout:
 
 ### 1.3 Blog, public blog page, recap, keepsake (P2)
 
+**2026-10-20 implementation:** Public and recap maps now use fresh server projection, with public locations outside the cached document. Browser export captures a bounded map or prints labeled coarse areas. Native PDF uses area lists. [Implementation and remaining device/retirement gates](../operations/gap-closing-maps.md).
+
 - Change the blog `dayMap` fact in `services/blogDayFactsService.ts` to return the day's points (media geotags) instead of a signed PNG URL. `tripBlog.tsx` and the public blog page render them with `TripMap`.
 - **Privacy:** photo visibility is not consent to publish precise EXIF. Default public location sharing off; require an explicit approximate-location preview/consent, suppress home/private lodging points, and project only approved coarse points **on the server**. Rounding to 100 m is not anonymization. Public HTML, APIs, exports and analytics must not contain hidden exact coordinates. Recheck audience and invalidate caches on unpublish/delete.
 - **Keepsake:** prototype a bounded export-only map instance, wait for tiles/fonts with a timeout, snapshot with attribution and dispose it. Avoid `preserveDrawingBuffer` on every live map; test memory/CORS and native `expo-print` compatibility. Export still succeeds with a labeled list when imagery is unavailable; never output a silently blank canvas. No server render dependency.
 - **Retire** the render job, `trip_blog_day_map_render`, and `blog_day_map_artifacts` once nothing reads them (all three adapters).
 
 ### 1.4 Coordinate reuse and optional geocoding (P1)
+
+**2026-10-20 implementation:** Durable public-catalog POI jobs/cache, cross-instance admission, fenced completion, bounded provider responses and shared merchant lookup are built on both adapters. External lookup defaults off; public OSM and private inputs are excluded. Current-item overlays avoid background address overwrites. [Configuration and remaining provider gates](../operations/gap-closing-maps.md).
 
 - **Resolution order:** reuse permitted catalog/airport/item coordinates before cache or external lookup. Catalog Nearby and initial maps can ship without external geocoding; unresolved items retain their original text and remain usable.
 - **Cache:** key by normalized query + country/locality/language context + provider/normalizer version; record coordinates, quality/provenance, expiry and negative-result TTL. Reuse only eligible public POIs across users, isolate private locations. A plain address hash is dictionary-searchable, not anonymization. Refresh with deduplicated jobs; recheck the item's address version before writing results.
@@ -294,6 +298,8 @@ This is the proposed direction; validate it on supported devices before rollout:
 - **Timezone:** lat/lng alone is not a timezone. Use existing inference or a separate vetted offline lookup, retain provenance and support correction. Use `geo_city` in day titles only when sufficiently reliable; preserve the original location fallback.
 
 ### 1.5 Native app (P1 stopgap → P2)
+
+**2026-10-20 implementation:** Native MapLibre 10.4.2 source and Expo plugin are wired behind independent build/DB gates. Mocked lifecycle and fallback checks pass; new EAS builds and named-device compatibility evidence are still required before enabling. Google routes remain for supported old clients. [Activation and validation](../operations/gap-closing-maps.md).
 
 1. **Stopgap — Google live view only.** Provision a server-only key restricted to the Maps Static API, set `GOOGLE_STATIC_MAPS_API_KEY`, and flip `trip_day_map` for native.
    - Change `GET /api/maps/trip-day` to take `tripId` + `dayDate`, check `ensureUserCanReadTrip`, and derive points server-side, so clients can't run arbitrary addresses through our key.

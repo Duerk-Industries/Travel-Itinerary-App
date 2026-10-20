@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, setFeatureFlag } from '../src/db';
+import { initDb, setFeatureFlag, getCurrentDbProvider } from '../src/db';
 import { randomUUID } from 'crypto';
 import { futureDateString, registerAndLoginWebUser } from './helpers';
 import { insertPublicAlias, insertPublicEpoch, publishUploadedAsset, setStoredVisibility } from './providerRows';
@@ -19,6 +19,7 @@ describe('Public Blog API', () => {
   // processing), so the same fixture works on pg-mem and on Firestore.
   const day = futureDateString();
   const expenseAmount = 7777.77;
+  let publishedTripId = '';
   const expenseCategory = 'Dinner';
 
   beforeAll(async () => {
@@ -29,6 +30,7 @@ describe('Public Blog API', () => {
     const auth = { Authorization: `Bearer ${token}` };
     const trip = await request(app).post('/api/trips/wizard').set(auth).send({ name: 'Paris 2026', startDate: day, endDate: day, participants: [] }).expect(201);
     const tripId = trip.body.trip?.id ?? trip.body.id;
+    publishedTripId = tripId;
     await request(app).get(`/api/trips/${tripId}/blog`).set(auth).expect(200);
     await request(app).patch(`/api/trips/${tripId}/blog`).set(auth).send({ title: 'Paris Blog' }).expect(200);
     await request(app).patch(`/api/trips/${tripId}/blog/days/${day}`).set(auth).send({ headline: 'Arrival in Paris', updateVersion: 1 }).expect(200);
@@ -84,4 +86,20 @@ describe('Public Blog API', () => {
     const res = await request(app).get('/public/blog/nobody/nowhere');
     expect(res.status).toBe(404);
   });
+  it('keeps anonymous maps uncached and consent-gated, and denies unpublished aliases', async () => {
+    const maps = await request(app).get('/public/blog/testuser/paris-2026/maps').expect(200);
+    expect(maps.headers['cache-control']).toContain('no-store');
+    expect(maps.body.days).toEqual([]);
+    await setStoredVisibility(publishedTripId, 'private');
+    if (getCurrentDbProvider() === 'firebase') {
+      const { getDb } = await import('../src/db.firebase');
+      const epochs = await getDb().collection('blog_publication_epochs').where('tripId', '==', publishedTripId).get();
+      for (const doc of epochs.docs) await doc.ref.update({ state: 'revoked' });
+    } else {
+      const { queryBlog } = await import('../src/db.postgres');
+      await queryBlog("UPDATE blog_publication_epochs SET state='revoked' WHERE trip_id=$1", [publishedTripId]);
+    }
+    await request(app).get('/public/blog/testuser/paris-2026/maps').expect(404);
+  });
+
 });

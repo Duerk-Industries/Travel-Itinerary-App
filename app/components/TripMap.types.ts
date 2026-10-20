@@ -1,2 +1,2 @@
 import type { PlanningMapPoint } from '../../server/src/types';
-export type TripMapProps = { points: PlanningMapPoint[]; selectedId?: string | null; onSelect?: (id: string) => void; testID?: string };
+export type TripMapProps = { points: PlanningMapPoint[]; nativeEnabled?: boolean; selectedId?: string | null; onSelect?: (id: string) => void; testID?: string };

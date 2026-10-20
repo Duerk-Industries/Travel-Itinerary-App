@@ -260,18 +260,25 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   const [dayMapPoints, setDayMapPoints] = useState<Record<string, { precision: 'exact' | 'approximate'; points: Array<{ lat: number; lng: number }> }>>({});
   // The °F/°C switch only shows when there's weather to convert.
   const hasWeatherFacts = useMemo(() => Object.values(dayFacts || {}).some((facts: any) => Array.isArray(facts) && facts.some((fact) => fact.key === 'weather')), [dayFacts]);
+  const factScope = JSON.stringify([activeTripId, headers?.Authorization, readOnly]);
+  const factScopeRef = useRef(factScope); factScopeRef.current = factScope;
+  const mapScope = JSON.stringify([factScope, publicPreview]);
+  const mapScopeRef = useRef(mapScope); mapScopeRef.current = mapScope;
   const loadedFactDays = useRef(new Set());
-  useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); setDayMapPoints({}); }, [activeTripId]);
+  useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); }, [factScope]);
+  useEffect(() => { setDayMapPoints({}); }, [mapScope]);
   useEffect(() => {
     if (publicPreview) return;
     for (const day of visibleDays) {
       if (loadedFactDays.current.has(day.localDate)) continue;
       loadedFactDays.current.add(day.localDate);
+      const requestScope = mapScope;
       fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${day.localDate}/facts`, { headers })
         .then((response) => (response.ok ? response.json() : null))
         .then((data) => {
-          if (!data?.facts) return;
+          if (!data?.facts || factScopeRef.current !== factScope) return;
           setDayFacts((current) => ({ ...current, [day.localDate]: data.facts }));
+          if (mapScopeRef.current !== requestScope) return;
           setDayMapPoints((current) => {
             const { [day.localDate]: _previous, ...rest } = current;
             return data.mapPoints?.points?.length ? { ...rest, [day.localDate]: data.mapPoints } : rest;
@@ -279,7 +286,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
         })
         .catch(() => { loadedFactDays.current.delete(day.localDate); });
     }
-  }, [visibleDays, publicPreview, backendUrl, activeTripId, headers]);
+  }, [visibleDays, publicPreview, backendUrl, activeTripId, headers, mapScope]);
 
   // Phase 5 (A1) — Day Starter. For any day the editing traveler has left empty, ask the server
   // for its one deterministic draft suggestion. Same lazy per-day shape as the facts effect above:
@@ -456,6 +463,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       }
       if (!response.ok || !data.recap) throw new Error(data.error || 'Unable to build the trip recap');
       setRecap(data.recap);
+      try {
+        const mapsResponse = await fetch(`${backendUrl}/api/trips/${activeTripId}/blog/maps`, { headers, cache: 'no-store' });
+        if (mapsResponse.ok && mapScopeRef.current === mapScope) { const maps = await mapsResponse.json(); if (mapScopeRef.current !== mapScope) return; setDayMapPoints(Object.fromEntries((maps.days || []).map(day => [day.dayDate, day.mapPoints]))); }
+      } catch { /* The recap remains useful without a map. */ }
       setRecapNotice(null);
       // Bring the freshly-built card into view — otherwise it just appears somewhere off-screen.
       setTimeout(() => { try { scrollRef.current?.scrollTo({ y: Math.max(0, recapY.current - 24), animated: true }); } catch {} }, 120);
@@ -1765,9 +1776,10 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 })()}
               </View>
             ) : null}
-            {Platform.OS === 'web' && dayMapPoints[day.localDate] ? (
+            {!publicPreview && dayMapPoints[day.localDate] ? (
               <View style={{ marginTop: 4, marginBottom: 4 }}>
                 <TripMap
+                  nativeEnabled={capabilities.planning_native_map === true}
                   testID={`blog-day-map-${day.localDate}`}
                   points={dayMapPoints[day.localDate].points.map((point, index) => ({
                     id: `blog-map-${day.localDate}-${index}`, kind: 'activity' as const, lat: point.lat, lng: point.lng,
@@ -2137,6 +2149,8 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
           <View style={{ marginTop: 8 }} onLayout={(e) => { recapY.current = e.nativeEvent.layout.y; }}>
             {recap ? (
               <TripRecapCards
+                nativeEnabled={capabilities.planning_native_map === true}
+                mapDays={Object.entries(publicPreview ? {} : dayMapPoints).map(([dayDate, mapPoints]) => ({ dayDate, mapPoints }))}
                 recap={recap}
                 topPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.assetId === recap?.topPhoto?.assetId)?.primaryUrl}
                 fallbackPhotoUrl={visibleDays.flatMap(mediaForDay).find((item) => item.mediaKind === 'photo' && (item.primaryUrl || item.thumbnailUrl))?.primaryUrl}

@@ -1,3 +1,5 @@
+import { configureMapLibre } from '../utils/maplibreConfig.web';
+import { isLocatedMapPoint } from '../utils/planningMapGeometry';
 import { travelEstimate } from '../../packages/domain/src/planningTravelEstimates';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
@@ -7,9 +9,7 @@ import type { PlanningMapPoint } from '../../server/src/types';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const COLORS = { flight: '#4285F4', lodging: '#FB8C00', activity: '#34A853', car_rental: '#9C27B0' };
-const located = (point: PlanningMapPoint): boolean => typeof point.lat === 'number' && typeof point.lng === 'number'
-  && Number.isFinite(point.lat) && Number.isFinite(point.lng) && Math.abs(point.lat) <= 90 && Math.abs(point.lng) <= 180
-  && ['catalog', 'airport', 'manual'].includes(point.coordinateSource || '');
+const located = isLocatedMapPoint;
 
 export default function TripMap({ points, selectedId, onSelect, testID }: TripMapProps) {
   const host = useRef<HTMLDivElement | null>(null);
@@ -37,6 +37,7 @@ export default function TripMap({ points, selectedId, onSelect, testID }: TripMa
     setFailed(false);
     void import('maplibre-gl').then(lib => {
       if (cancelled || !host.current) return;
+      configureMapLibre(lib);
       const instance = new lib.Map({
         container: host.current, style: 'https://tiles.openfreemap.org/styles/liberty',
         center: [resolved[0].lng!, resolved[0].lat!], zoom: 13, cooperativeGestures: true,

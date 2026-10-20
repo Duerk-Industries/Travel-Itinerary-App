@@ -1,3 +1,5 @@
+import { captureKeepsakeMap, type KeepsakeMapCapture } from '../utils/keepsakeMapCapture';
+import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useState } from 'react';
 import { Alert, Modal, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import {
@@ -54,6 +56,25 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, text
     return blog;
   };
 
+  const loadMaps = async (): Promise<Record<string, KeepsakeMapCapture>> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5_000);
+    try {
+      const response = await fetch(`${backendUrl}/api/trips/${tripId}/blog/maps?shared=1`, { headers, cache: 'no-store', signal: controller.signal });
+      if (!response.ok) return {};
+      const data = await response.json();
+      const maps: Record<string, KeepsakeMapCapture> = {};
+      // One bounded export renderer at a time; never preserve buffers on live maps.
+      const days = (Array.isArray(data.days) ? data.days as BlogMapDay[] : []).slice(0, 60);
+      for (const day of days) if (day.mapPoints.precision === 'approximate') maps[day.dayDate] = { approximate: true, labels: day.mapPoints.points.slice(0, 12).map((p, n) => `Approximate area ${n + 1} (${p.lat.toFixed(2)}, ${p.lng.toFixed(2)})`) };
+      for (const day of days.slice(0, 6)) {
+        if (day.mapPoints.precision === 'approximate') maps[day.dayDate] = await captureKeepsakeMap(day.mapPoints);
+      }
+      return maps;
+    } catch { return {}; }
+    finally { clearTimeout(timer); }
+  };
+
   const createKeepsake = async () => {
     if (busy) return;
     saveTheme(themeKey);
@@ -68,11 +89,15 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, text
         popup.document.write('<p style="font:16px system-ui;padding:24px;color:#6b7280">Preparing your keepsake…</p>');
         const blog = await loadBlog();
         popup.document.open();
-        popup.document.write(buildKeepsakeHtml(blog, themeKey));
+        popup.document.write(buildKeepsakeHtml(blog, themeKey, await loadMaps()));
         popup.document.close();
         popup.focus();
         // Give photos and the web font a moment to load before the print dialog.
-        window.setTimeout(() => popup.print(), 900);
+        await Promise.race([
+          Promise.all([popup.document.fonts?.ready, ...Array.from(popup.document.images).map(image => image.complete ? Promise.resolve() : new Promise<void>(resolve => { image.onload = () => resolve(); image.onerror = () => resolve(); }))]),
+          new Promise(resolve => window.setTimeout(resolve, 5_000)),
+        ]);
+        if (!popup.closed) popup.print();
         return;
       }
       const blog = await loadBlog();
@@ -86,7 +111,7 @@ const BlogKeepsakeButton: React.FC<Props> = ({ backendUrl, headers, tripId, text
         Print = null;
       }
       if (Print?.printToFileAsync && Sharing?.shareAsync) {
-        const { uri } = await Print.printToFileAsync({ html: buildKeepsakeHtml(blog, themeKey) });
+        const { uri } = await Print.printToFileAsync({ html: buildKeepsakeHtml(blog, themeKey, await loadMaps()) });
         await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: blog.title || 'Trip keepsake' });
       } else {
         await Share.share({ title: blog.title || 'Trip keepsake', message: keepsakeText(blog) });

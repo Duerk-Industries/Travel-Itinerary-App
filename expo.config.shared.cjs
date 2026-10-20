@@ -191,6 +191,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       },
     },
     plugins: [
+      resolvePluginFromApp('@maplibre/maplibre-react-native/app.plugin.js', appDir),
       'expo-web-browser',
       'expo-video',
       'expo-dev-client',
@@ -257,6 +258,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       ],
     ],
     extra: {
+      nativeMapRenderer: process.env.NATIVE_MAP_RENDERER === '1',
       // A web release build (RELEASE_WEB_BUILD=1, set only by
       // build-release.ps1/.sh) must promote one artifact unmodified from
       // test to production, so it leaves backendUrl unset here rather than

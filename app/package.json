@@ -53,6 +53,7 @@
     "@10play/tentap-editor": "^1.0.1",
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo/metro-runtime": "~6.1.2",
+    "@maplibre/maplibre-react-native": "10.4.2",
     "@mlc-ai/web-llm": "0.2.82",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",

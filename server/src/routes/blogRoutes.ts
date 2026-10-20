@@ -1,3 +1,4 @@
+import { getFeatureFlag } from '../db';
 import { Router } from 'express';
 import multer from 'multer';
 import { createHash, randomUUID } from 'crypto';
@@ -86,9 +87,10 @@ router.get('/:tripId/blog/capabilities', async (req, res) => {
     const kinds = await Promise.all(descriptors.map(async (descriptor) => ({ ...descriptor, enabled: master && await isFeatureEnabled(descriptor.featureFlag) })));
     const limits = tripBlogLimits();
     const writable = Boolean(await ensureUserInTrip(req.params.tripId, userIdOf(req)));
-    const featureKeys = ['trip_blog_authoring_assist', 'trip_blog_day_starter', 'trip_blog_photo_composer', 'trip_blog_ai_highlights', 'trip_blog_reactions', 'trip_blog_spend_summary', 'trip_blog_recap', 'trip_blog_alt_text', 'trip_blog_caption_ai', 'trip_blog_audio', 'trip_blog_audio_transcription', 'trip_blog_search', 'trip_blog_places', 'trip_blog_offline_queue', 'trip_blog_trip_awards', 'trip_blog_keepsake_export', 'trip_blog_mobile_share_ios', 'trip_blog_mobile_share_android', 'activity_recap'] as const;
+    const featureKeys = ['planning_native_map', 'trip_blog_authoring_assist', 'trip_blog_day_starter', 'trip_blog_photo_composer', 'trip_blog_ai_highlights', 'trip_blog_reactions', 'trip_blog_spend_summary', 'trip_blog_recap', 'trip_blog_alt_text', 'trip_blog_caption_ai', 'trip_blog_audio', 'trip_blog_audio_transcription', 'trip_blog_search', 'trip_blog_places', 'trip_blog_offline_queue', 'trip_blog_trip_awards', 'trip_blog_keepsake_export', 'trip_blog_mobile_share_ios', 'trip_blog_mobile_share_android', 'activity_recap'] as const;
     const featureValues = await Promise.all(featureKeys.map((key) => isFeatureEnabled(key)));
     const features = Object.fromEntries(featureKeys.map((key, index) => [key, master && featureValues[index]]));
+    features.planning_native_map = master && (await getFeatureFlag('planning_native_map'))?.enabled === true;
     res.json({ enabled: master, writable, kinds, features, limits: { maxTextBlocksPerDay: Number(limits.maxTextBlocksPerDay ?? 10), maxMediaItemsPerDay: Number(limits.maxMediaItemsPerDay ?? 50), videoMaxDurationSeconds: Number(limits.videoMaxDurationSeconds ?? 300), maxAssetsPerGallery: Number(limits.maxAssetsPerGallery ?? 30), offlineQueueMaxEntries: Number(limits.offlineQueueMaxEntries ?? 25), offlineQueueRetentionDays: Number(limits.offlineQueueRetentionDays ?? 7), audioMaxBytes: Number(limits.audioMaxBytes ?? 26214400) } });
   } catch (err) {
     errorResponse(res, err);

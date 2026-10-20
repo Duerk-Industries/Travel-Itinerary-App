@@ -6,6 +6,8 @@
 //
 // Deliberately web-only (App.tsx only checks window.location on Platform.OS === 'web'): a public
 // link is a browser-shareable artifact, not something native deep-linking needs to solve today.
+import BlogMap from './BlogMap';
+import type { BlogMapDay } from '../../server/src/services/blogMapService';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, Text, View } from 'react-native';
 import Constants from 'expo-constants';
@@ -224,6 +226,7 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'not-found' | 'error'; blog: PublicBlogPayload | null; message: string | null }>({
     status: 'loading', blog: null, message: null,
   });
+  const [mapDays, setMapDays] = useState<BlogMapDay[]>([]);
   const [documentRefreshVersion, setDocumentRefreshVersion] = useState(0);
   useBlogMediaUrlRefresh(state.blog, () => setDocumentRefreshVersion((version) => version + 1));
 
@@ -257,6 +260,25 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
       }
     })();
     return () => { cancelled = true; };
+  }, [backendUrl, username, tripSlug, documentRefreshVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof document === 'undefined') return;
+    const controller = new AbortController();
+    const refresh = async () => {
+      setMapDays([]);
+      if (document.visibilityState === 'hidden') return;
+      try {
+        const response = await fetch(`${backendUrl}/public/blog/${encodeURIComponent(username)}/${encodeURIComponent(tripSlug)}/maps`, { cache: 'no-store', signal: controller.signal });
+        const data = response.ok ? await response.json() : {};
+        if (!cancelled) setMapDays(Array.isArray(data.days) ? data.days : []);
+      } catch { /* prose remains readable */ }
+    };
+    void refresh();
+    const timer = setInterval(() => { void refresh(); }, 30_000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { cancelled = true; controller.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
   }, [backendUrl, username, tripSlug, documentRefreshVersion]);
 
   // Read-only public engagement — public-audience reaction counts and comment counts per day, on
@@ -434,7 +456,8 @@ const PublicTripBlogPage: React.FC<Props> = ({ username, tripSlug }) => {
       {day.headline ? (
         <Text style={{ fontFamily: displayFont, fontSize: 26, color: '#152944', marginBottom: day.summary ? 6 : 16 }}>{day.headline}</Text>
       ) : null}
-      {day.summary ? (
+      {mapDays.find(d => d.dayDate === day.localDate)?.mapPoints ? <BlogMap testID={`public-map-${day.localDate}`} map={mapDays.find(d => d.dayDate === day.localDate)!.mapPoints} /> : null}
+                  {day.summary ? (
         <Text style={{ color: '#6B7280', fontSize: 15, marginBottom: 16 }}>{day.summary}</Text>
       ) : null}
       {day.items.map((item) => {

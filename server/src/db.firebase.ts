@@ -9753,3 +9753,5 @@ export const getPlanningRevision = async (tripId: string, groupId: string): Prom
   const docs = await db.getAll(...[`trip:${tripId}`, `group:${groupId}`, 'global:profiles'].map(scope => db.collection('planning_revisions').doc(scope)));
   return JSON.stringify(docs.map(doc => [doc.id, doc.data()?.revision ?? 0]));
 };
+
+export { mutateGeocodingFirebase as mutateGeocodingState } from './services/geocodingRepository';
