@@ -126,6 +126,27 @@ exists for the matcher, but using it requires trusted receiver authentication fi
 - Tests: `blogMapProjection.test.ts`, `blog-day-map-points.test.ts` (pg-mem; Firestore path
   not exercised) plus all 42 blog suites; no browser check of the rendered map.
 
+## Continuation: replay locking without Web Locks (§5.3)
+
+Audit finding: the financial (expense) queue on web already uses the IndexedDB lease in
+`pendingWriteStore.web.ts` (claim, heartbeat renew, fencing token on every commit), which does
+not depend on Web Locks. If IndexedDB is unavailable the queue fails visibly rather than running
+unlocked. The only unlocked path was the legacy non-store branch of `usePendingWrites`, used
+when `navigator.locks` is missing.
+
+- `utils/replayLock.ts`: a localStorage claim-then-verify lease (30 s term, 10 s renew, 30 ms
+  verify wait) now backs that branch. It narrows, but cannot eliminate, a double replay because
+  localStorage has no compare-and-swap; every replayed write still carries an Idempotency-Key.
+  Without any storage (native) it runs unlocked as before; storage that rejects writes also
+  runs the work rather than stranding the queue.
+- Both lease implementations now treat a lease further out than two terms as expired, so a
+  clock moved backwards cannot block replay for hours.
+- Tests: `replayLock.test.ts`; `usePendingWrites.test.tsx` now waits for the drain to start.
+  The IndexedDB clock guard has no test: there is no IndexedDB fake in this repo, and the
+  Chromium adapter check in `output/playwright/idb-check.log` predates it.
+- Still open here: real two-tab browser run, native encrypted queue, bounded resume recovery and
+  an automatic repair/import flow for corrupt queue exports.
+
 ## Source work still outstanding
 
 | Plan area | Actual remaining implementation |
@@ -136,7 +157,7 @@ exists for the matcher, but using it requires trusted receiver authentication fi
 | §3.1 / §3.2 sender trust | Imports UI for the (now built) address verification API, trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
 | §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
 | §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
-| §5.3 queue concurrency and recovery | Transactional cross-tab fallback where Web Locks is unavailable; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; a supported automatic repair/import flow for corrupt queue exports. Durable discard feedback and raw whole-queue recovery export are now implemented. |
+| §5.3 queue concurrency and recovery | Real two-tab browser verification of the lease fallbacks; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; a supported automatic repair/import flow for corrupt queue exports. Durable discard feedback and raw whole-queue recovery export are now implemented. |
 | §5.4 browser shell | Local Chromium install/offline reload and simulated HTML update checked. Real deployment/hash-change recovery, hosting headers, signed-in offline flows and other browsers still need verification. Browser push and public explore remain later scope in §7. |
 
 Snapshot eviction is oldest-saved, not a claim of access-based LRU. Queue storage

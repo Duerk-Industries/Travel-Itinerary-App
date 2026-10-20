@@ -1,6 +1,7 @@
 import { parsePendingWriteQueue as parseQueue } from '../utils/pendingWriteValidation';
 import { transactionalPendingWriteStore, type PendingWriteStore } from '../utils/pendingWriteStore';
 import { replayTransactionalPending } from '../utils/transactionalPendingReplay';
+import { withStorageLease } from '../utils/replayLock';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { canAccessWebStorage, readAsync, readAsyncOrThrow, readSync, writeAsync, writeSync } from '../utils/persistentStorage';
@@ -122,10 +123,10 @@ type LockManagerLike = {
   request: (name: string, options: { ifAvailable: boolean }, cb: (lock: unknown) => Promise<unknown>) => Promise<unknown>;
 };
 
-/** Runs `work` only if no other tab/window holds the queue's replay lock. Falls back to running when Web Locks is unavailable. */
+/** Runs `work` only if no other tab/window holds the queue's replay lock. Without Web Locks it falls back to a storage lease (utils/replayLock.ts). */
 const withReplayLock = async <T,>(name: string, work: () => Promise<T>): Promise<T | null> => {
   const locks = (typeof navigator !== 'undefined' ? (navigator as { locks?: LockManagerLike }).locks : undefined) ?? null;
-  if (!locks) return work();
+  if (!locks) return withStorageLease(name, work);
   let result: T | null = null;
   await locks.request(`replay:${name}`, { ifAvailable: true }, async (lock) => {
     if (!lock) return null;

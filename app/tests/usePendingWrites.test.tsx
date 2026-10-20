@@ -4,7 +4,7 @@
 /// <reference types="jest" />
 /// <reference types="node" />
 
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { usePendingWrites } from '../hooks/usePendingWrites';
 
 const STORAGE_KEY = 'stp.pending-writes';
@@ -319,6 +319,8 @@ describe('pending write session fencing', () => {
     const send = jest.fn(async () => { await gate; return true; });
     let drain!: ReturnType<typeof result.current.replay>;
     act(() => { drain = result.current.replay(send); });
+    // The no-Web-Locks fallback verifies its lease first; wait until the drain is really in flight.
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     rerender({ k: 'b' });
     act(() => { result.current.enqueue('b-only', {}); });
     await act(async () => { release(); await drain; });

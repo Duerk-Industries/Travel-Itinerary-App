@@ -14,6 +14,10 @@ let opening: Promise<IDBDatabase> | undefined;
 const listeners = new Map<string, Set<() => void>>();
 let channel: BroadcastChannel | undefined;
 
+// A lease further out than two terms was written before the clock moved back; it must not block replay.
+const leaseHeld = (row: Row, leaseMs: number): boolean =>
+  Boolean(row.lease && row.lease.until > Date.now() && row.lease.until - Date.now() <= leaseMs * 2);
+
 const emit = (key: string) => listeners.get(key)?.forEach(callback => callback());
 const broadcast = (key: string) => {
   emit(key); channel?.postMessage({ key });
@@ -104,7 +108,7 @@ export const transactionalPendingWriteStore: PendingWriteStore = {
     return next;
   }),
   claim: (key, token, leaseMs) => transact(key, row => {
-    if (row.lease && row.lease.until > Date.now()) return false;
+    if (leaseHeld(row, leaseMs)) return false;
     row.lease = { token, until: Date.now() + leaseMs }; return true;
   }),
   renew: (key, token, leaseMs) => transact(key, row => {
