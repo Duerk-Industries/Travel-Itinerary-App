@@ -82,10 +82,12 @@ router.patch('/:tripId/blog', async (req, res) => {
     // Trip-level opt-in for the end-of-day photo reminder (blogBackgroundWorker.ts's
     // runDayPhotoReminderJob) — off by default; see BlogMastheadPatch.dayPhotoRemindersEnabled.
     const dayPhotoRemindersEnabled = req.body?.dayPhotoRemindersEnabled === undefined ? undefined : Boolean(req.body.dayPhotoRemindersEnabled);
+    // Approximate day maps for followers; off by default (see BlogDocument.sharedMapEnabled).
+    const sharedMapEnabled = req.body?.sharedMapEnabled === undefined ? undefined : Boolean(req.body.sharedMapEnabled);
     // "Make private": any traveler can take the blog off the public web (travelers and followers
     // keep access). Clearing it lets the blog be published again if every traveler still qualifies.
     const publicOptOut = req.body?.publicOptOut === undefined ? undefined : Boolean(req.body.publicOptOut);
-    const blog = await blogRepository().updateBlogMeta(userIdOf(req), req.params.tripId, { title, subtitle, introduction, photoLocationEnabled, dayPhotoRemindersEnabled, publicOptOut });
+    const blog = await blogRepository().updateBlogMeta(userIdOf(req), req.params.tripId, { title, subtitle, introduction, photoLocationEnabled, dayPhotoRemindersEnabled, sharedMapEnabled, publicOptOut });
     if (publicOptOut === true) {
       await revokePublicBlog(req.params.tripId, userIdOf(req));
       blog.visibilityState = 'private';

@@ -103,11 +103,34 @@ exists for the matcher, but using it requires trusted receiver authentication fi
 (below). The Imports UI for adding/confirming addresses is not built. Covered by
 `server/__tests__/verifiedSenders.test.ts` (pg-mem only).
 
+## Continuation: audience-safe blog day maps (§1.3, partial)
+
+- Day facts now carry `mapPoints` (`blogMapProjection.ts`). Travelers get their own geotags
+  (5 decimals, no timestamps or media ids). Anyone else gets points only when the trip's new
+  `trip_blogs.shared_map_enabled` is on (default off, fail-closed on a missing row/doc;
+  `PATCH /api/trips/:id/blog { sharedMapEnabled }`, any traveler). Those points are snapped to
+  0.01° cells (~1.1 km), de-duplicated, capped at 12, dropped within 1.5 km of any lodging that
+  has coordinates, and withheld entirely unless two distinct areas remain. The facts cache key
+  includes the sharing choice, so turning it off applies on the next request.
+- Followers no longer receive the legacy `dayMap` stored-image fact (rendered from exact
+  geotags, never consent-gated). Travelers still do for old clients; retirement of the render
+  job and `blog_day_map_artifacts` waits for those clients.
+- Web blog day cards draw `mapPoints` with the existing `TripMap`; native shows no blog map.
+- Apply `20261027_blog_shared_map_enabled.sql` before deploying (Firestore needs nothing).
+- Limits: suppression only knows lodgings that already have coordinates, so a trip with
+  un-geocoded lodging can still show a stop near where it stayed. Rounding is not
+  anonymisation. This is why sharing is a deliberate opt-in. **Not built:** the settings
+  control for `sharedMapEnabled` (and the existing `photoLocationEnabled`) in the app, the
+  owner's preview of what followers will see, the public blog page map (that page exposes no
+  coordinates today, and still must not), recap/keepsake maps, and legacy artifact retirement.
+- Tests: `blogMapProjection.test.ts`, `blog-day-map-points.test.ts` (pg-mem; Firestore path
+  not exercised) plus all 42 blog suites; no browser check of the rendered map.
+
 ## Source work still outstanding
 
 | Plan area | Actual remaining implementation |
 | --- | --- |
-| §1.3 public/blog/recap maps and keepsake | Explicit approximate-location consent/preview, server audience-safe projection, shared renderer integration, bounded export-only capture and legacy-artifact retirement after reader migration. Do not publish EXIF or private lodging coordinates. |
+| §1.3 public/blog/recap maps and keepsake | Server projection, consent flag and web blog-day rendering are built (see above). Remaining: settings control and owner preview of the approximate map, public page/recap integration, bounded export-only keepsake capture, and legacy-artifact retirement after reader migration. Do not publish EXIF or private lodging coordinates. |
 | §1.4 optional geocoder | Provider/input policy decision, shared admission/throttling, durable jobs/cache and adapter fencing. This is optional; current catalog/airport maps need no geocoder. No private query or bulk Nominatim backfill is authorized. |
 | §1.5 native renderer | Expo/RN compatibility and named-device spike before adding the native renderer, independent rollback flag, staged EAS build and supported-old-client retirement. Current authorized static-map/list fallback stays supported. |
 | §3.1 / §3.2 sender trust | Imports UI for the (now built) address verification API, trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |

@@ -135,6 +135,22 @@ export const getFollowerCommentsEnabled = async (tripId: string): Promise<boolea
   return data.followerCommentsEnabled !== false;
 };
 
+// Fail-closed (unlike followerCommentsEnabled): no document, or anything but `true`, is off.
+export const getSharedMapEnabled = async (tripId: string): Promise<boolean> => {
+  const doc = await getDb().collection('trip_blogs').doc(tripId).get();
+  return doc.exists && (doc.data() as any)?.sharedMapEnabled === true;
+};
+
+// Lodging coordinates are used server-side only, to keep followers' approximate maps away from
+// where the travelers sleep; they are never returned to the caller.
+export const getTripLodgingAnchors = async (tripId: string): Promise<Array<{ lat: number; lng: number }>> => {
+  const snap = await getDb().collection('lodgings').where('trip_id', '==', tripId).get();
+  return snap.docs
+    .map((doc) => doc.data() as any)
+    .filter((data) => data.lat != null && data.lng != null && Number.isFinite(Number(data.lat)) && Number.isFinite(Number(data.lng)))
+    .map((data) => ({ lat: Number(data.lat), lng: Number(data.lng) }));
+};
+
 export const getGroupMemberUserIdsForTrip = async (tripId: string): Promise<string[]> => {
   const db = getDb();
   const tripSnap = await db.collection('trips').doc(tripId).get();

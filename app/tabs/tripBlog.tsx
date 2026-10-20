@@ -11,6 +11,7 @@ import { alertMessage } from '../utils/crossPlatformAlert';
 import { formatDateLong } from '../utils/formatDateLong';
 import TripDayMap from '../components/TripDayMap';
 import { type TripMapPoint } from '../utils/googleMaps';
+import TripMap from '../components/TripMap';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
 import { createIdempotencyKey } from '../utils/idempotencyKey';
 import { useAutosave } from '../utils/useAutosave';
@@ -255,10 +256,12 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
   // resolve membership against there), and a failure (flag off, rate-limited, etc.) just leaves
   // that day's strip empty rather than surfacing an error — facts are enrichment, never blocking.
   const [dayFacts, setDayFacts] = useState({});
+  // Server-projected stops for the device map. Exact for travelers; coarse, opt-in and lodging-free for followers.
+  const [dayMapPoints, setDayMapPoints] = useState<Record<string, { precision: 'exact' | 'approximate'; points: Array<{ lat: number; lng: number }> }>>({});
   // The °F/°C switch only shows when there's weather to convert.
   const hasWeatherFacts = useMemo(() => Object.values(dayFacts || {}).some((facts: any) => Array.isArray(facts) && facts.some((fact) => fact.key === 'weather')), [dayFacts]);
   const loadedFactDays = useRef(new Set());
-  useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); }, [activeTripId]);
+  useEffect(() => { loadedFactDays.current.clear(); setDayFacts({}); setDayMapPoints({}); }, [activeTripId]);
   useEffect(() => {
     if (publicPreview) return;
     for (const day of visibleDays) {
@@ -266,7 +269,14 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
       loadedFactDays.current.add(day.localDate);
       fetch(`${backendUrl}/api/trips/${activeTripId}/blog/days/${day.localDate}/facts`, { headers })
         .then((response) => (response.ok ? response.json() : null))
-        .then((data) => { if (data?.facts) setDayFacts((current) => ({ ...current, [day.localDate]: data.facts })); })
+        .then((data) => {
+          if (!data?.facts) return;
+          setDayFacts((current) => ({ ...current, [day.localDate]: data.facts }));
+          setDayMapPoints((current) => {
+            const { [day.localDate]: _previous, ...rest } = current;
+            return data.mapPoints?.points?.length ? { ...rest, [day.localDate]: data.mapPoints } : rest;
+          });
+        })
         .catch(() => { loadedFactDays.current.delete(day.localDate); });
     }
   }, [visibleDays, publicPreview, backendUrl, activeTripId, headers]);
@@ -1685,6 +1695,21 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                     />
                   );
                 })()}
+              </View>
+            ) : null}
+            {Platform.OS === 'web' && dayMapPoints[day.localDate] ? (
+              <View style={{ marginTop: 4, marginBottom: 4 }}>
+                <TripMap
+                  testID={`blog-day-map-${day.localDate}`}
+                  points={dayMapPoints[day.localDate].points.map((point, index) => ({
+                    id: `blog-map-${day.localDate}-${index}`, kind: 'activity' as const, lat: point.lat, lng: point.lng,
+                    coordinateSource: 'manual' as const,
+                    title: dayMapPoints[day.localDate].precision === 'approximate' ? `Approximate area ${index + 1}` : `Photo location ${index + 1}`,
+                  }))}
+                />
+                {dayMapPoints[day.localDate].precision === 'approximate' ? (
+                  <Text style={{ fontSize: 12, color: theme?.colors?.textMuted ?? '#64748b' }}>Locations are approximate (about 1 km) and omit where the travelers stayed.</Text>
+                ) : null}
               </View>
             ) : null}
             {(day.items || []).filter((item) => item.kindKey !== 'core.gallery' && !(item.kindKey && item.kindKey.startsWith('media.'))).map((item) => (

@@ -8,7 +8,8 @@ import { BlogTargetNotFoundError } from './blogEngagementErrors';
 import { createHash } from 'crypto';
 import { createBlogReadUrl } from './blogStorageClient';
 import { findBundledAirport } from './airportCatalog';
-import { getBlogDayByDate, getTripName, getVisibleMediaForDay, getDayMapArtifact } from '../blog/firebaseBlogDayData';
+import { getBlogDayByDate, getTripName, getVisibleMediaForDay, getDayMapArtifact, getSharedMapEnabled, getTripLodgingAnchors } from '../blog/firebaseBlogDayData';
+import { projectBlogDayMapPoints, type BlogDayMapPoints } from './blogMapProjection';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §7.1.
 // One service, two projections over the same source set: `facts` (aggregates for the strip) and
@@ -51,6 +52,9 @@ export interface BlogDayFactsResult {
   dayDate: string;
   facts: BlogDayFact[];
   timeline: BlogDayTimelineEntry[];
+  // Audience-safe stops for drawing the day on a device map. Absent when the viewer may not see
+  // locations, or there are fewer than two usable stops. See blogMapProjection.ts.
+  mapPoints?: BlogDayMapPoints;
 }
 
 const EARTH_RADIUS_KM = 6371;
@@ -90,11 +94,26 @@ const isSameDate = (value: unknown, dayDate: string): boolean => new Date(String
 
 export const getDayFacts = async (tripId: string, actorUserId: string, dayDate: string): Promise<BlogDayFactsResult> => {
   const membership = await resolveActorMembership(tripId, actorUserId);
-  const cacheKey = `${tripId}:${dayDate}:${membership}`;
-  return factsCache.getOrFetch(cacheKey, () => computeDayFacts(tripId, actorUserId, dayDate, membership), getFactsCacheTtlMs());
+  // The sharing choice is part of the key, so turning it off takes effect on the next request
+  // instead of after the cache window; a follower never keeps seeing points the trip withdrew.
+  const sharedMapEnabled = await readSharedMapEnabled(tripId);
+  const cacheKey = `${tripId}:${dayDate}:${membership}:${sharedMapEnabled ? 'map' : 'nomap'}`;
+  return factsCache.getOrFetch(cacheKey, () => computeDayFacts(tripId, actorUserId, dayDate, membership, sharedMapEnabled), getFactsCacheTtlMs());
 };
 
-const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: string, membership: 'traveler' | 'follower'): Promise<BlogDayFactsResult> => {
+const readSharedMapEnabled = async (tripId: string): Promise<boolean> => {
+  if (getCurrentDbProvider() === 'firebase') return getSharedMapEnabled(tripId);
+  const row = await queryBlog<{ shared_map_enabled: boolean }>('SELECT shared_map_enabled FROM trip_blogs WHERE trip_id = $1', [tripId]);
+  return row.rows[0]?.shared_map_enabled === true;
+};
+
+const readLodgingAnchors = async (tripId: string): Promise<Array<{ lat: number; lng: number }>> => {
+  if (getCurrentDbProvider() === 'firebase') return getTripLodgingAnchors(tripId);
+  const rows = await queryBlog<{ lat: number | null; lng: number | null }>('SELECT lat, lng FROM lodgings WHERE trip_id = $1 AND lat IS NOT NULL AND lng IS NOT NULL', [tripId]);
+  return rows.rows.map((r) => ({ lat: Number(r.lat), lng: Number(r.lng) }));
+};
+
+const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: string, membership: 'traveler' | 'follower', sharedMapEnabled: boolean): Promise<BlogDayFactsResult> => {
   const isFirebase = getCurrentDbProvider() === 'firebase';
 
   let dayRow: { rows: Array<{ id: string; headline: string | null; summary: string | null; local_date: string }> };
@@ -289,10 +308,22 @@ const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: str
     }
   }
 
+  // Device-drawn map points. Travelers get their own exact geotags; anyone else gets coarse,
+  // lodging-suppressed points, and only when the trip opted in. Lodging coordinates are read only
+  // on that path and never leave this function.
+  const mapPoints = projectBlogDayMapPoints({
+    sources: mediaPoints,
+    membership,
+    sharedMapEnabled,
+    privateAnchors: membership !== 'traveler' && sharedMapEnabled && mediaPoints.length >= 2 ? await readLodgingAnchors(tripId) : [],
+  });
+
   // Day Map Artifact (Phase 5) — keyed on media geotags only, matching exactly what
   // blogBackgroundWorker.ts's render job hashes (it has no flight-leg awareness), so this lookup
   // must use the same media-only point set or it will simply never find the stored artifact.
-  if (mediaPoints.length >= 2) {
+  // Followers never get the legacy stored image: it is rendered from exact geotags and was never
+  // consent-gated. Old clients simply show no thumbnail; new ones draw `mapPoints`.
+  if (membership === 'traveler' && mediaPoints.length >= 2) {
     const pointsData = mediaPoints.map((p) => `${p.lat},${p.lng}`).sort().join('|');
     const pointsHash = createHash('md5').update(pointsData).digest('hex');
     let artifact: { rows: Array<{ gcs_path: string }> };
@@ -389,5 +420,5 @@ const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: str
     return a.label.localeCompare(b.label);
   });
 
-  return { dayDate, facts, timeline };
+  return { dayDate, facts, timeline, ...(mapPoints ? { mapPoints } : {}) };
 };
