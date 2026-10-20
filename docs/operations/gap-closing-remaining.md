@@ -282,6 +282,15 @@ emulator (REST `PUT /emulator/v1/projects/<id>:securityRules`) for a throwaway p
 on the running emulator (127.0.0.1:8080, Auth 9099): 13 of 13 pass. It failed earlier only because the
 throwaway emulator I used had no rules loaded.
 
+**Composite indexes (production only).** The emulator does not enforce them; production Firestore
+fails a query that combines an equality filter with a range or ordering on another field unless an
+index exists. Three were missing and are now in `firestore.indexes.json`: `notification_work`
+(`completed`, `expiresAt`, used by cleanup) and, from older blog workers, `blog_media_assets`
+(`state`, `createdAt` desc) and `blog_items` (`tripId`, `createdAt`). `firestoreIndexes.test.ts` fails
+if any of the 12 indexes the gap-closing and blog worker queries rely on is removed. **Deploy them**
+(`scripts/deploy-firestore-indexes`) before enabling the notification cleanup or the day-photo
+reminder; until they finish building those queries error in production.
+
 **Known, unchanged (same on both adapters):** two trips whose owner and trip name slug to the same
 words share one public address, because aliases are unique on (username slug, trip slug) and are
 reused rather than suffixed.
@@ -296,8 +305,8 @@ reused rather than suffixed.
 | §3.1 / §3.2 sender trust | Trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
 | §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
 | §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
-| §5.3 queue concurrency and recovery | Real two-tab browser verification of the lease fallbacks; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; (the corrupt-queue repair/import flow is built; see above). Durable discard feedback and raw whole-queue recovery export are now implemented. |
-| §5.4 browser shell | Local Chromium install/offline reload and simulated HTML update checked. Real deployment/hash-change recovery, hosting headers, signed-in offline flows and other browsers still need verification. Browser push and public explore remain later scope in §7. |
+| §5.3 queue concurrency and recovery | Two-tab browser verification is done (`node scripts/check-queue-locks.cjs`: the IndexedDB lease is exclusive across two real tabs, hands over on release, refuses writes without the lease and ignores a clock-skewed lease; the localStorage fallback lock double-ran 0 of 40 simultaneous races, which can still happen rarely because localStorage has no compare-and-swap). Still open: encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; (the corrupt-queue repair/import flow is built; see above). Durable discard feedback and raw whole-queue recovery export are now implemented. |
+| §5.4 browser shell | Local Chromium install/offline reload and simulated HTML update checked. `firebase.json` hosting headers reviewed: `/sw.js` is `no-cache` with `Service-Worker-Allowed: /`, `/index.html` is `no-store`, the catch-all adds only the CSP (which already allows the tile host and blob workers). Still needs a real deployment check of hash-change recovery, signed-in offline flows and other browsers. Browser push and public explore remain later scope in §7. |
 
 Snapshot eviction is oldest-saved, not a claim of access-based LRU. Queue storage
 keys intentionally retain the existing environment-qualified format rather than
@@ -308,8 +317,8 @@ silently orphaning existing financial work under a new hash.
 - Production flag/settings and map object inventory; reviewed provider-storage
   rights; actual provider/scanner readiness, receiver forwarding trials, scheduler
   configuration and multi-instance recovery.
-- Real PostgreSQL concurrency/trigger migration and Firestore emulator parity,
-  indexes, contention and bounded cost measurements.
+- Real PostgreSQL concurrency/trigger migration, and Firestore index build status,
+  contention and bounded cost measurements in production (emulator parity is done; see above).
 - Named iOS/Android devices and EAS builds for storage/key loss, file sharing,
   maps, push receipts, memory and accessibility.
 - Representative audited automatic-assignment fixtures and precision threshold;
