@@ -254,17 +254,30 @@ packing groups in a different order on Firestore, "Clothing & Footwear" first ra
 Toiletries", which is a product decision), and `blog-account-deletion-scrub` (fixed email collides
 across runs). Re-run the full suite on your own emulator before relying on this list.
 
-**Still Postgres-only, not part of this work:** 16 older blog suites seed rows with raw SQL
-(`blog-auto-publish`, `blog-comment-routes`, `blog-publication`, `blog-engagement-authorization`,
-`blog-account-deletion-scrub`, `blog-gallery`, `blog-get-engagement-block`,
-`blog-public-engagement`, `blog-security`, `blog-comment-audience-inheritance`,
-`blog-reaction-routes`, `blog-phase7-routes`, `blog-media`, `blog-recap`,
-`blog-counter-reconciliation`, `public-blog`; the last two are Postgres-specific by design for
-counters). Their first SQL line fails with "DATABASE_URL is missing", so the product code behind
-them was not exercised on Firestore here. Firestore-native coverage exists for engagement and day
-media (`blog-engagement-firebase`, `blog-firebase-day-media`). Converting the rest is a separate,
-mechanical job, and given the media bug above it is worth doing before relying on those blog
-features in production.
+**The 16 older blog suites now run on both adapters.** They were converted from raw SQL fixtures to
+the shared helpers in `__tests__/providerRows.ts` (members, followers, publication state, engagement
+rows, recap seeds), or to API-driven setup (`public-blog`). `blog-counter-reconciliation` keeps its
+drift tests Postgres-only by design (the job repairs Postgres JSONB counters and skips Firestore) and
+asserts on Firestore that counters are exact and the job is a no-op. Test isolation: every test file
+on Firestore now starts from an empty emulator database (the hook in `jest-after-env.ts` clears
+`FIRESTORE_DATABASE_ID`, falling back to `(default)`, only for a `demo-`/`jest-` project on an
+emulator), matching pg-mem's fresh database per file. Earlier Firestore runs in this document
+accumulated state because the tests use the named database from `server/.env`, not `(default)`.
+
+**More Firestore-only defects found while converting them, and fixed:**
+- Per-emoji reaction counts were written under a literal dotted field name, so the summary always
+  showed `{}`; a reactor list also looked up the wrong field and always came back empty.
+- Removed reactions left `emoji: 0` entries in the summary.
+- A day's comment list only included comments placed directly on the day, not those on its entries
+  or photos (Postgres includes all three).
+- Blog contributors scanned every trip's items and photos in the database and matched by date, so
+  another trip's uploader names could appear (and the read cost grew with total data). Now per trip.
+- Deleting an account tombstoned the author's comments but kept the author's user id on them;
+  Postgres clears it through a foreign key. Now cleared.
+
+**Known, unchanged (same on both adapters):** two trips whose owner and trip name slug to the same
+words share one public address, because aliases are unique on (username slug, trip slug) and are
+reused rather than suffixed.
 
 ## Source work still outstanding
 

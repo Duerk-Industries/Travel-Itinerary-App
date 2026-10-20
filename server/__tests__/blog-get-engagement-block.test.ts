@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { followTripAs, blogDayIdFor } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, loginWebUser, registerWebUser } from './helpers';
 
 // Phase 3 — the batched `engagement`/`contributors` block on GET /:tripId/blog (architecture §5.4).
@@ -46,7 +46,7 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${aliceToken}`).expect(200);
     // bob is a follower, not a group member, so his authored comment/item counts as "follower"
     // contribution and his reactions sum only followers+public.
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, bobId]);
+    await followTripAs(tripId, bobId);
 
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
@@ -55,8 +55,7 @@ describe('GET /:tripId/blog — batched engagement and contributors block', () =
       .expect(201);
     itemId = item.body.id;
 
-    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, TRIP_DAY]);
-    dayId = dayRow.rows[0].id;
+    dayId = await blogDayIdFor(tripId, TRIP_DAY);
   });
 
   afterAll(async () => { await cleanupTestUsersByEmail([alice.email, bob.email]); });

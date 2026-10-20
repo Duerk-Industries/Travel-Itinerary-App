@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { addTripMember, followTripAs } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, makeAdminUser, registerWebUser } from './helpers';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 
@@ -64,10 +64,8 @@ describe('blog comment routes', () => {
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
-    const group = await queryBlog<{ group_id: string }>('SELECT group_id FROM trips WHERE id = $1', [tripId]);
-    const groupId = group.rows[0].group_id;
-    await queryBlog('INSERT INTO group_members (id, group_id, user_id, added_by) VALUES ($1, $2, $3, $3)', [randomUUID(), groupId, travelerId]);
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, followerId]);
+    await addTripMember(tripId, travelerId);
+    await followTripAs(tripId, followerId);
 
     const item = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
@@ -301,7 +299,7 @@ describe('blog comment routes', () => {
     const victimLogin = await loginWebUser(strikeVictim);
     const victimToken = victimLogin.body.token;
     const victimId = victimLogin.body.user.id;
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, victimId]);
+    await followTripAs(tripId, victimId);
 
     for (let i = 0; i < 3; i += 1) {
       const c = await request(app)

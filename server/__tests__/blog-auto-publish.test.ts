@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { addTripGuests, addTripMember, setDateOfBirth, storedBlog } from './providerRows';
 import { confirmWebUser, loginWebUser, cleanupTestUsersByEmail, futureDateString } from './helpers';
 
 const TRIP_DAY = futureDateString();
@@ -43,17 +43,8 @@ describe('trip blog is public by default (opt-out)', () => {
       .send({ name, startDate: TRIP_DAY, endDate: TRIP_DAY, participants: [] })
       .expect(201);
     const tripId = trip.body.trip?.id ?? trip.body.id;
-    const group = await queryBlog<{ group_id: string; created_by?: string }>('SELECT group_id FROM trips WHERE id = $1', [tripId]);
-    const groupId = group.rows[0].group_id;
-    for (const userId of memberIds) {
-      await queryBlog('INSERT INTO group_members (id, group_id, user_id, added_by) VALUES ($1, $2, $3, $3)', [randomUUID(), groupId, userId]);
-    }
-    if (guests > 0) {
-      const owner = await queryBlog<{ user_id: string }>('SELECT user_id FROM group_members WHERE group_id = $1 LIMIT 1', [groupId]);
-      for (let i = 0; i < guests; i += 1) {
-        await queryBlog('INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)', [randomUUID(), groupId, `Guest ${i}`, owner.rows[0].user_id]);
-      }
-    }
+    for (const userId of memberIds) await addTripMember(tripId, userId);
+    if (guests > 0) await addTripGuests(tripId, guests);
     return tripId as string;
   };
 
@@ -61,7 +52,7 @@ describe('trip blog is public by default (opt-out)', () => {
     request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${token}`).expect(200);
 
   const visibility = async (tripId: string) =>
-    (await queryBlog<{ visibility_state: string }>('SELECT visibility_state FROM trip_blogs WHERE trip_id = $1', [tripId])).rows[0]?.visibility_state ?? 'none';
+    (await storedBlog(tripId))?.visibilityState ?? 'none';
 
   it('publishes when every traveler is 16+ and nobody has opted out; opt-out/clear toggles it', async () => {
     const solo = await signUp(adult, '1990-01-01');
@@ -86,7 +77,7 @@ describe('trip blog is public by default (opt-out)', () => {
   it('does not publish when an account traveler is under 16', async () => {
     const owner = await signUp(other, '1985-06-01');
     const young = await signUp(minorish, '1990-01-01');
-    await queryBlog('UPDATE users SET date_of_birth = $2::date WHERE id = $1', [young.id, new Date(Date.now() - 12 * 365 * 86_400_000).toISOString().slice(0, 10)]);
+    await setDateOfBirth(young.id, new Date(Date.now() - 12 * 365 * 86_400_000).toISOString().slice(0, 10));
     const withMinor = await createTrip(owner.token, 'Minor Trip', [young.id]);
     await openBlog(withMinor, owner.token);
     expect(await visibility(withMinor)).not.toBe('public');
@@ -101,7 +92,7 @@ describe('trip blog is public by default (opt-out)', () => {
 
   it('does not publish when a traveler has no date of birth', async () => {
     const owner = await signUp(noDob, '1990-01-01');
-    await queryBlog('UPDATE users SET date_of_birth = NULL WHERE id = $1', [owner.id]);
+    await setDateOfBirth(owner.id, null);
     const tripId = await createTrip(owner.token, 'No DOB Trip');
     await openBlog(tripId, owner.token);
     expect(await visibility(tripId)).not.toBe('public');

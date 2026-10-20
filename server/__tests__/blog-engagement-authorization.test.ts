@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { followTripAs, blogDayIdFor, insertPublicEpoch, deleteEpochs, setFollowerComments } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, futureDateString, futureDateStringPlusDays, loginWebUser, registerWebUser } from './helpers';
 import {
   BlogEngagementUnauthorizedError,
@@ -78,7 +78,7 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
 
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, followerId]);
+    await followTripAs(tripId, followerId);
 
     // trip_blogs is created lazily by ensureBlog() — which createBlogTextItem below never calls;
     // only GET /:tripId/blog (and a few other repository functions) do. Everything this service
@@ -91,8 +91,7 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
     publicItemId = await createTextItem(TRIP_DAY, 'public', 'Everyone sees this');
     followersItemId = await createTextItem(TRIP_DAY, 'followers', 'Followers and travelers see this');
 
-    const dayRow = await queryBlog<{ id: string }>('SELECT id FROM blog_days WHERE trip_id = $1 AND local_date = $2::date', [tripId, TRIP_DAY]);
-    dayId = dayRow.rows[0].id;
+    dayId = await blogDayIdFor(tripId, TRIP_DAY);
   });
 
   afterAll(async () => {
@@ -131,13 +130,10 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
       expect(asFollower?.effectiveAudience).toBe('followers');
     });
     it('a day target is `public` audience once the blog is published', async () => {
-      await queryBlog(
-        `INSERT INTO blog_publication_epochs (trip_id, epoch, state, requested_by) VALUES ($1, 1, 'public', $2)`,
-        [tripId, travelerId]
-      );
+      await insertPublicEpoch(tripId, travelerId);
       const asTraveler = await resolveEngagementTarget(tripId, travelerId, 'traveler', 'day', dayId);
       expect(asTraveler?.effectiveAudience).toBe('public');
-      await queryBlog(`DELETE FROM blog_publication_epochs WHERE trip_id = $1`, [tripId]);
+      await deleteEpochs(tripId);
     });
   });
 
@@ -227,10 +223,10 @@ describe('blog engagement authorization matrix (Phase 2 — service layer, no ro
 
   describe('trip-level toggles and strikes — steps 5 and 6', () => {
     it('disabling follower_comments_enabled blocks a follower but not a traveler', async () => {
-      await queryBlog('UPDATE trip_blogs SET follower_comments_enabled = FALSE WHERE trip_id = $1', [tripId]);
+      await setFollowerComments(tripId, false);
       await expect(postComment(tripId, followerId, 'item', publicItemId, 'Should be blocked')).rejects.toBeInstanceOf(BlogEngagementUnauthorizedError);
       await expect(postComment(tripId, travelerId, 'item', publicItemId, 'Travelers are unaffected')).resolves.toBeTruthy();
-      await queryBlog('UPDATE trip_blogs SET follower_comments_enabled = TRUE WHERE trip_id = $1', [tripId]);
+      await setFollowerComments(tripId, true);
     });
     it('three strikes blocks further commenting on the trip (FR-B11.3)', async () => {
       await blogEngagementRepository().incrementStrike(tripId, followerId);

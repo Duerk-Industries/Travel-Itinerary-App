@@ -557,14 +557,21 @@ export const getContributorsForDays = async (dayIds: string[]): Promise<Record<s
   const db = getDb();
   const dayDocs = await Promise.all(dayIds.map((id) => db.collection('blog_days').doc(id).get()));
   const dateToDayId = new Map<string, string>();
+  const tripIds = new Set<string>();
   dayIds.forEach((id, i) => {
     result[id] = {};
     const data = dayDocs[i].data() as any;
-    if (data?.localDate) dateToDayId.set(String(data.localDate), id);
+    if (data?.localDate) dateToDayId.set(`${data.tripId}:${data.localDate}`, id);
+    if (data?.tripId) tripIds.add(String(data.tripId));
   });
 
-  const itemSnap = await db.collection('blog_items').where('kindKey', '==', 'core.text').get();
-  for (const doc of itemSnap.docs) {
+  // Only the requested days' own trips: scanning every trip's items and photos would both leak other
+  // trips' contributors (matched by calendar date alone) and read the whole collection.
+  const tripChunks: string[][] = [];
+  const tripList = [...tripIds];
+  for (let i = 0; i < tripList.length; i += 10) tripChunks.push(tripList.slice(i, i + 10));
+  const itemDocs = (await Promise.all(tripChunks.map((chunk) => db.collection('blog_items').where('tripId', 'in', chunk).where('kindKey', '==', 'core.text').get()))).flatMap((snap) => snap.docs);
+  for (const doc of itemDocs) {
     const data = doc.data() as any;
     if (data.deletedAt || !dayIds.includes(data.blogDayId)) continue;
     const bucket = result[data.blogDayId];
@@ -573,10 +580,10 @@ export const getContributorsForDays = async (dayIds: string[]): Promise<Record<s
     bucket[data.authorUserId] = entry;
   }
 
-  const assetSnap = await db.collection('blog_media_assets').where('state', '==', 'ready').get();
-  for (const doc of assetSnap.docs) {
+  const assetDocs = (await Promise.all(tripChunks.map((chunk) => db.collection('blog_media_assets').where('tripId', 'in', chunk).where('state', '==', 'ready').get()))).flatMap((snap) => snap.docs);
+  for (const doc of assetDocs) {
     const data = doc.data() as any;
-    const dayId = dateToDayId.get(String(data.dayDate));
+    const dayId = dateToDayId.get(`${data.tripId}:${data.dayDate}`);
     if (!dayId) continue;
     const bucket = result[dayId];
     const entry = bucket[data.uploaderUserId] ?? { itemCount: 0, assetCount: 0 };

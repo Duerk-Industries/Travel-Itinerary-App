@@ -1993,7 +1993,8 @@ const scrubBlogEngagementForDeletedUser = async (userId: string): Promise<void> 
   for (const doc of comments.docs) {
     const data = doc.data() as any;
     const alreadyTombstoned = Boolean(data.deletedAt);
-    await doc.ref.set({ body: null, deletedAt: data.deletedAt ?? now, updatedAt: now }, { merge: true });
+    // authorUserId is cleared too: Postgres does this through the user foreign key (ON DELETE SET NULL).
+    await doc.ref.set({ body: null, authorUserId: null, deletedAt: data.deletedAt ?? now, updatedAt: now }, { merge: true });
     if (!alreadyTombstoned && !data.hiddenAt) {
       const counterRef = db.collection('blog_engagement_counters').doc(`${data.targetKind}:${data.targetId}:${data.audience}`);
       await counterRef.set({ commentCount: FieldValue.increment(-1), updatedAt: now }, { merge: true });

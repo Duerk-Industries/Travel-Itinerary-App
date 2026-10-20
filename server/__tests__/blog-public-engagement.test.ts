@@ -2,7 +2,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, setFeatureFlag } from '../src/db';
-import { queryBlog } from '../src/db.postgres';
+import { followTripAs, insertPublicAlias, insertPublicEpoch, publishUploadedAsset, setStoredVisibility, softDeleteItemOfAsset, visitorReactionCount } from './providerRows';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 
@@ -16,6 +16,7 @@ describe('public blog engagement endpoint', () => {
   const follower = { firstName: 'Public', lastName: 'Follower', email: 'blog-public-engagement-follower@example.com', password: 'Password123!' };
 
   let ownerToken = '';
+  let ownerId = '';
   let followerToken = '';
   let followerId = '';
   let tripId = '';
@@ -36,7 +37,9 @@ describe('public blog engagement endpoint', () => {
 
     await registerWebUser(owner);
     await confirmWebUser(owner.email);
-    ownerToken = (await loginWebUser(owner)).body.token;
+    const ownerLogin = await loginWebUser(owner);
+    ownerToken = ownerLogin.body.token;
+    ownerId = ownerLogin.body.user.id;
 
     await registerWebUser(follower);
     await confirmWebUser(follower.email);
@@ -51,7 +54,7 @@ describe('public blog engagement endpoint', () => {
       .expect(201);
     tripId = trip.body.trip?.id ?? trip.body.id;
     await request(app).get(`/api/trips/${tripId}/blog`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
-    await queryBlog('INSERT INTO trip_followers (id, trip_id, follower_user_id) VALUES ($1, $2, $3)', [randomUUID(), tripId, followerId]);
+    await followTripAs(tripId, followerId);
 
     const publicItem = await request(app)
       .post(`/api/trips/${tripId}/blog/items`)
@@ -72,15 +75,9 @@ describe('public blog engagement endpoint', () => {
     // correctness is blog-publication.test.ts's concern, not this endpoint's.
     usernameSlug = 'public-engagement-owner';
     tripSlug = 'public-engagement-trip';
-    await queryBlog(`UPDATE trip_blogs SET visibility_state = 'public' WHERE trip_id = $1`, [tripId]);
-    await queryBlog(
-      `INSERT INTO blog_publication_epochs (id, trip_id, epoch, state, requested_by) VALUES ($1, $2, 1, 'public', $3)`,
-      [randomUUID(), tripId, (await queryBlog<{ id: string }>('SELECT id FROM users WHERE email = $1', [owner.email])).rows[0].id]
-    );
-    await queryBlog(
-      `INSERT INTO blog_public_aliases (id, trip_id, user_id, username_slug, trip_slug, canonical) VALUES ($1, $2, $3, $4, $5, TRUE)`,
-      [randomUUID(), tripId, (await queryBlog<{ id: string }>('SELECT id FROM users WHERE email = $1', [owner.email])).rows[0].id, usernameSlug, tripSlug]
-    );
+    await setStoredVisibility(tripId, 'public');
+    await insertPublicEpoch(tripId, ownerId);
+    await insertPublicAlias(tripId, ownerId, usernameSlug, tripSlug);
   });
 
   afterAll(async () => { await cleanupTestUsersByEmail([owner.email, follower.email]); });
@@ -145,8 +142,7 @@ describe('public blog engagement endpoint', () => {
     const cleared = await request(app).post(url).type('form').send({ visitorId, action: 'clear' }).expect(200);
     expect(cleared.body.reactionTotal).toBe(0);
     expect(cleared.body.userReaction).toBeNull();
-    const rows = await queryBlog('SELECT id FROM blog_reactions WHERE visitor_id = $1', [visitorId]);
-    expect(rows.rows).toHaveLength(0);
+    expect(await visitorReactionCount(visitorId)).toBe(0);
   });
 
   it('rejects invalid public reaction targets and visitor IDs', async () => {
@@ -185,15 +181,14 @@ describe('public blog engagement endpoint', () => {
     const assetId = init.body.asset.id;
     await request(app).post(`/api/trips/${tripId}/blog/media/${assetId}/complete`)
       .set('Authorization', `Bearer ${ownerToken}`).send({ physicalBytes: 1024 }).expect(200);
-    await queryBlog("UPDATE blog_media_assets SET state = 'ready' WHERE id = $1", [assetId]);
-    await queryBlog("UPDATE blog_items SET audience = 'public' WHERE id IN (SELECT item_id FROM blog_item_assets WHERE asset_id = $1)", [assetId]);
+    await publishUploadedAsset(assetId);
     const visitorId = randomUUID();
     const url = `/public/blog/${usernameSlug}/${tripSlug}/engagement/asset/${assetId}/reaction`;
     const added = await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'heart' }).expect(200);
     expect(added.body.reactionCounts.heart).toBe(1);
     const summary = await request(app).get(`/public/blog/${usernameSlug}/${tripSlug}/engagement`).expect(200);
     expect(summary.body.posts.find((post: any) => post.targetKind === 'asset' && post.targetId === assetId).reactionCounts.heart).toBe(1);
-    await queryBlog("UPDATE blog_items SET deleted_at = NOW() WHERE id IN (SELECT item_id FROM blog_item_assets WHERE asset_id = $1)", [assetId]);
+    await softDeleteItemOfAsset(assetId);
     await request(app).post(url).type('form').send({ visitorId, action: 'set', emoji: 'clap' }).expect(404);
   });
 
