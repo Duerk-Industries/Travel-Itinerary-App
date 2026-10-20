@@ -244,6 +244,7 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
+  | 'FEATURE_COHORT_UPDATED'
   | 'AI_PROVIDER_CONFIG_UPDATED'
   | 'AI_PROVIDER_CERTIFIED'
   | 'AI_PROVIDER_CERTIFICATION_REVOKED'
@@ -1392,6 +1393,7 @@ export interface NotificationDevice {
 }
 
 export interface NotificationPreferences {
+  digestTiming?: { timezone: string; time: string } | null;
   quietTiming?: { timezone: string; quietStart: string; quietEnd: string } | null;
   userId: string;
   category: NotificationCategory;

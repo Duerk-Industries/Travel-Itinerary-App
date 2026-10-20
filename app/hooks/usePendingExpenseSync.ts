@@ -35,7 +35,7 @@ export function usePendingExpenseSync({ userId, backendUrl, headers, canSync, on
     [userId, backendUrl],
   );
   const queue = usePendingWrites({ storageKey, maxAttempts: null, backoffMs: backoffDelayMs });
-  const { replay, enqueueDurable, retry, remove } = queue;
+  const { replay, enqueueDurable, retry } = queue;
 
   const headersRef = useRef(headers);
   headersRef.current = headers;
@@ -107,11 +107,14 @@ export function usePendingExpenseSync({ userId, backendUrl, headers, canSync, on
 
   return {
     entries,
+    storageError: userId ? queue.storageError : null,
+    getRecoveryData: queue.getRecoveryData,
     syncedNotice,
     queueExpense,
     retryEntry,
     replaceEntry: queue.replaceFailedDurable,
-    discardEntry: remove,
+    discardEntry: queue.removeDurable,
+    discardAll: queue.clearDurable,
     syncNow: () => setTick(n => n + 1),
   };
 }

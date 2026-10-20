@@ -102,7 +102,7 @@ type DailyExpensesTabProps = {
     queueExpense: (args: PendingExpenseArgs) => Promise<string | null>;
     retryEntry: (id: string) => void;
     replaceEntry?: (id: string, args: PendingExpenseArgs) => Promise<boolean>;
-    discardEntry: (id: string) => void;
+    discardEntry: (id: string) => void | Promise<boolean>;
   };
 };
 
@@ -778,10 +778,11 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <ConfirmDialog
           visible
           title="Discard this expense?"
-          message="It has not been saved to the trip yet. Discarding it removes it from this device for good."
+          message="This stops retries on this device. If an earlier attempt reached the server, the expense may still appear in your trip. Discarding cannot undo an expense already saved to the trip."
           confirmLabel="Discard"
-          onConfirm={() => {
-            pendingExpenses?.discardEntry(pendingDiscardId);
+          onConfirm={async () => {
+            const discarded = await pendingExpenses?.discardEntry(pendingDiscardId);
+            if (discarded === false) { alertMessage("Couldn't discard this expense from device storage. It is still saved; try again."); return; }
             setPendingDiscardId(null);
           }}
           onCancel={() => setPendingDiscardId(null)}

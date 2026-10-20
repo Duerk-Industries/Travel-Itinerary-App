@@ -1,3 +1,4 @@
+import { COHORT_FEATURES, cohortSchema, cohortSettingKey, clearCohortCache } from '../services/featureCohorts';
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
@@ -995,7 +996,7 @@ const listAdminFeatureFlags = async () => {
     });
   }
 
-  return [...mergedByKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+  return [...mergedByKey.values()].map(flag => ({ ...flag, supportsCohort: (COHORT_FEATURES as readonly string[]).includes(flag.key) })).sort((a, b) => a.key.localeCompare(b.key));
 };
 
 router.get('/features', async (_req, res) => {
@@ -1006,6 +1007,35 @@ router.get('/features', async (_req, res) => {
     res.status(500).json({ error: 'Failed to list feature flags' });
   }
 });
+
+// Cohorts restrict an enabled global flag; they never grant a disabled feature.
+router.get('/features/:key/cohort', async (req, res) => {
+  try {
+    if (!(COHORT_FEATURES as readonly string[]).includes(req.params.key)) { res.status(400).json({ error: 'This feature does not support cohorts.' }); return; }
+    const saved = await getAdminSetting(cohortSettingKey(req.params.key));
+    try { res.json({ key: req.params.key, cohort: saved ? JSON.parse(saved.value) : null }); }
+    catch { res.status(503).json({ error: 'Stored cohort configuration is invalid.' }); }
+  } catch { res.status(503).json({ error: 'Cohort configuration is temporarily unavailable.' }); }
+});
+router.put('/features/:key/cohort', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const reason = requireReason(req.body?.reason);
+    const parsed = cohortSchema.nullable().safeParse(req.body?.cohort);
+    if (!(COHORT_FEATURES as readonly string[]).includes(key) || !reason || !parsed.success
+      || (parsed.data && Date.parse(parsed.data.retireAfter) <= Date.now())) {
+      res.status(400).json({ error: 'Choose a supported flag, a reason and a valid future-dated cohort (or null to remove it).' }); return;
+    }
+    const actorUserId = getActorId(req);
+    const before = await getAdminSetting(cohortSettingKey(key));
+    const cohort = parsed.data ? { ...parsed.data, userIds: [...new Set(parsed.data.userIds)] } : null;
+    await setAdminSetting({ key: cohortSettingKey(key), value: JSON.stringify(cohort), updatedBy: actorUserId });
+    await writeAuditLog({ actorUserId, action: 'FEATURE_COHORT_UPDATED', beforeState: before ? { ...before } : null, afterState: { key, cohort }, reason });
+    clearCohortCache();
+    res.json({ key, cohort });
+  } catch { res.status(503).json({ error: 'Cohort configuration could not be saved.' }); }
+});
+
 
 router.patch('/features/:key/flag', async (req, res) => {
   const { key } = req.params;

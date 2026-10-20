@@ -1,7 +1,8 @@
+import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import request from 'supertest';
 import { createHash } from 'crypto';
 import { app } from '../src/app';
-import { initDb, setFeatureFlag } from '../src/db';
+import { initDb, setFeatureFlag, setAdminSetting } from '../src/db';
 import { queryBlog } from '../src/db.postgres';
 import { notify } from '../src/services/notificationService';
 import { cleanupTestUsersByEmail, confirmWebUser, loginWebUser, registerWebUser } from './helpers';
@@ -25,6 +26,27 @@ describe('notification service', () => {
 
   afterAll(async () => {
     await cleanupTestUsersByEmail([user.email]);
+  });
+
+  it('restricts inbox access to the current cohort without an admin bypass', async () => {
+    const settingKey = 'feature_cohort:notifications_in_app';
+    await setAdminSetting({ key: settingKey, value: JSON.stringify({ userIds: [], owner: 'Notifications', retireAfter: '2099-01-01T00:00:00Z' }), updatedBy: null });
+    clearFeatureFlagCacheForTesting();
+    await request(app).get('/api/notifications').set('Authorization', `Bearer ${token}`).expect(404);
+    await setAdminSetting({ key: settingKey, value: JSON.stringify({ userIds: [userId], owner: 'Notifications', retireAfter: '2099-01-01T00:00:00Z' }), updatedBy: null });
+    clearFeatureFlagCacheForTesting();
+    await request(app).get('/api/notifications').set('Authorization', `Bearer ${token}`).expect(200);
+    await setAdminSetting({ key: settingKey, value: 'null', updatedBy: null }); clearFeatureFlagCacheForTesting();
+  });
+
+  it('preserves a digest schedule during ordinary channel changes', async () => {
+    const digestTiming = { timezone: 'America/New_York', time: '08:00' };
+    const preference = { category: 'trip_digest', inApp: true, push: false, email: false };
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`).send({ preferences: [{ ...preference, digestTiming }] }).expect(204);
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`).send({ preferences: [preference] }).expect(204);
+    const saved = await request(app).get('/api/notifications/preferences').set('Authorization', `Bearer ${token}`).expect(200);
+    expect(saved.body.preferences.find((row: { category: string }) => row.category === 'trip_digest').digestTiming).toEqual(digestTiming);
+    await request(app).patch('/api/notifications/preferences').set('Authorization', `Bearer ${token}`).send({ preferences: [{ ...preference, digestTiming: null }] }).expect(204);
   });
 
   it('round-trips quiet hours, preserves them on channel-only edits, and validates timezones', async () => {

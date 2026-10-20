@@ -40,6 +40,52 @@ PostgreSQL notification preferences. Firestore needs no schema migration for
 these optional preference fields. Nothing in this task activates production flags,
 provisions a provider, deletes stored artifacts or deploys a native build.
 
+## Continuation: cohorts, scheduled digests and browser storage
+
+Implemented in the continuation after P2.5:
+
+- Admin → Feature Flags can manage explicit user cohorts for the six planning
+  surfaces plus inbox, push and email. Cohorts require an owner, future UTC
+  retirement date and audit reason; an empty list denies everyone. Expired or
+  malformed rules deny access. Removing a rule widens eligibility only when the
+  global flag is already enabled. The global cached flag is checked first;
+  membership is evaluated per caller and never cached as a per-flag boolean.
+  Capability and use-time checks receive the authenticated user. Rule refresh is
+  at most 60 seconds across instances; the editing instance clears its cache.
+- The existing category preferences now support a local daily-summary time and
+  IANA timezone. Summary source windows stay UTC. Durable per-user work rechecks
+  preference edits, membership and consent; parent retries and child delivery use
+  the same dedupe identity. DST gaps use the first real minute after the chosen
+  wall time, and repeated hours use the first occurrence. Quiet hours still defer
+  push/email independently of inbox delivery.
+- Browser snapshot copies use `offlineSnapshotStorage.web.ts`, an IndexedDB
+  transaction adapter. Saves wait for transaction completion, not request success.
+  Native storage remains the previous adapter pending the encrypted-store spike.
+  The explicit Save this trip offline control warns about shared devices, reports
+  progress/size/date, preserves prior copies on failure and fences account changes.
+  Access is extended only after the server authorizes a complete download. Native
+  automatic download behavior is unchanged; browser saves are deliberate.
+- Discard waits for durable read-back. A storage failure keeps the expense and
+  keeps the user signed in when discarding during logout. Unreadable queues expose
+  an account-fenced recovery export; a JSON envelope preserves the original contents
+  and operation keys without interpreting the corrupt contents. Corrupt originals
+  are not silently removed or overwritten.
+
+Apply `20261026_notification_digest_timing.sql` before the updated PostgreSQL
+notification preference API; Firestore stores optional schedule fields on existing
+preference documents. Cohorts use existing admin settings on both adapters and
+need no new collection or migration. No global feature value is changed.
+
+The admin cohort API is `GET|PUT /api/admin/features/:key/cohort`. PUT accepts
+`{ cohort: { userIds, owner, retireAfter }, reason }`; `cohort: null` removes the
+restriction. Retain an owner and retirement review for each temporary rollout.
+
+Real Chromium checked the actual IndexedDB adapter bundled in isolation:
+transaction abort retained the old value, another account key survived deletion,
+and ten concurrent writes committed. Evidence: `output/playwright/idb-check.log`.
+This does not establish a signed-in offline app flow or cross-tab financial queue
+locking. Snapshot storage and pending financial queues remain distinct.
+
 ## Source work still outstanding
 
 | Plan area | Actual remaining implementation |
@@ -48,9 +94,9 @@ provisions a provider, deletes stored artifacts or deploys a native build.
 | §1.4 optional geocoder | Provider/input policy decision, shared admission/throttling, durable jobs/cache and adapter fencing. This is optional; current catalog/airport maps need no geocoder. No private query or bulk Nominatim backfill is authorized. |
 | §1.5 native renderer | Expo/RN compatibility and named-device spike before adding the native renderer, independent rollback flag, staged EAS build and supported-old-client retirement. Current authorized static-map/list fallback stays supported. |
 | §3.1 / §3.2 sender trust | Additional-address verification, trusted receiver alignment and validated Gmail confirmation recognition. Actual receiver fixtures are required; claimed From/authentication headers remain insufficient. |
-| §4.1 / §4.2 rollout and timing | Explicit cohort configuration with per-user evaluation and route/capability parity; configurable digest timing. UTC daily digest scheduling currently remains the defined policy. |
-| §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery, account-scoped browser IndexedDB and shared-device save controls. Current AsyncStorage/localStorage is unencrypted. |
-| §5.3 queue concurrency and recovery | Transactional cross-tab fallback where Web Locks is unavailable; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; durable discard failure feedback and failed-queue export/recovery after corrupt storage. Current expense-level export does not recover an unreadable whole queue. |
+| §4.1 / §4.2 rollout and timing | Cohort controls and configurable digest timing are implemented. Live cohort/provider delivery, other timezone/device coverage and cost/latency evidence remain release gates. |
+| §5.2 native/browser stores | Transactional encrypted native store and device-backed key lifecycle, authenticated migration/reinstall/key-loss recovery. Browser IndexedDB and shared-device save controls are now implemented. Native AsyncStorage and the financial queue remain unencrypted. |
+| §5.3 queue concurrency and recovery | Transactional cross-tab fallback where Web Locks is unavailable; encrypted native queue retention; bounded replay/resume recovery and lifecycle testing; a supported automatic repair/import flow for corrupt queue exports. Durable discard feedback and raw whole-queue recovery export are now implemented. |
 | §5.4 browser shell | Local Chromium install/offline reload and simulated HTML update checked. Real deployment/hash-change recovery, hosting headers, signed-in offline flows and other browsers still need verification. Browser push and public explore remain later scope in §7. |
 
 Snapshot eviction is oldest-saved, not a claim of access-based LRU. Queue storage
@@ -90,3 +136,18 @@ of their respective slices; this audit takes precedence for completion status.
 - The local browser had no backend on port 4000. Its auth-feature connection error
   and offline resource errors are expected; this does not verify authenticated
   planning, provider tiles, production CSP or native device behavior.
+
+
+### Continuation verification
+
+- Frontend: 11 focused suites / 70 tests passed, covering cohort editing, digest
+  preference UI, browser save confirmation/failure/account races, queue discard
+  and corrupt export, startup, expenses and existing admin tier behavior.
+- Backend: six final focused suites / 126 tests passed (admin, planning contracts,
+  preferences/outbox, durable work and timing). The final DST/digest integration
+  rerun passed 11 tests after extending the bounded recovery horizon to cover
+  next-day fall-back delivery. Additional day-order, assignment, migration and
+  billing entitlement checks passed during this continuation.
+- Workspace typechecks passed; production web export passed. Actual IndexedDB
+  abort/isolation/concurrent-write checks passed in local Chromium. No native,
+  real-provider or production deployment validation is claimed.

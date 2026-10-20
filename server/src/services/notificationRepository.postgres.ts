@@ -101,11 +101,11 @@ export const incrementDeviceFailure = async (deviceId: string): Promise<void> =>
 export const updatePreferences = async (userId: string, prefs: any[]): Promise<void> => {
   for (const p of prefs) {
     await queryBlog(
-      `INSERT INTO notification_preferences (user_id, category, in_app, push, email, quiet_timing)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO notification_preferences (user_id, category, in_app, push, email, quiet_timing, digest_timing)
+       VALUES ($1, $2, $3, $4, $5, $6, $8)
        ON CONFLICT (user_id, category) DO UPDATE
-       SET in_app = EXCLUDED.in_app, push = EXCLUDED.push, email = EXCLUDED.email, quiet_timing = CASE WHEN $7 THEN EXCLUDED.quiet_timing ELSE notification_preferences.quiet_timing END`,
-      [userId, p.category, p.inApp, p.push, p.email, p.quietTiming == null ? null : JSON.stringify(p.quietTiming), p.quietTiming !== undefined]
+       SET in_app = EXCLUDED.in_app, push = EXCLUDED.push, email = EXCLUDED.email, quiet_timing = CASE WHEN $7 THEN EXCLUDED.quiet_timing ELSE notification_preferences.quiet_timing END, digest_timing = CASE WHEN $9 THEN EXCLUDED.digest_timing ELSE notification_preferences.digest_timing END`,
+      [userId, p.category, p.inApp, p.push, p.email, p.quietTiming == null ? null : JSON.stringify(p.quietTiming), p.quietTiming !== undefined, p.digestTiming == null ? null : JSON.stringify(p.digestTiming), p.digestTiming !== undefined]
     );
   }
 };

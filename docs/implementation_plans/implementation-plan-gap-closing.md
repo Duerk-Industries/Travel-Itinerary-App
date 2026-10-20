@@ -29,7 +29,9 @@ user-task evidence remain release gates; forwarding remains suggestion-only.
 
 **Remaining-work audit (2026-10-19):** Additional expense recovery/session fencing,
 notification quiet hours, bounded snapshots, map travel estimates and automatic-import
-controls are implemented. P0/P1/P2 are not all complete. See the
+controls are implemented. The continuation adds audited cohort controls, local digest
+timing, browser IndexedDB saves and durable discard/corrupt-queue export recovery.
+P0/P1/P2 are not all complete. See the
 [current completion audit](../operations/gap-closing-remaining.md) for outstanding
 source work separately from provider, device and release evidence.
 

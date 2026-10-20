@@ -1,4 +1,4 @@
-import { readAsyncOrThrow, removeAsyncOrThrow, writeAsyncOrThrow } from './persistentStorage';
+import { readAsyncOrThrow, removeAsyncOrThrow, writeAsyncOrThrow } from './offlineSnapshotStorage';
 
 /**
  * This cache deliberately contains only the data needed to render a trip.

@@ -109,7 +109,7 @@ router.get('/:id/bundle', async (req, res) => {
   res.set({ 'Cache-Control': 'private, no-cache', Vary: 'Authorization' });
   if (!z.string().uuid().safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid trip' }); return; }
   try {
-    if (!getEnvFlag('TRIP_BUNDLE_VERSIONING') || !(await isFeatureEnabled('trip_bundle'))) { res.status(404).json({ error: 'Bundle unavailable' }); return; }
+    if (!getEnvFlag('TRIP_BUNDLE_VERSIONING') || !(await isFeatureEnabled('trip_bundle', (req as any).user.userId))) { res.status(404).json({ error: 'Bundle unavailable' }); return; }
     const user = (req as any).user as TokenPayload;
     const result = await readPlanningBundle(user.userId, req.params.id, user.role, req.get('If-None-Match'));
     res.set('ETag', result.etag);
@@ -631,7 +631,7 @@ router.get('/:id/planning-capabilities', async (req, res) => {
   try {
     const access = await ensureUserCanReadTrip(String(req.params.id), userId);
     if (!access) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
-    const [map, nearby, partner, dayOrder] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order'].map(key => isFeatureEnabled(key)));
+    const [map, nearby, partner, dayOrder] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order'].map(key => isFeatureEnabled(key, userId)));
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ map, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member' });
   } catch { res.status(503).json({ error: 'Planning options are temporarily unavailable.' }); }

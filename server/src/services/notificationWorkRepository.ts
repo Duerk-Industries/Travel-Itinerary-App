@@ -80,7 +80,16 @@ export const prunePlanningWork = async (): Promise<void> => {
     const receipts = await db.collection('operation_receipts').where('expiresAt', '<=', new Date().toISOString()).limit(100).get();
     const batch = db.batch(); [...jobs.docs, ...receipts.docs].forEach(doc => batch.delete(doc.ref)); await batch.commit();
   } else {
-    await queryBlog('DELETE FROM notification_work WHERE id IN (SELECT id FROM notification_work WHERE completed=true AND expires_at < NOW() LIMIT 100)');
-    await queryBlog('DELETE FROM operation_receipts WHERE expires_at < NOW()');
+    await queryBlog('DELETE FROM notification_work WHERE id IN (SELECT id FROM notification_work WHERE completed=true AND expires_at < $1 LIMIT 100)', [new Date(Date.now())]);
+    const now = new Date(Date.now());
+    const expired = (await queryBlog('SELECT user_id,operation_key FROM operation_receipts WHERE expires_at < $1 LIMIT 100', [now])).rows;
+    if (expired.length) {
+      const values: unknown[] = [now];
+      const pairs = expired.map(row => {
+        values.push(row.user_id, row.operation_key);
+        return `(user_id=$${values.length - 1} AND operation_key=$${values.length})`;
+      });
+      await queryBlog(`DELETE FROM operation_receipts WHERE expires_at < $1 AND (${pairs.join(' OR ')})`, values);
+    }
   }
 };

@@ -1,3 +1,4 @@
+import { clearCohortCache, isInFeatureCohort } from './featureCohorts';
 import {
   getUserRole, setUserRole, writeAuditLog,
   getFeatureFlag, listFeatureFlags, setFeatureFlag,
@@ -235,22 +236,23 @@ const FAIL_CLOSED_FLAGS = new Set([
  * Preserves the platform's fail-open behavior for established flags, while
  * rollout-sensitive cache/provider flags fail closed when their DB row is absent.
  */
-export const isFeatureEnabled = async (key: string, _userId?: string, _role?: string): Promise<boolean> => {
+export const isFeatureEnabled = async (key: string, userId?: string, _role?: string): Promise<boolean> => {
   const cached = flagCache.get(key);
   if (cached && Date.now() < cached.expiresAt) {
-    return cached.enabled;
+    return cached.enabled && await isInFeatureCohort(key, userId);
   }
   const flag = await getFeatureFlag(key);
   // New write/provider features are explicit rollout flags; an absent row
   // must not accidentally expose them on an older deployment.
   const enabled = flag?.enabled ?? (FAIL_CLOSED_FLAGS.has(key) ? false : true);
   flagCache.set(key, { enabled, expiresAt: Date.now() + FLAG_CACHE_TTL_MS });
-  return enabled;
+  return enabled && await isInFeatureCohort(key, userId);
 };
 
 export const clearFeatureFlagCacheForTesting = (): void => {
   if (process.env.NODE_ENV === 'test') {
     flagCache.clear();
+    clearCohortCache();
   }
 };
 
@@ -342,7 +344,7 @@ export const assertCanUseFeature = async (
   role: UserRole
 ): Promise<void> => {
   // 1. Feature flag — no bypass, even for admins.
-  const flagEnabled = await isFeatureEnabled(featureKey);
+  const flagEnabled = await isFeatureEnabled(featureKey, userId, role);
   if (!flagEnabled) {
     incrementMetric('feature_access_denied', { featureKey, reason: 'flag_disabled' });
     throw new EntitlementError('FEATURE_DISABLED', `Feature '${featureKey}' is currently disabled`, { featureKey });

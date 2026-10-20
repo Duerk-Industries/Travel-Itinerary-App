@@ -1,3 +1,4 @@
+import FeatureCohortEditor from '../components/FeatureCohortEditor';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -32,7 +33,7 @@ type QueueDepthSnapshot = {
   snapshotAtIso: string;
 };
 
-type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
+type FeatureFlag = { key: string; enabled: boolean; description?: string | null; supportsCohort?: boolean };
 
 type AiProviderOption = { id: string; configured: boolean; registered: boolean; certified?: boolean; supportedModels: string[] };
 type AiProviderFeatureConfig = {
@@ -375,6 +376,7 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
               <Text style={localStyles.badgeText}>{flag.enabled ? 'ON' : 'OFF'}</Text>
             </View>
           </View>
+          {flag.supportsCohort && <FeatureCohortEditor featureKey={flag.key} backendUrl={backendUrl} headers={headers} theme={theme} />}
           {reasonVisible[flag.key] || true ? (
             <View style={localStyles.inlineForm}>
               <TextInput

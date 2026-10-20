@@ -1,7 +1,8 @@
 import { createHash } from 'crypto';
 import * as db from '../db';
 import { isFeatureEnabled } from './entitlementService';
-import { notify } from './notificationService';
+import { digestDueAt } from './notificationTiming';
+import { getNotificationPreference, notify } from './notificationService';
 import { claimNotificationWork, completedPlanningSourcePage, finishNotificationWork, planningTripScanPage, prunePlanningWork, putNotificationWork, type NotificationWork } from './notificationWorkRepository';
 import { notificationRepository } from './notificationRepository';
 import { getExpoPushReceipts } from '../apis/expoPushApi';
@@ -56,7 +57,7 @@ const scan = async (job: NotificationWork, now: number) => {
 
 const deliver = async (job: NotificationWork, now: number) => {
   if (job.kind === 'receipt') {
-    if (!(await isFeatureEnabled('notifications_push'))) { await finishNotificationWork(job, { dueAt: now + 3600_000 }); return; }
+    if (!(await isFeatureEnabled('notifications_push', String(job.data.userId)))) { await finishNotificationWork(job, { dueAt: now + 3600_000 }); return; }
     const receipt = (await getExpoPushReceipts([String(job.data.ticketId)]))[String(job.data.ticketId)];
     if (!receipt) {
       if (now < Number(job.data.expiresAt)) { await finishNotificationWork(job, { dueAt: now + 15 * 60_000 }); return; }
@@ -82,12 +83,29 @@ const deliver = async (job: NotificationWork, now: number) => {
       dedupeKey: job.id, requireDurable: true });
   } else {
     const start = Date.parse(`${job.data.day}T00:00:00Z`);
-    if (now > start + 2 * DAY) { await finishNotificationWork(job); return; }
+    // A local next-day delivery can be over 24 hours after window close on
+    // fall-back days. Keep a bounded 48-hour delivery/recovery horizon.
+    if (now > start + 3 * DAY) { await finishNotificationWork(job); return; }
     const events = (await db.listTripActivity(tripId, { limit: 100 })).events.filter(event => {
       const time = Date.parse(event.createdAt); return time >= start && time < start + DAY;
     });
-    for (const userId of userIds) if (events.some(event => event.actorUserId !== userId)) await notify({ userIds: [userId], tripId,
-      category: 'trip_digest', title: 'Your trip’s daily summary', body: 'Tripmates updated your trip. Open it to see their latest changes.', dedupeKey: job.id, requireDurable: true });
+    for (const userId of userIds) {
+      if (job.data.targetUserId && job.data.targetUserId !== userId) continue;
+      if (!events.some(event => event.actorUserId !== userId)) continue;
+      const preference = await getNotificationPreference(userId, 'trip_digest');
+      if (!preference.inApp && !preference.push && !preference.email) continue;
+      const digestDedupe = String(job.data.digestDedupe ?? key(['digest-user', job.id, userId]));
+      const dueAt = preference.digestTiming ? digestDueAt(preference.digestTiming, start + DAY) : start + DAY;
+      if (dueAt > now) {
+        if (job.data.targetUserId) await finishNotificationWork(job, { dueAt });
+        else await putNotificationWork({ id: digestDedupe, kind: 'digest', dueAt,
+          data: { ...job.data, targetUserId: userId, digestDedupe, timezone: preference.digestTiming?.timezone ?? 'UTC', dstPolicy: 'first-real-minute' } });
+        if (job.data.targetUserId) return;
+        continue;
+      }
+      await notify({ userIds: [userId], tripId, category: 'trip_digest', title: 'Your trip’s daily summary',
+        body: 'Tripmates updated your trip. Open it to see their latest changes.', dedupeKey: digestDedupe, requireDurable: true });
+    }
   }
   await finishNotificationWork(job);
 };

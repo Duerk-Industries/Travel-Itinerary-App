@@ -96,7 +96,7 @@ router.get('/nearby', async (req, res) => {
   const query = z.object({ tripId: z.string().uuid(), lat: z.coerce.number().finite().min(-90).max(90).optional(), lng: z.coerce.number().finite().min(-180).max(180).optional(), area: z.string().trim().max(120).optional(), offset: z.coerce.number().int().min(0).max(100).default(0) }).safeParse(req.query);
   if (!query.success) { res.status(400).json({ error: 'Choose a trip and valid map area.' }); return; }
   try {
-    if (!(await isFeatureEnabled('planning_nearby'))) { res.status(404).json({ error: 'Nearby is currently unavailable.' }); return; }
+    if (!(await isFeatureEnabled('planning_nearby', (req as any).user.userId))) { res.status(404).json({ error: 'Nearby is currently unavailable.' }); return; }
     const userId = (req as any).user.userId as string;
     if (!(await ensureUserInTrip(query.data.tripId, userId))) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
     await reserveHttpRateLimitOrThrow({ name: 'nearby_browse', identity: userId, limit: 60, windowMs: 60_000 });
@@ -141,7 +141,7 @@ router.post('/', async (req, res) => {
     const key = req.get('Idempotency-Key');
     if (!data.success || !key || !/^[a-zA-Z0-9_-]{16,128}$/.test(key)) { res.status(400).json({ error: 'Choose a place, trip and day.' }); return; }
     try {
-      if (!(await isFeatureEnabled('planning_nearby'))) { res.status(404).json({ error: 'Nearby is currently unavailable.' }); return; }
+      if (!(await isFeatureEnabled('planning_nearby', (req as any).user.userId))) { res.status(404).json({ error: 'Nearby is currently unavailable.' }); return; }
       const result = await createCatalogActivity((req as any).user.userId, { ...data.data, operationKey: key });
       if (result.replayed) res.setHeader('Idempotent-Replayed', 'true');
       res.status(201).json(result.activity);
@@ -332,7 +332,7 @@ router.put('/day-order', async (req, res) => {
   if (!dto.success) { res.status(400).json({ error: 'Choose a trip, a day and the new order.', code: 'INVALID_DAY_ORDER' }); return; }
   const userId = (req as any).user.userId as string;
   try {
-    if (!(await isFeatureEnabled('planning_day_order'))) { res.status(404).json({ error: 'Reordering is currently unavailable.', code: 'FEATURE_DISABLED' }); return; }
+    if (!(await isFeatureEnabled('planning_day_order', userId))) { res.status(404).json({ error: 'Reordering is currently unavailable.', code: 'FEATURE_DISABLED' }); return; }
     await reserveHttpRateLimitOrThrow({ name: 'activity_day_order', identity: userId, limit: 60, windowMs: 60_000 });
     const { tripId, date, orderedIds, expectedIds } = dto.data;
     const outcome = await reorderActivitiesForDay(userId, tripId, date, orderedIds, expectedIds);

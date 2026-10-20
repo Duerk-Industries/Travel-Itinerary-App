@@ -16,6 +16,9 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<NotificationPreferences[]>([]);
+  const [digestEditing, setDigestEditing] = useState(false);
+  const [digestTime, setDigestTime] = useState('08:00');
+  const [digestTimezone, setDigestTimezone] = useState('UTC');
   const [timingCategory, setTimingCategory] = useState<string | null>(null);
   const [timezone, setTimezone] = useState('UTC');
   const [quietStart, setQuietStart] = useState('22:00');
@@ -97,6 +100,19 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
     } catch (error) { if (current === epoch.current) setError((error as Error).message); }
     finally { busy.current = false; }
   };
+  const saveDigest = async (preference: NotificationPreferences, clear = false) => {
+    if (busy.current) return; busy.current = true;
+    const current = epoch.current;
+    try {
+      const digestTiming = clear ? null : { timezone: digestTimezone, time: digestTime };
+      const response = await fetch(`${backendUrl}/api/notifications/preferences`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: [{ category: preference.category, inApp: preference.inApp, push: preference.push, email: preference.email, digestTiming }] }) });
+      if (!response.ok) throw new Error('Use a timezone such as America/New_York and a 24-hour time such as 08:00.');
+      if (current !== epoch.current) return;
+      setPreferences(previous => previous.map(row => row.category === preference.category ? { ...row, digestTiming } : row));
+      setDigestEditing(false); setError(null);
+    } catch (error) { if (current === epoch.current) setError((error as Error).message); }
+    finally { busy.current = false; }
+  };
   if (!enabled) return null;
   const buttonStyle = { minHeight: 44, padding: 10, justifyContent: 'center' as const };
   return <>
@@ -117,6 +133,18 @@ export default function NotificationInbox({ backendUrl, token, onOpen, openNotif
               <Text>Important updates and Daily summary have independent inbox, mobile alert, and email choices. Turning mobile alerts off never enables email.</Text>
               {preferences.map(preference => <View key={preference.category} style={{ paddingVertical: 8 }}>
                 <Text style={{ fontWeight: '700' }}>{LABELS[preference.category] || preference.category.replace(/_/g, ' ')}</Text>
+                {preference.category === 'trip_digest' && <>
+                  <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => {
+                    setDigestTime(preference.digestTiming?.time || '08:00'); setDigestTimezone(preference.digestTiming?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'); setDigestEditing(true);
+                  }}><Text>{preference.digestTiming ? 'Edit daily summary time' : 'Set daily summary time'}</Text></TouchableOpacity>
+                  {digestEditing && <View>
+                    <Text>Summaries cover a UTC calendar day and arrive at your next chosen local time. Clock-change gaps use the next valid time. Mobile alerts and email also respect quiet hours.</Text>
+                    <TextInput accessibilityLabel="Daily summary timezone" value={digestTimezone} onChangeText={setDigestTimezone} style={{ minHeight: 44 }} />
+                    <TextInput accessibilityLabel="Daily summary time, 24 hour time" value={digestTime} onChangeText={setDigestTime} style={{ minHeight: 44 }} />
+                    <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveDigest(preference)}><Text>Save summary time</Text></TouchableOpacity>
+                    <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => void saveDigest(preference, true)}><Text>Use midnight UTC</Text></TouchableOpacity>
+                  </View>}
+                </>}
                 <TouchableOpacity style={buttonStyle} accessibilityRole="button" onPress={() => {
                   setTimingCategory(preference.category); setTimezone(preference.quietTiming?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
                   setQuietStart(preference.quietTiming?.quietStart || '22:00'); setQuietEnd(preference.quietTiming?.quietEnd || '08:00');

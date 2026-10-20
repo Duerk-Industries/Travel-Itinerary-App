@@ -1,9 +1,12 @@
+import { notificationRepository } from '../src/services/notificationRepository';
+import { putNotificationWork } from '../src/services/notificationWorkRepository';
+import { runPlanningNotifications } from '../src/services/planningNotificationScheduler';
 import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import * as db from '../src/db';
 import { queryBlog } from '../src/db.postgres';
-import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
+import { isFeatureEnabled, clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { readPlanningBundle } from '../src/services/planningBundleService';
 import { registerAndLoginWebUser, seedTiersForTest } from './helpers';
 
@@ -23,6 +26,57 @@ describe('P1 private planning contracts', () => {
     clearFeatureFlagCacheForTesting();
   });
   afterAll(() => { delete process.env.TRIP_BUNDLE_VERSIONING; });
+  it('enforces cohorts per caller at both capability and route boundaries; global off wins', async () => {
+    const key = 'planning_nearby';
+    const setCohort = async (userIds: string[], retireAfter = '2099-01-01T00:00:00.000Z') => {
+      await db.setAdminSetting({ key: `feature_cohort:${key}`, value: JSON.stringify({ userIds, owner: 'Planning', retireAfter }), updatedBy: null });
+      clearFeatureFlagCacheForTesting();
+    };
+    await setCohort([userId]);
+    expect(await isFeatureEnabled(key, userId)).toBe(true);
+    expect(await isFeatureEnabled(key, randomUUID())).toBe(false);
+    expect(await isFeatureEnabled(key, userId)).toBe(true);
+    expect((await request(app).get(`/api/trips/${tripId}/planning-capabilities`).set('Authorization', `Bearer ${token}`).expect(200)).body.nearby).toBe(true);
+    await request(app).get(`/api/activities/nearby?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
+    await setCohort([]);
+    expect((await request(app).get(`/api/trips/${tripId}/planning-capabilities`).set('Authorization', `Bearer ${token}`).expect(200)).body.nearby).toBe(false);
+    await request(app).get(`/api/activities/nearby?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(404);
+    await setCohort([userId]);
+    await db.setFeatureFlag(key, false, null); clearFeatureFlagCacheForTesting();
+    expect(await isFeatureEnabled(key, userId, 'admin')).toBe(false);
+    await db.setFeatureFlag(key, true, null);
+    await setCohort([userId], '2000-01-01T00:00:00.000Z');
+    expect(await isFeatureEnabled(key, userId)).toBe(false);
+    await db.setAdminSetting({ key: `feature_cohort:${key}`, value: '{broken', updatedBy: null }); clearFeatureFlagCacheForTesting();
+    expect(await isFeatureEnabled(key, userId)).toBe(false);
+    await db.setAdminSetting({ key: `feature_cohort:${key}`, value: 'null', updatedBy: null }); clearFeatureFlagCacheForTesting();
+    expect(await isFeatureEnabled(key, userId)).toBe(true);
+  });
+
+  it('persists personal digest due time, rechecks its schedule and dedupes parent retries', async () => {
+    const base = Date.parse('2026-10-19T00:00:00Z');
+    const now = jest.spyOn(Date, 'now').mockReturnValue(base + 8 * 3600_000);
+    const feed = jest.spyOn(db, 'listTripActivity').mockResolvedValue({ events: [{ id: randomUUID(), tripId, actorUserId: randomUUID(), type: 'activity_added', title: 'Changed plan', summary: '', metadata: {}, createdAt: '2026-10-18T12:00:00Z' }], nextCursor: null });
+    const parentId = `digest-test-${randomUUID()}`;
+    try {
+      await db.setFeatureFlag('planning_notifications', true, null); clearFeatureFlagCacheForTesting();
+      await notificationRepository().updatePreferences(userId, [{ category: 'trip_digest', inApp: true, push: false, email: false, digestTiming: { timezone: 'America/New_York', time: '08:00' } }]);
+      await putNotificationWork({ id: parentId, kind: 'digest', dueAt: base, data: { tripId, ownerId: userId, day: '2026-10-18' } });
+      await runPlanningNotifications();
+      const child = (await queryBlog("SELECT id,due_at,data FROM notification_work WHERE kind='digest' AND completed=false")).rows.find((row: { data: { targetUserId?: string; day: string } }) => row.data.targetUserId === userId && row.data.day === '2026-10-18');
+      expect(Number(child.due_at)).toBe(base + 12 * 3600_000);
+      // A preference edit after scheduling moves the same durable work, rather than adding another digest.
+      await notificationRepository().updatePreferences(userId, [{ category: 'trip_digest', inApp: true, push: false, email: false, digestTiming: { timezone: 'America/New_York', time: '09:00' } }]);
+      now.mockReturnValue(base + 12 * 3600_000); await runPlanningNotifications();
+      expect((await queryBlog('SELECT due_at FROM notification_work WHERE id=$1', [child.id])).rows[0].due_at).toBe(base + 13 * 3600_000);
+      now.mockReturnValue(base + 13 * 3600_000); await runPlanningNotifications();
+      expect((await queryBlog('SELECT id FROM notifications WHERE user_id=$1 AND dedupe_key=$2', [userId, child.id])).rows).toHaveLength(1);
+      await queryBlog('UPDATE notification_work SET completed=false,due_at=$2,lease_until=0 WHERE id=$1', [parentId, base]);
+      await runPlanningNotifications();
+      expect((await queryBlog('SELECT id FROM notifications WHERE user_id=$1 AND dedupe_key=$2', [userId, child.id])).rows).toHaveLength(1);
+    } finally { now.mockRestore(); feed.mockRestore(); }
+  });
+
   it('replays a committed Add without duplicating and rejects key reuse with different input', async () => {
     const body = { tripId, catalogId, date: '2027-05-02' };
     const add = () => request(app).post('/api/activities').set('Authorization', `Bearer ${token}`).set('Idempotency-Key', 'p1-add-operation-001').send(body);

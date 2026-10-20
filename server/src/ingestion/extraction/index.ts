@@ -1334,7 +1334,7 @@ export const extractCandidates = async (
     aiProvider: config.aiProvider,
   };
 
-  if (await isFeatureEnabled('planning_structured_import')) {
+  if (await isFeatureEnabled('planning_structured_import', extractionConfig.userId)) {
     const [primaryPolicy, secondaryPolicy] = await Promise.all([getActiveAiProvider('ingestion_llm_extract'), getActiveAiProvider('ingestion_llm_extract_secondary')]);
     const policy = createHash('sha256').update(JSON.stringify([primaryPolicy, secondaryPolicy, extractionConfig.allowSmallLlm, extractionConfig.allowLargeLlm,
       getConfiguredProviderModels(primaryPolicy.provider, []), getConfiguredProviderModels(secondaryPolicy.provider, [])])).digest('hex').slice(0, 16);

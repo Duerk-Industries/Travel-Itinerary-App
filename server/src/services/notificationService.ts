@@ -77,8 +77,8 @@ export const notify = async (options: NotifyOptions): Promise<void> => {
   }
 };
 
-export const getNotificationPreference = async (userId: string, category: NotificationCategory, rows?: any[]): Promise<Pick<NotificationPreferences, 'inApp' | 'push' | 'email' | 'quietTiming'>> => {
+export const getNotificationPreference = async (userId: string, category: NotificationCategory, rows?: any[]): Promise<Pick<NotificationPreferences, 'inApp' | 'push' | 'email' | 'quietTiming' | 'digestTiming'>> => {
   const saved = (rows ?? await notificationRepository().getPreferences([userId])).find(row => row.category === category);
   const fallback = DEFAULT_PREFERENCES[category] || { inApp: true, push: false, email: false };
-  return { quietTiming: saved?.quiet_timing ?? saved?.quietTiming ?? null, inApp: saved?.in_app ?? saved?.inApp ?? fallback.inApp, push: saved?.push ?? fallback.push, email: saved?.email ?? fallback.email };
+  return { digestTiming: saved?.digest_timing ?? saved?.digestTiming ?? null, quietTiming: saved?.quiet_timing ?? saved?.quietTiming ?? null, inApp: saved?.in_app ?? saved?.inApp ?? fallback.inApp, push: saved?.push ?? fallback.push, email: saved?.email ?? fallback.email };
 };

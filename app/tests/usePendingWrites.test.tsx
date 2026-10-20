@@ -362,3 +362,28 @@ it('does not overwrite a corrupt financial queue when a new expense is enqueued'
   await act(async () => { expect(await result.current.enqueueDurable('expense', {})).toBeNull(); });
   expect(window.localStorage.getItem('corrupt-expenses')).toBe('{damaged-data');
 });
+
+
+it('retains financial entries when durable discard fails, and confirms a successful discard', async () => {
+  window.localStorage.clear();
+  const { result } = renderHook(() => usePendingWrites({ storageKey: 'discard-financial' }));
+  let id = '';
+  act(() => { id = result.current.enqueue('expense', { amount: 20 }); });
+  const write = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('unavailable'); });
+  await act(async () => { expect(await result.current.removeDurable(id)).toBe(false); });
+  expect(result.current.pending).toHaveLength(1);
+  write.mockRestore();
+  await act(async () => { expect(await result.current.clearDurable()).toBe(true); });
+  expect(result.current.pending).toHaveLength(0);
+  expect(window.localStorage.getItem('discard-financial')).toBe('[]');
+});
+
+it('exposes corrupt queue recovery data only for the current account', async () => {
+  window.localStorage.clear(); window.localStorage.setItem('owner-corrupt', '{broken-financial-data');
+  const { result, rerender } = renderHook(({ key }: { key: string }) => usePendingWrites({ storageKey: key }), { initialProps: { key: 'owner-corrupt' } });
+  await act(async () => { await Promise.resolve(); });
+  expect(result.current.storageError).toMatch(/kept for recovery/);
+  expect(await result.current.getRecoveryData()).toBe('{broken-financial-data');
+  rerender({ key: 'another-owner' });
+  expect(await result.current.getRecoveryData()).toBeNull();
+});

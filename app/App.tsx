@@ -1,3 +1,5 @@
+import PendingExpenseRecovery from './components/PendingExpenseRecovery';
+import SaveTripOffline from './components/SaveTripOffline';
 import PendingExpenseLogoutDialog from './components/PendingExpenseLogoutDialog';
 /**
  * Main client app for Shared Trip Planner.
@@ -1567,9 +1569,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     // userToken or activeTripId becomes null after clearSession().
     void clearSessionAsync();
   }, [clearSessionState, clearTripsData, offlineOwner, userEmail, userId]);
+  const [pendingLogoutBusy, setPendingLogoutBusy] = useState(false);
+  const [pendingLogoutError, setPendingLogoutError] = useState<string | null>(null);
   const [pendingLogoutVisible, setPendingLogoutVisible] = useState(false);
   const requestLogout = useCallback(() => {
-    if (pendingExpenses.entries.length) setPendingLogoutVisible(true);
+    if (pendingExpenses.entries.length) { setPendingLogoutError(null); setPendingLogoutVisible(true); }
     else logout();
   }, [pendingExpenses.entries.length, logout]);
   logoutRef.current = logout;
@@ -3295,11 +3299,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
       <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
-      <PendingExpenseLogoutDialog visible={pendingLogoutVisible} count={pendingExpenses.entries.length}
+      <PendingExpenseLogoutDialog visible={pendingLogoutVisible} count={pendingExpenses.entries.length} busy={pendingLogoutBusy} error={pendingLogoutError}
         onCancel={() => setPendingLogoutVisible(false)}
         onSync={() => { setPendingLogoutVisible(false); pendingExpenses.syncNow(); }}
         onKeep={() => { setPendingLogoutVisible(false); logout(); }}
-        onDiscard={() => { pendingExpenses.entries.forEach(entry => pendingExpenses.discardEntry(entry.id)); setPendingLogoutVisible(false); logout(); }} />
+        onDiscard={async () => {
+          setPendingLogoutBusy(true);
+          const discarded = await pendingExpenses.discardAll();
+          setPendingLogoutBusy(false);
+          if (!discarded) { setPendingLogoutError("Couldn't remove the saved expenses. You're still signed in; try again or keep them on this device."); return; }
+          setPendingLogoutVisible(false); logout();
+        }} />
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
         <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
           {userToken && activePage !== 'home' ? (
@@ -3401,6 +3411,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         ) : null}
       </View>
+      {userToken && offlineOwner && activeTrip && !isFollowingMode && <SaveTripOffline trip={activeTrip} trips={trips} groups={groups}
+        owner={offlineOwner} token={userToken} costTrackingAllowed={costTrackingAllowed} disabled={offlineReadOnly} />}
+      {userId && <PendingExpenseRecovery error={pendingExpenses.storageError} getRecoveryData={pendingExpenses.getRecoveryData} ownerId={userId} environment={backendUrl} />}
       <OfflineBanner
         status={connection.status}
         offlineReadOnly={offlineReadOnly}

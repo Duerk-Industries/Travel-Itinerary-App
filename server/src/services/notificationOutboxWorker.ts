@@ -79,7 +79,7 @@ export const deliverPush = async (entry: any) => {
   if (!preference.push) return;
   const until = quietUntil(preference.quietTiming);
   if (until) throw new NotificationDeliveryPaused('Quiet hours', until);
-  const pushEnabled = await isFeatureEnabled('notifications_push');
+  const pushEnabled = await isFeatureEnabled('notifications_push', userId);
   if (!pushEnabled) throw new NotificationDeliveryPaused('Push delivery is paused');
   const devices = pushEnabled ? await notificationRepository().listActivePushDevicesForUser(userId) : [];
 
@@ -120,8 +120,6 @@ export const deliverPush = async (entry: any) => {
 };
 
 export const deliverEmail = async (entry: any) => {
-  if (!(await isFeatureEnabled('notifications_email'))) throw new NotificationDeliveryPaused('Email delivery is paused');
-
   const notification = await notificationRepository().getNotificationById(notificationIdOf(entry));
   if (!notification) return;
 
@@ -130,6 +128,7 @@ export const deliverEmail = async (entry: any) => {
   if (tripId && !(await ensureUserCanReadTrip(String(tripId), userId))) return;
   const preference = await getNotificationPreference(userId, notification.category);
   if (!preference.email) return;
+  if (!(await isFeatureEnabled('notifications_email', userId))) throw new NotificationDeliveryPaused('Email delivery is paused');
   const until = quietUntil(preference.quietTiming);
   if (until) throw new NotificationDeliveryPaused('Quiet hours', until);
   const user = await getUserById(userId);

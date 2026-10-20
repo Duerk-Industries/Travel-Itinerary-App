@@ -17,7 +17,7 @@ const safe = (fn: (req: Request, res: Response) => Promise<void>): RequestHandle
 };
 router.use((req, res, next) => {
   res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('Vary', 'Authorization');
-  void isFeatureEnabled('notifications_in_app').then(enabled => enabled ? next() : res.status(404).json({ error: 'Notifications are not enabled' })).catch(() => res.status(503).end());
+  void isFeatureEnabled('notifications_in_app', owner(req)).then(enabled => enabled ? next() : res.status(404).json({ error: 'Notifications are not enabled' })).catch(() => res.status(503).end());
 });
 const normalize = (row: Record<string, any>) => ({
   id: String(row.id), category: row.category, tripId: row.tripId ?? row.trip_id ?? null,
@@ -50,7 +50,7 @@ router.get('/preferences', safe(async (req, res) => {
   res.json({ preferences });
 }));
 router.patch('/preferences', safe(async (req, res) => {
-  const schema = z.object({ preferences: z.array(z.object({ category: z.enum(Object.keys(DEFAULT_PREFERENCES) as [string, ...string[]]), inApp: z.boolean(), push: z.boolean(), email: z.boolean(), quietTiming: z.object({ timezone: z.string().max(100).refine(validTimezone), quietStart: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/), quietEnd: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/) }).strict().nullable().optional() }).strict()).max(30) }).strict();
+  const schema = z.object({ preferences: z.array(z.object({ category: z.enum(Object.keys(DEFAULT_PREFERENCES) as [string, ...string[]]), inApp: z.boolean(), push: z.boolean(), email: z.boolean(), digestTiming: z.object({ timezone: z.string().max(100).refine(validTimezone), time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/) }).strict().nullable().optional(), quietTiming: z.object({ timezone: z.string().max(100).refine(validTimezone), quietStart: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/), quietEnd: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/) }).strict().nullable().optional() }).strict()).max(30) }).strict();
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid notification preferences.' }); return; }
   await notificationRepository().updatePreferences(owner(req), parsed.data.preferences); res.status(204).end();

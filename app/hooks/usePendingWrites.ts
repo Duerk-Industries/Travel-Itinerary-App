@@ -109,10 +109,14 @@ export interface ReplaySummary {
 export interface UsePendingWritesResult {
   /** Current queue snapshot, ordered oldest-first. */
   pending: PendingWrite[];
+  storageError: string | null;
+  getRecoveryData: () => Promise<string | null>;
   /** Queue a new write and return its generated id. */
   enqueue: <TArgs>(kind: string, args: TArgs) => string;
   /** Like `enqueue`, but resolves only after the write is read back from storage. `null` means it was NOT saved. */
   enqueueDurable: <TArgs>(kind: string, args: TArgs) => Promise<string | null>;
+  removeDurable: (id: string) => Promise<boolean>;
+  clearDurable: () => Promise<boolean>;
   replaceFailedDurable: <TArgs>(id: string, args: TArgs) => Promise<boolean>;
   /** Remove a single entry by id (no-op if not found). */
   remove: (id: string) => void;
@@ -162,6 +166,7 @@ export function usePendingWrites(
   const storageKey = opts.storageKey ?? DEFAULT_STORAGE_KEY;
   const backoffMs = opts.backoffMs;
 
+  const [storageError, setStorageError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingWrite[]>(() => readQueueSync(storageKey));
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
@@ -177,6 +182,21 @@ export function usePendingWrites(
     generationRef.current += 1;
     pendingRef.current = readQueueSync(storageKey);
   }
+
+  useEffect(() => {
+    const key = storageKey;
+    let cancelled = false;
+    setStorageError(null);
+    void readAsyncOrThrow(key).then(raw => { parseQueue(raw, true); }).catch(() => {
+      if (!cancelled && keyRef.current === key) setStorageError('Saved expenses could not be read. They have been kept for recovery.');
+    });
+    return () => { cancelled = true; };
+  }, [storageKey]);
+  const getRecoveryData = useCallback(async (): Promise<string | null> => {
+    const key = keyRef.current, generation = generationRef.current;
+    const raw = await readAsyncOrThrow(key);
+    return generation === generationRef.current && key === keyRef.current ? raw : null;
+  }, []);
 
   const persist = useCallback((next: PendingWrite[]) => {
     mutationRef.current += 1;
@@ -270,6 +290,23 @@ export function usePendingWrites(
     enqueueTail.current = work.catch(() => undefined);
     return work;
   }, []);
+
+  const discardDurably = useCallback((id?: string): Promise<boolean> => {
+    const key = keyRef.current, generation = generationRef.current;
+    const work = enqueueTail.current.then(async () => {
+      if (generation !== generationRef.current) return false;
+      // Corruption must not silently turn into an empty, successfully discarded queue.
+      parseQueue(await readAsyncOrThrow(key), true);
+      const next = id === undefined ? [] : pendingRef.current.filter(entry => entry.id !== id);
+      if (!await persistQueueDurably(key, next) || generation !== generationRef.current) return false;
+      mutationRef.current += 1; pendingRef.current = next; setPending(next);
+      return true;
+    }).catch(() => false);
+    enqueueTail.current = work;
+    return work;
+  }, []);
+  const removeDurable = useCallback((id: string) => discardDurably(id), [discardDurably]);
+  const clearDurable = useCallback(() => discardDurably(), [discardDurably]);
 
   const remove = useCallback((id: string) => {
     persist(pendingRef.current.filter((e) => e.id !== id));
@@ -371,5 +408,5 @@ export function usePendingWrites(
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  return { pending: keyRef.current === storageKey ? pendingRef.current : [], enqueue, enqueueDurable, replaceFailedDurable, remove, retry, clear, replay };
+  return { pending: keyRef.current === storageKey ? pendingRef.current : [], storageError, getRecoveryData, enqueue, enqueueDurable, replaceFailedDurable, removeDurable, clearDurable, remove, retry, clear, replay };
 }
