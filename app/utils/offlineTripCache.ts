@@ -12,6 +12,8 @@ export type OfflineTripSnapshot = {
   bundleEtag?: string;
   bundleCostTracking?: boolean;
   savedAt: number;
+  /** Last time the snapshot was saved or opened; drives eviction. Older entries fall back to savedAt. */
+  lastAccessedAt?: number;
   trip: unknown;
   groupMembers: unknown[];
   flights: unknown[];
@@ -46,6 +48,8 @@ const CACHE_KEY_PREFIX = 'stp.offline-trip-cache.v2';
 export const MAX_OFFLINE_TRIP_SNAPSHOTS = 5;
 // At most four UTF-8 bytes per UTF-16 code unit: conservative 20 MB ceiling.
 const MAX_CACHE_CHARACTERS = 5_000_000;
+const ACCESS_TOUCH_INTERVAL_MS = 60 * 60 * 1000;
+const lastAccess = (snapshot: OfflineTripSnapshot): number => snapshot.lastAccessedAt ?? snapshot.savedAt;
 export type OfflineCacheOwner = { userId: string; environment: string; legacyEmail?: string | null };
 const cacheKeyFor = (owner: OfflineCacheOwner): string =>
   `${CACHE_KEY_PREFIX}.${encodeURIComponent(owner.environment)}.${encodeURIComponent(owner.userId)}`;
@@ -115,12 +119,14 @@ export const saveOfflineTripSnapshot = async (
     if (!current || current.accessExpiresAt <= Date.now()) return;
     const updated: OfflineTripCache = { ...current, savedAt: Date.now(),
       trips: catalog.trips, groups: catalog.groups,
-      snapshots: { ...current.snapshots, [snapshot.tripId]: { ...snapshot, savedAt: Date.now() } } };
+      snapshots: { ...current.snapshots, [snapshot.tripId]: { ...snapshot, savedAt: Date.now(), lastAccessedAt: Date.now() } } };
     // Snapshot eviction never touches the separately stored financial write queue.
     // The requested trip is retained; reject an oversized single trip atomically.
+    // Least recently opened goes first, so a trip being read is not dropped for
+    // a newer download of one that is never opened.
     const oldest = Object.values(updated.snapshots)
       .filter(entry => entry.tripId !== snapshot.tripId)
-      .sort((a, b) => a.savedAt - b.savedAt || a.tripId.localeCompare(b.tripId));
+      .sort((a, b) => lastAccess(a) - lastAccess(b) || a.tripId.localeCompare(b.tripId));
     while (oldest.length && (Object.keys(updated.snapshots).length > MAX_OFFLINE_TRIP_SNAPSHOTS
       || JSON.stringify(updated).length > MAX_CACHE_CHARACTERS)) {
       delete updated.snapshots[oldest.shift()!.tripId];
@@ -132,6 +138,22 @@ export const saveOfflineTripSnapshot = async (
     // Email-only entries cannot prove immutable ownership. Replace them from
     // online data, and remove the legacy copy only after the new commit.
     if (owner.legacyEmail) await removeAsyncOrThrow(`stp.offline-trip-cache.v1.${encodeURIComponent(owner.legacyEmail.trim().toLowerCase())}`);
+  });
+};
+/** Record that a saved trip was opened. Writes at most once per interval, never
+ * extends offline access, and never creates a cache or snapshot. */
+export const touchOfflineTripSnapshot = async (
+  owner: OfflineCacheOwner | null | undefined, tripId: string, now = Date.now(),
+): Promise<void> => {
+  if (!validOwner(owner) || !tripId) return;
+  const key = cacheKeyFor(owner);
+  const epoch = epochs.get(key) ?? 0;
+  await serialized(key, async () => {
+    if ((epochs.get(key) ?? 0) !== epoch) return;
+    const current = await readCache(owner);
+    const entry = current?.snapshots[tripId];
+    if (!current || !entry || now - lastAccess(entry) < ACCESS_TOUCH_INTERVAL_MS) return;
+    await writeCache(owner, { ...current, snapshots: { ...current.snapshots, [tripId]: { ...entry, lastAccessedAt: now } } });
   });
 };
 export const clearOfflineTripCache = async (owner: OfflineCacheOwner | null | undefined): Promise<void> => {

@@ -43,7 +43,7 @@ Source work still open (see the [completion audit](../operations/gap-closing-rem
 - **Day editing (§1.6):** web/native drag handles, persisted optimization pins, Move up/down and checked Optimize/Undo are implemented. Environment rollout, usability and physical-device gesture checks remain ([details](../operations/gap-closing-day-order-inspiration.md)).
 - **Discovery (§2.3):** destination-based “Trips like this” and credited copying of explicitly shared public catalog activity templates are implemented. Manual/private activity copying is excluded; public explore/SEO remains later scope (§7). [Contract and activation](../operations/gap-closing-day-order-inspiration.md).
 - **Email import (§3.1–3.2):** signed, content-bound receiver-attestation verification, provenance-gated forwarder trust and Gmail confirmation recognition/UI are implemented ([contract and rollout](../operations/gap-closing-receiver-auth.md)). Remaining: deploy the trusted gateway/signer and validate real receiver/forwarding/Gmail fixtures before enabling; synthetic contract fixtures are not production evidence.
-- **Offline storage (§5.2–5.3):** encrypted transactional native storage, device-backed keys and migration/reinstall/key-loss recovery; access-based LRU snapshot eviction and optional Wi-Fi-only downloads.
+- **Offline storage (§5.2–5.3):** encrypted transactional native storage, device-backed keys and migration/reinstall/key-loss recovery. Access-based LRU snapshot eviction and the optional Wi-Fi-only setting are implemented (2026-10-21); device checks remain.
 - **Release evidence (§4–5 and acceptance gates):** real notification delivery/cohort/timing measurements, deployed shell/hash-change and authenticated offline recovery across browsers, provider/scanner/forwarding trials, database concurrency/index readiness, named native devices, accessibility/usability, import precision and performance evidence.
 
 **Implemented in this continuation (§5.3):** replay selects due entries before taking a batch, preventing delayed entries from starving ready expenses. Both storage paths process at most 20 entries per drain and stop starting requests after 45 seconds; transactional replay rechecks the budget after storage awaits. Focused tests cover bounded continuation, foreground resume, stable operation keys, interrupted commits, account fencing and lease replacement. These automated checks do not establish native device/background or production recovery evidence.
@@ -593,8 +593,8 @@ Still to do before this ships (all listed in §5.2 / the usability gate):
 - **Completed:** sign-out warning with unsynced count, Sync now / Keep on this device / Discard. Retention explains device-key loss on native and unencrypted browser storage on web.
 - **Completed:** Edit for definitively rejected expenses, plus per-expense Export; unknown outcomes retain the original operation key.
 - **Implemented, device acceptance pending:** SQLCipher native queue and device-only keys (§5.2). Browser IndexedDB remains unencrypted.
-- Firestore emulator parity run for the new server tests (they pass on the in-memory adapter), real-device checks, and the novice-recovery usability test.
-- Deciding whether the entry-queue key should include the environment hash instead of the raw backend URL.
+- **Done 2026-10-21:** Firestore emulator parity for `expense-idempotency.test.ts` (7/7 on a private emulator). Real-device checks and the novice-recovery usability test remain.
+- **Decided 2026-10-21:** the queue key keeps the raw backend URL; see the remaining-work audit.
 
 1. **Queue:** extend `usePendingWrites` with owner/environment/schema scope, cryptographically random stable operation id, trip id, validated payload, creation time, status, attempts and next retry time. Await durable enqueue before **Saved on this device**. Prevent native hydration/enqueue races and concurrent replay with a lease/lock appropriate to supported browsers (Web Locks where available, tested transactional fallback) and native app lifecycle. One in-memory mutex alone does not provide persistence/crash recovery.
 2. **Never silently drop an expense.** Replace the 5-attempt drop with exponential backoff. Permanent failures (`403` membership revoked, `422` validation) go to a "Couldn't sync" list with Retry, Edit, Export, and Discard.
@@ -768,14 +768,42 @@ Defaults: extend existing services; simple manual import/suggestions first; auto
 optimization free; no new paid routing or server map renderer. Keep exact public location
 sharing off. Manual upload, list view and saved trip details remain usable independently.
 
-Resolve only before the affected slice ships:
+### 10.1 Decisions recorded (2026-10-21, Bryan Duerk)
 
-1. Approved map/geocoder inputs, applicable account terms, export/storage rights, optional public-location consent and scoped artifact cleanup inventory. Public Nominatim is not unconditional production infrastructure.
-2. Absolute feature budgets, per-active-user target, named billing owner and measured load assumptions.
-3. One vetted encrypted native store/key lifecycle and explicit web shared-device policy; protected pending-work retention behavior at logout.
-4. Real forwarding/authentication fixtures, durable retry semantics, scanner readiness/deployment and retention/cleanup owner.
-5. Supported minimum native versions before Google retirement; MapLibre/Expo and keepsake compatibility results. Avoid tying encryption release to map readiness.
-6. Later offline edits (activities/notes), browser push, public SEO and Gmail expansion each require their own use/cost case; no automatic scope expansion.
+1. **External geocoding.** Ship catalog, airport and manual coordinates. External geocoding stays off. Public Nominatim is not production infrastructure, and no private address goes to any external geocoder.
+2. **Map artifacts and retirement.**
+   - Stop new legacy artifact generation (`trip_blog_day_map_render` off).
+   - Publish a client-support cutoff, then run an audited cleanup after a dry-run inventory.
+   - Purge only artifacts the applicable terms rule out. No broad prefix deletes, and no removal of old routes before reader migration is confirmed.
+   - Minimum native version: the old-client support cutoff is 2027-01-21 (three months from this decision). Retire the Google routes and key on or after that date only once under about 5% of sessions are on old clients; otherwise extend the cutoff.
+3. **Forwarding identity.** Exact-mailbox proof stays mandatory for trusted forwarding. If ordinary forwarding cannot establish it reliably, behavior stays suggestion-only.
+4. **Scanner operations and retention.** Use the existing fail-closed scanner integration. Tristan Duerk is the named operational owner for the scanner and for retention/cleanup.
+5. **Budgets and parser consensus.**
+   - Fix advance spend reservation first.
+   - Budgets come from measured workload plus an acceptable margin. Maps keeps the existing $15 monthly cap. The LLM cap comes from two weeks of `usage_metering` data, with an 80% alert.
+   - Then lower consensus sampling incrementally, with audited quality checks at each step. The percentage is never chosen for savings alone.
+6. **Offline product limits.**
+   - Implement access-based LRU eviction (never evicting unsynced work) and an optional Wi-Fi-only download setting.
+   - Deliberate saves stay usable on cellular, with a warning before large downloads.
+   - Prioritize staged downloads if real trips reach today's cap.
+   - Keep the explicit web shared-device warning.
+7. **Release acceptance and cohort expansion.**
+   - Gate: at least 99% precision over at least 200 audited supported automatic assignments, and zero wrong-trip assignments.
+   - Pause expansion if Undo exceeds 2%.
+   - Usability: at least 4/5 uncoached task completion, with no unnoticed loss or sharing.
+   - Fix provider-scoped booking continuity before the automation pilot.
+   - Everything stays suggestion-only until real receiver/forwarding fixtures pass. Admin release comes only after the precision gate. Nothing in this item ships before the unauthenticated login routes (`/api/auth/email|oauth`) are removed from production by deploy.
+8. **Operational rollout.**
+   - One accountable owner per subsystem. For now Tristan Duerk owns all of them: maps, discovery, email import and scanner, notifications, offline storage and sync, entitlements and flags, and cost and billing. Reassign per subsystem as people are added.
+   - Start with the documented bounded, minute-based notification worker. Alert on failures and backlog.
+   - Widen cohorts only after observed delivery and cost pass.
+9. **Native encrypted store and key lifecycle.** Keep the SQLCipher/SecureStore design as built and finish the named-device tests. Web storage stays unencrypted, with the shared-device warning.
+10. **Public location sharing.** Public exact locations stay off. Coarse areas are opt-in only.
+11. **Later scope deferred.** Offline edits, browser push, public SEO/explore and Gmail expansion are out of scope until separately justified.
+12. **Adapter parity.** Postgres and Firestore must have parity for every change here. Each slice includes Firestore emulator results; a pg-mem pass alone does not count.
+
+**Still open:**
+- The LLM cap value, pending two weeks of `usage_metering` data.
 
 ## Sources and Verification Limits
 

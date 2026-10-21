@@ -21,6 +21,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { getNetworkStateAsync } from 'expo-network';
+import { allowAutomaticDownload, getConnectionCost, readWifiOnlyPreference } from './utils/offlineDownloadPolicy';
 import * as ExpoLinking from 'expo-linking';
 import {
   adminScreenBySection,
@@ -99,6 +100,7 @@ import {
   isTripActiveToday,
   loadOfflineTripCache,
   saveOfflineTripSnapshot,
+  touchOfflineTripSnapshot,
   startOfflineAccessPeriod,
   type OfflineTripCache,
   type OfflineTripSnapshot,
@@ -1084,7 +1086,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!currentTripIds.length) return;
     let cancelled = false;
 
-    void Promise.all(currentTripIds.map(async (tripId) => {
+    // The Wi-Fi-only setting pauses automatic refreshes without an error; the saved copy stays as is.
+    void Promise.all([readWifiOnlyPreference(), getConnectionCost()]).then(([wifiOnly, cost]) => {
+      if (cancelled || !allowAutomaticDownload(wifiOnly, cost)) return;
+      return Promise.all(currentTripIds.map(async (tripId) => {
       // Avoid re-downloading the same current-trip snapshot more than once in
       // a five-minute refresh window when another piece of active data changes.
       const cacheKey = `${offlineOwner.userId}:${offlineOwner.environment}:${tripId}:${costTrackingAllowed}`;
@@ -1108,7 +1113,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         delete offlineSnapshotPrefetchRef.current[cacheKey];
         if (!cancelled) setOfflineSaveError("Couldn't update the saved copy. Your previous saved copy is still available. Try again when connected.");
       }
-    }));
+      }));
+    });
 
     return () => {
       cancelled = true;
@@ -1128,11 +1134,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   ]);
 
   useEffect(() => {
+    // Opening a trip online also counts as use, so eviction keeps what is actually read.
+    if (offlineReadOnly || !offlineOwner || !activeTripId) return;
+    void touchOfflineTripSnapshot(offlineOwner, activeTripId).catch(() => undefined);
+  }, [activeTripId, offlineOwner, offlineReadOnly]);
+
+  useEffect(() => {
     if (!offlineReadOnly || !userEmail || !activeTripId) return;
     let cancelled = false;
     void loadOfflineTripCache(offlineOwner).then((cache) => {
       if (!cancelled && cache && isOfflineAccessValid(cache)) {
         hydrateOfflineTripCache(cache, activeTripId);
+        void touchOfflineTripSnapshot(offlineOwner, activeTripId).catch(() => undefined);
       }
     }).catch(() => { if (!cancelled) setOfflineSaveError("Couldn't read the saved copy. Connect to the internet and download again."); });
     return () => {

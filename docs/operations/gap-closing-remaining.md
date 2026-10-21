@@ -309,9 +309,19 @@ reused rather than suffixed.
 | §5.3 queue concurrency and recovery | Two-tab browser verification is done (`node scripts/check-queue-locks.cjs`: the IndexedDB lease is exclusive across two real tabs, hands over on release, refuses writes without the lease and ignores a clock-skewed lease; the localStorage fallback lock double-ran 0 of 40 simultaneous races, which can still happen rarely because localStorage has no compare-and-swap). Encrypted native queue retention is implemented; still open: native/device replay lifecycle evidence (bounded replay and automated resume/recovery checks are implemented; see the 2026-10-20 continuation below). The corrupt-queue repair/import flow is built (see above). Durable discard feedback and raw whole-queue recovery export are now implemented. |
 | §5.4 browser shell | Local Chromium install/offline reload and simulated HTML update checked. `firebase.json` hosting headers reviewed: `/sw.js` is `no-cache` with `Service-Worker-Allowed: /`, `/index.html` is `no-store`, the catch-all adds only the CSP (which already allows the tile host and blob workers). Still needs a real deployment check of hash-change recovery, signed-in offline flows and other browsers. Browser push and public explore remain later scope in §7. |
 
-Snapshot eviction is oldest-saved, not a claim of access-based LRU. Queue storage
-keys intentionally retain the existing environment-qualified format rather than
-silently orphaning existing financial work under a new hash.
+**Snapshot eviction and downloads (2026-10-21).** Snapshots are evicted least recently
+opened first (`lastAccessedAt`, falling back to `savedAt` for older copies). Saving or
+opening a trip records access, writes are throttled to one per hour, and a touch never
+extends the 30-day offline access window or creates a snapshot. The queue is a separate
+store and is never evicted. A device-level "Update saved trips over Wi-Fi only" switch
+(`utils/offlineDownloadPolicy.ts`) pauses automatic refreshes unless the link is
+confirmed Wi-Fi/Ethernet; unknown counts as not confirmed. A deliberate save always works
+on mobile data, but asks first when Wi-Fi only is on or the last copy was 5 MB or more.
+Browsers rarely report the connection type, so on web this warning rarely appears.
+Estimates use the previous saved copy, so a first-ever download cannot warn about size.
+Queue storage keys intentionally retain the existing environment-qualified format: the key
+is local and not secret, the native store already hashes its scope for file names, and a
+new hash would orphan existing queued financial work without a migration. Decision closed.
 
 ## External evidence still required
 

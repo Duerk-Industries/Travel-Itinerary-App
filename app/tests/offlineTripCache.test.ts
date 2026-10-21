@@ -12,6 +12,7 @@ import {
   loadOfflineTripCache,
   saveOfflineTripSnapshot,
   startOfflineAccessPeriod,
+  touchOfflineTripSnapshot,
 } from '../utils/offlineTripCache';
 
 const owner = { userId: 'user-1', environment: 'https://api.example.com' };
@@ -128,4 +129,44 @@ it('bounds saved trips and never evicts unsynced financial work', async () => {
   expect(await AsyncStorage.getItem('stp.pending-expenses.keep')).toBe('unsynced');
   await expect(saveOfflineTripSnapshot(owner, { tripId: 'too-big', savedAt: Date.now(), trip: { id: 'too-big', notes: 'x'.repeat(5_000_001) }, groupMembers: [], flights: [], lodgings: [], tours: [], carRentals: [], expenses: [], payments: [], coveredBy: {}, itinerary: null }, { trips: [], groups: [] })).rejects.toThrow('too large');
   expect((await loadOfflineTripCache(owner))!.snapshots).toEqual(saved!.snapshots);
+});
+
+const snap = (tripId: string, savedAt = Date.now()) => ({ tripId, savedAt, trip: { id: tripId }, groupMembers: [], flights: [], lodgings: [], tours: [], carRentals: [], expenses: [], payments: [], coveredBy: {}, itinerary: null });
+
+it('evicts the least recently opened trip, not the oldest download', async () => {
+  await AsyncStorage.clear();
+  await startOfflineAccessPeriod(owner);
+  for (let index = 0; index < 5; index += 1) await saveOfflineTripSnapshot(owner, snap(`lru-${index}`), { trips: [], groups: [] });
+  // lru-0 was downloaded first but opened most recently.
+  await touchOfflineTripSnapshot(owner, 'lru-0', Date.now() + 2 * 60 * 60 * 1000);
+  await saveOfflineTripSnapshot(owner, snap('lru-5'), { trips: [], groups: [] });
+  const ids = Object.keys((await loadOfflineTripCache(owner))!.snapshots).sort();
+  expect(ids).toEqual(['lru-0', 'lru-2', 'lru-3', 'lru-4', 'lru-5']);
+});
+
+it('falls back to savedAt for snapshots saved before access tracking', async () => {
+  await AsyncStorage.clear();
+  const now = Date.now();
+  await startOfflineAccessPeriod(owner, now);
+  const key = `stp.offline-trip-cache.v2.${encodeURIComponent(owner.environment)}.${encodeURIComponent(owner.userId)}`;
+  const cache = JSON.parse((await AsyncStorage.getItem(key))!);
+  for (let index = 0; index < 5; index += 1) cache.snapshots[`old-${index}`] = snap(`old-${index}`, now - (10 - index) * 1000);
+  await AsyncStorage.setItem(key, JSON.stringify(cache));
+  await saveOfflineTripSnapshot(owner, snap('new'), { trips: [], groups: [] });
+  expect(Object.keys((await loadOfflineTripCache(owner))!.snapshots).sort()).toEqual(['new', 'old-1', 'old-2', 'old-3', 'old-4']);
+});
+
+it('touching is throttled, never creates a snapshot and never extends access', async () => {
+  await AsyncStorage.clear();
+  await touchOfflineTripSnapshot(owner, 'missing');
+  expect(await loadOfflineTripCache(owner)).toBeNull();
+  const started = await startOfflineAccessPeriod(owner);
+  await saveOfflineTripSnapshot(owner, snap('only'), { trips: [], groups: [] });
+  const before = (await loadOfflineTripCache(owner))!;
+  await touchOfflineTripSnapshot(owner, 'only', Date.now() + 1000);
+  expect((await loadOfflineTripCache(owner))!.snapshots.only.lastAccessedAt).toBe(before.snapshots.only.lastAccessedAt);
+  await touchOfflineTripSnapshot(owner, 'only', Date.now() + 2 * 60 * 60 * 1000);
+  const after = (await loadOfflineTripCache(owner))!;
+  expect(after.snapshots.only.lastAccessedAt).toBeGreaterThan(before.snapshots.only.lastAccessedAt!);
+  expect(after.accessExpiresAt).toBe(started!.accessExpiresAt);
 });
