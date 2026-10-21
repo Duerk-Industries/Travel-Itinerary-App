@@ -10,7 +10,7 @@ beforeEach(() => {
   (db.listFlights as jest.Mock).mockResolvedValue([]); (db.listLodgings as jest.Mock).mockResolvedValue([]); (db.listCarRentals as jest.Mock).mockResolvedValue([]);
   (db.listActivities as jest.Mock).mockResolvedValue([activity]); (db.getTripById as jest.Mock).mockResolvedValue({ destination: 'Paris' });
   (db.listAttractionCatalogEntries as jest.Mock).mockResolvedValue([place]);
-  (resolveCatalogCoordinates as jest.Mock).mockResolvedValue({ lat: 48.86, lng: 2.34, geoCity: 'Paris' });
+  (resolveCatalogCoordinates as jest.Mock).mockResolvedValue({ lat: 48.86, lng: 2.34, geoCity: 'Paris', attribution: 'Reviewed POI provider', provider: 'review-v1' });
 });
 it('reuses permitted catalog coordinates without an external-geocoding prerequisite', async () => {
   expect((await getPlanningDayPoints('user', 'trip', activity.date))[0]).toMatchObject({ lat: 48.86, lng: 2.34, coordinateSource: 'catalog' });
@@ -23,7 +23,7 @@ it('preserves manual coordinates and never enqueues that item', async () => {
 });
 it('uses only a current matching public POI and never writes an item in the background', async () => {
   (db.listAttractionCatalogEntries as jest.Mock).mockResolvedValue([{ ...place, lat: null, lon: null }]);
-  expect((await getPlanningDayPoints('user', 'trip', activity.date))[0].coordinateSource).toBe('geocoder');
+  expect((await getPlanningDayPoints('user', 'trip', activity.date))[0]).toMatchObject({ coordinateSource: 'geocoder', coordinateAttribution: 'Reviewed POI provider', coordinateProvider: 'review-v1' });
   expect(resolveCatalogCoordinates).toHaveBeenCalledWith(expect.objectContaining({ name: 'Museum' }));
 });
 it.each([{ name: 'New stop' }, { startLocation: 'My private address' }])('does not apply a stale catalog identity after an item edit: %j', async edit => {

@@ -30,7 +30,7 @@ export const getPlanningDayPoints = async (userId: string, tripId: string, date:
       if (reusableCatalogPlace(place)) Object.assign(point, { lat: place.lat, lng: place.lon, geoCity: place.destinationDisplayName, coordinateSource: 'catalog' });
       else {
         const resolved = await resolveCatalogCoordinates(place);
-        if (resolved) Object.assign(point, { lat: resolved.lat, lng: resolved.lng, geoCity: resolved.geoCity, coordinateSource: 'geocoder' });
+        if (resolved) Object.assign(point, { lat: resolved.lat, lng: resolved.lng, geoCity: resolved.geoCity, coordinateSource: 'geocoder', coordinateAttribution: resolved.attribution, coordinateProvider: resolved.provider });
       }
     }
   } catch { /* Optional lookup never blocks the itinerary or item save. */ }

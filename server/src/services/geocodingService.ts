@@ -1,22 +1,10 @@
 import { createHash, randomUUID } from 'crypto';
 import { getFeatureFlag, mutateGeocodingState, atomicIncrementApiUsageIfUnderLimit } from '../db';
-import { getEnvValue, getEnvFlag } from '../env';
+import { getGeocodingPolicy as config } from './geocodingPolicy';
 import type { AttractionCatalogEntry, GeocodeJob, GeocodeQuery, GeocodeResult } from '../types';
 
 const normalize = (text: string): string => text.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
 export const geocodeKey = (query: GeocodeQuery): string => createHash('sha256').update(JSON.stringify([query.name, query.locality, query.country, query.language, query.providerVersion].map(normalize))).digest('hex');
-const config = () => {
-  const endpoint = getEnvValue('GEOCODING_SEARCH_URL');
-  const identity = getEnvValue('GEOCODING_USER_AGENT');
-  const version = getEnvValue('GEOCODING_PROVIDER_VERSION');
-  if (!getEnvFlag('GEOCODING_PUBLIC_POI_APPROVED') || !endpoint || !identity || !version) return null;
-  try {
-    const url = new URL(endpoint);
-    // Public OSM is deliberately excluded: recurring distributed work is not an approved use.
-    if (url.protocol !== 'https:' || /(^|\.)openstreetmap\.org$/i.test(url.hostname) || url.username || url.password || url.search || url.hash) return null;
-    return { endpoint, identity, version };
-  } catch { return null; }
-};
 export const geocodingEnabled = async (): Promise<boolean> => Boolean(config()) && (await getFeatureFlag('planning_geocoding'))?.enabled === true;
 export const publicCatalogQuery = (entry: AttractionCatalogEntry, providerVersion: string): GeocodeQuery | null => {
   try {
@@ -43,85 +31,160 @@ export async function resolveCatalogCoordinates(entry: AttractionCatalogEntry): 
   });
   return state.jobs.find(job => job.key === key && job.state === 'done')?.result ?? null;
 }
-/** Shared by geocoding and merchant lookup. One in-flight request across all instances. */
+type FailureCode = NonNullable<GeocodeJob['lastErrorCode']>;
+class LookupFailure extends Error {
+  constructor(readonly code: FailureCode, readonly retryAt?: number) { super(code); }
+}
+const LEASE_MS = 30_000;
+const nextUtcDay = (): number => { const now = new Date(Date.now()); return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1); };
+const retryAfter = (value: string | null): number => {
+  const seconds = value !== null && /^\d+$/.test(value.trim()) ? Math.min(86400, Number(value)) * 1000 : NaN;
+  const delay = Number.isFinite(seconds) ? seconds : Date.parse(value || '') - Date.now();
+  return Date.now() + Math.max(15_000, Math.min(86400_000, Number.isFinite(delay) ? delay : 60_000));
+};
+/** Shared by map enrichment and merchant lookup. Admission is durable across
+ * instances. Endpoint-side controls are still needed for a suspended process. */
 export async function claimGeocoderAdmission(): Promise<string | null> {
+  const settings = config(); if (!settings || !await geocodingEnabled()) return null;
   const token = randomUUID(); const now = Date.now();
   const state = await mutateGeocodingState(state => {
     if (state.nextAllowedAt > now || (state.providerLeaseUntil || 0) > now) return state;
-    state.providerLeaseToken = token; state.providerLeaseUntil = now + 30_000;
-    state.nextAllowedAt = now + 15_000; return state;
+    state.providerLeaseToken = token; state.providerLeaseUntil = now + LEASE_MS;
+    state.nextAllowedAt = now + settings.policy.minIntervalMs; return state;
   });
   return state.providerLeaseToken === token ? token : null;
 }
 export async function releaseGeocoderAdmission(token: string): Promise<void> {
   await mutateGeocodingState(state => {
-    if (state.providerLeaseToken === token) { delete state.providerLeaseToken; delete state.providerLeaseUntil; state.nextAllowedAt = Math.max(state.nextAllowedAt, Date.now() + 15_000); }
+    if (state.providerLeaseToken === token) {
+      delete state.providerLeaseToken; delete state.providerLeaseUntil;
+      state.nextAllowedAt = Math.max(state.nextAllowedAt, Date.now() + (config()?.policy.minIntervalMs ?? 15_000));
+    }
     return state;
   });
 }
 export async function lookupApprovedPublicPoi(query: GeocodeQuery, admission: string, jobToken: string): Promise<GeocodeResult | null> {
-  const settings = config(); if (!settings || !await geocodingEnabled() || query.providerVersion !== settings.version) throw new Error('Provider disabled');
-  const url = new URL(settings.endpoint); url.searchParams.set('q', [query.name, query.locality, query.country].filter(Boolean).join(', '));
-  url.searchParams.set('format', 'jsonv2'); url.searchParams.set('limit', '1'); url.searchParams.set('addressdetails', '1'); url.searchParams.set('accept-language', query.language);
-  const configuredLimit = Number(getEnvValue('GEOCODING_MAX_DAILY_REQUESTS', { defaultValue: '100' }));
-  const limit = Number.isFinite(configuredLimit) ? Math.max(0, Math.min(1000, Math.floor(configuredLimit))) : 0;
-  const quota = limit > 0 && await atomicIncrementApiUsageIfUnderLimit({ provider: 'GEOCODING', caller: 'PUBLIC_POI_LOOKUP', scope: 'caller', windowKey: new Date().toISOString().slice(0, 10), limit });
-  if (!quota || !quota.allowed) throw new Error('Daily geocoding budget exhausted');
-  const ownership = await mutateGeocodingState(state => {
-    const job = state.jobs.find(j => j.leaseToken === jobToken);
-    if (state.providerLeaseToken === admission && (state.providerLeaseUntil || 0) > Date.now() && job && (job.leaseUntil || 0) > Date.now()) {
-      state.providerLeaseUntil = Date.now() + 30_000; job.leaseUntil = state.providerLeaseUntil;
-    }
-    return state;
-  });
-  if (ownership.providerLeaseToken !== admission || (ownership.providerLeaseUntil || 0) <= Date.now() || !ownership.jobs.some(j => j.leaseToken === jobToken && (j.leaseUntil || 0) > Date.now())) throw new Error('Lease lost');
-  const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 8_000);
-  try {
-    const response = await fetch(url, { signal: controller.signal, redirect: 'error', headers: { Accept: 'application/json', 'User-Agent': settings.identity } });
-    if (!response.ok) throw new Error('Geocoder unavailable');
-    if (Number(response.headers.get('content-length') || 0) > 65_536) throw new Error('Response too large');
-    if (!response.body) throw new Error('Missing body');
-    const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let size = 0;
-    try { while (true) { const next = await reader.read(); if (next.done) break; size += next.value.byteLength; if (size > 65_536) throw new Error('Response too large'); chunks.push(next.value); } }
-    finally { await reader.cancel(); }
-    const rows: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    if (!Array.isArray(rows)) throw new Error('Invalid provider response');
-    if (!rows.length) return null;
-    const row = rows[0] as { lat?: string; lon?: string; category?: string; type?: string; address?: { city?: string; town?: string } };
-    const lat = Number(row.lat); const lng = Number(row.lon);
-    if (row.lat == null || row.lon == null || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) throw new Error('Invalid coordinates');
-    return { lat, lng, geoCity: (row.address?.city || row.address?.town || '').slice(0, 160) || null, quality: 'approximate', providerCategory: String(row.category || '').slice(0, 80), providerType: String(row.type || '').slice(0, 80), provider: settings.version, attribution: '© OpenStreetMap contributors (ODbL)' };
-  } finally { clearTimeout(timeout); }
-}
-export async function processGeocodingJob(): Promise<{ processed: number }> {
-  if (!await geocodingEnabled()) return { processed: 0 };
-  const admission = await claimGeocoderAdmission(); if (!admission) return { processed: 0 };
-  const token = randomUUID(); const now = Date.now(); let job: GeocodeJob | undefined;
-  try {
-    const state = await mutateGeocodingState(state => {
-      const candidate = state.jobs.find(j => j.state === 'pending' && j.dueAt <= now && (j.leaseUntil || 0) <= now);
-      if (candidate) { candidate.leaseToken = token; candidate.leaseUntil = now + 30_000; }
+  const settings = config();
+  if (!settings || !await geocodingEnabled() || query.providerVersion !== settings.version) throw new LookupFailure('disabled');
+  const key = geocodeKey(query);
+  const assertOwnership = async () => {
+    let owned = false; let leaseUntil = 0;
+    await mutateGeocodingState(state => {
+      const job = state.jobs.find(j => j.key === key && j.leaseToken === jobToken && j.state === 'pending');
+      owned = Boolean(state.providerLeaseToken === admission && (state.providerLeaseUntil || 0) > Date.now()
+        && job && geocodeKey(job.query) === key && (job.leaseUntil || 0) > Date.now());
+      if (owned && job) { leaseUntil = Date.now() + LEASE_MS; state.providerLeaseUntil = leaseUntil; job.leaseUntil = leaseUntil; }
       return state;
     });
-    job = state.jobs.find(j => j.leaseToken === token); if (!job) return { processed: 0 };
-    let result: GeocodeResult | null = null; let failed = false;
-    try { result = await lookupApprovedPublicPoi(job.query, admission, token); } catch { failed = true; }
-    const key = job.key;
+    if (!owned || leaseUntil <= Date.now()) throw new LookupFailure('lease-lost');
+  };
+  await assertOwnership();
+  const quota = settings.dailyLimit > 0 && await atomicIncrementApiUsageIfUnderLimit({ provider: 'GEOCODING', caller: 'PUBLIC_POI_LOOKUP', scope: 'caller', windowKey: new Date(Date.now()).toISOString().slice(0, 10), limit: settings.dailyLimit });
+  if (!quota || !quota.allowed) throw new LookupFailure('budget', nextUtcDay());
+  // Database/quota awaits can outlive both a lease and a configuration change.
+  if (config()?.version !== settings.version || !await geocodingEnabled()) throw new LookupFailure('disabled');
+  await assertOwnership();
+  if (config()?.version !== settings.version) throw new LookupFailure('disabled');
+  const url = new URL(settings.endpoint);
+  url.searchParams.set('q', [query.name, query.locality, query.country].filter(Boolean).join(', '));
+  url.searchParams.set('format', 'jsonv2'); url.searchParams.set('limit', '1');
+  url.searchParams.set('addressdetails', '1'); url.searchParams.set('accept-language', query.language);
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timeout = setTimeout(() => { controller.abort(); reject(new LookupFailure('timeout')); }, 8_000);
+  });
+  const request = async (): Promise<GeocodeResult | null> => {
+    const response = await fetch(url, { signal: controller.signal, redirect: 'error', headers: { Accept: 'application/json', 'User-Agent': settings.identity } });
+    if (response.status === 429 || response.status === 503) {
+      throw new LookupFailure('rate-limit', retryAfter(response.headers.get('retry-after')));
+    }
+    if (!response.ok) throw new LookupFailure('provider');
+    if (Number(response.headers.get('content-length') || 0) > 65_536 || !response.body) throw new LookupFailure('invalid-response');
+    const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let size = 0;
+    try {
+      while (true) {
+        const next = await reader.read(); if (next.done) break;
+        size += next.value.byteLength; if (size > 65_536) throw new LookupFailure('invalid-response');
+        chunks.push(next.value);
+      }
+    } finally { void reader.cancel().catch(() => undefined); }
+    let rows: unknown;
+    try { rows = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new LookupFailure('invalid-response'); }
+    if (!Array.isArray(rows)) throw new LookupFailure('invalid-response');
+    if (!rows.length) return null;
+    const row = rows[0] as { lat?: string | number; lon?: string | number; category?: unknown; type?: unknown; address?: { city?: unknown; town?: unknown } };
+    const lat = Number(row?.lat); const lng = Number(row?.lon);
+    if (!row || !['string', 'number'].includes(typeof row.lat) || !['string', 'number'].includes(typeof row.lon) || row.lat == null || row.lon == null || String(row.lat).trim() === '' || String(row.lon).trim() === ''
+      || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) throw new LookupFailure('invalid-response');
+    const city = row.address?.city || row.address?.town;
+    return { lat, lng, geoCity: typeof city === 'string' ? city.slice(0, 160) : null, quality: 'approximate',
+      providerCategory: typeof row.category === 'string' ? row.category.slice(0, 80) : '',
+      providerType: typeof row.type === 'string' ? row.type.slice(0, 80) : '',
+      provider: settings.version, attribution: settings.policy.attribution };
+  };
+  try { return await Promise.race([request(), deadline]); }
+  catch (error) { throw error instanceof LookupFailure ? error : new LookupFailure('provider'); }
+  finally { controller.abort(); if (timeout !== undefined) clearTimeout(timeout); }
+}
+/** Run even with external work disabled so expired/withdrawn cached results
+ * do not persist indefinitely simply because a kill switch was used. */
+const maintainGeocodingState = async (settings: ReturnType<typeof config>) => mutateGeocodingState(state => {
+  state.jobs = state.jobs.filter(job => (!job.expiresAt || job.expiresAt > Date.now())
+    && (job.state !== 'done' || (settings && job.query.providerVersion === settings.version)));
+  return state;
+});
+
+export async function processGeocodingJob(): Promise<{ processed: number }> {
+  const settings = config();
+  await maintainGeocodingState(settings);
+  if (!settings || !await geocodingEnabled()) return { processed: 0 };
+  const admission = await claimGeocoderAdmission(); if (!admission) return { processed: 0 };
+  const token = randomUUID(); const now = Date.now();
+  try {
+    const state = await mutateGeocodingState(state => {
+      state.jobs = state.jobs.filter(j => j.query.providerVersion === settings.version && (!j.expiresAt || j.expiresAt > now));
+      const candidate = state.jobs.filter(j => j.state === 'pending' && j.dueAt <= now && (j.leaseUntil || 0) <= now)
+        .sort((a, b) => a.dueAt - b.dueAt || a.key.localeCompare(b.key))[0];
+      if (candidate) { candidate.leaseToken = token; candidate.leaseUntil = now + LEASE_MS; }
+      return state;
+    });
+    const job = state.jobs.find(j => j.leaseToken === token); if (!job) return { processed: 0 };
+    let result: GeocodeResult | null = null; let failure: LookupFailure | undefined;
+    try { result = await lookupApprovedPublicPoi(job.query, admission, token); }
+    catch (error) { failure = error instanceof LookupFailure ? error : new LookupFailure('provider'); }
     await mutateGeocodingState(state => {
-      const current = state.jobs.find(j => j.key === key);
-      if (!current || current.leaseToken !== token || (current.leaseUntil || 0) <= Date.now() || state.providerLeaseToken !== admission) return state;
+      const current = state.jobs.find(j => j.key === job.key);
+      if (!current || current.leaseToken !== token || (current.leaseUntil || 0) <= Date.now()
+        || state.providerLeaseToken !== admission || (state.providerLeaseUntil || 0) <= Date.now()) return state;
       delete current.leaseToken; delete current.leaseUntil;
-      current.attempts += 1;
-      if (failed) { current.state = current.attempts >= 4 ? 'dead' : 'pending'; current.dueAt = Date.now() + 60_000 * 2 ** current.attempts; if (current.state === 'dead') current.expiresAt = Date.now() + 86400_000; }
-      else { current.state = 'done'; current.result = result; current.expiresAt = Date.now() + (result ? 30 : 1) * 86400_000; }
+      if (failure) {
+        current.lastErrorCode = failure.code;
+        if (failure.code === 'budget' || failure.code === 'disabled' || failure.code === 'lease-lost') {
+          current.dueAt = failure.retryAt ?? Date.now() + 60_000;
+        } else {
+          current.attempts += 1;
+          current.state = current.attempts >= 4 ? 'dead' : 'pending';
+          current.dueAt = Math.max(failure.retryAt ?? 0, Date.now() + 60_000 * 2 ** current.attempts);
+          if (current.state === 'dead') current.expiresAt = Date.now() + 86400_000;
+        }
+        if (failure.code === 'rate-limit' || failure.code === 'budget') state.nextAllowedAt = Math.max(state.nextAllowedAt, current.dueAt);
+      } else if (config()?.version === settings.version) {
+        current.attempts += 1; delete current.lastErrorCode;
+        current.state = 'done'; current.result = result;
+        current.expiresAt = Date.now() + (result ? settings.policy.positiveTtlSeconds : settings.policy.negativeTtlSeconds) * 1000;
+      }
       return state;
     });
     return { processed: 1 };
   } finally { await releaseGeocoderAdmission(admission); }
 }
 
-export async function geocodingStatus(): Promise<{ enabled: boolean; pending: number; ready: number; dead: number }> {
+export async function geocodingStatus() {
   const enabled = await geocodingEnabled();
-  const state = await mutateGeocodingState(state => state);
-  return { enabled, pending: state.jobs.filter(j => j.state === 'pending').length, ready: state.jobs.filter(j => j.state === 'done').length, dead: state.jobs.filter(j => j.state === 'dead').length };
+  const state = await maintainGeocodingState(config());
+  return { enabled, pending: state.jobs.filter(j => j.state === 'pending').length,
+    ready: state.jobs.filter(j => j.state === 'done' && (j.expiresAt || 0) > Date.now()).length,
+    dead: state.jobs.filter(j => j.state === 'dead').length, nextAllowedAt: state.nextAllowedAt,
+    deadJobs: state.jobs.filter(j => j.state === 'dead').map(j => ({ key: j.key, attempts: j.attempts, lastErrorCode: j.lastErrorCode ?? null })) };
 }

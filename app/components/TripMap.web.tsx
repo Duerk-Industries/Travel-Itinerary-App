@@ -88,6 +88,7 @@ export default function TripMap({ points, selectedId, onSelect, testID }: TripMa
         </ol>
         <div ref={host} aria-label="Interactive map of day stops" style={{ flex: 2, minHeight: 360, height: 400, display: failed || !resolved.length ? 'none' : 'block', borderRadius: 12, overflow: 'hidden' }} />
       </div>
+      {[...new Set(points.map(point => point.coordinateAttribution).filter((value): value is string => Boolean(value)))].map(value => <Text key={value}>{value}</Text>)}
       <Text>Straight-line estimates, not directions. Roads, barriers, traffic and accessibility can change travel time. Letters show visit order. Blue: flight · Orange: lodging · Green: activity · Purple: car rental.</Text>
       <Text>© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</Text>
     </>}

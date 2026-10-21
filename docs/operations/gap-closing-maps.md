@@ -24,7 +24,7 @@ There is no default external endpoint. A Nominatim-compatible self-hosted or con
 
 For unresolved current activity stops, resolution reuses item/airport/catalog coordinates before looking at the public-POI cache. Only an exact match to a server-side catalog record with an approved reusable source can enqueue lookup. Names/context come from that catalog record, not request text. Results overlay the current map response; the worker never overwrites an item or an edited address. Merchant classification now uses the same catalog queue/cache/admission and no longer independently sends arbitrary merchant text to public Nominatim. This intentionally narrows the older lookup feature.
 
-The bounded state record holds at most 150 jobs/cache entries and 700 KB, using a PostgreSQL row transaction or Firestore document transaction. Cache keys include normalized name, locality, country, language and operator-supplied provider/normalizer version. Positive cache TTL is 30 days; negative TTL one day. Failures use exponential backoff and become visible dead jobs after four attempts (retained one day). Admission permits one in-flight provider request across instances and at least 15 seconds after release. Thirty-second renewable/fenced ownership surrounds an eight-second abortable provider operation with a 64 KiB body limit and no redirects. Stale workers cannot commit. A daily atomic request budget defaults to 100 and can be lowered to zero. Cache hits do not consume provider quota. Cache pressure evicts completed records, never pending work; provider-version changes retire old-version entries. Strict provider-side concurrency guarantees still require endpoint admission controls: a database lease cannot cancel HTTP already sent by a suspended process.
+The bounded state record holds at most 150 jobs/cache entries and 700 KB, using a PostgreSQL row transaction or Firestore document transaction. Cache keys include normalized name, locality, country, language and operator-supplied provider/normalizer version. Reviewed positive cache TTL is at most 30 days; negative TTL at most one day. The mandatory policy can shorten either retention period (minimum 60 seconds). Cache/job keys also bind the endpoint, policy revision/permissions, attribution, retention and normalizer revision; changing the provider contract cannot reuse old results. Failures use exponential backoff and become visible dead jobs after four attempts (retained one day). Admission permits one in-flight provider request across instances and at least 15 seconds after release. Thirty-second renewable/fenced ownership surrounds an eight-second hard-deadline provider operation with a 64 KiB body limit and no redirects. Provider requests are bound to a live job key and lease before quota is spent; ownership is renewed/rechecked after awaited quota/flag checks. Stale workers cannot commit. Failed/oversized repository mutations cannot leak in-place JSON changes. A daily atomic UTC request budget defaults to 100, is capped by the reviewed policy and can be lowered to zero. Quota exhaustion defers until the next UTC day without consuming job attempts; Retry-After on 429/503 establishes a durable app-wide cooldown (bounded to one day). Cache hits do not consume provider quota. Cache pressure evicts completed records, never pending work; provider-version changes retire old-version entries. Strict provider-side concurrency guarantees still require endpoint admission controls: a database lease cannot cancel HTTP already sent by a suspended process.
 
 Apply `server/migrations/20261020_add_geocoding_state.sql` for PostgreSQL. Firestore initializes its single state document transactionally, with no new composite index. Set the following only after documenting endpoint input, storage, export and attribution rights:
 
@@ -34,9 +34,30 @@ GEOCODING_USER_AGENT=WanderBunnies/1.0 (a real operator contact)
 GEOCODING_PROVIDER_VERSION=your-provider-and-normalizer-version
 GEOCODING_PUBLIC_POI_APPROVED=1
 GEOCODING_MAX_DAILY_REQUESTS=100
+GEOCODING_POLICY_JSON_FILE=/run/config/geocoding-policy.json
 ```
 
-Then enable `planning_geocoding` in the DB. Every external lookup checks this flag; missing configuration/flag denies external work without blocking item saves or the itinerary. Configure a trusted scheduler to POST `/api/internal/blog/geocoding` with `X-Ingestion-Worker-Secret` (existing `INGESTION_WORKER_SHARED_SECRET`); one request processes at most one job. GET on the same path returns enabled/pending/ready/dead counts without query text. No scheduler, provider account, production flag or secret was changed by this implementation.
+The policy file is a mandatory operator assertion after an actual terms/privacy/storage/display/export review. The approval boolean alone is insufficient. For example, replace the example terms URL and attribution with the reviewed endpoint's actual requirements:
+
+```json
+{
+  "revision": "review-2026-10-20",
+  "termsUrl": "https://your-reviewed-service.example/terms",
+  "publicPoiInputs": true,
+  "storage": true,
+  "display": true,
+  "export": true,
+  "attribution": "Your reviewed provider and dataset attribution",
+  "positiveTtlSeconds": 2592000,
+  "negativeTtlSeconds": 86400,
+  "minIntervalMs": 15000,
+  "dailyRequestLimit": 100
+}
+```
+
+`GEOCODING_POLICY_JSON` can instead hold this JSON directly. Unknown fields, missing permissions, non-HTTPS terms, invalid retention/rate values or absent attribution fail closed. This first release requires permission for storage, text attribution/display and export; do not activate a contract whose additional requirements the client does not meet. Text attribution is carried with the map points and shown on both renderers, including the list fallback. Manual/catalog/airport coordinates retain their existing resolution priority.
+
+Then enable `planning_geocoding` in the DB. Every external lookup checks this flag; missing configuration/flag denies external work without blocking item saves or the itinerary. Configure a trusted scheduler to POST `/api/internal/blog/geocoding` with `X-Ingestion-Worker-Secret` (existing `INGESTION_WORKER_SHARED_SECRET`); one request processes at most one job. GET on the same path returns enabled/pending/ready/dead counts, next admission time and dead-job key/attempt/error-code diagnostics without query text. Keep this scheduler running when the flag is off: POST/GET also purge expired records and withdraw cached results when policy approval disappears. Expiry is enforced on every lookup; physical cleanup depends on this scheduled maintenance. No scheduler, provider account, production flag or secret was changed by this implementation.
 
 Provider selection via Stripe Directory query `geocoding API` was unavailable because the local CLI authentication expired; no provider account was selected or purchased. The configurable interface allows a separately reviewed deployment decision.
 
@@ -50,3 +71,13 @@ Provider selection via Stripe Directory query `geocoding API` was unavailable be
 Primary references: [MapLibre Expo setup](https://maplibre.org/maplibre-react-native/docs/setup/expo/), [MapLibre v10 migration](https://maplibre.org/maplibre-react-native/docs/setup/migrations/v10/), [MapLibre GL JS Map API](https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/), [OSMF Nominatim policy](https://operations.osmfoundation.org/policies/nominatim/).
 
 Latest local results: 9 frontend suites / 45 tests; 8 backend suites / 35 distinct tests across focused runs; Firestore emulator parity 3 suites / 11 tests. Frontend TypeScript, backend build, production web export and diff checks passed. Full workspace suites and real native builds were not run for this slice.
+
+
+## Geocoding policy/recovery continuation — 2026-10-20
+
+Implemented explicit reviewed policy, endpoint/policy-scoped retention, reviewed attribution propagation, hard fetch/body deadlines, quota deferral, Retry-After cooldown, lease/query binding, stale completion fencing and redacted diagnostics. Durable state remains in the existing Postgres/Firestore adapter contract and migration; new job diagnostics are additive JSON fields and need no new schema migration. Pending jobs are never evicted to make cache space. Old provider-version jobs are retired when the active policy changes, and a current authorized map lookup enqueues the new version; the worker never backfills arbitrary locations.
+
+The [public Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) was rechecked for this continuation. The public endpoint remains excluded, including a trailing-dot hostname alias. This implementation does not select, purchase or activate a provider. Verify the actual endpoint's terms, request/response contract, allowed attribution format, endpoint-side admission and scheduler in staging before enabling. A DB lease cannot enforce physical exclusivity across a process suspended between its final ownership check and sending HTTP; provider-side admission is still required for that guarantee.
+
+
+Validation for this continuation: four backend suites passed with 34 tests on the memory adapter (one contention test intentionally skipped because pg-mem lacks row-lock isolation), and 35 tests on the Firestore emulator including concurrent admission. Three additional planning/public-map backend suites passed 18 tests. Two frontend map suites passed 12 tests. Both TypeScript checks, production web export and diff checks passed. Full workspace suites, live-provider calls and production deployment were not run.

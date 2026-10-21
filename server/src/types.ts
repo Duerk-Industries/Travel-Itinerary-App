@@ -602,7 +602,7 @@ export interface PlanningCoordinates {
 }
 export type PlanningMapPoint = PlanningCoordinates & {
   id: string; kind: 'flight' | 'lodging' | 'activity' | 'car_rental';
-  title: string; address?: string; label?: string;
+  title: string; address?: string; label?: string; coordinateAttribution?: string; coordinateProvider?: string;
 };
 export type NearbyPlace = {
   catalogId: string; name: string; lat: number; lng: number; distanceMeters: number;
@@ -1436,7 +1436,7 @@ export interface PlanningBundle {
 // Only reviewed public catalog POIs enter this shared queue; never item addresses.
 export type GeocodeQuery = { name: string; locality: string; country: string; language: string; providerVersion: string };
 export type GeocodeResult = { lat: number; lng: number; geoCity: string | null; quality: 'approximate'; providerCategory?: string; providerType?: string; attribution: string; provider: string };
-export type GeocodeJob = { key: string; query: GeocodeQuery; state: 'pending' | 'done' | 'dead'; attempts: number; dueAt: number; leaseToken?: string; leaseUntil?: number; result?: GeocodeResult | null; expiresAt?: number };
+export type GeocodeJob = { key: string; query: GeocodeQuery; state: 'pending' | 'done' | 'dead'; attempts: number; dueAt: number; lastErrorCode?: 'disabled' | 'lease-lost' | 'budget' | 'rate-limit' | 'timeout' | 'provider' | 'invalid-response'; leaseToken?: string; leaseUntil?: number; result?: GeocodeResult | null; expiresAt?: number };
 export type GeocodingState = { jobs: GeocodeJob[]; nextAllowedAt: number; providerLeaseToken?: string; providerLeaseUntil?: number };
 
 export type GmailForwardingConfirmation = { provider: 'gmail'; code: string; requestedBy: string; expiresAt: number };

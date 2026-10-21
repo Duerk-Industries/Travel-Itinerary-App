@@ -48,6 +48,7 @@ export default function TripMap({ points, selectedId, onSelect, testID, nativeEn
         <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: (selectedId ?? selection) === point.id }} onPress={() => choose(point.id)} style={{ minHeight: 44, justifyContent: 'center' }}><Text>{point.label || n + 1} · {point.title}{!isLocatedMapPoint(point) ? ' · Not on the map yet' : ''}</Text></TouchableOpacity>
         {isLocatedMapPoint(point) && <TouchableOpacity accessibilityRole="link" onPress={() => { void Linking.openURL(`https://www.openstreetmap.org/?mlat=${point.lat}&mlon=${point.lng}#map=15/${point.lat}/${point.lng}`); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text>Open {point.title} in Maps</Text></TouchableOpacity>}
       </View>)}
+      {[...new Set(points.map(point => point.coordinateAttribution).filter((value): value is string => Boolean(value)))].map(value => <Text key={value}>{value}</Text>)}
       <Text>Straight lines show visit order, not directions. © OpenFreeMap © OpenMapTiles © OpenStreetMap contributors</Text>
     </>}
   </View>;

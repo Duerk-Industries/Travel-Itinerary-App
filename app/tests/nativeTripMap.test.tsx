@@ -33,3 +33,10 @@ it('releases native map while backgrounded, restores on resume and cleans up lis
   await waitFor(() => expect(screen.getByTestId('native-trip-map')).toBeTruthy());
   screen.unmount(); expect(subscription.remove).toHaveBeenCalled();
 });
+
+it('displays reviewed coordinate-provider attribution once, including list fallback', () => {
+  const attributed = points.map(point => ({ ...point, coordinateAttribution: 'Reviewed POI provider', coordinateProvider: 'provider-policy-v1' }));
+  const screen = render(<TripMap points={[...attributed, { ...attributed[0], id: 'two' }]} />);
+  fireEvent.press(screen.getByText('Show map'));
+  expect(screen.getAllByText('Reviewed POI provider')).toHaveLength(1);
+});
