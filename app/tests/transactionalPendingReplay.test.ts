@@ -109,3 +109,37 @@ it('pauses a 401 without consuming attempts and retains permanent rejections', a
   expect(summary.failed).toBe(2); expect(summary.dropped).toBe(0);
   expect(store.entries.every(e => e.status === 'failed')).toBe(true);
 });
+
+it('counts lease acquisition time against the request-start budget', async () => {
+  const store = new Store(); store.entries = [entry(1)];
+  const claim = store.claim.bind(store);
+  jest.spyOn(store, 'claim').mockImplementation(async (...args) => {
+    jest.setSystemTime(Date.now() + MAX_PENDING_REPLAY_DURATION_MS);
+    return claim(...args);
+  });
+  const send = jest.fn(async () => true);
+  await drain(store, send);
+  expect(send).not.toHaveBeenCalled(); expect(store.entries).toEqual([entry(1)]);
+  expect(store.lease).toBeUndefined();
+});
+it('recovers an abandoned lease after process death with unchanged operation keys', async () => {
+  const store = new Store(); store.entries = [entry(1), entry(2)];
+  await store.claim('owner-a', 'killed-process', 30_000);
+  const send = jest.fn(async () => true);
+  await drain(store, send); expect(send).not.toHaveBeenCalled();
+  jest.setSystemTime(Date.now() + 30_001);
+  await drain(store, send);
+  expect(send.mock.calls.map(call => (call as unknown as [PendingWrite])[0].args)).toEqual([
+    { operationKey: 'stable-1' }, { operationKey: 'stable-2' },
+  ]);
+  expect(store.entries).toEqual([]); expect(jest.getTimerCount()).toBe(0);
+});
+it('does not send after a foreground generation changes during storage renewal', async () => {
+  const store = new Store(); store.entries = [entry(1)]; let active = true;
+  const renew = store.renew.bind(store);
+  jest.spyOn(store, 'renew').mockImplementation(async (...args) => { active = false; return renew(...args); });
+  const send = jest.fn(async () => true);
+  await drain(store, send, { current: () => active });
+  expect(send).not.toHaveBeenCalled(); expect(store.entries).toEqual([entry(1)]);
+  expect(store.lease).toBeUndefined(); expect(jest.getTimerCount()).toBe(0);
+});

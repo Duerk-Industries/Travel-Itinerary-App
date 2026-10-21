@@ -123,3 +123,28 @@ describe('pending expense helpers', () => {
     expect(row.forIds).toEqual(['m1', 'm2']);
   });
 });
+
+describe('bounded expense HTTP lifetime', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+  it.each(['request', 'response body'])('returns a safe retry after 15 seconds with a stalled %s', async stalled => {
+    const args = newPendingExpenseArgs(payload);
+    let signal: AbortSignal | undefined;
+    const send = jest.fn((_url: string, init: RequestInit) => {
+      signal = init.signal as AbortSignal;
+      return stalled === 'request' ? new Promise<Response>(() => undefined) : Promise.resolve({
+        ok: true, status: 201, json: () => new Promise(() => undefined),
+      } as unknown as Response);
+    });
+    let settled = false;
+    const result = sendPendingExpense(args, { backendUrl: 'https://api.example.com', headers: {}, fetchImpl: send as unknown as typeof fetch });
+    void result.then(() => { settled = true; });
+    await jest.advanceTimersByTimeAsync(14_999);
+    expect(settled).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(await result).toMatchObject({ outcome: 'retry' });
+    expect(signal?.aborted).toBe(true);
+    expect((send.mock.calls[0][1].headers as Record<string, string>)['Idempotency-Key']).toBe(args.operationKey);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+});

@@ -127,8 +127,8 @@ export interface UsePendingWritesResult {
   retry: (id: string) => void;
   /** Clear the full queue. Used by "give up" UI affordances. */
   clear: () => void;
-  /** Iterate the queue, calling `replayFn` per entry. Removes ones that succeed. */
-  replay: (replayFn: PendingWriteReplayFn, options?: { ignoreBackoff?: boolean }) => Promise<ReplaySummary>;
+  /** Iterate the queue and remove successes. `shouldContinue` fences an obsolete app lifecycle before sends/commits. */
+  replay: (replayFn: PendingWriteReplayFn, options?: { ignoreBackoff?: boolean; shouldContinue?: () => boolean }) => Promise<ReplaySummary>;
 }
 
 type LockManagerLike = {
@@ -392,15 +392,16 @@ export function usePendingWrites(
     persist([]);
   }, [persist, store, discardDurably]);
 
-  const replay = useCallback(async (replayFn: PendingWriteReplayFn, options?: { ignoreBackoff?: boolean }): Promise<ReplaySummary> => {
+  const replay = useCallback(async (replayFn: PendingWriteReplayFn, options?: { ignoreBackoff?: boolean; shouldContinue?: () => boolean }): Promise<ReplaySummary> => {
     const empty: ReplaySummary = { replayed: 0, remaining: pendingRef.current.length, dropped: 0, failed: 0, paused: false };
     // One drain at a time in this tab, and one tab at a time per queue, so a resume + reconnect
     // (or two open tabs) cannot send the same entry twice concurrently.
     if (replayingRef.current) return empty;
     replayingRef.current = true;
+    const started = Date.now();
     const replayKey = keyRef.current;
     const generation = generationRef.current;
-    const current = () => keyRef.current === replayKey && generationRef.current === generation;
+    const current = () => keyRef.current === replayKey && generationRef.current === generation && (options?.shouldContinue?.() ?? true);
     try {
       if (store) {
         try {
@@ -424,7 +425,7 @@ export function usePendingWrites(
         const updated = new Map<string, PendingWrite | null>();
         for (let i = 0; i < snapshot.length; i += 1) {
           const entry = snapshot[i]!;
-          if (paused || !current() || Date.now() - now >= MAX_PENDING_REPLAY_DURATION_MS) break;
+          if (paused || !current() || Date.now() - started >= MAX_PENDING_REPLAY_DURATION_MS) break;
           if (entry.status === 'failed') continue;
           if (!options?.ignoreBackoff && entry.nextAttemptAtMs && entry.nextAttemptAtMs > now) continue;
           let result: PendingWriteReplayResult = false;

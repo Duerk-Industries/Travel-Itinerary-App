@@ -1,4 +1,5 @@
 /** @jest-environment node */
+import { replayTransactionalPending } from '../utils/transactionalPendingReplay';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import * as Files from 'expo-file-system/legacy';
@@ -181,4 +182,22 @@ it('does not migrate a snapshot belonging to another immutable owner', async () 
   await AsyncStorage.setItem(snapshotKey, wrong);
   expect(await snapshots.readAsyncOrThrow(snapshotKey)).toBeNull();
   expect(await AsyncStorage.getItem(snapshotKey)).toBe(wrong);
+});
+
+it('resumes the native transactional queue after suspension and abandoned-lease expiry', async () => {
+  await store.update(key, () => [entry, { ...entry, id: 'two', args: { operationKey: 'stable-two' } }]);
+  let foreground = true;
+  const run = (token: string, replay: Parameters<typeof replayTransactionalPending>[0]['replay']) =>
+    replayTransactionalPending({ store, key, token, current: () => foreground, maxAttempts: null, replay });
+  await run('suspended', async () => { foreground = false; return true; });
+  expect(await store.read(key)).toHaveLength(2);
+  foreground = true;
+  expect(await store.claim(key, 'killed-process', 30_000)).toBe(true);
+  const send = jest.fn(async () => true);
+  await run('resume', send); expect(send).not.toHaveBeenCalled();
+  const now = Date.now(); jest.spyOn(Date, 'now').mockReturnValue(now + 30_001);
+  const summary = await run('relaunch', send);
+  expect(summary).toMatchObject({ replayed: 2, remaining: 0, dropped: 0 });
+  expect(send.mock.calls.map(call => (call as unknown as [typeof entry])[0].args.operationKey)).toEqual(['stable', 'stable-two']);
+  expect(await store.read(key)).toEqual([]);
 });

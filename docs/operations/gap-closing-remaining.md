@@ -367,7 +367,7 @@ of their respective slices; this audit takes precedence for completion status.
 - Due entries are filtered before selecting the oldest 20 operations, so a batch of delayed retries cannot starve later ready expenses.
 - Legacy/native replay now shares the transactional path's 20-entry and 45-second request-start bounds. Transactional replay checks elapsed time again after awaiting storage, before starting HTTP. An in-flight expense request retains its existing 15-second timeout; the drain budget does not cancel an already-started request.
 - Automated coverage exercises a second bounded drain, backoff starvation, foreground resume with the original operation key and listener cleanup, account fencing, interrupted per-entry commits, lease replacement, concurrent discard, authentication pause and retained permanent rejection.
-- Encrypted native storage and actual native suspend/kill/relaunch/key-loss evidence remain open; this completes the bounded replay implementation and automated lifecycle slice only.
+- Native encryption is now implemented (see the continuation below). Actual native suspend/kill/relaunch/key-loss evidence remains open; automated lifecycle coverage does not establish device acceptance.
 
 Validation: four focused frontend suites / 56 tests passed; frontend TypeScript check and `git diff --check` passed. The full frontend/backend suites were not rerun for this slice.
 
@@ -385,3 +385,14 @@ Implemented the signed receiver integration boundary and Gmail confirmation stat
 ### Native encryption and recovery continuation — 2026-10-20
 
 SQLCipher/SecureStore implementation and automated transaction/recovery checks now close the native-store implementation slice. Earlier entries describing plaintext native storage are historical. See [the runbook](gap-closing-native-storage.md) for migration, key-loss behavior and device release checks. Native hardware/build acceptance is still open; losing a device key cannot recover unsynced plaintext from ciphertext.
+
+
+### Expense foreground/resume recovery — 2026-10-20
+
+- Added a foreground generation fence to both transactional and legacy replay. Background/inactive transitions and unmount invalidate the old drain synchronously, including background/active events batched into one React render. Its outstanding HTTP request remains bounded by the existing 15-second timeout; an ambiguous response retains the same operation key for safe retry.
+- Retry ticks run only while foregrounded and able to sync. A resume/account change that raced an in-flight drain is woken after that drain unlocks. Successful bounded batches have a 250 ms continuation fallback, so a large queue does not depend on another foreground event; normal queue-progress renders may trigger the next batch earlier. Each drain remains capped at 20 due entries and a 45-second request-start budget, now including lease acquisition.
+- Auth pauses are scoped to account, environment and credential. Explicit retry wakes the scheduler. Timer/listener cleanup and stale UI callbacks are fenced on unmount.
+- Added tests for background launch, batched suspend/resume during HTTP, unmount/relaunch with original operation keys, multi-batch continuation, slow lease acquisition, an abandoned process lease, and suspension/lease recovery through the native SQLCipher adapter (with mocked native encryption/key APIs and real SQLite transactions).
+- Real-device background throttling, forced process death, OS restore and secure-key behavior still require the named Android/iOS acceptance in [the native storage runbook](gap-closing-native-storage.md). No native hardware execution is claimed.
+
+Validation: all 263 frontend suites / 1,726 tests passed, including 79 focused replay/expense/native-store tests. Frontend TypeScript and `git diff --check` passed. Backend code was unchanged; backend suites were not rerun.

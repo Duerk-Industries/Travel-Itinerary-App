@@ -15,13 +15,13 @@ export const replayTransactionalPending = async (options: {
 }): Promise<ReplaySummary> => {
   const { store, key, token, current } = options;
   const summary: ReplaySummary = { replayed: 0, remaining: 0, dropped: 0, failed: 0, paused: false };
+  const started = Date.now();
   if (!current() || !await store.claim(key, token, PENDING_REPLAY_LEASE_MS)) return summary;
   let owned = true;
   const heartbeat = setInterval(() => {
     if (!current()) { owned = false; return; }
     void store.renew(key, token, PENDING_REPLAY_LEASE_MS).then(ok => { if (!ok) owned = false; }).catch(() => { owned = false; });
   }, 10_000);
-  const started = Date.now();
   try {
     const eligibleAt = Date.now();
     const snapshot = (await store.read(key)).filter(entry => entry.status !== 'failed'

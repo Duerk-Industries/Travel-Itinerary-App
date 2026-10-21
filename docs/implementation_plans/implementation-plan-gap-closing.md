@@ -575,6 +575,9 @@ Production values may differ from these seed defaults; §4.1 checks them.
 
 ### 5.3 Offline expenses with idempotent replay (P2)
 
+**Lifecycle continuation (2026-10-20):** Bounded drains now include lease-acquisition time in the 45-second request-start budget. Foreground generations fence background/inactive transitions, batched suspend/resume and unmount; stale responses retain the original operation for idempotent retry and cannot update the current UI. Retry timers stop while offline/backgrounded, and remaining successful batches schedule continuation after yielding. A resume that arrives before the old drain releases its lock is woken again on completion. Automated hook, replay and native-adapter tests cover these paths, including abandoned-lease expiry. Actual named-device suspend/kill/relaunch acceptance remains a release gate.
+
+
 **Implementation status (2026-10-19) — first slice built; not yet released.**
 
 Built and tested:

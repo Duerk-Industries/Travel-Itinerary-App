@@ -162,3 +162,72 @@ it('retries a due expense on foreground resume with the same operation key and r
     expect(subscription.remove).toHaveBeenCalled();
   } finally { clock?.mockRestore(); global.fetch = originalFetch; }
 });
+
+describe('expense replay lifecycle recovery', () => {
+  const originalFetch = global.fetch;
+  const emit = (state: 'active' | 'background' | 'inactive') => {
+    const calls = jest.mocked(AppState.addEventListener).mock.calls;
+    act(() => calls[calls.length - 1][1](state));
+  };
+  beforeEach(() => { window.localStorage.clear(); AppState.currentState = 'active'; });
+  afterEach(() => { global.fetch = originalFetch; AppState.currentState = 'active'; jest.restoreAllMocks(); });
+
+  it('does not start requests in the background and resumes when active', async () => {
+    AppState.currentState = 'background';
+    const send = jest.fn(async () => reply(201, { id: 'foreground' })); global.fetch = send;
+    const hook = setup({ userId: 'background-owner', canSync: true });
+    await act(async () => { await hook.result.current.queueExpense(newPendingExpenseArgs(payload)); });
+    act(() => hook.result.current.syncNow());
+    expect(send).not.toHaveBeenCalled(); expect(hook.result.current.entries).toHaveLength(1);
+    emit('active');
+    await waitFor(() => expect(hook.result.current.entries).toHaveLength(0));
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('fences a response across a batched suspend/resume and wakes after the old drain unlocks', async () => {
+    let resolve!: (response: Response) => void;
+    const send = jest.fn(() => new Promise<Response>(done => { resolve = done; })); global.fetch = send;
+    const hook = setup({ userId: 'suspend-owner', canSync: true });
+    const args = newPendingExpenseArgs(payload);
+    await act(async () => { await hook.result.current.queueExpense(args); });
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const calls = jest.mocked(AppState.addEventListener).mock.calls;
+    const listener = calls[calls.length - 1][1];
+    act(() => { listener('background'); listener('active'); });
+    send.mockImplementation(async () => reply(200, { id: 'same-server-expense' }));
+    await act(async () => { resolve(reply(201, { id: 'stale-response' })); });
+    await waitFor(() => expect(hook.result.current.entries).toHaveLength(0));
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(hook.onSynced).toHaveBeenCalledTimes(1);
+    expect(hook.onSynced).toHaveBeenCalledWith({ id: 'same-server-expense' }, payload.tripId);
+    for (const call of send.mock.calls) expect(((call as unknown as [string, RequestInit])[1].headers as Record<string, string>)['Idempotency-Key']).toBe(args.operationKey);
+  });
+
+  it('keeps an in-flight operation durable across unmount/relaunch and suppresses stale UI callbacks', async () => {
+    let resolve!: (response: Response) => void;
+    const send = jest.fn(() => new Promise<Response>(done => { resolve = done; })); global.fetch = send;
+    const first = setup({ userId: 'relaunch-owner', canSync: true });
+    const args = newPendingExpenseArgs(payload);
+    await act(async () => { await first.result.current.queueExpense(args); });
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    first.unmount();
+    await act(async () => { resolve(reply(201, { id: 'committed-before-kill' })); });
+    expect(first.onSynced).not.toHaveBeenCalled();
+    send.mockImplementation(async () => reply(200, { id: 'committed-before-kill' }));
+    const next = setup({ userId: 'relaunch-owner', canSync: true });
+    await waitFor(() => expect(next.result.current.entries).toHaveLength(0));
+    expect(send).toHaveBeenCalledTimes(2);
+    for (const call of send.mock.calls) expect(((call as unknown as [string, RequestInit])[1].headers as Record<string, string>)['Idempotency-Key']).toBe(args.operationKey);
+  });
+
+  it('yields after a bounded batch and schedules the remaining work without waiting for another resume', async () => {
+    const send = jest.fn(async () => reply(201, { id: 'synced' })); global.fetch = send;
+    const hook = setup({ userId: 'batch-owner', canSync: false });
+    await act(async () => {
+      for (let n = 0; n < 25; n++) await hook.result.current.queueExpense(newPendingExpenseArgs(payload));
+    });
+    hook.rerender({ userId: 'batch-owner', canSync: true });
+    await waitFor(() => expect(hook.result.current.entries).toHaveLength(0));
+    expect(send).toHaveBeenCalledTimes(25);
+  });
+});
