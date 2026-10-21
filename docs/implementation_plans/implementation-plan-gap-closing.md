@@ -733,6 +733,12 @@ implementation PRs may extend existing suites; do not build tests that merely mi
 
 ## 9. Definition of Done and Release Evidence
 
+The [release evidence runbook](../operations/gap-closing-evidence.md) and
+`npm run evidence:gap` provide a pending-first packet and an executable checker for
+deployment, named devices, accessibility/usability, performance and import quality.
+Recorded results require hashed artifacts and exact commit/environment identity;
+source tests do not substitute for external execution.
+
 A slice is done when its user task and failure recovery pass, its supported adapters/platforms
 are verified, measured security/performance/cost targets meet the declared gate, and its
 migration, owner, rollout flag and rollback are documented. Include exact test commands,

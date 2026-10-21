@@ -314,6 +314,12 @@ silently orphaning existing financial work under a new hash.
 
 ## External evidence still required
 
+Collection and validation now have a [five-area evidence runbook](gap-closing-evidence.md)
+and `npm run evidence:gap -- init|check <packet.json> <environment>`. The checker binds
+observations to the release commit/environment and hashed local artifacts, enforces freshness,
+required coverage, performance budgets and audited assignment-quality gates. This tooling
+does not itself establish any of the external observations listed below.
+
 - Production flag/settings and map object inventory; reviewed provider-storage
   rights; actual provider/scanner readiness, receiver forwarding trials, scheduler
   configuration and multi-instance recovery.

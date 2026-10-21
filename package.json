@@ -36,6 +36,8 @@
     "sync:analytics-registry": "node scripts/sync-analytics-registry.mjs",
     "check:analytics-registry": "node scripts/sync-analytics-registry.mjs --check",
     "check:analytics-release": "node scripts/analytics-release-gate.mjs",
+    "evidence:gap": "tsx scripts/gap-evidence.ts",
+    "test:evidence:gap": "npm --prefix server test -- --runInBand __tests__/deploy/gapEvidence.test.ts",
     "smoke:analytics": "node scripts/analytics-smoke.mjs",
     "lint": "npm run lint:app && npm run lint:server && npm run lint:messaging && npm run lint:domain",
     "test": "npm run test:app && npm run test:server",
