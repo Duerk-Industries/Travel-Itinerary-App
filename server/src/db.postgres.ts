@@ -5170,6 +5170,44 @@ export const getCarRentalById = async (id: string): Promise<CarRental | null> =>
   };
 };
 
+export type ItemCoordinateKind = 'lodging' | 'activity' | 'car_rental';
+export type ItemCoordinates = {
+  lat?: number | null;
+  lng?: number | null;
+  coordinateSource: 'catalog' | 'airport' | 'manual' | 'geocoder';
+  /** Car rentals only: the drop-off point. */
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
+};
+
+/** Stores coordinates (and where they came from) on a lodging, activity or car rental the caller can edit. */
+export const setItemCoordinates = async (
+  userId: string,
+  kind: ItemCoordinateKind,
+  itemId: string,
+  coordinates: ItemCoordinates
+): Promise<boolean> => {
+  const p = getPool();
+  const table = kind === 'lodging' ? 'lodgings' : kind === 'activity' ? 'tours' : 'car_rentals';
+  // Item ids are UUIDs; anything else cannot exist (and would make Postgres reject the query).
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId)) return false;
+  const { rows } = await p.query<{ trip_id: string }>(`SELECT trip_id FROM ${table} WHERE id = $1`, [itemId]);
+  if (!rows.length) return false;
+  if (!(await ensureUserInTrip(rows[0].trip_id, userId))) throw new Error('Not authorized to update this trip');
+  if (kind === 'car_rental') {
+    await p.query(
+      `UPDATE car_rentals SET lat = $2, lng = $3, dropoff_lat = $4, dropoff_lng = $5, coordinate_source = $6 WHERE id = $1`,
+      [itemId, coordinates.lat ?? null, coordinates.lng ?? null, coordinates.dropoffLat ?? null, coordinates.dropoffLng ?? null, coordinates.coordinateSource]
+    );
+  } else {
+    await p.query(
+      `UPDATE ${table} SET lat = $2, lng = $3, coordinate_source = $4 WHERE id = $1`,
+      [itemId, coordinates.lat ?? null, coordinates.lng ?? null, coordinates.coordinateSource]
+    );
+  }
+  return true;
+};
+
 export const insertCarRental = async (rental: Omit<CarRental, 'id' | 'createdAt'>): Promise<CarRental> => {
   const p = getPool();
   const id = randomUUID();

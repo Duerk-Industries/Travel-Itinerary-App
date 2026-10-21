@@ -27,7 +27,7 @@ import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './con
 import { getBillingPlanConfig } from './db';
 import { startScheduledAggregation } from './ai/analytics/scheduledAggregation';
 import { syncPackingPresetCatalogFromDisk } from './services/packingListCatalogService';
-import { assertMailAdmissionReady } from './ingestion/worker/mailReceiptWorker';
+import { mailAdmissionProblems } from './ingestion/worker/mailReceiptWorker';
 import { isFeatureEnabled } from './services/entitlementService';
 import { refreshMeanVector } from './services/meanVectorService';
 
@@ -93,7 +93,12 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await initDb();
     await seedEntitlementDefaults();
     await applyStartupFeatureFlagOverrides();
-    if (await isFeatureEnabled('feature_ingest_forwarded_mailbox')) assertMailAdmissionReady();
+    if (await isFeatureEnabled('feature_ingest_forwarded_mailbox')) {
+      // An unfinished mailbox setup must not take the whole API (and the admin panel needed to fix it)
+      // offline. Intake and the scheduler still refuse mail until this is resolved, so nothing is admitted unscanned.
+      const problems = mailAdmissionProblems();
+      if (problems.length) logError(`[startup] Forwarded mailbox is enabled but not ready, so it will not accept mail: ${problems.join('; ')}. The rest of the API is running.`);
+    }
     await syncPackingPresetCatalogFromDisk();
     await warnIfStripePricesUnconfigured(getBillingPlanConfig);
     await seedDefaultTestAccountsIfEnabled();

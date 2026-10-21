@@ -46,6 +46,18 @@ const field = (label: string, value: unknown): string => {
   return clean ? `<div class="field"><span>${escapeHtml(label)}</span><strong>${escapeHtml(clean)}</strong></div>` : '';
 };
 
+// Coordinates are printed only when the item has them, so the importer can restore them. The
+// source ("catalog", "airport", "manual", "geocoder") travels with them for provenance.
+const coordinate = (lat: unknown, lng: unknown): string => {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  const present = lat !== null && lat !== undefined && lng !== null && lng !== undefined;
+  return present && Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
+    ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` : '';
+};
+const coordinateFields = (item: PrintableRecord, hasCoordinates: boolean): string =>
+  hasCoordinates ? field('Coordinate source', item.coordinateSource) : '';
+
 const renderFlight = (flight: PrintableRecord, currency: string): string => {
   const dep = flight.departure_location || flight.departure_airport_code || 'Departure';
   const arr = flight.arrival_location || flight.arrival_airport_code || 'Arrival';
@@ -70,6 +82,7 @@ const renderLodging = (lodging: PrintableRecord, currency: string): string => `<
     ${field('Address', lodging.address)}${field('Rooms', lodging.rooms)}${field('Status', lodging.status)}
     ${field('Refund by', lodging.refundBy ? formatDate(lodging.refundBy) : '')}
     ${lodging.totalCost ? field('Total', money(lodging.totalCost, currency)) : ''}${lodging.costPerNight ? field('Per night', money(lodging.costPerNight, currency)) : ''}
+    ${field('Coordinates', coordinate(lodging.lat, lodging.lng))}${coordinateFields(lodging, Boolean(coordinate(lodging.lat, lodging.lng)))}
   </div>
 </article>`;
 
@@ -77,8 +90,9 @@ const renderTour = (tour: PrintableRecord, currency: string): string => `<articl
   <div class="item-heading"><span class="item-kind">Activity</span><h3>${text(tour.name)}</h3></div>
   <div class="fields">
     ${field('Time', tour.startTime)}${field('Location', tour.startLocation)}${field('Duration', tour.duration)}
-    ${field('Status', tour.status)}${field('Booking reference', tour.reference)}${tour.cost ? field('Cost', money(tour.cost, currency)) : ''}
+    ${field('Status', tour.status)}${field('Category', tour.activityType)}${field('Booking reference', tour.reference)}${tour.cost ? field('Cost', money(tour.cost, currency)) : ''}
     ${field('Free cancellation by', tour.freeCancelBy ? formatDate(tour.freeCancelBy) : '')}
+    ${field('Coordinates', coordinate(tour.lat, tour.lng))}${coordinateFields(tour, Boolean(coordinate(tour.lat, tour.lng)))}
   </div>
 </article>`;
 
@@ -88,8 +102,9 @@ const renderRental = (rental: PrintableRecord, currency: string): string => `<ar
     ${field('Vehicle', rental.model)}${field('Pick up', `${formatDate(rental.pickupDate)} · ${rental.pickupLocation || 'Location TBD'}`)}
     ${field('Drop off', `${formatDate(rental.dropoffDate)} · ${rental.dropoffLocation || 'Location TBD'}`)}
     ${field('Reference', rental.reference)}${field('Prepaid', rental.prepaid)}${rental.cost ? field('Cost', money(rental.cost, currency)) : ''}
+    ${field('Pick-up coordinates', coordinate(rental.lat, rental.lng))}${field('Drop-off coordinates', coordinate(rental.dropoffLat, rental.dropoffLng))}
+    ${coordinateFields(rental, Boolean(coordinate(rental.lat, rental.lng) || coordinate(rental.dropoffLat, rental.dropoffLng)))}${field('Notes', rental.notes)}
   </div>
-  ${rental.notes ? `<p class="item-note">${text(rental.notes)}</p>` : ''}
 </article>`;
 
 const renderDetail = (detail: PrintableRecord): string => {

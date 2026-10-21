@@ -142,8 +142,11 @@ const corsOptions: cors.CorsOptions = {
     return callback(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent', 'X-Public-Visitor-Id'],
-  exposedHeaders: ['X-Request-Id'],
+  // Every non-safelisted header the web app sends must be listed, or the browser blocks the request at its
+  // preflight when the app and API are on different origins (as in local development).
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key', 'X-Analytics-Consent', 'X-Public-Visitor-Id', 'X-Device-Timezone', 'If-None-Match'],
+  // The trip bundle's ETag and an idempotent replay marker are read by client code.
+  exposedHeaders: ['X-Request-Id', 'ETag', 'Idempotent-Replayed'],
 };
 
 app.use((req, res, next) => {

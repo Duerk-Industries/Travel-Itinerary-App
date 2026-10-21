@@ -13,6 +13,7 @@ import {
   listLodgings,
   listItineraries,
   listItineraryDetails,
+  setItemCoordinates,
   updateTripDetails,
 } from '../db';
 import { createAiCallContext } from '../ai/registry/correlation';
@@ -23,10 +24,12 @@ import { estimateAiCostMicros } from '../apis/providerBudgeting';
 import { createTtlCache } from '../utils/ttlCache';
 import { createHash } from 'crypto';
 import { logError } from '../logger';
+import { isWanderBunniesPrint, parseWanderBunniesPrint, type PrintedDetail } from './wanderBunniesPrintParser';
 
 export const ITINERARY_DOCUMENT_IMPORT_FEATURE_KEY = 'itinerary_document_import';
 const CALLER_ID = 'ITINERARY_DOCUMENT_IMPORT';
 const MAX_DOCUMENT_CHARS = 60_000;
+const MAX_PRINTED_DOCUMENT_CHARS = 400_000;
 const ACTIVITY_CHUNK_MAX_CHARS = 8_000;
 
 export type ItineraryDocumentDaySection = {
@@ -90,6 +93,21 @@ export type ItineraryDocumentCandidate = {
   flight?: { departureLocation: string | null; arrivalLocation: string | null; carrier: string | null; transferType?: string | null };
   hotel?: { address: string | null };
   carRental?: { pickupLocation: string | null; dropoffLocation: string | null; vendor: string | null };
+  /** Set when the document is a WanderBunnies printout, which records these exactly. */
+  status?: string | null;
+  refundBy?: string | null;
+  costPerNight?: number | null;
+  freeCancelBy?: string | null;
+  travelerNames?: string | null;
+  /** Coordinates recorded in a WanderBunnies printout, with where they came from. */
+  lat?: number | null;
+  lng?: number | null;
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
+  coordinateSource?: 'catalog' | 'airport' | 'manual' | 'geocoder';
+  layoverLocation?: string | null;
+  layoverDuration?: string | null;
+  prepaid?: string | null;
   activity?: { activityType: string | null; startLocation: string | null };
 };
 
@@ -106,6 +124,10 @@ export type ExtractedItineraryDocument = {
   candidates: ItineraryDocumentCandidate[];
   unassignedNotes: string;
   dayNotes: Array<{ day: number | null; date: string | null; title: string | null; body: string; sourceExcerpt: string }>;
+  /** Day-plan items (places, notes, checklists, custom activities) from a WanderBunnies printout. */
+  details?: PrintedDetail[];
+  /** Currency printed on a WanderBunnies printout's cover. */
+  currency?: string | null;
   usage: { promptTokens: number; completionTokens: number; estimatedCostUsd: number };
 };
 
@@ -118,6 +140,8 @@ export type ImportDocumentResult = {
   skippedUnparseable: Array<{ type: ImportResultItemType; name: string; summary: string; excerpt: string; reason: string }>;
   notesAppended: boolean;
   notesPreview: string | null;
+  /** Things worth checking before confirming, such as amounts in a different currency. */
+  warnings?: string[];
   usage: { promptTokens: number; completionTokens: number; estimatedCostUsd: number };
 };
 export type ItineraryDocumentImportResult = ImportDocumentResult;
@@ -398,6 +422,16 @@ export const extractItineraryDocumentCandidates = async (params: {
 }): Promise<ExtractedItineraryDocument> => {
   const documentText = params.documentText.trim();
   if (!documentText) throw new Error('Document text is required');
+
+  // A WanderBunnies printout is read directly: every flight, train, stay, activity, rental and
+  // day-plan item is recovered exactly, with no model call, key or cost. The 60k limit exists for
+  // the model, so a long trip gets a larger bound here.
+  if (documentText.length <= MAX_PRINTED_DOCUMENT_CHARS && isWanderBunniesPrint(documentText)) {
+    const printed = parseWanderBunniesPrint(documentText);
+    if (printed.candidates.length || printed.details.length) {
+      return { candidates: printed.candidates, details: printed.details, currency: printed.currency, unassignedNotes: '', dayNotes: [], usage: { promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 } };
+    }
+  }
   if (documentText.length > MAX_DOCUMENT_CHARS) throw new Error(`Document text exceeds the ${MAX_DOCUMENT_CHARS}-character limit`);
 
   const cacheKey = getDocumentHash(documentText, params.userId);
@@ -518,6 +552,10 @@ const sharesNameToken = (left: unknown, right: unknown): boolean => {
   const rightTokens = new Set(normalize(right).split(' ').filter((token) => token.length > 2 && !ignored.has(token)));
   return leftTokens.some((token) => rightTokens.has(token));
 };
+const clockTime = (value: unknown): string | null => {
+  const match = /(\d{1,2}):(\d{2})/.exec(String(value ?? ''));
+  return match ? `${match[1].padStart(2, '0')}:${match[2]}` : null;
+};
 const dayDistance = (left: unknown, right: unknown): number => {
   const a = Date.parse(String(left ?? '')); const b = Date.parse(String(right ?? ''));
   return Number.isFinite(a) && Number.isFinite(b) ? Math.abs(a - b) / 86_400_000 : Number.POSITIVE_INFINITY;
@@ -536,16 +574,29 @@ export const isDuplicateItineraryCandidate = (
     const date = candidate.departureDate ?? candidate.date;
     const departure = candidate.departureLocation ?? candidate.flight?.departureLocation ?? candidate.location;
     const arrival = candidate.arrivalLocation ?? candidate.flight?.arrivalLocation;
-    return existing.flights.some((item) => dayDistance(date, item.departureDate) <= 1
-      && (overlapsText(departure, item.departureLocation ?? item.departureAirportCode)
-        || overlapsText(arrival, item.arrivalLocation ?? item.arrivalAirportCode)));
+    return existing.flights.some((item) => {
+      if (dayDistance(date, item.departureDate) > 1) return false;
+      const sameDeparture = overlapsText(departure, item.departureLocation ?? item.departureAirportCode);
+      const sameArrival = overlapsText(arrival, item.arrivalLocation ?? item.arrivalAirportCode);
+      if (sameDeparture && sameArrival) return true;
+      if (!sameDeparture && !sameArrival) return false;
+      // One shared endpoint (a hub such as Tokyo) is only a duplicate when the departure times
+      // agree or are unknown; two trains out of the same station at different times are two trips.
+      const left = clockTime(candidate.departureTime); const right = clockTime(item.departureTime);
+      return !left || !right || left === right;
+    });
   }
   if (candidate.type === 'hotel') {
     return existing.lodgings.some((item) => rangesOverlap(candidate.checkInDate ?? candidate.date, candidate.checkOutDate ?? candidate.endDate, item.checkInDate ?? item.check_in_date, item.checkOutDate ?? item.check_out_date)
       && (sharesNameToken(candidate.name ?? candidate.providerVendor, item.name) || overlapsText(candidate.address ?? candidate.hotel?.address, item.address)));
   }
   if (candidate.type === 'tour_activity') {
-    return existing.activities.some((item) => (candidate.activityDate ?? candidate.date) === item.date && overlapsText(candidate.name, item.name));
+    return existing.activities.some((item) => {
+      if ((candidate.activityDate ?? candidate.date) !== item.date || !overlapsText(candidate.name, item.name)) return false;
+      // The same place visited twice in a day (morning and evening) is two activities.
+      const left = clockTime(candidate.activityTime); const right = clockTime(item.startTime);
+      return !left || !right || left === right;
+    });
   }
   return existing.carRentals.some((item) => (candidate.pickupDate ?? candidate.date) === item.pickupDate
     && (overlapsText(candidate.providerVendor ?? candidate.carRental?.vendor, item.vendor) || overlapsText(candidate.pickupLocation ?? candidate.carRental?.pickupLocation ?? candidate.location, item.pickupLocation)));
@@ -570,6 +621,9 @@ export const findExistingTripItemMatches = (
   }));
   return match ? [{ candidateIndex, existingId: String(match.id ?? ''), existingType: candidate.type, reason: 'Matches an existing trip item by date and normalized identifying fields' }] : [];
 });
+
+const itineraryStatus = (value: string | null | undefined): 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed' =>
+  value === 'Needed' || value === 'Booked' || value === 'Cancelled' || value === 'Completed' ? value : 'Proposed';
 
 const summarize = (candidate: ItineraryDocumentCandidate): string =>
   candidate.name || candidate.flightNumber || candidate.providerVendor || candidate.departureLocation || candidate.pickupLocation || candidate.type.replace(/_/g, ' ');
@@ -621,13 +675,36 @@ const addCandidateToMatchSet = (
   id: string
 ): void => {
   if (candidate.type === 'tour_activity') {
-    existing.activities.push({ id, name: candidate.name, date: candidate.activityDate ?? candidate.date });
+    existing.activities.push({ id, name: candidate.name, date: candidate.activityDate ?? candidate.date, startTime: candidate.activityTime });
   } else if (candidate.type === 'hotel') {
     existing.lodgings.push({ id, name: candidate.name, address: candidate.address ?? candidate.hotel?.address, checkInDate: candidate.checkInDate ?? candidate.date, checkOutDate: candidate.checkOutDate ?? candidate.endDate });
   } else if (candidate.type === 'car_rental') {
     existing.carRentals.push({ id, pickupDate: candidate.pickupDate ?? candidate.date, vendor: candidate.providerVendor ?? candidate.carRental?.vendor, pickupLocation: candidate.pickupLocation ?? candidate.carRental?.pickupLocation ?? candidate.location });
   } else {
-    existing.flights.push({ id, departureDate: candidate.departureDate ?? candidate.date, departureLocation: candidate.departureLocation ?? candidate.flight?.departureLocation ?? candidate.location, arrivalLocation: candidate.arrivalLocation ?? candidate.flight?.arrivalLocation });
+    existing.flights.push({ id, departureTime: candidate.departureTime, departureDate: candidate.departureDate ?? candidate.date, departureLocation: candidate.departureLocation ?? candidate.flight?.departureLocation ?? candidate.location, arrivalLocation: candidate.arrivalLocation ?? candidate.flight?.arrivalLocation });
+  }
+};
+
+/** Puts map coordinates recorded in a WanderBunnies printout back on the item just created. */
+const restoreCoordinates = async (
+  userId: string,
+  candidate: ItineraryDocumentCandidate,
+  itemId: string,
+  warnings: string[]
+): Promise<void> => {
+  const kind = candidate.type === 'hotel' ? 'lodging' : candidate.type === 'tour_activity' ? 'activity' : candidate.type === 'car_rental' ? 'car_rental' : null;
+  const located = candidate.lat != null || candidate.lng != null || candidate.dropoffLat != null || candidate.dropoffLng != null;
+  if (!kind || !located || !candidate.coordinateSource) return;
+  try {
+    await setItemCoordinates(userId, kind, itemId, {
+      lat: candidate.lat, lng: candidate.lng, dropoffLat: candidate.dropoffLat, dropoffLng: candidate.dropoffLng,
+      coordinateSource: candidate.coordinateSource,
+    });
+  } catch (error) {
+    // The booking itself is saved; a missing map pin never fails the import.
+    logError('[itinerary-document-import] could not restore coordinates', error);
+    const message = 'Some map locations could not be saved; those items were still added without a map pin.';
+    if (!warnings.includes(message)) warnings.push(message);
   }
 };
 
@@ -651,6 +728,13 @@ export const importItineraryDocument = async (params: {
   ]);
   const existing = { flights, lodgings, activities, carRentals };
   const result: ImportDocumentResult = { dryRun: params.dryRun, added: [], skippedDuplicates: [], skippedUnparseable: [], notesAppended: false, notesPreview: null, usage: extracted.usage };
+  const warnings: string[] = [];
+  const documentCurrency = extracted.currency?.trim().toUpperCase();
+  const tripCurrency = trip.currency?.trim().toUpperCase();
+  if (documentCurrency && tripCurrency && documentCurrency !== tripCurrency) {
+    // Items carry no currency of their own, so amounts are kept as printed rather than guessed at.
+    warnings.push(`This document's amounts are in ${documentCurrency}, but this trip uses ${tripCurrency}. Amounts are imported as printed and are not converted, so check the costs.`);
+  }
 
   for (const extractedCandidate of extracted.candidates) {
     const inferredDate = dateForTripDay(trip.startDate, extractedCandidate.day);
@@ -672,31 +756,47 @@ export const importItineraryDocument = async (params: {
       const checkInDate = candidate.checkInDate ?? candidate.date!;
       const checkOutDate = candidate.checkOutDate ?? candidate.endDate!;
       const nights = Math.max(1, Math.round(dayDistance(checkInDate, checkOutDate)));
-      created = await insertLodging({ userId: params.userId, tripId: params.tripId, status: 'Proposed', name: candidate.name!, checkInDate, checkOutDate, rooms: candidate.rooms ?? 1, totalCost: candidate.totalCost ?? 0, costPerNight: (candidate.totalCost ?? 0) / nights, address: candidate.address ?? candidate.hotel?.address ?? candidate.location ?? '', paid_by: [], traveler_ids: [] });
+      created = await insertLodging({ userId: params.userId, tripId: params.tripId, status: itineraryStatus(candidate.status), name: candidate.name!, checkInDate, checkOutDate, rooms: candidate.rooms ?? 1, refundBy: candidate.refundBy ?? null, totalCost: candidate.totalCost ?? 0, costPerNight: candidate.costPerNight ?? (candidate.totalCost ?? 0) / nights, address: candidate.address ?? candidate.hotel?.address ?? candidate.location ?? '', paid_by: [], traveler_ids: [] });
     } else if (candidate.type === 'tour_activity') {
-      const activityType = (candidate.activity?.activityType as any) || 'Tour';
-      created = await insertActivity({ userId: params.userId, tripId: params.tripId, status: 'Proposed', activityType, date: candidate.activityDate ?? candidate.date!, name: candidate.name!, startLocation: candidate.activity?.startLocation ?? candidate.location ?? candidate.address ?? '', startTime: candidate.activityTime ?? '', duration: candidate.duration ?? '', cost: candidate.totalCost ?? 0, bookedOn: '', reference: candidate.confirmationNumber ?? '', notes: candidate.notes ?? '', paidBy: [], travelerIds: [] });
+      const activityType = (candidate.activity?.activityType as any) || (candidate.status !== undefined ? 'Other' : 'Tour');
+      created = await insertActivity({ userId: params.userId, tripId: params.tripId, status: itineraryStatus(candidate.status), activityType, freeCancelBy: candidate.freeCancelBy ?? null, date: candidate.activityDate ?? candidate.date!, name: candidate.name!, startLocation: candidate.activity?.startLocation ?? candidate.location ?? candidate.address ?? '', startTime: candidate.activityTime ?? '', duration: candidate.duration ?? '', cost: candidate.totalCost ?? 0, bookedOn: '', reference: candidate.confirmationNumber ?? '', notes: candidate.notes ?? '', paidBy: [], travelerIds: [] });
     } else if (candidate.type === 'car_rental') {
       const pickupDate = candidate.pickupDate ?? candidate.date!;
-      created = await insertCarRental({ userId: params.userId, tripId: params.tripId, status: 'Proposed', pickupLocation: candidate.pickupLocation ?? candidate.carRental?.pickupLocation ?? candidate.location!, pickupDate, dropoffLocation: candidate.dropoffLocation ?? candidate.carRental?.dropoffLocation ?? '', dropoffDate: candidate.dropoffDate ?? candidate.endDate ?? pickupDate, reference: candidate.confirmationNumber ?? '', vendor: candidate.providerVendor ?? candidate.carRental?.vendor ?? '', prepaid: '', cost: candidate.totalCost ?? 0, model: candidate.vehicleType ?? '', notes: candidate.notes ?? '', paidBy: [], travelerIds: [] });
+      created = await insertCarRental({ userId: params.userId, tripId: params.tripId, status: itineraryStatus(candidate.status), pickupLocation: candidate.pickupLocation ?? candidate.carRental?.pickupLocation ?? candidate.location!, pickupDate, dropoffLocation: candidate.dropoffLocation ?? candidate.carRental?.dropoffLocation ?? '', dropoffDate: candidate.dropoffDate ?? candidate.endDate ?? pickupDate, reference: candidate.confirmationNumber ?? '', vendor: candidate.providerVendor ?? candidate.carRental?.vendor ?? '', prepaid: candidate.prepaid ?? '', cost: candidate.totalCost ?? 0, model: candidate.vehicleType ?? '', notes: candidate.notes ?? '', paidBy: [], travelerIds: [] });
     } else {
       const transferType = (candidate.flight?.transferType as any) || (candidate.type === 'flight' ? 'Flight' : candidate.type === 'rail' ? 'Train' : 'Other');
       const departureDate = candidate.departureDate ?? candidate.date!;
-      created = await insertFlight({ userId: params.userId, tripId: params.tripId, status: 'Proposed', transferType, passengerName: '', passengerIds: [], departureDate, arrivalDate: candidate.arrivalDate ?? candidate.endDate ?? departureDate, departureLocation: candidate.departureLocation ?? candidate.flight?.departureLocation ?? candidate.location!, departureTime: candidate.departureTime ?? '', arrivalLocation: candidate.arrivalLocation ?? candidate.flight?.arrivalLocation!, arrivalTime: candidate.arrivalTime ?? '', cost: candidate.totalCost ?? 0, carrier: candidate.carrier ?? candidate.flight?.carrier ?? candidate.providerVendor ?? '', flightNumber: candidate.flightNumber ?? '', bookingReference: candidate.confirmationNumber ?? '', paidBy: [] });
+      created = await insertFlight({ userId: params.userId, tripId: params.tripId, status: itineraryStatus(candidate.status), transferType, passengerName: candidate.travelerNames ?? '', layoverLocation: candidate.layoverLocation ?? undefined, layoverDuration: candidate.layoverDuration ?? undefined, passengerIds: [], departureDate, arrivalDate: candidate.arrivalDate ?? candidate.endDate ?? departureDate, departureLocation: candidate.departureLocation ?? candidate.flight?.departureLocation ?? candidate.location!, departureTime: candidate.departureTime ?? '', arrivalLocation: candidate.arrivalLocation ?? candidate.flight?.arrivalLocation!, arrivalTime: candidate.arrivalTime ?? '', cost: candidate.totalCost ?? 0, carrier: candidate.carrier ?? candidate.flight?.carrier ?? candidate.providerVendor ?? '', flightNumber: candidate.flightNumber ?? '', bookingReference: candidate.confirmationNumber ?? '', paidBy: [] });
     }
+    await restoreCoordinates(params.userId, candidate, created.id, warnings);
     result.added.push({ type: candidate.type, id: created.id, name: summary, summary });
     // Keep the in-memory match set current so duplicate rows produced by different
     // extraction stages in this same import cannot both be written.
     addCandidateToMatchSet(existing, candidate, created.id);
   }
 
+  let itinerary = itineraries.find((entry) => entry.tripId === params.tripId) ?? null;
+  let existingDetails = extracted.dayNotes.length || extracted.details?.length
+    ? (itinerary ? await listItineraryDetails(params.userId, itinerary.id) : [])
+    : [];
+  const ensureItinerary = async (minimumDays: number) => {
+    if (!itinerary) {
+      itinerary = await createItineraryRecord(
+        params.userId,
+        params.tripId,
+        trip.destination?.trim() || trip.name,
+        inferTripDurationDays(trip, minimumDays),
+        null
+      );
+    }
+    return itinerary;
+  };
+
   if (extracted.dayNotes.length) {
-    let itinerary = itineraries.find((entry) => entry.tripId === params.tripId) ?? null;
     const resolvedNotes = extracted.dayNotes.map((note) => ({
       ...note,
       day: note.day ?? tripDayForDate(trip.startDate, note.date),
     }));
-    let existingDetails = itinerary ? await listItineraryDetails(params.userId, itinerary.id) : [];
     for (const note of resolvedNotes) {
       const name = note.title ?? `Day ${note.day ?? '?'} note`;
       if (!note.day) {
@@ -714,17 +814,8 @@ export const importItineraryDocument = async (params: {
         result.added.push({ type: 'day_note', id: null, name, summary: `${name}: ${note.body}` });
         continue;
       }
-      if (!itinerary) {
-        const minimumDays = Math.max(...resolvedNotes.map((entry) => entry.day ?? 1));
-        itinerary = await createItineraryRecord(
-          params.userId,
-          params.tripId,
-          trip.destination?.trim() || trip.name,
-          inferTripDurationDays(trip, minimumDays),
-          null
-        );
-      }
-      const created = await addItineraryDetail(params.userId, itinerary.id, {
+      const target = await ensureItinerary(Math.max(...resolvedNotes.map((entry) => entry.day ?? 1)));
+      const created = await addItineraryDetail(params.userId, target.id, {
         day: note.day,
         activity: name,
         kind: 'note',
@@ -732,6 +823,47 @@ export const importItineraryDocument = async (params: {
       });
       existingDetails = [...existingDetails, created];
       result.added.push({ type: 'day_note', id: created.id, name, summary: `${name}: ${note.body}` });
+    }
+  }
+
+  // Day-plan items from a WanderBunnies printout (places, notes, checklists, custom activities).
+  // They land on the trip day that matches their printed date, or on the printed day number when
+  // the trip has no start date to compare against.
+  if (extracted.details?.length) {
+    const placed = extracted.details.map((detail) => ({
+      detail,
+      day: trip.startDate ? tripDayForDate(trip.startDate, detail.date) : detail.day,
+    }));
+    for (const { detail, day } of placed) {
+      const name = detail.title;
+      if (!day) {
+        result.skippedUnparseable.push({ type: 'day_note', name, summary: name, excerpt: detail.title, reason: 'This date is before the trip starts' });
+        continue;
+      }
+      const duplicate = existingDetails.find((existingDetail) => existingDetail.day === day
+        && (existingDetail.kind ?? 'activity') === detail.kind
+        && normalize(existingDetail.activity) === normalize(detail.title));
+      if (duplicate) {
+        result.skippedDuplicates.push({ type: 'day_note', name, summary: name, matchedExistingId: duplicate.id, reason: 'The same item already exists on this day' });
+        continue;
+      }
+      const summary = `${detail.kind}: ${name}`;
+      if (params.dryRun) {
+        result.added.push({ type: 'day_note', id: null, name, summary });
+        existingDetails = [...existingDetails, { id: `dry-run:${result.added.length}`, itineraryId: '', day, activity: detail.title, kind: detail.kind } as (typeof existingDetails)[number]];
+        continue;
+      }
+      const target = await ensureItinerary(Math.max(...placed.map((entry) => entry.day ?? 1)));
+      const created = await addItineraryDetail(params.userId, target.id, {
+        day,
+        activity: detail.title,
+        kind: detail.kind,
+        time: detail.time,
+        cost: detail.cost,
+        ...(detail.kind === 'checklist' ? { checklistItems: detail.checklist.map((label, position) => ({ label, position })) } : {}),
+      });
+      existingDetails = [...existingDetails, created];
+      result.added.push({ type: 'day_note', id: created.id, name, summary });
     }
   }
 
@@ -743,6 +875,7 @@ export const importItineraryDocument = async (params: {
       result.notesAppended = true;
     }
   }
+  if (warnings.length) result.warnings = warnings;
   return result;
 };
 

@@ -218,6 +218,8 @@ export const insertActivity = async (...args: Parameters<ReturnType<typeof adapt
   adapter().insertActivity(...args);
 export const insertCarRental = async (...args: Parameters<ReturnType<typeof adapter>['insertCarRental']>) =>
   adapter().insertCarRental(...args);
+export const setItemCoordinates = async (...args: Parameters<ReturnType<typeof adapter>['setItemCoordinates']>) =>
+  adapter().setItemCoordinates(...args);
 export const updateActivity = async (...args: Parameters<ReturnType<typeof adapter>['updateActivity']>) =>
   adapter().updateActivity(...args);
 export const updateCarRental = async (...args: Parameters<ReturnType<typeof adapter>['updateCarRental']>) =>

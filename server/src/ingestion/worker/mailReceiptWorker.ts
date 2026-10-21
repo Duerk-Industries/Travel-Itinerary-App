@@ -13,14 +13,27 @@ import { getVirusScanner } from '../virusScanProviders';
 import { deleteTempBytes } from '../shared/tempStorage';
 import { logError } from '../../logger';
 
+/** Everything missing before forwarded mail may be accepted; empty when it is safe to admit mail. */
+export const mailAdmissionProblems = (): string[] => {
+  if (getEnvValue('NODE_ENV') === 'test') return [];
+  const problems: string[] = [];
+  if (!getEnvFlag('INGESTION_MAIL_RECEIPT_SCHEDULER_READY')) problems.push('INGESTION_MAIL_RECEIPT_SCHEDULER_READY is not set');
+  if (!getEnvValue('INGESTION_ENCRYPTION_SECRET')) problems.push('INGESTION_ENCRYPTION_SECRET is not set');
+  let scanner = '';
+  try { scanner = getVirusScanner().name; } catch { scanner = 'unavailable'; }
+  if (scanner !== 'clamav_http') problems.push(`the virus scanner provider is "${scanner}", not clamav_http`);
+  if (!getEnvValue('INGESTION_VIRUS_SCAN_URL')) problems.push('INGESTION_VIRUS_SCAN_URL is not set');
+  if (!getEnvValue('INGESTION_VIRUS_SCAN_AUTH_TOKEN')) problems.push('INGESTION_VIRUS_SCAN_AUTH_TOKEN is not set');
+  return problems;
+};
+
+/** Throws unless forwarded mail may be admitted. Intake and the scheduler call this so they fail closed. */
 export const assertMailAdmissionReady = (): void => {
-  if (getEnvValue('NODE_ENV') === 'test') return;
-  if (!getEnvFlag('INGESTION_MAIL_RECEIPT_SCHEDULER_READY') || !getEnvValue('INGESTION_ENCRYPTION_SECRET')) {
-    throw new Error('Mail receipt scheduler and encryption must be configured before admission');
-  }
-  if (getVirusScanner().name !== 'clamav_http' || !getEnvValue('INGESTION_VIRUS_SCAN_URL') || !getEnvValue('INGESTION_VIRUS_SCAN_AUTH_TOKEN')) {
-    throw new Error('Forwarded mail requires an authenticated clamav_http scanner');
-  }
+  const problems = mailAdmissionProblems();
+  if (!problems.length) return;
+  throw new Error(problems.some(problem => /SCHEDULER|ENCRYPTION/.test(problem))
+    ? 'Mail receipt scheduler and encryption must be configured before admission'
+    : 'Forwarded mail requires an authenticated clamav_http scanner');
 };
 
 /** Synchronous scheduler invocation: response waits for bounded work. A crash

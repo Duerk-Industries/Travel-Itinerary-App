@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import SaveTripOffline from '../components/SaveTripOffline';
 import * as cache from '../utils/offlineTripCache';
 import * as policy from '../utils/offlineDownloadPolicy';
+import * as breakpoints from '../hooks/useLayoutBreakpoints';
 import { downloadOfflineTripSnapshot } from '../utils/downloadOfflineTripSnapshot';
 
 jest.mock('../utils/offlineTripCache', () => ({ loadOfflineTripCache: jest.fn(async () => null), startOfflineAccessPeriod: jest.fn(async () => ({})), saveOfflineTripSnapshot: jest.fn(async () => undefined) }));
@@ -11,6 +12,7 @@ jest.mock('../utils/offlineDownloadPolicy', () => ({
   ...jest.requireActual('../utils/offlineDownloadPolicy'),
   getConnectionCost: jest.fn(), readWifiOnlyPreference: jest.fn(), writeWifiOnlyPreference: jest.fn(),
 }));
+jest.mock('../hooks/useLayoutBreakpoints', () => ({ useLayoutBreakpoints: jest.fn(() => ({ viewportWidth: 1200, isNarrowLayout: false, isPhoneLayout: false })) }));
 jest.mock('../utils/downloadOfflineTripSnapshot', () => ({ downloadOfflineTripSnapshot: jest.fn() }));
 const props = { trip: { id: 'trip-a', groupId: 'group-a' }, trips: [], groups: [], owner: { userId: 'owner-a', environment: 'https://api.test' }, token: 'token-a', costTrackingAllowed: false };
 beforeEach(() => {
@@ -71,4 +73,16 @@ it('lets the user wait for Wi-Fi and remembers the setting', async () => {
   fireEvent.press(screen.getByText('Save this trip offline'));
   fireEvent.press(await screen.findByText('Wait for Wi-Fi'));
   expect(downloadOfflineTripSnapshot).not.toHaveBeenCalled();
+});
+it('collapses into one dropdown on phones and still saves from it', async () => {
+  jest.mocked(breakpoints.useLayoutBreakpoints).mockReturnValue({ viewportWidth: 390, isNarrowLayout: true, isPhoneLayout: true });
+  const screen = render(<SaveTripOffline {...props} />);
+  expect(screen.queryByText('Save this trip offline')).toBeNull();
+  expect(screen.queryByLabelText('Download over Wi-Fi only')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Offline options'));
+  expect(screen.getByLabelText('Download over Wi-Fi only')).toBeTruthy();
+  fireEvent.press(screen.getByText('Save this trip offline'));
+  expect(screen.queryByLabelText('Download over Wi-Fi only')).toBeNull();
+  expect(await screen.findByText(/Avoid saving on shared devices/)).toBeTruthy();
+  jest.mocked(breakpoints.useLayoutBreakpoints).mockReturnValue({ viewportWidth: 1200, isNarrowLayout: false, isPhoneLayout: false });
 });

@@ -348,3 +348,80 @@ though the import was still running successfully server-side.
 Test coverage: `server/__tests__/document-import-async.test.ts` — 202-then-poll happy path, failure surfaced
 as a failed job rather than a hung/thrown request, tier-gating still fails fast pre-enqueue, and job
 ownership is enforced on the GET endpoint (404 for another user's job id).
+
+## 11. Addendum (2026-10-21): WanderBunnies printouts import completely
+
+**Problem:** importing an itinerary that WanderBunnies itself printed (Overview → Print itinerary → PDF)
+brought in only the first flight. The model-driven pipeline was a poor fit for that layout: the extracted
+text glues each label to its value (`Departure12:00 · BOSArrival16:10 · NRT`), a booking is printed on every
+day it appears (a flight on its departure and arrival days, a hotel on each night), a 30-day trip is far past
+one response's output budget, and the duplicate matcher treated any two transfers on adjacent days that
+shared one endpoint (for example, both arriving at Tokyo) as the same trip.
+
+**Fix:**
+
+- `server/src/services/wanderBunniesPrintParser.ts` reads the app's own printout deterministically. It is
+  selected by `isWanderBunniesPrint` (the "TRAVEL ITINERARY" title, the "Printed from WanderBunnies" footer and
+  `DAY n` headings), and `extractItineraryDocumentCandidates` uses it before any AI call: no provider key, no
+  cost, same result on every run. Other documents still use the model pipeline unchanged.
+- Recovered: flights, trains, buses, ferries and private/other transfers (route, times, carrier, number,
+  booking reference, travelers, layover, cost), lodging (stay dates, address, rooms, status, refund-by, total,
+  per night), activities (date, time, location, duration, status, reference, cost, free-cancellation date),
+  car rentals (vendor, vehicle, pick-up/drop-off date and place, reference, prepaid, cost, note), and day-plan
+  places, notes and checklists with their time, cost and entries. Status is kept as printed.
+- A booking printed on several days becomes one record: transfers repeated on consecutive days (up to two for
+  flights) merge, with the last day as the arrival date, and lodging and rentals are keyed by name and dates.
+  Items keep the dates printed in the document, not the target trip's dates.
+- Duplicate matching is tighter for everything: transfers sharing one endpoint are duplicates only when their
+  departure times agree or are unknown, and two activities with the same name on a day are one only when their
+  start times agree or are unknown (a morning and an evening visit are two).
+- The 60,000-character limit exists for the model, so printouts get a 400,000-character bound.
+
+Known limits: the printout carries no activity category (imported as "Other"), no currency per item (amounts
+are taken in the trip's currency), no coordinates, and no per-person split. Note bodies are not printed, so
+imported notes carry only their title. Identical entries listed twice on one day are treated as one.
+
+Tests: `server/__tests__/wanderBunniesPrintImport.test.ts` covers the parser on a printout fixture in the
+extracted-text format, the full import (inserts, preview, re-import adds nothing, no AI provider used) and
+the two matcher changes.
+
+## 12. Addendum (2026-10-21): category, coordinates and currency in the printout
+
+Follow-up to §11, closing three of its "known limits".
+
+**Export** (`app/utils/printableItinerary.ts`):
+
+- Activities print a `Category` field (their activity type).
+- Lodging, activities and car rentals print `Coordinates` (`41.40363, 2.17436`) and a `Coordinate source`
+  (`catalog`, `airport`, `manual` or `geocoder`) only when the item has valid coordinates. Car rentals print
+  `Pick-up coordinates` and `Drop-off coordinates`. Out-of-range values are never printed. Flights print none:
+  their airports are known from the IATA code.
+- A car rental's note is now a labeled `Notes` field instead of a loose paragraph, so it can be read back
+  unambiguously. Older printouts, where the note followed the cost, still import.
+- Currency was already printed on the cover and in every cost (`USD 752.97`); nothing item-level changes, because
+  items store no currency of their own.
+
+**Import** (`wanderBunniesPrintParser.ts`, `itineraryDocumentImportService.ts`):
+
+- `Category` becomes the activity type when it is one of the app's types, otherwise the activity is "Other".
+- Coordinates are restored with their recorded source; an unrecognized source is treated as `manual`, and
+  impossible values are ignored. Printouts made before this change have none and import as before.
+- Storage is the new adapter function `setItemCoordinates(userId, kind, itemId, coordinates)` (lodging, activity
+  or car rental), implemented for Postgres (also used by the in-memory test adapter) and Firestore and exposed
+  through `db.ts`. It checks the caller belongs to the item's trip, and returns false for an item that does not
+  exist. The existing insert functions are unchanged. The Postgres ones never wrote coordinate columns, and the
+  same is true of the other planning writes, which update them separately.
+- A failed coordinate save never fails the import: the item is added without a pin and the result carries a
+  warning.
+- The cover currency is compared with the trip's currency. If they differ, the result carries a warning and the
+  Imports preview shows "Check: ..." above the items. Amounts are imported as printed, not converted, because
+  there is no per-item currency or rate to convert with. Printouts and trips in the same currency show nothing.
+- The print parser now also accepts text where the extractor puts a space between each label and its value
+  (`FLIGHT BOS → NRT`, `Departure 12:00 · BOS`), and ignores a repeat of the trip title that a browser's print
+  header can add between pages.
+
+Still not carried by a printout: flight coordinates, per-person cost splits, and the body of a note.
+
+Tests: `server/__tests__/item-coordinates.test.ts` (real adapter, run on both the in-memory adapter and the
+Firestore emulator), `server/__tests__/wanderBunniesPrintImport.test.ts` (category, coordinates, labeled notes,
+currency warning, failed coordinate save, spaced text) and `app/tests/printableItinerary.test.ts`.

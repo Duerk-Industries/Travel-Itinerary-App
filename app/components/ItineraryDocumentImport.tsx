@@ -10,6 +10,7 @@ type ImportResult = {
   skippedUnparseable: Array<PreviewItem & { reason: string }>;
   notesPreview: string | null;
   notesAppended: boolean;
+  warnings?: string[];
 };
 
 type Props = {
@@ -215,6 +216,9 @@ export const ItineraryDocumentImport: React.FC<Props> = ({
           {preview ? (
             <View testID="itinerary-import-preview-results" style={{ gap: 6 }}>
               <Text style={styles.headerText}>Preview</Text>
+              {(preview.warnings ?? []).map((warning, index) => (
+                <Text key={`warn-${index}`} testID="itinerary-import-warning" accessibilityRole="alert" style={styles.bodyText}>Check: {warning}</Text>
+              ))}
               {preview.added.map((item, index) => <Text key={`add-${index}`} style={styles.bodyText}>Add {item.type.replace(/_/g, ' ')}: {item.summary}</Text>)}
               {preview.skippedDuplicates.map((item, index) => <Text key={`dup-${index}`} style={styles.helperText}>Already present: {item.summary}</Text>)}
               {preview.skippedUnparseable.map((item, index) => <Text key={`bad-${index}`} style={styles.helperText}>Skipped {item.summary}: {item.reason}</Text>)}

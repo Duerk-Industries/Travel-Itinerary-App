@@ -5093,6 +5093,36 @@ export const getCarRentalById = async (id: string): Promise<CarRental | null> =>
   return { ...(doc.data() as CarRental), status: normalizeItineraryStatus((doc.data() as any)?.status) };
 };
 
+/** Stores coordinates (and where they came from) on a lodging, activity or car rental the caller can edit. */
+export const setItemCoordinates = async (
+  userId: string,
+  kind: 'lodging' | 'activity' | 'car_rental',
+  itemId: string,
+  coordinates: {
+    lat?: number | null;
+    lng?: number | null;
+    coordinateSource: 'catalog' | 'airport' | 'manual' | 'geocoder';
+    dropoffLat?: number | null;
+    dropoffLng?: number | null;
+  }
+): Promise<boolean> => {
+  const db = getDb();
+  const collection = kind === 'lodging' ? 'lodgings' : kind === 'activity' ? 'tours' : 'car_rentals';
+  const ref = db.collection(collection).doc(itemId);
+  const doc = await ref.get();
+  if (!doc.exists) return false;
+  const data = doc.data() as any;
+  const tripId = data.tripId ?? data.trip_id;
+  if (!tripId || !(await ensureUserInTrip(tripId, userId))) throw new Error('Not authorized to update this trip');
+  await ref.update({
+    lat: coordinates.lat ?? null,
+    lng: coordinates.lng ?? null,
+    coordinateSource: coordinates.coordinateSource,
+    ...(kind === 'car_rental' ? { dropoffLat: coordinates.dropoffLat ?? null, dropoffLng: coordinates.dropoffLng ?? null } : {}),
+  });
+  return true;
+};
+
 export const insertCarRental = async (rental: Omit<CarRental, 'id' | 'createdAt'>): Promise<CarRental> => {
   const db = getDb();
   const id = randomUUID();

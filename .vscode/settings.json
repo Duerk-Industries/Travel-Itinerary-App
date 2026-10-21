@@ -352,5 +352,6 @@
     "claudeCode.allowDangerouslySkipPermissions": true,
     "claudeCode.environmentVariables": [
         
-    ]
+    ],
+    "python.terminal.useEnvFile": true
 }
