@@ -1,3 +1,4 @@
+import type { ImportTripDraft } from '../../server/src/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import HorizontalTableScroll from '../components/HorizontalTableScroll';
@@ -98,6 +99,7 @@ const WIZARD_CAR_COLUMNS = [
 ] as const;
 
 type CreateTripWizardProps = {
+  initialDraft?: ImportTripDraft | null;
   backendUrl: string;
   userToken: string | null;
   headers: Record<string, string>;
@@ -239,6 +241,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   onWizardCarRentals,
   currentUserName,
   currentUserEmail,
+  initialDraft,
   featureQuickStartTripWizard = true,
   aiItineraryGenerationAllowed = true,
 }) => {
@@ -259,18 +262,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
   const [quickStartMode, setQuickStartMode] = useState(featureQuickStartTripWizard);
-  const [details, setDetails] = useState<TripDetails>({ name: '', description: '' });
+  const [details, setDetails] = useState<TripDetails>({ name: initialDraft?.name ?? '', description: '' });
   const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
   const [selectedMustSeeAttractions, setSelectedMustSeeAttractions] = useState<AttractionOption[]>([]);
   const [dates, setDates] = useState<TripDates>({
-    startDate: '',
-    endDate: '',
+    startDate: initialDraft?.startDate ?? '',
+    endDate: initialDraft?.endDate ?? '',
     startMonth: '',
     startYear: '',
     durationDays: '',
     mode: 'range',
   });
-  const [dateModeSelected, setDateModeSelected] = useState<'range' | 'month' | null>(null);
+  const [dateModeSelected, setDateModeSelected] = useState<'range' | 'month' | null>(initialDraft?.startDate ? 'range' : null);
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [participantDraft, setParticipantDraft] = useState<ParticipantInput>({ firstName: '', lastName: '', email: '' });
   const [participantSearch, setParticipantSearch] = useState('');
@@ -1288,6 +1291,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const renderQuickStart = () => (
     <>
       <Text style={styles.sectionTitle}>Start planning in seconds</Text>
+      {initialDraft && <Text style={styles.helperText}>Started from your booking. Check the destination and dates; the booking stays in Imports until you choose to add it.</Text>}
       <Text style={styles.helperText}>Add a trip name, destination, and dates now. You can invite travelers and customize planning preferences from the trip later.</Text>
       <Text style={styles.modalLabel}>Trip name</Text>
       <TextInput
@@ -1302,6 +1306,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       <LocationSelector
         backendUrl={backendUrl}
         headers={stableHeaders}
+        initialQuery={initialDraft?.destinationQuery}
         selectedLocations={selectedLocations}
         onAddLocation={addLocation}
         onRemoveLocation={removeLocation}
@@ -1365,6 +1370,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <LocationSelector
               backendUrl={backendUrl}
               headers={stableHeaders}
+              initialQuery={initialDraft?.destinationQuery}
               selectedLocations={selectedLocations}
               onAddLocation={addLocation}
               onRemoveLocation={removeLocation}

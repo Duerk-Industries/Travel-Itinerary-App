@@ -1,3 +1,5 @@
+import ImportSuggestionReview from '../components/ImportSuggestionReview';
+import type { ImportTripDraft, ImportForwarderTrust, Trip as DomainTrip } from '../../server/src/types';
 import AutomaticImportSettings from '../components/AutomaticImportSettings';
 import ImportForwardingSetup from '../components/ImportForwardingSetup';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -70,10 +72,7 @@ type ConfigResponse = {
   };
 };
 
-type Trip = {
-  id: string;
-  name: string;
-};
+type Trip = Pick<DomainTrip, 'id' | 'name'>;
 
 type IngestionTabProps = {
   backendUrl: string;
@@ -81,6 +80,9 @@ type IngestionTabProps = {
   styles: Record<string, any>;
   theme?: AppTheme;
   onNavigate: (page: string) => void;
+  onCreateTripFromImport?: (itemId: string, draft: ImportTripDraft) => void;
+  initialReview?: { itemId: string; tripId: string } | null;
+  onInitialReviewHandled?: () => void;
   onAssignmentApplied?: (params: { itemType: string; tripId: string }) => void | Promise<void>;
   // Admins get the full operational view (search/status/source/type/date/confidence filters,
   // forwarding provider/instructions detail, bulk select+assign+delete, and the Gmail section's
@@ -123,9 +125,22 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   theme,
   onNavigate,
   onAssignmentApplied,
+  onCreateTripFromImport, initialReview, onInitialReviewHandled,
   userRole = 'user',
 }) => {
   const isAdmin = userRole === 'admin';
+  const scope = `${backendUrl}:${JSON.stringify(headers)}`;
+  const scopeRef = useRef(scope); scopeRef.current = scope;
+  const editRequest = useRef(0);
+  const mutation = useRef<string | null>(null);
+  const [mutationScope, setMutationScope] = useState('');
+  const [detailReady, setDetailReady] = useState(false);
+  const [loadedScope, setLoadedScope] = useState('');
+  const [forwarderTrust, setForwarderTrust] = useState<ImportForwarderTrust>('uncertain');
+  const [tripDraft, setTripDraft] = useState<ImportTripDraft | null>(null);
+  const [choices, setChoices] = useState<Array<{ tripId: string; tripName: string; reasons: string[]; strong: boolean }>>([]);
+  const initialHandled = useRef('');
+
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [jobs, setJobs] = useState<ImportJob[]>([]);
@@ -157,46 +172,27 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   const [bulkAssignTripId, setBulkAssignTripId] = useState<string>('');
 
   const load = async () => {
-    setLoading(true);
-    setError(null);
+    const requestScope = scope; setLoading(true); setError(null);
     try {
-      const [configRes, itemsRes, jobsRes, tripsRes] = await Promise.all([
-        fetch(`${backendUrl}/api/ingestion/config`, { headers }),
-        fetch(`${backendUrl}/api/ingestion/review-items`, { headers }),
-        fetch(`${backendUrl}/api/ingestion/jobs`, { headers }),
-        fetch(`${backendUrl}/api/ingestion/assignment/trips`, { headers }),
+      const responses = await Promise.all([
+        fetch(`${backendUrl}/api/ingestion/config`, { headers }), fetch(`${backendUrl}/api/ingestion/review-items`, { headers }),
+        fetch(`${backendUrl}/api/ingestion/jobs`, { headers }), fetch(`${backendUrl}/api/ingestion/assignment/trips`, { headers }),
       ]);
-      if (!configRes.ok) throw new Error('Import settings unavailable');
-      const configData = await configRes.json();
-      setConfig(configData);
-      if (itemsRes.ok) {
-        const itemsData = await itemsRes.json();
-        setItems(itemsData.items ?? []);
-      } else {
-        setItems([]);
-      }
-      if (jobsRes.ok) {
-        const jobsData = await jobsRes.json();
-        setJobs(jobsData.jobs ?? []);
-      } else {
-        setJobs([]);
-      }
-      if (tripsRes.ok) {
-        const tripsData = await tripsRes.json();
-        setTrips((tripsData.trips ?? []).map((trip: any) => ({ id: trip.id, name: trip.name })));
-      } else {
-        setTrips([]);
-      }
-    } catch (err) {
-      setError('Unable to load ingestion queue.');
-    } finally {
-      setLoading(false);
-    }
+      if (!responses[0]!.ok) throw new Error('Import settings unavailable');
+      const [settings, queue, recent, choices] = await Promise.all(responses.map(response => response.ok ? response.json() : Promise.resolve({})));
+      if (scopeRef.current !== requestScope) return;
+      setConfig(settings); setItems(queue.items ?? []); setJobs(recent.jobs ?? []);
+      setTrips((choices.trips ?? []).map((trip: Trip) => ({ id: trip.id, name: trip.name }))); setLoadedScope(scope);
+    } catch { if (scopeRef.current === requestScope) setError('Unable to load Imports. Try again.'); }
+    finally { if (scopeRef.current === requestScope) setLoading(false); }
   };
 
   useEffect(() => {
+    setItems([]); setJobs([]); setTrips([]); setSelectedItem(null); setDetailReady(false); setLoadedScope('');
+    setMutationScope(''); setSelectedIds(new Set()); setBulkAssignTripId(''); editRequest.current += 1;
     void load();
-  }, []);
+    return () => { if (scopeRef.current === scope) scopeRef.current = ''; };
+  }, [scope]);
 
   const jobsRef = useRef<ImportJob[]>(jobs);
   jobsRef.current = jobs;
@@ -207,6 +203,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     const jobsRes = await fetch(`${backendUrl}/api/ingestion/jobs`, { headers });
     if (!jobsRes.ok) return { done: false };
     const jobsData = await jobsRes.json().catch(() => ({}));
+    if (scopeRef.current !== scope) return { done: true };
     const nextJobs: ImportJob[] = (jobsData as any).jobs ?? [];
 
     const prevJobs = jobsRef.current;
@@ -221,12 +218,12 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
       const itemsRes = await fetch(`${backendUrl}/api/ingestion/review-items`, { headers });
       if (itemsRes.ok) {
         const itemsData = await itemsRes.json().catch(() => ({}));
-        setItems((itemsData as any).items ?? []);
+        if (scopeRef.current === scope) setItems((itemsData as any).items ?? []);
       }
     }
 
     return { done: !nextJobs.some((job) => ACTIVE_JOB_STATES.has(job.state)) };
-  }, [backendUrl, headers]);
+  }, [backendUrl, headers, scope]);
 
   usePolling({
     enabled: hasActiveJobs,
@@ -253,24 +250,40 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     });
   }, [items, search, sourceFilter, statusFilter, typeFilter, dateFilter, confidenceFilter]);
 
-  const beginEdit = async (item: ReviewItem) => {
-    setSelectedItem(item);
-    setEditProvider(String(item.editedFields?.providerVendor ?? item.providerVendor ?? ''));
-    setEditConfirmation(String(item.editedFields?.confirmationNumber ?? item.confirmationNumber ?? ''));
-    setEditNotes(String(item.editedFields?.notes ?? item.extractedFields?.notes ?? item.extractedFields?.summary ?? ''));
-    setAssignTripId('');
-    setSignedDocumentUrl(null);
-    setSuggestionReasons([]);
-    const response = await fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, {
-      headers,
-    });
-    const body = await response.json().catch(() => ({}));
-    const suggestions = (body as any).suggestions || [];
-    if (suggestions.length === 1 && suggestions[0].reasons.length >= 2) setAssignTripId(suggestions[0].tripId);
-    setSuggestionReasons(suggestions.length === 1 ? suggestions[0].reasons : []);
-    setSelectedDocumentSummary((body as any).documentSummary ?? null);
-    setSignedDocumentUrl((body as any).signedDocument ?? null);
+  const beginEdit = async (item: ReviewItem, preferredTripId?: string) => {
+    const requestScope = scope, request = ++editRequest.current;
+    setSelectedItem(item); setDetailReady(false); setTripDraft(null); setChoices([]); setForwarderTrust('uncertain');
+    setAssignTripId(''); setSignedDocumentUrl(null); setSuggestionReasons([]); setEditProvider(''); setEditConfirmation(''); setEditNotes(''); setError(null);
+    try {
+      const response = await fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, { headers });
+      const body = await response.json();
+      if (scopeRef.current !== requestScope || editRequest.current !== request) return;
+      if (!response.ok) throw new Error(body.error || 'This booking could not load. Close it and try again.');
+      const fresh: ReviewItem = body.item ?? item;
+      setSelectedItem(fresh);
+      setEditProvider(String(fresh.editedFields?.providerVendor ?? fresh.providerVendor ?? ''));
+      setEditConfirmation(String(fresh.editedFields?.confirmationNumber ?? fresh.confirmationNumber ?? ''));
+      setEditNotes(String(fresh.editedFields?.notes ?? fresh.extractedFields?.notes ?? fresh.extractedFields?.summary ?? ''));
+      const suggestions: Array<{ tripId: string; tripName: string; reasons: string[]; strong: boolean }> = body.suggestions ?? [];
+      setChoices(suggestions);
+      const strong = suggestions.filter(row => row.strong);
+      const selected = preferredTripId && trips.some(trip => trip.id === preferredTripId) ? preferredTripId : strong.length === 1 ? strong[0]!.tripId : '';
+      setAssignTripId(selected); setSuggestionReasons(suggestions.find(row => row.tripId === selected)?.reasons ?? []);
+      setForwarderTrust(body.forwarderTrust === 'verified' ? 'verified' : body.forwarderTrust === 'not_forwarded' ? 'not_forwarded' : 'uncertain');
+      setTripDraft(body.tripDraft ?? null); setSelectedDocumentSummary(body.documentSummary ?? null); setSignedDocumentUrl(body.signedDocument ?? null);
+      setDetailReady(true);
+    } catch (error) { if (scopeRef.current === requestScope && editRequest.current === request) setError((error as Error).message); }
   };
+  useEffect(() => {
+    if (!initialReview || loadedScope !== scope) return;
+    const key = `${scope}:${initialReview.itemId}:${initialReview.tripId}`;
+    if (initialHandled.current === key) return;
+    initialHandled.current = key;
+    const item = items.find(row => row.id === initialReview.itemId);
+    if (item) void beginEdit(item, initialReview.tripId);
+    else setError('This booking is no longer in the review queue. Refresh Imports to check its status.');
+    onInitialReviewHandled?.();
+  }, [initialReview, loadedScope, scope, items, trips]);
 
   const openDocument = () => {
     if (!signedDocumentUrl) return;
@@ -282,43 +295,36 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
   };
 
   const saveEdits = async () => {
-    if (!selectedItem) return;
-    const editedFields = {
-      providerVendor: editProvider.trim() || null,
-      confirmationNumber: editConfirmation.trim() || null,
-      notes: editNotes.trim() || null,
-    };
-    await fetch(`${backendUrl}/api/ingestion/review-items/${selectedItem.id}`, {
-      method: 'PATCH',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ editedFields }),
-    });
-    await load();
+    if (!selectedItem || !detailReady || mutation.current === scope) return;
+    const requestScope = scope; mutation.current = scope; setMutationScope(scope);
+    try {
+      const response = await fetch(`${backendUrl}/api/ingestion/review-items/${selectedItem.id}`, {
+        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ editedFields: { providerVendor: editProvider.trim() || null, confirmationNumber: editConfirmation.trim() || null, notes: editNotes.trim() || null } }),
+      });
+      const body = await response.json(); if (!response.ok) throw new Error(body.error || 'Changes could not be saved. Your input is still here.');
+      if (scopeRef.current !== requestScope) return;
+      setSelectedItem(body); await load(); await beginEdit(body);
+    } catch (error) { if (scopeRef.current === requestScope) setError((error as Error).message); }
+    finally { if (mutation.current === requestScope) mutation.current = null; if (scopeRef.current === requestScope) setMutationScope(''); }
   };
-
   const assignItem = async () => {
-    if (!selectedItem || !assignTripId) return;
-    const tripId = assignTripId;
-    const itemType = selectedItem.itemType;
-    const editedFields = {
-      providerVendor: editProvider.trim() || null,
-      confirmationNumber: editConfirmation.trim() || null,
-      notes: editNotes.trim() || null,
-    };
-    const response = await fetch(`${backendUrl}/api/ingestion/review-items/${selectedItem.id}/assign`, {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tripId, editedFields }),
-    });
-    if (!response.ok) {
+    if (!selectedItem || !assignTripId || !detailReady || mutation.current === scope) return;
+    const requestScope = scope, tripId = assignTripId, itemType = selectedItem.itemType;
+    mutation.current = scope; setMutationScope(scope);
+    try {
+      const response = await fetch(`${backendUrl}/api/ingestion/review-items/${selectedItem.id}/assign`, {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId, editedFields: { providerVendor: editProvider.trim() || null, confirmationNumber: editConfirmation.trim() || null, notes: editNotes.trim() || null } }),
+      });
       const body = await response.json().catch(() => ({}));
-      setError((body as any).error ?? 'Unable to assign item to trip.');
-      return;
-    }
-    await onAssignmentApplied?.({ itemType, tripId });
-    setSelectedDocumentSummary(null);
-    setSelectedItem(null);
-    await load();
+      if (!response.ok) throw new Error(body.error || 'The result could not be confirmed. Refresh Imports before trying again.');
+      if (scopeRef.current !== requestScope) return;
+      setSelectedDocumentSummary(null); setSelectedItem(null);
+      await onAssignmentApplied?.({ itemType, tripId });
+      if (scopeRef.current === requestScope) await load();
+    } catch (error) { if (scopeRef.current === requestScope) setError((error as Error).message); }
+    finally { if (mutation.current === requestScope) mutation.current = null; if (scopeRef.current === requestScope) setMutationScope(''); }
   };
 
   const deleteItem = async (itemId: string) => {
@@ -516,6 +522,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>Ingest & Review</Text>
       <AutomaticImportSettings backendUrl={backendUrl} headers={headers} onChanged={() => void load()} />
+      <ImportSuggestionReview backendUrl={backendUrl} headers={headers} styles={styles}
+        onReviewItem={id => { const item = items.find(row => row.id === id); if (item) void beginEdit(item); else setError('Refresh Imports to review this booking.'); }}
+        onConfirmed={async assigned => { for (const entry of assigned) { if (scopeRef.current !== scope) return; await onAssignmentApplied?.({ itemType: entry.itemType, tripId: entry.tripId }); } if (scopeRef.current === scope) await load(); }} />
       <Text style={styles.helperText}>
         {config.tierKey === 'free'
           ? 'Premium or Pro is required to upload and review imported travel items.'
@@ -786,7 +795,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
             <View style={[styles.modalCard, { maxWidth: 720 }]}>
               <ScrollView style={{ maxHeight: 520 }}>
                 <Text style={styles.sectionTitle}>Review Item</Text>
-                <Text style={styles.helperText}>{selectedItem.itemType} • {selectedItem.status}</Text>
+                {error && <Text accessibilityRole="alert" style={styles.warningText}>{error}</Text>}
+                <Text style={styles.helperText}>{isAdmin ? `${selectedItem.itemType} • ${selectedItem.status}` : `${selectedItem.itemType.replace(/_/g, ' ')} · Review before adding`}</Text>
+                {!detailReady && <Text style={styles.helperText}>Loading booking details…</Text>}
                 {selectedItem.timezoneStatus === 'UNKNOWN' ? (
                   <Text style={styles.warningText}>Timezone unknown{selectedItem.rawDatetimeString ? ` (raw: ${selectedItem.rawDatetimeString})` : ''}</Text>
                 ) : null}
@@ -797,18 +808,27 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                 ) : null}
                 {isAdmin ? <Text style={styles.helperText}>{JSON.stringify(selectedItem.extractedFields, null, 2)}</Text> : <>
                   <Text style={styles.helperText}>Imported by you · Check this booking before adding it.</Text>
-                  {selectedItem.sourceType === 'FORWARDED_MAILBOX' && <Text style={styles.helperText}>We couldn’t confirm who forwarded this — check it before adding.</Text>}
+                  {selectedItem.sourceType === 'FORWARDED_MAILBOX' && <Text style={styles.helperText}>{forwarderTrust === 'verified' ? 'Forwarding address verified. Check the booking details before adding.' : 'We couldn’t confirm who forwarded this — check it before adding.'}</Text>}
                   <Text style={styles.flightTitle}>{String(selectedItem.extractedFields.name || selectedItem.extractedFields.propertyName || selectedItem.providerVendor || 'Booking')}</Text>
                   <Text style={styles.helperText}>{selectedItem.startDateTimeUtc ? new Date(selectedItem.startDateTimeUtc).toLocaleString() : 'Check the local date and timezone.'}</Text>
                   <Text style={styles.helperText}>{String(selectedItem.extractedFields.address || selectedItem.extractedFields.startLocation || '')}</Text>
                 </>}
                 <Text style={styles.modalLabel}>Provider</Text>
-                <TextInput style={styles.input} value={editProvider} onChangeText={setEditProvider} />
+                <TextInput style={styles.input} editable={detailReady && mutationScope !== scope} value={editProvider} onChangeText={setEditProvider} />
                 <Text style={styles.modalLabel}>Confirmation</Text>
-                <TextInput style={styles.input} value={editConfirmation} onChangeText={setEditConfirmation} />
+                <TextInput style={styles.input} editable={detailReady && mutationScope !== scope} value={editConfirmation} onChangeText={setEditConfirmation} />
                 <Text style={styles.modalLabel}>Notes</Text>
-                <TextInput style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} multiline value={editNotes} onChangeText={setEditNotes} />
+                <TextInput style={[styles.input, { minHeight: 100, textAlignVertical: 'top' }]} multiline editable={detailReady && mutationScope !== scope} value={editNotes} onChangeText={setEditNotes} />
                 <Text style={styles.modalLabel}>Assign to Trip</Text>
+                {choices.map(choice => <TouchableOpacity key={choice.tripId} accessibilityRole="button" disabled={!detailReady || mutationScope === scope} style={[styles.navButton, { minHeight: 44 }]}
+                  onPress={() => { setAssignTripId(choice.tripId); setSuggestionReasons(choice.reasons); }}>
+                  <Text style={styles.navButtonText}>Suggestion: {choice.tripName || trips.find(trip => trip.id === choice.tripId)?.name || 'Trip'}</Text>
+                  <Text style={styles.helperText}>{choice.reasons.join('. ')}</Text>
+                </TouchableOpacity>)}
+                {tripDraft && onCreateTripFromImport && <TouchableOpacity accessibilityRole="button" style={[styles.button, { minHeight: 44 }]} disabled={!detailReady || mutationScope === scope}
+                  onPress={() => { editRequest.current += 1; setSelectedItem(null); onCreateTripFromImport(selectedItem.id, tripDraft); }}>
+                  <Text style={styles.buttonText}>Create a trip from this booking</Text>
+                </TouchableOpacity>}
                 {trips.length === 0 ? (
                   <View>
                     <Text style={styles.helperText}>Create a trip first before assigning imported items.</Text>
@@ -834,10 +854,10 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                     <Text style={styles.buttonText}>View Document</Text>
                   </TouchableOpacity>
                 ) : null}
-                <TouchableOpacity style={styles.button} onPress={saveEdits}>
+                <TouchableOpacity style={styles.button} onPress={saveEdits} disabled={!detailReady || mutationScope === scope}>
                   <Text style={styles.buttonText}>Save Edits</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={assignItem} disabled={!assignTripId}>
+                <TouchableOpacity style={styles.button} onPress={assignItem} disabled={!assignTripId || !detailReady || mutationScope === scope}>
                   <Text style={styles.buttonText}>{assignTripId ? `Add to ${trips.find(trip => trip.id === assignTripId)?.name || 'selected trip'}` : 'Choose a trip'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={() => deleteItem(selectedItem.id)}>
@@ -846,7 +866,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                 <TouchableOpacity
                   style={styles.button}
                   onPress={() => {
-                    setSelectedItem(null);
+                    editRequest.current += 1; setSelectedItem(null);
                     setSelectedDocumentSummary(null);
                     setSignedDocumentUrl(null);
                   }}

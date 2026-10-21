@@ -612,6 +612,19 @@ export type NearbyPlace = {
 export type CatalogActivityCreate = { tripId: string; date: string; catalogId: string; operationKey: string };
 export type CatalogActivityResult = { activity: Activity; replayed: boolean };
 
+export type TripBookingEvidence = {
+  provider: string; reference: string; itemType: import('./ingestion/contracts').ParsedItemType;
+  startDate: string | null; endDate: string | null;
+};
+export type ImportTripDraft = { name: string; destinationQuery: string; startDate: string; endDate: string };
+export type ImportForwarderTrust = 'verified' | 'uncertain' | 'not_forwarded';
+export type ImportReviewSuggestion = {
+  itemId: string; itemType: import('./ingestion/contracts').ParsedItemType; label: string;
+  tripId: string; tripName: string; reasons: string[]; reviewVersion: string;
+  forwarderTrust: ImportForwarderTrust;
+  startDate: string | null; endDate: string | null; amount: number | null; currency: string | null;
+};
+
 export interface Lodging extends PlanningCoordinates {
   id: string;
   user_id: string;

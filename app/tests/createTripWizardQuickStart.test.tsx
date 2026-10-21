@@ -95,4 +95,13 @@ describe('CreateTripWizard Quick Start', () => {
     fireEvent.press(getByText('Cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+  it('prefills an imported booking but requires a real destination selection before creating', () => {
+    const ui = render(<CreateTripWizard {...baseProps} initialDraft={{name: 'Trip to Tokyo', destinationQuery: 'Tokyo', startDate: '2027-05-10', endDate: '2027-05-11'}}/>);
+    expect(ui.getByTestId('quick-start-trip-name').props.value).toBe('Trip to Tokyo');
+    expect(ui.getByPlaceholderText('Search destinations, countries, or states').props.value).toBe('Tokyo');
+    expect(ui.getByText(/booking stays in Imports/)).toBeTruthy();
+    expect(ui.getByTestId('quick-start-create').props.accessibilityState?.disabled ?? ui.getByTestId('quick-start-create').props.disabled).toBeTruthy();
+    expect(baseProps.onTripCreated).not.toHaveBeenCalled();
+  });
+
 });

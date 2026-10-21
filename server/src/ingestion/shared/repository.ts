@@ -1,4 +1,5 @@
 import { planningFirestore } from '../../services/planningFirestore';
+import { reviewItemVersion } from '../assignment/reviewVersion';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
@@ -1012,6 +1013,7 @@ export type AssignmentOptions = {
   undoWindowMs?: number;
   /** Plain-language reasons the trip was chosen, kept so the person can see why. */
   reasons?: string[];
+  expectedItemVersion?: string;
 };
 export type TripRecordKind = 'flights' | 'lodgings' | 'car_rentals' | 'tours';
 export const AUTO_UNDO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1059,6 +1061,12 @@ const readExpenseBySourcePostgres = async (client: Pool, sourceId: string): Prom
 };
 
 const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedParsedItem, tripId: string, assignedByUserId: string, options: AssignmentOptions = {}) => {
+  await client.query('SELECT id FROM trips WHERE id=$1 FOR SHARE', [tripId]);
+  await client.query('SELECT gm.id FROM group_members gm JOIN trips t ON t.group_id=gm.group_id WHERE t.id=$1 AND gm.user_id=$2 AND gm.removed_at IS NULL FOR SHARE', [tripId, item.userId]);
+  if (!await ensureUserInTrip(tripId, item.userId)) throw new Error('You are no longer part of this trip.');
+  const locked = await client.query<ParsedItemRow>('SELECT * FROM parsed_items WHERE id=$1 AND user_id=$2 FOR UPDATE', [item.id, item.userId]);
+  const current = locked.rows[0] && mapParsedItemRow(locked.rows[0]);
+  if (!current || current.status === 'ASSIGNED' || current.status === 'DELETED' || reviewItemVersion(current) !== (options.expectedItemVersion ?? reviewItemVersion(item))) throw new Error('This booking changed. Refresh it before adding.');
   const id = randomUUID();
   const messageId = randomUUID();
   const assignmentTransactionId = randomUUID();
@@ -1241,6 +1249,10 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
     const parsedItemRef = db.collection('parsed_items').doc(item.id);
     const parsedItemDoc = await tx.get(parsedItemRef);
     if (!parsedItemDoc.exists) throw new Error('Parsed item not found');
+    const [access, currentTrip] = await Promise.all([tx.get(db.collection('trip_access').doc(`${tripId}_${item.userId}`)), tx.get(db.collection('trips').doc(tripId))]);
+    if (!currentTrip.exists || access.data()?.status !== 'active' || access.data()?.canWrite !== true) throw new Error('You are no longer part of this trip.');
+    const currentItem = { ...parsedItemDoc.data(), id: parsedItemDoc.id } as PersistedParsedItem;
+    if (currentItem.userId !== item.userId || ['ASSIGNED','DELETED'].includes(currentItem.reviewStatus) || reviewItemVersion(currentItem) !== (options.expectedItemVersion ?? reviewItemVersion(item))) throw new Error('This booking changed. Refresh it before adding.');
     const payload: Record<string, unknown> = {
       id: tripRecordId,
       userId: item.userId,
@@ -2432,6 +2444,7 @@ export const assignParsedItemToTrip = async (
   options: AssignmentOptions = {}
 ) => {
   await ensureTripExists(tripId);
+  if (!await ensureUserInTrip(tripId, userId)) throw new Error('You are no longer part of this trip.');
   const item = await getParsedItemById(userId, itemId);
   if (!item) throw new Error('Parsed item not found');
   if (item.status === 'ASSIGNED') throw new Error('Parsed item already assigned');
@@ -2749,38 +2762,45 @@ export const setAutoAssignPreference = async (userId: string, value: boolean | n
   );
 };
 
-/** Booking numbers already attached to each trip: transport, rentals, activities and earlier imports. */
-export const listTripBookingReferences = async (tripIds: string[]): Promise<Map<string, string[]>> => {
+/** Provider/type/date-scoped continuity. Bare reference strings never grant a match. */
+export const listTripBookingReferences = async (tripIds: string[]): Promise<Map<string, import('../../types').TripBookingEvidence[]>> => {
   await ensureIngestionRepositoryReady();
-  const out = new Map<string, string[]>();
-  const clean = (values: unknown[]): string[] => Array.from(new Set(values.map((v) => String(v ?? '').trim()).filter(Boolean)));
-  if (getCurrentDbProvider() === 'firebase') {
-    const db = getFirebaseDb();
-    for (const tripId of tripIds) {
-      const [flights, rentals, tours, items] = await Promise.all([
+  const out = new Map<string, import('../../types').TripBookingEvidence[]>();
+  const { dateOnly, bookingDates } = await import('../assignment/tripMatcher');
+  for (const tripId of Array.from(new Set(tripIds))) {
+    const evidence: import('../../types').TripBookingEvidence[] = [];
+    let items: PersistedParsedItem[] = [];
+    if (getCurrentDbProvider() === 'firebase') {
+      const db = getFirebaseDb();
+      const [flights, rentals, parsed] = await Promise.all([
         db.collection('flights').where('tripId', '==', tripId).get(),
         db.collection('car_rentals').where('tripId', '==', tripId).get(),
-        db.collection('tours').where('tripId', '==', tripId).get(),
         db.collection('parsed_items').where('assignedTripId', '==', tripId).get(),
       ]);
-      out.set(tripId, clean([
-        ...flights.docs.map((d) => (d.data() as any).bookingReference),
-        ...rentals.docs.map((d) => (d.data() as any).reference),
-        ...tours.docs.map((d) => (d.data() as any).reference),
-        ...items.docs.map((d) => (d.data() as any).confirmationNumber),
-      ]));
+      for (const doc of flights.docs) {
+        const d = doc.data(); if (d.status === 'Cancelled' || !['Flight','Train','Ferry','Bus'].includes(d.transferType ?? 'Flight')) continue;
+        evidence.push({ provider: String(d.carrier ?? ''), reference: String(d.bookingReference ?? ''), itemType: d.transferType === 'Train' ? 'rail' : ['Ferry','Bus'].includes(d.transferType) ? 'ferry_bus_transfer' : 'flight', startDate: dateOnly(d.departureDate), endDate: dateOnly(d.arrivalDate) });
+      }
+      for (const doc of rentals.docs) {
+        const d = doc.data(); if (d.status === 'Cancelled') continue;
+        evidence.push({ provider: String(d.vendor ?? ''), reference: String(d.reference ?? ''), itemType: 'car_rental', startDate: dateOnly(d.pickupDate), endDate: dateOnly(d.dropoffDate) });
+      }
+      items = parsed.docs.filter(doc => doc.data().reviewStatus === 'ASSIGNED').map(doc => ({ ...doc.data(), id: doc.id } as PersistedParsedItem));
+    } else {
+      const p = getPg();
+      const [flights, rentals, parsed] = await Promise.all([
+        p.query<import('../../types').TripBookingEvidence>(`SELECT carrier AS provider, booking_reference AS reference, CASE WHEN transfer_type='Train' THEN 'rail' WHEN transfer_type IN ('Ferry','Bus') THEN 'ferry_bus_transfer' ELSE 'flight' END AS "itemType", departure_date AS "startDate", arrival_date AS "endDate" FROM flights WHERE trip_id=$1 AND status <> 'Cancelled' AND (transfer_type IN ('Flight','Train','Ferry','Bus') OR transfer_type IS NULL)`, [tripId]),
+        p.query<import('../../types').TripBookingEvidence>(`SELECT vendor AS provider, reference, 'car_rental' AS "itemType", pickup_date AS "startDate", dropoff_date AS "endDate" FROM car_rentals WHERE trip_id=$1 AND status <> 'Cancelled'`, [tripId]),
+        p.query<ParsedItemRow>(`SELECT * FROM parsed_items WHERE assigned_trip_id=$1 AND review_status='ASSIGNED'`, [tripId]),
+      ]);
+      evidence.push(...flights.rows, ...rentals.rows); items = parsed.rows.map(mapParsedItemRow);
     }
-    return out;
-  }
-  const p = getPg();
-  for (const tripId of tripIds) {
-    const [flights, rentals, tours, items] = await Promise.all([
-      p.query(`SELECT booking_reference AS ref FROM flights WHERE trip_id = $1`, [tripId]),
-      p.query(`SELECT reference AS ref FROM car_rentals WHERE trip_id = $1`, [tripId]),
-      p.query(`SELECT reference AS ref FROM tours WHERE trip_id = $1`, [tripId]),
-      p.query(`SELECT confirmation_number AS ref FROM parsed_items WHERE assigned_trip_id = $1`, [tripId]),
-    ]);
-    out.set(tripId, clean([...flights.rows, ...rentals.rows, ...tours.rows, ...items.rows].map((row: any) => row.ref)));
+    for (const item of items) {
+      const fields = { ...item.extractedFields, ...item.editedFields };
+      evidence.push({ provider: String(fields.providerVendor ?? item.providerVendor ?? ''), reference: String(fields.confirmationNumber ?? item.confirmationNumber ?? ''), itemType: item.itemType,
+        startDate: bookingDates(item).start, endDate: bookingDates(item).end });
+    }
+    out.set(tripId, evidence.filter(row => row.provider && row.reference).map(row => ({ ...row, startDate: dateOnly(row.startDate), endDate: dateOnly(row.endDate) })));
   }
   return out;
 };

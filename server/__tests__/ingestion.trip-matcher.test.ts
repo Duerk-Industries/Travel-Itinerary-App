@@ -83,9 +83,9 @@ describe('matchItemToTrip: automatic adding', () => {
     expect(withoutContinuity.heldBack).toBe('weak_evidence');
     expect(withoutContinuity.reasons).toContain('Departs from the destination');
 
-    const withContinuity = matchItemToTrip(returnLeg, [{ ...japan, bookingReferences: ['abc-123'] }], trusted);
+    const withContinuity = matchItemToTrip(returnLeg, [{ ...japan, bookingReferences: [{provider: 'Delta', reference: 'abc-123', itemType: 'flight', startDate: '2027-05-10', endDate: '2027-05-11'}] }], trusted);
     expect(withContinuity.decision).toBe('auto');
-    expect(withContinuity.reasons).toContain('Same booking number as something already in this trip');
+    expect(withContinuity.reasons).toContain('Same provider and booking number as something already in this trip');
   });
 
   it('never matches on a booking reference that belongs to a different trip', () => {
@@ -195,5 +195,45 @@ describe('matchItemToTrip: extractor opt-out', () => {
     expect(result.decision).toBe('suggest');
     expect(result.heldBack).toBe('review_required');
     expect(result.tripId).toBe('japan');
+  });
+});
+
+
+describe('complete matching evidence', () => {
+  const evidence = { provider: 'Delta', reference: 'ABC123', itemType: 'flight' as const, startDate: '2027-05-10', endDate: '2027-05-11' };
+  const returning = () => item({extractedFields: {departureLocation: 'Tokyo', arrivalLocation: 'Boston'}});
+  it.each([
+    ['unscoped', 'ABC123'], ['other provider', {...evidence, provider: 'United'}],
+    ['other type', {...evidence, itemType: 'hotel' as const}], ['old booking', {...evidence, startDate: '2026-01-01', endDate: '2026-01-02'}],
+  ])('does not auto-add continuity with %s evidence', (_label, reference) => {
+    expect(matchItemToTrip(returning(), [{...japan, bookingReferences: [reference]}], trusted).decision).toBe('suggest');
+  });
+  it('uses corrected references and provider names', () => {
+    const corrected = returning(); corrected.editedFields = {providerVendor: 'United', confirmationNumber: 'NEW'};
+    expect(matchItemToTrip(corrected, [{...japan, bookingReferences: [evidence]}], trusted).decision).toBe('suggest');
+    expect(matchItemToTrip(corrected, [{...japan, bookingReferences: [{...evidence, provider: 'United', reference: 'NEW'}]}], trusted).decision).toBe('auto');
+  });
+  it('offers month-only trips without automatically assigning', () => {
+    const result = matchItemToTrip(item(), [{...japan, startDate: null, endDate: null, startMonth: 5, startYear: 2027}], trusted);
+    expect(result.decision).toBe('suggest'); expect(result.reasons.join(' ')).toContain('planned month'); expect(result.candidates[0]?.strong).toBe(false);
+  });
+  it('ranks matching travelers without resolving ambiguity', () => {
+    const result = matchItemToTrip(item(), [{...japan, id: 'a'}, {...japan, id: 'z', travelerMatches: 1}], trusted);
+    expect(result.tripId).toBe('z'); expect(result.heldBack).toBe('not_unique');
+  });
+  it('does not truncate evidence or claim uniqueness when evidence could not load', () => {
+    const result = matchItemToTrip(item(), Array.from({length: 7}, (_, n) => ({...japan, id: String(n)})), trusted);
+    expect(result.candidates).toHaveLength(7); expect(result.heldBack).toBe('not_unique');
+    expect(matchItemToTrip(item(), [japan], {...trusted, evidenceComplete: false}).decision).toBe('suggest');
+  });
+  it('uses resolved airport cities but never a partial city name or country alone', () => {
+    expect(matchItemToTrip(item({fields: {arrivalLocation: 'HND'}}), [japan], {...trusted, arrivalCities: ['Tokyo']}).decision).toBe('auto');
+    expect(matchItemToTrip(item({extractedFields: {arrivalLocation: 'Jerome'}}), [{...japan, destination: 'Rome'}], trusted).decision).toBe('suggest');
+    expect(matchItemToTrip(item({extractedFields: {arrivalLocation: 'Osaka, Japan'}}), [{...japan, broadPlaces: ['Japan']}], trusted).decision).toBe('suggest');
+    expect(matchItemToTrip(item({extractedFields: {arrivalCity: 'East Tokyo'}}), [japan], trusted).decision).toBe('suggest');
+  });
+  it('keeps approximate geography and invalid timezones in review', () => {
+    expect(matchItemToTrip(item(), [{...japan, destination: null, weakPlaces: ['Tokyo']}], trusted).decision).toBe('suggest');
+    expect(matchItemToTrip(item({originalTimezone: 'Invalid/Zone'}), [japan], trusted).heldBack).toBe('timezone_uncertain');
   });
 });

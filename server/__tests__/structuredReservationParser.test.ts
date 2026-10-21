@@ -27,6 +27,7 @@ describe('bounded structured confirmation parsing', () => {
     const item = { startDateTimeUtc: '2027-05-02T10:00:00Z', timezoneStatus: 'RESOLVED', extractedFields: { departureLocation: 'Paris', arrivalLocation: 'Rome' } } as PersistedParsedItem;
     const trips = [{ id: 'paris', destination: 'Paris' }, { id: 'rome', destination: 'Rome' }].map(trip => ({ ...trip, startDate: '2027-05-01', endDate: '2027-05-05' })) as Trip[];
     const suggestions = suggestTrips(item, trips);
-    expect(suggestions[0].tripId).toBe('rome'); expect(suggestions[1].reasons).toHaveLength(1);
+    expect(suggestions[0].tripId).toBe('rome'); expect(suggestions[1].reasons).toContain('Departs from the destination');
+    expect(suggestions[1].reasons).not.toContain('Booking location matches the destination');
   });
 });

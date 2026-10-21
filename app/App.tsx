@@ -1,3 +1,4 @@
+import type { ImportTripDraft } from '../server/src/types';
 import PendingExpenseRecovery from './components/PendingExpenseRecovery';
 import SaveTripOffline from './components/SaveTripOffline';
 import PendingExpenseLogoutDialog from './components/PendingExpenseLogoutDialog';
@@ -615,6 +616,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     resendConfirmationEmail: submitResendConfirmation,
   } = useAuthFlowState({ backendUrl, userToken });
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
+  const [importTripCreation, setImportTripCreation] = useState<{ auth: string; itemId: string; draft: ImportTripDraft } | null>(null);
+  const [returnImportReview, setReturnImportReview] = useState<{ auth: string; itemId: string; tripId: string } | null>(null);
+  const tripCreationAuthRef = useRef(userToken); tripCreationAuthRef.current = userToken;
+  useEffect(() => { setImportTripCreation(null); setReturnImportReview(null); }, [userToken]);
+
   // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
@@ -2890,14 +2896,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const onTripCreated = useCallback((tripId: string) => {
+    if (tripCreationAuthRef.current !== userToken) return;
+    const returnToImport = importTripCreation?.auth === userToken ? importTripCreation : null;
     setActiveTripId(tripId);
     fetchTrips();
     fetchGroups();
     fetchInvites();
     setPageForwardHistory([]);
     setPageHistory((prev) => prev.slice(-25));
-    setActivePage('overview');
-  }, [fetchTrips, fetchGroups, fetchInvites]);
+    if (returnToImport) setReturnImportReview({ auth: returnToImport.auth, itemId: returnToImport.itemId, tripId });
+    setImportTripCreation(null);
+    setActivePage(returnToImport ? 'ingest' : 'overview');
+  }, [fetchTrips, fetchGroups, fetchInvites, importTripCreation, userToken]);
 
   const onAiItineraryQueued = useCallback((tripId: string, jobId: string, request?: Record<string, unknown>) => {
     setAsyncItineraryByTrip((prev) => ({
@@ -3632,6 +3642,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     theme={theme}
                     onNavigate={handleHomeNavigate}
                     onAssignmentApplied={handleIngestionAssignmentApplied}
+                    onCreateTripFromImport={(itemId, draft) => { if (!userToken) return; setImportTripCreation({ auth: userToken, itemId, draft }); requestPageChange('create-trip'); }}
+                    initialReview={returnImportReview?.auth === userToken ? returnImportReview : null}
+                    onInitialReviewHandled={() => setReturnImportReview(null)}
                     userRole={userRole}
                   />
                 </Suspense>
@@ -4314,6 +4327,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         <View style={styles.wizardOverlay}>
           <View style={styles.wizardModal}>
             <CreateTripWizard
+              initialDraft={importTripCreation?.auth === userToken ? importTripCreation.draft : null}
               backendUrl={backendUrl}
               userToken={userToken}
               headers={headers}
@@ -4322,7 +4336,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onSearchAirports={fetchFlightAirports}
               styles={styles}
               theme={theme}
-              onCancel={closeTripWizard}
+              onCancel={() => { const backToImports = importTripCreation?.auth === userToken; setImportTripCreation(null); if (backToImports) { setPageForwardHistory([]); setActivePage('ingest'); } else closeTripWizard(); }}
               onTripCreated={onTripCreated}
               onAiItineraryQueued={onAiItineraryQueued}
               onUnauthorized={logout}

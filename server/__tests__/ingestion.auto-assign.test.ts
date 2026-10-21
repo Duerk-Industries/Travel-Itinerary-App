@@ -6,8 +6,9 @@ import { app } from '../src/app';
 import * as db from '../src/db';
 import { firestore, isFirebase, sql } from './providerRows';
 import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
+import { reviewItemVersion } from '../src/ingestion/assignment/reviewVersion';
 import { applyAutomaticAssignments } from '../src/ingestion/assignment/autoAssign';
-import { getParsedItemById } from '../src/ingestion/shared/repository';
+import { assignParsedItemToTrip, getParsedItemById } from '../src/ingestion/shared/repository';
 import { registerAndLoginWebUser, registerWebUser, seedTiersForTest, setUserTierInDb, waitFor } from './helpers';
 
 const letters = (): string => randomUUID().replace(/[0-9-]/g, value => value === '-' ? '' : String.fromCharCode(103 + Number(value)));
@@ -331,4 +332,67 @@ describe('automatic adding of matching bookings', () => {
       expect((await request(app).get('/api/ingestion/settings').set(auth)).body.autoAssign).toEqual({ available: false, choice: null, enabled: false });
     });
   });
+  describe('reviewing matching suggestions', () => {
+    const preview = async (id: string) => {
+      const response = await request(app).get('/api/ingestion/review-suggestions').set(auth).expect(200);
+      expect(response.headers['cache-control']).toContain('no-store');
+      const row = response.body.suggestions.find((r: any) => r.itemId === id);
+      expect(row).toBeDefined(); return row;
+    };
+    const confirm = (rows: any[]) => request(app).post('/api/ingestion/review-suggestions/confirm').set(auth)
+      .send({suggestions: rows.map(({itemId, tripId, reviewVersion}) => ({itemId, tripId, reviewVersion}))});
+    it('shows unified reasons, booking-prefilled draft and uncertain forwarding trust', async () => {
+      const id = await seedItem({source_type: 'FORWARDED_MAILBOX'});
+      const detail = await status(id);
+      expect(detail.forwarderTrust).toBe('uncertain');
+      expect(detail.tripDraft).toMatchObject({startDate: '2027-05-10', endDate: '2027-05-11'});
+      expect(detail.suggestions[0]).toMatchObject({tripId, strong: true});
+      const row = await preview(id);
+      expect(row).toMatchObject({tripId, forwarderTrust: 'uncertain', amount: 450, currency: 'USD'});
+      expect(row.reasons).toEqual(detail.suggestions.find((s: any) => s.tripId === tripId).reasons);
+    });
+    it('confirms manually and retries without duplicating bookings or costs', async () => {
+      const id = await seedItem(); const row = await preview(id);
+      const before = (await flights()).length, costBefore = (await expenses()).length;
+      expect((await confirm([row]).expect(200)).body.assigned).toHaveLength(1);
+      expect((await status(id)).assignment.mode).toBe('MANUAL');
+      expect((await confirm([row]).expect(200)).body.assigned[0].alreadyAssigned).toBe(true);
+      expect(await flights()).toHaveLength(before + 1); expect(await expenses()).toHaveLength(costBefore + 1);
+    });
+    it('rejects stale details while confirming the other booking in the same batch', async () => {
+      const first = await seedItem(), second = await seedItem();
+      const a = await preview(first), b = await preview(second);
+      await request(app).patch(`/api/ingestion/review-items/${first}`).set(auth).send({editedFields: {providerVendor: 'Changed'}}).expect(200);
+      const result = await confirm([a,b]).expect(207);
+      expect(result.body.failed).toEqual([expect.objectContaining({id: first, reason: expect.stringMatching(/changed/i)})]);
+      expect(result.body.assigned.map((row: any) => row.id)).toEqual([second]);
+      expect((await getParsedItemById(userId, first))?.status).not.toBe('ASSIGNED');
+    });
+    it('requires ownership and a current unique trip match', async () => {
+      const id = await seedItem(), row = await preview(id);
+      const stranger = await request(app).post('/api/ingestion/review-suggestions/confirm').set({Authorization: `Bearer ${tripmateToken}`})
+        .send({suggestions: [{itemId: row.itemId, tripId: row.tripId, reviewVersion: row.reviewVersion}]}).expect(207);
+      expect(stranger.body.assigned).toHaveLength(0);
+      const twin = await request(app).post('/api/trips').set(auth).send({groupId, name: 'Another Tokyo trip', startDate: '2027-05-11', endDate: '2027-05-21'}).expect(201);
+      await setTripDestination(twin.body.id, 'Tokyo, Japan');
+      const result = await confirm([row]).expect(207);
+      expect(result.body.failed[0].reason).toMatch(/changed|choice/);
+      await request(app).delete(`/api/trips/${twin.body.id}`).set(auth).expect(204);
+    });
+    it('rejects stale assignment content inside the adapter without creating a booking or expense', async () => {
+      const id = await seedItem(); const beforeItem = (await getParsedItemById(userId, id))!;
+      const version = reviewItemVersion(beforeItem), count = (await flights()).length, costCount = (await expenses()).length;
+      await request(app).patch(`/api/ingestion/review-items/${id}`).set(auth).send({editedFields:{notes:'Corrected'}}).expect(200);
+      await expect(assignParsedItemToTrip(userId, id, tripId, userId, {mode:'MANUAL',expectedItemVersion:version})).rejects.toThrow(/changed/);
+      expect(await flights()).toHaveLength(count); expect(await expenses()).toHaveLength(costCount);
+    });
+    it('keeps uncertain dates and duplicates out of bulk confirmation, and validates requests', async () => {
+      const id = await seedItem({timezone_status: 'UNKNOWN'});
+      const queue = await request(app).get('/api/ingestion/review-suggestions').set(auth).expect(200);
+      expect(queue.body.suggestions.some((r: any) => r.itemId === id)).toBe(false);
+      await confirm([]).expect(400);
+      await request(app).post('/api/ingestion/review-suggestions/confirm').set(auth).send({suggestions: [{itemId: id, tripId, reviewVersion: 'forged'}]}).expect(400);
+    });
+  });
+
 });

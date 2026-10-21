@@ -1,30 +1,12 @@
-import { getIngestedDocumentById } from '../shared/repository';
-import { getMailReceipt } from '../shared/mailAdmission';
-import { trustedForwarder } from '../shared/receiverAuthentication';
-import { listTrips } from '../../db';
-import { getDestinationLocationOptionsByIds } from '../../services/destinationAttractionAutocompleteService';
-import { getLocationOptionsByIds } from '../../services/locationServices';
 import { logError, logInfo } from '../../logger';
 import { isFeatureEnabled } from '../../services/entitlementService';
 import { notify } from '../../services/notificationService';
 import type { PersistedParsedItem } from '../contracts';
-import {
-  AUTO_UNDO_WINDOW_MS,
-  assignParsedItemToTrip,
-  getAutoAssignPreference,
-  listTripBookingReferences,
-} from '../shared/repository';
-import { dateOnly, matchItemToTrip, type MatchDecision, type MatchTrip } from './tripMatcher';
+import { AUTO_UNDO_WINDOW_MS, assignParsedItemToTrip, getAutoAssignPreference } from '../shared/repository';
+import { buildMatchingContext } from './matchingContext';
 
 /** Master switch for writing matched bookings into trips. Fail-closed: off until deliberately turned on. */
 export const AUTO_ASSIGN_FLAG = 'planning_auto_assign';
-
-/**
- * Sources where the signed-in owner personally handed us the document (their own upload or share).
- * Forwarded email is checked separately against private receiver provenance and a currently verified
- * forwarding mailbox. A claimed From, extracted trust field or Gmail OAuth source cannot grant trust.
- */
-const TRUSTED_SOURCES = new Set<PersistedParsedItem['sourceType']>(['MANUAL_UPLOAD']);
 
 /**
  * Whether automatic adding applies to this person: the release switch is on AND they have not turned it off.
@@ -35,77 +17,9 @@ export const automaticAddingEnabledFor = async (userId: string): Promise<boolean
   return (await getAutoAssignPreference(userId)) ?? true;
 };
 
-type TripPlaces = { cities: string[]; broad: string[] };
-
-/**
- * Trips created through the app never store a destination sentence; where they are going lives in the
- * place ids the person picked. Resolve those to names so a booking can be matched to the trip by place.
- * Cities (and named destinations) are specific enough to count; countries and states are not.
- */
-export const resolveTripPlaces = async (locationIds: unknown): Promise<TripPlaces> => {
-  const ids = Array.isArray(locationIds) ? locationIds.map(String).filter(Boolean).slice(0, 20) : [];
-  if (!ids.length) return { cities: [], broad: [] };
-  const [options, destinations] = await Promise.all([
-    getLocationOptionsByIds(ids).catch(() => []),
-    getDestinationLocationOptionsByIds(ids).catch(() => []),
-  ]);
-  const cities = new Set<string>();
-  const broad = new Set<string>();
-  for (const option of options) (option.sourceType === 'city' ? cities : broad).add(option.name);
-  for (const destination of destinations) {
-    cities.add(destination.name);
-    if (destination.nearestCity) cities.add(destination.nearestCity);
-    if (destination.countryName) broad.add(destination.countryName);
-  }
-  return { cities: [...cities], broad: [...broad] };
-};
-
-const toMatchTrip = (
-  trip: { id: string; name: string; destination?: string | null; startDate?: unknown; endDate?: unknown },
-  refs: readonly string[] = [],
-  places: TripPlaces = { cities: [], broad: [] },
-): MatchTrip => ({
-  id: trip.id,
-  name: trip.name,
-  destination: [trip.destination, ...places.cities].filter(Boolean).join(', ') || null,
-  broadPlaces: places.broad,
-  startDate: dateOnly(trip.startDate),
-  endDate: dateOnly(trip.endDate),
-  bookingReferences: refs,
-});
-
-/**
- * Decides where one booking belongs. Candidate trips are only the ones this person is an active member of
- * (listTrips), and booking numbers are only looked up for trips that already fit on dates.
- */
-export const decideTripForItem = async (item: PersistedParsedItem, userId: string, automaticAddingOn: boolean): Promise<MatchDecision & { tripName: string | null }> => {
-  const trips = await listTrips(userId);
-  const base = trips.map((trip) => toMatchTrip(trip));
-  let sourceTrusted = TRUSTED_SOURCES.has(item.sourceType);
-  if (item.sourceType === 'FORWARDED_MAILBOX') {
-    // Extraction text/editedFields cannot grant trust. Use only server-owned provenance.
-    const document = await getIngestedDocumentById(item.rawDocId);
-    const receiptId = document?.metadata?.receiverReceiptId;
-    if (document?.userId === userId && document.importJobId === item.importJobId && document.virusScanStatus === 'PASSED' && document.sourceType === 'FORWARDED_MAILBOX' && typeof receiptId === 'string') {
-      const receipt = await getMailReceipt(receiptId, userId);
-      sourceTrusted = Boolean(receipt && receipt.expiresAt > Date.now() && receipt.state !== 'HELD' && await trustedForwarder(userId, receipt.authentication));
-    }
-  }
-  const options = { sourceTrusted, automaticAddingOn };
-  let decision = matchItemToTrip(item, base, options);
-  if (decision.candidates.length) {
-    // Only for the few trips that already fit on dates: where they are going, and booking numbers already in them.
-    const ids = decision.candidates.map((candidate) => candidate.tripId);
-    const [refs, places] = await Promise.all([
-      listTripBookingReferences(ids),
-      Promise.all(trips.filter((trip) => ids.includes(trip.id)).map(async (trip) => [trip.id, await resolveTripPlaces((trip as { locationIds?: unknown }).locationIds)] as const)),
-    ]);
-    const placesById = new Map(places);
-    decision = matchItemToTrip(item, trips.map((trip) => toMatchTrip(trip, refs.get(trip.id) ?? [], placesById.get(trip.id))), options);
-  }
-  const tripName = trips.find((trip) => trip.id === decision.tripId)?.name ?? null;
-  return { ...decision, tripName };
-};
+export { resolveTripPlaces } from './matchingContext';
+export const decideTripForItem = async (item: PersistedParsedItem, userId: string, automaticAddingOn: boolean) =>
+  (await buildMatchingContext(userId, [item])).evaluate(item, automaticAddingOn);
 
 export type AutoAssignResult = { itemId: string; tripId: string; tripName: string | null; reasons: string[] };
 
@@ -125,10 +39,13 @@ export const applyAutomaticAssignments = async (params: { userId: string; items:
   }
   if (!on) return added;
 
+  let context: Awaited<ReturnType<typeof buildMatchingContext>>;
+  try { context = await buildMatchingContext(params.userId, params.items); }
+  catch (error) { logError('[ingestion][auto-assign] matching unavailable; leaving items for review', error); return added; }
   for (const item of params.items) {
     if (item.status !== 'READY_FOR_REVIEW') continue;
     try {
-      const decision = await decideTripForItem(item, params.userId, true);
+      const decision = await context.evaluate(item, true);
       if (decision.decision !== 'auto' || !decision.tripId) continue;
       await assignParsedItemToTrip(params.userId, item.id, decision.tripId, params.userId, {
         mode: 'AUTO',

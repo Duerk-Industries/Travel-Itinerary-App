@@ -495,6 +495,8 @@ Trips from `listTrips(userId)` where the alias owner is an active group member �
 | Suggest | Gates 2–3 pass for several trips, or confidence 0.7–0.9, or a month-only fit | Review queue with the top trip pre-selected and reasons shown; one-tap Confirm; "Confirm all suggestions" |
 | Review | No trip passes the date gate | Review queue with "Create a trip from this" (Quick Start wizard prefilled — no automatic trip creation) |
 
+**2026-10-21 implementation:** Shared matching context now hydrates every date-eligible candidate, resolves airport and trip-item cities, scopes booking continuity by provider/type/dates, and ranks traveler matches without breaking automatic ambiguity. Imports adds explicit batch preview/confirmation, partial-failure recovery, provenance-based forwarding copy and booking-prefilled Quick Start with return to review. [Contract and remaining acceptance](../operations/gap-closing-matching-review.md).
+
 #### Conflict-safe Undo (7 days)
 
 - Each auto-assignment stores `assignment_mode = 'AUTO'` and `undo_expires_at`.

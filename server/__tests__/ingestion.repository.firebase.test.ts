@@ -502,6 +502,7 @@ describe('ingestion repository firebase writes', () => {
     jest.doMock('../src/db', () => ({
       getCurrentDbProvider: () => 'firebase',
       poolClient: jest.fn(),
+      ensureUserInTrip: jest.fn(async () => true),
       getTripById: jest.fn(async (tripId: string) => (
         tripId === 'trip-1'
           ? { id: tripId, groupId: 'group-1', name: 'Trip 1', currency: 'USD' }
@@ -527,6 +528,8 @@ describe('ingestion repository firebase writes', () => {
 
     const { assignParsedItemToTrip } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
+    fakeDb.collection('trips').doc('trip-1').set({groupId:'group-1',name:'Trip 1',currency:'USD'});
+    fakeDb.collection('trip_access').doc('trip-1_user-1').set({status:'active',canWrite:true});
     await assignParsedItemToTrip('user-1', 'parsed-1', 'trip-1', 'user-1');
 
     const allFlights = (fakeDb as any).collections.get('flights');
@@ -710,6 +713,7 @@ describe('ingestion repository firebase writes', () => {
     jest.doMock('../src/db', () => ({
       getCurrentDbProvider: () => 'firebase',
       poolClient: jest.fn(),
+      ensureUserInTrip: jest.fn(async () => true),
       getTripById: jest.fn(async (tripId: string) => (
         tripId === 'trip-2'
           ? { id: tripId, groupId: 'group-2', name: 'Trip 2', currency: 'USD' }
@@ -735,6 +739,8 @@ describe('ingestion repository firebase writes', () => {
 
     const { assignParsedItemToTrip } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
+    fakeDb.collection('trips').doc('trip-2').set({groupId:'group-2',name:'Trip 2',currency:'USD'});
+    fakeDb.collection('trip_access').doc('trip-2_user-1').set({status:'active',canWrite:true});
     await assignParsedItemToTrip('user-1', 'parsed-2', 'trip-2', 'user-1');
 
     expect(fetchFrankfurterExchangeRate).toHaveBeenCalledWith({

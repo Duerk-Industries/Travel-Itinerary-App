@@ -1,7 +1,9 @@
 import { readGmailConfirmation, resolveMailAlias } from '../ingestion/shared/mailAdmission';
 import { ownerVerifiedAddress, receiverAuthenticationEnabled, receiverPolicyCurrent } from '../ingestion/shared/receiverAuthentication';
-import { suggestTrips } from '../ingestion/assignment/tripSuggestions';
-import { AUTO_ASSIGN_FLAG, automaticAddingEnabledFor, decideTripForItem } from '../ingestion/assignment/autoAssign';
+import { AUTO_ASSIGN_FLAG, automaticAddingEnabledFor } from '../ingestion/assignment/autoAssign';
+import { buildMatchingContext, forwardingTrust } from '../ingestion/assignment/matchingContext';
+import { listReviewSuggestions, confirmReviewSuggestions } from '../ingestion/assignment/reviewSuggestions';
+import { z } from 'zod';
 import { reserveHttpRateLimitOrThrow, HttpRateLimitExceededError } from '../services/httpRateLimitService';
 import { Router, type Request, type Response, type RequestHandler } from 'express';
 import bodyParser from 'body-parser';
@@ -302,6 +304,27 @@ const describeUploadRequest = (req: any): Record<string, unknown> => {
   };
 };
 
+router.get('/review-suggestions', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!await requireTierAccess(userId, res)) return;
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_suggestion_preview', identity: userId, limit: 20, windowMs: 60_000 });
+    res.json(await listReviewSuggestions(userId, typeof req.query.after === 'string' ? req.query.after : undefined));
+  } catch (error) { res.status(error instanceof HttpRateLimitExceededError ? 429 : 503).json({ error: 'Matching bookings could not load. Try again.' }); }
+});
+router.post('/review-suggestions/confirm', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!await requireTierAccess(userId, res)) return;
+  const body = z.object({ suggestions: z.array(z.object({ itemId: z.string().uuid(), tripId: z.string().uuid(), reviewVersion: z.string().regex(/^[a-f0-9]{64}$/) }).strict()).min(1).max(20) }).strict().safeParse(req.body);
+  if (!body.success || new Set(body.data.suggestions.map(row => row.itemId)).size !== body.data.suggestions.length) { res.status(400).json({ error: 'Review up to 20 different bookings before confirming.' }); return; }
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    await reserveHttpRateLimitOrThrow({ name: 'import_suggestion_confirm', identity: userId, limit: 10, windowMs: 60_000 });
+    const result = await confirmReviewSuggestions(userId, body.data.suggestions);
+    res.status(result.failed.length ? 207 : 200).json(result);
+  } catch (error) { res.status(error instanceof HttpRateLimitExceededError ? 429 : 503).json({ error: 'The result could not be confirmed. Refresh Imports before retrying.' }); }
+});
 router.get('/review-items/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await requireTierAccess(userId, res))) return;
@@ -313,12 +336,15 @@ router.get('/review-items/:id', async (req, res) => {
   const signed = await getReviewQueueSignedUrl(item.rawDocId);
   const rawDocument = await getIngestedDocumentById(item.rawDocId);
   const [automaticAddingOn, assignments] = await Promise.all([automaticAddingEnabledFor(userId), getAssignmentSummaries(userId, [item.id])]);
-  const placement = item.status === 'ASSIGNED' ? null : await decideTripForItem(item, userId, automaticAddingOn);
+  const context = await buildMatchingContext(userId, [item]);
+  const placement = item.status === 'ASSIGNED' ? null : await context.evaluate(item, automaticAddingOn);
   res.json({
     // Where this booking probably belongs and why, in plain language. `heldBack` says why it was not added automatically.
     placement: placement && { decision: placement.decision, tripId: placement.tripId, tripName: placement.tripName, reasons: placement.reasons, heldBack: placement.heldBack ?? null },
     assignment: assignments.get(item.id) ?? null,
-    suggestions: suggestTrips(item, await listTrips(userId)),
+    suggestions: placement?.candidates.slice(0, 5).map(candidate => ({ ...candidate, tripName: context.trips.find(trip => trip.id === candidate.tripId)?.name ?? 'Trip' })) ?? [],
+    forwarderTrust: placement?.forwarderTrust ?? await forwardingTrust(item, userId),
+    tripDraft: await context.draft(item),
     item,
     signedDocument: signed,
     documentSummary: rawDocument
