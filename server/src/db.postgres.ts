@@ -13936,3 +13936,12 @@ export const claimApiSpendReservation = (id:string): Promise<boolean> => seriali
   const result = await getPool().query('UPDATE api_spend_reservations SET dispatched_at=NOW() WHERE id=$1 AND dispatched_at IS NULL AND settled_micros IS NULL RETURNING id',[id]);
   return result.rows.length === 1;
 });
+
+export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promise<import('./types').LegacyBlogMapArtifact[]> => {
+  const result = await getPool().query('SELECT trip_id,day_date,points_hash,gcs_path FROM blog_day_map_artifacts WHERE gcs_path > $1 ORDER BY gcs_path LIMIT $2',[afterPath,Math.min(100,Math.max(1,limit))]);
+  return result.rows.map(row => ({tripId:row.trip_id,dayDate:row.day_date instanceof Date ? row.day_date.toISOString().slice(0,10) : String(row.day_date).slice(0,10),pointsHash:row.points_hash,path:row.gcs_path}));
+};
+export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
+  const result = await getPool().query('DELETE FROM blog_day_map_artifacts WHERE trip_id=$1 AND day_date=$2 AND points_hash=$3 AND gcs_path=$4 RETURNING trip_id',[row.tripId,row.dayDate,row.pointsHash,row.path]);
+  return result.rows.length === 1;
+};

@@ -1,9 +1,10 @@
+import { keepsakeMapFallback, keepsakeMapPoints } from './keepsakeMapData';
 import { configureMapLibre } from './maplibreConfig.web';
 import type { BlogDayMapPoints } from '../../server/src/services/blogMapProjection';
 import type { KeepsakeMapCapture } from './keepsakeMapCapture';
 export async function captureKeepsakeMap(input: BlogDayMapPoints): Promise<KeepsakeMapCapture> {
-  const points = input.points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180).slice(0, 12);
-  const result: KeepsakeMapCapture = { labels: points.map((p, n) => `Approximate area ${n + 1} (${p.lat.toFixed(2)}, ${p.lng.toFixed(2)})`), approximate: true };
+  const points = keepsakeMapPoints(input);
+  const result = keepsakeMapFallback(input);
   if (input.precision !== 'approximate' || !points.length || typeof document === 'undefined') return result;
   const host = document.createElement('div');
   Object.assign(host.style, { position: 'fixed', left: '-10000px', top: '0', width: '640px', height: '400px' });

@@ -9822,3 +9822,13 @@ export const claimApiSpendReservation = async (id:string): Promise<boolean> => {
     tx.update(ref,{dispatchedAt:nowIso()}); return true;
   });
 };
+
+export const listLegacyBlogMapArtifacts = async (afterPath='',limit=100): Promise<import('./types').LegacyBlogMapArtifact[]> => {
+  const query = getDb().collection('blog_day_map_artifacts').orderBy('gcsPath').limit(Math.min(100,Math.max(1,limit)));
+  const rows = await (afterPath ? query.startAfter(afterPath) : query).get();
+  return rows.docs.map(doc => {const row=doc.data();return {tripId:String(row.tripId),dayDate:String(row.dayDate),pointsHash:String(row.pointsHash),path:String(row.gcsPath)};});
+};
+export const deleteLegacyBlogMapArtifact = async (row:import('./types').LegacyBlogMapArtifact): Promise<boolean> => {
+  const db=getDb(), ref=db.collection('blog_day_map_artifacts').doc(`${row.tripId}:${row.dayDate}:${row.pointsHash}`);
+  return db.runTransaction(async tx => {const doc=await tx.get(ref);if(!doc.exists || doc.data()?.gcsPath !== row.path) return false;tx.delete(ref);return true;});
+};

@@ -839,3 +839,6 @@ export const reserveApiSpendBatch = async (...args: Parameters<ReturnType<typeof
 export const settleApiSpendReservation = async (...args: Parameters<ReturnType<typeof adapter>['settleApiSpendReservation']>) => adapter().settleApiSpendReservation(...args);
 
 export const claimApiSpendReservation = async (...args: Parameters<ReturnType<typeof adapter>['claimApiSpendReservation']>) => adapter().claimApiSpendReservation(...args);
+
+export const listLegacyBlogMapArtifacts = async (...args: Parameters<ReturnType<typeof adapter>['listLegacyBlogMapArtifacts']>) => adapter().listLegacyBlogMapArtifacts(...args);
+export const deleteLegacyBlogMapArtifact = async (...args: Parameters<ReturnType<typeof adapter>['deleteLegacyBlogMapArtifact']>) => adapter().deleteLegacyBlogMapArtifact(...args);

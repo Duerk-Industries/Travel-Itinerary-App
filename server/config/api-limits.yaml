@@ -224,7 +224,6 @@ providers:
       # blog's day-map render job only, never a request path. Bounded by the number of trip-days
       # that ever exist (render-once-and-store), not by page views, instances or crawlers, so 200/
       # day is generous headroom rather than a real ceiling in practice.
-      BLOG_DAY_MAP_RENDER: 200
 
   NOMINATIM:
     window: hour

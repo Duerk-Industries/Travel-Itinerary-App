@@ -5,10 +5,8 @@ import { createTtlCache } from '../utils/ttlCache';
 import { getApiCacheSetting } from '../config/apiLimits';
 import { resolveActorMembership, visibleAudiencesForMembership, BlogEngagementUnauthorizedError } from './blogEngagementService';
 import { BlogTargetNotFoundError } from './blogEngagementErrors';
-import { createHash } from 'crypto';
-import { createBlogReadUrl } from './blogStorageClient';
 import { findBundledAirport } from './airportCatalog';
-import { getBlogDayByDate, listBlogDayDates, getTripName, getVisibleMediaForDay, getDayMapArtifact, getSharedMapEnabled, getTripLodgingAnchors } from '../blog/firebaseBlogDayData';
+import { getBlogDayByDate, listBlogDayDates, getTripName, getVisibleMediaForDay, getSharedMapEnabled, getTripLodgingAnchors } from '../blog/firebaseBlogDayData';
 import { projectBlogDayMapPoints, type BlogDayMapPoints } from './blogMapProjection';
 
 // Phase 5 of docs/trip-blog-social-implementation-plan.md (C1, C2, C3, C5) — architecture §7.1.
@@ -24,7 +22,7 @@ import { projectBlogDayMapPoints, type BlogDayMapPoints } from './blogMapProject
 export type FactConfidence = 'high' | 'approx';
 
 export interface BlogDayFact {
-  key: 'weather' | 'distance' | 'places' | 'media' | 'plannedVsActual' | 'dayMap';
+  key: 'weather' | 'distance' | 'places' | 'media' | 'plannedVsActual';
   label: string;
   value: string;
   // Weather only: the raw values behind `value`, so clients can render the reader's °F/°C.
@@ -318,45 +316,7 @@ const computeDayFacts = async (tripId: string, actorUserId: string, dayDate: str
     privateAnchors: membership !== 'traveler' && sharedMapEnabled && mediaPoints.length >= 2 ? await readLodgingAnchors(tripId) : [],
   });
 
-  // Day Map Artifact (Phase 5) — keyed on media geotags only, matching exactly what
-  // blogBackgroundWorker.ts's render job hashes (it has no flight-leg awareness), so this lookup
-  // must use the same media-only point set or it will simply never find the stored artifact.
-  // Followers never get the legacy stored image: it is rendered from exact geotags and was never
-  // consent-gated. Old clients simply show no thumbnail; new ones draw `mapPoints`.
-  if (membership === 'traveler' && mediaPoints.length >= 2) {
-    const pointsData = mediaPoints.map((p) => `${p.lat},${p.lng}`).sort().join('|');
-    const pointsHash = createHash('md5').update(pointsData).digest('hex');
-    let artifact: { rows: Array<{ gcs_path: string }> };
-    if (isFirebase) {
-      const row = await getDayMapArtifact(tripId, dayDate, pointsHash);
-      artifact = { rows: row ? [row] : [] };
-    } else {
-      artifact = await queryBlog<{ gcs_path: string }>(
-        'SELECT gcs_path FROM blog_day_map_artifacts WHERE trip_id = $1 AND day_date = $2 AND points_hash = $3',
-        [tripId, dayDate, pointsHash]
-      );
-    }
-    if (artifact.rows[0]) {
-      // The stored artifact is a bare object path (blog_day_map_artifacts.gcs_path), not a
-      // fetchable URL — signed the same way every blog photo already is (architecture §14.1:
-      // "served through the existing signed-URL/CDN path"). A signing failure (object missing,
-      // credentials misconfigured) degrades this one fact away rather than failing the whole
-      // request — the day card must still render without its map, per the "assert budget
-      // exhaustion degrades the card rather than erroring the page" contract this same section
-      // sets for the render job's own failure mode.
-      const mapUrl = await createBlogReadUrl(artifact.rows[0].gcs_path).catch(() => null);
-      if (mapUrl) {
-        facts.push({
-          key: 'dayMap',
-          label: 'Day Map',
-          value: mapUrl,
-          sourceTypes: ['blog_day_map_artifacts'],
-          confidence: 'high',
-          asOf,
-        });
-      }
-    }
-  }
+  // Legacy stored map images are retired. All readers use the authorized mapPoints projection.
 
   if (membership === 'traveler') {
     for (const row of flights.rows) {

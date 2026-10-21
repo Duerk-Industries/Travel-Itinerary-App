@@ -116,20 +116,6 @@ export const insertDayStarterDismissal = async (tripId: string, dayDate: string,
   );
 };
 
-export const getDayMapArtifact = async (tripId: string, dayDate: string, pointsHash: string): Promise<{ gcs_path: string } | null> => {
-  const doc = await getDb().collection('blog_day_map_artifacts').doc(`${tripId}:${dayDate}:${pointsHash}`).get();
-  if (!doc.exists) return null;
-  const data = doc.data() as any;
-  return { gcs_path: String(data.gcsPath ?? '') };
-};
-
-export const upsertDayMapArtifact = async (tripId: string, dayDate: string, pointsHash: string, gcsPath: string): Promise<void> => {
-  await getDb().collection('blog_day_map_artifacts').doc(`${tripId}:${dayDate}:${pointsHash}`).set(
-    { tripId, dayDate, pointsHash, gcsPath, updatedAt: nowIso() },
-    { merge: true }
-  );
-};
-
 export const getFollowerCommentsEnabled = async (tripId: string): Promise<boolean> => {
   const doc = await getDb().collection('trip_blogs').doc(tripId).get();
   if (!doc.exists) return true;

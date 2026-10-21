@@ -237,6 +237,8 @@ export interface GenerationIdempotencyRecord {
 }
 
 export type AuditAction =
+  | 'LEGACY_MAP_RETIREMENT_REQUESTED'
+  | 'LEGACY_MAP_ARTIFACT_RETIRED'
   | 'ADMIN_BOOTSTRAP_GRANTED'
   | 'USER_ROLE_GRANTED'
   | 'USER_ROLE_REVOKED'
@@ -1473,3 +1475,5 @@ export type ApiSpendReservation = {
   id: string; provider: string; windowKey: string; amountMicros: number; limitMicros: number | null;
   related?: ApiSpendReservation[];
 };
+
+export type LegacyBlogMapArtifact = {tripId:string;dayDate:string;pointsHash:string;path:string};

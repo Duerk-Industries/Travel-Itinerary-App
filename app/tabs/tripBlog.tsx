@@ -1468,7 +1468,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                 <Text style={{ color: theme?.colors?.link ?? '#0ea5e9', fontWeight: '700' }}>Quick capture</Text>
               </TouchableOpacity>
             ) : null}
-            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
+            {capabilities.trip_blog_keepsake_export ? <BlogKeepsakeButton nativeEnabled={capabilities.planning_native_map === true} backendUrl={backendUrl} headers={headers} tripId={activeTripId} textColor={theme?.colors?.link ?? '#0ea5e9'} /> : null}
           </View>
         </View>
         {/* Phase 1 masthead stat row (redesign proposal §1) — the "trip at a glance" strip. */}

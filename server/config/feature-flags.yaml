@@ -263,7 +263,7 @@ flags:
   # points-hash) by a background job, never on a request path (architecture §14.1).
   trip_blog_day_map_render:
     enabled: false
-    description: "Background day-map render job (§14.1) — writes a stored PNG via Google Static Maps once per (trip-day, points-hash); no request path ever calls out"
+    description: "Retired legacy blog map renderer; retained as a disabled compatibility tombstone. New readers use authorized mapPoints."
   # Phase 6 — every independently releasable surface defaults off. Caption AI and nudges are
   # fail-closed in entitlementService because they call a paid provider or contact a person.
   trip_blog_spend_summary:
