@@ -1,3 +1,5 @@
+import { quoteAiSpend, releaseUndispatchedSpend } from '../../apis/providerBudgeting';
+import { getProviderLimitKey } from '../../services/aiInvocationGuard';
 /**
  * Real LLM-backed extractor for travel document ingestion.
  *
@@ -148,10 +150,11 @@ export class LlmExtractor implements ExtractionStrategy {
   }
 
   async extract(doc: NormalizedDocument, config: ExtractionConfig): Promise<ExtractionResult> {
-    if (!this.canRun(config)) return skippedResult(config, this.strategyName, 'disabled-by-config');
+    if (!this.canRun(config)) { await releaseUndispatchedSpend(config.spendReservation); return skippedResult(config, this.strategyName, 'disabled-by-config'); }
 
     const inputText = doc.normalizedText.slice(0, INGESTION_LLM_MAX_INPUT_CHARS);
 
+    let providerInvoked = false;
     let responseText: string | null = null;
     let promptTokens = 0;
     let completionTokens = 0;
@@ -187,6 +190,7 @@ export class LlmExtractor implements ExtractionStrategy {
         usageWindowKey?: string | null;
         usageMetadata?: Record<string, unknown>;
       };
+      ctx.spendReservation = config.spendReservation;
       ctx.apiKey = apiKey;
       ctx.usageAccountingEnabled = true;
       ctx.usageWindowKey = getMonthWindowKey();
@@ -194,6 +198,7 @@ export class LlmExtractor implements ExtractionStrategy {
         pipeline: 'ingestion_llm_extract',
         strategyName: this.strategyName,
       };
+      providerInvoked = true;
       const response = await provider.chatCompletion(
         {
           model: modelName,
@@ -213,7 +218,7 @@ export class LlmExtractor implements ExtractionStrategy {
     } catch (err: any) {
       logError(`[ingestion][llm] provider call failed: ${err.message ?? err}`);
       return skippedResult(config, this.strategyName, 'provider-call-failed', { provider: providerId, modelName });
-    }
+    } finally { if (!providerInvoked) await releaseUndispatchedSpend(config.spendReservation); }
 
     if (!responseText) {
       return skippedResult(config, this.strategyName, 'empty-provider-response', {
@@ -458,3 +463,9 @@ const learnParserFromLlmResult = async (
   }
   await upsertLearnedParser(sourceKey, itemType, patterns, confidence);
 };
+
+
+/** Same input/output bounds as the actual extractor request, for aggregate admission. */
+export const quoteExtractionSpend = (doc: NormalizedDocument, provider:string, model:string) => quoteAiSpend(getProviderLimitKey(provider), {
+  model, messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:doc.normalizedText.slice(0,INGESTION_LLM_MAX_INPUT_CHARS)}],max_tokens:1200,
+});

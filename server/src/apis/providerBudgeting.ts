@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import {
   findApiRequestPricingUsd,
@@ -6,6 +7,9 @@ import {
   normalizeApiLimitKeyPart,
 } from '../config/apiLimits';
 import {
+  claimApiSpendReservation,
+  reserveApiSpendBatch,
+  settleApiSpendReservation,
   getApiCostCounter,
   incrementApiCostCounter,
   insertProviderCostLedgerEntry,
@@ -15,7 +19,7 @@ import {
 import { logError, logInfo } from '../logger';
 import { incrementMetric } from '../metrics';
 import { getRequestContext } from '../requestContext';
-import type { ProviderCostLedgerEntry } from '../types';
+import type { ApiSpendReservation, ProviderCostLedgerEntry } from '../types';
 import { isAccountErased } from '../services/privacyRightsService';
 
 export { getApiRequestPricingUsd } from '../config/apiLimits';
@@ -28,7 +32,7 @@ const formatMonthWindowKey = (now = new Date()): string => {
   return `${year}-${month}`;
 };
 
-const toUsdMicros = (usd: number): number => Math.round(usd * MICROS_PER_USD);
+const toUsdMicros = (usd: number): number => Math.floor(usd * MICROS_PER_USD);
 const TRACKED_OPENAI_MODELS = ['gpt-4o-mini', 'gpt-5.6-luna'] as const;
 
 export const getApiBudgetWindowKey = (now = new Date()): string => formatMonthWindowKey(now);
@@ -42,7 +46,7 @@ export const estimateAiCostMicros = (params: {
   const providerConfig = getApiBudgetProviderConfig(params.provider);
   const modelPricing = providerConfig?.models?.[normalizeApiLimitKeyPart(params.model)];
   if (!modelPricing) return null;
-  return Math.round(
+  return Math.ceil(
     params.promptTokens * modelPricing.inputCostPer1MTokensUsd +
       params.completionTokens * modelPricing.outputCostPer1MTokensUsd
   );
@@ -75,7 +79,7 @@ export const recordApiCost = async (params: {
 // USD-per-request providers (SerpAPI, Wikimedia, Google Routes, etc.) have no token counts to
 // price against, so cost is just the configured flat rate for that provider.
 export const estimateRequestCostMicros = (costPerRequestUsd: number): number =>
-  Math.round(Math.max(0, Number(costPerRequestUsd) || 0) * MICROS_PER_USD);
+  Math.ceil(Math.max(0, Number(costPerRequestUsd) || 0) * MICROS_PER_USD);
 
 // ── Trusted settlement (analytics Phase 3) ──────────────────────────────────
 // Every billable provider attempt is settled exactly once here: one
@@ -108,6 +112,9 @@ export type SettleProviderAttemptInput = ProviderAttemptAttribution & {
   cacheStatus?: ProviderCostLedgerEntry['cacheStatus'];
   outcome?: ProviderCostLedgerEntry['outcome'];
   windowKey?: string;
+  reservation?: ApiSpendReservation | null;
+  /** False for a timeout or a successful response without metering. */
+  usageKnown?: boolean;
 };
 
 export type SettleProviderAttemptResult = {
@@ -139,15 +146,15 @@ const priceTokens = (provider: string, model: string | null, promptTokens: numbe
   const pricing = getApiBudgetProviderConfig(provider)?.models?.[normalizeApiLimitKeyPart(model)];
   if (!pricing) return { micros: null, priceVersion: null };
   return {
-    micros: Math.round(promptTokens * pricing.inputCostPer1MTokensUsd + completionTokens * pricing.outputCostPer1MTokensUsd),
+    micros: Math.ceil(promptTokens * pricing.inputCostPer1MTokensUsd + completionTokens * pricing.outputCostPer1MTokensUsd),
     priceVersion: `${provider}/${model}@${pricing.inputCostPer1MTokensUsd}/${pricing.outputCostPer1MTokensUsd}`,
   };
 };
 
 export const settleProviderAttempt = async (input: SettleProviderAttemptInput): Promise<SettleProviderAttemptResult> => {
   const provider = normalizeApiLimitKeyPart(input.provider);
-  const windowKey = input.windowKey ?? getApiBudgetWindowKey();
-  const attemptId = input.attemptId?.trim() ? `${provider}:${input.attemptId.trim()}` : `${provider}:${randomUUID()}`;
+  const windowKey = input.reservation?.windowKey ?? input.windowKey ?? getApiBudgetWindowKey();
+  const attemptId = input.reservation ? `${provider}:${input.reservation.id}` : input.attemptId?.trim() ? `${provider}:${input.attemptId.trim()}` : `${provider}:${randomUUID()}`;
   const outcome = input.outcome ?? 'success';
   const promptTokens = safeCount(input.promptTokens);
   const completionTokens = safeCount(input.completionTokens);
@@ -156,7 +163,9 @@ export const settleProviderAttempt = async (input: SettleProviderAttemptInput): 
 
   let estimatedCostMicros: number | null;
   let priceVersion: string | null = null;
-  if (input.unitType === 'tokens') {
+  if (input.usageKnown === false) {
+    estimatedCostMicros = null;
+  } else if (input.unitType === 'tokens') {
     if (outcome === 'failed' && promptTokens + completionTokens === 0) {
       estimatedCostMicros = 0; // no usage reported: providers do not bill these
     } else {
@@ -203,11 +212,18 @@ export const settleProviderAttempt = async (input: SettleProviderAttemptInput): 
     incrementMetric('cost_ledger.settlement_failed', { provider });
     logError('[cost-ledger] failed to settle provider attempt', { provider, attemptId, error: err instanceof Error ? err.message : String(err) });
   }
+  if (input.reservation && estimatedCostMicros !== null && estimatedCostMicros > input.reservation.amountMicros) {
+    incrementMetric('api_spend.reservation_overrun',{provider});
+    logError('[api-spend] provider usage exceeded its configured allowance',{provider});
+  }
+  const reservationTotal = input.reservation ? await settleApiSpendReservation(input.reservation.id, estimatedCostMicros) : undefined;
+  for (const related of input.reservation?.related ?? []) await settleApiSpendReservation(related.id,estimatedCostMicros);
   if (!inserted) {
     incrementMetric('cost_ledger.duplicate_attempt', { provider });
     return { attemptId, duplicate: true, costStatus, estimatedCostMicros };
   }
   incrementMetric('cost_ledger.settled', { provider, costStatus });
+  if (input.reservation) return {attemptId, duplicate: false, costStatus, estimatedCostMicros, counterTotalMicros: reservationTotal};
   if ((estimatedCostMicros ?? 0) > 0) {
     const counterTotalMicros = await recordApiCost({ provider, windowKey, amountMicros: estimatedCostMicros ?? 0 });
     return { attemptId, duplicate: false, costStatus, estimatedCostMicros, counterTotalMicros };
@@ -226,8 +242,10 @@ export const recordProviderRequestCost = async (params: ProviderAttemptAttributi
   const provider = normalizeApiLimitKeyPart(params.provider);
   const price = params.costPerRequestUsd ?? findApiRequestPricingUsd(provider);
   if (price === 0) return undefined;
+  const [reservation] = await reserveProviderSpendBatch([{provider,amountMicros:price == null ? null : estimateRequestCostMicros(price),windowKey:params.windowKey}]);
   const result = await settleProviderAttempt({
     ...params,
+    reservation,
     provider,
     unitType: 'request',
     requestUnits: 1,
@@ -336,3 +354,82 @@ export const logMissingApiPricingConfigurationWarnings = (): void => {
     }
   }
 };
+
+
+const spendAlerts = new Set<string>();
+
+export class AdvanceSpendError extends Error {
+  readonly code = 'API_BUDGET_EXCEEDED';
+  constructor(message: string) { super(message); this.name = 'AdvanceSpendError'; }
+}
+
+/** Each quote is a distinct dispatch attempt. Persist the complete batch before starting any work. */
+export const reserveProviderSpendBatch = async (quotes: Array<{provider:string; amountMicros:number|null; windowKey?:string; limitMicros?:number|null}>): Promise<Array<ApiSpendReservation|null>> => {
+  if (!quotes.length || quotes.length > 64) throw new Error('Reserve between 1 and 64 provider attempts');
+  const reservations: Array<ApiSpendReservation|null> = quotes.map(quote => {
+    const provider = normalizeApiLimitKeyPart(quote.provider), budget = getApiBudgetProviderConfig(provider)?.monthlyBudgetUsd;
+    const configuredLimit = budget == null ? null : Math.floor(budget*MICROS_PER_USD);
+    const limitMicros = quote.limitMicros == null ? configuredLimit : configuredLimit === null ? quote.limitMicros : Math.min(configuredLimit,quote.limitMicros);
+    if (quote.amountMicros === null) {
+      if (limitMicros !== null || spendScopes.getStore()?.length) throw new AdvanceSpendError(`No bounded price configured for provider=${provider}; paid work was not started`);
+      return null;
+    }
+    if (!Number.isSafeInteger(quote.amountMicros) || quote.amountMicros < 0 || limitMicros !== null && (!Number.isSafeInteger(limitMicros) || limitMicros < 0)) throw new Error('Invalid spend reservation amount');
+    return {id:randomUUID(),provider,windowKey:quote.windowKey ?? getApiBudgetWindowKey(),amountMicros:quote.amountMicros,limitMicros};
+  });
+  const scopes = spendScopes.getStore() ?? [];
+  for (const reservation of reservations) if (reservation) reservation.related = scopes.filter(scope => normalizeApiLimitKeyPart(scope.provider) !== reservation.provider).map(scope => ({
+    id:randomUUID(), provider:normalizeApiLimitKeyPart(scope.provider),windowKey:scope.windowKey ?? reservation.windowKey,amountMicros:reservation.amountMicros,limitMicros:scope.limitMicros,
+  }));
+  const priced = reservations.filter((row): row is ApiSpendReservation => row !== null);
+  if (priced.length && !await reserveApiSpendBatch(priced.flatMap(row => { const {related,...base} = row; return [base,...related ?? []]; }))) throw new AdvanceSpendError('The provider budget cannot cover this work. Continue with manual review or try later.');
+  for (const row of priced) {
+    const threshold = getApiBudgetProviderConfig(row.provider)?.alertThresholdPercent ?? 80;
+    const key = `${row.provider}:${row.windowKey}:${row.limitMicros}:${threshold}`;
+    if (row.limitMicros === null || row.limitMicros <= 0 || spendAlerts.has(key)) continue;
+    try {
+      const total = await getApiCostCounter(row.provider,row.windowKey);
+      if (total*100 >= row.limitMicros*threshold) {
+        if (spendAlerts.size >= 512) spendAlerts.clear();
+        spendAlerts.add(key); incrementMetric('api_spend.threshold',{provider:row.provider});
+        logInfo(`[api-spend] budget alert threshold reached provider=${row.provider} window=${row.windowKey} threshold=${threshold}%`);
+      }
+    } catch { incrementMetric('api_spend.alert_failed',{provider:row.provider}); }
+  }
+  return reservations;
+};
+
+/** UTF-8 bytes plus framing is a deliberately conservative text-input token allowance. */
+export const quoteAiSpend = (provider: string, request: {model:string; messages: Array<{role:string;content:string}>; max_tokens?:number;max_completion_tokens?:number}): number | null => {
+  for (const cap of [request.max_tokens,request.max_completion_tokens]) if (cap !== undefined && (!Number.isSafeInteger(cap) || cap < 1 || cap > 1_000_000)) throw new Error('Invalid bounded AI output token count');
+  const output = Math.max(request.max_completion_tokens ?? 0, request.max_tokens ?? 0) || 2048;
+  if (!Number.isSafeInteger(output) || output < 1 || output > 1_000_000) throw new Error('Invalid bounded AI output token count');
+  const pricing = getApiBudgetProviderConfig(provider)?.models?.[normalizeApiLimitKeyPart(request.model)];
+  return pricing ? Math.ceil((Buffer.byteLength(JSON.stringify(request.messages),'utf8')+1024+request.messages.length*32)*pricing.inputCostPer1MTokensUsd+output*pricing.outputCostPer1MTokensUsd) : null;
+};
+export const reserveAiSpend = async (provider:string, request: Parameters<typeof quoteAiSpend>[1]) =>
+  (await reserveProviderSpendBatch([{provider,amountMicros:quoteAiSpend(provider,request)}]))[0];
+
+/** Only release work known not to have been dispatched. Never run expiry-based refunds. */
+export const releaseUndispatchedSpend = async (reservation: ApiSpendReservation | null | undefined) => {
+  if (reservation) for (const row of [reservation,...reservation.related ?? []]) await settleApiSpendReservation(row.id,0,true);
+};
+
+
+type SpendScope = {provider:string;limitMicros:number;windowKey?:string};
+const spendScopes = new AsyncLocalStorage<SpendScope[]>();
+/** Durable scope counters accumulate all attempts across retries, processes and background tasks. */
+export const withSpendScope = <T>(scope: SpendScope, work: () => Promise<T>): Promise<T> => {
+  if (!Number.isSafeInteger(scope.limitMicros) || scope.limitMicros < 0) throw new Error('Invalid job spend ceiling');
+  const parents = spendScopes.getStore() ?? [];
+  const parent = parents.find(parent => parent.provider === scope.provider);
+  if (parent) scope = {...scope,limitMicros:Math.min(scope.limitMicros,parent.limitMicros),windowKey:parent.windowKey ?? scope.windowKey};
+  return spendScopes.run([...parents.filter(parent => parent.provider !== scope.provider),scope],work);
+};
+
+export const claimProviderSpend = async (reservation:ApiSpendReservation|null|undefined): Promise<void> => {
+  if (reservation) for (const row of [reservation,...reservation.related ?? []]) if (!await claimApiSpendReservation(row.id)) throw new AdvanceSpendError('This spend reservation has already been used. A retry requires a new reservation.');
+};
+
+export const hasMeteredTokenUsage = (usage: {prompt_tokens?:number;completion_tokens?:number}|null|undefined): boolean =>
+  Boolean(usage && [usage.prompt_tokens,usage.completion_tokens].every(value => Number.isSafeInteger(value) && value! >= 0));

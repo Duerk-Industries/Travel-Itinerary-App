@@ -1657,9 +1657,9 @@ router.patch('/api-limits/:provider', async (req, res) => {
   if (
     monthlyBudgetUsd !== null &&
     typeof monthlyBudgetUsd !== 'undefined' &&
-    (!Number.isFinite(Number(monthlyBudgetUsd)) || Number(monthlyBudgetUsd) <= 0)
+    (!Number.isFinite(Number(monthlyBudgetUsd)) || Number(monthlyBudgetUsd) < 0)
   ) {
-    res.status(400).json({ error: 'monthlyBudgetUsd must be null or a positive number' });
+    res.status(400).json({ error: 'monthlyBudgetUsd must be null or a non-negative number' });
     return;
   }
   if (

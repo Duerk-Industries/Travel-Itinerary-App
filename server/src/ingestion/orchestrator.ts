@@ -1,3 +1,4 @@
+import { withSpendScope } from '../apis/providerBudgeting';
 import { INGESTION_JOB_TOKEN_BUDGET_USD, INGESTION_LOGIC_VERSION } from './config';
 import type { ExtractionResult, IngestionPayload, PersistedImportJob, QueuedImportProcessorConfig } from './contracts';
 import { extractCandidates } from './extraction';
@@ -145,7 +146,7 @@ const processExistingImportJob = async (
   job: PersistedImportJob,
   payloadRecord: NonNullable<Awaited<ReturnType<typeof getImportJobPayload>>>,
   overrides?: PipelineOverrides
-): Promise<PersistedImportJob> => {
+): Promise<PersistedImportJob> => withSpendScope({provider:`INGESTION_JOB_${job.id}`,limitMicros:Math.floor(INGESTION_JOB_TOKEN_BUDGET_USD*1_000_000),windowKey:new Date(job.createdAt).toISOString().slice(0,7)}, async () => {
   if (isTerminalJobState(job.state)) {
     return job;
   }
@@ -268,7 +269,7 @@ const processExistingImportJob = async (
     await deleteTempBytes(payload.contentBytesRef);
     throw error;
   }
-};
+});
 
 export const processImportJob = async (jobId: string, overrides?: PipelineOverrides): Promise<PersistedImportJob> => {
   const job = await getImportJobById(jobId);

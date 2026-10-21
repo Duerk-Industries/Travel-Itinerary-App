@@ -658,6 +658,8 @@ until measured cost/reliability requirements justify the fixed maintenance burde
 
 ### 6.2 Mandatory controls for every slice
 
+**2026-10-21 implementation:** Durable advance spend reservations now cover provider attempts, shared import-job limits, consensus preflight, shadow scope and capture/request retries, with single-use dispatch claims and conservative settlement. [Contract, migration and remaining deployment evidence](../operations/gap-closing-advance-spend.md).
+
 - Paid calls use `reserveApiUsageOrThrow` / `recordProviderRequestCost`, with an operator-chosen absolute monthly cap and per-active-user target, 80% alert, and a tested atomic hard stop across instances. Include retries and parallel model reservations. Budget exhaustion degrades to review/list/manual work, not silent failure.
 - New external-contact/paid/automatic-write flags explicitly join `FAIL_CLOSED_FLAGS` with missing-row tests; preserve unrelated fail-open legacy entitlements. Global off denies everyone; cohorts never bypass global flags or authorization.
 - Validate cheaply before database-backed rate-limit writes; cap aggregate body/storage/queue sizes. Edge rejection reduces both memory pressure and DB metering cost under abuse.

@@ -5,6 +5,7 @@ import os from 'os';
 import path from 'path';
 import {
   getApiBudgetProviderConfig,
+  updateApiBudgetProviderConfig,
   getApiCacheSetting,
   getApiLimitProviderConfig,
   updateApiCachingConfig,
@@ -86,4 +87,9 @@ describe('api-limits yaml config', () => {
     expect(getApiCacheSetting('attractions', 'durationMetadataRefreshDays')).toBe(60);
     expect(getApiCacheSetting('images', 'cacheTtlMs')).toBe(12345);
   });
+  it('round-trips a zero-dollar provider cap rather than treating it as unconfigured', () => {
+    updateApiBudgetProviderConfig('OPENAI',{monthlyBudgetUsd:0,alertThresholdPercent:80,models:{}});
+    expect(getApiBudgetProviderConfig('OPENAI')?.monthlyBudgetUsd).toBe(0);
+  });
+
 });

@@ -1,3 +1,4 @@
+import { validateSpendBatch, validateActualSpend } from './utils/apiSpendValidation';
 import { memoryPlanningRevision, trackMemoryPlanningWrites } from './services/planningMemoryRevision';
 import { AsyncLocalStorage } from 'async_hooks';
 // server/src/db.ts
@@ -1539,6 +1540,7 @@ export const initDb = async (): Promise<void> => {
     await del('ai_experiment_assignments');
     await del('ai_experiments');
     await del('generation_idempotency');
+    await del('api_spend_reservations');
     await del('api_cost_counters');
     await del('api_usage_counters');
     await del('admin_settings');
@@ -11528,10 +11530,16 @@ export const listApiCostCounters = async (): Promise<
   }));
 };
 
-export const resetApiCostCounters = async (): Promise<void> => {
-  const p = getPool();
-  await p.query(`DELETE FROM api_cost_counters`);
-};
+export const resetApiCostCounters = async (): Promise<void> => serializeMemorySpend(async () => {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    if (!isMemorySpend()) await client.query('LOCK TABLE api_spend_reservations IN SHARE ROW EXCLUSIVE MODE');
+    const pending = await client.query('SELECT id FROM api_spend_reservations WHERE settled_micros IS NULL LIMIT 1');
+    if (pending.rows.length) throw new Error('Cannot reset budgets with unsettled provider work');
+    await client.query('DELETE FROM api_cost_counters'); await client.query('COMMIT');
+  } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+});
 
 export const recordItineraryGenerationMetrics = async (metrics: ItineraryGenerationMetrics): Promise<void> => {
   const p = getPool();
@@ -13844,3 +13852,87 @@ export const getPlanningRevision = async (tripId: string, groupId: string): Prom
 };
 
 export { mutateGeocodingPostgres as mutateGeocodingState } from './services/geocodingRepository';
+
+
+/** Lock budget rows in a consistent order; admission and holds commit together across instances. */
+const reserveApiSpendBatchStored = async (requests: import('./types').ApiSpendReservation[]): Promise<boolean> => {
+  validateSpendBatch(requests);
+  const client = await getPool().connect();
+  const pending: typeof requests = [];
+  try {
+    await client.query('BEGIN');
+    for (const request of [...requests].sort((a,b) => a.id.localeCompare(b.id))) {
+      const existing = await client.query('SELECT * FROM api_spend_reservations WHERE id=$1 FOR UPDATE',[request.id]);
+      if (existing.rows.length) {
+        const row = existing.rows[0];
+        if (row.provider !== request.provider || row.window_key !== request.windowKey || Number(row.amount_micros) !== request.amountMicros || (row.settled_micros !== null || row.dispatched_at !== null)) throw new Error('Spend reservation cannot be reused for another attempt');
+        continue;
+      }
+      const inserted = await client.query(`INSERT INTO api_spend_reservations (id,provider,window_key,amount_micros) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING RETURNING id`, [request.id,request.provider,request.windowKey,request.amountMicros]);
+      if (inserted.rows.length) pending.push(request);
+      else {
+        const {rows} = await client.query('SELECT * FROM api_spend_reservations WHERE id=$1 FOR UPDATE', [request.id]);
+        const row = rows[0];
+        if (!row || row.provider !== request.provider || row.window_key !== request.windowKey || Number(row.amount_micros) !== request.amountMicros || (row.settled_micros !== null || row.dispatched_at !== null)) throw new Error('Spend reservation cannot be reused for another attempt');
+      }
+    }
+    const buckets = new Map<string, {provider:string; windowKey:string; amount:number; limit:number|null}>();
+    for (const request of pending) {
+      const key = `${request.provider}:${request.windowKey}`, bucket = buckets.get(key) ?? {provider:request.provider,windowKey:request.windowKey,amount:0,limit:null};
+      bucket.amount += request.amountMicros;
+      if (!Number.isSafeInteger(bucket.amount)) throw new Error('Spend amount exceeds integer precision');
+      if (request.limitMicros !== null) bucket.limit = bucket.limit === null ? request.limitMicros : Math.min(bucket.limit, request.limitMicros);
+      buckets.set(key,bucket);
+    }
+    for (const bucket of [...buckets.values()].sort((a,b) => `${a.provider}:${a.windowKey}`.localeCompare(`${b.provider}:${b.windowKey}`))) {
+      await client.query(`INSERT INTO api_cost_counters (provider,window_key,amount_micros) VALUES ($1,$2,0) ON CONFLICT (provider,window_key) DO NOTHING`, [bucket.provider,bucket.windowKey]);
+      const {rows} = await client.query('SELECT amount_micros FROM api_cost_counters WHERE provider=$1 AND window_key=$2 FOR UPDATE', [bucket.provider,bucket.windowKey]);
+      if (!Number.isSafeInteger(Number(rows[0].amount_micros)+bucket.amount)) throw new Error('Spend amount exceeds integer precision');
+      if (bucket.limit !== null && Number(rows[0].amount_micros) + bucket.amount > bucket.limit) {
+        if (isMemorySpend()) for (const request of pending) await client.query('DELETE FROM api_spend_reservations WHERE id=$1', [request.id]);
+        await client.query('ROLLBACK'); return false;
+      }
+    }
+    for (const bucket of buckets.values()) await client.query('UPDATE api_cost_counters SET amount_micros=amount_micros+$3,updated_at=NOW() WHERE provider=$1 AND window_key=$2', [bucket.provider,bucket.windowKey,bucket.amount]);
+    await client.query('COMMIT'); return true;
+  } catch (error) {
+    if (isMemorySpend()) for (const request of pending) await client.query('DELETE FROM api_spend_reservations WHERE id=$1',[request.id]);
+    await client.query('ROLLBACK'); throw error;
+  } finally { client.release(); }
+};
+
+/** Null means dispatch/usage is uncertain: retain the whole hold, including after a crash. */
+const settleApiSpendReservationStored = async (id: string, actualMicros: number | null, undispatchedOnly = false): Promise<number> => {
+  validateActualSpend(actualMicros);
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const {rows} = await client.query('SELECT * FROM api_spend_reservations WHERE id=$1 FOR UPDATE', [id]);
+    const row = rows[0]; if (!row) throw new Error('Spend reservation not found');
+    if (row.settled_micros === null && (!undispatchedOnly || row.dispatched_at === null)) {
+      const amount = actualMicros ?? Number(row.amount_micros);
+      const current = await client.query('SELECT amount_micros FROM api_cost_counters WHERE provider=$1 AND window_key=$2 FOR UPDATE',[row.provider,row.window_key]);
+      const nextAmount = Number(current.rows[0]?.amount_micros ?? 0) + amount - Number(row.amount_micros);
+      if (!Number.isSafeInteger(nextAmount) || nextAmount < 0) throw new Error('Invalid budget reconciliation');
+      await client.query('UPDATE api_cost_counters SET amount_micros=amount_micros+$3,updated_at=NOW() WHERE provider=$1 AND window_key=$2', [row.provider,row.window_key,amount-Number(row.amount_micros)]);
+      await client.query('UPDATE api_spend_reservations SET settled_micros=$2,settled_at=NOW() WHERE id=$1', [id,amount]);
+    }
+    const total = await client.query('SELECT amount_micros FROM api_cost_counters WHERE provider=$1 AND window_key=$2', [row.provider,row.window_key]);
+    await client.query('COMMIT'); return Number(total.rows[0]?.amount_micros ?? 0);
+  } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
+};
+
+// pg-mem has no row locks; serialize its transactions to preserve admission semantics in tests.
+const isMemorySpend = () => getEnvFlag('USE_IN_MEMORY_DB') || getEnvValue('DB_PROVIDER') === 'memory' || Boolean(getEnvValue('DATABASE_URL')?.startsWith('pg-mem://'));
+let memorySpendTail: Promise<unknown> = Promise.resolve();
+const serializeMemorySpend = <T>(work: () => Promise<T>): Promise<T> => {
+  if (!isMemorySpend()) return work();
+  const next = memorySpendTail.then(work,work); memorySpendTail = next.catch(() => undefined); return next;
+};
+export const reserveApiSpendBatch = (requests: import('./types').ApiSpendReservation[]) => serializeMemorySpend(() => reserveApiSpendBatchStored(requests));
+export const settleApiSpendReservation = (id:string,actualMicros:number|null,undispatchedOnly = false) => serializeMemorySpend(() => settleApiSpendReservationStored(id,actualMicros,undispatchedOnly));
+
+export const claimApiSpendReservation = (id:string): Promise<boolean> => serializeMemorySpend(async () => {
+  const result = await getPool().query('UPDATE api_spend_reservations SET dispatched_at=NOW() WHERE id=$1 AND dispatched_at IS NULL AND settled_micros IS NULL RETURNING id',[id]);
+  return result.rows.length === 1;
+});

@@ -78,11 +78,11 @@ export const anthropicProvider: AiChatProvider = {
           message: { role: 'assistant', content: contentText(data.content) },
           finish_reason: data.stop_reason ?? null,
         }],
-        usage: {
-          prompt_tokens: data.usage?.input_tokens ?? 0,
-          completion_tokens: data.usage?.output_tokens ?? 0,
+        usage: data.usage ? {
+          prompt_tokens: data.usage?.input_tokens,
+          completion_tokens: data.usage?.output_tokens,
           total_tokens: (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0),
-        },
+        } : undefined,
       };
     } catch (err) {
       throw normalizeProviderError('anthropic', err);

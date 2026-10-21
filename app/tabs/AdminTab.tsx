@@ -2424,8 +2424,8 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
       setError(`Overall limit for ${provider.provider} must be blank or a positive number.`);
       return;
     }
-    if (parsedMonthlyBudgetUsd !== null && (!Number.isFinite(parsedMonthlyBudgetUsd) || parsedMonthlyBudgetUsd <= 0)) {
-      setError(`Monthly budget for ${provider.provider} must be blank or a positive number.`);
+    if (parsedMonthlyBudgetUsd !== null && (!Number.isFinite(parsedMonthlyBudgetUsd) || parsedMonthlyBudgetUsd < 0)) {
+      setError(`Monthly budget for ${provider.provider} must be blank or a non-negative number.`);
       return;
     }
     if (

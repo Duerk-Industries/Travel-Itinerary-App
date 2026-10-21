@@ -146,25 +146,26 @@ describe('provider cost ledger: OpenAI chat path', () => {
     attribution: { userId, featureKey: 'itinerary', tripId: 'trip-9' },
   });
 
-  it('keys settlement on the OpenAI response ID and attributes it, even without usage accounting', async () => {
+  it('keys settlement on a unique admitted attempt and attributes every dispatch, even without usage accounting', async () => {
     const id = `chatcmpl-${Date.now()}`;
     jest.spyOn(axios, 'post').mockResolvedValue({ data: { id, usage: { prompt_tokens: 120, completion_tokens: 40, total_tokens: 160 } } });
     await call('user-openai');
-    await call('user-openai'); // same response replayed
+    await call('user-openai'); // another actual dispatch has its own reservation
     const month = new Date().toISOString().slice(0, 7);
-    const rows = (await ledger(month)).filter((r) => r.attemptId === `OPENAI:${id}`);
-    expect(rows).toHaveLength(1);
+    const rows = (await ledger(month)).filter((r) => r.userId === 'user-openai');
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map(row => row.attemptId)).size).toBe(2);
     expect(rows[0]).toMatchObject({ userId: 'user-openai', featureKey: 'itinerary', tripId: 'trip-9', caller: 'ITINERARY_GENERATION', promptTokens: 120 });
   });
 
-  it('settles a failed OpenAI call as a non-billable attempt and still throws', async () => {
+  it('settles an unmetered failed OpenAI call as unknown and still throws', async () => {
     jest.spyOn(axios, 'post').mockRejectedValue(Object.assign(new Error('boom'), { response: { status: 500, data: {} } }));
     const month = new Date().toISOString().slice(0, 7);
     const before = (await ledger(month)).filter((r) => r.outcome === 'failed' && r.userId === 'user-fail').length;
     await expect(call('user-fail')).rejects.toThrow();
     const after = (await ledger(month)).filter((r) => r.outcome === 'failed' && r.userId === 'user-fail');
     expect(after).toHaveLength(before + 1);
-    expect(after[after.length - 1]).toMatchObject({ costStatus: 'not_billable', estimatedCostMicros: 0 });
+    expect(after[after.length - 1]).toMatchObject({ costStatus: 'unknown', estimatedCostMicros: null });
   });
 });
 

@@ -130,7 +130,7 @@ const normalizeProviderBudgeting = (raw: RawProviderBudgeting | undefined): Prov
     };
   }
   return {
-    monthlyBudgetUsd: parsePositiveNumber(raw?.monthlyBudgetUsd),
+    monthlyBudgetUsd: raw?.monthlyBudgetUsd != null && String(raw.monthlyBudgetUsd).trim() !== '' && Number(raw.monthlyBudgetUsd) === 0 ? 0 : parsePositiveNumber(raw?.monthlyBudgetUsd),
     alertThresholdPercent: parsePositiveNumber(raw?.alertThresholdPercent),
     models,
   };

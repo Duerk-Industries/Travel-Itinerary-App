@@ -49,6 +49,7 @@ export const authorizeAiCall = async (ctx: AiCallContextWithUsage): Promise<AiCa
     await reserveApiUsageOrThrow({
       provider: getProviderLimitKey(ctx.provider),
       caller: ctx.callerId,
+      ...(ctx.spendReservation ? {spendAlreadyReserved:true} : {}),
     });
     return true;
   });

@@ -3,7 +3,7 @@ import { logError } from '../../logger';
 import { ParsedFlight } from './types';
 import { getEnvValue } from '../../env';
 import { reserveApiUsageOrThrow } from '../../apis/usageLimiter';
-import { settleProviderAttempt } from '../../apis/providerBudgeting';
+import { claimProviderSpend, hasMeteredTokenUsage, reserveAiSpend, settleProviderAttempt } from '../../apis/providerBudgeting';
 
 export const GEMINI_FLIGHT_PARSER_CALLER = 'PARSE_FLIGHT_TEXT';
 
@@ -52,6 +52,9 @@ ${text.substring(0, 10000)}
 """
 `;
 
+    const reservation = await reserveAiSpend('GEMINI',{model:'gemini-2.5-flash',messages:[{role:'user',content:prompt}],max_tokens:2048});
+    await claimProviderSpend(reservation);
+    let settled = false;
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -60,6 +63,7 @@ ${text.substring(0, 10000)}
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.1,
+            maxOutputTokens: 2048,
           },
         }),
       });
@@ -71,10 +75,12 @@ ${text.substring(0, 10000)}
 
       const data = await response.json() as any;
       const promptTokens = Number(data?.usageMetadata?.promptTokenCount ?? 0);
-      const completionTokens = Number(data?.usageMetadata?.candidatesTokenCount ?? 0);
+      const completionTokens = Number(data?.usageMetadata?.candidatesTokenCount ?? 0) + Number(data?.usageMetadata?.thoughtsTokenCount ?? 0);
       try {
         await settleProviderAttempt({
           provider: 'GEMINI',
+          reservation,
+          usageKnown: data?.usageMetadata?.promptTokenCount !== undefined && data?.usageMetadata?.candidatesTokenCount !== undefined && hasMeteredTokenUsage({prompt_tokens:promptTokens,completion_tokens:completionTokens}),
           attemptId: typeof data?.responseId === 'string' ? data.responseId : null,
           unitType: 'tokens',
           model: 'gemini-2.5-flash',
@@ -87,6 +93,7 @@ ${text.substring(0, 10000)}
         // failed flight parse; the limiter reservation already happened.
         logError('[FlightParser] Gemini cost accounting failed', accountingError);
       }
+      settled = true;
       const contentText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       
       const cleanJsonStr = contentText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
@@ -97,6 +104,7 @@ ${text.substring(0, 10000)}
         bulk: Array.isArray(parsed.bulk) ? parsed.bulk : [],
       };
     } catch (err) {
+      if (!settled) await settleProviderAttempt({provider:'GEMINI',reservation,unitType:'tokens',model:'gemini-2.5-flash',outcome:'failed',usageKnown:false,caller:GEMINI_FLIGHT_PARSER_CALLER}).catch(() => undefined);
       logError('[FlightParser] Gemini parsing failed', err);
       throw new Error('Failed to parse flight data using Gemini');
     }

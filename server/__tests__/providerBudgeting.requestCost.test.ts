@@ -45,11 +45,13 @@ describe('providerBudgeting request-cost recording (Phase 1)', () => {
   it('recordProviderRequestCost no-ops (no DB write) when the price is 0', async () => {
     writeConfig('  SERPAPI: 0');
     jest.doMock('../src/db', () => ({
+      reserveApiSpendBatch: jest.fn(async () => true),
+      settleApiSpendReservation: jest.fn(async () => 0),
       getApiCostCounter: jest.fn(async () => 0),
       incrementApiCostCounter: jest.fn(async () => 0),
     }));
     const { recordProviderRequestCost } = require('../src/apis/providerBudgeting') as typeof ProviderBudgetingModule;
-    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock };
+    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock; reserveApiSpendBatch: jest.Mock };
 
     const result = await recordProviderRequestCost({ provider: 'SERPAPI' });
 
@@ -60,42 +62,49 @@ describe('providerBudgeting request-cost recording (Phase 1)', () => {
   it('recordProviderRequestCost records the correct micros amount when a price is configured', async () => {
     writeConfig('  SERPAPI: 0.01');
     jest.doMock('../src/db', () => ({
+      reserveApiSpendBatch: jest.fn(async () => true),
+      settleApiSpendReservation: jest.fn(async () => 0),
       getApiCostCounter: jest.fn(async () => 0),
       incrementApiCostCounter: jest.fn(async (_provider: string, _windowKey: string, amountMicros: number) => amountMicros),
     }));
     const { recordProviderRequestCost, getApiBudgetWindowKey } = require('../src/apis/providerBudgeting') as typeof ProviderBudgetingModule;
-    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock };
+    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock; reserveApiSpendBatch: jest.Mock };
 
     await recordProviderRequestCost({ provider: 'SERPAPI' });
 
-    expect(mockedDb.incrementApiCostCounter).toHaveBeenCalledWith('SERPAPI', getApiBudgetWindowKey(), 10000);
+    expect(mockedDb.reserveApiSpendBatch).toHaveBeenCalledWith([expect.objectContaining({provider:'SERPAPI',windowKey:getApiBudgetWindowKey(),amountMicros:10000})]);
+    expect(mockedDb.incrementApiCostCounter).not.toHaveBeenCalled();
   });
 
   it('an explicit costPerRequestUsd override takes precedence over the configured price', async () => {
     writeConfig('  SERPAPI: 0');
     jest.doMock('../src/db', () => ({
+      reserveApiSpendBatch: jest.fn(async () => true),
+      settleApiSpendReservation: jest.fn(async () => 0),
       getApiCostCounter: jest.fn(async () => 0),
       incrementApiCostCounter: jest.fn(async (_provider: string, _windowKey: string, amountMicros: number) => amountMicros),
     }));
     const { recordProviderRequestCost } = require('../src/apis/providerBudgeting') as typeof ProviderBudgetingModule;
-    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock };
+    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock; reserveApiSpendBatch: jest.Mock };
 
     await recordProviderRequestCost({ provider: 'SERPAPI', costPerRequestUsd: 0.02 });
 
-    expect(mockedDb.incrementApiCostCounter).toHaveBeenCalledWith('SERPAPI', expect.any(String), 20000);
+    expect(mockedDb.reserveApiSpendBatch).toHaveBeenCalledWith([expect.objectContaining({provider:'SERPAPI',amountMicros:20000})]);
   });
 
   it('normalizes the provider key the same way the rest of the api-limits config does', async () => {
     writeConfig('  google_routes: 0.05');
     jest.doMock('../src/db', () => ({
+      reserveApiSpendBatch: jest.fn(async () => true),
+      settleApiSpendReservation: jest.fn(async () => 0),
       getApiCostCounter: jest.fn(async () => 0),
       incrementApiCostCounter: jest.fn(async (_provider: string, _windowKey: string, amountMicros: number) => amountMicros),
     }));
     const { recordProviderRequestCost } = require('../src/apis/providerBudgeting') as typeof ProviderBudgetingModule;
-    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock };
+    const mockedDb = jest.requireMock('../src/db') as { incrementApiCostCounter: jest.Mock; reserveApiSpendBatch: jest.Mock };
 
     await recordProviderRequestCost({ provider: 'Google Routes' });
 
-    expect(mockedDb.incrementApiCostCounter).toHaveBeenCalledWith('GOOGLE_ROUTES', expect.any(String), 50000);
+    expect(mockedDb.reserveApiSpendBatch).toHaveBeenCalledWith([expect.objectContaining({provider:'GOOGLE_ROUTES',amountMicros:50000})]);
   });
 });

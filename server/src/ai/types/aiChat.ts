@@ -38,6 +38,7 @@ export type AiChatResponse = {
 };
 
 export type AiCallContext = {
+  spendReservation?: import('../../types').ApiSpendReservation | null;
   correlationId: string;
   requestId: string;
   jobId?: string;

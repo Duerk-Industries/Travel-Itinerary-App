@@ -1,3 +1,5 @@
+import { AdvanceSpendError, reserveProviderSpendBatch, withSpendScope } from '../../apis/providerBudgeting';
+import { getProviderLimitKey } from '../../services/aiInvocationGuard';
 import { extractStructured } from './structuredExtractor';
 import { createHash } from 'crypto';
 import { INGESTION_CONFIDENCE_HIGH, INGESTION_CONFIDENCE_REVIEW_READY, INGESTION_FEATURE_FLAGS, INGESTION_JOB_TOKEN_BUDGET_USD, INGESTION_LOGIC_VERSION } from '../config';
@@ -1314,7 +1316,7 @@ export const extractCandidates = async (
   doc: NormalizedDocument,
   config: Omit<ExtractionConfig, 'logicVersion' | 'tokenBudgetUsd'> & Partial<Pick<ExtractionConfig, 'logicVersion' | 'tokenBudgetUsd'>>,
   strategies?: ExtractionStrategy[]
-): Promise<ExtractionResult> => {
+): Promise<ExtractionResult> => withSpendScope({provider:`INGESTION_JOB_${config.importJobId}`,limitMicros:Math.floor((config.tokenBudgetUsd ?? INGESTION_JOB_TOKEN_BUDGET_USD)*1_000_000)}, async () => {
   if (!strategies) {
     try {
       strategies = await getLearnedStrategies();
@@ -1397,12 +1399,21 @@ export const extractCandidates = async (
         ?? secondaryModels.find((model) => model !== primaryModel)
         ?? secondaryModels[0]
         ?? null);
-    const { LlmExtractor: ProductionLlmExtractor } = await import('./llmExtractor');
+    const { LlmExtractor: ProductionLlmExtractor, quoteExtractionSpend } = require('./llmExtractor') as typeof import('./llmExtractor');
     const llmA = new ProductionLlmExtractor('ProductionLLM_A', 1, () => true);
     const llmB = new ProductionLlmExtractor('ProductionLLM_B', 1, () => true);
+    let reserved: Awaited<ReturnType<typeof reserveProviderSpendBatch>>;
+    try { reserved = await reserveProviderSpendBatch([
+      {provider:getProviderLimitKey(active.provider),amountMicros:quoteExtractionSpend(doc,active.provider,primaryModel)},
+      {provider:getProviderLimitKey(secondaryProvider),amountMicros:quoteExtractionSpend(doc,secondaryProvider,secondaryModel ?? '')},
+    ]); } catch (error) {
+      if (!(error instanceof AdvanceSpendError)) logError('[ingestion][consensus] spend admission unavailable; preserving individual review',error);
+      const fallback = staticResult.parsedItems.length ? staticResult.parsedItems : [await createCandidate({itemType:'generic_note',doc,extractedFields:{summary:doc.normalizedText.slice(0,500)},confidenceScore:0.55})];
+      return validateAndAdjustExtractionResult({...staticResult,parsedItems:fallback.map(item => ({...item,reviewStatus:'LOW_CONFIDENCE' as const,confidenceScore:Math.min(item.confidenceScore,0.69),extractedFields:{...item.extractedFields,automaticAssignmentAllowed:false}})),metadata:{...staticResult.metadata,strategyName:'StaticParserBudgetReview'}});
+    }
     const [llmAResult, llmBResult] = await Promise.all([
-      llmA.extract(doc, { ...extractionConfig, aiProvider: { provider: active.provider, model: primaryModel } }),
-      llmB.extract(doc, { ...extractionConfig, aiProvider: { provider: secondaryProvider, model: secondaryModel ?? undefined } }),
+      llmA.extract(doc, { ...extractionConfig, spendReservation:reserved[0], aiProvider: { provider: active.provider, model: primaryModel } }),
+      llmB.extract(doc, { ...extractionConfig, spendReservation:reserved[1], aiProvider: { provider: secondaryProvider, model: secondaryModel ?? undefined } }),
     ]);
     let productionAttempt = 0;
     for (const [stageName, stageResult] of [
@@ -1442,8 +1453,8 @@ export const extractCandidates = async (
     const consensus = await buildProductionConsensus(doc, extractionConfig, staticResult, llmAResult, llmBResult);
     try {
       await reserveApiUsageOrThrow({ provider: 'INGESTION_STORAGE', caller: 'PARSE_COMPARISON_WRITE', requireConfiguredLimit: true });
-      await saveParseComparison(consensus.comparison);
       await recordProviderRequestCost({ provider: 'INGESTION_STORAGE' });
+      await saveParseComparison(consensus.comparison);
     } catch (error) {
       logError('[ingestion][consensus] comparison persistence failed', error);
     }
@@ -1539,7 +1550,7 @@ export const extractCandidates = async (
     validatedFinalResult as unknown as Record<string, unknown>
   );
   return validatedFinalResult;
-};
+});
 
 // Exported for testing
 export { extractChaseFlights as _extractChaseFlights, parseChaseFlightLegs as _parseChaseFlightLegs, extractTimeCodePairs as _extractTimeCodePairs, extractTravelerNames as _extractTravelerNames, isChaseTravel as _isChaseTravel };

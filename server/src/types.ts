@@ -1466,3 +1466,10 @@ export type GeocodeJob = { key: string; query: GeocodeQuery; state: 'pending' | 
 export type GeocodingState = { jobs: GeocodeJob[]; nextAllowedAt: number; providerLeaseToken?: string; providerLeaseUntil?: number };
 
 export type GmailForwardingConfirmation = { provider: 'gmail'; code: string; requestedBy: string; expiresAt: number };
+
+
+/** Internal, durable admission for one provider attempt; contains no prompt or account data. */
+export type ApiSpendReservation = {
+  id: string; provider: string; windowKey: string; amountMicros: number; limitMicros: number | null;
+  related?: ApiSpendReservation[];
+};

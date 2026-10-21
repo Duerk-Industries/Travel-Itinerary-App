@@ -834,3 +834,8 @@ export const undoCatalogActivity = async (...args: Parameters<ReturnType<typeof 
 export const getPlanningRevision = async (...args: Parameters<ReturnType<typeof adapter>['getPlanningRevision']>) => adapter().getPlanningRevision(...args);
 
 export const mutateGeocodingState = (...args: Parameters<ReturnType<typeof adapter>['mutateGeocodingState']>) => adapter().mutateGeocodingState(...args);
+
+export const reserveApiSpendBatch = async (...args: Parameters<ReturnType<typeof adapter>['reserveApiSpendBatch']>) => adapter().reserveApiSpendBatch(...args);
+export const settleApiSpendReservation = async (...args: Parameters<ReturnType<typeof adapter>['settleApiSpendReservation']>) => adapter().settleApiSpendReservation(...args);
+
+export const claimApiSpendReservation = async (...args: Parameters<ReturnType<typeof adapter>['claimApiSpendReservation']>) => adapter().claimApiSpendReservation(...args);

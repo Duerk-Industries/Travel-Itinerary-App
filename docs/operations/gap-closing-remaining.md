@@ -420,3 +420,8 @@ Web/native drag handles and persisted optimizer pins now extend checked day orde
 ### Matching completeness and import review — 2026-10-21
 
 Shared automatic/manual matching, scoped booking continuity, airport and existing-item cities, weak month/region suggestions, traveler ranking, explicit batch confirmation and booking-prefilled trip creation are implemented. [Behavior and validation bounds](gap-closing-matching-review.md). Stale content and trip permission are checked again inside assignment transactions on both adapters. Live receiver fixtures, representative import precision, real PostgreSQL contention and named-device/accessibility acceptance remain release gates.
+
+
+### Advance spend reservation — 2026-10-21
+
+Adapter-atomic advance allowances, one-use dispatch claims, aggregate consensus admission, persistent job/shadow ceilings, conservative unknown-usage settlement and paid capture/request admission are implemented. [Migration, configuration and validation bounds](gap-closing-advance-spend.md). Real PostgreSQL contention, live billing reconciliation and production alert delivery remain release evidence; no production cap or pricing value was changed.

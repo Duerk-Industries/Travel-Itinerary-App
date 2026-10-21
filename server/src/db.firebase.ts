@@ -1,3 +1,4 @@
+import { validateSpendBatch, validateActualSpend } from './utils/apiSpendValidation';
 import { planningFirestore } from './services/planningFirestore';
 // Firebase adapter (Firestore-backed)
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
@@ -7792,11 +7793,13 @@ export const listApiCostCounters = async (): Promise<
 
 export const resetApiCostCounters = async (): Promise<void> => {
   const db = getDb();
-  const snap = await db.collection('api_cost_counters').get();
-  if (snap.empty) return;
-  const batch = db.batch();
-  snap.docs.forEach((doc) => batch.delete(doc.ref));
-  await batch.commit();
+  await db.runTransaction(async tx => {
+    const pending = await tx.get(db.collection('api_spend_reservations').where('settledMicros','==',null).limit(1));
+    if (!pending.empty) throw new Error('Cannot reset budgets with unsettled provider work');
+    const counters = await tx.get(db.collection('api_cost_counters'));
+    if (counters.size > 400) throw new Error('Too many budget counters for an atomic reset');
+    counters.docs.forEach(doc => tx.delete(doc.ref));
+  });
 };
 
 export const atomicIncrementIfUnderLimit = async (
@@ -9766,3 +9769,56 @@ export const getPlanningRevision = async (tripId: string, groupId: string): Prom
 };
 
 export { mutateGeocodingFirebase as mutateGeocodingState } from './services/geocodingRepository';
+
+
+export const reserveApiSpendBatch = async (requests: import('./types').ApiSpendReservation[]): Promise<boolean> => {
+  validateSpendBatch(requests);
+  const db = getDb();
+  return db.runTransaction(async tx => {
+    const records = await Promise.all(requests.map(request => tx.get(db.collection('api_spend_reservations').doc(request.id))));
+    const pending = requests.filter((request,i) => {
+      if (!records[i].exists) return true;
+      const row = records[i].data()!;
+      if (row.provider !== request.provider || row.windowKey !== request.windowKey || row.amountMicros !== request.amountMicros || (row.settledMicros !== null || row.dispatchedAt !== null)) throw new Error('Spend reservation cannot be reused for another attempt');
+      return false;
+    });
+    const buckets = new Map<string,{provider:string;windowKey:string;amount:number;limit:number|null}>();
+    for (const request of pending) {
+      const key = `${request.provider}_${request.windowKey}`, bucket = buckets.get(key) ?? {provider:request.provider,windowKey:request.windowKey,amount:0,limit:null};
+      bucket.amount += request.amountMicros;
+      if (!Number.isSafeInteger(bucket.amount)) throw new Error('Spend amount exceeds integer precision');
+      if (request.limitMicros !== null) bucket.limit = bucket.limit === null ? request.limitMicros : Math.min(bucket.limit,request.limitMicros);
+      buckets.set(key,bucket);
+    }
+    const entries = [...buckets.entries()];
+    const counters = await Promise.all(entries.map(([key]) => tx.get(db.collection('api_cost_counters').doc(key))));
+    if (entries.some(([,bucket],i) => !Number.isSafeInteger(Number(counters[i].data()?.amountMicros ?? 0)+bucket.amount))) throw new Error('Spend amount exceeds integer precision');
+    if (entries.some(([,bucket],i) => bucket.limit !== null && Number(counters[i].data()?.amountMicros ?? 0) + bucket.amount > bucket.limit)) return false;
+    entries.forEach(([key,bucket],i) => tx.set(db.collection('api_cost_counters').doc(key), {provider:bucket.provider,windowKey:bucket.windowKey,amountMicros:Number(counters[i].data()?.amountMicros ?? 0)+bucket.amount,updatedAt:nowIso()}, {merge:true}));
+    pending.forEach(request => tx.create(db.collection('api_spend_reservations').doc(request.id), {...request,settledMicros:null,dispatchedAt:null,createdAt:nowIso()}));
+    return true;
+  });
+};
+export const settleApiSpendReservation = async (id: string, actualMicros: number | null, undispatchedOnly = false): Promise<number> => {
+  validateActualSpend(actualMicros);
+  const db = getDb(), ref = db.collection('api_spend_reservations').doc(id);
+  return db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref); if (!snapshot.exists) throw new Error('Spend reservation not found');
+    const row = snapshot.data()!, counter = db.collection('api_cost_counters').doc(`${row.provider}_${row.windowKey}`);
+    const current = Number((await tx.get(counter)).data()?.amountMicros ?? 0);
+    if (row.settledMicros !== null || undispatchedOnly && row.dispatchedAt !== null) return current;
+    const amount = actualMicros ?? row.amountMicros, total = current + amount - row.amountMicros;
+    if (!Number.isSafeInteger(total) || total < 0) throw new Error('Invalid budget reconciliation');
+    tx.set(counter,{amountMicros:total,updatedAt:nowIso()},{merge:true}); tx.update(ref,{settledMicros:amount,settledAt:nowIso()});
+    return total;
+  });
+};
+
+export const claimApiSpendReservation = async (id:string): Promise<boolean> => {
+  const db = getDb(), ref = db.collection('api_spend_reservations').doc(id);
+  return db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref), row = snapshot.data();
+    if (!row || row.dispatchedAt !== null || row.settledMicros !== null) return false;
+    tx.update(ref,{dispatchedAt:nowIso()}); return true;
+  });
+};
