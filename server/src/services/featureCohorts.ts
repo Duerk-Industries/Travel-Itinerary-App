@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { getAdminSetting } from '../db';
 
 // These surfaces pass authenticated ownership at both capability and use time.
-export const COHORT_FEATURES = ['planning_web_map', 'planning_nearby', 'planning_day_order',
+export const COHORT_FEATURES = ['planning_web_map', 'planning_nearby', 'planning_day_order', 'planning_trip_inspiration',
   'planning_structured_import', 'planning_auto_assign', 'trip_bundle',
   'notifications_in_app', 'notifications_push', 'notifications_email'] as const;
 export const cohortSettingKey = (key: string): string => `feature_cohort:${key}`;

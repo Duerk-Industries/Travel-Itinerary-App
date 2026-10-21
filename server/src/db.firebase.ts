@@ -4985,11 +4985,14 @@ export const reorderActivitiesForDay = async (
   tripId: string,
   date: string,
   orderedIds: string[],
-  expectedIds: string[]
+  expectedIds: string[],
+  pins?: { pinnedIds: string[]; expectedPinnedIds: string[] }
 ): Promise<DayOrderOutcome> => {
   if (!(await ensureUserInTrip(tripId, userId))) return { ok: false, reason: 'forbidden', currentOrder: [] };
   const db = getDb();
   return db.runTransaction(async (tx) => {
+    const access = await tx.get(db.collection('trip_access').doc(`${tripId}_${userId}`));
+    if (access.data()?.status !== 'active' || access.data()?.canWrite !== true) return { ok: false, reason: 'forbidden', currentOrder: [] } as DayOrderOutcome;
     const snapshot = await tx.get(db.collection('tours').where('tripId', '==', tripId));
     const dayDocs = snapshot.docs
       .map((doc) => ({ ref: doc.ref, activity: normalizeActivityRecord(doc.data()) as Activity }))
@@ -5002,10 +5005,16 @@ export const reorderActivitiesForDay = async (
     const sameSet = orderedIds.length === currentOrder.length && new Set(orderedIds).size === orderedIds.length
       && orderedIds.every((id) => currentOrder.includes(id));
     if (!sameSet) return { ok: false, reason: 'mismatch', currentOrder } as DayOrderOutcome;
+    if (pins) {
+      const currentPins = current.filter(row => row.dayOrderPinned).map(row => row.id).sort();
+      if (JSON.stringify(currentPins) !== JSON.stringify([...pins.expectedPinnedIds].sort())) return { ok: false, reason: 'stale', currentOrder } as DayOrderOutcome;
+      if (new Set(pins.pinnedIds).size !== pins.pinnedIds.length || pins.pinnedIds.some(id => !currentOrder.includes(id))) return { ok: false, reason: 'mismatch', currentOrder } as DayOrderOutcome;
+    }
     const positionById = new Map(current.map((row) => [row.id, row.dayPosition ?? null]));
     const refById = new Map(dayDocs.map(({ ref, activity }) => [String(activity.id), ref]));
     orderedIds.forEach((id, index) => {
-      if (positionById.get(id) !== index) tx.update(refById.get(id)!, { dayPosition: index });
+      if (pins) tx.update(refById.get(id)!, { dayPosition: index, dayOrderPinned: pins.pinnedIds.includes(id) });
+      else if (positionById.get(id) !== index) tx.update(refById.get(id)!, { dayPosition: index });
     });
     return { ok: true, order: orderedIds } as DayOrderOutcome;
   });
@@ -5022,7 +5031,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
     ...activity,
     ...(activity.startLocation !== undefined && activity.startLocation !== current.startLocation ? { lat: null, lng: null, coordinateSource: null } : {}),
     // A stop moved to another day must not carry its old rank into that day's order.
-    ...(activity.date !== undefined && String(activity.date).slice(0, 10) !== String(current.date ?? '').slice(0, 10) ? { dayPosition: null } : {}),
+    ...(activity.date !== undefined && String(activity.date).slice(0, 10) !== String(current.date ?? '').slice(0, 10) ? { dayPosition: null, dayOrderPinned: false } : {}),
     activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
   });
   if (Object.keys(updatePayload).length > 0) {
@@ -9747,6 +9756,8 @@ export const setTripTimezone = async (tripId: string, timezone: string): Promise
 };
 
 export { createCatalogActivityFirebase as createCatalogActivity, undoCatalogActivityFirebase as undoCatalogActivity } from './services/planningOperations';
+export { getActivitySharingFirebase as getActivitySharing, setActivitySharingFirebase as setActivitySharing,
+  listSimilarTripsFirebase as listSimilarTrips, copyPublicActivityFirebase as copyPublicActivity } from './services/tripInspiration';
 
 export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {
   const db = getDb();

@@ -59,6 +59,19 @@ describe('PUT /api/activities/day-order', () => {
     expect([byId.get(c), byId.get(a), byId.get(b)]).toEqual([0, 1, 2]);
   });
 
+  it('persists pins with an expected-pin check and refuses invalid or stale pins atomically', async () => {
+    const date = '2027-05-01';
+    const a = await create('Pinned stop', '09:00', date), b = await create('Flexible stop', '10:00', date);
+    const body = { tripId, date, expectedIds: [a, b], orderedIds: [a, b], pinnedIds: [a], expectedPinnedIds: [] };
+    await reorder(body).expect(200);
+    expect((await listDay(date)).find(row => row.id === a).dayOrderPinned).toBe(true);
+    await reorder({ ...body, orderedIds: [b, a] }).expect(409);
+    await reorder({ ...body, pinnedIds: ['outside-day'], expectedPinnedIds: [a] }).expect(409);
+    await reorder({ ...body, pinnedIds: undefined }).expect(400);
+    await reorder({ ...body, pinnedIds: [], expectedPinnedIds: [a] }).expect(200);
+    expect((await listDay(date)).find(row => row.id === a).dayOrderPinned).toBe(false);
+  });
+
   it('rejects a stale expected order with 409 and the current order, writing nothing', async () => {
     const x = await create('X-ray', '09:00', OTHER_DAY);
     const y = await create('Yankee', '10:00', OTHER_DAY);
@@ -102,10 +115,11 @@ describe('PUT /api/activities/day-order', () => {
     const moving = await create('Zulu', '08:00', day);
     const anchor = await create('Zebra', '08:30', day);
     const current = orderDayActivities(await listDay(day)).map((r) => r.id);
-    await reorder({ tripId, date: day, expectedIds: current, orderedIds: [...current] }).expect(200);
+    await reorder({ tripId, date: day, expectedIds: current, orderedIds: [...current], pinnedIds: [moving], expectedPinnedIds: [] }).expect(200);
     await request(app).put(`/api/activities/${moving}`).set('Authorization', `Bearer ${token}`).send({ date: '2027-05-04' }).expect(200);
     const moved = (await listDay('2027-05-04')).find((r) => r.id === moving);
     expect(moved?.dayPosition ?? null).toBeNull();
+    expect(moved?.dayOrderPinned).toBe(false);
     expect((await listDay(day)).some((r) => r.id === anchor)).toBe(true);
   });
 

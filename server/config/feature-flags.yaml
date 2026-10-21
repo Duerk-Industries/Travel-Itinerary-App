@@ -25,6 +25,9 @@ flags:
   planning_nearby:
     enabled: false
     description: "P1 catalog Nearby and atomic Add to day; no external geocoder"
+  planning_trip_inspiration:
+    enabled: false
+    description: "Destination-matched public trips with explicit catalog activity sharing and credited copies"
   planning_structured_import:
     enabled: false
     description: "P1 bounded calendar and reservation extraction"

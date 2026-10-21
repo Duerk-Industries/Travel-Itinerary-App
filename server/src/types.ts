@@ -641,6 +641,7 @@ export interface Lodging extends PlanningCoordinates {
 export interface Activity extends PlanningCoordinates {
   catalogId?: string | null;
   dayPosition?: number | null;
+  dayOrderPinned?: boolean;
   id: string;
   userId: string;
   tripId: string;
@@ -664,6 +665,18 @@ export interface Activity extends PlanningCoordinates {
   travelerIds?: string[];
   createdAt: string;
 }
+
+/** Public inspiration contains only explicitly shared activity templates, never booking data. */
+export type SharedActivityTemplate = Pick<Activity, 'id' | 'name' | 'activityType' | 'duration'> & {
+  lat?: number; lng?: number; catalogId: string; sourceUrl?: string;
+};
+export type PublicTripInspiration = {
+  username: string; tripSlug: string; title: string; sourcePath: string; activities: SharedActivityTemplate[];
+};
+export type PublicActivityCopy = {
+  tripId: string; date: string; operationKey: string;
+  publicSource: { username: string; tripSlug: string; activityId: string };
+};
 
 // Temporary compatibility alias while call sites transition to Activity naming.
 export type Tour = Activity;

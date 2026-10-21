@@ -72,6 +72,7 @@ import {
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import DateField from '../components/DateField';
 import NearbyPlacesPanel from '../components/NearbyPlacesPanel';
+import TripsLikeThis from '../components/TripsLikeThis';
 import DayActivitiesOrdering from '../components/DayActivitiesOrdering';
 import { orderDayActivities } from '../../packages/domain/src/dayOrder';
 import { selectPlanningDayPoints } from '../../packages/domain/src/planningMapPoints';
@@ -2813,6 +2814,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               ) : null}
               {!readOnly && <NearbyPlacesPanel tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} destination={trip.destination}
                 center={nearbyAnchor ? { lat: nearbyAnchor.lat!, lng: nearbyAnchor.lng! } : undefined} onAdded={onTourDataChanged} />}
+              {!readOnly && <TripsLikeThis tripId={trip.id} date={activeDayCard.date} backendUrl={backendUrl} headers={headers} onAdded={onTourDataChanged} />}
               {narrativeLines.length ? (
                 <View style={styles.dayNarrativeBox}>
                   {narrativeLines.map((line, idx) => (

@@ -825,6 +825,10 @@ export const setTripTimezone = async (...args: Parameters<ReturnType<typeof adap
   adapter().setTripTimezone(...args);
 
 export const createCatalogActivity = async (...args: Parameters<ReturnType<typeof adapter>['createCatalogActivity']>) => adapter().createCatalogActivity(...args);
+export const getActivitySharing = async (...args: Parameters<ReturnType<typeof adapter>['getActivitySharing']>) => adapter().getActivitySharing(...args);
+export const setActivitySharing = async (...args: Parameters<ReturnType<typeof adapter>['setActivitySharing']>) => adapter().setActivitySharing(...args);
+export const listSimilarTrips = async (...args: Parameters<ReturnType<typeof adapter>['listSimilarTrips']>) => adapter().listSimilarTrips(...args);
+export const copyPublicActivity = async (...args: Parameters<ReturnType<typeof adapter>['copyPublicActivity']>) => adapter().copyPublicActivity(...args);
 export const undoCatalogActivity = async (...args: Parameters<ReturnType<typeof adapter>['undoCatalogActivity']>) => adapter().undoCatalogActivity(...args);
 
 export const getPlanningRevision = async (...args: Parameters<ReturnType<typeof adapter>['getPlanningRevision']>) => adapter().getPlanningRevision(...args);

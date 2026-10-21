@@ -409,3 +409,8 @@ Validation: all 263 frontend suites / 1,726 tests passed, including 79 focused r
 The implementation now requires an explicit reviewed provider policy, scopes caches/jobs to the endpoint and policy/normalizer revision, carries reviewed attribution to web/native maps, enforces a hard provider/body timeout, honors Retry-After globally, defers daily-budget exhaustion without spending attempts, and exposes redacted dead-job diagnostics. Adapter tests include interrupted/oversized mutations and concurrent Firestore admission. Disabled workers still maintain expiry/withdrawn cache approval. See [configuration, limits and provider activation gates](gap-closing-maps.md#optional-public-poi-geocoding). Actual provider rights/endpoint-side admission and scheduler activation remain deployment gates; no provider account or production flag was changed.
 
 Validation: 34 focused memory-adapter tests, 35 Firestore-emulator tests, 18 planning regression tests and 12 frontend map tests passed. Both TypeScript checks and the production web export passed. Real PostgreSQL contention and live-provider delivery remain deployment checks.
+
+
+### Day ordering and Trips like this — 2026-10-21
+
+Web/native drag handles and persisted optimizer pins now extend checked day ordering. Destination-matched public blog recommendations and credited copies of explicitly shared catalog activity templates are implemented behind `planning_trip_inspiration`. Source withdrawal and target membership are rechecked inside copy transactions. [Contract, privacy, limits and remaining acceptance](gap-closing-day-order-inspiration.md). No production flag was enabled.

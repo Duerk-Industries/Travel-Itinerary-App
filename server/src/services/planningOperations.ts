@@ -20,16 +20,16 @@ export const reusableCatalogPlace = (entry: AttractionCatalogEntry): boolean => 
     return url.protocol === 'https:' && /(^|\.)(wikipedia\.org|wikidata\.org|wikivoyage\.org|openstreetmap\.org)$/.test(url.hostname);
   } catch { return false; }
 };
-const catalogRecord = (row: { id: string; name: string; payload?: unknown; updatedAt?: string }): AttractionCatalogEntry => ({
+export const catalogRecord = (row: { id: string; name: string; payload?: unknown; updatedAt?: string }): AttractionCatalogEntry => ({
   ...(row.payload as AttractionCatalogEntry), id: row.id, name: row.name, updatedAt: row.updatedAt || '',
 });
-const assertDay = (date: string, trip: { startDate?: string | null; endDate?: string | null }): void => {
+export const assertDay = (date: string, trip: { startDate?: string | null; endDate?: string | null }): void => {
   if (!Number.isFinite(Date.parse(`${date}T12:00:00Z`)) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date
     || (trip.startDate && date < new Date(trip.startDate).toISOString().slice(0, 10)) || (trip.endDate && date > new Date(trip.endDate).toISOString().slice(0, 10))) {
     throw new PlanningError('INVALID_DAY', 422, 'Choose a day within this trip.');
   }
 };
-const activityFor = (userId: string, request: CatalogActivityCreate, place: AttractionCatalogEntry): Omit<Activity, 'id' | 'createdAt'> => ({
+export const activityFor = (userId: string, request: CatalogActivityCreate, place: AttractionCatalogEntry): Omit<Activity, 'id' | 'createdAt'> => ({
   userId, tripId: request.tripId, date: request.date, status: 'Proposed', name: place.name,
   activityType: place.activityType, startLocation: place.name, startTime: '',
   duration: `${estimateAttractionDurationMinutes(place.name, place.activityType)} min`, cost: 0,
@@ -38,7 +38,7 @@ const activityFor = (userId: string, request: CatalogActivityCreate, place: Attr
   geoCity: place.destinationDisplayName, catalogId: place.id,
 });
 type StoredOperation = { activity: Activity; undone?: boolean };
-const replay = (hash: string, storedHash: string, result: StoredOperation): CatalogActivityResult => {
+export const replay = (hash: string, storedHash: string, result: StoredOperation): CatalogActivityResult => {
   if (hash !== storedHash) throw new PlanningError('IDEMPOTENCY_CONFLICT', 409, 'This request was already used for a different activity.');
   if (result.undone) throw new PlanningError('OPERATION_UNDONE', 409, 'This addition was undone. Add it again with a new request.');
   return { activity: result.activity, replayed: true };
@@ -48,7 +48,7 @@ const projection = (activity: Activity): unknown => ({
   status: activity.status, startLocation: activity.startLocation, startTime: activity.startTime,
   cost: Number(activity.cost), duration: activity.duration, notes: activity.notes || '',
   paidBy: activity.paidBy || [], travelerIds: activity.travelerIds || [], reference: activity.reference,
-  lat: activity.lat ?? null, lng: activity.lng ?? null, coordinateSource: activity.coordinateSource ?? null, catalogId: activity.catalogId ?? null, dayPosition: activity.dayPosition ?? null,
+  lat: activity.lat ?? null, lng: activity.lng ?? null, coordinateSource: activity.coordinateSource ?? null, catalogId: activity.catalogId ?? null, dayPosition: activity.dayPosition ?? null, dayOrderPinned: activity.dayOrderPinned ?? false,
   activityType: activity.activityType, bookedOn: activity.bookedOn, freeCancelBy: activity.freeCancelBy || null,
 });
 

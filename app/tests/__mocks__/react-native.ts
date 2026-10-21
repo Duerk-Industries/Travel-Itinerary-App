@@ -1,4 +1,5 @@
 export const Platform = { OS: 'ios' };
+export const PanResponder = { create: (handlers: Record<string, unknown>) => ({ panHandlers: handlers }) };
 export const ScrollView = 'ScrollView';
 export const Text = 'Text';
 export const TextInput = 'TextInput';

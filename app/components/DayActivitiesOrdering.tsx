@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text, TouchableOpacity, View } from 'react-native';
 import { orderDayActivities } from '../../packages/domain/src/dayOrder';
 import { MAX_OPTIMIZE_STOPS, moveStop, optimizeDayOrder, type LatLng, type OptimizeResult } from '../../packages/domain/src/dayRouteOptimizer';
+import DayOrderRow from './DayOrderRow';
 
 export type OrderableActivity = {
   id: string;
@@ -11,6 +12,7 @@ export type OrderableActivity = {
   lat?: number | null;
   lng?: number | null;
   dayPosition?: number | null;
+  dayOrderPinned?: boolean;
 };
 
 type Props<T extends OrderableActivity> = {
@@ -54,13 +56,20 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
   const [notice, setNotice] = useState<Notice>(null);
   const [preview, setPreview] = useState<OptimizeResult | null>(null);
   const [useLodging, setUseLodging] = useState(true);
-  const [undo, setUndo] = useState<{ previous: string[]; applied: string[] } | null>(null);
+  const [undo, setUndo] = useState<{ previous: string[]; applied: string[]; pins: string[] } | null>(null);
   const busyRef = useRef(false);
+  const layouts = useRef(new Map<string, { y: number; height: number }>());
+  const drag = useRef<{ id: string; ids: string[]; pins: string[]; scope: string } | null>(null);
 
   const ordered = useMemo(() => orderDayActivities(activities), [activities]);
   const orderedIds = useMemo(() => ordered.map((a) => a.id), [ordered]);
   const nameById = useMemo(() => new Map(ordered.map((a) => [a.id, a.name])), [ordered]);
   const auth = headers.Authorization ?? '';
+  const scope = `${backendUrl}:${tripId}:${date}:${auth}:${Boolean(readOnly)}`;
+  const scopeRef = useRef(scope); scopeRef.current = scope;
+  useEffect(() => () => { if (scopeRef.current === scope) scopeRef.current = ''; }, [scope]);
+  const pinnedIds = useMemo(() => ordered.filter(a => a.dayOrderPinned).map(a => a.id), [ordered]);
+  const previewBase = useRef<{ ids: string[]; pins: string[] } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,10 +91,15 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
     setPreview(null);
     setUndo(null);
     setNotice(null);
-  }, [tripId, date]);
+    drag.current = null;
+    layouts.current.clear();
+  }, [scope]);
 
-  const save = useCallback(async (next: string[], expected: string[]): Promise<boolean> => {
-    if (busyRef.current) return false;
+  useEffect(() => { setPreview(null); previewBase.current = null; }, [activities]);
+
+  const save = useCallback(async (next: string[], expected: string[], pins?: { pinnedIds: string[]; expectedPinnedIds: string[] }): Promise<boolean> => {
+    if (busyRef.current || !enabled || readOnly) return false;
+    const requestScope = scope;
     busyRef.current = true;
     setBusy(true);
     setNotice(null);
@@ -93,9 +107,10 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
       const response = await fetch(`${backendUrl}/api/activities/day-order`, {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tripId, date, expectedIds: expected, orderedIds: next }),
+        body: JSON.stringify({ tripId, date, expectedIds: expected, orderedIds: next, ...pins }),
       });
       const data = await response.json().catch(() => ({}));
+      if (scopeRef.current !== requestScope) return false;
       if (response.status === 409) {
         setPreview(null);
         setUndo(null);
@@ -110,13 +125,43 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
       onChanged();
       return true;
     } catch {
-      setNotice({ kind: 'error', text: 'No connection. Nothing was changed. Try again when you are back online.' });
+      if (scopeRef.current === requestScope) setNotice({ kind: 'error', text: 'No connection. The save could not be confirmed. Refresh the day before trying again.' });
       return false;
     } finally {
       busyRef.current = false;
       setBusy(false);
     }
-  }, [backendUrl, date, headers, onChanged, tripId]);
+  }, [backendUrl, date, headers, onChanged, tripId, scope, enabled, readOnly]);
+
+  const drop = async (target: string) => {
+    const source = drag.current; drag.current = null;
+    if (!source || source.scope !== scope || source.id === target || busyRef.current) return;
+    const next = source.ids.filter(id => id !== source.id);
+    next.splice(source.ids.indexOf(target), 0, source.id);
+    setPreview(null); setUndo(null);
+    if (await save(next, source.ids, { pinnedIds: source.pins, expectedPinnedIds: source.pins })) {
+      setNotice({ kind: 'info', text: `Moved ${nameById.get(source.id) ?? 'activity'}.` });
+    }
+  };
+  const endDrag = (offset?: number) => {
+    const source = drag.current;
+    if (source && offset !== undefined && layouts.current.has(source.id)) {
+      const start = layouts.current.get(source.id)!;
+      const center = start.y + start.height / 2 + offset;
+      const target = source.ids.reduce((best, id) => {
+        const row = layouts.current.get(id); const previous = layouts.current.get(best);
+        return row && (!previous || Math.abs(row.y + row.height / 2 - center) < Math.abs(previous.y + previous.height / 2 - center)) ? id : best;
+      }, source.id);
+      void drop(target);
+    } else drag.current = null;
+  };
+  const togglePin = async (activity: T) => {
+    const next = activity.dayOrderPinned ? pinnedIds.filter(id => id !== activity.id) : [...pinnedIds, activity.id];
+    setPreview(null); setUndo(null);
+    if (await save(orderedIds, orderedIds, { pinnedIds: next, expectedPinnedIds: pinnedIds })) {
+      setNotice({ kind: 'info', text: `${activity.name} ${activity.dayOrderPinned ? 'can move when optimizing' : 'will stay in place when optimizing'}.` });
+    }
+  };
 
   const move = async (id: string, delta: -1 | 1) => {
     const next = moveStop(orderedIds, id, delta);
@@ -129,6 +174,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
   };
 
   const showPreview = () => {
+    previewBase.current = { ids: orderedIds, pins: pinnedIds };
     setNotice(null);
     const anchor = useLodging && lodgingAnchor ? lodgingAnchor : null;
     const result = optimizeDayOrder(
@@ -137,7 +183,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
         lat: a.lat,
         lng: a.lng,
         // A confirmed booking with a set time stays where it is; proposed ideas can move.
-        fixed: a.status === 'Booked' && Boolean(a.startTime),
+        fixed: a.dayOrderPinned || (a.status === 'Booked' && Boolean(a.startTime)),
       })),
       anchor,
     );
@@ -151,9 +197,10 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
 
   const applyPreview = async () => {
     if (!preview) return;
-    const previous = orderedIds;
-    if (await save(preview.order, previous)) {
-      setUndo({ previous, applied: preview.order });
+    const previous = previewBase.current?.ids ?? orderedIds;
+    const pins = previewBase.current?.pins ?? pinnedIds;
+    if (await save(preview.order, previous, { pinnedIds: pins, expectedPinnedIds: pins })) {
+      setUndo({ previous, applied: preview.order, pins });
       setNotice({ kind: 'info', text: `Order updated. Straight-line distance went from ${km(preview.beforeKm)} to ${km(preview.afterKm)}.` });
       setPreview(null);
     }
@@ -161,7 +208,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
 
   const undoOptimize = async () => {
     if (!undo) return;
-    if (await save(undo.previous, undo.applied)) {
+    if (await save(undo.previous, undo.applied, { pinnedIds: undo.pins, expectedPinnedIds: undo.pins })) {
       setUndo(null);
       setNotice({ kind: 'info', text: 'Your previous order is back.' });
     }
@@ -194,6 +241,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
               testID="day-order-lodging-toggle"
               accessibilityRole="switch"
               accessibilityLabel="Start and end at your lodging"
+              aria-checked={useLodging}
               accessibilityState={{ checked: useLodging }}
               style={touch}
               onPress={() => setUseLodging((value) => !value)}
@@ -214,7 +262,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
             <Text key={id} style={styles.cellText}>{`${index + 1}. ${nameById.get(id) ?? id}${preview.keptInPlace.includes(id) ? ' (stays here)' : ''}`}</Text>
           ))}
           {preview.keptInPlace.length ? (
-            <Text style={styles.helperText}>Booked activities with a set time and activities without a map location stay where they are.</Text>
+            <Text style={styles.helperText}>Pinned stops, booked activities with a set time and activities without a map location stay where they are.</Text>
           ) : null}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
@@ -266,11 +314,22 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
         </View>
       ) : null}
 
-      {ordered.map((activity, index) =>
+      {ordered.map((activity, index) => <DayOrderRow key={activity.id} id={activity.id} name={activity.name}
+        disabled={!canReorder || busy} onStart={id => { drag.current = { id, ids: orderedIds, pins: pinnedIds, scope }; }}
+        onDrop={id => void drop(id)} onEnd={endDrag}
+        onLayout={(id, y, height) => { layouts.current.set(id, { y, height }); }}>
+        {
         renderRow(
           activity,
           canReorder ? (
             <View style={{ flexDirection: 'row', gap: 4 }}>
+              <TouchableOpacity testID={`day-order-pin-${activity.id}`} accessibilityRole="switch"
+                accessibilityLabel={`Keep ${activity.name} in place when optimizing`}
+                aria-checked={Boolean(activity.dayOrderPinned)}
+                accessibilityState={{ checked: Boolean(activity.dayOrderPinned), disabled: busy }} disabled={busy}
+                style={touch} onPress={() => void togglePin(activity)}>
+                <Text style={styles.dayInfoButtonText}>{activity.dayOrderPinned ? 'Unpin' : 'Pin'}</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 testID={`day-order-up-${activity.id}`}
                 accessibilityRole="button"
@@ -295,7 +354,7 @@ export default function DayActivitiesOrdering<T extends OrderableActivity>({
               </TouchableOpacity>
             </View>
           ) : null,
-        ),
+        )}</DayOrderRow>,
       )}
     </View>
   );

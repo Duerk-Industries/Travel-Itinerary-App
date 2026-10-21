@@ -4803,7 +4803,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
-      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition",
+      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
       tu.start_time as "startTime",
       tu.duration,
       tu.cost::numeric as cost,
@@ -4849,7 +4849,7 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
-      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition",
+      tu.lat, tu.lng, tu.geo_city as "geoCity", tu.coordinate_source as "coordinateSource", tu.catalog_id as "catalogId", tu.day_position as "dayPosition", tu.day_order_pinned as "dayOrderPinned",
       tu.start_time as "startTime",
       tu.duration,
       tu.cost::numeric as cost,
@@ -4896,7 +4896,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
-      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition",
+      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
       start_time as "startTime",
       duration,
       cost::numeric as cost,
@@ -4959,12 +4959,13 @@ export const reorderActivitiesForDay = async (
   tripId: string,
   date: string,
   orderedIds: string[],
-  expectedIds: string[]
+  expectedIds: string[],
+  pins?: { pinnedIds: string[]; expectedPinnedIds: string[] }
 ): Promise<DayOrderOutcome> =>
   withPlanningTransaction(async (client) => {
     if (!(await ensureUserInTrip(tripId, userId))) return { ok: false, reason: 'forbidden', currentOrder: [] };
-    const { rows } = await client.query<{ id: string; name: string | null; startTime: string | null; dayPosition: number | null }>(
-      `SELECT id, name, start_time as "startTime", day_position as "dayPosition"
+    const { rows } = await client.query<{ id: string; name: string | null; startTime: string | null; dayPosition: number | null; dayOrderPinned: boolean }>(
+      `SELECT id, name, start_time as "startTime", day_position as "dayPosition", day_order_pinned as "dayOrderPinned"
        FROM tours
        WHERE trip_id = $1 AND date = $2::date
        FOR UPDATE`,
@@ -4978,11 +4979,16 @@ export const reorderActivitiesForDay = async (
     const sameSet = orderedIds.length === currentOrder.length && new Set(orderedIds).size === orderedIds.length
       && orderedIds.every((id) => currentOrder.includes(id));
     if (!sameSet) return { ok: false, reason: 'mismatch', currentOrder };
+    if (pins) {
+      const currentPins = current.filter(row => row.dayOrderPinned).map(row => row.id).sort();
+      if (JSON.stringify(currentPins) !== JSON.stringify([...pins.expectedPinnedIds].sort())) return { ok: false, reason: 'stale', currentOrder };
+      if (new Set(pins.pinnedIds).size !== pins.pinnedIds.length || pins.pinnedIds.some(id => !currentOrder.includes(id))) return { ok: false, reason: 'mismatch', currentOrder };
+    }
     const positionById = new Map(current.map((row) => [row.id, row.dayPosition ?? null]));
     for (let index = 0; index < orderedIds.length; index += 1) {
       const id = orderedIds[index]!;
-      if (positionById.get(id) === index) continue;
-      await client.query(`UPDATE tours SET day_position = $1 WHERE id = $2 AND trip_id = $3`, [index, id, tripId]);
+      if (pins) await client.query('UPDATE tours SET day_position=$1,day_order_pinned=$4 WHERE id=$2 AND trip_id=$3', [index, id, tripId, pins.pinnedIds.includes(id)]);
+      else if (positionById.get(id) !== index) await client.query(`UPDATE tours SET day_position = $1 WHERE id = $2 AND trip_id = $3`, [index, id, tripId]);
     }
     return { ok: true, order: orderedIds };
   });
@@ -5004,6 +5010,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       status = COALESCE($3, status),
       activity_type = COALESCE($4, activity_type),
       day_position = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN NULL ELSE day_position END,
+      day_order_pinned = CASE WHEN $5 IS NOT NULL AND $5::date <> date THEN FALSE ELSE day_order_pinned END,
       date = COALESCE($5, date),
       name = COALESCE($6, name),
       lat = CASE WHEN $7 IS NOT NULL AND $7 <> start_location THEN NULL ELSE lat END,
@@ -5029,7 +5036,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
-      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition",
+      lat, lng, geo_city as "geoCity", coordinate_source as "coordinateSource", catalog_id as "catalogId", day_position as "dayPosition", day_order_pinned as "dayOrderPinned",
       start_time as "startTime",
       duration,
       cost::numeric as cost,
@@ -13826,6 +13833,8 @@ export const setTripTimezone = async (tripId: string, timezone: string): Promise
 };
 
 export { createCatalogActivityPostgres as createCatalogActivity, undoCatalogActivityPostgres as undoCatalogActivity } from './services/planningOperations';
+export { getActivitySharingPostgres as getActivitySharing, setActivitySharingPostgres as setActivitySharing,
+  listSimilarTripsPostgres as listSimilarTrips, copyPublicActivityPostgres as copyPublicActivity } from './services/tripInspiration';
 
 /** Revision scopes are updated by DB triggers, including non-facade writers. */
 export const getPlanningRevision = async (tripId: string, groupId: string): Promise<string> => {

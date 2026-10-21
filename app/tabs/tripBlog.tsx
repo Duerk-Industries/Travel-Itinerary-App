@@ -10,6 +10,7 @@ import VoiceNoteRecorder from '../components/VoiceNoteRecorder';
 import { alertMessage } from '../utils/crossPlatformAlert';
 import { formatDateLong } from '../utils/formatDateLong';
 import TripDayMap from '../components/TripDayMap';
+import ActivitySharingControls from '../components/ActivitySharingControls';
 import { type TripMapPoint } from '../utils/googleMaps';
 import TripMap from '../components/TripMap';
 import { createCheckoutSession, fetchBillingPlans, openBillingUrl, type PlanInfo } from '../utils/billing';
@@ -2239,6 +2240,7 @@ const TripBlogTab = ({ backendUrl, headers, activeTripId, trips = [] as any[], s
                   </Text>
                 </View>
               ) : null}
+              {canEdit && !readOnly && <ActivitySharingControls tripId={activeTripId} backendUrl={backendUrl} headers={headers} />}
               {canEdit && !readOnly ? (
                 <View testID="blog-photo-location-settings" style={{ padding: 10, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: inputColor }}>
                   <Text style={{ color: textColor, fontWeight: '700' }}>Keep photo locations: {blog?.photoLocationEnabled ? 'On' : 'Off'}</Text>

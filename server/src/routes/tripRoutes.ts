@@ -4,11 +4,13 @@ import { z } from 'zod';
 import { getEnvFlag } from '../env';
 import { readPlanningBundle } from '../services/planningBundleService';
 import { PlanningError } from '../services/planningOperations';
+import { HttpRateLimitExceededError, reserveHttpRateLimitOrThrow } from '../services/httpRateLimitService';
 import { Router } from 'express';
 import { recordServerEvent } from '../analytics/ingestService';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
+  getActivitySharing, setActivitySharing, listSimilarTrips,
   acceptTripShareInvite,
   addTripComment,
   createTripShareInvite,
@@ -648,10 +650,40 @@ router.get('/:id/planning-capabilities', async (req, res) => {
   try {
     const access = await ensureUserCanReadTrip(String(req.params.id), userId);
     if (!access) { res.status(403).json({ error: 'Trip unavailable.' }); return; }
-    const [map, nearby, partner, dayOrder, nativeMap] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order', 'planning_native_map'].map(key => isFeatureEnabled(key, userId)));
+    const [map, nearby, partner, dayOrder, nativeMap, inspiration] = await Promise.all(['planning_web_map', 'planning_nearby', 'getyourguide_activity_suggestions', 'planning_day_order', 'planning_native_map', 'planning_trip_inspiration'].map(key => isFeatureEnabled(key, userId)));
     res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ map, nativeMap: nativeMap && (await getFeatureFlag('planning_native_map'))?.enabled === true, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member' });
+    res.json({ map, nativeMap: nativeMap && (await getFeatureFlag('planning_native_map'))?.enabled === true, nearby: nearby && access.access === 'member', partner, dayOrder: dayOrder && access.access === 'member', inspiration: inspiration && access.access === 'member' });
   } catch { res.status(503).json({ error: 'Planning options are temporarily unavailable.' }); }
+});
+
+for (const action of ['similar-trips', 'activity-sharing'] as const) {
+  router.get(`/:id/${action}`, async (req, res) => {
+    const userId = (req as any).user.userId as string;
+    res.setHeader('Cache-Control', 'private, no-store');
+    try {
+      if (!z.string().uuid().safeParse(req.params.id).success) { res.status(400).json({ error: 'Choose a valid trip.' }); return; }
+      if (!(await isFeatureEnabled('planning_trip_inspiration', userId))) { res.status(404).json({ error: 'Trips like this is unavailable.' }); return; }
+      await reserveHttpRateLimitOrThrow({ name: 'trip_inspiration_read', identity: userId, limit: 60, windowMs: 60_000 });
+      res.json(action === 'similar-trips' ? { trips: await listSimilarTrips(userId, req.params.id) } : await getActivitySharing(userId, req.params.id));
+    } catch (error) {
+      res.status(error instanceof PlanningError ? error.status : error instanceof HttpRateLimitExceededError ? 429 : 503)
+        .json({ error: error instanceof PlanningError ? error.message : 'Shared activities could not load.' });
+    }
+  });
+}
+router.put('/:id/activity-sharing', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const body = z.object({ enabled: z.boolean() }).strict().safeParse(req.body);
+  if (!body.success || !z.string().uuid().safeParse(req.params.id).success) { res.status(400).json({ error: 'Choose whether to share activities.' }); return; }
+  res.setHeader('Cache-Control', 'private, no-store');
+  try {
+    if (!(await isFeatureEnabled('planning_trip_inspiration', userId))) { res.status(404).json({ error: 'Activity sharing is unavailable.' }); return; }
+    await reserveHttpRateLimitOrThrow({ name: 'trip_inspiration_share', identity: userId, limit: 20, windowMs: 60_000 });
+    res.json(await setActivitySharing(userId, req.params.id, body.data.enabled));
+  } catch (error) {
+    res.status(error instanceof PlanningError ? error.status : error instanceof HttpRateLimitExceededError ? 429 : 503)
+      .json({ error: error instanceof PlanningError ? error.message : 'Sharing could not be updated.' });
+  }
 });
 
 router.get('/:id/covered-by', async (req, res) => {

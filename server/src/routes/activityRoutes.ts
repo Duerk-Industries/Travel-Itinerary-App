@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
   createCatalogActivity,
+  copyPublicActivity,
   undoCatalogActivity,
   castItemVote,
   deleteExpenseForSource,
@@ -136,6 +137,24 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+  if (req.body?.publicSource !== undefined) {
+    const data = z.object({ tripId: z.string().uuid(), date: z.iso.date(),
+      publicSource: z.object({ username: z.string().regex(/^[a-z0-9-]{1,80}$/), tripSlug: z.string().regex(/^[a-z0-9-]{1,80}$/), activityId: z.string().uuid() }).strict() }).strict().safeParse(req.body);
+    const key = req.get('Idempotency-Key');
+    if (!data.success || !key || !/^[a-zA-Z0-9_-]{16,128}$/.test(key)) { res.status(400).json({ error: 'Choose a shared activity and a valid trip day.' }); return; }
+    const userId = (req as any).user.userId as string;
+    try {
+      if (!(await isFeatureEnabled('planning_trip_inspiration', userId))) { res.status(404).json({ error: 'Trips like this is unavailable.' }); return; }
+      await reserveHttpRateLimitOrThrow({ name: 'public_activity_copy', identity: userId, limit: 30, windowMs: 60_000 });
+      const result = await copyPublicActivity(userId, { ...data.data, operationKey: key });
+      if (result.replayed) res.setHeader('Idempotent-Replayed', 'true');
+      res.status(201).json(result.activity);
+    } catch (error) {
+      res.status(error instanceof PlanningError ? error.status : error instanceof HttpRateLimitExceededError ? 429 : 503)
+        .json({ error: error instanceof PlanningError ? error.message : 'Could not copy this activity. Please retry.', code: error instanceof PlanningError ? error.code : 'TEMPORARY_FAILURE' });
+    }
+    return;
+  }
   if (req.body?.catalogId !== undefined) {
     const data = z.object({ tripId: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), catalogId: z.string().min(1).max(200) }).safeParse(req.body);
     const key = req.get('Idempotency-Key');
@@ -320,11 +339,13 @@ router.patch('/bulk', async (req, res) => {
 
 const dayOrderDto = z.object({
   tripId: z.string().uuid(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.iso.date(),
   // The order the client was looking at. A mismatch means someone else changed the day first.
   expectedIds: z.array(z.string().min(1).max(64)).max(100),
   orderedIds: z.array(z.string().min(1).max(64)).max(100),
-});
+  pinnedIds: z.array(z.string().min(1).max(64)).max(100).optional(),
+  expectedPinnedIds: z.array(z.string().min(1).max(64)).max(100).optional(),
+}).refine(value => (value.pinnedIds === undefined) === (value.expectedPinnedIds === undefined));
 
 // Registered before '/:id' so "day-order" is never read as an activity id.
 router.put('/day-order', async (req, res) => {
@@ -334,8 +355,9 @@ router.put('/day-order', async (req, res) => {
   try {
     if (!(await isFeatureEnabled('planning_day_order', userId))) { res.status(404).json({ error: 'Reordering is currently unavailable.', code: 'FEATURE_DISABLED' }); return; }
     await reserveHttpRateLimitOrThrow({ name: 'activity_day_order', identity: userId, limit: 60, windowMs: 60_000 });
-    const { tripId, date, orderedIds, expectedIds } = dto.data;
-    const outcome = await reorderActivitiesForDay(userId, tripId, date, orderedIds, expectedIds);
+    const { tripId, date, orderedIds, expectedIds, pinnedIds, expectedPinnedIds } = dto.data;
+    const outcome = await reorderActivitiesForDay(userId, tripId, date, orderedIds, expectedIds,
+      pinnedIds ? { pinnedIds, expectedPinnedIds: expectedPinnedIds! } : undefined);
     if (outcome.ok) { res.json({ order: outcome.order }); return; }
     if (outcome.reason === 'forbidden') { res.status(403).json({ error: 'You must be in the group for this trip.' }); return; }
     res.status(409).json({

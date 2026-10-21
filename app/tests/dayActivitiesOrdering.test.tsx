@@ -91,6 +91,30 @@ describe('DayActivitiesOrdering', () => {
     expect(view.getByTestId('day-order-notice').props.children).toBe('Moved Far East Tower down.');
   });
 
+  it('saves a pin with the expected pin state and keeps pinned stops fixed in optimization', async () => {
+    const view = setup({ activities: [A, { ...B, dayOrderPinned: true }, C, D] });
+    await waitFor(() => expect(view.getByTestId('day-order-pin-b')).toBeTruthy());
+    expect(view.getByLabelText('Keep West Garden in place when optimizing').props.accessibilityState.checked).toBe(true);
+    fireEvent.press(view.getByTestId('day-order-optimize'));
+    fireEvent.press(view.getByTestId('day-order-apply'));
+    await waitFor(() => expect(view.puts()).toHaveLength(1));
+    expect(view.body().orderedIds[1]).toBe('b');
+    expect(view.body().expectedPinnedIds).toEqual(['b']);
+    fireEvent.press(view.getByTestId('day-order-pin-a'));
+    await waitFor(() => expect(view.puts()).toHaveLength(2));
+    expect(view.body(1)).toMatchObject({ expectedPinnedIds: ['b'], pinnedIds: ['b', 'a'] });
+  });
+
+  it('drags a native handle to a measured row and submits the original order', async () => {
+    const view = setup();
+    await waitFor(() => expect(view.getByTestId('day-order-drag-a')).toBeTruthy());
+    ['a', 'b', 'c', 'd'].forEach((id, i) => fireEvent(view.getByTestId(`day-order-row-${id}`), 'layout', { nativeEvent: { layout: { y: i * 100, height: 100 } } }));
+    fireEvent(view.getByTestId('day-order-drag-a'), 'panResponderGrant');
+    fireEvent(view.getByTestId('day-order-drag-a'), 'panResponderRelease', {}, { dy: 300 });
+    await waitFor(() => expect(view.puts()).toHaveLength(1));
+    expect(view.body()).toMatchObject({ expectedIds: ['a', 'b', 'c', 'd'], orderedIds: ['b', 'c', 'd', 'a'], pinnedIds: [], expectedPinnedIds: [] });
+  });
+
   it('disables Move up on the first row and Move down on the last, with accessible labels', async () => {
     const view = setup();
     await waitFor(() => expect(view.getByTestId('day-order-up-a')).toBeTruthy());
@@ -123,7 +147,7 @@ describe('DayActivitiesOrdering', () => {
     const applied = view.body().orderedIds as string[];
     fireEvent.press(view.getByTestId('day-order-undo'));
     await waitFor(() => expect(view.puts()).toHaveLength(2));
-    expect(view.body(1)).toEqual({ tripId: 'trip-1', date: '2027-05-02', expectedIds: applied, orderedIds: ['a', 'b', 'c', 'd'] });
+    expect(view.body(1)).toEqual({ tripId: 'trip-1', date: '2027-05-02', expectedIds: applied, orderedIds: ['a', 'b', 'c', 'd'], pinnedIds: [], expectedPinnedIds: [] });
     await waitFor(() => expect(view.getByTestId('day-order-notice').props.children).toBe('Your previous order is back.'));
     expect(view.queryByTestId('day-order-undo')).toBeNull();
   });
@@ -200,7 +224,7 @@ describe('DayActivitiesOrdering', () => {
     );
     await waitFor(() => expect(view.getByTestId('day-order-down-a')).toBeTruthy());
     fireEvent.press(view.getByTestId('day-order-down-a'));
-    await waitFor(() => expect(view.getByTestId('day-order-notice').props.children).toMatch(/Nothing was changed/));
+    await waitFor(() => expect(view.getByTestId('day-order-notice').props.children).toMatch(/save could not be confirmed/));
     expect(onChanged).not.toHaveBeenCalled();
   });
 

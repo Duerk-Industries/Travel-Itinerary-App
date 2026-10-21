@@ -40,8 +40,8 @@ source work separately from provider, device and release evidence.
 Source work still open (see the [completion audit](../operations/gap-closing-remaining.md) for evidence):
 
 - **Maps (§1.3–1.5):** public/recap integration, bounded browser keepsake capture, native renderer source and bounded public-catalog geocoding are implemented ([details and activation](../operations/gap-closing-maps.md)). Remaining: named-device/EAS and native print checks, reviewed geocoding endpoint/scheduler activation, production evidence, and legacy-artifact retirement after old-client migration.
-- **Day editing (§1.6):** validated drag-and-drop; Move up/down is implemented. Environment rollout and usability checks remain.
-- **Discovery (§2.3):** destination-based “Trips like this” and privacy-safe activity copying with source credit. Public explore/SEO remains later scope (§7).
+- **Day editing (§1.6):** web/native drag handles, persisted optimization pins, Move up/down and checked Optimize/Undo are implemented. Environment rollout, usability and physical-device gesture checks remain ([details](../operations/gap-closing-day-order-inspiration.md)).
+- **Discovery (§2.3):** destination-based “Trips like this” and credited copying of explicitly shared public catalog activity templates are implemented. Manual/private activity copying is excluded; public explore/SEO remains later scope (§7). [Contract and activation](../operations/gap-closing-day-order-inspiration.md).
 - **Email import (§3.1–3.2):** signed, content-bound receiver-attestation verification, provenance-gated forwarder trust and Gmail confirmation recognition/UI are implemented ([contract and rollout](../operations/gap-closing-receiver-auth.md)). Remaining: deploy the trusted gateway/signer and validate real receiver/forwarding/Gmail fixtures before enabling; synthetic contract fixtures are not production evidence.
 - **Offline storage (§5.2–5.3):** encrypted transactional native storage, device-backed keys and migration/reinstall/key-loss recovery; access-based LRU snapshot eviction and optional Wi-Fi-only downloads.
 - **Release evidence (§4–5 and acceptance gates):** real notification delivery/cohort/timing measurements, deployed shell/hash-change and authenticated offline recovery across browsers, provider/scanner/forwarding trials, database concurrency/index readiness, named native devices, accessibility/usability, import precision and performance evidence.
@@ -317,7 +317,7 @@ This is the proposed direction; validate it on supported devices before rollout:
 - **`dayRouteOptimizer.ts`** (pure, deterministic): nearest-neighbour + 2-opt for up to 12 stops. Booked activities with a set time and stops without coordinates keep their slot; an optional lodging anchor makes the route start and end there; it never returns a longer route than it was given.
 - **`DayActivitiesOrdering`** in the Overview day view: Move up / Move down (44 px targets, labelled for screen readers), **Optimize order** with a preview (straight-line distance before/after, what stays put, "not walking or driving times"), **Use this order**, **Keep my order**, and **Undo** (itself a checked save). Conflicts, offline and double taps are handled in place with a persistent notice.
 
-Not done yet: drag-and-drop (needs a drag library validated against React Native Web; Move up/down is the accessible baseline), enabling the flag per environment, a usability pass, and native/device evidence. Firestore emulator parity is recorded in the completion audit.
+2026-10-21: HTML drag handles on web and responder-based handles on native now reuse the checked day-order save; no drag dependency is added. Persisted Pin/Unpin constrains optimization, and expected-pin checks prevent stale overwrites. Move up/down remains the accessible baseline. Environment rollout, unfamiliar-user and physical-device acceptance remain open. [Implementation and checks](../operations/gap-closing-day-order-inspiration.md).
 
 1. **Route line:** a MapLibre line layer in visit order. On the native Google stopgap, the `path` parameter, which needs `lat`/`lng` from §1.4.
 2. **Travel time between stops** via the existing `transferEstimationService`: haversine with walking (~5 km/h) or driving (~30 km/h) speeds, shown as "~12 min walk".
@@ -347,6 +347,8 @@ Not done yet: drag-and-drop (needs a drag library validated against React Native
 - GetYourGuide options appear when `getyourguide_activity_suggestions` is on, labelled "Partner". Ranking ignores affiliate status.
 
 ### 2.3 "Trips like this" & destination pages (P2)
+
+**2026-10-21 implementation:** Overview day details recommends opted-in public/discoverable blogs with matching destination IDs or legacy destination text. An explicit sharing preview permits only catalog-backed public templates; copies use an adapter-atomic allowlist, publication/consent rechecks, stable operation keys and source credit. Private/manual activities are excluded. [Behavior, bounds and activation](../operations/gap-closing-day-order-inspiration.md).
 
 - Public trip blogs for the same destination. "Copy activities" clones names, categories, coordinates, and durations, and credits the source blog.
 - Only content published under the public-sharing consent is eligible. Never notes, costs, bookings, flight numbers, or traveler names.
