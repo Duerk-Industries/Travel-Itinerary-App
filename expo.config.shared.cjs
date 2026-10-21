@@ -191,6 +191,8 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       },
     },
     plugins: [
+      [resolvePluginFromApp('expo-sqlite/app.plugin.js', appDir), { useSQLCipher: true }],
+      [resolvePluginFromApp('expo-secure-store/app.plugin.js', appDir), { configureAndroidBackup: true }],
       resolvePluginFromApp('@maplibre/maplibre-react-native/app.plugin.js', appDir),
       'expo-web-browser',
       'expo-video',
@@ -258,6 +260,7 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       ],
     ],
     extra: {
+      nativeEncryptedStorage: process.env.NATIVE_ENCRYPTED_STORAGE !== '0',
       nativeMapRenderer: process.env.NATIVE_MAP_RENDERER === '1',
       // A web release build (RELEASE_WEB_BUILD=1, set only by
       // build-release.ps1/.sh) must promote one artifact unmodified from

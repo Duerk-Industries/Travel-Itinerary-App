@@ -564,6 +564,9 @@ Production values may differ from these seed defaults; §4.1 checks them.
 
 ### 5.2 Secure local storage (P0 isolation; staged native-store migration)
 
+**Implementation continuation (2026-10-20):** Native trip snapshots and financial queues now use per-account/environment SQLCipher databases, with random keys in device-only SecureStore. Migration validates the existing owner-bound snapshot/queue and commits before removing plaintext. Email-only snapshots still require a fresh authorized download. Missing/wrong keys preserve the original: snapshots can be downloaded again, financial queues stop replay and expose encrypted recovery export instead of resetting. Corrupt readable queues have transactional backup/repair; future schema versions are refused. Snapshot logout erases its active ciphertext/key while retained financial queues keep theirs. `NATIVE_ENCRYPTED_STORAGE=0` disables native storage rather than falling back to plaintext, independently of the map renderer flag. A new native build and named-device encryption/restore/kill/relaunch acceptance remain required; see [native storage runbook](../operations/gap-closing-native-storage.md).
+
+
 - **Build on `offlineTripCache.ts`:** preserve 30-day access/unlock; key by immutable user id + environment + schema version. Migrate authenticated-owner legacy email entries once, validating before commit and deleting only after success; account switching cannot relabel another user's data.
 - **Native:** choose one transactional encrypted store after an Expo/device spike; hold keys in device-backed secure storage, not the snapshot. Device unlock alone does not encrypt AsyncStorage. Test restore/reinstall/key loss and provide **Download again** recovery. New builds are required; keep migration/renderer flags independent.
 - **Web:** account-scoped IndexedDB, minimal fields and explicit shared-device warning on offline save. Do not claim native biometric protection or browser storage encryption against same-origin XSS; prioritize CSP and avoiding unsafe HTML. No long-lived server tokens or raw mail in snapshots.
@@ -580,9 +583,9 @@ Built and tested:
 - `usePendingExpenseSync` (app-level) queues and drains expenses; `DailyExpensesTab` lets a new expense be added offline, shows "Saved on this device · waiting to sync", and offers **Try again** / **Discard**.
 
 Still to do before this ships (all listed in §5.2 / the usability gate):
-- **Completed:** sign-out warning with unsynced count, Sync now / Keep on this device / Discard. Retention explicitly warns that current storage is unencrypted.
+- **Completed:** sign-out warning with unsynced count, Sync now / Keep on this device / Discard. Retention explains device-key loss on native and unencrypted browser storage on web.
 - **Completed:** Edit for definitively rejected expenses, plus per-expense Export; unknown outcomes retain the original operation key.
-- Encrypting the queue on native (§5.2); today it is plain `AsyncStorage`/`localStorage` like the existing snapshot.
+- **Implemented, device acceptance pending:** SQLCipher native queue and device-only keys (§5.2). Browser IndexedDB remains unencrypted.
 - Firestore emulator parity run for the new server tests (they pass on the in-memory adapter), real-device checks, and the novice-recovery usability test.
 - Deciding whether the entry-queue key should include the environment hash instead of the raw backend URL.
 

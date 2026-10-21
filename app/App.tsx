@@ -1573,9 +1573,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [pendingLogoutError, setPendingLogoutError] = useState<string | null>(null);
   const [pendingLogoutVisible, setPendingLogoutVisible] = useState(false);
   const requestLogout = useCallback(() => {
-    if (pendingExpenses.entries.length) { setPendingLogoutError(null); setPendingLogoutVisible(true); }
+    if (pendingExpenses.entries.length || pendingExpenses.storageError) { setPendingLogoutError(pendingExpenses.storageError); setPendingLogoutVisible(true); }
     else logout();
-  }, [pendingExpenses.entries.length, logout]);
+  }, [pendingExpenses.entries.length, pendingExpenses.storageError, logout]);
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.

@@ -14,3 +14,10 @@ it('shows the unsynced count and requires a deliberate recovery choice', () => {
   fireEvent.press(screen.getByLabelText('Discard expenses and sign out'));
   expect(onDiscard).toHaveBeenCalledTimes(1);
 });
+
+it('warns about unreadable retained work even when its count is unknown', () => {
+  const screen = render(<PendingExpenseLogoutDialog visible count={0} error="The device encryption key is unavailable."
+    onCancel={jest.fn()} onSync={jest.fn()} onKeep={jest.fn()} onDiscard={jest.fn()} />);
+  expect(screen.getByText('Saved expenses need recovery')).toBeTruthy();
+  expect(screen.getByText('The device encryption key is unavailable.')).toBeTruthy();
+});

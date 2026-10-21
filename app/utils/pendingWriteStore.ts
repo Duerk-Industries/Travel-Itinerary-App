@@ -12,5 +12,5 @@ export interface PendingWriteStore {
   subscribe(key: string, changed: () => void): () => void;
 }
 
-// Native keeps its current storage path until the encrypted-store migration.
+// Platform overrides use IndexedDB on web and SQLCipher on native.
 export const transactionalPendingWriteStore: PendingWriteStore | null = null;

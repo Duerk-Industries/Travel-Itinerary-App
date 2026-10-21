@@ -191,8 +191,9 @@ export function usePendingWrites(
     if (keyRef.current !== key || generationRef.current !== generation) return;
     mutationRef.current += 1; pendingRef.current = next; setPending(next); setStorageError(null);
   }, []);
-  const storeFailure = useCallback((key: string, generation: number) => {
-    if (keyRef.current === key && generationRef.current === generation) setStorageError('Saved expenses could not be read or updated. They have been kept for recovery.');
+  const storeFailure = useCallback((key: string, generation: number, error?: unknown) => {
+    if (keyRef.current === key && generationRef.current === generation) setStorageError(error instanceof Error && 'code' in error && error.code === 'NATIVE_STORAGE_RECOVERY'
+      ? error.message : 'Saved expenses could not be read or updated. They have been kept for recovery.');
   }, []);
   useEffect(() => {
     const key = storageKey, generation = generationRef.current;
@@ -201,7 +202,7 @@ export function usePendingWrites(
     const refresh = () => {
       const read = store ? store.read(key).then(entries => { if (!cancelled) accept(key, generation, entries); })
         : readAsyncOrThrow(key).then(raw => { parseQueue(raw, true); });
-      void read.catch(() => { if (!cancelled) storeFailure(key, generation); });
+      void read.catch(error => { if (!cancelled) storeFailure(key, generation, error); });
     };
     refresh();
     const unsubscribe = store?.subscribe(key, refresh);
@@ -221,7 +222,7 @@ export function usePendingWrites(
       const next = await store.update(key, entries => generation === generationRef.current && keyRef.current === key ? change(entries) : entries);
       if (generation !== generationRef.current) return false;
       accept(key, generation, next); return true;
-    } catch { storeFailure(key, generation); return false; }
+    } catch (error) { storeFailure(key, generation, error); return false; }
   }, [store, accept, storeFailure]);
 
   const persist = useCallback((next: PendingWrite[]) => {
@@ -406,7 +407,7 @@ export function usePendingWrites(
           const summary = await replayTransactionalPending({ store, key: replayKey, token: makeId(), current, replay: replayFn, maxAttempts, backoffMs, ignoreBackoff: options?.ignoreBackoff });
           if (current()) accept(replayKey, generation, await store.read(replayKey));
           return summary;
-        } catch { storeFailure(replayKey, generation); return empty; }
+        } catch (error) { storeFailure(replayKey, generation, error); return empty; }
       }
       const summary = await withReplayLock(replayKey, async (): Promise<ReplaySummary> => {
         // Snapshot the queue up-front so entries enqueued mid-drain are left
