@@ -15,8 +15,9 @@ implemented changes from outstanding source work and release evidence.
   hydration fencing, and corrupt-queue preservation. An account switch stops the
   rest of a drain and cannot write its result into the next account's queue.
 - Snapshot storage: five saved trips, conservative 20 MB serialized ceiling,
-  oldest-saved eviction excluding the current save, oversized-save failure that
-  preserves the previous copy. Financial queues are never evicted with snapshots.
+  least-recently-opened eviction excluding the current save (see "Snapshot eviction
+  and downloads" below), oversized-save failure that preserves the previous copy.
+  Financial queues are never evicted with snapshots.
 - Notification quiet hours extend existing category preferences on both adapters.
   Inbox delivery remains immediate; push/email outbox work waits until the next
   real instant outside the window, without spending a retry attempt. Local IANA
@@ -319,6 +320,11 @@ confirmed Wi-Fi/Ethernet; unknown counts as not confirmed. A deliberate save alw
 on mobile data, but asks first when Wi-Fi only is on or the last copy was 5 MB or more.
 Browsers rarely report the connection type, so on web this warning rarely appears.
 Estimates use the previous saved copy, so a first-ever download cannot warn about size.
+Verification: `offlineTripCache`, `offlineDownloadPolicy` and `SaveTripOffline` suites cover
+eviction order, the savedAt fallback, throttled touches, connection classification, the
+Wi-Fi-only gate and the mobile-data prompts. Full frontend suite: 266 suites / 1,756 tests
+passed; `expense-idempotency.test.ts` passed 7/7 on a private Firestore emulator. Native device
+behavior of the connection check (`expo-network` type) is not yet tested on named devices.
 Queue storage keys intentionally retain the existing environment-qualified format: the key
 is local and not secret, the native store already hashes its scope for file names, and a
 new hash would orphan existing queued financial work without a migration. Decision closed.
