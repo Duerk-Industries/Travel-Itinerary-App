@@ -151,6 +151,9 @@ const createExpoConfig = ({ appDir, assetPrefix = './' }) => {
       const isProduction = !isDevLikeBuild;
       return {
         supportsTablet: true,
+        // Flat "Pin Bunny" mark (source: assets/branding/wanderbunnies-ios-icon.svg). App Store
+        // icons must be full-bleed squares with no alpha channel; iOS applies the rounded mask.
+        icon: prefixAsset('./assets/wanderbunnies-ios-icon.png', assetPrefix),
         bundleIdentifier: 'com.duerkindustries.travelitineraryplanner',
         buildNumber: '1',
         // Keeps the "Sign In with Apple" capability enabled on the bundle
